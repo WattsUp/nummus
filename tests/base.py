@@ -34,7 +34,7 @@ class TestBase(unittest.TestCase):
     """
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
 
-  def __clean_test_root(self):
+  def _clean_test_root(self):
     """Clean root test folder
     """
     if self._TEST_ROOT.exists():
@@ -55,7 +55,7 @@ class TestBase(unittest.TestCase):
     self.assertLessEqual(error, threshold)
 
   def setUp(self):
-    self.__clean_test_root()
+    self._clean_test_root()
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     self._test_start = time.perf_counter()
 
@@ -67,7 +67,7 @@ class TestBase(unittest.TestCase):
     duration = time.perf_counter() - self._test_start
     with autodict.JSONAutoDict(TEST_LOG) as d:
       d["methods"][self.id()] = duration
-    self.__clean_test_root()
+    self._clean_test_root()
 
     # Restore sleeping
     time.sleep = self._original_sleep

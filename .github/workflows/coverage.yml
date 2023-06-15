@@ -23,8 +23,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
+          sudo apt-get install -y libsqlcipher-dev || (sudo apt-get update && sudo apt-get install -y libsqlcipher-dev)
           python -m pip install --upgrade pip
-          python -m pip install -e .[test]
+          python -m pip install -e .[test,encrypt]
       - name: Test
         run: |
           python -m coverage run &> testing.log
