@@ -23,6 +23,11 @@ exclude_lines =
   # Don't complain if non-runnable code isn't run:
   if 0:
   if __name__ == .__main__.:
+
+  # Don't complain about the one win32 line
+  if sys.platform == "win32":
+
+  # Don't complain about ImportErrors, unit tests mocks them
   except ImportError
 ignore_errors = True
 precision = 2

@@ -7,8 +7,6 @@ import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
-# Import sqlcipher3 to test if encrypted SQL will work
-import sqlcipher3  # pylint: disable=unused-import
 
 from nummus import common
 
