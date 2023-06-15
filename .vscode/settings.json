@@ -1,6 +1,8 @@
 {
   "cSpell.words": [
-    "nummus"
+    "nummus",
+    "poolclass",
+    "pycryptodome"
   ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,

@@ -14,12 +14,11 @@ module_name = "nummus"
 with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
 
-required = []
+required = ["sqlalchemy", "AutoDict"]
 extras_require = {
-    "test": ["AutoDict", "coverage", "pylint", "numpy"],
-    "dev": [
-        "AutoDict", "coverage", "pylint", "numpy", "toml", "witch-ver", "yapf"
-    ]
+    "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
+    "test": ["coverage", "pylint", "numpy"],
+    "dev": ["coverage", "pylint", "numpy", "toml", "witch-ver", "yapf"]
 }
 
 setuptools.setup(
