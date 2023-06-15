@@ -1,6 +1,7 @@
 # nummus
 
 [![Unit Test][unittest-image]][unittest-url] [![Pylint][pylint-image]][pylint-url] [![Coverage][coverage-image]][coverage-url]
+
 A personal financial information aggregator and planning tool. Collects and categorizes transactions, manages budgets, tracks investments, calculates net worth, and predicts future performance.
 
 ---
