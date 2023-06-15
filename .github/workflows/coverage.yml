@@ -59,7 +59,7 @@ jobs:
         with:
           auth: ${{ secrets.GIST_SECRET }}
           gistID: 36d9705addcd44fb0fccec1d23dc1338
-          filename: PythonProjectTemplate__${{ env.BRANCH }}.json
+          filename: nummus__${{ env.BRANCH }}.json
           label: Test Coverage
           message: ${{ env.COVERAGE }}
           color: ${{ env.COLOR }}

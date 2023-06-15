@@ -1,4 +1,4 @@
-"""Setup and install project_template
+"""Setup and install nummus
 
 Typical usage:
   python setup.py develop
@@ -8,8 +8,8 @@ Typical usage:
 
 import setuptools
 
-module_folder = "project_template"
-module_name = "PythonProjectTemplate"
+module_folder = "nummus"
+module_name = "nummus"
 
 with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
@@ -23,9 +23,9 @@ extras_require = {
 }
 
 setuptools.setup(
-    name="PythonProjectTemplate",
+    name=module_name,
     use_witch_ver=True,
-    description="A template repository for Python projects",
+    description="A personal financial information aggregator and planning tool",
     long_description=longDescription,
     long_description_content_type="text/markdown",
     license="MIT",
@@ -37,19 +37,21 @@ setuptools.setup(
     scripts=[],
     author="Bradley Davis",
     author_email="me@bradleydavis.tech",
-    url="https://github.com/WattsUp/PythonProjectTemplate",
+    url="https://github.com/WattsUp/nummus",
     classifiers=[
         "Programming Language :: Python :: 3",
         "Operating System :: OS Independent",
-        "Development Status :: 5 - Production/Stable",
+        "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: MIT License",
-        "Intended Audience :: Developers",
-        "Programming Language :: Python :: 3.7",
+        "Intended Audience :: Financial and Insurance Industry",
+        "Intended Audience :: End Users/Desktop",
+        "Topic :: Office/Business :: Financial",
+        "Topic :: Office/Business :: Financial :: Accounting",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
     ],
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     # include_package_data=True, # Leave out cause wacky
     zip_safe=False,
     entry_points={"console_scripts": []})

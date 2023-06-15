@@ -7,7 +7,7 @@ import unittest
 
 import autodict
 
-from project_template.version import __version__
+from nummus.version import __version__
 
 from tests import TEST_LOG
 

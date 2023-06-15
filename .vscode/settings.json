@@ -1,5 +1,7 @@
 {
-  "cSpell.words": [  ],
+  "cSpell.words": [
+    "nummus"
+  ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,
   "python.linting.pylintEnabled": true

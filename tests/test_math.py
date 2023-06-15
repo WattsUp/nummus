@@ -1,7 +1,7 @@
-"""Test module project_template.math
+"""Test module nummus.math
 """
 
-from project_template import math
+from nummus import math
 
 from tests import base
 
