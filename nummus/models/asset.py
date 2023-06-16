@@ -35,11 +35,11 @@ class AssetValuation(base.Base):
 class AssetCategory(enum.Enum):
   """Categories of Assets
   """
-  ITEM = 0
   CASH = 1
   SECURITY = 2
   REAL_ESTATE = 3
   VEHICLE = 4
+  ITEM = 5
 
 
 class Asset(base.Base):

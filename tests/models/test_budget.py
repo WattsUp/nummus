@@ -78,12 +78,12 @@ class TestAnnualBudget(base.TestBase):
     self.assertRaises(KeyError, setattr, b, "categories", {"home": 1})
 
     d = {
-        "home": self._RNG.uniform(0, 1),
-        "food": self._RNG.uniform(0, 1),
-        "shopping": self._RNG.uniform(0, 1),
         "hobbies": self._RNG.uniform(0, 1),
         "services": self._RNG.uniform(0, 1),
-        "travel": self._RNG.uniform(0, 1)
+        "travel": self._RNG.uniform(0, 1),
+        "home": self._RNG.uniform(0, 1),
+        "food": self._RNG.uniform(0, 1),
+        "shopping": self._RNG.uniform(0, 1)
     }
     b.categories = d
 
