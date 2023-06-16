@@ -1,4 +1,4 @@
-"""Test module nummus.models.base
+"""Test module nummus.models.asset
 """
 
 import datetime
@@ -10,7 +10,7 @@ from tests import base
 
 
 class TestAssetValuation(base.TestBase):
-  """Test ORM Base
+  """Test AssetValuation class
   """
 
   def test_init_properties(self):
@@ -47,7 +47,7 @@ class TestAssetValuation(base.TestBase):
 
 
 class TestAsset(base.TestBase):
-  """Test ORM Base
+  """Test Asset class
   """
 
   def test_init_properties(self):
