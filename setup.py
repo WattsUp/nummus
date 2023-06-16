@@ -14,7 +14,7 @@ module_name = "nummus"
 with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
 
-required = ["sqlalchemy", "AutoDict"]
+required = ["sqlalchemy>=2", "AutoDict"]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
     "test": ["coverage", "pylint", "numpy"],

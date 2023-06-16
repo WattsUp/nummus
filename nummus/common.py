@@ -4,6 +4,7 @@
 import enum
 import getpass
 import random
+import re
 import string
 import sys
 
@@ -14,6 +15,17 @@ class RC(enum.Enum):
 
   SUCCESS = 0
   EXCEPTION = 1
+
+
+_REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
+_REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
+
+
+def camel_to_snake(s: str) -> str:
+  """Transform CamelCase to snake_case
+  """
+  s = _REGEX_CC_SC_0.sub(r"\1_\2", s)  # _ at the start of Words
+  return _REGEX_CC_SC_1.sub(r"\1_\2", s).lower()  # _ at then end of Words
 
 
 def random_string(min_length: int = 8, max_length: int = 12) -> str:

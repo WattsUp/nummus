@@ -13,6 +13,32 @@ class TestCommon(base.TestBase):
   """Test common methods
   """
 
+  def test_camel_to_snake(self):
+    s = "CamelCase"
+    target = "camel_case"
+    result = common.camel_to_snake(s)
+    self.assertEqual(target, result)
+
+    s = "Camel"
+    target = "camel"
+    result = common.camel_to_snake(s)
+    self.assertEqual(target, result)
+
+    s = "camel"
+    target = "camel"
+    result = common.camel_to_snake(s)
+    self.assertEqual(target, result)
+
+    s = "HTTPClass"
+    target = "http_class"
+    result = common.camel_to_snake(s)
+    self.assertEqual(target, result)
+
+    s = "HTTPClassXYZ"
+    target = "http_class_xyz"
+    result = common.camel_to_snake(s)
+    self.assertEqual(target, result)
+
   def test_random_string(self):
     string1 = common.random_string(min_length=40, max_length=50)
     string2 = common.random_string(min_length=40, max_length=50)
