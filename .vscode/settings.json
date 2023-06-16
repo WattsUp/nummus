@@ -1,8 +1,11 @@
 {
   "cSpell.words": [
+    "AppenderQuery",
     "nummus",
+    "ondelete",
     "poolclass",
-    "pycryptodome"
+    "pycryptodome",
+    "uselist"
   ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,

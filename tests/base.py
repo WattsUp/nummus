@@ -6,9 +6,13 @@ import shutil
 import string
 import time
 import unittest
+import uuid
 
 import autodict
 import numpy as np
+from sqlalchemy import orm
+
+from nummus import sql
 
 from tests import TEST_LOG
 
@@ -34,6 +38,13 @@ class TestBase(unittest.TestCase):
     """
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
 
+  def _get_session(self) -> orm.Session:
+    """Obtain a test sql session
+    """
+    config = autodict.AutoDict(encrypt=False)
+    path = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+    return sql.get_session(path, config)
+
   def _clean_test_root(self):
     """Clean root test folder
     """
@@ -55,6 +66,7 @@ class TestBase(unittest.TestCase):
     self.assertLessEqual(error, threshold)
 
   def setUp(self):
+    sql.drop_session()
     self._clean_test_root()
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     self._test_start = time.perf_counter()
@@ -64,6 +76,7 @@ class TestBase(unittest.TestCase):
     time.sleep = lambda *args: None
 
   def tearDown(self):
+    sql.drop_session()
     duration = time.perf_counter() - self._test_start
     with autodict.JSONAutoDict(TEST_LOG) as d:
       d["methods"][self.id()] = duration
