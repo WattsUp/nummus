@@ -2,13 +2,14 @@
 """
 
 from __future__ import annotations
-from typing import List
+from typing import List, Optional
 
 import uuid
 
 import sqlalchemy
 from sqlalchemy import orm
 
+from nummus import models
 from nummus.models import base
 
 from tests import base as test_base
@@ -20,12 +21,9 @@ class Parent(base.Base):
 
   _PROPERTIES_HIDDEN = ["age"]
 
-  _hidden_column: orm.Mapped[int] = orm.mapped_column(sqlalchemy.Integer,
-                                                      nullable=True)
-  generic_column: orm.Mapped[int] = orm.mapped_column(sqlalchemy.Integer,
-                                                      nullable=True)
-  children: orm.Mapped[List[Child]] = orm.relationship("Child",
-                                                       back_populates="parent")
+  _hidden_column: orm.Mapped[Optional[int]]
+  generic_column: orm.Mapped[Optional[int]]
+  children: orm.Mapped[List[Child]] = orm.relationship(back_populates="parent")
 
   _age = 40
 
@@ -60,12 +58,10 @@ class ParentHidden(base.Base):
 
   _PROPERTIES_HIDDEN = ["generic_column"]
 
-  _hidden_column: orm.Mapped[int] = orm.mapped_column(sqlalchemy.Integer,
-                                                      nullable=True)
-  generic_column: orm.Mapped[int] = orm.mapped_column(sqlalchemy.Integer,
-                                                      nullable=True)
+  _hidden_column: orm.Mapped[Optional[int]]
+  generic_column: orm.Mapped[Optional[int]]
   _children: orm.Mapped[List[Child]] = orm.relationship(
-      "Child", back_populates="parent_hidden")
+      back_populates="parent_hidden")
 
   _age = 43
 
@@ -86,18 +82,14 @@ class Child(base.Base):
 
   _PROPERTIES_DEFAULT = ["id", "age"]
 
-  _hidden_column: orm.Mapped[int] = orm.mapped_column(sqlalchemy.Integer,
-                                                      nullable=True)
+  _hidden_column: orm.Mapped[Optional[int]]
   parent_id: orm.Mapped[str] = orm.mapped_column(
       sqlalchemy.String(36), sqlalchemy.ForeignKey("parent.id"))
-  parent: orm.Mapped[Parent] = orm.relationship("Parent",
-                                                back_populates="children")
-  parent_hidden_id: orm.Mapped[str] = orm.mapped_column(
-      sqlalchemy.String(36),
-      sqlalchemy.ForeignKey("parent_hidden.id"),
-      nullable=True)
-  parent_hidden: orm.Mapped[Parent] = orm.relationship(
-      "ParentHidden", back_populates="_children")
+  parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
+  parent_hidden_id: orm.Mapped[Optional[str]] = orm.mapped_column(
+      sqlalchemy.String(36), sqlalchemy.ForeignKey("parent_hidden.id"))
+  parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
+      back_populates="_children")
 
   _age = 10
 
@@ -334,15 +326,12 @@ class TestBase(test_base.TestBase):
     self.assertEqual(0, len(parent_a.children))
     self.assertEqual(2, len(parent_b.children))
 
-    # Changing IDs is forcible but bad
+    # Changing IDs is forcible but will cause IntegrityErrors upon execution
     id_old = parent_b.id
     d = {"id": str(uuid.uuid4())}
     changes = parent_b.update(d, force=True)
-    session.commit()
-    self.assertEqual(d["id"], parent_b.id)
-    self.assertEqual(id_old, child_a.parent_id)
-    self.assertIsNone(child_a.parent)
-    self.assertDictEqual({"id": (id_old, d["id"])}, changes)
+    self.assertRaises(models.exc.IntegrityError, session.commit)
+    session.rollback()
 
     # Revert
     d = {"id": id_old}

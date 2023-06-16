@@ -8,7 +8,9 @@ import sys
 
 import autodict
 import hashlib
+import sqlite3
 import sqlalchemy
+import sqlalchemy.event
 from sqlalchemy import pool, orm
 
 try:
@@ -20,6 +22,18 @@ except ImportError:
   Encryption = None
 
 _SESSIONS: Dict[str, orm.Session] = {}
+
+
+@sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
+def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
+  """Hook to set PRAGMA upon opening SQLite connection
+
+  Args:
+    db_connection: Connection to SQLite DB
+  """
+  cursor = db_connection.cursor()
+  cursor.execute("PRAGMA foreign_keys=ON")
+  cursor.close()
 
 
 def get_session(path: str,
