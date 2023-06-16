@@ -4,6 +4,8 @@
 from __future__ import annotations
 from typing import List
 
+import uuid
+
 import sqlalchemy
 from sqlalchemy import orm
 
@@ -32,6 +34,10 @@ class Parent(base.Base):
     """Age of parent in years
     """
     return self._age
+
+  @age.setter
+  def age(self, age: int) -> None:
+    self._age = age
 
   @property
   def favorite_child(self) -> Child:
@@ -68,6 +74,10 @@ class ParentHidden(base.Base):
     """Age of parent in years
     """
     return self._age
+
+  @age.setter
+  def age(self, age: int) -> None:
+    self._age = age
 
 
 class Child(base.Base):
@@ -164,13 +174,13 @@ class TestBase(test_base.TestBase):
     d = child.to_dict(hide=["id"], show=["id", "parent_hidden"])
     self.assertDictEqual(target, d)
 
-    # Hide ID but child is at Parent.Child
+    # Hide id but child is at Parent.Child
     target = {"id": child.id, "age": child.age}
     d = child.to_dict(hide=["id"],
                       path=f"{Parent.__tablename__}.{Child.__tablename__}")
     self.assertDictEqual(target, d)
 
-    # Hide ID in other ways
+    # Hide id in other ways
     target = {"age": child.age}
     d = child.to_dict(hide=[f"{Child.__tablename__}.id"])
     self.assertDictEqual(target, d)
@@ -194,6 +204,7 @@ class TestBase(test_base.TestBase):
 
     target = {
         "id": child.id,
+        "parent_id": parent.id,
         "parent": {
             "id": parent.id
         },
@@ -201,7 +212,8 @@ class TestBase(test_base.TestBase):
             "id": parent_hidden.id
         }
     }
-    d = child.to_dict(show=["parent", "parent_hidden"], hide=["age"])
+    d = child.to_dict(show=["parent", "parent_id", "parent_hidden"],
+                      hide=["age"])
     self.assertDictEqual(target, d)
 
     # Test non-serializable objects
@@ -247,3 +259,118 @@ class TestBase(test_base.TestBase):
     target = {"id": parent_hidden.id}
     d = parent_hidden.to_dict(show=["_children"])
     self.assertDictEqual(target, d)
+
+  def test_update(self):
+    session = self._get_session()
+    base.Base.metadata.create_all(
+        session.get_bind(),
+        tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
+    session.commit()
+
+    parent_a = Parent()
+    parent_b = Parent()
+    session.add_all([parent_a, parent_b])
+    session.commit()
+
+    d = {"id": str(uuid.uuid4()), "age": self._RNG.integers(50, 100)}
+
+    child_a = Child(parent=parent_a)
+    child_b = Child(parent=parent_b)
+    session.add_all([child_a, child_b])
+    session.commit()
+
+    self.assertEqual(1, len(parent_a.children))
+    self.assertEqual(1, len(parent_b.children))
+
+    id_old = child_a.id
+    age_old = child_a.age
+    changes = child_a.update(d, force=False)
+    session.commit()
+    self.assertEqual(id_old, child_a.id)  # id is readonly
+    self.assertEqual(d["age"], child_a.age)
+    self.assertDictEqual({"age": (age_old, d["age"])}, changes)
+
+    # age is the same, not updated
+    changes = child_a.update(d, force=True)
+    session.commit()
+    self.assertEqual(d["id"], child_a.id)
+    self.assertEqual(d["age"], child_a.age)
+    self.assertDictEqual({"id": (id_old, d["id"])}, changes)
+
+    # Both are the same, not updated
+    changes = child_a.update(d, force=True)
+    session.commit()
+    self.assertEqual(d["age"], child_a.age)
+    self.assertEqual(d["id"], child_a.id)
+    self.assertDictEqual({}, changes)
+
+    # Update parent via id
+    d = {"parent_id": parent_b.id}
+    changes = child_a.update(d)
+    session.commit()
+    self.assertEqual(parent_b, child_a.parent)
+    self.assertDictEqual({"parent_id": (parent_a.id, parent_b.id)}, changes)
+
+    self.assertEqual(0, len(parent_a.children))
+    self.assertEqual(2, len(parent_b.children))
+
+    # Can't update relationships by obj
+    d = {"parent": parent_a}
+    changes = child_a.update(d)
+    session.commit()
+    self.assertEqual(parent_b, child_a.parent)
+    self.assertEqual(parent_b.id, child_a.parent_id)
+    self.assertDictEqual({}, changes)
+
+    self.assertEqual(0, len(parent_a.children))
+    self.assertEqual(2, len(parent_b.children))
+
+    d = {"children": []}
+    changes = parent_a.update(d)
+    session.commit()
+    self.assertEqual(parent_b, child_a.parent)
+    self.assertDictEqual({}, changes)
+
+    self.assertEqual(0, len(parent_a.children))
+    self.assertEqual(2, len(parent_b.children))
+
+    # Changing IDs is forcible but bad
+    id_old = parent_b.id
+    d = {"id": str(uuid.uuid4())}
+    changes = parent_b.update(d, force=True)
+    session.commit()
+    self.assertEqual(d["id"], parent_b.id)
+    self.assertEqual(id_old, child_a.parent_id)
+    self.assertIsNone(child_a.parent)
+    self.assertDictEqual({"id": (id_old, d["id"])}, changes)
+
+    # Revert
+    d = {"id": id_old}
+    _ = parent_b.update(d, force=True)
+    session.commit()
+    self.assertEqual(id_old, parent_b.id)
+    self.assertEqual(id_old, child_a.parent_id)
+    self.assertEqual(parent_b, child_a.parent)
+
+    d = {"id": id_old}
+
+    # Hidden property will not update
+    age_old = parent_b.age
+    d = {"age": self._RNG.integers(50, 100)}
+    changes = parent_b.update(d)
+    session.commit()
+    self.assertEqual(age_old, parent_b.age)
+    self.assertDictEqual({}, changes)
+
+    changes = parent_b.update(d, force=True)
+    session.commit()
+    self.assertEqual(d["age"], parent_b.age)
+    self.assertDictEqual({"age": (age_old, d["age"])}, changes)
+
+    # Property without a setter will not update
+    id_bytes_old = parent_b.id_bytes
+    d = {"id_bytes": str(uuid.uuid4()).encode()}
+    changes = parent_b.update(d)
+    session.commit()
+    self.assertEqual(id_bytes_old, parent_b.id_bytes)
+    self.assertDictEqual({}, changes)

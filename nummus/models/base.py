@@ -1,7 +1,7 @@
 """Base ORM model
 """
 
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Tuple
 
 import json
 import uuid
@@ -162,3 +162,60 @@ class Base(orm.DeclarativeBase):
         d[key] = json.loads(json.dumps(item))
 
     return d
+
+  def update(self,
+             data: Dict[str, Union[str, float, int, bool, object]],
+             force: bool = False) -> Dict[str, Tuple[object, object]]:
+    """Update model from dictionary
+
+    Only updates columns
+
+    Args:
+      data: Dictionary to update properties from
+      force: True will overwrite readonly properties
+
+    Returns:
+      Dictionary of changes {attribute: (old, new)}
+    """
+    attr_readonly = self._PROPERTIES_READONLY + self._PROPERTIES_HIDDEN
+
+    columns = self.__table__.columns.keys()
+    relationships = self.__mapper__.relationships.keys()
+    properties = dir(self)
+
+    changes: Dict[str, Tuple[object, object]] = {}
+
+    # Update columns
+    for key in columns:
+      if key[0] == "_":
+        # Private properties are always readonly
+        continue
+      if (key not in data) or (not force and key in attr_readonly):
+        continue
+      val_old = getattr(self, key)
+      val_new = data[key]
+      if val_old != val_new:
+        changes[key] = (val_old, val_new)
+        setattr(self, key, val_new)
+
+    # Don't update relationships
+    # Force the user to update via the governing id columns
+    # Aka parent_id = new_parent.id not parent = new_parent
+
+    # Update properties
+    for key in list(set(properties) - set(columns) - set(relationships)):
+      if key[0] == "_":
+        # Private properties are always readonly
+        continue
+      if (key not in data) or (not force and key in attr_readonly):
+        continue
+      if getattr(self.__class__, key).fset is None:
+        # No setter, skip
+        continue
+      val_old = getattr(self, key)
+      val_new = data[key]
+      if val_old != val_new:
+        changes[key] = (val_old, val_new)
+        setattr(self, key, val_new)
+
+    return changes
