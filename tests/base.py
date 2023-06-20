@@ -10,7 +10,7 @@ import uuid
 
 import autodict
 import numpy as np
-from sqlalchemy import orm
+from sqlalchemy import orm, pool
 
 from nummus import sql
 
@@ -74,6 +74,9 @@ class TestBase(unittest.TestCase):
     # Remove sleeping by default, mainly in read hardware interaction
     self._original_sleep = time.sleep
     time.sleep = lambda *args: None
+
+    # Change all engines to NullPool so timing isn't an issue
+    sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # pylint: disable=protected-access
 
   def tearDown(self):
     sql.drop_session()

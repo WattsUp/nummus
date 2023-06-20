@@ -56,10 +56,11 @@ class TestSQL(base.TestBase):
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     s = sql.get_session(path, config)
     self.assertIsNotNone(s)
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     s2 = sql.get_session(path, config)
-    self.assertEqual(s, s2)
+    self.assertNotEqual(s, s2)  # Different sessions
+    self.assertEqual(s.get_bind(), s2.get_bind())  # But same engine
 
     self.assertIn("child", ORMBase.metadata.tables)
     ORMBase.metadata.create_all(s.get_bind())
@@ -71,13 +72,13 @@ class TestSQL(base.TestBase):
 
     s = None
     s2 = None
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     sql.drop_session(path)
-    self.assertEqual(len(sql._SESSIONS), 0)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
     # Able to call drop after it has been dropped
     sql.drop_session(path)
-    self.assertEqual(len(sql._SESSIONS), 0)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
 
     with open(path, "rb") as file:
       data = file.read()
@@ -90,17 +91,17 @@ class TestSQL(base.TestBase):
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     s = sql.get_session(path, config)
     self.assertIsNotNone(s)
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     self.assertIn("child", ORMBase.metadata.tables)
     ORMBase.metadata.create_all(s.get_bind())
     s.commit()
 
     s = None
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     sql.drop_session()
-    self.assertEqual(len(sql._SESSIONS), 0)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
 
     with open(path, "rb") as file:
       data = file.read()
@@ -124,17 +125,17 @@ class TestSQL(base.TestBase):
 
     s = sql.get_session(path, config, enc)
     self.assertIsNotNone(s)
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     self.assertIn("child", ORMBase.metadata.tables)
     ORMBase.metadata.create_all(s.get_bind())
     s.commit()
 
     s = None
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     sql.drop_session(path)
-    self.assertEqual(len(sql._SESSIONS), 0)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
 
     with open(path, "rb") as file:
       data = file.read()
@@ -147,17 +148,17 @@ class TestSQL(base.TestBase):
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     s = sql.get_session(path, config, enc)
     self.assertIsNotNone(s)
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     self.assertIn("child", ORMBase.metadata.tables)
     ORMBase.metadata.create_all(s.get_bind())
     s.commit()
 
     s = None
-    self.assertEqual(len(sql._SESSIONS), 1)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
 
     sql.drop_session(path)
-    self.assertEqual(len(sql._SESSIONS), 0)  # pylint: disable=protected-access
+    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
 
     with open(path, "rb") as file:
       data = file.read()
