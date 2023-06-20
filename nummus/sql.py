@@ -11,7 +11,7 @@ import hashlib
 import sqlite3
 import sqlalchemy
 import sqlalchemy.event
-from sqlalchemy import pool, orm
+from sqlalchemy import orm
 
 try:
   # TODO (WattsUp) figure out Windows sqlcipher installation
@@ -21,7 +21,10 @@ except ImportError:
   # Helpful information printed in nummus.portfolio
   Encryption = None
 
-_SESSIONS: Dict[str, orm.Session] = {}
+# Cache engines so recomputing db_key is avoided
+_ENGINES: Dict[str, sqlalchemy.engine.Engine] = {}
+
+_ENGINE_ARGS: Dict[str, object] = {}
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
@@ -51,10 +54,10 @@ def get_session(path: str,
   """
   if path is None:
     raise ValueError("Path must not be None")
-  if path not in _SESSIONS:
-    _SESSIONS[path] = orm.Session(bind=_get_engine(path, config, enc))
+  if path not in _ENGINES:
+    _ENGINES[path] = _get_engine(path, config, enc)
 
-  return _SESSIONS[path]
+  return orm.Session(bind=_ENGINES[path])
 
 
 def drop_session(path: str = None) -> None:
@@ -64,14 +67,10 @@ def drop_session(path: str = None) -> None:
     path: Path to database file, None will drop all sessions
   """
   if path is None:
-    for p in _SESSIONS.values():
-      p.close()
-    _SESSIONS.clear()
-    orm.close_all_sessions()  # Close any danglers
+    orm.close_all_sessions()  # Close any sessions
+    _ENGINES.clear()
   else:
-    if path in _SESSIONS:
-      _SESSIONS[path].close()
-      _SESSIONS.pop(path)
+    _ENGINES.pop(path, None)
 
 
 def _get_engine(path: str,
@@ -99,7 +98,7 @@ def _get_engine(path: str,
     db_path = f"sqlite+pysqlcipher://:{db_key}@{sep}{path}"
     engine = sqlalchemy.create_engine(db_path,
                                       module=sqlcipher3,
-                                      poolclass=pool.NullPool)
+                                      **_ENGINE_ARGS)
   else:
     if sys.platform == "win32":
       db_path = f"sqlite:///{path}"
@@ -108,5 +107,5 @@ def _get_engine(path: str,
         db_path = f"sqlite:////{path}"
       else:
         db_path = f"sqlite:///{path}"
-    engine = sqlalchemy.create_engine(db_path, poolclass=pool.NullPool)
+    engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
   return engine
