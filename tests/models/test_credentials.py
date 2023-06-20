@@ -1,8 +1,6 @@
 """Test module nummus.models.credentials
 """
 
-import datetime
-
 from nummus import models
 from nummus.models import credentials
 
