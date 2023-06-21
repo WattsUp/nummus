@@ -1,6 +1,8 @@
 """Test module nummus.encryption
 """
 
+import base64
+
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
 except ImportError:
@@ -27,6 +29,7 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
 
@@ -39,10 +42,28 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
 
     bad_key = key + self.random_string().encode()
     enc_bad = encryption.Encryption(bad_key)
 
+    try:
+      secret_bad = enc_bad.decrypt(encrypted)
+      # Sometimes decrypting is valid but yields wrong secret
+      self.assertNotEqual(secret, secret_bad)
+    except ValueError:
+      pass  # Expected mismatch of padding
+
+    # Fixed test case for mismatch padding
+    key = b"Strong password"
+    secret = b"I only give my dog 40 belly rubs when I get home instead of 50"
+    enc = encryption.Encryption(key)
+    encrypted = enc.encrypt(secret)
+    self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
+
+    bad_key = b"N0t @ strong pa$sword (lol actually has more entropy)"
+    enc_bad = encryption.Encryption(bad_key)
     self.assertRaises(ValueError, enc_bad.decrypt, encrypted)
 
   def test_salt(self):
@@ -55,6 +76,7 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     enc.set_salt(salt)
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
@@ -63,6 +85,7 @@ class TestEncryption(base.TestBase):
     enc.set_salt(salt)
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     enc.set_salt(salt)
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
