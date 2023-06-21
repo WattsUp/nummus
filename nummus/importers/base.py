@@ -11,6 +11,24 @@ class TransactionImporter(ABC):
   """Importer that imports transactions
   """
 
+  def __init__(self, path: str = None, buf: bytes = None) -> None:
+    """Initialize Transaction Importer
+    
+    Args:
+      Provide one or the other
+      path: Path to file
+      buf: Contents of file
+    """
+    super().__init__()
+
+    if buf is not None:
+      self._buf = buf
+    elif path is not None:
+      with open(path, "rb") as file:
+        self._buf = file.read()
+    else:
+      raise ValueError("Must provide path or buffer")
+
   @classmethod
   @abstractmethod
   def is_importable(cls, name: str, buf: bytes) -> bool:

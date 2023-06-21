@@ -33,24 +33,6 @@ class CSVTransactionImporter(base.TransactionImporter):
       "asset_quantity": (False, common.parse_financial)
   }
 
-  def __init__(self, path: str = None, buf: bytes = None) -> None:
-    """Initialize CSV Transaction Importer
-    
-    Args:
-      Provide one or the other
-      path: Path to CSV
-      buf: Contents of CSV file
-    """
-    super().__init__()
-
-    if buf is not None:
-      self._buf = buf.decode()
-    elif path is not None:
-      with open(path, "r", encoding="utf-8") as file:
-        self._buf = file.read()
-    else:
-      raise ValueError("Must provide path or buffer")
-
   @classmethod
   def is_importable(cls, name: str, buf: bytes) -> bool:
     if not name.endswith(".csv"):
@@ -66,7 +48,7 @@ class CSVTransactionImporter(base.TransactionImporter):
     return True
 
   def run(self) -> List[Dict[str, Union[str, float, datetime.date, object]]]:
-    first_line, remaining = self._buf.split("\n", 1)
+    first_line, remaining = self._buf.decode().split("\n", 1)
     first_line = first_line.lower().replace(" ", "_")
     reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))
     transactions: List[Dict[str, Union[str, float, datetime.date, object]]] = []

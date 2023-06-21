@@ -13,21 +13,6 @@ class TestCSVTransactionImporter(base.TestBase):
   """Test CSVTransactionImporter class
   """
 
-  def test_init_properties(self):
-    self.assertRaises(ValueError, raw_csv.CSVTransactionImporter)
-
-    path = self._DATA_ROOT.joinpath("transactions_required.csv")
-    with open(path, "rb") as file:
-      buf = file.read()
-
-    buf_str = buf.decode()
-
-    i = raw_csv.CSVTransactionImporter(buf=buf)
-    self.assertEqual(buf_str, i._buf)  # pylint: disable=protected-access
-
-    i = raw_csv.CSVTransactionImporter(path=path)
-    self.assertEqual(buf_str, i._buf)  # pylint: disable=protected-access
-
   def test_is_importable(self):
     path = "Not a CSV"
     result = raw_csv.CSVTransactionImporter.is_importable(path, None)

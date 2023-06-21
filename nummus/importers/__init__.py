@@ -1,7 +1,29 @@
 """Financial source importers
 """
 
+import pathlib
+
+from nummus.importers.base import TransactionImporter
 from nummus.importers.raw_csv import CSVTransactionImporter
 
-# TODO (WattsUp) get_importer(file) -> Importer class
-# Iterate through all and choose based on is_importable()
+
+def get_importer(path: str) -> TransactionImporter:
+  """Get the best importer for a file
+
+  Args:
+    path: Path to file
+
+  Returns:
+    Initialized Importer
+  """
+  p = pathlib.Path(path)
+
+  with open(p, "rb") as file:
+    buf = file.read()
+
+  available = [CSVTransactionImporter]
+
+  for i in available:
+    if i.is_importable(p.name, buf):
+      return i(buf=buf)
+  return None
