@@ -1,0 +1,5 @@
+Account,Date,Total,Payee,Description
+Monkey Bank,2023-01-01,"$1,000.00",Employer,Paycheck
+Monkey Bank,2023-01-02,-12.34,Monkey Store,Banana
+Monkey Bank,2023-01-02,-900,Monkey Investments,Account Transfer
+Monkey Investments,2023-01-02,900,Monkey Investments,Account Transfer

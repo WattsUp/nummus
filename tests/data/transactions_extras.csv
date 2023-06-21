@@ -1,0 +1,6 @@
+Account,Date,Total,Payee,Description,Asset,ASSET_QUANTITY,Tag,Sales Tax,Category,Subcategory
+Monkey Bank,2023-01-01,"$1,000.00",Employer,Paycheck,,,,,Income,Paychecks
+Monkey Bank,2023-01-02,-12.34,Monkey Store,Banana,,,Fruit,-1.23,Food,Groceries
+Monkey Bank,2023-01-02,-900,Monkey Investments,Account Transfer,,,,,Transfer
+Monkey Investments,2023-01-02,900,Monkey Investments,Account Transfer,,,,,Transfer
+Monkey Investments,2023-01-03,-900,Monkey Investments,Security Exchange,BANANA,32.1234,,,Instrument
