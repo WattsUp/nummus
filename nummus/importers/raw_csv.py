@@ -57,10 +57,13 @@ class CSVTransactionImporter(base.TransactionImporter):
       return False
 
     # Check if the columns start with the expected ones
-    first_line = buf.split(b"\n", 1)[0].decode().lower()
+    first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")
     header = list(csv.reader(io.StringIO(first_line)))[0]
-    required_columns = [k for k, v in cls._COLUMNS.items() if v[0]]
-    return required_columns == header[:len(required_columns)]
+    for k, item in cls._COLUMNS.items():
+      required, _ = item
+      if required and k not in header:
+        return False
+    return True
 
   def run(self) -> List[Dict[str, Union[str, float, datetime.date, object]]]:
     first_line, remaining = self._buf.split("\n", 1)
