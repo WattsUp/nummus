@@ -1,6 +1,7 @@
 """Asset model for storing an individual item with dynamic worth
 """
 
+from __future__ import annotations
 from typing import List, Optional
 
 import datetime
@@ -40,6 +41,34 @@ class AssetCategory(enum.Enum):
   REAL_ESTATE = 3
   VEHICLE = 4
   ITEM = 5
+
+  @classmethod
+  def parse(cls, s: str) -> AssetCategory:
+    """Parse a string and return matching enum
+
+    Args:
+      s: String to parse
+
+    Returns:
+      AssetCategory enumeration that matches
+    """
+    if isinstance(s, AssetCategory):
+      return s
+    if isinstance(s, int):
+      return AssetCategory(s)
+    if s in ["", None]:
+      return None
+    s = s.upper().strip()
+    if s in AssetCategory._member_names_:
+      return AssetCategory[s]
+
+    # s = s.lower()
+    # # LUT of common strings to the matching enum
+    # enum_map: Dict[str, AssetCategory] = {}
+    # if s in enum_map:
+    #   return enum_map[s]
+
+    raise ValueError(f"String not found in {cls.__name__}: {s}")
 
 
 class Asset(base.Base):

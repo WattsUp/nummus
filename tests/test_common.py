@@ -163,3 +163,29 @@ class TestCommon(base.TestBase):
 
     finally:
       mock.builtins.input = original_input
+
+  def test_parse_financial(self):
+    result = common.parse_financial(None)
+    self.assertIsNone(result)
+
+    result = common.parse_financial("")
+    self.assertIsNone(result)
+
+    result = common.parse_financial("Not a number")
+    self.assertIsNone(result)
+
+    s = "1000.1"
+    result = common.parse_financial(s)
+    self.assertEqualWithinError(result, 1000.1, 1e-6)
+
+    s = "1,000.1"
+    result = common.parse_financial(s)
+    self.assertEqualWithinError(result, 1000.1, 1e-6)
+
+    s = "$1000.1"
+    result = common.parse_financial(s)
+    self.assertEqualWithinError(result, 1000.1, 1e-6)
+
+    s = "-$1,000.1"
+    result = common.parse_financial(s)
+    self.assertEqualWithinError(result, -1000.1, 1e-6)
