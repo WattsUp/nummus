@@ -5,7 +5,8 @@
     "ondelete",
     "poolclass",
     "pycryptodome",
-    "uselist"
+    "uselist",
+    "Woot"
   ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,

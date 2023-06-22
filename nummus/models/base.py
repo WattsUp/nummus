@@ -1,6 +1,7 @@
 """Base ORM model
 """
 
+from __future__ import annotations
 from typing import Dict, List, Union, Tuple
 
 import json
@@ -219,3 +220,25 @@ class Base(orm.DeclarativeBase):
         setattr(self, key, val_new)
 
     return changes
+
+  def __eq__(self, other: Base) -> bool:
+    """Test equality by ID
+
+    Args:
+      other: Other object to test
+
+    Returns:
+      True if IDs match
+    """
+    return self.id == other.id
+
+  def __ne__(self, other: Base) -> bool:
+    """Test inequality by ID
+
+    Args:
+      other: Other object to test
+
+    Returns:
+      True if IDs do not match
+    """
+    return self.id != other.id

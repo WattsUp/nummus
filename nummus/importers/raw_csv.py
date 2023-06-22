@@ -62,5 +62,6 @@ class CSVTransactionImporter(base.TransactionImporter):
             raise KeyError(f"CSV is missing column: {key}")
         else:
           t[key] = cleaner(value)
+      t["statement"] = t["description"]
       transactions.append(t)
     return transactions

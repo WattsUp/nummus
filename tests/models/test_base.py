@@ -363,3 +363,26 @@ class TestBase(test_base.TestBase):
     session.commit()
     self.assertEqual(id_bytes_old, parent_b.id_bytes)
     self.assertDictEqual({}, changes)
+
+  def test_comparators(self):
+    session = self._get_session()
+    base.Base.metadata.create_all(
+        session.get_bind(),
+        tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
+    session.commit()
+
+    parent_a = Parent()
+    parent_b = Parent()
+    session.add_all([parent_a, parent_b])
+    session.commit()
+
+    self.assertEqual(parent_a, parent_a)
+    self.assertNotEqual(parent_a, parent_b)
+
+    # Make a new session to same DB
+    with orm.create_session(bind=session.get_bind()) as session_2:
+      # Get same parent_a but in a different Python object
+      parent_a_queried = session_2.query(Parent).where(
+          Parent.id == parent_a.id).first()
+      self.assertNotEqual(id(parent_a), id(parent_a_queried))
+      self.assertEqual(parent_a, parent_a_queried)

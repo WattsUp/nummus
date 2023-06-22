@@ -2,13 +2,15 @@
 """
 
 from __future__ import annotations
+from typing import Dict, List
 
 import pathlib
 
 import autodict
 from sqlalchemy import orm
 
-from nummus import common, models, sql, version
+from nummus import common, importers, models, sql, version
+from nummus.models import Account, Asset, Credentials, Transaction
 
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
@@ -103,9 +105,9 @@ class Portfolio:
     with sql.get_session(path_db, config, enc) as session:
       models.metadata_create_all(session)
 
-      nummus_user = models.Credentials(site=Portfolio._NUMMUS_SITE,
-                                       user=Portfolio._NUMMUS_USER,
-                                       password=password)
+      nummus_user = Credentials(site=Portfolio._NUMMUS_SITE,
+                                user=Portfolio._NUMMUS_USER,
+                                password=password)
       session.add(nummus_user)
       session.commit()
 
@@ -124,9 +126,9 @@ class Portfolio:
     sql.drop_session(self._path_db)
     try:
       with self.get_session() as s:
-        user: models.Credentials = s.query(models.Credentials).filter(
-            models.Credentials.site == self._NUMMUS_SITE,
-            models.Credentials.user == self._NUMMUS_USER).first()
+        user: Credentials = s.query(Credentials).filter(
+            Credentials.site == self._NUMMUS_SITE,
+            Credentials.user == self._NUMMUS_USER).first()
     except models.exc.DatabaseError as e:
       raise TypeError(f"Failed to open database {self._path_db}") from e
 
@@ -154,3 +156,96 @@ class Portfolio:
       Open Session
     """
     return sql.get_session(self._path_db, self._config, self._enc)
+
+  def import_file(self, path: str) -> None:
+    """Import a file into the Portfolio
+
+    Args:
+      path: Path to file to import
+
+    Raises:
+      KeyError if account or asset cannot be resolved
+    """
+    i = importers.get_importer(path)
+
+    # Cache a mapping from account/asset name to the ID
+    account_mapping: Dict[str, str] = {}
+    asset_mapping: Dict[str, str] = {}
+    transactions: List[Transaction] = []
+    for d in i.run():
+      account = d.pop("account")
+      account_id = account_mapping.get(account)
+      if account_id is None:
+        account_id = self._find_account(account)
+        if account_id is None:
+          raise KeyError(f"Could not find Account by '{account}'")
+        account_mapping[account] = account_id
+      d["account_id"] = account_id
+
+      asset = d.pop("asset", None)
+      if asset is not None:
+        # Find its ID
+        asset_id = asset_mapping.get(asset)
+        if asset_id is None:
+          asset_id = self._find_asset(asset)
+          if asset_id is None:
+            raise KeyError(f"Could not find Asset by '{asset}'")
+          asset_mapping[asset] = asset_id
+        d["asset_id"] = asset_id
+
+      transactions.append(Transaction(**d))
+
+    # All good, add transactions and commit
+    with self.get_session() as session:
+      session.add_all(transactions)
+      session.commit()
+
+  def _find_account(self, account: str) -> str:
+    """Find a matching Account by name or ID or institution
+
+    Args:
+      account: Search query
+    
+    Returns:
+      Account ID or None if no matches found
+    """
+    with self.get_session() as session:
+      # See if account is an ID first...
+      matches = session.query(Account).where(Account.id == account).all()
+      if len(matches) == 1:
+        # Woot
+        return matches[0].id
+      # Maybe a name next
+      matches = session.query(Account).where(Account.name == account).all()
+      if len(matches) == 1:
+        # Woot
+        return matches[0].id
+      # Last chance, institution
+      matches = session.query(Account).where(
+          Account.institution == account).all()
+      if len(matches) == 1:
+        # Woot
+        return matches[0].id
+    return None
+
+  def _find_asset(self, asset: str) -> str:
+    """Find a matching Asset by name or ID
+
+    Args:
+      asset: Search query
+    
+    Returns:
+      Asset ID or None if no matches found
+    """
+    with self.get_session() as session:
+      # See if asset is an ID first...
+      matches = session.query(Asset).where(Asset.id == asset).all()
+      if len(matches) == 1:
+        # Woot
+        return matches[0].id
+      # Maybe a name next
+      matches = session.query(Asset).where(Asset.name == asset).all()
+      if len(matches) == 1:
+        # Woot
+        return matches[0].id
+    return None
