@@ -20,6 +20,8 @@ class RC(enum.Enum):
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
+_REGEX_FINANCIAL_CLEAN = re.compile(r"[^0-9\-\.]")
+
 
 def camel_to_snake(s: str) -> str:
   """Transform CamelCase to snake_case
@@ -101,3 +103,20 @@ def confirm(prompt: str = None, default=False) -> bool:
     print()
     print("Please enter y or n.")
     print()
+
+
+def parse_financial(s: str) -> float:
+  """Parse a string number written in financial notation
+
+  Args:
+    s: String to parse
+
+  Returns:
+    String as number
+  """
+  if s is None:
+    return None
+  s = _REGEX_FINANCIAL_CLEAN.sub("", s)
+  if s == "":
+    return None
+  return float(s)

@@ -1,6 +1,8 @@
 """Test module nummus.encryption
 """
 
+import base64
+
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
 except ImportError:
@@ -27,6 +29,7 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
 
@@ -39,11 +42,17 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
 
     bad_key = key + self.random_string().encode()
     enc_bad = encryption.Encryption(bad_key)
 
-    self.assertRaises(ValueError, enc_bad.decrypt, encrypted)
+    try:
+      secret_bad = enc_bad.decrypt(encrypted)
+      # Sometimes decrypting is valid but yields wrong secret
+      self.assertNotEqual(secret, secret_bad)
+    except ValueError:
+      pass  # Expected mismatch of padding
 
   def test_salt(self):
     key = self.random_string().encode()
@@ -55,6 +64,7 @@ class TestEncryption(base.TestBase):
 
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     enc.set_salt(salt)
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
@@ -63,6 +73,7 @@ class TestEncryption(base.TestBase):
     enc.set_salt(salt)
     encrypted = enc.encrypt(secret)
     self.assertNotEqual(secret, encrypted)
+    self.assertNotEqual(secret, base64.b64decode(encrypted))
     enc.set_salt(salt)
     decrypted = enc.decrypt(encrypted)
     self.assertEqual(secret, decrypted)
