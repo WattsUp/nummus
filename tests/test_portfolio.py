@@ -45,8 +45,8 @@ class TestPortfolio(TestBase):
 
     # Create unencrypted portfolio
     portfolio.Portfolio.create(path_db)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -78,8 +78,8 @@ class TestPortfolio(TestBase):
     path_config.unlink()
 
     portfolio.Portfolio.create(path_db)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     sql.drop_session()
 
     # Delete root
@@ -105,8 +105,8 @@ class TestPortfolio(TestBase):
 
     # Create unencrypted portfolio
     portfolio.Portfolio.create(path_db, key)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -141,8 +141,8 @@ class TestPortfolio(TestBase):
     path_db.unlink()
     path_config.unlink()
     portfolio.Portfolio.create(path_db, key)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     sql.drop_session()
 
     # Change root password to unencrypted

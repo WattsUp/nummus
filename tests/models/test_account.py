@@ -44,7 +44,7 @@ class TestTransaction(TestBase):
     self.assertEqual(d["date"], t.date)
     self.assertEqual(d["total"], t.total)
     self.assertEqual(d["statement"], t.statement)
-    self.assertFalse(t.locked)
+    self.assertFalse(t.locked, "Transaction is unexpectedly locked")
 
     d["sales_tax"] = self._RNG.uniform(-1, 0)
     d["payee"] = self.random_string()
