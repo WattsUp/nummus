@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, List
 
 import pathlib
+import shutil
 
 import autodict
 from sqlalchemy import orm
@@ -133,6 +134,7 @@ class Portfolio:
                                 password=password)
       session.add(nummus_user)
       session.commit()
+    path_db.chmod(0o600)  # Only owner can read/write
 
     return Portfolio(path_db, key)
 
@@ -272,3 +274,38 @@ class Portfolio:
         # Woot
         return matches[0].id
     return None
+
+  def backup(self) -> None:
+    """Back up database, duplicates files
+    """
+    backup_db = self._path_db.with_suffix(".backup.db")
+    backup_config = self._path_config.with_suffix(".backup.config")
+
+    shutil.copyfile(self._path_db, backup_db)
+    shutil.copyfile(self._path_config, backup_config)
+
+    backup_db.chmod(0o600)  # Only owner can read/write
+    backup_config.chmod(0o600)  # Only owner can read/write
+
+  def restore(self) -> None:
+    """Restore database from backup
+    """
+    backup_db = self._path_db.with_suffix(".backup.db")
+    backup_config = self._path_config.with_suffix(".backup.config")
+
+    if not backup_db.exists():
+      raise FileNotFoundError(f"Backup database {backup_db} does not exist")
+    if not backup_config.exists():
+      raise FileNotFoundError(f"Backup config {backup_config} does not exist")
+
+    # Drop any dangling sessions
+    sql.drop_session(self._path_db)
+
+    shutil.copyfile(backup_db, self._path_db)
+    shutil.copyfile(backup_config, self._path_config)
+
+    backup_db.chmod(0o600)  # Only owner can read/write
+    backup_config.chmod(0o600)  # Only owner can read/write
+
+    # Update config
+    self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)

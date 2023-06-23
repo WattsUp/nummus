@@ -47,6 +47,7 @@ class TestPortfolio(TestBase):
     portfolio.Portfolio.create(path_db)
     self.assertTrue(path_db.exists(), "Portfolio does not exist")
     self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -109,6 +110,7 @@ class TestPortfolio(TestBase):
     portfolio.Portfolio.create(path_db, key)
     self.assertTrue(path_db.exists(), "Portfolio does not exist")
     self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -326,3 +328,90 @@ class TestPortfolio(TestBase):
 
           r_v = getattr(r, k)
           self.assertEqual(t_v, r_v)
+
+  def test_backup_restore(self):
+    path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+    path_config = path_db.with_suffix(".config")
+    p = portfolio.Portfolio.create(path_db)
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+    # Create Account
+    with p.get_session() as s:
+      a = Account(name="Monkey Bank Checking",
+                  institution="Monkey Bank",
+                  category=AccountCategory.CASH)
+      s.add(a)
+      s.commit()
+
+      accounts = s.query(Account).all()
+      self.assertEqual(1, len(accounts))
+
+    p.backup()
+
+    path_db_backup = path_db.with_suffix(".backup.db")
+    path_config_backup = path_config.with_suffix(".backup.config")
+
+    self.assertTrue(path_db_backup.exists(), "Backup portfolio does not exist")
+    self.assertTrue(path_config_backup.exists(), "Backup config does not exist")
+    self.assertEqual(path_db_backup.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config_backup.stat().st_mode & 0o777, 0o600)
+
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    with open(path_config_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_config, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    # Accidentally add a new Account
+    with p.get_session() as s:
+      a = Account(name="Monkey Bank Checking Duplicate",
+                  institution="Monkey Bank",
+                  category=AccountCategory.CASH)
+      s.add(a)
+      s.commit()
+
+      accounts = s.query(Account).all()
+      self.assertEqual(2, len(accounts))
+
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertNotEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    p.restore()
+
+    # Files should match again
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    # Only the original account present
+    with p.get_session() as s:
+      accounts = s.query(Account).all()
+      self.assertEqual(1, len(accounts))
+
+    # Can't restore if backup config is missing
+    path_config_backup.unlink()
+    self.assertRaises(FileNotFoundError, p.restore)
+
+    # Can't restore if backup database is missing
+    path_db_backup.unlink()
+    self.assertRaises(FileNotFoundError, p.restore)
