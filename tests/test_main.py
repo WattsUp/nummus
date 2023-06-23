@@ -123,12 +123,35 @@ class TestMain(TestBase):
     finally:
       self._tear_down_commands()
 
+  def test_unlock(self):
+    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+
+    # Try unlocking non-existent Portfolio
+    args = ["--portfolio", path, "unlock"]
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      rc = main(args)
+    self.assertNotEqual(rc, 0)
+
+    commands.create(path, None, False, True)
+
+    args = ["--portfolio", path, "unlock"]
+    with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+      rc = main(args)
+    self.assertEqual(rc, 0)
+
+    fake_stdout = fake_stdout.getvalue()
+    self.assertIn("Portfolio is unlocked", fake_stdout)
+
   def test_web(self):
-    self.assertRaises(NotImplementedError, main, [])
+    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+    commands.create(path, None, False, True)
+
+    args = ["--portfolio", path]
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      self.assertRaises(NotImplementedError, main, args)
     self.skipTest("Not implemented")
 
     home = pathlib.Path(os.path.expanduser("~"))
-    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
     path_password = str(self._TEST_ROOT.joinpath(".password"))
     try:
       self._set_up_commands()

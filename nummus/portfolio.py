@@ -59,6 +59,29 @@ class Portfolio:
     self._unlock()
 
   @staticmethod
+  def is_encrypted(path: str) -> bool:
+    """Check Portfolio's config for encryption status
+
+    Args:
+      path: Path to database file
+
+    Returns:
+      True if Portfolio is encrypted
+
+    Raises:
+      FileNotFound if database or configuration does not exist
+    """
+    path_db = pathlib.Path(path)
+    if not path_db.exists():
+      raise FileNotFoundError(f"Database does not exist at {path_db}")
+    path_config = path_db.with_suffix(".config")
+    if not path_config.exists():
+      raise FileNotFoundError("Portfolio configuration does not exist, "
+                              f"for {path_db}")
+    with autodict.JSONAutoDict(path_config, save_on_exit=False) as config:
+      return config["encrypt"]
+
+  @staticmethod
   def create(path: str, key: str = None) -> Portfolio:
     """Create a new Portfolio
 
@@ -205,7 +228,7 @@ class Portfolio:
 
     Args:
       account: Search query
-    
+
     Returns:
       Account ID or None if no matches found
     """
@@ -233,7 +256,7 @@ class Portfolio:
 
     Args:
       asset: Search query
-    
+
     Returns:
       Asset ID or None if no matches found
     """

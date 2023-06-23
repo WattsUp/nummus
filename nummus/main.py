@@ -62,6 +62,10 @@ calculates net worth, and predicts future performance."""
                           action="store_true",
                           help="Do not encrypt portfolio")
 
+  _ = subparsers.add_parser("unlock",
+                            help="test unlocking portfolio",
+                            description="Test unlocking portfolio")
+
   # sub_web = subparsers.add_parser("web",
   #                                 help="start gleMon web",
   #                                 description="Default interface to gleMon")
@@ -88,20 +92,22 @@ calculates net worth, and predicts future performance."""
     force: bool = args.force
     no_encrypt: bool = args.no_encrypt
     return commands.create(path=path_db,
+                           pass_file=path_password,
                            force=force,
-                           no_encrypt=no_encrypt,
-                           pass_file=path_password)
+                           no_encrypt=no_encrypt)
 
-  # try:
-  #   p = portfolio.Portfolio(path_db, None)
-  # except TypeError:
-  #   print(f"{Fore.MAGENTA}Portfolio is encrypted")
+  p = commands.unlock(path=path_db, pass_file=path_password)
+  if p is None:
+    return 1
 
   if cmd == "web" or cmd is None:
     # if not args.no_web:
     #   w = web.Server(p)
     #   rc = w.run(host=args.host, port=args.port)
     raise NotImplementedError
+  elif cmd == "unlock":
+    # Already unlocked
+    return 0
   else:
     raise ValueError(f"Unknown command '{cmd}'")  # pragma: no cover
 

@@ -56,6 +56,8 @@ class TestPortfolio(TestBase):
       target = b"SQLite format 3"
       self.assertEqual(target, buf[:len(target)])
       buf = None  # Clear local buffer
+    self.assertFalse(portfolio.Portfolio.is_encrypted(path_db),
+                     "Database is unexpectedly encrypted")
 
     # Database already exists
     self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -116,6 +118,8 @@ class TestPortfolio(TestBase):
       target = b"SQLite format 3"
       self.assertNotEqual(target, buf[:len(target)])
       buf = None  # Clear local buffer
+    self.assertTrue(portfolio.Portfolio.is_encrypted(path_db),
+                    "Database is unexpectedly unencrypted")
 
     # Database already exists
     self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -157,6 +161,34 @@ class TestPortfolio(TestBase):
 
     # Invalid unencrypted password
     self.assertRaises(PermissionError, portfolio.Portfolio, path_db, key)
+
+  def test_is_encrypted(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    path_config = path_db.with_suffix(".config")
+
+    self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted,
+                      path_db)
+
+    with open(path_db, "w", encoding="utf-8") as file:
+      file.write("I'm a database")
+
+    # Still missing config
+    self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted,
+                      path_db)
+
+    with autodict.JSONAutoDict(path_config) as c:
+      c["encrypt"] = True
+
+    self.assertTrue(portfolio.Portfolio.is_encrypted(path_db),
+                    "Database is unexpectedly unencrypted")
+
+    with autodict.JSONAutoDict(path_config) as c:
+      c["encrypt"] = False
+
+    self.assertFalse(portfolio.Portfolio.is_encrypted(path_db),
+                     "Database is unexpectedly encrypted")
+
+    path_db.unlink()
 
   def test_find_account(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")

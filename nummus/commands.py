@@ -11,14 +11,14 @@ from nummus import common, portfolio
 colorama.init(autoreset=True)
 
 
-def create(path: str, force: bool, no_encrypt: bool, pass_file: str) -> int:
+def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
   """Create a new Portfolio
 
   Args:
     path: Path to Portfolio DB to create
+    pass_file: Path to password file, None will prompt when necessary
     force: True will overwrite existing if necessary
     no_encrypt: True will not encrypt the Portfolio
-    pass_file: Path to password file, None will prompt when necessary
 
   Returns:
     0 on success
@@ -45,7 +45,7 @@ def create(path: str, force: bool, no_encrypt: bool, pass_file: str) -> int:
 
     # Prompt user
     while key is None:
-      key = common.get_input("Please enter password:", secure=True)
+      key = common.get_input("Please enter password: ", secure=True)
       if key is None:
         return 1
 
@@ -54,7 +54,7 @@ def create(path: str, force: bool, no_encrypt: bool, pass_file: str) -> int:
         key = None
         continue
 
-      repeat = common.get_input("Please confirm password:", secure=True)
+      repeat = common.get_input("Please confirm password: ", secure=True)
       if repeat is None:
         return 1
 
@@ -65,3 +65,58 @@ def create(path: str, force: bool, no_encrypt: bool, pass_file: str) -> int:
   portfolio.Portfolio.create(path_db, key)
 
   return 0
+
+
+def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
+  """Unlock an existing Portfolio
+
+  Args:
+    path: Path to Portfolio DB to create
+    pass_file: Path to password file, None will prompt when necessary
+
+  Returns:
+    Unlocked Portfolio or None if unlocking failed
+  """
+  path_db = pathlib.Path(path)
+  if not path_db.exists():
+    print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
+    return None
+
+  if not portfolio.Portfolio.is_encrypted(path_db):
+    p = portfolio.Portfolio(path_db, None)
+    print(f"{Fore.GREEN}Portfolio is unlocked")
+    return p
+
+  key: str = None
+
+  if pass_file is not None:
+    path_password = pathlib.Path(pass_file)
+    if path_password.exists():
+      with open(pass_file, "r", encoding="utf-8") as file:
+        key = file.read().strip()
+
+  if key is not None:
+    # Try once with password file
+    try:
+      p = portfolio.Portfolio(path_db, key)
+      print(f"{Fore.GREEN}Portfolio is unlocked")
+      return p
+    except TypeError:
+      print(f"{Fore.RED}Could not decrypt with password file")
+      return None
+
+  # 3 attempts
+  for _ in range(3):
+    key = common.get_input("Please enter password: ", secure=True)
+    if key is None:
+      return None
+    try:
+      p = portfolio.Portfolio(path_db, key)
+      print(f"{Fore.GREEN}Portfolio is unlocked")
+      return p
+    except TypeError:
+      print(f"{Fore.RED}Incorrect password")
+      # Try again
+
+  print(f"{Fore.RED}Too many incorrect attempts")
+  return None
