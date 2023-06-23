@@ -14,7 +14,7 @@ module_name = "nummus"
 with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
 
-required = ["sqlalchemy>=2", "AutoDict"]
+required = ["sqlalchemy>=2", "AutoDict", "connexion", "gevent", "colorama"]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
     "test": ["coverage", "pylint", "numpy"],
@@ -53,4 +53,4 @@ setuptools.setup(
     python_requires=">=3.8",
     # include_package_data=True, # Leave out cause wacky
     zip_safe=False,
-    entry_points={"console_scripts": []})
+    entry_points={"console_scripts": ["nummus=nummus:main"]})
