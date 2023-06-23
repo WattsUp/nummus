@@ -9,11 +9,11 @@ from nummus import portfolio, sql
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Credentials, Transaction)
 
-from tests import base
+from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 
 
-class TestPortfolio(base.TestBase):
+class TestPortfolio(TestBase):
   """Test Portfolio class
   """
 

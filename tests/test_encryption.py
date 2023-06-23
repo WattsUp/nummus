@@ -9,10 +9,10 @@ except ImportError:
   # Helpful information printed in nummus.portfolio
   encryption = None
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestEncryption(base.TestBase):
+class TestEncryption(TestBase):
   """Test Encryption
   """
 

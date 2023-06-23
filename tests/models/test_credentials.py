@@ -4,10 +4,10 @@
 from nummus import models
 from nummus.models import credentials
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestCredentials(base.TestBase):
+class TestCredentials(TestBase):
   """Test AnnualBudget class
   """
 

@@ -12,7 +12,7 @@ from sqlalchemy import orm
 from nummus import models
 from nummus.models import base
 
-from tests import base as test_base
+from tests.base import TestBase
 
 
 class Parent(base.Base):
@@ -104,7 +104,7 @@ class Child(base.Base):
     self._age = age
 
 
-class TestBase(test_base.TestBase):
+class TestBase(TestBase):
   """Test ORM Base
   """
 

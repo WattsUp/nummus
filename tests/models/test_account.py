@@ -6,10 +6,10 @@ import datetime
 from nummus import models
 from nummus.models import account, asset
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestTransaction(base.TestBase):
+class TestTransaction(TestBase):
   """Test Transaction class
   """
 
@@ -85,7 +85,7 @@ class TestTransaction(base.TestBase):
     self.assertRaises(ValueError, account.TransactionCategory.parse, "FAKE")
 
 
-class TestAccount(base.TestBase):
+class TestAccount(TestBase):
   """Test Account class
   """
 

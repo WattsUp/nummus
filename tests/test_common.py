@@ -6,10 +6,10 @@ from unittest import mock
 
 from nummus import common
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestCommon(base.TestBase):
+class TestCommon(TestBase):
   """Test common methods
   """
 

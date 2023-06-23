@@ -9,7 +9,7 @@ from sqlalchemy import orm, schema
 
 from nummus import sql
 
-from tests import base
+from tests.base import TestBase
 
 
 class ORMBase(orm.DeclarativeBase):
@@ -41,7 +41,7 @@ class Child(ORMBase):
   pass
 
 
-class TestSQL(base.TestBase):
+class TestSQL(TestBase):
   """Test SQL methods
   """
 
