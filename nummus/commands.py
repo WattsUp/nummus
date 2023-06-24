@@ -1,6 +1,8 @@
 """Command line interface commands
 """
 
+from typing import List
+
 import pathlib
 
 import colorama
@@ -120,3 +122,49 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
 
   print(f"{Fore.RED}Too many incorrect attempts")
   return None
+
+
+def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
+  """Import a list of files or directories into a portfolio
+
+  Args:
+    p: Working Portfolio
+    paths: List of files or directories to import
+  
+  Returns:
+    0 on success
+    non-zero on failure
+  """
+  # Back up Portfolio
+  p.backup()
+  success = False
+
+  count = 0
+
+  try:
+    for path in paths:
+      file = pathlib.Path(path)
+      if not file.exists():
+        print(f"{Fore.RED}File does not exist: {file}")
+        return 1
+      if file.is_dir():
+        for f in file.iterdir():
+          if f.is_file():
+            p.import_file(f)
+            count += 1
+      else:
+        p.import_file(file)
+        count += 1
+
+    success = True
+  except TypeError as e:
+    print(f"{Fore.RED}{e}")
+    return 1
+  finally:
+    # Restore backup if anything went wrong
+    # Coverage gets confused with finally blocks
+    if not success:  # pragma: no cover
+      p.restore()
+      print(f"{Fore.RED}Abandoned import, restored from backup")
+  print(f"{Fore.GREEN}Imported {count} files")
+  return 0

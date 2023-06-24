@@ -104,7 +104,7 @@ class Child(base.Base):
     self._age = age
 
 
-class TestBase(TestBase):
+class TestORMBase(TestBase):
   """Test ORM Base
   """
 

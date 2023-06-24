@@ -192,6 +192,8 @@ class Portfolio:
       KeyError if account or asset cannot be resolved
     """
     i = importers.get_importer(path)
+    if i is None:
+      raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
     account_mapping: Dict[str, str] = {}

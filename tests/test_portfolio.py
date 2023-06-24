@@ -278,6 +278,11 @@ class TestPortfolio(TestBase):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
     p = portfolio.Portfolio.create(path_db)
 
+    # Fail to import non-importable file
+    path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
+    self.assertRaises(TypeError, p.import_file, path)
+
+    # Fail to match Accounts and Assets
     path = self._DATA_ROOT.joinpath("transactions_extras.csv")
     self.assertRaises(KeyError, p.import_file, path)
 

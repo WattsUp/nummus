@@ -60,11 +60,20 @@ calculates net worth, and predicts future performance."""
   sub_create.add_argument("--no-encrypt",
                           default=False,
                           action="store_true",
-                          help="Do not encrypt portfolio")
+                          help="do not encrypt portfolio")
 
   _ = subparsers.add_parser("unlock",
                             help="test unlocking portfolio",
                             description="Test unlocking portfolio")
+
+  sub_import = subparsers.add_parser(
+      "import",
+      help="import files into portfolio",
+      description="Import financial statements into portfolio")
+  sub_import.add_argument("paths",
+                          metavar="PATH",
+                          nargs="+",
+                          help="list of files and directories to import")
 
   # sub_web = subparsers.add_parser("web",
   #                                 help="start gleMon web",
@@ -108,6 +117,9 @@ calculates net worth, and predicts future performance."""
   elif cmd == "unlock":
     # Already unlocked
     return 0
+  elif cmd == "import":
+    paths: List[str] = args.paths
+    return commands.import_files(p, paths=paths)
   else:
     raise ValueError(f"Unknown command '{cmd}'")  # pragma: no cover
 
