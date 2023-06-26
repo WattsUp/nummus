@@ -17,7 +17,7 @@ class AssetValuation(base.Base):
   """Asset Valuation model for storing a value of an asset on a specific date
 
   Attributes:
-    asset: Asset unique identifier
+    asset_uuid: Asset unique identifier
     date: Date of valuation
     value: Value of assert
     multiplier: Multiplier to mutate quantity (ex: share splits)
@@ -82,7 +82,7 @@ class Asset(base.Base):
   """Asset model for storing an individual item with dynamic worth
 
   Attributes:
-    id: Asset unique identifier
+    uuid: Asset unique identifier
     name: Name of Asset
     description: Description of Asset
     category: Type of Asset

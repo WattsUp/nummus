@@ -20,7 +20,7 @@ class AnnualBudget(base.Base):
   All numbers are annual allocations
 
   Attributes:
-    id: AnnualBudget unique identifier
+    uuid: AnnualBudget unique identifier
     date: Date on which AnnualBudget is effective
     total: Total limit of AnnualBudget
     categories: Categorical breakdown of total
