@@ -23,14 +23,21 @@ class AssetValuation(base.Base):
     multiplier: Multiplier to mutate quantity (ex: share splits)
   """
 
-  _PROPERTIES_DEFAULT = ["asset_id", "value", "multiplier", "date"]
-  _PROPERTIES_HIDDEN = ["id"]
+  _PROPERTIES_DEFAULT = ["asset_uuid", "value", "multiplier", "date"]
+  _PROPERTIES_HIDDEN = ["id", "uuid"]
 
-  asset_id: orm.Mapped[str] = orm.mapped_column(
-      sqlalchemy.String(36), sqlalchemy.ForeignKey("asset.id"))
+  asset_id: orm.Mapped[int] = orm.mapped_column(
+      sqlalchemy.ForeignKey("asset.id"))
+  asset: orm.Mapped[Asset] = orm.relationship()
   value: orm.Mapped[float]
   multiplier: orm.Mapped[float] = orm.mapped_column(default=1)
   date: orm.Mapped[datetime.date]
+
+  @property
+  def asset_uuid(self) -> str:
+    """UUID of asset
+    """
+    return self.asset.uuid
 
 
 class AssetCategory(enum.Enum):
@@ -83,7 +90,9 @@ class Asset(base.Base):
     tag: Unique tag linked across datasets
   """
 
-  _PROPERTIES_DEFAULT = ["id", "name", "description", "category", "unit", "tag"]
+  _PROPERTIES_DEFAULT = [
+      "uuid", "name", "description", "category", "unit", "tag"
+  ]
 
   name: orm.Mapped[str]
   description: orm.Mapped[Optional[str]]
@@ -92,4 +101,5 @@ class Asset(base.Base):
   tag: orm.Mapped[Optional[str]]
 
   # TODO (WattsUp) Move to write only relationship if too slow
-  valuations: orm.Mapped[List[AssetValuation]] = orm.relationship()
+  valuations: orm.Mapped[List[AssetValuation]] = orm.relationship(
+      back_populates="asset")

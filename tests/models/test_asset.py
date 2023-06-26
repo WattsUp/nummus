@@ -33,6 +33,8 @@ class TestAssetValuation(TestBase):
     session.commit()
 
     self.assertEqual(d["asset_id"], v.asset_id)
+    self.assertEqual(a, v.asset)
+    self.assertEqual(a.uuid, v.asset_uuid)
     self.assertEqual(d["value"], v.value)
     self.assertEqual(1.0, v.multiplier)
     self.assertEqual(d["date"], v.date)
@@ -42,6 +44,8 @@ class TestAssetValuation(TestBase):
     self.assertEqual(d["multiplier"], v.multiplier)
 
     # Test default and hidden properties
+    d.pop("asset_id")
+    d["asset_uuid"] = a.uuid
     result = v.to_dict()
     self.assertDictEqual(d, result)
 
@@ -74,7 +78,7 @@ class TestAsset(TestBase):
     self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
-    d["id"] = a.id
+    d["uuid"] = a.uuid
     result = a.to_dict()
     self.assertDictEqual(d, result)
 
