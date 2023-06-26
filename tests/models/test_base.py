@@ -46,10 +46,10 @@ class Parent(base.Base):
     return self.children[0]
 
   @property
-  def id_bytes(self) -> bytes:
+  def uuid_bytes(self) -> bytes:
     """Get ID as bytes
     """
-    return self.id.encode(encoding="utf-8")
+    return self.uuid.encode(encoding="utf-8")
 
 
 class ParentHidden(base.Base):
@@ -80,14 +80,14 @@ class Child(base.Base):
   """Test Child class for Base.to_dict, Base.from_dict
   """
 
-  _PROPERTIES_DEFAULT = ["id", "age"]
+  _PROPERTIES_DEFAULT = ["uuid", "age"]
 
   _hidden_column: orm.Mapped[Optional[int]]
-  parent_id: orm.Mapped[str] = orm.mapped_column(
-      sqlalchemy.String(36), sqlalchemy.ForeignKey("parent.id"))
+  parent_id: orm.Mapped[int] = orm.mapped_column(
+      sqlalchemy.ForeignKey("parent.id"))
   parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
-  parent_hidden_id: orm.Mapped[Optional[str]] = orm.mapped_column(
-      sqlalchemy.String(36), sqlalchemy.ForeignKey("parent_hidden.id"))
+  parent_hidden_id: orm.Mapped[Optional[int]] = orm.mapped_column(
+      sqlalchemy.ForeignKey("parent_hidden.id"))
   parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
       back_populates="_children")
 
@@ -117,12 +117,15 @@ class TestORMBase(TestBase):
 
     parent = Parent()
     self.assertIsNone(parent.id)
+    self.assertIsNone(parent.uuid)
     session.add(parent)
     session.commit()
     self.assertIsNotNone(parent.id)
+    self.assertIsNotNone(parent.uuid)
 
     child = Child()
     self.assertIsNone(child.id)
+    self.assertIsNone(child.uuid)
     self.assertIsNone(child.parent)
     self.assertIsNone(child.parent_id)
     self.assertIsNone(child.parent_hidden)
@@ -131,6 +134,7 @@ class TestORMBase(TestBase):
     session.add(child)
     session.commit()
     self.assertIsNotNone(child.id)
+    self.assertIsNotNone(child.uuid)
     self.assertIsNotNone(child.parent)
     self.assertIsNotNone(child.parent_id)
     self.assertIsNone(child.parent_hidden)
@@ -153,7 +157,7 @@ class TestORMBase(TestBase):
     session.add(child)
     session.commit()
 
-    target = {"id": child.id, "age": child.age}
+    target = {"uuid": child.uuid, "age": child.age}
     d = child.to_dict()
     self.assertDictEqual(target, d)
     self.assertEqual(str(target), str(child))
@@ -163,30 +167,30 @@ class TestORMBase(TestBase):
 
     # Hide is stronger
     target = {"age": child.age, "parent_hidden": None}
-    d = child.to_dict(hide=["id"], show=["id", "parent_hidden"])
+    d = child.to_dict(hide=["uuid"], show=["uuid", "parent_hidden"])
     self.assertDictEqual(target, d)
 
-    # Hide id but child is at Parent.Child
-    target = {"id": child.id, "age": child.age}
-    d = child.to_dict(hide=["id"],
+    # Hide uuid but child is at Parent.Child
+    target = {"uuid": child.uuid, "age": child.age}
+    d = child.to_dict(hide=["uuid"],
                       path=f"{Parent.__tablename__}.{Child.__tablename__}")
     self.assertDictEqual(target, d)
 
-    # Hide id in other ways
+    # Hide uuid in other ways
     target = {"age": child.age}
-    d = child.to_dict(hide=[f"{Child.__tablename__}.id"])
+    d = child.to_dict(hide=[f"{Child.__tablename__}.uuid"])
     self.assertDictEqual(target, d)
 
     target = {"age": child.age}
-    d = child.to_dict(hide=[".id"])
+    d = child.to_dict(hide=[".uuid"])
     self.assertDictEqual(target, d)
 
     # Test default Parent
-    target = {"id": parent.id}
+    target = {"uuid": parent.uuid}
     d = parent.to_dict()
     self.assertDictEqual(target, d)
 
-    target = {"id": parent_hidden.id}
+    target = {"uuid": parent_hidden.uuid}
     d = parent_hidden.to_dict()
     self.assertDictEqual(target, d)
 
@@ -195,13 +199,13 @@ class TestORMBase(TestBase):
     session.commit()
 
     target = {
-        "id": child.id,
+        "uuid": child.uuid,
         "parent_id": parent.id,
         "parent": {
-            "id": parent.id
+            "uuid": parent.uuid
         },
         "parent_hidden": {
-            "id": parent_hidden.id
+            "uuid": parent_hidden.uuid
         }
     }
     d = child.to_dict(show=["parent", "parent_id", "parent_hidden"],
@@ -209,17 +213,17 @@ class TestORMBase(TestBase):
     self.assertDictEqual(target, d)
 
     # Test non-serializable objects
-    self.assertRaises(TypeError, parent.to_dict, show=["id_bytes"])
+    self.assertRaises(TypeError, parent.to_dict, show=["uuid_bytes"])
 
     # Test recursion and non-serializable objects
     target = {
-        "id": parent.id,
+        "uuid": parent.uuid,
         "children": [{
-            "id": child.id,
+            "uuid": child.uuid,
             "age": child.age
         }],
         "favorite_child": {
-            "id": child.id,
+            "uuid": child.uuid,
             "age": child.age
         }
     }
@@ -228,27 +232,27 @@ class TestORMBase(TestBase):
 
     # Test recursion show/hiding
     target = {
-        "id": parent.id,
+        "uuid": parent.uuid,
         "age": parent.age,
         "children": [{
-            "id": child.id
+            "uuid": child.uuid
         }]
     }
     d = parent.to_dict(show=["children", "age"], hide=["children.age"])
     self.assertDictEqual(target, d)
 
     # Hide a relationship
-    target = {"id": parent.id}
+    target = {"uuid": parent.uuid}
     d = parent.to_dict(hide=["children"])
     self.assertDictEqual(target, d)
 
     # Check hidden relationship is hidden
-    target = {"id": parent_hidden.id}
+    target = {"uuid": parent_hidden.uuid}
     d = parent_hidden.to_dict()
     self.assertDictEqual(target, d)
 
     # Check hidden relationship is not shown when asked
-    target = {"id": parent_hidden.id}
+    target = {"uuid": parent_hidden.uuid}
     d = parent_hidden.to_dict(show=["_children"])
     self.assertDictEqual(target, d)
 
@@ -264,7 +268,11 @@ class TestORMBase(TestBase):
     session.add_all([parent_a, parent_b])
     session.commit()
 
-    d = {"id": str(uuid.uuid4()), "age": self._RNG.integers(50, 100)}
+    d = {
+        "id": int(self._RNG.integers(10, 1000)),
+        "uuid": str(uuid.uuid4()),
+        "age": int(self._RNG.integers(50, 100))
+    }
 
     child_a = Child(parent=parent_a)
     child_b = Child(parent=parent_b)
@@ -275,10 +283,12 @@ class TestORMBase(TestBase):
     self.assertEqual(1, len(parent_b.children))
 
     id_old = child_a.id
+    uuid_old = child_a.uuid
     age_old = child_a.age
     changes = child_a.update(d, force=False)
     session.commit()
     self.assertEqual(id_old, child_a.id)  # id is readonly
+    self.assertEqual(uuid_old, child_a.uuid)  # uuid is readonly
     self.assertEqual(d["age"], child_a.age)
     self.assertDictEqual({"age": (age_old, d["age"])}, changes)
 
@@ -286,14 +296,20 @@ class TestORMBase(TestBase):
     changes = child_a.update(d, force=True)
     session.commit()
     self.assertEqual(d["id"], child_a.id)
+    self.assertEqual(d["uuid"], child_a.uuid)
     self.assertEqual(d["age"], child_a.age)
-    self.assertDictEqual({"id": (id_old, d["id"])}, changes)
+    self.assertDictEqual(
+        {
+            "id": (id_old, d["id"]),
+            "uuid": (uuid_old, d["uuid"])
+        }, changes)
 
     # Both are the same, not updated
     changes = child_a.update(d, force=True)
     session.commit()
     self.assertEqual(d["age"], child_a.age)
     self.assertEqual(d["id"], child_a.id)
+    self.assertEqual(d["uuid"], child_a.uuid)
     self.assertDictEqual({}, changes)
 
     # Update parent via id
@@ -357,11 +373,11 @@ class TestORMBase(TestBase):
     self.assertDictEqual({"age": (age_old, d["age"])}, changes)
 
     # Property without a setter will not update
-    id_bytes_old = parent_b.id_bytes
-    d = {"id_bytes": str(uuid.uuid4()).encode()}
+    uuid_bytes_old = parent_b.uuid_bytes
+    d = {"uuid_bytes": str(uuid.uuid4()).encode()}
     changes = parent_b.update(d)
     session.commit()
-    self.assertEqual(id_bytes_old, parent_b.id_bytes)
+    self.assertEqual(uuid_bytes_old, parent_b.uuid_bytes)
     self.assertDictEqual({}, changes)
 
   def test_comparators(self):
