@@ -46,7 +46,7 @@ calculates net worth, and predicts future performance."""
 
   subparsers = parser.add_subparsers(dest="cmd",
                                      metavar="<command>",
-                                     required=False)
+                                     required=True)
 
   sub_create = subparsers.add_parser(
       "create",
@@ -75,18 +75,18 @@ calculates net worth, and predicts future performance."""
                           nargs="+",
                           help="list of files and directories to import")
 
-  # sub_web = subparsers.add_parser("web",
-  #                                 help="start gleMon web",
-  #                                 description="Default interface to gleMon")
-  # sub_web.add_argument("--host",
-  #                      "-H",
-  #                      default="127.0.0.1",
-  #                      help="specify network address for web server")
-  # sub_web.add_argument("--port",
-  #                      "-P",
-  #                      default=80,
-  #                      type=int,
-  #                      help="specify network port for web server")
+  sub_web = subparsers.add_parser("web",
+                                  help="start nummus web server",
+                                  description="Default interface to nummus")
+  sub_web.add_argument("--host",
+                       "-H",
+                       default="127.0.0.1",
+                       help="specify network address for web server")
+  sub_web.add_argument("--port",
+                       "-P",
+                       default=8080,
+                       type=int,
+                       help="specify network port for web server")
 
   args = parser.parse_args(args=command_line)
 
@@ -109,11 +109,10 @@ calculates net worth, and predicts future performance."""
   if p is None:
     return 1
 
-  if cmd == "web" or cmd is None:
-    # if not args.no_web:
-    #   w = web.Server(p)
-    #   rc = w.run(host=args.host, port=args.port)
-    raise NotImplementedError
+  if cmd == "web":
+    host: str = args.host
+    port: int = args.port
+    return commands.run_web(p, host=host, port=port)
   elif cmd == "unlock":
     # Already unlocked
     return 0

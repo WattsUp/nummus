@@ -168,3 +168,18 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
       print(f"{Fore.RED}Abandoned import, restored from backup")
   print(f"{Fore.GREEN}Imported {count} files")
   return 0
+
+
+def run_web(p: portfolio.Portfolio, host: str, port: int) -> int:
+  """Run web server serving the nummus Portfolio
+
+  Args:
+    p: Working Portfolio
+    host: IP to bind to
+    port: Network port to bind to
+  
+  Returns:
+    0 on success
+    non-zero on failure
+  """
+  raise NotImplementedError

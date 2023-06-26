@@ -56,6 +56,14 @@ class TestMain(TestBase):
     fake_stdout = fake_stdout.getvalue()
     self.assertEqual(fake_stdout, version.__version__ + "\n")
 
+  def test_no_command(self):
+    args = []
+    with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+      self.assertRaises(SystemExit, main, args)
+    fake_stderr = fake_stderr.getvalue()
+    self.assertIn("the following arguments are required: <command>",
+                  fake_stderr)
+
   def test_entrypoints(self):
     # Check can execute module
     with subprocess.Popen("python3 -m nummus --version",
@@ -162,7 +170,6 @@ class TestMain(TestBase):
       args = ["--portfolio", path, "import"] + paths
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
-      # self.assertListEqual([], self._called_args)
       self.assertEqual(1, len(self._called_args))
       self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
       self.assertDictEqual({
@@ -174,7 +181,6 @@ class TestMain(TestBase):
       args = ["--portfolio", path, "import"] + paths
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
-      # self.assertListEqual([], self._called_args)
       self.assertEqual(1, len(self._called_args))
       self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
       self.assertDictEqual({
@@ -189,34 +195,32 @@ class TestMain(TestBase):
     path = str(self._TEST_ROOT.joinpath("portfolio.db"))
     commands.create(path, None, False, True)
 
-    args = ["--portfolio", path]
-    with mock.patch("sys.stdout", new=io.StringIO()) as _:
-      self.assertRaises(NotImplementedError, main, args)
-    self.skipTest("Not implemented")
-
-    home = pathlib.Path(os.path.expanduser("~"))
-    path_password = str(self._TEST_ROOT.joinpath(".password"))
     try:
       self._set_up_commands()
 
-      args = []
-      main(args)
-      self.assertListEqual([], self._called_args)
+      args = ["--portfolio", path, "web"]
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        main(args)
+      self.assertEqual(1, len(self._called_args))
+      self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
       self.assertDictEqual(
           {
-              "_func": "web",
-              "path": str(home.joinpath(".nummus", "portfolio.db")),
-              "pass_file": None
+              "_func": "run_web",
+              "host": "127.0.0.1",
+              "port": 8080
           }, self._called_kwargs)
 
-      args = ["--portfolio", path, "--pass-file", path_password, "web"]
-      main(args)
-      self.assertListEqual([], self._called_args)
-      self.assertDictEqual(
-          {
-              "_func": "web",
-              "path": path,
-              "pass_file": path_password
-          }, self._called_kwargs)
+      host = "0.0.0.0"
+      port = 80
+      args = ["--portfolio", path, "web", "-H", host, "-P", str(port)]
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        main(args)
+      self.assertEqual(1, len(self._called_args))
+      self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+      self.assertDictEqual({
+          "_func": "run_web",
+          "host": host,
+          "port": port
+      }, self._called_kwargs)
     finally:
       self._tear_down_commands()
