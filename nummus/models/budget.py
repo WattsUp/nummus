@@ -26,7 +26,7 @@ class AnnualBudget(base.Base):
     categories: Categorical breakdown of total
   """
 
-  _PROPERTIES_DEFAULT = ["id", "date", "total", "categories"]
+  _PROPERTIES_DEFAULT = ["uuid", "date", "total", "categories"]
 
   date: orm.Mapped[datetime.date]
   home: orm.Mapped[float] = orm.mapped_column(default=0)
