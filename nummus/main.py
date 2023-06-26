@@ -12,7 +12,7 @@ import os
 import pathlib
 import sys
 
-from nummus import version
+from nummus import __version__
 
 
 def main(command_line: List[str] = None) -> int:
@@ -31,9 +31,7 @@ calculates net worth, and predicts future performance."""
   home = pathlib.Path(os.path.expanduser("~"))
   default_path = str(home.joinpath(".nummus", "portfolio.db"))
   parser = argparse.ArgumentParser(prog="nummus", description=desc)
-  parser.add_argument("--version",
-                      action="version",
-                      version=version.__version__)
+  parser.add_argument("--version", action="version", version=__version__)
   parser.add_argument("--portfolio",
                       "-p",
                       metavar="PATH",

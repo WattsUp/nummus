@@ -5,8 +5,10 @@
     "gevent",
     "nummus",
     "ondelete",
+    "openapi",
     "poolclass",
     "pycryptodome",
+    "robo-advising",
     "uselist",
     "Woot"
   ],

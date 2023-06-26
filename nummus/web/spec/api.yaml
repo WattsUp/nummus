@@ -1,0 +1,84 @@
+openapi: 3.0.0
+servers:
+  - url: https://nummus/
+info:
+  description: >-
+    This is a server for nummus: A personal financial information aggregator and
+    planning tool. Collects and categorizes transactions, manages budgets,
+    tracks investments, calculates net worth, and predicts future performance.
+  version: 0.1.0
+  title: nummus API
+  license:
+    name: MIT
+    url: https://github.com/WattsUp/nummus/blob/master/LICENSE
+tags:
+  - name: Configuration
+    description: nummus configuration settings
+  - name: HTML
+    description: Paths to HTML pages
+  - name: Account
+    description: Financial account information
+  - name: Transaction
+    description: Exchange of cash for an asset (or none)
+  - name: Asset
+    description: Access to individual assets that have a dynamic worth
+  - name: Portfolio
+    description: Operations on entire portfolio
+  - name: Budget
+    description: Allocation of cash flow transactions by categories
+  - name: Planning
+    description: >-
+      Planning tools TODO (WattsUp) add future net worth, retirement, and
+      investment planning tools. Future net worth uses multiple simulators to
+      determine worth in next 1/2 years including expected cashflow. Retirement
+      looks at annual future net worth until death with large life cash flows
+      event (same source as future net worth). Investment planning uses
+      robo-advising to recommend fund allocation.
+paths:
+  /api/version:
+    get:
+      tags:
+        - Configuration
+      summary: Displays version information.
+      description: ""
+      x-openapi-router-controller: nummus.web.controller_config
+      operationId: get_version
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  api:
+                    description: Version of nummus API
+                    type: string
+                    format: "[major].[minor].[patch]"
+                    pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$
+                    example: 0.1.0
+                  nummus:
+                    description: Version of nummus server
+                    type: string
+                    format: "[major].[minor].[patch](-tweak)"
+                    pattern: >-
+                      ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?([a-zA-Z\d][-a-zA-Z.\d]*)?$
+                    example: 10.2.0-rc1-alpha
+externalDocs:
+  description: Find out more about nummus
+  url: https://github.com/WattsUp/nummus
+components:
+  responses:
+    Image:
+      description: Image content
+      content:
+        image/*:
+          schema:
+            type: string
+            format: byte
+            example: 6tZMso4sTUeoJTDg3UB3xw==
+    HTML:
+      description: HTML content
+      content:
+        text/html:
+          example: <html><body>Your HTML text</body></html>

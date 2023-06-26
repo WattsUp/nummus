@@ -8,7 +8,7 @@ import pathlib
 import colorama
 from colorama import Fore
 
-from nummus import common, portfolio
+from nummus import common, portfolio, web
 
 colorama.init(autoreset=True)
 
@@ -183,4 +183,6 @@ def run_web(p: portfolio.Portfolio, host: str, port: int) -> int:
     0 on success
     non-zero on failure
   """
-  raise NotImplementedError
+  s = web.Server(p)
+  s.run(host, port)
+  return 0
