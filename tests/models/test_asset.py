@@ -6,10 +6,10 @@ import datetime
 from nummus import models
 from nummus.models import asset
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestAssetValuation(base.TestBase):
+class TestAssetValuation(TestBase):
   """Test AssetValuation class
   """
 
@@ -46,7 +46,7 @@ class TestAssetValuation(base.TestBase):
     self.assertDictEqual(d, result)
 
 
-class TestAsset(base.TestBase):
+class TestAsset(TestBase):
   """Test Asset class
   """
 

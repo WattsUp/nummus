@@ -1,6 +1,8 @@
 {
   "cSpell.words": [
     "AppenderQuery",
+    "connexion",
+    "gevent",
     "nummus",
     "ondelete",
     "poolclass",

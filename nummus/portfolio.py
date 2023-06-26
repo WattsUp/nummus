@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Dict, List
 
 import pathlib
+import shutil
 
 import autodict
 from sqlalchemy import orm
@@ -59,6 +60,29 @@ class Portfolio:
     self._unlock()
 
   @staticmethod
+  def is_encrypted(path: str) -> bool:
+    """Check Portfolio's config for encryption status
+
+    Args:
+      path: Path to database file
+
+    Returns:
+      True if Portfolio is encrypted
+
+    Raises:
+      FileNotFound if database or configuration does not exist
+    """
+    path_db = pathlib.Path(path)
+    if not path_db.exists():
+      raise FileNotFoundError(f"Database does not exist at {path_db}")
+    path_config = path_db.with_suffix(".config")
+    if not path_config.exists():
+      raise FileNotFoundError("Portfolio configuration does not exist, "
+                              f"for {path_db}")
+    with autodict.JSONAutoDict(path_config, save_on_exit=False) as config:
+      return config["encrypt"]
+
+  @staticmethod
   def create(path: str, key: str = None) -> Portfolio:
     """Create a new Portfolio
 
@@ -110,6 +134,7 @@ class Portfolio:
                                 password=password)
       session.add(nummus_user)
       session.commit()
+    path_db.chmod(0o600)  # Only owner can read/write
 
     return Portfolio(path_db, key)
 
@@ -167,6 +192,8 @@ class Portfolio:
       KeyError if account or asset cannot be resolved
     """
     i = importers.get_importer(path)
+    if i is None:
+      raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
     account_mapping: Dict[str, str] = {}
@@ -205,7 +232,7 @@ class Portfolio:
 
     Args:
       account: Search query
-    
+
     Returns:
       Account ID or None if no matches found
     """
@@ -233,7 +260,7 @@ class Portfolio:
 
     Args:
       asset: Search query
-    
+
     Returns:
       Asset ID or None if no matches found
     """
@@ -249,3 +276,38 @@ class Portfolio:
         # Woot
         return matches[0].id
     return None
+
+  def backup(self) -> None:
+    """Back up database, duplicates files
+    """
+    backup_db = self._path_db.with_suffix(".backup.db")
+    backup_config = self._path_config.with_suffix(".backup.config")
+
+    shutil.copyfile(self._path_db, backup_db)
+    shutil.copyfile(self._path_config, backup_config)
+
+    backup_db.chmod(0o600)  # Only owner can read/write
+    backup_config.chmod(0o600)  # Only owner can read/write
+
+  def restore(self) -> None:
+    """Restore database from backup
+    """
+    backup_db = self._path_db.with_suffix(".backup.db")
+    backup_config = self._path_config.with_suffix(".backup.config")
+
+    if not backup_db.exists():
+      raise FileNotFoundError(f"Backup database {backup_db} does not exist")
+    if not backup_config.exists():
+      raise FileNotFoundError(f"Backup config {backup_config} does not exist")
+
+    # Drop any dangling sessions
+    sql.drop_session(self._path_db)
+
+    shutil.copyfile(backup_db, self._path_db)
+    shutil.copyfile(backup_config, self._path_config)
+
+    backup_db.chmod(0o600)  # Only owner can read/write
+    backup_config.chmod(0o600)  # Only owner can read/write
+
+    # Update config
+    self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)

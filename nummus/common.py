@@ -1,21 +1,11 @@
 """Miscellaneous functions and classes
 """
 
-import enum
 import getpass
 import random
 import re
 import string
 import sys
-
-
-class RC(enum.Enum):
-  """Command line return codes enumeration
-  """
-
-  SUCCESS = 0
-  EXCEPTION = 1
-
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")

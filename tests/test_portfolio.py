@@ -9,11 +9,11 @@ from nummus import portfolio, sql
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Credentials, Transaction)
 
-from tests import base
+from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 
 
-class TestPortfolio(base.TestBase):
+class TestPortfolio(TestBase):
   """Test Portfolio class
   """
 
@@ -45,8 +45,9 @@ class TestPortfolio(base.TestBase):
 
     # Create unencrypted portfolio
     portfolio.Portfolio.create(path_db)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -56,6 +57,8 @@ class TestPortfolio(base.TestBase):
       target = b"SQLite format 3"
       self.assertEqual(target, buf[:len(target)])
       buf = None  # Clear local buffer
+    self.assertFalse(portfolio.Portfolio.is_encrypted(path_db),
+                     "Database is unexpectedly encrypted")
 
     # Database already exists
     self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -78,8 +81,8 @@ class TestPortfolio(base.TestBase):
     path_config.unlink()
 
     portfolio.Portfolio.create(path_db)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     sql.drop_session()
 
     # Delete root
@@ -105,8 +108,9 @@ class TestPortfolio(base.TestBase):
 
     # Create unencrypted portfolio
     portfolio.Portfolio.create(path_db, key)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     sql.drop_session()
 
@@ -116,6 +120,8 @@ class TestPortfolio(base.TestBase):
       target = b"SQLite format 3"
       self.assertNotEqual(target, buf[:len(target)])
       buf = None  # Clear local buffer
+    self.assertTrue(portfolio.Portfolio.is_encrypted(path_db),
+                    "Database is unexpectedly unencrypted")
 
     # Database already exists
     self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -141,8 +147,8 @@ class TestPortfolio(base.TestBase):
     path_db.unlink()
     path_config.unlink()
     portfolio.Portfolio.create(path_db, key)
-    self.assertTrue(path_db.exists())
-    self.assertTrue(path_config.exists())
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
     sql.drop_session()
 
     # Change root password to unencrypted
@@ -157,6 +163,34 @@ class TestPortfolio(base.TestBase):
 
     # Invalid unencrypted password
     self.assertRaises(PermissionError, portfolio.Portfolio, path_db, key)
+
+  def test_is_encrypted(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    path_config = path_db.with_suffix(".config")
+
+    self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted,
+                      path_db)
+
+    with open(path_db, "w", encoding="utf-8") as file:
+      file.write("I'm a database")
+
+    # Still missing config
+    self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted,
+                      path_db)
+
+    with autodict.JSONAutoDict(path_config) as c:
+      c["encrypt"] = True
+
+    self.assertTrue(portfolio.Portfolio.is_encrypted(path_db),
+                    "Database is unexpectedly unencrypted")
+
+    with autodict.JSONAutoDict(path_config) as c:
+      c["encrypt"] = False
+
+    self.assertFalse(portfolio.Portfolio.is_encrypted(path_db),
+                     "Database is unexpectedly encrypted")
+
+    path_db.unlink()
 
   def test_find_account(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
@@ -244,6 +278,11 @@ class TestPortfolio(base.TestBase):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
     p = portfolio.Portfolio.create(path_db)
 
+    # Fail to import non-importable file
+    path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
+    self.assertRaises(TypeError, p.import_file, path)
+
+    # Fail to match Accounts and Assets
     path = self._DATA_ROOT.joinpath("transactions_extras.csv")
     self.assertRaises(KeyError, p.import_file, path)
 
@@ -294,3 +333,90 @@ class TestPortfolio(base.TestBase):
 
           r_v = getattr(r, k)
           self.assertEqual(t_v, r_v)
+
+  def test_backup_restore(self):
+    path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+    path_config = path_db.with_suffix(".config")
+    p = portfolio.Portfolio.create(path_db)
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+    # Create Account
+    with p.get_session() as s:
+      a = Account(name="Monkey Bank Checking",
+                  institution="Monkey Bank",
+                  category=AccountCategory.CASH)
+      s.add(a)
+      s.commit()
+
+      accounts = s.query(Account).all()
+      self.assertEqual(1, len(accounts))
+
+    p.backup()
+
+    path_db_backup = path_db.with_suffix(".backup.db")
+    path_config_backup = path_config.with_suffix(".backup.config")
+
+    self.assertTrue(path_db_backup.exists(), "Backup portfolio does not exist")
+    self.assertTrue(path_config_backup.exists(), "Backup config does not exist")
+    self.assertEqual(path_db_backup.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config_backup.stat().st_mode & 0o777, 0o600)
+
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    with open(path_config_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_config, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    # Accidentally add a new Account
+    with p.get_session() as s:
+      a = Account(name="Monkey Bank Checking Duplicate",
+                  institution="Monkey Bank",
+                  category=AccountCategory.CASH)
+      s.add(a)
+      s.commit()
+
+      accounts = s.query(Account).all()
+      self.assertEqual(2, len(accounts))
+
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertNotEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    p.restore()
+
+    # Files should match again
+    with open(path_db_backup, "rb") as file:
+      buf_backup = file.read()
+    with open(path_db, "rb") as file:
+      buf = file.read()
+    self.assertEqual(buf, buf_backup)
+    buf = None
+    buf_backup = None
+
+    # Only the original account present
+    with p.get_session() as s:
+      accounts = s.query(Account).all()
+      self.assertEqual(1, len(accounts))
+
+    # Can't restore if backup config is missing
+    path_config_backup.unlink()
+    self.assertRaises(FileNotFoundError, p.restore)
+
+    # Can't restore if backup database is missing
+    path_db_backup.unlink()
+    self.assertRaises(FileNotFoundError, p.restore)

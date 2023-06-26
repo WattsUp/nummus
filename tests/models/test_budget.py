@@ -6,10 +6,10 @@ import datetime
 from nummus import models
 from nummus.models import budget
 
-from tests import base
+from tests.base import TestBase
 
 
-class TestAnnualBudget(base.TestBase):
+class TestAnnualBudget(TestBase):
   """Test AnnualBudget class
   """
 
