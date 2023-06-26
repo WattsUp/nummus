@@ -126,19 +126,10 @@ class Transaction(base.Base):
     date: Date on which Transaction occurred
     total: Total amount of cash exchanged. Positive indicated Account
       increases in value (ingress)
-    sales_tax: Amount of sales tax paid on Transaction, always negative
-    payee: Name of payee (for egress)/payer (for ingress)
     statement: Text appearing on Account statement
-    description: Description of exchange
-    category: Type of Transaction
-    subcategory: Subcategory of Transaction type
-    tag: Unique tag linked across datasets
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
-    parent: Parent Transaction when parent is split
-    asset: Asset exchanged for cash, primarily for instrument transactions
-    asset_quantity: Number of units of Asset exchanged, Positive indicates
-      Account gained Assets (ingress)
+    splits: List of TransactionSplits
   """
 
   _PROPERTIES_DEFAULT = [

@@ -320,7 +320,13 @@ class TestPortfolio(TestBase):
 
       target = TRANSACTIONS_EXTRAS
       self.assertEqual(len(target), len(transactions))
+      split_properties = [
+          "sales_tax", "payee", "description", "category", "subcategory", "tag",
+          "asset", "asset_quantity"
+      ]
       for t, r in zip(target, transactions):
+        self.assertEqual(1, len(r.splits))
+        r_split = r.splits[0]
         for k, t_v in t.items():
           # Fix test value for linked properties
           if k == "asset":
@@ -331,8 +337,15 @@ class TestPortfolio(TestBase):
             else:
               t_v = a_invest
 
-          r_v = getattr(r, k)
-          self.assertEqual(t_v, r_v)
+          if k in split_properties:
+            r_v = getattr(r_split, k)
+            self.assertEqual(t_v, r_v)
+          elif k == "total":
+            self.assertEqual(t_v, r.total)
+            self.assertEqual(t_v, r_split.total)
+          else:
+            r_v = getattr(r, k)
+            self.assertEqual(t_v, r_v)
 
   def test_backup_restore(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
