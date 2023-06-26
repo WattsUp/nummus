@@ -9,6 +9,7 @@ import connexion
 import gevent.pywsgi
 
 from nummus import portfolio
+from nummus.web import controller_html
 
 
 class Server:
@@ -33,11 +34,12 @@ class Server:
 
     """
     spec_dir = pathlib.Path(__file__).parent.absolute().joinpath("spec")
-    options = {"swagger_ui": True, "swagger_url": "/api/ui"}
+    options = {"swagger_ui": True, "debug": True}
     app = connexion.App(__name__, specification_dir=spec_dir, options=options)
     app.add_api("api.yaml",
                 arguments={"title": "nummus API"},
                 pythonic_params=True)
+    app.add_url_rule("/", "", controller_html.get_home)
 
     self._server = gevent.pywsgi.WSGIServer((host, port), app)
     # TODO (WattsUp) Get https

@@ -1,6 +1,6 @@
 openapi: 3.0.0
 servers:
-  - url: https://nummus/
+  - url: https://nummus/api
 info:
   description: >-
     This is a server for nummus: A personal financial information aggregator and
@@ -35,7 +35,7 @@ tags:
       event (same source as future net worth). Investment planning uses
       robo-advising to recommend fund allocation.
 paths:
-  /api/version:
+  /version:
     get:
       tags:
         - Configuration
