@@ -171,18 +171,20 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
   return 0
 
 
-def run_web(p: portfolio.Portfolio, host: str, port: int) -> int:
+def run_web(p: portfolio.Portfolio, host: str, port: int,
+            enable_api_ui: bool) -> int:
   """Run web server serving the nummus Portfolio
 
   Args:
     p: Working Portfolio
     host: IP to bind to
     port: Network port to bind to
+    enable_api_ui: True will enable Swagger UI for the API
   
   Returns:
     0 on success
     non-zero on failure
   """
-  s = web.Server(p)
-  s.run(host, port)
+  s = web.Server(p, host, port, enable_api_ui)
+  s.run()
   return 0
