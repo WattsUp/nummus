@@ -17,28 +17,31 @@ class Base(orm.DeclarativeBase):
   """Base ORM model
 
   Attributes:
-    id: Unique identifier
+    id: Primary key identifier
+    uuid: Universally unique identifier
   """
   metadata: schema.MetaData
 
-  _PROPERTIES_DEFAULT: List[str] = ["id"]
-  _PROPERTIES_HIDDEN: List[str] = []
-  _PROPERTIES_READONLY: List[str] = ["id"]
+  _PROPERTIES_DEFAULT: List[str] = ["uuid"]
+  _PROPERTIES_HIDDEN: List[str] = ["id"]
+  _PROPERTIES_READONLY: List[str] = ["id", "uuid"]
 
   @orm.declared_attr
   def __tablename__(self):
     return common.camel_to_snake(self.__name__)
 
-  id: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(36),
-                                          primary_key=True,
-                                          default=lambda: str(uuid.uuid4()))
+  id: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
+  # Could be better with storing a uuid as a 16B int but SQLite doesn't have
+  # that large of integers
+  uuid: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(36),
+                                            default=lambda: str(uuid.uuid4()))
 
   def __str__(self) -> str:
     return str(self.to_dict())
 
   def __repr__(self) -> str:
     try:
-      return f"<{self.__class__.__name__} id={self.id}>"
+      return f"<{self.__class__.__name__} id={self.id} uuid={self.uuid}>"
     except orm.exc.DetachedInstanceError:
       return f"<{self.__class__.__name__} id=Detached Instance>"
 
@@ -222,23 +225,23 @@ class Base(orm.DeclarativeBase):
     return changes
 
   def __eq__(self, other: Base) -> bool:
-    """Test equality by ID
+    """Test equality by UUID
 
     Args:
       other: Other object to test
 
     Returns:
-      True if IDs match
+      True if UUIDs match
     """
-    return self.id == other.id
+    return self.uuid == other.uuid
 
   def __ne__(self, other: Base) -> bool:
-    """Test inequality by ID
+    """Test inequality by UUID
 
     Args:
       other: Other object to test
 
     Returns:
-      True if IDs do not match
+      True if UUIDs do not match
     """
-    return self.id != other.id
+    return self.uuid != other.uuid

@@ -60,7 +60,7 @@ class TestAnnualBudget(TestBase):
 
     self.assertDictEqual(d, b.categories)
 
-    target = {"id": b.id, "date": b.date, "total": total, "categories": d}
+    target = {"uuid": b.uuid, "date": b.date, "total": total, "categories": d}
     result = b.to_dict()
     self.assertDictEqual(target, result)
 

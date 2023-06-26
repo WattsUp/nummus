@@ -46,28 +46,56 @@ class TestTransaction(TestBase):
     self.assertEqual(d["statement"], t.statement)
     self.assertFalse(t.locked, "Transaction is unexpectedly locked")
 
-    d["sales_tax"] = self._RNG.uniform(-1, 0)
-    d["payee"] = self.random_string()
-    d["description"] = self.random_string()
-    d["category"] = account.TransactionCategory.FOOD
-    d["subcategory"] = self.random_string()
-    d["tag"] = self.random_string()
-    d["locked"] = True
-    d["asset_id"] = asset_bananas.id
-    d["asset_quantity"] = self._RNG.uniform(-1, 1)
-    d["parent_id"] = t.id
+    d.pop("account_id")
+    d["uuid"] = t.uuid
+    d["account_uuid"] = a.uuid
+    d["splits"] = []
+    d["locked"] = False
+    result = t.to_dict()
+    self.assertDictEqual(d, result)
 
-    t_split = account.Transaction(**d)
-    session.add(t_split)
+    d = {"total": self._RNG.uniform(-1, 1), "parent_id": t.id}
+
+    t_split_0 = account.TransactionSplit(**d)
+    session.add(t_split_0)
+    session.commit()
+
+    result = t_split_0.to_dict()
+    self.assertEqual(t_split_0.uuid, result.pop("uuid"))
+    self.assertEqual(t_split_0.total, result.pop("total"))
+    self.assertEqual(t.uuid, result.pop("parent_uuid"))
+    # Rest should be None
+    for k, v in result.items():
+      self.assertIsNone(v, f"result[{k}] is not None")
+
+    d = {
+        "total": self._RNG.uniform(-1, 1),
+        "sales_tax": self._RNG.uniform(-1, 0),
+        "payee": self.random_string(),
+        "description": self.random_string(),
+        "category": account.TransactionCategory.FOOD,
+        "subcategory": self.random_string(),
+        "tag": self.random_string(),
+        "asset_id": asset_bananas.id,
+        "asset_quantity": self._RNG.uniform(-1, 1),
+        "parent_id": t.id
+    }
+
+    t_split_1 = account.TransactionSplit(**d)
+    session.add(t_split_1)
     session.commit()
 
     # Test default and hidden properties
-    d["id"] = t_split.id
-    result = t_split.to_dict()
+    d.pop("asset_id")
+    d.pop("parent_id")
+    d["uuid"] = t_split_1.uuid
+    d["asset_uuid"] = asset_bananas.uuid
+    d["parent_uuid"] = t.uuid
+    result = t_split_1.to_dict()
     self.assertDictEqual(d, result)
 
-    self.assertEqual([t_split], t.splits)
-    self.assertEqual(asset_bananas, t_split.asset)
+    self.assertEqual([t_split_0, t_split_1], t.splits)
+    self.assertEqual(asset_bananas, t_split_1.asset)
 
   def test_category(self):
     self.assertEqual(None, account.TransactionCategory.parse(None))
@@ -111,7 +139,7 @@ class TestAccount(TestBase):
     self.assertIsNone(a.updated_on)
 
     # Test default and hidden properties
-    d["id"] = a.id
+    d["uuid"] = a.uuid
     d["opened_on"] = None
     d["updated_on"] = None
     result = a.to_dict()

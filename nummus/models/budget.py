@@ -20,13 +20,13 @@ class AnnualBudget(base.Base):
   All numbers are annual allocations
 
   Attributes:
-    id: AnnualBudget unique identifier
+    uuid: AnnualBudget unique identifier
     date: Date on which AnnualBudget is effective
     total: Total limit of AnnualBudget
     categories: Categorical breakdown of total
   """
 
-  _PROPERTIES_DEFAULT = ["id", "date", "total", "categories"]
+  _PROPERTIES_DEFAULT = ["uuid", "date", "total", "categories"]
 
   date: orm.Mapped[datetime.date]
   home: orm.Mapped[float] = orm.mapped_column(default=0)

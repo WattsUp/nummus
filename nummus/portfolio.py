@@ -2,8 +2,9 @@
 """
 
 from __future__ import annotations
-from typing import Dict, List
+from typing import Dict, List, Tuple, Union
 
+import datetime
 import pathlib
 import shutil
 
@@ -11,7 +12,8 @@ import autodict
 from sqlalchemy import orm
 
 from nummus import common, importers, models, sql, version
-from nummus.models import Account, Asset, Credentials, Transaction
+from nummus.models import (Account, Asset, Credentials, Transaction,
+                           TransactionSplit)
 
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
@@ -198,8 +200,20 @@ class Portfolio:
     # Cache a mapping from account/asset name to the ID
     account_mapping: Dict[str, str] = {}
     asset_mapping: Dict[str, str] = {}
-    transactions: List[Transaction] = []
+    transactions: List[Tuple[Transaction, TransactionSplit]] = []
     for d in i.run():
+      # Create a single split for each transaction
+      d_split: Dict[str, Union[str, float, datetime.date, object]] = {
+          "total": d["total"],  # Both split and parent have total
+          "sales_tax": d.pop("sales_tax", None),
+          "payee": d.pop("payee", None),
+          "description": d.pop("description", None),
+          "category": d.pop("category", None),
+          "subcategory": d.pop("subcategory", None),
+          "tag": d.pop("tag", None),
+          "asset_quantity": d.pop("asset_quantity", None)
+      }
+
       account = d.pop("account")
       account_id = account_mapping.get(account)
       if account_id is None:
@@ -218,13 +232,20 @@ class Portfolio:
           if asset_id is None:
             raise KeyError(f"Could not find Asset by '{asset}'")
           asset_mapping[asset] = asset_id
-        d["asset_id"] = asset_id
+        d_split["asset_id"] = asset_id
 
-      transactions.append(Transaction(**d))
+      transactions.append((Transaction(**d), TransactionSplit(**d_split)))
 
     # All good, add transactions and commit
     with self.get_session() as session:
-      session.add_all(transactions)
+      # Add just the transactions first
+      session.add_all(t for t, _ in transactions)
+      session.commit()
+
+      # Update the parent_ids
+      for t, t_split in transactions:
+        t_split.parent_id = t.id
+        session.add(t_split)
       session.commit()
 
   def _find_account(self, account: str) -> str:
