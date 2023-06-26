@@ -20,7 +20,7 @@ class TestCommands(TestBase):
   """Test CLI commands
   """
 
-  def test_create(self):
+  def test_create_unencrypted(self):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
@@ -78,7 +78,35 @@ class TestCommands(TestBase):
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
       self.assertTrue(path_config.exists(), "Config does not exist")
 
-      path_db.unlink()
+    finally:
+      mock.builtins.input = original_input
+      commands.common.getpass.getpass = original_get_pass
+
+  def test_create_encrypted(self):
+    if portfolio.encryption is None:
+      self.skipTest("Encryption is not installed")
+
+    original_input = mock.builtins.input
+    original_get_pass = commands.common.getpass.getpass
+
+    queue: List[str] = []
+
+    def mock_input(to_print: str):
+      print(to_print)
+      if len(queue) == 1:
+        return queue[0]
+      return queue.pop(0)
+
+    try:
+      mock.builtins.input = mock_input
+      commands.common.getpass.getpass = mock_input
+
+      path_db = self._TEST_ROOT.joinpath("portfolio.db")
+      path_config = path_db.with_suffix(".config")
+      path_password = self._TEST_ROOT.joinpath(".password")
+      key = self.random_string()
+      with open(path_password, "w", encoding="utf-8") as file:
+        file.write(f"  {key}  \n\n")
 
       # Create encrypted
       queue = []
@@ -152,7 +180,7 @@ class TestCommands(TestBase):
       mock.builtins.input = original_input
       commands.common.getpass.getpass = original_get_pass
 
-  def test_unlock(self):
+  def test_unlock_unencrypted(self):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
@@ -189,6 +217,31 @@ class TestCommands(TestBase):
       fake_stdout = fake_stdout.getvalue()
       target = f"{Fore.GREEN}Portfolio is unlocked\n"
       self.assertEqual(target, fake_stdout)
+
+    finally:
+      mock.builtins.input = original_input
+      commands.common.getpass.getpass = original_get_pass
+
+  def test_unlock_encrypted(self):
+    if portfolio.encryption is None:
+      self.skipTest("Encryption is not installed")
+
+    original_input = mock.builtins.input
+    original_get_pass = commands.common.getpass.getpass
+
+    queue: List[str] = []
+
+    def mock_input(to_print: str):
+      print(to_print)
+      if len(queue) == 1:
+        return queue[0]
+      return queue.pop(0)
+
+    try:
+      mock.builtins.input = mock_input
+      commands.common.getpass.getpass = mock_input
+
+      path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
       # Create and unlock encrypted Portfolio
       key = self.random_string()
