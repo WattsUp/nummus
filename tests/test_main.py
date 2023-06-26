@@ -143,7 +143,8 @@ class TestMain(TestBase):
       rc = main(args)
     self.assertNotEqual(rc, 0)
 
-    commands.create(path, None, False, True)
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path, None, False, True)
 
     args = ["--portfolio", path, "unlock"]
     with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -155,7 +156,8 @@ class TestMain(TestBase):
 
   def test_import(self):
     path = str(self._TEST_ROOT.joinpath("portfolio.db"))
-    commands.create(path, None, False, True)
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path, None, False, True)
 
     try:
       self._set_up_commands()
@@ -193,7 +195,8 @@ class TestMain(TestBase):
 
   def test_web(self):
     path = str(self._TEST_ROOT.joinpath("portfolio.db"))
-    commands.create(path, None, False, True)
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path, None, False, True)
 
     try:
       self._set_up_commands()

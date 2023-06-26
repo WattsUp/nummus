@@ -65,6 +65,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         key = None
 
   portfolio.Portfolio.create(path_db, key)
+  print(f"{Fore.GREEN}Portfolio created at {path_db}")
 
   return 0
 
