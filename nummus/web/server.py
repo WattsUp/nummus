@@ -37,7 +37,8 @@ class Server:
       app = connexion.App(__name__, specification_dir=spec_dir, options=options)
     app.add_api("api.yaml",
                 arguments={"title": "nummus API"},
-                pythonic_params=True)
+                pythonic_params=True,
+                strict_validation=True)
     app.add_url_rule("/", "", controller_html.get_home)
 
     # Add Portfolio to context for controllers

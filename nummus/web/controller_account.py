@@ -20,6 +20,7 @@ def create() -> flask.Response:
   expected_keys = {"name", "institution", "category"}
   if expected_keys != req.keys():
     extra = list(req.keys() - expected_keys)
+    print(extra)
     raise connexion.exceptions.BadRequestProblem(
         detail=f"Extra Request Keys: {extra}")
 
