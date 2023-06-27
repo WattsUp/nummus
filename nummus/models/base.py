@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import Dict, List, Union, Tuple
 
+import datetime
 import enum
 import json
 import uuid
@@ -164,7 +165,7 @@ class Base(orm.DeclarativeBase):
                               hide=list(hide),
                               path=f"{path}.{key.lower()}")
       else:
-        d[key] = json.loads(json.dumps(item))
+        d[key] = json.loads(json.dumps(item, cls=NummusJSONEncoder))
 
     return d
 
@@ -257,4 +258,6 @@ class NummusJSONEncoder(json.JSONEncoder):
       return o.to_dict()
     if isinstance(o, enum.Enum):
       return o.name.lower()
+    if isinstance(o, datetime.date):
+      return o.isoformat()
     return super().default(o)

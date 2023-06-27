@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import List, Optional
 
+import datetime
 import enum
 import json
 import uuid
@@ -428,9 +429,10 @@ class TestORMBase(TestBase):
     target = json.dumps(parent.to_dict())
     self.assertEqual(target, result)
 
-    d = {"class": ClassType.PARENT}
+    today = datetime.date.today()
+    d = {"class": ClassType.PARENT, "today": today}
     result = json.dumps(d, cls=base.NummusJSONEncoder)
-    target = '{"class": "parent"}'
+    target = f'{{"class": "parent", "today": "{today.isoformat()}"}}'
     self.assertEqual(target, result)
 
     class Fake:

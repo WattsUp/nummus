@@ -1,13 +1,16 @@
 """Test module nummus.web.controller_account
 """
 
+import datetime
 import io
 import json
 from unittest import mock
+import uuid
 import warnings
 
 from nummus import portfolio
-from nummus.models import Account, AccountCategory, NummusJSONEncoder
+from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
+                           Transaction, TransactionSplit)
 
 from tests.base import TestBase
 
@@ -41,24 +44,174 @@ class TestControllerAccount(TestBase):
     result = response.json
     self.assertDictEqual(target, result)
 
-    # Extra keys are bad
-    req = {
-        "name": name,
-        "institution": institution,
-        "category": category,
-        "extra": "key"
-    }
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/account", json=req)
-    self.assertEqual(400, response.status_code)
-
     # Fewer keys are bad
     req = {"name": name, "institution": institution}
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       with mock.patch("sys.stderr", new=io.StringIO()) as _:
         response = client.post("/api/account", json=req)
+    self.assertEqual(400, response.status_code)
+
+  def test_get(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+    client = self._get_api_client(p)
+
+    # Create accounts
+    a = Account(name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH)
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      a_uuid = a.uuid
+      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+    # Get by uuid
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      response = client.get(f"/api/account/{a_uuid}")
+    self.assertEqual(200, response.status_code)
+    self.assertEqual("application/json", response.content_type)
+    result = response.json
+    self.assertEqual(target, result)
+
+    # Get by uuid without dashes
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      response = client.get(f"/api/account/{a_uuid.replace('-', '')}")
+    self.assertEqual(200, response.status_code)
+    self.assertEqual("application/json", response.content_type)
+    result = response.json
+    self.assertEqual(target, result)
+
+    # Account does not exist
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.get(f"/api/account/{uuid.uuid4()}")
+    self.assertEqual(404, response.status_code)
+
+    # Bad UUID
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.get("/api/account/not-a-uuid")
+    self.assertEqual(400, response.status_code)
+
+  def test_update(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+    client = self._get_api_client(p)
+
+    # Create accounts
+    a = Account(name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH)
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      a_uuid = a.uuid
+      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+    # Update by uuid
+    new_name = self.random_string()
+    target["name"] = new_name
+    req = dict(target)
+    req.pop("uuid")
+    req.pop("opened_on")
+    req.pop("updated_on")
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      response = client.put(f"/api/account/{a_uuid}", json=req)
+    self.assertEqual(200, response.status_code)
+    self.assertEqual("application/json", response.content_type)
+    result = response.json
+    self.assertEqual(target, result)
+
+    # Read only properties
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.put("/api/account/not-a-uuid", json=target)
+    self.assertEqual(400, response.status_code)
+
+    # Account does not exist
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.put(f"/api/account/{uuid.uuid4()}", json=req)
+    self.assertEqual(404, response.status_code)
+
+    # Bad UUID
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.put("/api/account/not-a-uuid", json=req)
+    self.assertEqual(400, response.status_code)
+
+  def test_delete(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+    client = self._get_api_client(p)
+
+    # Create accounts
+    a = Account(name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH)
+    n_transactions = 10
+    today = datetime.date.today()
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      for _ in range(n_transactions):
+        t = Transaction(account_id=a.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=t)
+        s.add_all((t, t_split))
+      s.commit()
+
+      a_uuid = a.uuid
+      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+    with p.get_session() as s:
+      result = s.query(Transaction).count()
+      self.assertEqual(n_transactions, result)
+      result = s.query(TransactionSplit).count()
+      self.assertEqual(n_transactions, result)
+
+    # Delete by uuid
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      response = client.delete(f"/api/account/{a_uuid}")
+    self.assertEqual(200, response.status_code)
+    self.assertEqual("application/json", response.content_type)
+    result = response.json
+    self.assertEqual(target, result)
+
+    with p.get_session() as s:
+      result = s.query(Transaction).count()
+      self.assertEqual(0, result)
+      result = s.query(TransactionSplit).count()
+      self.assertEqual(0, result)
+
+    # Account does not exist
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.delete(f"/api/account/{uuid.uuid4()}")
+    self.assertEqual(404, response.status_code)
+
+    # Bad UUID
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+        response = client.delete("/api/account/not-a-uuid")
     self.assertEqual(400, response.status_code)
 
   def test_get_all(self):
@@ -76,9 +229,6 @@ class TestControllerAccount(TestBase):
     with p.get_session() as s:
       s.add_all((a_checking, a_invest))
       s.commit()
-
-      target = [a_checking, a_invest]
-      target = json.loads(json.dumps(target, cls=NummusJSONEncoder))
 
     # Get all
     with warnings.catch_warnings():

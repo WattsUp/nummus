@@ -81,6 +81,69 @@ paths:
           description: Invalid parameter supplied
       requestBody:
         $ref: "#/components/requestBodies/Account"
+  /account/{accountID}:
+    get:
+      tags:
+        - Account
+      summary: Find Account by UUID
+      description: Returns a single Account
+      x-openapi-router-controller: nummus.web.controller_account
+      operationId: get
+      parameters:
+        - $ref: "#/components/parameters/PathAccountID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Account not found
+    put:
+      tags:
+        - Account
+      summary: Update an existing Account
+      description: ""
+      x-openapi-router-controller: nummus.web.controller_account
+      operationId: update
+      parameters:
+        - $ref: "#/components/parameters/PathAccountID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Account not found
+      requestBody:
+        $ref: "#/components/requestBodies/Account"
+    delete:
+      tags:
+        - Account
+      summary: Delete an Account
+      description: Deletes the Account and all associated Transactions
+      x-openapi-router-controller: nummus.web.controller_account
+      operationId: delete
+      parameters:
+        - $ref: "#/components/parameters/PathAccountID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Account not found
   /accounts:
     get:
       tags:
@@ -132,6 +195,14 @@ components:
         text/html:
           example: <html><body>Your HTML text</body></html>
   parameters:
+    PathAccountID:
+      name: accountID
+      in: path
+      description: ID of Account to return
+      required: true
+      schema:
+        type: string
+        format: uuid
     AccountCategory:
       name: category
       in: query
