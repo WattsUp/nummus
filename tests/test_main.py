@@ -206,24 +206,45 @@ class TestMain(TestBase):
         main(args)
       self.assertEqual(1, len(self._called_args))
       self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+      is_dev = (version.version_dict["branch"] != "master" and
+                version.version_dict["distance"] != 0)
       self.assertDictEqual(
           {
               "_func": "run_web",
               "host": "127.0.0.1",
-              "port": 8080
+              "port": 8080,
+              "enable_api_ui": is_dev
           }, self._called_kwargs)
 
-      host = "0.0.0.0"
-      port = 80
-      args = ["--portfolio", path, "web", "-H", host, "-P", str(port)]
+      args = ["--portfolio", path, "web", "--api-ui"]
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
       self.assertEqual(1, len(self._called_args))
       self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
-      self.assertDictEqual({
-          "_func": "run_web",
-          "host": host,
-          "port": port
-      }, self._called_kwargs)
+      self.assertDictEqual(
+          {
+              "_func": "run_web",
+              "host": "127.0.0.1",
+              "port": 8080,
+              "enable_api_ui": True
+          }, self._called_kwargs)
+
+      host = "0.0.0.0"
+      port = 80
+      args = [
+          "--portfolio", path, "web", "-H", host, "-P",
+          str(port), "--no-api-ui"
+      ]
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        main(args)
+      self.assertEqual(1, len(self._called_args))
+      self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+      self.assertDictEqual(
+          {
+              "_func": "run_web",
+              "host": host,
+              "port": port,
+              "enable_api_ui": False
+          }, self._called_kwargs)
     finally:
       self._tear_down_commands()

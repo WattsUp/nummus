@@ -4,6 +4,7 @@
 from __future__ import annotations
 from typing import Dict, List, Union, Tuple
 
+import enum
 import json
 import uuid
 
@@ -245,3 +246,15 @@ class Base(orm.DeclarativeBase):
       True if UUIDs do not match
     """
     return self.uuid != other.uuid
+
+
+class NummusJSONEncoder(json.JSONEncoder):
+  """Custom JSON Encoder for nummus models
+  """
+
+  def default(self, o: object) -> object:
+    if isinstance(o, Base):
+      return o.to_dict()
+    if isinstance(o, enum.Enum):
+      return o.name.lower()
+    return super().default(o)

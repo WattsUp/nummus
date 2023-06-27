@@ -4,6 +4,8 @@
 from __future__ import annotations
 from typing import List, Optional
 
+import enum
+import json
 import uuid
 
 import sqlalchemy
@@ -13,6 +15,14 @@ from nummus import models
 from nummus.models import base
 
 from tests.base import TestBase
+
+
+class ClassType(enum.Enum):
+  """Test enum class for NummusJSONEncoder
+  """
+
+  CHILD = 0
+  PARENT = 1
 
 
 class Parent(base.Base):
@@ -402,3 +412,29 @@ class TestORMBase(TestBase):
           Parent.id == parent_a.id).first()
       self.assertNotEqual(id(parent_a), id(parent_a_queried))
       self.assertEqual(parent_a, parent_a_queried)
+
+  def test_json_encoder(self):
+    session = self._get_session()
+    base.Base.metadata.create_all(
+        session.get_bind(),
+        tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
+    session.commit()
+
+    parent = Parent()
+    session.add(parent)
+    session.commit()
+
+    result = json.dumps(parent, cls=base.NummusJSONEncoder)
+    target = json.dumps(parent.to_dict())
+    self.assertEqual(target, result)
+
+    d = {"class": ClassType.PARENT}
+    result = json.dumps(d, cls=base.NummusJSONEncoder)
+    target = '{"class": "parent"}'
+    self.assertEqual(target, result)
+
+    class Fake:
+      pass
+
+    d = {"obj": Fake()}
+    self.assertRaises(TypeError, json.dumps, d, cls=base.NummusJSONEncoder)

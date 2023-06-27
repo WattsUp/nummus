@@ -1,12 +1,9 @@
 """Database models
 """
 
-import enum
-import json
-
 from sqlalchemy import exc, orm
 
-from nummus.models.base import Base
+from nummus.models.base import Base, NummusJSONEncoder
 
 from nummus.models.account import (AccountCategory, Account,
                                    TransactionCategory, Transaction,
@@ -31,15 +28,3 @@ def metadata_create_all(session: orm.Session) -> None:
   ]
   Base.metadata.create_all(session.get_bind(), tables)
   session.commit()
-
-
-class NummusJSONEncoder(json.JSONEncoder):
-  """Custom JSON Encoder for nummus models
-  """
-
-  def default(self, o: object) -> object:
-    if isinstance(o, Base):
-      return o.to_dict()
-    if isinstance(o, enum.Enum):
-      return o.name.lower()
-    return super().default(o)

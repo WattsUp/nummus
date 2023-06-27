@@ -171,8 +171,9 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
   return 0
 
 
+# No unit test for wrapper command, too difficult to mock
 def run_web(p: portfolio.Portfolio, host: str, port: int,
-            enable_api_ui: bool) -> int:
+            enable_api_ui: bool) -> int:  # pragma: no cover
   """Run web server serving the nummus Portfolio
 
   Args:
