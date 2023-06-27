@@ -434,6 +434,8 @@ class TestORMBase(TestBase):
     self.assertEqual(target, result)
 
     class Fake:
+      """Unserializable class
+      """
       pass
 
     d = {"obj": Fake()}

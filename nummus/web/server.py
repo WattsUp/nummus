@@ -3,6 +3,7 @@
 
 import datetime
 import pathlib
+import warnings
 
 from colorama import Fore
 import connexion
@@ -31,7 +32,9 @@ class Server:
 
     spec_dir = pathlib.Path(__file__).parent.absolute().joinpath("spec")
     options = {"swagger_ui": enable_api_ui}
-    app = connexion.App(__name__, specification_dir=spec_dir, options=options)
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      app = connexion.App(__name__, specification_dir=spec_dir, options=options)
     app.add_api("api.yaml",
                 arguments={"title": "nummus API"},
                 pythonic_params=True)
@@ -43,7 +46,10 @@ class Server:
       flask.current_app.portfolio = p
 
     # Set JSON encoder
-    flask_app.json_encoder = models.NummusJSONEncoder
+    # TODO (WattsUp) Fix deprecation warning once connexion updates
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      flask_app.json_encoder = models.NummusJSONEncoder
 
     self._server = gevent.pywsgi.WSGIServer((host, port), app)
     self._enable_api_ui = enable_api_ui
