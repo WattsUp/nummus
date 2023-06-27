@@ -6,9 +6,10 @@ import pathlib
 
 from colorama import Fore
 import connexion
+import flask
 import gevent.pywsgi
 
-from nummus import portfolio
+from nummus import models, portfolio
 from nummus.web import controller_html
 
 
@@ -35,6 +36,14 @@ class Server:
                 arguments={"title": "nummus API"},
                 pythonic_params=True)
     app.add_url_rule("/", "", controller_html.get_home)
+
+    # Add Portfolio to context for controllers
+    flask_app: flask.Flask = app.app
+    with flask_app.app_context():
+      flask.current_app.portfolio = p
+
+    # Set JSON encoder
+    flask_app.json_encoder = models.NummusJSONEncoder
 
     self._server = gevent.pywsgi.WSGIServer((host, port), app)
     self._enable_api_ui = enable_api_ui

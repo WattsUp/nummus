@@ -14,8 +14,6 @@ info:
 tags:
   - name: Configuration
     description: nummus configuration settings
-  - name: HTML
-    description: Paths to HTML pages
   - name: Account
     description: Financial account information
   - name: Transaction
@@ -64,10 +62,61 @@ paths:
                     pattern: >-
                       ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?([a-zA-Z\d][-a-zA-Z.\d]*)?$
                     example: 10.2.0-rc1-alpha
+  /account:
+    post:
+      tags:
+        - Account
+      summary: Add a new Account to the portfolio
+      description: ""
+      x-openapi-router-controller: nummus.web.controller_account
+      operationId: create
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+        "400":
+          description: Invalid parameter supplied
+      requestBody:
+        $ref: "#/components/requestBodies/Account"
+  /accounts:
+    get:
+      tags:
+        - Account
+      summary: Get Accounts of Portfolio
+      description: ""
+      x-openapi-router-controller: nummus.web.controller_account
+      operationId: get_all
+      parameters:
+        - $ref: "#/components/parameters/AccountCategory"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accounts:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Account"
+        "400":
+          description: Invalid parameter supplied
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus
 components:
+  requestBodies:
+    Account:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Account"
+      description: Account object that needs to be added to the portfolio
+      required: true
   responses:
     Image:
       description: Image content
@@ -82,3 +131,50 @@ components:
       content:
         text/html:
           example: <html><body>Your HTML text</body></html>
+  parameters:
+    AccountCategory:
+      name: category
+      in: query
+      description: Filter data by Account category
+      schema:
+        $ref: "#/components/schemas/Account/properties/category"
+  schemas:
+    Account:
+      description: An financial Account of the portfolio
+      type: object
+      required:
+        - uuid
+        - name
+        - institution
+        - category
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          example: Monkey Bank Checking
+        institution:
+          type: string
+          example: Monkey Bank
+        category:
+          type: string
+          enum:
+            - cash
+            - credit
+            - investment
+            - mortgage
+            - loan
+            - fixed
+            - other
+        opened_on:
+          description: Date of first transaction
+          type: string
+          format: date
+          readOnly: true
+        updated_on:
+          description: Date of latest transaction
+          type: string
+          format: date
+          readOnly: true

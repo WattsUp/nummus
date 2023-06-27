@@ -3,6 +3,7 @@
     "AppenderQuery",
     "connexion",
     "gevent",
+    "jsonify",
     "nummus",
     "ondelete",
     "openapi",
