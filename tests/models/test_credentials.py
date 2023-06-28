@@ -8,7 +8,7 @@ from tests.base import TestBase
 
 
 class TestCredentials(TestBase):
-  """Test AnnualBudget class
+  """Test Credentials class
   """
 
   def test_init_properties(self):

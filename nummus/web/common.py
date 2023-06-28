@@ -6,7 +6,7 @@ import uuid
 import connexion
 from sqlalchemy import orm
 
-from nummus.models import Account, Asset, Transaction
+from nummus.models import Account, Asset, Budget, Transaction
 
 
 def find_account(s: orm.Session, query: str) -> Account:
@@ -58,6 +58,32 @@ def find_asset(s: orm.Session, query: str) -> Asset:
   if a is None:
     raise connexion.exceptions.ProblemException(
         status=404, detail=f"Asset {asset_uuid} not found in Portfolio")
+  return a
+
+
+def find_budget(s: orm.Session, query: str) -> Budget:
+  """Find the matching Budget by UUID
+
+  Args:
+    s: SQL session to search
+    query: Budget UUID to find, will clean first
+  
+  Returns:
+    Budget
+
+  Raises:
+    BadRequestProblem if UUID is malformed
+    ProblemException if Budget is not found
+  """
+  try:
+    asset_uuid = str(uuid.UUID(query))
+  except ValueError as e:
+    raise connexion.exceptions.BadRequestProblem(
+        detail=f"Badly formed UUID: {query}") from e
+  a = s.query(Budget).where(Budget.uuid == asset_uuid).first()
+  if a is None:
+    raise connexion.exceptions.ProblemException(
+        status=404, detail=f"Budget {asset_uuid} not found in Portfolio")
   return a
 
 

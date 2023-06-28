@@ -8,7 +8,7 @@ import connexion
 
 from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           Transaction, TransactionSplit)
+                           Budget, Transaction, TransactionSplit)
 from nummus.web import common
 
 from tests.base import TestBase
@@ -66,7 +66,7 @@ class TestCommon(TestBase):
       result = common.find_asset(s, a_uuid.replace("-", ""))
       self.assertEqual(a, result)
 
-      # Account does not exist
+      # Asset does not exist
       with self.assertRaises(connexion.exceptions.ProblemException) as cm:
         common.find_asset(s, str(uuid.uuid4()))
       e: connexion.exceptions.ProblemException = cm.exception
@@ -75,6 +75,35 @@ class TestCommon(TestBase):
       # Bad UUID
       self.assertRaises(connexion.exceptions.BadRequestProblem,
                         common.find_asset, s, self.random_string())
+
+  def test_find_budget(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+
+    # Create budget
+    today = datetime.date.today()
+    b = Budget(date=today)
+    with p.get_session() as s:
+      s.add(b)
+      s.commit()
+
+      b_uuid = str(b.uuid)
+      result = common.find_budget(s, b_uuid)
+      self.assertEqual(b, result)
+
+      # Get by uuid without dashes
+      result = common.find_budget(s, b_uuid.replace("-", ""))
+      self.assertEqual(b, result)
+
+      # Budget does not exist
+      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
+        common.find_budget(s, str(uuid.uuid4()))
+      e: connexion.exceptions.ProblemException = cm.exception
+      self.assertEqual(404, e.status)
+
+      # Bad UUID
+      self.assertRaises(connexion.exceptions.BadRequestProblem,
+                        common.find_budget, s, self.random_string())
 
   def test_find_transaction(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")

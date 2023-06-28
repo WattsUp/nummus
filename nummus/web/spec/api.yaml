@@ -262,6 +262,105 @@ paths:
                       $ref: "#/components/schemas/Asset"
         "400":
           description: Invalid parameter supplied
+  /budget:
+    post:
+      tags:
+        - Budget
+      summary: Add a new Budget to the portfolio
+      description: ""
+      operationId: nummus.web.controller_budget.create
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "400":
+          description: Invalid parameter supplied
+      requestBody:
+        $ref: "#/components/requestBodies/Budget"
+  /budget/{budgetUUID}:
+    get:
+      tags:
+        - Budget
+      summary: Find Budget by UUID
+      description: Returns a single Budget
+      operationId: nummus.web.controller_budget.get
+      parameters:
+        - $ref: "#/components/parameters/PathBudgetUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Budget not found
+    put:
+      tags:
+        - Budget
+      summary: Update an existing Budget
+      description: ""
+      operationId: nummus.web.controller_budget.update
+      parameters:
+        - $ref: "#/components/parameters/PathBudgetUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Budget not found
+      requestBody:
+        $ref: "#/components/requestBodies/Budget"
+    delete:
+      tags:
+        - Budget
+      summary: Delete an Budget
+      description: Deletes the Budget
+      operationId: nummus.web.controller_budget.delete
+      parameters:
+        - $ref: "#/components/parameters/PathBudgetUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Budget"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Budget not found
+  /budgets:
+    get:
+      tags:
+        - Budget
+      summary: Get Budgets of Portfolio
+      description: ""
+      operationId: nummus.web.controller_budget.get_all
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  budgets:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Budget"
+        "400":
+          description: Invalid parameter supplied
   /transaction:
     post:
       tags:
@@ -382,6 +481,13 @@ components:
             $ref: "#/components/schemas/Asset"
       description: Asset object that needs to be added to the portfolio
       required: true
+    Budget:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Budget"
+      description: Budget object that needs to be added to the portfolio
+      required: true
     Transaction:
       content:
         application/json:
@@ -416,6 +522,14 @@ components:
       name: assetUUID
       in: path
       description: ID of Asset to operate on
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PathBudgetUUID:
+      name: budgetUUID
+      in: path
+      description: ID of Budget to operate on
       required: true
       schema:
         type: string
@@ -523,6 +637,57 @@ components:
           type: string
           example: Collectibles
           nullable: true
+    Budget:
+      description: Allocation of cash flow transactions by categories. All
+        numbers are annual allocations.
+      type: object
+      required:
+        - uuid
+        - date
+        - categories
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        date:
+          description: Effective date of budget
+          type: string
+          format: date
+        total:
+          description: Total limit of budget
+          type: number
+          format: double
+          readOnly: true
+        categories:
+          description: Category breakdown of budget
+          type: object
+          properties:
+            home:
+              type: number
+              format: double
+            food:
+              type: number
+              format: double
+            shopping:
+              type: number
+              format: double
+            hobbies:
+              type: number
+              format: double
+            services:
+              type: number
+              format: double
+            travel:
+              type: number
+              format: double
+          required:
+            - home
+            - food
+            - shopping
+            - hobbies
+            - services
+            - travel
     Transaction:
       description: Exchange of cash for an asset (or none)
       type: object

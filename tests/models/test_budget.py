@@ -9,8 +9,8 @@ from nummus.models import budget
 from tests.base import TestBase
 
 
-class TestAnnualBudget(TestBase):
-  """Test AnnualBudget class
+class TestBudget(TestBase):
+  """Test Budget class
   """
 
   def test_init_properties(self):
@@ -19,7 +19,7 @@ class TestAnnualBudget(TestBase):
 
     today = datetime.date.today()
 
-    b = budget.AnnualBudget(date=today)
+    b = budget.Budget(date=today)
     session.add(b)
     session.commit()
 
@@ -42,7 +42,7 @@ class TestAnnualBudget(TestBase):
         "travel": self._RNG.uniform(0, 1)
     }
 
-    b = budget.AnnualBudget(**d)
+    b = budget.Budget(**d)
     session.add(b)
     session.commit()
 
@@ -70,7 +70,7 @@ class TestAnnualBudget(TestBase):
 
     today = datetime.date.today()
 
-    b = budget.AnnualBudget(date=today)
+    b = budget.Budget(date=today)
     session.add(b)
     session.commit()
 

@@ -13,16 +13,16 @@ from sqlalchemy import orm
 from nummus.models import base
 
 
-class AnnualBudget(base.Base):
+class Budget(base.Base):
   """Budget model for storing an allocation of cash flow transactions by
   categories
 
   All numbers are annual allocations
 
   Attributes:
-    uuid: AnnualBudget unique identifier
-    date: Date on which AnnualBudget is effective
-    total: Total limit of AnnualBudget
+    uuid: Budget unique identifier
+    date: Date on which Budget is effective
+    total: Total limit of Budget
     categories: Categorical breakdown of total
   """
 
