@@ -217,7 +217,7 @@ class Portfolio:
       account = d.pop("account")
       account_id = account_mapping.get(account)
       if account_id is None:
-        account_id = self._find_account(account)
+        account_id = self.find_account(account)
         if account_id is None:
           raise KeyError(f"Could not find Account by '{account}'")
         account_mapping[account] = account_id
@@ -228,7 +228,7 @@ class Portfolio:
         # Find its ID
         asset_id = asset_mapping.get(asset)
         if asset_id is None:
-          asset_id = self._find_asset(asset)
+          asset_id = self.find_asset(asset)
           if asset_id is None:
             raise KeyError(f"Could not find Asset by '{asset}'")
           asset_mapping[asset] = asset_id
@@ -248,54 +248,68 @@ class Portfolio:
         session.add(t_split)
       session.commit()
 
-  def _find_account(self, account: str) -> str:
-    """Find a matching Account by name or ID or institution
+  def find_account(self, query: Union[int, str]) -> Union[models.Account, int]:
+    """Find a matching Account by name, UUID, institution, or ID
 
     Args:
-      account: Search query
+      query: Search query
 
     Returns:
       Account ID or None if no matches found
     """
     with self.get_session() as session:
-      # See if account is an ID first...
-      matches = session.query(Account).where(Account.id == account).all()
-      if len(matches) == 1:
-        # Woot
-        return matches[0].id
-      # Maybe a name next
-      matches = session.query(Account).where(Account.name == account).all()
-      if len(matches) == 1:
-        # Woot
-        return matches[0].id
-      # Last chance, institution
-      matches = session.query(Account).where(
-          Account.institution == account).all()
-      if len(matches) == 1:
-        # Woot
-        return matches[0].id
+      if isinstance(query, int):
+        # See if account is an ID first...
+        matches = session.query(Account).where(Account.id == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
+      else:
+        # See if account is an UUID first...
+        matches = session.query(Account).where(Account.uuid == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
+        # Maybe a name next
+        matches = session.query(Account).where(Account.name == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
+        # Last chance, institution
+        matches = session.query(Account).where(
+            Account.institution == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
     return None
 
-  def _find_asset(self, asset: str) -> str:
-    """Find a matching Asset by name or ID
+  def find_asset(self, query: Union[int, str]) -> int:
+    """Find a matching Asset by name, UUID, or ID
 
     Args:
-      asset: Search query
+      query: Search query
 
     Returns:
       Asset ID or None if no matches found
     """
     with self.get_session() as session:
-      # See if asset is an ID first...
-      matches = session.query(Asset).where(Asset.id == asset).all()
-      if len(matches) == 1:
-        # Woot
-        return matches[0].id
-      # Maybe a name next
-      matches = session.query(Asset).where(Asset.name == asset).all()
-      if len(matches) == 1:
-        # Woot
-        return matches[0].id
+      if isinstance(query, int):
+        # See if asset is an ID first...
+        matches = session.query(Asset).where(Asset.id == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
+      else:
+        # See if asset is an UUID first...
+        matches = session.query(Asset).where(Asset.uuid == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
+        # Maybe a name next
+        matches = session.query(Asset).where(Asset.name == query).all()
+        if len(matches) == 1:
+          # Woot
+          return matches[0].id
     return None
 
   def backup(self) -> None:
