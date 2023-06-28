@@ -1,4 +1,4 @@
-"""Account API Controller
+"""Asset API Controller
 """
 
 from typing import Dict
@@ -6,12 +6,12 @@ from typing import Dict
 import flask
 
 from nummus import portfolio
-from nummus.models import Account, AccountCategory
+from nummus.models import Asset, AssetCategory
 from nummus.web import common
 
 
 def create() -> flask.Response:
-  """POST /api/account
+  """POST /api/asset
 
   Returns:
     JSON response, see api.yaml for details
@@ -20,22 +20,28 @@ def create() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   req: Dict[str, object] = flask.request.json
-  name = req["name"]
-  institution = req["institution"]
-  category = AccountCategory.parse(req["category"])
+  name = str(req["name"])
+  description = req.get("description")
+  category = AssetCategory.parse(req["category"])
+  unit = req.get("unit")
+  tag = req.get("tag")
 
-  a = Account(name=name, institution=institution, category=category)
+  a = Asset(name=name,
+            description=description,
+            category=category,
+            unit=unit,
+            tag=tag)
   with p.get_session() as s:
     s.add(a)
     s.commit()
     return flask.jsonify(a)
 
 
-def get(account_uuid: str) -> flask.Response:
-  """GET /api/account/{account_uuid}
+def get(asset_uuid: str) -> flask.Response:
+  """GET /api/asset/{asset_uuid}
 
   Args:
-    account_uuid: UUID of Account to find
+    asset_uuid: UUID of Asset to find
 
   Returns:
     JSON response, see api.yaml for details
@@ -44,15 +50,15 @@ def get(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    a = common.find_asset(s, asset_uuid)
     return flask.jsonify(a)
 
 
-def update(account_uuid: str) -> flask.Response:
-  """PUT /api/account/{account_uuid}
+def update(asset_uuid: str) -> flask.Response:
+  """PUT /api/asset/{asset_uuid}
 
   Args:
-    account_uuid: UUID of Account to update
+    asset_uuid: UUID of Asset to update
 
   Returns:
     JSON response, see api.yaml for details
@@ -61,24 +67,26 @@ def update(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    a = common.find_asset(s, asset_uuid)
 
     req: Dict[str, object] = flask.request.json
     d: Dict[str, object] = {}
     d["name"] = req["name"]
-    d["institution"] = req["institution"]
-    d["category"] = AccountCategory.parse(req["category"])
+    d["institution"] = req.get("description")
+    d["category"] = AssetCategory.parse(req["category"])
+    d["unit"] = req.get("unit")
+    d["tag"] = req.get("tag")
 
     a.update(d)
     s.commit()
     return flask.jsonify(a)
 
 
-def delete(account_uuid: str) -> flask.Response:
-  """DELETE /api/account/{account_uuid}
+def delete(asset_uuid: str) -> flask.Response:
+  """DELETE /api/asset/{asset_uuid}
 
   Args:
-    account_uuid: UUID of Account to delete
+    asset_uuid: UUID of Asset to delete
 
   Returns:
     JSON response, see api.yaml for details
@@ -87,22 +95,20 @@ def delete(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    a = common.find_asset(s, asset_uuid)
 
     response = flask.jsonify(a)
 
-    # Delete the transactions as well
-    for t in a.transactions:
-      for t_split in t.splits:
-        s.delete(t_split)
-      s.delete(t)
+    # Delete the valuations as well
+    for v in a.valuations:
+      s.delete(v)
     s.delete(a)
     s.commit()
     return response
 
 
 def get_all() -> flask.Response:
-  """GET /api/accounts
+  """GET /api/assets
 
   Returns:
     JSON response, see api.yaml for details
@@ -111,12 +117,12 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = AccountCategory.parse(args.get("category"))
+  filter_category = AssetCategory.parse(args.get("category"))
 
   with p.get_session() as s:
-    query = s.query(Account)
+    query = s.query(Asset)
     if filter_category is not None:
-      query = query.where(Account.category == filter_category)
+      query = query.where(Asset.category == filter_category)
 
-    response = {"accounts": query.all()}
+    response = {"assets": query.all()}
     return flask.jsonify(response)

@@ -88,28 +88,24 @@ class TestControllerTransaction(TestBase):
     subcategory = self.random_string()
     tag = self.random_string()
     asset_qty = float(self._RNG.uniform(-1, 1))
+    req_split = {
+        "total": total,
+        "sales_tax": sales_tax,
+        "payee": payee,
+        "description": description,
+        "category": category.name.lower(),
+        "subcategory": subcategory,
+        "tag": tag,
+        "asset_uuid": asset_bananas_uuid,
+        "asset_quantity": asset_qty
+    }
     req = {
-        "account_uuid":
-            a_uuid,
-        "date":
-            today.isoformat(),
-        "total":
-            total,
-        "statement":
-            statement,
-        "locked":
-            True,
-        "splits": [{
-            "total": total,
-            "sales_tax": sales_tax,
-            "payee": payee,
-            "description": description,
-            "category": category.name.lower(),
-            "subcategory": subcategory,
-            "tag": tag,
-            "asset_uuid": asset_bananas_uuid,
-            "asset_quantity": asset_qty
-        }]
+        "account_uuid": a_uuid,
+        "date": today.isoformat(),
+        "total": total,
+        "statement": statement,
+        "locked": True,
+        "splits": [req_split]
     }
 
     with warnings.catch_warnings():
