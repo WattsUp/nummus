@@ -5,15 +5,11 @@ import datetime
 import io
 import json
 from unittest import mock
-import uuid
 import warnings
-
-import connexion
 
 from nummus import portfolio
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
                            Transaction, TransactionSplit)
-from nummus.web import controller_account
 
 from tests.base import TestBase
 
@@ -54,36 +50,6 @@ class TestControllerAccount(TestBase):
       with mock.patch("sys.stderr", new=io.StringIO()) as _:
         response = client.post("/api/account", json=req)
     self.assertEqual(400, response.status_code)
-
-  def test_find(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-
-    # Create accounts
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
-    with p.get_session() as s:
-      s.add(a)
-      s.commit()
-
-      a_uuid = str(a.uuid)
-      result = controller_account.find(s, a_uuid)
-      self.assertEqual(a, result)
-
-      # Get by uuid without dashes
-      result = controller_account.find(s, a_uuid.replace("-", ""))
-      self.assertEqual(a, result)
-
-      # Account does not exist
-      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-        controller_account.find(s, str(uuid.uuid4()))
-      e: connexion.exceptions.ProblemException = cm.exception
-      self.assertEqual(404, e.status)
-
-      # Bad UUID
-      self.assertRaises(connexion.exceptions.BadRequestProblem,
-                        controller_account.find, s, self.random_string())
 
   def test_get(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -128,7 +94,9 @@ class TestControllerAccount(TestBase):
 
     # Update by uuid
     new_name = self.random_string()
+    new_category = AccountCategory.CREDIT
     target["name"] = new_name
+    target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
     req.pop("opened_on")
@@ -138,6 +106,10 @@ class TestControllerAccount(TestBase):
       response = client.put(f"/api/account/{a_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
+    with p.get_session() as s:
+      a = s.query(Account).where(Account.uuid == a_uuid).first()
+      self.assertEqual(new_name, a.name)
+      self.assertEqual(new_category, a.category)
     result = response.json
     self.assertEqual(target, result)
 
@@ -145,7 +117,7 @@ class TestControllerAccount(TestBase):
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put("/api/account/not-a-uuid", json=target)
+        response = client.put(f"/api/account/{a_uuid}", json=target)
     self.assertEqual(400, response.status_code)
 
   def test_delete(self):
@@ -176,6 +148,8 @@ class TestControllerAccount(TestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     with p.get_session() as s:
+      result = s.query(Account).count()
+      self.assertEqual(1, result)
       result = s.query(Transaction).count()
       self.assertEqual(n_transactions, result)
       result = s.query(TransactionSplit).count()
@@ -191,6 +165,8 @@ class TestControllerAccount(TestBase):
     self.assertEqual(target, result)
 
     with p.get_session() as s:
+      result = s.query(Account).count()
+      self.assertEqual(0, result)
       result = s.query(Transaction).count()
       self.assertEqual(0, result)
       result = s.query(TransactionSplit).count()

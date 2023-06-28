@@ -81,6 +81,7 @@ class TestBase(unittest.TestCase):
       real: Test value
       threshold: Fractional amount real can be off
     """
+    self.assertIsNotNone(real)
     if target == 0.0:
       error = np.abs(real - target)
     else:

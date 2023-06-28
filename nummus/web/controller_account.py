@@ -3,40 +3,11 @@
 
 from typing import Dict
 
-import uuid
-
-import connexion
-from sqlalchemy import orm
 import flask
 
 from nummus import portfolio
 from nummus.models import Account, AccountCategory
-
-
-def find(s: orm.Session, query: str) -> Account:
-  """Find the matching Account by UUID
-
-  Args:
-    s: SQL session to search
-    query: Account UUID to find, will clean first
-  
-  Returns:
-    Account
-
-  Raises:
-    BadRequestProblem if UUID is malformed
-    ProblemException if Account is not found
-  """
-  try:
-    account_uuid = str(uuid.UUID(query))
-  except ValueError as e:
-    raise connexion.exceptions.BadRequestProblem(
-        detail=f"Badly formed UUID: {query}") from e
-  a = s.query(Account).where(Account.uuid == account_uuid).first()
-  if a is None:
-    raise connexion.exceptions.ProblemException(
-        status=404, detail=f"{account_uuid} not found in Portfolio")
-  return a
+from nummus.web import common
 
 
 def create() -> flask.Response:
@@ -73,15 +44,15 @@ def get(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    account = find(s, account_uuid)
-    return flask.jsonify(account)
+    a = common.find_account(s, account_uuid)
+    return flask.jsonify(a)
 
 
 def update(account_uuid: str) -> flask.Response:
   """PUT /api/account/{account_uuid}
 
   Args:
-    account_uuid: UUID of Account to find
+    account_uuid: UUID of Account to update
 
   Returns:
     JSON response, see api.yaml for details
@@ -90,18 +61,24 @@ def update(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    account = find(s, account_uuid)
+    a = common.find_account(s, account_uuid)
 
     req: Dict[str, object] = flask.request.json
-    account.update(req)
-    return flask.jsonify(account)
+    d: Dict[str, object] = {}
+    d["name"] = req["name"]
+    d["institution"] = req["institution"]
+    d["category"] = AccountCategory.parse(req["category"])
+
+    a.update(d)
+    s.commit()
+    return flask.jsonify(a)
 
 
 def delete(account_uuid: str) -> flask.Response:
-  """DELETE /api/account/{account_id}
+  """DELETE /api/account/{account_uuid}
 
   Args:
-    account_id: UUID of Account to delete
+    account_uuid: UUID of Account to delete
 
   Returns:
     JSON response, see api.yaml for details
@@ -110,20 +87,22 @@ def delete(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    account = find(s, account_uuid)
+    a = common.find_account(s, account_uuid)
+
+    response = flask.jsonify(a)
 
     # Delete the transactions as well
-    for t in account.transactions:
+    for t in a.transactions:
       for t_split in t.splits:
         s.delete(t_split)
       s.delete(t)
-    s.delete(account)
+    s.delete(a)
     s.commit()
-    return flask.jsonify(account)
+    return response
 
 
 def get_all() -> flask.Response:
-  """Get all Accounts of Portfolio
+  """GET /api/accounts
 
   Returns:
     JSON response, see api.yaml for details

@@ -39,8 +39,7 @@ paths:
         - Configuration
       summary: Displays version information.
       description: ""
-      x-openapi-router-controller: nummus.web.controller_config
-      operationId: get_version
+      operationId: nummus.web.controller_config.get_version
       responses:
         "200":
           description: Successful operation
@@ -59,8 +58,7 @@ paths:
                     description: Version of nummus server
                     type: string
                     format: "[major].[minor].[patch](-tweak)"
-                    pattern: >-
-                      ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?([a-zA-Z\d][-a-zA-Z.\d]*)?$
+                    pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?([a-zA-Z\d][-a-zA-Z.\d]*)?$
                     example: 10.2.0-rc1-alpha
   /account:
     post:
@@ -68,8 +66,7 @@ paths:
         - Account
       summary: Add a new Account to the portfolio
       description: ""
-      x-openapi-router-controller: nummus.web.controller_account
-      operationId: create
+      operationId: nummus.web.controller_account.create
       responses:
         "200":
           description: Successful operation
@@ -81,16 +78,15 @@ paths:
           description: Invalid parameter supplied
       requestBody:
         $ref: "#/components/requestBodies/Account"
-  /account/{accountID}:
+  /account/{accountUUID}:
     get:
       tags:
         - Account
       summary: Find Account by UUID
       description: Returns a single Account
-      x-openapi-router-controller: nummus.web.controller_account
-      operationId: get
+      operationId: nummus.web.controller_account.get
       parameters:
-        - $ref: "#/components/parameters/PathAccountID"
+        - $ref: "#/components/parameters/PathAccountUUID"
       responses:
         "200":
           description: Successful operation
@@ -107,10 +103,9 @@ paths:
         - Account
       summary: Update an existing Account
       description: ""
-      x-openapi-router-controller: nummus.web.controller_account
-      operationId: update
+      operationId: nummus.web.controller_account.update
       parameters:
-        - $ref: "#/components/parameters/PathAccountID"
+        - $ref: "#/components/parameters/PathAccountUUID"
       responses:
         "200":
           description: Successful operation
@@ -129,10 +124,9 @@ paths:
         - Account
       summary: Delete an Account
       description: Deletes the Account and all associated Transactions
-      x-openapi-router-controller: nummus.web.controller_account
-      operationId: delete
+      operationId: nummus.web.controller_account.delete
       parameters:
-        - $ref: "#/components/parameters/PathAccountID"
+        - $ref: "#/components/parameters/PathAccountUUID"
       responses:
         "200":
           description: Successful operation
@@ -150,8 +144,7 @@ paths:
         - Account
       summary: Get Accounts of Portfolio
       description: ""
-      x-openapi-router-controller: nummus.web.controller_account
-      operationId: get_all
+      operationId: nummus.web.controller_account.get_all
       parameters:
         - $ref: "#/components/parameters/AccountCategory"
       responses:
@@ -168,6 +161,107 @@ paths:
                       $ref: "#/components/schemas/Account"
         "400":
           description: Invalid parameter supplied
+  /transaction:
+    post:
+      tags:
+        - Transaction
+      summary: Add a new Transaction to the portfolio
+      description: ""
+      operationId: nummus.web.controller_transaction.create
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid parameter supplied
+      requestBody:
+        $ref: "#/components/requestBodies/Transaction"
+  /transaction/{transactionUUID}:
+    get:
+      tags:
+        - Transaction
+      summary: Find Transaction by UUID
+      description: Returns a single Transaction
+      operationId: nummus.web.controller_transaction.get
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Transaction not found
+    put:
+      tags:
+        - Transaction
+      summary: Update an existing Transaction
+      description: ""
+      operationId: nummus.web.controller_transaction.update
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Transaction not found
+      requestBody:
+        $ref: "#/components/requestBodies/Transaction"
+    delete:
+      tags:
+        - Transaction
+      summary: Delete an Transaction
+      description: Deletes the Transaction
+      operationId: nummus.web.controller_transaction.delete
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Transaction not found
+  /transactions:
+    get:
+      tags:
+        - Transaction
+      summary: Get Transaction of Portfolio
+      description: ""
+      operationId: nummus.web.controller_transaction.get_all
+      parameters:
+        - $ref: "#/components/parameters/TransactionCategory"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Invalid parameter supplied
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus
@@ -179,6 +273,13 @@ components:
           schema:
             $ref: "#/components/schemas/Account"
       description: Account object that needs to be added to the portfolio
+      required: true
+    Transaction:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Transaction"
+      description: Transaction object that needs to be added to the portfolio
       required: true
   responses:
     Image:
@@ -195,10 +296,18 @@ components:
         text/html:
           example: <html><body>Your HTML text</body></html>
   parameters:
-    PathAccountID:
-      name: accountID
+    PathAccountUUID:
+      name: accountUUID
       in: path
-      description: ID of Account to return
+      description: ID of Account to operate on
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PathTransactionUUID:
+      name: transactionUUID
+      in: path
+      description: ID of Transaction to operate on
       required: true
       schema:
         type: string
@@ -209,6 +318,12 @@ components:
       description: Filter data by Account category
       schema:
         $ref: "#/components/schemas/Account/properties/category"
+    TransactionCategory:
+      name: category
+      in: query
+      description: Filter data by Transaction category
+      schema:
+        $ref: "#/components/schemas/TransactionSplit/properties/category"
   schemas:
     Account:
       description: An financial Account of the portfolio
@@ -249,3 +364,153 @@ components:
           type: string
           format: date
           readOnly: true
+    Asset:
+      description: Individual item with dynamic worth
+      type: object
+      required:
+        - uuid
+        - name
+        - category
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          description: Name of asset
+          type: string
+          example: NASDAQ:AMZN
+        description:
+          type: string
+          example: Amazon.com, Inc.
+          nullable: true
+        category:
+          type: string
+          enum:
+            - cash
+            - security
+            - real_estate
+            - vehicle
+            - item
+        unit:
+          description: Unit name for a individual asset
+          type: string
+          example: shares
+          nullable: true
+        tag:
+          type: string
+          example: Collectibles
+          nullable: true
+    Transaction:
+      description: Exchange of cash for an asset (or none)
+      type: object
+      required:
+        - uuid
+        - account_uuid
+        - date
+        - total
+        - statement
+        - locked
+        - splits
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        account_uuid:
+          description: ID of Account that owns this Transaction
+          type: string
+          format: uuid
+        date:
+          type: string
+          format: date
+        total:
+          description: Total amount of cash exchanged. Positive indicates
+            Account increases in value (inflow).
+          type: number
+          format: double
+          example: -10.99
+        statement:
+          description: Text appearing on statement
+          type: string
+          example: AMZN#123456789
+        locked:
+          description: Parameters can only be manually edited
+          type: boolean
+        splits:
+          description: Parent transaction when split
+          type: array
+          items:
+            $ref: "#/components/schemas/TransactionSplit"
+    TransactionSplit:
+      description: Exchange of cash for an asset (or none)
+      type: object
+      required:
+        - uuid
+        - total
+        - parent_uuid
+      properties:
+        uuid:
+          type: string
+          format: uuid
+          readOnly: true
+        parent_uuid:
+          description: ID of Transaction that owns this TransactionSplit
+          type: string
+          format: uuid
+          readOnly: true
+        total:
+          description: Total amount of cash exchanged. Positive indicates
+            Account increases in value (ingress).
+          type: number
+          format: double
+          example: -10.99
+        sales_tax:
+          description: Amount of sales tax paid on transaction, always negative
+          type: number
+          format: double
+          example: -0.52
+          nullable: true
+        payee:
+          description: Name of payee (for outflow)/payer (for inflow)
+          type: string
+          example: Amazon
+          nullable: true
+        description:
+          type: string
+          example: Banana hook
+          nullable: true
+        category:
+          type: string
+          enum:
+            - home
+            - food
+            - shopping
+            - hobbies
+            - services
+            - travel
+            - income
+            - instrument
+            - transfer
+          nullable: true
+        subcategory:
+          type: string
+          example: Furnishings
+          nullable: true
+        tag:
+          type: string
+          example: Kitchen
+          nullable: true
+        asset_uuid:
+          description: ID of Asset exchanged for cash, primarily for instrument
+            transactions
+          type: string
+          format: uuid
+          nullable: true
+        asset_quantity:
+          description: Number of units of Asset exchanged. Positive indicates
+            Account gained Assets (ingress)
+          type: number
+          format: double
+          example: -0.52
+          nullable: true
