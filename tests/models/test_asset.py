@@ -109,18 +109,3 @@ class TestAsset(TestBase):
     self.assertEqual([], result)
     result = session.query(asset.AssetValuation).all()
     self.assertEqual([], result)
-
-  def test_category(self):
-    self.assertEqual(None, asset.AssetCategory.parse(None))
-    self.assertEqual(None, asset.AssetCategory.parse(""))
-
-    for enum in asset.AssetCategory:
-      self.assertEqual(enum, asset.AssetCategory.parse(enum))
-      self.assertEqual(enum, asset.AssetCategory.parse(enum.name))
-      self.assertEqual(enum, asset.AssetCategory.parse(enum.value))
-
-    # enum_map = {}
-    # for s, enum in enum_map.items():
-    #   self.assertEqual(enum, asset.AssetCategory.parse(s.upper()))
-
-    self.assertRaises(ValueError, asset.AssetCategory.parse, "FAKE")

@@ -442,3 +442,32 @@ class TestORMBase(TestBase):
 
     d = {"obj": Fake()}
     self.assertRaises(TypeError, json.dumps, d, cls=base.NummusJSONEncoder)
+
+
+class Derived(base.BaseEnum):
+  """Derived test class for BaseEnum
+  """
+
+  RED = 1
+  BLUE = 2
+
+  __ENUM_MAP__ = {"r": RED, "b": BLUE}
+
+
+class TestBaseEnum(TestBase):
+  """Test BaseEnum class
+  """
+
+  def test_parse(self):
+    self.assertEqual(None, Derived.parse(None))
+    self.assertEqual(None, Derived.parse(""))
+
+    for enum in Derived:
+      self.assertEqual(enum, Derived.parse(enum))
+      self.assertEqual(enum, Derived.parse(enum.name))
+      self.assertEqual(enum, Derived.parse(enum.value))
+
+    for s, enum in Derived.__ENUM_MAP__.items():
+      self.assertEqual(enum, Derived.parse(s.upper()))
+
+    self.assertRaises(ValueError, Derived.parse, "FAKE")

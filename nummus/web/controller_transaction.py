@@ -3,8 +3,6 @@
 
 from typing import Dict, List
 
-import datetime
-
 import connexion
 import flask
 
@@ -24,7 +22,7 @@ def create() -> flask.Response:
 
   req: Dict[str, object] = flask.request.json
   account_uuid = req["account_uuid"]
-  date = datetime.date.fromisoformat(req["date"])
+  date = common.parse_date(req["date"])
   locked = req["locked"]
   statement = req["statement"]
   total = req["total"]
@@ -37,7 +35,8 @@ def create() -> flask.Response:
         "sales_tax": split.get("sales_tax"),
         "payee": split.get("payee"),
         "description": split.get("description"),
-        "category": TransactionCategory.parse(split.get("category")),
+        "category": (common.parse_enum(split.get("category"),
+                                       TransactionCategory)),
         "subcategory": split.get("subcategory"),
         "tag": split.get("tag"),
         "asset_uuid": split.get("asset_uuid"),
@@ -101,7 +100,7 @@ def update(transaction_uuid: str) -> flask.Response:
     d: Dict[str, object] = {}
     a = common.find_account(s, req["account_uuid"])
     d["account_id"] = a.id
-    d["date"] = datetime.date.fromisoformat(req["date"])
+    d["date"] = common.parse_date(req["date"])
     d["total"] = req["total"]
     d["statement"] = req["statement"]
     d["locked"] = req["locked"]
@@ -130,7 +129,8 @@ def update(transaction_uuid: str) -> flask.Response:
       d_split["sales_tax"] = req_split.get("sales_tax")
       d_split["payee"] = req_split.get("payee")
       d_split["description"] = req_split.get("description")
-      d_split["category"] = TransactionCategory.parse(req_split.get("category"))
+      d_split["category"] = common.parse_enum(req_split.get("category"),
+                                              TransactionCategory)
       d_split["subcategory"] = req_split.get("subcategory")
       d_split["tag"] = req_split.get("tag")
 
@@ -182,7 +182,7 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = TransactionCategory.parse(args.get("category"))
+  filter_category = common.parse_enum(args.get("category"), TransactionCategory)
 
   with p.get_session() as s:
     # Get by splits

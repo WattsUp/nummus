@@ -22,7 +22,7 @@ def create() -> flask.Response:
   req: Dict[str, object] = flask.request.json
   name = str(req["name"])
   description = req.get("description")
-  category = AssetCategory.parse(req["category"])
+  category = common.parse_enum(req["category"], AssetCategory)
   unit = req.get("unit")
   tag = req.get("tag")
 
@@ -73,7 +73,7 @@ def update(asset_uuid: str) -> flask.Response:
     d: Dict[str, object] = {}
     d["name"] = req["name"]
     d["institution"] = req.get("description")
-    d["category"] = AssetCategory.parse(req["category"])
+    d["category"] = common.parse_enum(req["category"], AssetCategory)
     d["unit"] = req.get("unit")
     d["tag"] = req.get("tag")
 
@@ -117,7 +117,7 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = AssetCategory.parse(args.get("category"))
+  filter_category = common.parse_enum(args.get("category"), AssetCategory)
 
   with p.get_session() as s:
     query = s.query(Asset)

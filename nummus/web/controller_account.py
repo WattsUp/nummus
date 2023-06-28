@@ -22,7 +22,7 @@ def create() -> flask.Response:
   req: Dict[str, object] = flask.request.json
   name = req["name"]
   institution = req["institution"]
-  category = AccountCategory.parse(req["category"])
+  category = common.parse_enum(req["category"], AccountCategory)
 
   a = Account(name=name, institution=institution, category=category)
   with p.get_session() as s:
@@ -67,7 +67,7 @@ def update(account_uuid: str) -> flask.Response:
     d: Dict[str, object] = {}
     d["name"] = req["name"]
     d["institution"] = req["institution"]
-    d["category"] = AccountCategory.parse(req["category"])
+    d["category"] = common.parse_enum(req["category"], AccountCategory)
 
     a.update(d)
     s.commit()
@@ -111,7 +111,7 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = AccountCategory.parse(args.get("category"))
+  filter_category = common.parse_enum(args.get("category"), AccountCategory)
 
   with p.get_session() as s:
     query = s.query(Account)

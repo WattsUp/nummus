@@ -3,8 +3,6 @@
 
 from typing import Dict
 
-import datetime
-
 import flask
 
 from nummus import portfolio
@@ -23,7 +21,7 @@ def create() -> flask.Response:
 
   req: Dict[str, object] = flask.request.json
   req_categories: Dict[str, float] = req["categories"]
-  date = datetime.date.fromisoformat(req["date"])
+  date = common.parse_date(req["date"])
   home = req_categories["home"]
   food = req_categories["food"]
   shopping = req_categories["shopping"]
@@ -77,7 +75,7 @@ def update(budget_uuid: str) -> flask.Response:
     b = common.find_budget(s, budget_uuid)
 
     req: Dict[str, object] = flask.request.json
-    b.date = datetime.date.fromisoformat(req["date"])
+    b.date = common.parse_date(req["date"])
     b.categories = req["categories"]
 
     s.commit()

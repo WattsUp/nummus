@@ -3,7 +3,7 @@
 
 from sqlalchemy import exc, orm
 
-from nummus.models.base import Base, NummusJSONEncoder
+from nummus.models.base import Base, BaseEnum, NummusJSONEncoder
 
 from nummus.models.account import (AccountCategory, Account,
                                    TransactionCategory, Transaction,

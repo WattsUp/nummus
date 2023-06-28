@@ -44,10 +44,6 @@ class TestCommon(TestBase):
       e: connexion.exceptions.ProblemException = cm.exception
       self.assertEqual(404, e.status)
 
-      # Bad UUID
-      self.assertRaises(connexion.exceptions.BadRequestProblem,
-                        common.find_account, s, self.random_string())
-
   def test_find_asset(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     p = portfolio.Portfolio.create(path_db, None)
@@ -71,10 +67,6 @@ class TestCommon(TestBase):
         common.find_asset(s, str(uuid.uuid4()))
       e: connexion.exceptions.ProblemException = cm.exception
       self.assertEqual(404, e.status)
-
-      # Bad UUID
-      self.assertRaises(connexion.exceptions.BadRequestProblem,
-                        common.find_asset, s, self.random_string())
 
   def test_find_budget(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -100,10 +92,6 @@ class TestCommon(TestBase):
         common.find_budget(s, str(uuid.uuid4()))
       e: connexion.exceptions.ProblemException = cm.exception
       self.assertEqual(404, e.status)
-
-      # Bad UUID
-      self.assertRaises(connexion.exceptions.BadRequestProblem,
-                        common.find_budget, s, self.random_string())
 
   def test_find_transaction(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -140,6 +128,36 @@ class TestCommon(TestBase):
       e: connexion.exceptions.ProblemException = cm.exception
       self.assertEqual(404, e.status)
 
-      # Bad UUID
-      self.assertRaises(connexion.exceptions.BadRequestProblem,
-                        common.find_transaction, s, self.random_string())
+  def test_parse_uuid(self):
+    target = uuid.uuid4()
+    s = str(target)
+    result = common.parse_uuid(s)
+    self.assertEqual(target, result)
+
+    s = str(target).replace("-", "")
+    result = common.parse_uuid(s)
+    self.assertEqual(target, result)
+
+    # Bad UUID
+    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_uuid,
+                      self.random_string())
+
+  def test_parse_date(self):
+    target = datetime.date.today()
+    s = target.isoformat()
+    result = common.parse_date(s)
+    self.assertEqual(target, result)
+
+    # Bad UUID
+    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_date,
+                      self.random_string())
+
+  def test_parse_enum(self):
+    target: AccountCategory = self._RNG.choice(AccountCategory)
+    s = target.name.lower()
+    result = common.parse_enum(s, AccountCategory)
+    self.assertEqual(target, result)
+
+    # Bad UUID
+    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_enum,
+                      self.random_string(), AccountCategory)

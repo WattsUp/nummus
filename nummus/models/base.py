@@ -261,3 +261,37 @@ class NummusJSONEncoder(json.JSONEncoder):
     if isinstance(o, datetime.date):
       return o.isoformat()
     return super().default(o)
+
+
+class BaseEnum(enum.Enum):
+  """Enum class with a parser
+  """
+
+  __ENUM_MAP__: Dict[str, BaseEnum] = {}
+
+  @classmethod
+  def parse(cls, s: str) -> BaseEnum:
+    """Parse a string and return matching enum
+
+    Args:
+      s: String to parse
+
+    Returns:
+      BaseEnum enumeration that matches
+    """
+    if isinstance(s, cls):
+      return s
+    if isinstance(s, int):
+      return cls(s)
+    if s in ["", None]:
+      return None
+    s = s.upper().strip()
+    if s in cls._member_names_:
+      return cls[s]
+
+    s = s.lower()
+    # LUT of common strings to the matching enum
+    if s in cls.__ENUM_MAP__:
+      return cls.__ENUM_MAP__[s]
+
+    raise ValueError(f"String not found in {cls.__name__}: {s}")
