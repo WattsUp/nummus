@@ -48,7 +48,8 @@ class TestCommands(TestBase):
       with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
         rc = commands.create(path_db, None, False, True)
       fake_stdout = fake_stdout.getvalue()
-      self.assertEqual(fake_stdout, "")
+      target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
+      self.assertEqual(fake_stdout, target)
       self.assertEqual(rc, 0)
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
       self.assertTrue(path_config.exists(), "Config does not exist")
@@ -73,7 +74,8 @@ class TestCommands(TestBase):
       with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
         rc = commands.create(path_db, None, True, True)
       fake_stdout = fake_stdout.getvalue()
-      self.assertEqual(fake_stdout, "")
+      target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
+      self.assertEqual(fake_stdout, target)
       self.assertEqual(rc, 0)
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
       self.assertTrue(path_config.exists(), "Config does not exist")
@@ -113,7 +115,8 @@ class TestCommands(TestBase):
       with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
         rc = commands.create(path_db, path_password, False, False)
       fake_stdout = fake_stdout.getvalue()
-      self.assertEqual(fake_stdout, "")
+      target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
+      self.assertEqual(fake_stdout, target)
       self.assertEqual(rc, 0)
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
       self.assertTrue(path_config.exists(), "Config does not exist")
@@ -128,7 +131,8 @@ class TestCommands(TestBase):
                              True, False)
       fake_stdout = fake_stdout.getvalue()
       target = ("Please enter password: \n"
-                "Please confirm password: \n")
+                "Please confirm password: \n"
+                f"{Fore.GREEN}Portfolio created at {path_db}\n")
       self.assertEqual(fake_stdout, target)
       self.assertEqual(rc, 0)
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
@@ -148,7 +152,8 @@ class TestCommands(TestBase):
                 "Please confirm password: \n"
                 f"{Fore.RED}Passwords must match\n"
                 "Please enter password: \n"
-                "Please confirm password: \n")
+                "Please confirm password: \n"
+                f"{Fore.GREEN}Portfolio created at {path_db}\n")
       self.assertEqual(fake_stdout, target)
       self.assertEqual(rc, 0)
       self.assertTrue(path_db.exists(), "Portfolio does not exist")
@@ -209,7 +214,8 @@ class TestCommands(TestBase):
       self.assertEqual(target, fake_stdout)
 
       # Create and unlock unencrypted Portfolio
-      commands.create(path_db, None, False, True)
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        commands.create(path_db, None, False, True)
       with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
         p = commands.unlock(path_db, None)
       self.assertIsNotNone(p)
@@ -332,7 +338,8 @@ class TestCommands(TestBase):
 
   def test_import_files(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    commands.create(path_db, None, False, True)
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path_db, None, False, True)
     p = portfolio.Portfolio(path_db, None)
 
     # Create Accounts and Assets

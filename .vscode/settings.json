@@ -3,10 +3,13 @@
     "AppenderQuery",
     "connexion",
     "gevent",
+    "jsonify",
     "nummus",
     "ondelete",
+    "openapi",
     "poolclass",
     "pycryptodome",
+    "robo-advising",
     "uselist",
     "Woot"
   ],

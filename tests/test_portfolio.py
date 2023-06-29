@@ -196,7 +196,7 @@ class TestPortfolio(TestBase):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
     p = portfolio.Portfolio.create(path_db)
 
-    result = p._find_account("Monkey Bank Checking")  # pylint: disable=protected-access
+    result = p.find_account("Monkey Bank Checking")
     self.assertIsNone(result)
 
     # Create accounts
@@ -219,30 +219,36 @@ class TestPortfolio(TestBase):
       a_invest_1 = s.query(Account).where(Account.id == a_invest_1.id).first()
 
     # Find by ID, kinda redundant but lol: id = find(id)
-    result = p._find_account(a_checking.id)  # pylint: disable=protected-access
+    result = p.find_account(a_checking.id)
     self.assertEqual(a_checking.id, result)
-    result = p._find_account(a_invest_0.id)  # pylint: disable=protected-access
+    result = p.find_account(a_invest_0.id)
     self.assertEqual(a_invest_0.id, result)
-    result = p._find_account(a_invest_1.id)  # pylint: disable=protected-access
+    result = p.find_account(a_invest_1.id)
     self.assertEqual(a_invest_1.id, result)
+    result = p.find_account(10)
+    self.assertIsNone(result)
+
+    # Find by UUID
+    result = p.find_account(a_checking.uuid)
+    self.assertEqual(a_checking.id, result)
 
     # Find by name
-    result = p._find_account("Monkey Bank Checking")  # pylint: disable=protected-access
+    result = p.find_account("Monkey Bank Checking")
     self.assertEqual(a_checking.id, result)
 
     # More than 1 match by name
-    result = p._find_account("Primate Investments")  # pylint: disable=protected-access
+    result = p.find_account("Primate Investments")
     self.assertIsNone(result)
 
     # Find by institution
-    result = p._find_account("Gorilla Bank")  # pylint: disable=protected-access
+    result = p.find_account("Gorilla Bank")
     self.assertEqual(a_invest_1.id, result)
 
   def test_find_asset(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
     p = portfolio.Portfolio.create(path_db)
 
-    result = p._find_asset("BANANA")  # pylint: disable=protected-access
+    result = p.find_asset("BANANA")
     self.assertIsNone(result)
 
     # Create accounts
@@ -259,19 +265,25 @@ class TestPortfolio(TestBase):
       a_apple_1 = s.query(Asset).where(Asset.id == a_apple_1.id).first()
 
     # Find by ID, kinda redundant but lol: id = find(id)
-    result = p._find_asset(a_banana.id)  # pylint: disable=protected-access
+    result = p.find_asset(a_banana.id)
     self.assertEqual(a_banana.id, result)
-    result = p._find_asset(a_apple_0.id)  # pylint: disable=protected-access
+    result = p.find_asset(a_apple_0.id)
     self.assertEqual(a_apple_0.id, result)
-    result = p._find_asset(a_apple_1.id)  # pylint: disable=protected-access
+    result = p.find_asset(a_apple_1.id)
     self.assertEqual(a_apple_1.id, result)
+    result = p.find_asset(10)
+    self.assertIsNone(result)
+
+    # Find by UUID
+    result = p.find_asset(a_banana.uuid)
+    self.assertEqual(a_banana.id, result)
 
     # Find by name
-    result = p._find_asset("BANANA")  # pylint: disable=protected-access
+    result = p.find_asset("BANANA")
     self.assertEqual(a_banana.id, result)
 
     # More than 1 match by name
-    result = p._find_asset("APPLE")  # pylint: disable=protected-access
+    result = p.find_asset("APPLE")
     self.assertIsNone(result)
 
   def test_import_file(self):

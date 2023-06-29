@@ -13,7 +13,7 @@ class TransactionImporter(ABC):
 
   def __init__(self, path: str = None, buf: bytes = None) -> None:
     """Initialize Transaction Importer
-    
+
     Args:
       Provide one or the other
       path: Path to file

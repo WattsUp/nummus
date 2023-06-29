@@ -8,7 +8,7 @@ import pathlib
 import colorama
 from colorama import Fore
 
-from nummus import common, portfolio
+from nummus import common, portfolio, web
 
 colorama.init(autoreset=True)
 
@@ -65,6 +65,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         key = None
 
   portfolio.Portfolio.create(path_db, key)
+  print(f"{Fore.GREEN}Portfolio created at {path_db}")
 
   return 0
 
@@ -130,7 +131,7 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
   Args:
     p: Working Portfolio
     paths: List of files or directories to import
-  
+
   Returns:
     0 on success
     non-zero on failure
@@ -170,16 +171,21 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
   return 0
 
 
-def run_web(p: portfolio.Portfolio, host: str, port: int) -> int:
+# No unit test for wrapper command, too difficult to mock
+def run_web(p: portfolio.Portfolio, host: str, port: int,
+            enable_api_ui: bool) -> int:  # pragma: no cover
   """Run web server serving the nummus Portfolio
 
   Args:
     p: Working Portfolio
     host: IP to bind to
     port: Network port to bind to
-  
+    enable_api_ui: True will enable Swagger UI for the API
+
   Returns:
     0 on success
     non-zero on failure
   """
-  raise NotImplementedError
+  s = web.Server(p, host, port, enable_api_ui)
+  s.run()
+  return 0

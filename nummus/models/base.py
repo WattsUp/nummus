@@ -4,6 +4,8 @@
 from __future__ import annotations
 from typing import Dict, List, Union, Tuple
 
+import datetime
+import enum
 import json
 import uuid
 
@@ -163,7 +165,7 @@ class Base(orm.DeclarativeBase):
                               hide=list(hide),
                               path=f"{path}.{key.lower()}")
       else:
-        d[key] = json.loads(json.dumps(item))
+        d[key] = json.loads(json.dumps(item, cls=NummusJSONEncoder))
 
     return d
 
@@ -245,3 +247,58 @@ class Base(orm.DeclarativeBase):
       True if UUIDs do not match
     """
     return self.uuid != other.uuid
+
+
+class NummusJSONEncoder(json.JSONEncoder):
+  """Custom JSON Encoder for nummus models
+  """
+
+  def default(self, o: object) -> object:
+    if isinstance(o, Base):
+      return o.to_dict()
+    if isinstance(o, enum.Enum):
+      return o.name.lower()
+    if isinstance(o, datetime.date):
+      return o.isoformat()
+    return super().default(o)
+
+
+class BaseEnum(enum.Enum):
+  """Enum class with a parser
+  """
+
+  @classmethod
+  def parse(cls, s: str) -> BaseEnum:
+    """Parse a string and return matching enum
+
+    Args:
+      s: String to parse
+
+    Returns:
+      BaseEnum enumeration that matches
+    """
+    if isinstance(s, cls):
+      return s
+    if isinstance(s, int):
+      return cls(s)
+    if s in ["", None]:
+      return None
+    s = s.upper().strip()
+    if s in cls._member_names_:
+      return cls[s]
+
+    s = s.lower()
+    # LUT of common strings to the matching enum
+    r = cls._lut().get(s)
+    if r is None:
+      raise ValueError(f"String not found in {cls.__name__}: {s}")
+    return r
+
+  @classmethod
+  def _lut(cls) -> Dict[str, BaseEnum]:
+    """Look up table, mapping of strings to matching Enums
+
+    Returns:
+      Dictionary {alternate names for enums: Enum}
+    """
+    return {}

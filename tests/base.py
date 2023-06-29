@@ -7,12 +7,16 @@ import string
 import time
 import unittest
 import uuid
+import warnings
 
 import autodict
+import connexion
+import flask
+import flask.testing
 import numpy as np
 from sqlalchemy import orm, pool
 
-from nummus import sql
+from nummus import sql, portfolio, web
 
 from tests import TEST_LOG
 
@@ -45,6 +49,24 @@ class TestBase(unittest.TestCase):
     path = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
     return sql.get_session(path, config)
 
+  def _get_api_client(self,
+                      p: portfolio.Portfolio) -> flask.testing.FlaskClient:
+    """Get test API client for a Portfolio
+
+    Args:
+      p: Portfolio to serve
+
+    Returns:
+      Flask test client
+    """
+    s = web.Server(p, "127.0.0.1", 8080, False)
+    s_server = s._server  # pylint: disable=protected-access
+    connexion_app: connexion.FlaskApp = s_server.application
+    flask_app: flask.Flask = connexion_app.app
+    with warnings.catch_warnings():
+      warnings.simplefilter("ignore")
+      return flask_app.test_client()
+
   def _clean_test_root(self):
     """Clean root test folder
     """
@@ -59,6 +81,7 @@ class TestBase(unittest.TestCase):
       real: Test value
       threshold: Fractional amount real can be off
     """
+    self.assertIsNotNone(real)
     if target == 0.0:
       error = np.abs(real - target)
     else:

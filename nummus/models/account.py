@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import List, Optional
 
 import datetime
-import enum
 
 import sqlalchemy
 from sqlalchemy import orm
@@ -13,7 +12,7 @@ from sqlalchemy import orm
 from nummus.models import base, asset
 
 
-class TransactionCategory(enum.Enum):
+class TransactionCategory(base.BaseEnum):
   """Categories of Transactions
   """
   HOME = 1
@@ -25,34 +24,6 @@ class TransactionCategory(enum.Enum):
   INCOME = 7
   INSTRUMENT = 8
   TRANSFER = 9
-
-  @classmethod
-  def parse(cls, s: str) -> TransactionCategory:
-    """Parse a string and return matching enum
-
-    Args:
-      s: String to parse
-
-    Returns:
-      TransactionCategory enumeration that matches
-    """
-    if isinstance(s, TransactionCategory):
-      return s
-    if isinstance(s, int):
-      return TransactionCategory(s)
-    if s in ["", None]:
-      return None
-    s = s.upper().strip()
-    if s in TransactionCategory._member_names_:
-      return TransactionCategory[s]
-
-    # s = s.lower()
-    # # LUT of common strings to the matching enum
-    # enum_map: Dict[str, TransactionCategory] = {}
-    # if s in enum_map:
-    #   return enum_map[s]
-
-    raise ValueError(f"String not found in {cls.__name__}: {s}")
 
 
 class TransactionSplit(base.Base):
@@ -155,7 +126,7 @@ class Transaction(base.Base):
     return self.account.uuid
 
 
-class AccountCategory(enum.Enum):
+class AccountCategory(base.BaseEnum):
   """Categories of Accounts
   """
   CASH = 1
@@ -165,34 +136,6 @@ class AccountCategory(enum.Enum):
   LOAN = 5
   FIXED = 6
   OTHER = 7
-
-  @classmethod
-  def parse(cls, s: str) -> AccountCategory:
-    """Parse a string and return matching enum
-
-    Args:
-      s: String to parse
-
-    Returns:
-      AccountCategory enumeration that matches
-    """
-    if isinstance(s, AccountCategory):
-      return s
-    if isinstance(s, int):
-      return AccountCategory(s)
-    if s in ["", None]:
-      return None
-    s = s.upper().strip()
-    if s in AccountCategory._member_names_:
-      return AccountCategory[s]
-
-    # s = s.lower()
-    # # LUT of common strings to the matching enum
-    # enum_map: Dict[str, AccountCategory] = {}
-    # if s in enum_map:
-    #   return enum_map[s]
-
-    raise ValueError(f"String not found in {cls.__name__}: {s}")
 
 
 class Account(base.Base):

@@ -2,8 +2,10 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import Dict, List, Optional
 
+import datetime
+import json
 import uuid
 
 import sqlalchemy
@@ -13,6 +15,14 @@ from nummus import models
 from nummus.models import base
 
 from tests.base import TestBase
+
+
+class ClassType(base.BaseEnum):
+  """Test enum class for NummusJSONEncoder
+  """
+
+  CHILD = 0
+  PARENT = 1
 
 
 class Parent(base.Base):
@@ -402,3 +412,63 @@ class TestORMBase(TestBase):
           Parent.id == parent_a.id).first()
       self.assertNotEqual(id(parent_a), id(parent_a_queried))
       self.assertEqual(parent_a, parent_a_queried)
+
+  def test_json_encoder(self):
+    session = self._get_session()
+    base.Base.metadata.create_all(
+        session.get_bind(),
+        tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
+    session.commit()
+
+    parent = Parent()
+    session.add(parent)
+    session.commit()
+
+    result = json.dumps(parent, cls=base.NummusJSONEncoder)
+    target = json.dumps(parent.to_dict())
+    self.assertEqual(target, result)
+
+    today = datetime.date.today()
+    d = {"class": ClassType.PARENT, "today": today}
+    result = json.dumps(d, cls=base.NummusJSONEncoder)
+    target = f'{{"class": "parent", "today": "{today.isoformat()}"}}'
+    self.assertEqual(target, result)
+
+    class Fake:
+      """Unserializable class
+      """
+      pass
+
+    d = {"obj": Fake()}
+    self.assertRaises(TypeError, json.dumps, d, cls=base.NummusJSONEncoder)
+
+
+class Derived(base.BaseEnum):
+  """Derived test class for BaseEnum
+  """
+
+  RED = 1
+  BLUE = 2
+
+  @classmethod
+  def _lut(cls) -> Dict[str, Derived]:
+    return {"r": cls.RED, "b": cls.BLUE}
+
+
+class TestBaseEnum(TestBase):
+  """Test BaseEnum class
+  """
+
+  def test_parse(self):
+    self.assertEqual(None, Derived.parse(None))
+    self.assertEqual(None, Derived.parse(""))
+
+    for e in Derived:
+      self.assertEqual(e, Derived.parse(e))
+      self.assertEqual(e, Derived.parse(e.name))
+      self.assertEqual(e, Derived.parse(e.value))
+
+    for s, e in Derived._lut().items():  # pylint: disable=protected-access
+      self.assertEqual(e, Derived.parse(s.upper()))
+
+    self.assertRaises(ValueError, Derived.parse, "FAKE")

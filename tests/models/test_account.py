@@ -97,21 +97,6 @@ class TestTransaction(TestBase):
     self.assertEqual([t_split_0, t_split_1], t.splits)
     self.assertEqual(asset_bananas, t_split_1.asset)
 
-  def test_category(self):
-    self.assertEqual(None, account.TransactionCategory.parse(None))
-    self.assertEqual(None, account.TransactionCategory.parse(""))
-
-    for enum in account.TransactionCategory:
-      self.assertEqual(enum, account.TransactionCategory.parse(enum))
-      self.assertEqual(enum, account.TransactionCategory.parse(enum.name))
-      self.assertEqual(enum, account.TransactionCategory.parse(enum.value))
-
-    # enum_map = {}
-    # for s, enum in enum_map.items():
-    #   self.assertEqual(enum, account.TransactionCategory.parse(s.upper()))
-
-    self.assertRaises(ValueError, account.TransactionCategory.parse, "FAKE")
-
 
 class TestAccount(TestBase):
   """Test Account class
@@ -199,18 +184,3 @@ class TestAccount(TestBase):
     self.assertEqual([t_before, t_today, t_after], a.transactions)
     self.assertEqual(t_before.date, a.opened_on)
     self.assertEqual(t_after.date, a.updated_on)
-
-  def test_category(self):
-    self.assertEqual(None, account.AccountCategory.parse(None))
-    self.assertEqual(None, account.AccountCategory.parse(""))
-
-    for enum in account.AccountCategory:
-      self.assertEqual(enum, account.AccountCategory.parse(enum))
-      self.assertEqual(enum, account.AccountCategory.parse(enum.name))
-      self.assertEqual(enum, account.AccountCategory.parse(enum.value))
-
-    # enum_map = {}
-    # for s, enum in enum_map.items():
-    #   self.assertEqual(enum, account.AccountCategory.parse(s.upper()))
-
-    self.assertRaises(ValueError, account.AccountCategory.parse, "FAKE")
