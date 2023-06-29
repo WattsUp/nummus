@@ -40,17 +40,18 @@ def main() -> None:
 
   # Trim trailing whitespace
   for f in files:
-    with open(f, "r", encoding="utf-8") as file:
+    # Do binary to normalize line endings to LF
+    with open(f, "rb") as file:
       buf = file.read()
 
-    lines = [l.rstrip(" ") for l in buf.splitlines()]
-    buf_trimmed = "\n".join(lines)
+    lines = [l.rstrip(b" ") for l in buf.splitlines()]
+    buf_trimmed = b"\n".join(lines)
     # Add trailing newline to non-blank files
-    if buf_trimmed != "":
-      buf_trimmed += "\n"
+    if buf_trimmed != b"":
+      buf_trimmed += b"\n"
     if buf == buf_trimmed:
       continue
-    with open(f, "w", encoding="utf-8") as file:
+    with open(f, "wb") as file:
       file.write(buf_trimmed)
     print(f"{Fore.GREEN}Trimmed {f}")
 
