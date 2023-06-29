@@ -35,9 +35,9 @@ class TransactionSplit(base.Base):
   Attributes:
     uuid: TransactionSplit unique identifier
     total: Total amount of cash exchanged. Positive indicated Account
-      increases in value (ingress)
+      increases in value (inflow)
     sales_tax: Amount of sales tax paid on Transaction, always negative
-    payee: Name of payee (for egress)/payer (for ingress)
+    payee: Name of payee (for outflow)/payer (for inflow)
     description: Description of exchange
     category: Type of Transaction
     subcategory: Subcategory of Transaction type
@@ -45,7 +45,7 @@ class TransactionSplit(base.Base):
     parent: Parent Transaction
     asset: Asset exchanged for cash, primarily for instrument transactions
     asset_quantity: Number of units of Asset exchanged, Positive indicates
-      Account gained Assets (ingress)
+      Account gained Assets (inflow)
   """
 
   _PROPERTIES_DEFAULT = [
@@ -96,7 +96,7 @@ class Transaction(base.Base):
     account: Account that owns this Transaction
     date: Date on which Transaction occurred
     total: Total amount of cash exchanged. Positive indicated Account
-      increases in value (ingress)
+      increases in value (inflow)
     statement: Text appearing on Account statement
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
