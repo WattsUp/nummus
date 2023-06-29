@@ -5,7 +5,6 @@ from __future__ import annotations
 from typing import List, Optional
 
 import datetime
-import enum
 
 import sqlalchemy
 from sqlalchemy import orm

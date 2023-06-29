@@ -267,8 +267,6 @@ class BaseEnum(enum.Enum):
   """Enum class with a parser
   """
 
-  __ENUM_MAP__: Dict[str, BaseEnum] = {}
-
   @classmethod
   def parse(cls, s: str) -> BaseEnum:
     """Parse a string and return matching enum
@@ -291,7 +289,16 @@ class BaseEnum(enum.Enum):
 
     s = s.lower()
     # LUT of common strings to the matching enum
-    if s in cls.__ENUM_MAP__:
-      return cls.__ENUM_MAP__[s]
+    r = cls._lut().get(s)
+    if r is None:
+      raise ValueError(f"String not found in {cls.__name__}: {s}")
+    return r
 
-    raise ValueError(f"String not found in {cls.__name__}: {s}")
+  @classmethod
+  def _lut(cls) -> Dict[str, BaseEnum]:
+    """Look up table, mapping of strings to matching Enums
+
+    Returns:
+      Dictionary {alternate names for enums: Enum}
+    """
+    return {}

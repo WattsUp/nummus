@@ -2,10 +2,9 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import datetime
-import enum
 import json
 import uuid
 
@@ -18,7 +17,7 @@ from nummus.models import base
 from tests.base import TestBase
 
 
-class ClassType(enum.Enum):
+class ClassType(base.BaseEnum):
   """Test enum class for NummusJSONEncoder
   """
 
@@ -451,7 +450,9 @@ class Derived(base.BaseEnum):
   RED = 1
   BLUE = 2
 
-  __ENUM_MAP__ = {"r": RED, "b": BLUE}
+  @classmethod
+  def _lut(cls) -> Dict[str, Derived]:
+    return {"r": cls.RED, "b": cls.BLUE}
 
 
 class TestBaseEnum(TestBase):
@@ -462,12 +463,12 @@ class TestBaseEnum(TestBase):
     self.assertEqual(None, Derived.parse(None))
     self.assertEqual(None, Derived.parse(""))
 
-    for enum in Derived:
-      self.assertEqual(enum, Derived.parse(enum))
-      self.assertEqual(enum, Derived.parse(enum.name))
-      self.assertEqual(enum, Derived.parse(enum.value))
+    for e in Derived:
+      self.assertEqual(e, Derived.parse(e))
+      self.assertEqual(e, Derived.parse(e.name))
+      self.assertEqual(e, Derived.parse(e.value))
 
-    for s, enum in Derived.__ENUM_MAP__.items():
-      self.assertEqual(enum, Derived.parse(s.upper()))
+    for s, e in Derived._lut().items():  # pylint: disable=protected-access
+      self.assertEqual(e, Derived.parse(s.upper()))
 
     self.assertRaises(ValueError, Derived.parse, "FAKE")
