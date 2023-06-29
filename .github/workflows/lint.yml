@@ -32,4 +32,4 @@ jobs:
           python -m pip install pylint
       - name: Lint
         run: |
-          python -m pylint nummus tests tools setup.py
+          python -m pylint nummus tests tools setup.py -j 0

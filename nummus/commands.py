@@ -131,7 +131,7 @@ def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
   Args:
     p: Working Portfolio
     paths: List of files or directories to import
-  
+
   Returns:
     0 on success
     non-zero on failure
@@ -181,7 +181,7 @@ def run_web(p: portfolio.Portfolio, host: str, port: int,
     host: IP to bind to
     port: Network port to bind to
     enable_api_ui: True will enable Swagger UI for the API
-  
+
   Returns:
     0 on success
     non-zero on failure
