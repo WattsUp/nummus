@@ -140,25 +140,60 @@ class TestControllerAsset(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    # Create accounts
-    a_banana = Asset(name="Banana", category=AssetCategory.ITEM, unit="bunches")
-    a_banana_inc = Asset(name="BANANA", category=AssetCategory.SECURITY)
+    # Create assets
+    a_banana = Asset(name="Banana",
+                     category=AssetCategory.ITEM,
+                     unit="bunches",
+                     tag="fruit")
+    a_banana_inc = Asset(name="BANANA inc.",
+                         category=AssetCategory.SECURITY,
+                         description="Big 'ole farm")
     with p.get_session() as s:
       s.add_all((a_banana, a_banana_inc))
       s.commit()
+      query = s.query(Asset)
+      assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
     result = self.api_get("/api/assets")
-    with p.get_session() as s:
-      query = s.query(Asset)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"assets": accounts}
+    target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only cash
     result = self.api_get("/api/assets", {"category": "item"})
-    with p.get_session() as s:
-      query = s.query(Asset).where(Asset.category == AssetCategory.ITEM)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"assets": accounts}
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Get via paging
+    result = self.api_get("/api/assets", {"limit": 1})
+    target = {"assets": assets[:1], "count": 2, "next_offset": 1}
+    self.assertEqual(target, result)
+
+    result = self.api_get("/api/assets", {"limit": 1, "offset": 1})
+    target = {"assets": assets[1:], "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by name
+    result = self.api_get("/api/assets", {"search": "banana"})
+    target = {"assets": assets, "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Bad search, neither are over the threshold
+    result = self.api_get("/api/assets", {"search": "inc"})
+    target = {"assets": assets, "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by description
+    result = self.api_get("/api/assets", {"search": "farm"})
+    target = {"assets": assets[1:], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by unit
+    result = self.api_get("/api/assets", {"search": "bunches"})
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by tag
+    result = self.api_get("/api/assets", {"search": "fruit"})
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)

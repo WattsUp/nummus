@@ -137,33 +137,32 @@ class TestControllerBudget(WebTestBase):
     with p.get_session() as s:
       s.add_all((b_today, b_yesterday))
       s.commit()
-
-    # Get all
-    result = self.api_get("/api/budgets")
-    with p.get_session() as s:
       query = s.query(Budget).order_by(Budget.date)
       budgets: List[Dict[str, object]] = json.loads(
           json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"budgets": budgets, "next_offset": None}
+
+    # Get all
+    result = self.api_get("/api/budgets")
+    target = {"budgets": budgets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Sort by newest first
     result = self.api_get("/api/budgets", {"sort": "newest"})
-    target = {"budgets": budgets[::-1], "next_offset": None}
+    target = {"budgets": budgets[::-1], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
     result = self.api_get("/api/budgets", {"limit": 1})
-    target = {"budgets": budgets[:1], "next_offset": 1}
+    target = {"budgets": budgets[:1], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
     result = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
-    target = {"budgets": budgets[1:], "next_offset": None}
+    target = {"budgets": budgets[1:], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging reverse
     result = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
-    target = {"budgets": budgets[1:], "next_offset": 1}
+    target = {"budgets": budgets[1:], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
     result = self.api_get("/api/budgets", {
@@ -171,17 +170,17 @@ class TestControllerBudget(WebTestBase):
         "offset": 1,
         "sort": "newest"
     })
-    target = {"budgets": budgets[:1], "next_offset": None}
+    target = {"budgets": budgets[:1], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by start date
     result = self.api_get("/api/budgets", {"start": today})
-    target = {"budgets": budgets[1:], "next_offset": None}
+    target = {"budgets": budgets[1:], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by end date
     result = self.api_get("/api/budgets", {"end": yesterday})
-    target = {"budgets": budgets[:1], "next_offset": None}
+    target = {"budgets": budgets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Strict query validation

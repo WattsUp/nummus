@@ -118,11 +118,18 @@ def get_all() -> flask.Response:
 
   args: Dict[str, object] = flask.request.args.to_dict()
   filter_category = common.parse_enum(args.get("category"), AssetCategory)
+  search = args.get("search")
+  limit = int(args.get("limit", 50))
+  offset = int(args.get("offset", 0))
+  next_offset: int = None
 
   with p.get_session() as s:
     query = s.query(Asset)
     if filter_category is not None:
       query = query.where(Asset.category == filter_category)
 
-    response = {"assets": query.all()}
+    query = common.search(s, query, Asset, search)
+
+    page, count, next_offset = common.paginate(query, limit, offset)
+    response = {"assets": page, "count": count, "next_offset": next_offset}
     return flask.jsonify(response)

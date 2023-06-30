@@ -144,41 +144,40 @@ class TestControllerAccount(WebTestBase):
     with p.get_session() as s:
       s.add_all((a_checking, a_invest))
       s.commit()
+      query = s.query(Account)
+      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
     result = self.api_get("/api/accounts")
 
-    with p.get_session() as s:
-      query = s.query(Account)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"accounts": accounts}
+    target = {"accounts": accounts, "count": 2}
     self.assertEqual(target, result)
 
     # Get only cash
     result = self.api_get("/api/accounts", {"category": "cash"})
-    target = {"accounts": accounts[:1]}
+    target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
     # Search by institution
     result = self.api_get("/api/accounts", {"search": "Bank"})
-    target = {"accounts": accounts[:1]}
+    target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
     result = self.api_get("/api/accounts", {"search": "Ape Trading"})
-    target = {"accounts": accounts[1:]}
+    target = {"accounts": accounts[1:], "count": 1}
     self.assertEqual(target, result)
 
     # Search by bank
     result = self.api_get("/api/accounts", {"search": "Investments"})
-    target = {"accounts": accounts[1:]}
+    target = {"accounts": accounts[1:], "count": 1}
     self.assertEqual(target, result)
 
     result = self.api_get("/api/accounts", {"search": "checking"})
-    target = {"accounts": accounts[:1]}
+    target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
     result = self.api_get("/api/accounts", {"search": "Monkey"})
-    target = {"accounts": accounts}
+    target = {"accounts": accounts, "count": 2}
     self.assertEqual(target, result)
 
     # Strict query validation

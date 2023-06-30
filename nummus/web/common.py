@@ -1,7 +1,7 @@
 """Transaction API Controller
 """
 
-from typing import Dict, List, Type
+from typing import Dict, List, Tuple, Type
 
 import datetime
 import uuid
@@ -11,6 +11,11 @@ from sqlalchemy import orm
 from thefuzz import process
 
 from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction)
+
+_SEARCH_PROPERTIES: Dict[Type[Base], List[str]] = {
+    Account: ["name", "institution"],
+    Asset: ["name", "description", "unit", "tag"]
+}
 
 
 def find_account(s: orm.Session, query: str) -> Account:
@@ -169,8 +174,8 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
         detail=f"Unknown {cls.__name__}: {s}, {e}") from e
 
 
-def search(s: orm.Session, query: orm.Query, cls: Type[Base],
-           search_str: str) -> List[Base]:
+def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
+           search_str: str) -> orm.Query[Base]:
   """Perform a fuzzy search and return matches
 
   Args:
@@ -179,28 +184,59 @@ def search(s: orm.Session, query: orm.Query, cls: Type[Base],
     search_str: String to search
 
   Returns:
-    List of results
+    List of results, count of total results
   """
   # TODO (WattsUp) Caching and paging and cache invalidation
-  unfiltered = query.all()
-  if search_str is None:
-    return unfiltered
+  if search_str is None or len(search_str) < 3:
+    return query
 
+  unfiltered = query.all()
   strings: Dict[int, str] = {}
   for instance in unfiltered:
-    if cls == Account:
-      instance: Account
-      parameters = [instance.name, instance.institution]
-    else:
-      raise TypeError(f"Unknown model type: {cls}")
+    parameters: List[str] = []
+    for k in _SEARCH_PROPERTIES[cls]:
+      parameters.append(getattr(instance, k))
     i_str = " ".join(p for p in parameters if p is not None)
     strings[instance.id] = i_str
 
-  filtered = process.extractBests(search_str,
-                                  strings,
-                                  score_cutoff=70,
-                                  limit=None)
-  matching_ids: List[int] = [i for _, _, i in filtered]
+  extracted = process.extract(search_str, strings, limit=None)
+  matching_ids: List[int] = [i for _, score, i in extracted if score > 70]
+  if len(matching_ids) == 0:
+    # Include poor matches to return something
+    matching_ids: List[int] = [i for _, _, i in extracted[:5]]
 
-  matches = s.query(cls).where(cls.id.in_(matching_ids)).all()
-  return matches
+  return s.query(cls).where(cls.id.in_(matching_ids))
+
+
+def paginate(query: orm.Query[Base], limit: int,
+             offset: int) -> Tuple[List[Base], int, int]:
+  """Paginate query response for smaller results
+
+  Args:
+    query: Session query to execute to get results
+    limit: Maximum number of results per page
+    offset: Result offset, advances to subsequent pages
+  
+  Returns:
+    Page (list of result from query), total count for query, next_offset for
+    subsequent calls
+  """
+  offset = max(0, offset)
+
+  # Get total number from filters
+  count = query.count()
+
+  # Apply limiting, and offset
+  query = query.limit(limit).offset(offset)
+
+  results = query.all()
+
+  # Compute next_offset
+  n_current = len(results)
+  remaining = count - n_current - offset
+  if remaining > 0:
+    next_offset = offset + n_current
+  else:
+    next_offset = None
+
+  return results, count, next_offset

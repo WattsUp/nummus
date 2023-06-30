@@ -119,6 +119,7 @@ def get_all() -> flask.Response:
     if category is not None:
       query = query.where(Account.category == category)
 
-    accounts = common.search(s, query, Account, search)
-    response = {"accounts": accounts}
+    query = common.search(s, query, Account, search)
+    accounts = query.all()
+    response = {"accounts": accounts, "count": len(accounts)}
     return flask.jsonify(response)

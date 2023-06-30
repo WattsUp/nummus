@@ -193,17 +193,88 @@ class TestCommon(WebTestBase):
       query = s.query(Account)
 
       # Unknown Model
-      self.assertRaises(TypeError, common.search, s, query, None, "")
+      self.assertRaises(KeyError, common.search, s, query, None, "abc")
 
       # No results return all
-      result = common.search(s, query, Account, None)
+      result = common.search(s, query, Account, None).all()
       self.assertEqual([a_checking, a_invest], result)
 
-      result = common.search(s, query, Account, "checking")
-      self.assertEqual([a_checking], result)
-      result = common.search(s, query, Account, "bank")
-      self.assertEqual([a_checking], result)
-      result = common.search(s, query, Account, "monkey")
+      # Short query return all
+      result = common.search(s, query, Account, "ab").all()
       self.assertEqual([a_checking, a_invest], result)
-      result = common.search(s, query, Account, "trading")
+
+      # No matches return first 5
+      result = common.search(s, query, Account, "crazy unrelated words").all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      result = common.search(s, query, Account, "checking").all()
+      self.assertEqual([a_checking], result)
+
+      result = common.search(s, query, Account, "bank").all()
+      self.assertEqual([a_checking], result)
+
+      result = common.search(s, query, Account, "monkey").all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      result = common.search(s, query, Account, "trading").all()
       self.assertEqual([a_invest], result)
+
+  def test_paginate(self):
+    p = self._portfolio
+
+    # Create accounts
+    a = Account(name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH)
+    n_transactions = 10
+    today = datetime.date.today()
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      for _ in range(n_transactions):
+        t = Transaction(account_id=a.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=t)
+        s.add_all((t, t_split))
+      s.commit()
+
+      query = s.query(Transaction)
+      transactions = query.all()
+
+      page, count, next_offset = common.paginate(query, 50, 0)
+      self.assertEqual(transactions, page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 0)
+      self.assertEqual(transactions[0:3], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(3, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 3)
+      self.assertEqual(transactions[3:6], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(6, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 6)
+      self.assertEqual(transactions[6:9], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(9, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 9)
+      self.assertEqual(transactions[9:], page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 1000)
+      self.assertEqual([], page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, -1000)
+      self.assertEqual(transactions[0:3], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(3, next_offset)

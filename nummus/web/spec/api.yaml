@@ -156,6 +156,10 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Account"
+                  count:
+                    description: Number of matches to request query
+                    type: number
+                    format: integer
         "400":
           description: Invalid parameter supplied
   /asset:
@@ -244,9 +248,9 @@ paths:
       description: ""
       operationId: nummus.web.controller_asset.get_all
       parameters:
-        # - $ref: "#/components/parameters/Limit"
-        # - $ref: "#/components/parameters/Offset"
-        # - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/AssetCategory"
       responses:
         "200":
@@ -260,11 +264,15 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Asset"
-                  # next_offset:
-                  #   description: Offset to use to fetch next page, null
-                  #     indicates no more pages available
-                  #   type: integer
-                  #   nullable: true
+                  count:
+                    description: Number of matches to request query
+                    type: number
+                    format: integer
+                  next_offset:
+                    description: Offset to use to fetch next page, null
+                      indicates no more pages available
+                    type: integer
+                    nullable: true
         "400":
           description: Invalid parameter supplied
   /budget:
@@ -370,6 +378,10 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Budget"
+                  count:
+                    description: Number of matches to request query
+                    type: number
+                    format: integer
                   next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available

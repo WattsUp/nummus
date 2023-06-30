@@ -134,19 +134,12 @@ def get_all() -> flask.Response:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
     count = query.count()
 
-    # Apply ordering, limiting, and offset
+    # Apply ordering
     if sort == "oldest":
       query = query.order_by(Budget.date)
     else:
       query = query.order_by(Budget.date.desc())
-    query = query.limit(limit).offset(offset)
 
-    budgets = query.all()
-
-    n_budgets = len(budgets)
-    remaining = count - n_budgets - offset
-    if remaining > 0:
-      next_offset = offset + n_budgets
-
-    response = {"budgets": budgets, "next_offset": next_offset}
+    page, count, next_offset = common.paginate(query, limit, offset)
+    response = {"budgets": page, "count": count, "next_offset": next_offset}
     return flask.jsonify(response)
