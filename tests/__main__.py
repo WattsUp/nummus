@@ -32,6 +32,8 @@ def post_tests():
                      key=lambda item: -item[1])[:n_slowest]
     methods = sorted(d["methods"].items(),
                      key=lambda item: -item[1])[:n_slowest]
+    api_latency = sorted(d["api_latency"].items(),
+                         key=lambda item: -max(item[1]))[:n_slowest]
 
   print(f"{n_slowest} slowest classes")
   if len(classes) != 0:
@@ -44,6 +46,13 @@ def post_tests():
     n_pad = max(len(k) for k, _ in methods) + 1
     for method, duration in methods:
       print(f"  {method:{n_pad}}: {duration:6.2f}s")
+
+  print(f"{n_slowest} slowest API calls")
+  if len(methods) != 0:
+    n_pad = max(len(k) for k, _ in api_latency) + 1
+    for method, durations in api_latency:
+      duration_ms = max(durations) * 1000
+      print(f"  {method:{n_pad}}: {duration_ms:6.1f}ms")
 
 
 pre_tests()

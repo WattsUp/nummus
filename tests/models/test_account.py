@@ -14,7 +14,7 @@ class TestTransaction(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     a = account.Account(name=self.random_string(),
@@ -103,7 +103,7 @@ class TestAccount(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     d = {
@@ -131,7 +131,7 @@ class TestAccount(TestBase):
     self.assertDictEqual(d, result)
 
   def test_add_transactions(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     today = datetime.date.today()

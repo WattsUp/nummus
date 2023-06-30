@@ -1,3 +1,4 @@
+# TODO (WattsUp) Implement endpoints into api.yaml and remove this temp file
 openapi: 3.0.0
 servers:
   - url: https://nummus/api
@@ -142,6 +143,7 @@ paths:
       description: ""
       operationId: nummus.web.controller_account.get_all
       parameters:
+        # - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/AccountCategory"
       responses:
         "200":
@@ -243,6 +245,9 @@ paths:
       description: ""
       operationId: nummus.web.controller_asset.get_all
       parameters:
+        # - $ref: "#/components/parameters/Limit"
+        # - $ref: "#/components/parameters/Offset"
+        # - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/AssetCategory"
       responses:
         "200":
@@ -256,6 +261,11 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Asset"
+                  # next_page:
+                  #   description: Offset to use to fetch next page, null
+                  #     indicates no more pages available
+                  #   type: integer
+                  #   nullable: true
         "400":
           description: Invalid parameter supplied
   /budget:
@@ -343,6 +353,12 @@ paths:
       summary: Get Budgets of Portfolio
       description: ""
       operationId: nummus.web.controller_budget.get_all
+      # parameters:
+      #   - $ref: "#/components/parameters/Start"
+      #   - $ref: "#/components/parameters/End"
+      #   - $ref: "#/components/parameters/SortByAge"
+      #   - $ref: "#/components/parameters/Limit"
+      #   - $ref: "#/components/parameters/Offset"
       responses:
         "200":
           description: Successful operation
@@ -355,6 +371,11 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Budget"
+                  # next_page:
+                  #   description: Offset to use to fetch next page, null
+                  #     indicates no more pages available
+                  #   type: integer
+                  #   nullable: true
         "400":
           description: Invalid parameter supplied
   /transaction:
@@ -443,7 +464,20 @@ paths:
       description: ""
       operationId: nummus.web.controller_transaction.get_all
       parameters:
+        # - $ref: "#/components/parameters/Start"
+        # - $ref: "#/components/parameters/End"
+        # - $ref: "#/components/parameters/SortByAge"
+        # - $ref: "#/components/parameters/Limit"
+        # - $ref: "#/components/parameters/Offset"
+        # - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/TransactionCategory"
+        # - $ref: "#/components/parameters/TransactionSubcategory"
+        # - $ref: "#/components/parameters/TransactionTag"
+        # - $ref: "#/components/parameters/TransactionLocked"
+        # - $ref: "#/components/parameters/AccountUUID"
+        # - $ref: "#/components/parameters/AccountCategoryExplicit"
+        # - $ref: "#/components/parameters/AssetUUID"
+        # - $ref: "#/components/parameters/AssetCategoryExplicit"
       responses:
         "200":
           description: Successful operation
@@ -456,6 +490,11 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Transaction"
+                  # next_page:
+                  #   description: Offset to use to fetch next page, null
+                  #     indicates no more pages available
+                  #   type: integer
+                  #   nullable: true
         "400":
           description: Invalid parameter supplied
 externalDocs:

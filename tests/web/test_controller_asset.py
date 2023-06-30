@@ -2,26 +2,19 @@
 """
 
 import datetime
-import io
 import json
-from unittest import mock
-import warnings
-
-from nummus import portfolio
 from nummus.models import (Asset, AssetCategory, AssetValuation,
                            NummusJSONEncoder)
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerAsset(TestBase):
+class TestControllerAsset(WebTestBase):
   """Test controller_asset methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     name = self.random_string()
     category = self._RNG.choice(AssetCategory)
@@ -29,9 +22,7 @@ class TestControllerAsset(TestBase):
     # Make the minimum
     req = {"name": name, "category": category}
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/asset", json=req)
+    response = self.api_post("/api/asset", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -58,9 +49,7 @@ class TestControllerAsset(TestBase):
         "tag": tag
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/asset", json=req)
+    response = self.api_post("/api/asset", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -74,16 +63,11 @@ class TestControllerAsset(TestBase):
 
     # Fewer keys are bad
     req = {"name": name}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/asset", json=req)
+    response = self.api_post("/api/asset", json=req)
     self.assertEqual(400, response.status_code)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -95,18 +79,14 @@ class TestControllerAsset(TestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/asset/{a_uuid}")
+    response = self.api_get(f"/api/asset/{a_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -124,9 +104,7 @@ class TestControllerAsset(TestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/asset/{a_uuid}", json=req)
+    response = self.api_put(f"/api/asset/{a_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -137,16 +115,11 @@ class TestControllerAsset(TestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/asset/{a_uuid}", json=target)
+    response = self.api_put(f"/api/asset/{a_uuid}", json=target)
     self.assertEqual(400, response.status_code)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -173,9 +146,7 @@ class TestControllerAsset(TestBase):
       self.assertEqual(n_valuations, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/asset/{a_uuid}")
+    response = self.api_delete(f"/api/asset/{a_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
@@ -188,9 +159,7 @@ class TestControllerAsset(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a_banana = Asset(name="Banana", category=AssetCategory.ITEM, unit="bunches")
@@ -200,9 +169,7 @@ class TestControllerAsset(TestBase):
       s.commit()
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/assets")
+    response = self.api_get("/api/assets")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -214,9 +181,7 @@ class TestControllerAsset(TestBase):
     self.assertEqual(target, result)
 
     # Get only cash
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/assets?category=item")
+    response = self.api_get("/api/assets?category=item")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 

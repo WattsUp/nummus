@@ -2,26 +2,19 @@
 """
 
 import datetime
-import io
 import json
-from unittest import mock
-import warnings
-
-from nummus import portfolio
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
                            Transaction, TransactionSplit)
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerAccount(TestBase):
+class TestControllerAccount(WebTestBase):
   """Test controller_account methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     name = self.random_string()
     institution = self.random_string()
@@ -29,9 +22,7 @@ class TestControllerAccount(TestBase):
 
     req = {"name": name, "institution": institution, "category": category}
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/account", json=req)
+    response = self.api_post("/api/account", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -45,16 +36,11 @@ class TestControllerAccount(TestBase):
 
     # Fewer keys are bad
     req = {"name": name, "institution": institution}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/account", json=req)
+    response = self.api_post("/api/account", json=req)
     self.assertEqual(400, response.status_code)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -68,18 +54,14 @@ class TestControllerAccount(TestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/account/{a_uuid}")
+    response = self.api_get(f"/api/account/{a_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -101,9 +83,7 @@ class TestControllerAccount(TestBase):
     req.pop("uuid")
     req.pop("opened_on")
     req.pop("updated_on")
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/account/{a_uuid}", json=req)
+    response = self.api_put(f"/api/account/{a_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -114,16 +94,11 @@ class TestControllerAccount(TestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/account/{a_uuid}", json=target)
+    response = self.api_put(f"/api/account/{a_uuid}", json=target)
     self.assertEqual(400, response.status_code)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -156,9 +131,7 @@ class TestControllerAccount(TestBase):
       self.assertEqual(n_transactions, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/account/{a_uuid}")
+    response = self.api_delete(f"/api/account/{a_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
@@ -173,9 +146,7 @@ class TestControllerAccount(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a_checking = Account(name="Monkey Bank Checking",
@@ -189,9 +160,7 @@ class TestControllerAccount(TestBase):
       s.commit()
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/accounts")
+    response = self.api_get("/api/accounts")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -203,9 +172,7 @@ class TestControllerAccount(TestBase):
     self.assertEqual(target, result)
 
     # Get only cash
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/accounts?category=cash")
+    response = self.api_get("/api/accounts?category=cash")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -217,8 +184,5 @@ class TestControllerAccount(TestBase):
     self.assertEqual(target, result)
 
     # Strict query validation
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.get("/api/accounts?fake=invalid")
+    response = self.api_get("/api/accounts?fake=invalid")
     self.assertEqual(400, response.status_code)

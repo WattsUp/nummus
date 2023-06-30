@@ -6,21 +6,19 @@ import uuid
 
 import connexion
 
-from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Budget, Transaction, TransactionSplit)
 from nummus.web import common
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestCommon(TestBase):
+class TestCommon(WebTestBase):
   """Test web common methods
   """
 
   def test_find_account(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -45,8 +43,7 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_asset(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create asset
     a = Asset(name="Monkey Bank Checking", category=AssetCategory.ITEM)
@@ -69,8 +66,7 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_budget(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -94,8 +90,7 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_transaction(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create accounts and transactions
     a = Account(name="Monkey Bank Checking",

@@ -2,27 +2,20 @@
 """
 
 import datetime
-import io
 import json
-from unittest import mock
-import warnings
-
-from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            NummusJSONEncoder, Transaction, TransactionCategory,
                            TransactionSplit)
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerTransaction(TestBase):
+class TestControllerTransaction(WebTestBase):
   """Test controller_transaction methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -50,9 +43,7 @@ class TestControllerTransaction(TestBase):
         }]
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/transaction", json=req)
+    response = self.api_post("/api/transaction", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -108,9 +99,7 @@ class TestControllerTransaction(TestBase):
         "splits": [req_split]
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/transaction", json=req)
+    response = self.api_post("/api/transaction", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -148,10 +137,7 @@ class TestControllerTransaction(TestBase):
         "statement": statement,
         "locked": True
     }
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/transaction", json=req)
+    response = self.api_post("/api/transaction", json=req)
     self.assertEqual(400, response.status_code)
 
     # Need at least one split
@@ -163,16 +149,11 @@ class TestControllerTransaction(TestBase):
         "locked": True,
         "splits": []
     }
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/transaction", json=req)
+    response = self.api_post("/api/transaction", json=req)
     self.assertEqual(400, response.status_code)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts and transactions
     a = Account(name="Monkey Bank Checking",
@@ -194,18 +175,14 @@ class TestControllerTransaction(TestBase):
       target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/transaction/{t_uuid}")
+    response = self.api_get(f"/api/transaction/{t_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts and transactions
     a = Account(name="Monkey Bank Checking",
@@ -241,9 +218,7 @@ class TestControllerTransaction(TestBase):
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
     req["splits"] = [req_split_0]
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/transaction/{t_uuid}", json=req)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -281,9 +256,7 @@ class TestControllerTransaction(TestBase):
     req_split_1.pop("uuid")
     req_split_1.pop("parent_uuid")
     req["splits"] = [req_split_0, req_split_1]
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/transaction/{t_uuid}", json=req)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -321,9 +294,7 @@ class TestControllerTransaction(TestBase):
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
     req["splits"] = [req_split_0]
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/transaction/{t_uuid}", json=req)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -345,23 +316,15 @@ class TestControllerTransaction(TestBase):
 
     # Try to remove all splits
     req["splits"] = []
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/transaction/{t_uuid}", json=req)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     self.assertEqual(400, response.status_code)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/transaction/{t_uuid}", json=target)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=target)
     self.assertEqual(400, response.status_code)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts and transactions
     a = Account(name="Monkey Bank Checking",
@@ -389,9 +352,7 @@ class TestControllerTransaction(TestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/transaction/{t_uuid}")
+    response = self.api_delete(f"/api/transaction/{t_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
@@ -404,9 +365,7 @@ class TestControllerTransaction(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     #   # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -436,9 +395,7 @@ class TestControllerTransaction(TestBase):
       s.commit()
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/transactions")
+    response = self.api_get("/api/transactions")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -450,9 +407,7 @@ class TestControllerTransaction(TestBase):
     self.assertEqual(target, result)
 
     # Get only travel
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/transactions?category=travel")
+    response = self.api_get("/api/transactions?category=travel")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 

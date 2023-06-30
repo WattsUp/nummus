@@ -2,25 +2,18 @@
 """
 
 import datetime
-import io
 import json
-from unittest import mock
-import warnings
-
-from nummus import portfolio
 from nummus.models import Budget, NummusJSONEncoder
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerBudget(TestBase):
+class TestControllerBudget(WebTestBase):
   """Test controller_budget methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     date = datetime.date.today()
     home = float(self._RNG.uniform(0, 100))
@@ -43,9 +36,7 @@ class TestControllerBudget(TestBase):
         }
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/budget", json=req)
+    response = self.api_post("/api/budget", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
@@ -62,16 +53,11 @@ class TestControllerBudget(TestBase):
 
     # Fewer keys are bad
     req = {"date": date}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/budget", json=req)
+    response = self.api_post("/api/budget", json=req)
     self.assertEqual(400, response.status_code)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -84,18 +70,14 @@ class TestControllerBudget(TestBase):
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/budget/{b_uuid}")
+    response = self.api_get(f"/api/budget/{b_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -116,9 +98,7 @@ class TestControllerBudget(TestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/budget/{b_uuid}", json=req)
+    response = self.api_put(f"/api/budget/{b_uuid}", json=req)
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
@@ -129,16 +109,11 @@ class TestControllerBudget(TestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/budget/{b_uuid}", json=target)
+    response = self.api_put(f"/api/budget/{b_uuid}", json=target)
     self.assertEqual(400, response.status_code)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -155,9 +130,7 @@ class TestControllerBudget(TestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/budget/{b_uuid}")
+    response = self.api_delete(f"/api/budget/{b_uuid}")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
@@ -168,9 +141,7 @@ class TestControllerBudget(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -180,9 +151,7 @@ class TestControllerBudget(TestBase):
       s.commit()
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/budgets")
+    response = self.api_get("/api/budgets")
     self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 

@@ -11,6 +11,7 @@
     "pycryptodome",
     "robo-advising",
     "uselist",
+    "werkzeug",
     "Woot"
   ],
   "python.formatting.provider": "yapf",
