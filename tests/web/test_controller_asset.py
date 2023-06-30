@@ -22,9 +22,7 @@ class TestControllerAsset(WebTestBase):
     # Make the minimum
     req = {"name": name, "category": category}
 
-    response = self.api_post("/api/asset", json=req)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       # Serialize then deserialize
@@ -32,8 +30,6 @@ class TestControllerAsset(WebTestBase):
 
       s.delete(a)
       s.commit()
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Make the maximum
@@ -48,20 +44,16 @@ class TestControllerAsset(WebTestBase):
         "tag": tag
     }
 
-    response = self.api_post("/api/asset", json=req)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {"name": name}
-    response = self.api_post("/api/asset", json=req, rc=400)
+    self.api_post("/api/asset", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -76,9 +68,7 @@ class TestControllerAsset(WebTestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    response = self.api_get(f"/api/asset/{a_uuid}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get(f"/api/asset/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -100,17 +90,15 @@ class TestControllerAsset(WebTestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    response = self.api_put(f"/api/asset/{a_uuid}", json=req)
-    self.assertEqual("application/json", response.content_type)
+    result = self.api_put(f"/api/asset/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
       self.assertEqual(new_category, a.category)
-    result = response.json
     self.assertEqual(target, result)
 
     # Read only properties
-    response = self.api_put(f"/api/asset/{a_uuid}", json=target, rc=400)
+    self.api_put(f"/api/asset/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -140,9 +128,7 @@ class TestControllerAsset(WebTestBase):
       self.assertEqual(n_valuations, result)
 
     # Delete by uuid
-    response = self.api_delete(f"/api/asset/{a_uuid}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_delete(f"/api/asset/{a_uuid}")
     self.assertEqual(target, result)
 
     with p.get_session() as s:
@@ -162,10 +148,7 @@ class TestControllerAsset(WebTestBase):
       s.commit()
 
     # Get all
-    response = self.api_get("/api/assets")
-    self.assertEqual("application/json", response.content_type)
-
-    result = response.json
+    result = self.api_get("/api/assets")
     with p.get_session() as s:
       query = s.query(Asset)
       accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
@@ -173,10 +156,7 @@ class TestControllerAsset(WebTestBase):
     self.assertEqual(target, result)
 
     # Get only cash
-    response = self.api_get("/api/assets?category=item")
-    self.assertEqual("application/json", response.content_type)
-
-    result = response.json
+    result = self.api_get("/api/assets", {"category": "item"})
     with p.get_session() as s:
       query = s.query(Asset).where(Asset.category == AssetCategory.ITEM)
       accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))

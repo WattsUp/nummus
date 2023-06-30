@@ -10,6 +10,7 @@
     "poolclass",
     "pycryptodome",
     "robo-advising",
+    "thefuzz",
     "uselist",
     "werkzeug",
     "Woot"

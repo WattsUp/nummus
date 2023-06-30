@@ -1,10 +1,13 @@
 """TestBase with extra functions for web testing
 """
 
+from typing import Dict, Union
+
 import io
 import re
 import time
 from unittest import mock
+import urllib.parse
 import warnings
 
 import autodict
@@ -74,17 +77,29 @@ class WebTestBase(TestBase):
   def api_open(self,
                method: str,
                endpoint: str,
+               queries: Dict[str, str],
+               content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> werkzeug.Response:
+               **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
     """Run a test API GET
 
     Args:
       client: Test client from get_api_client
       method: HTTP method to use
       endpoint: URL endpoint to test
+      queries: Dictionary of queries to append, will run through
+        urllib.parse.quote
+      content_type: Expected content type if rc == 200
       rc: Expected HTTP return code
       All other arguments passed to client.get
     """
+    if queries is not None:
+      queries = [
+          f"{k}={urllib.parse.quote(str(v))}" for k, v in queries.items()
+      ]
+      if len(queries) > 0:
+        endpoint = f"{endpoint}?{'&'.join(queries)}"
+
     kwargs["method"] = method
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
@@ -94,54 +109,134 @@ class WebTestBase(TestBase):
       else:
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
           response = self._client.open(endpoint, **kwargs)
-      duration = time.perf_counter() - start
-      self.assertEqual(rc, response.status_code)
-      self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
-      with autodict.JSONAutoDict(TEST_LOG) as d:
-        # Replace uuid with <uuid>
-        endpoint = _RE_UUID.sub("<uuid>", endpoint)
-        k = f"{method} {endpoint}"
-        if k not in d["api_latency"]:
-          d["api_latency"][k] = []
-        d["api_latency"][k].append(duration)
+    duration = time.perf_counter() - start
+    self.assertEqual(rc, response.status_code)
+    if rc == 200:
+      self.assertEqual(content_type, response.content_type)
+    self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
+
+    with autodict.JSONAutoDict(TEST_LOG) as d:
+      # Replace uuid with <uuid>
+      endpoint = _RE_UUID.sub("<uuid>", endpoint)
+      k = f"{method} {endpoint}"
+      if k not in d["api_latency"]:
+        d["api_latency"][k] = []
+      d["api_latency"][k].append(duration)
+
+    if content_type == "application/json":
+      return response.json
+    if content_type.startswith("text/html"):
+      return response.text
     return response
 
-  def api_get(self, endpoint: str, **kwargs) -> werkzeug.Response:
+  def api_get(self,
+              endpoint: str,
+              queries: Dict[str, str] = None,
+              content_type: str = "application/json",
+              rc: int = 200,
+              **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
     """Run a test API GET
 
     Args:
       endpoint: URL endpoint to test
+      queries: Dictionary of queries to append, will run through
+        urllib.parse.quote
+      content_type: Expected content type if rc == 200
+      rc: Expected return code
       All other arguments passed to client.get
-    """
-    return self.api_open("GET", endpoint, **kwargs)
 
-  def api_put(self, endpoint: str, **kwargs) -> werkzeug.Response:
+    Returns:
+      response.json if content_type == application/json
+      response.text if content_type == text/html
+      response otherwise
+    """
+    return self.api_open("GET",
+                         endpoint,
+                         queries,
+                         content_type=content_type,
+                         rc=rc,
+                         **kwargs)
+
+  def api_put(self,
+              endpoint: str,
+              queries: Dict[str, str] = None,
+              content_type: str = "application/json",
+              rc: int = 200,
+              **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
     """Run a test API PUT
 
     Args:
       endpoint: URL endpoint to test
+      queries: Dictionary of queries to append, will run through
+        urllib.parse.quote
+      content_type: Expected content type if rc == 200
+      rc: Expected return code
       All other arguments passed to client.get
+
+    Returns:
+      response.json if content_type == application/json
+      response.text if content_type == text/html
+      response otherwise
     """
-    return self.api_open("PUT", endpoint, **kwargs)
+    return self.api_open("PUT",
+                         endpoint,
+                         queries,
+                         content_type=content_type,
+                         rc=rc,
+                         **kwargs)
 
   def api_post(self,
                endpoint: str,
+               queries: Dict[str, str] = None,
+               content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> werkzeug.Response:
+               **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
     """Run a test API POST
 
     Args:
       endpoint: URL endpoint to test
+      queries: Dictionary of queries to append, will run through
+        urllib.parse.quote
+      content_type: Expected content type if rc == 200
       rc: Expected return code
       All other arguments passed to client.get
-    """
-    return self.api_open("POST", endpoint, rc, **kwargs)
 
-  def api_delete(self, endpoint: str, **kwargs) -> werkzeug.Response:
-    """Run a test API GET
+    Returns:
+      response.json if content_type == application/json
+      response.text if content_type == text/html
+      response otherwise
+    """
+    return self.api_open("POST",
+                         endpoint,
+                         queries,
+                         content_type=content_type,
+                         rc=rc,
+                         **kwargs)
+
+  def api_delete(self,
+                 endpoint: str,
+                 queries: Dict[str, str] = None,
+                 content_type: str = "application/json",
+                 rc: int = 200,
+                 **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+    """Run a test API DELETE
 
     Args:
       endpoint: URL endpoint to test
+      queries: Dictionary of queries to append, will run through
+        urllib.parse.quote
+      content_type: Expected content type if rc == 200
+      rc: Expected return code
       All other arguments passed to client.get
+
+    Returns:
+      response.json if content_type == application/json
+      response.text if content_type == text/html
+      response otherwise
     """
-    return self.api_open("DELETE", endpoint, **kwargs)
+    return self.api_open("DELETE",
+                         endpoint,
+                         queries,
+                         content_type=content_type,
+                         rc=rc,
+                         **kwargs)

@@ -1,15 +1,16 @@
 """Transaction API Controller
 """
 
-from typing import Type
+from typing import Dict, List, Type
 
 import datetime
 import uuid
 
 import connexion
 from sqlalchemy import orm
+from thefuzz import process
 
-from nummus.models import (Account, Asset, BaseEnum, Budget, Transaction)
+from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction)
 
 
 def find_account(s: orm.Session, query: str) -> Account:
@@ -166,3 +167,40 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
   except ValueError as e:
     raise connexion.exceptions.BadRequestProblem(
         detail=f"Unknown {cls.__name__}: {s}, {e}") from e
+
+
+def search(s: orm.Session, query: orm.Query, cls: Type[Base],
+           search_str: str) -> List[Base]:
+  """Perform a fuzzy search and return matches
+
+  Args:
+    query: Session query to execute before fuzzy searching
+    cls: Model type to search
+    search_str: String to search
+
+  Returns:
+    List of results
+  """
+  # TODO (WattsUp) Caching and paging and cache invalidation
+  unfiltered = query.all()
+  if search_str is None:
+    return unfiltered
+
+  strings: Dict[int, str] = {}
+  for instance in unfiltered:
+    if cls == Account:
+      instance: Account
+      parameters = [instance.name, instance.institution]
+    else:
+      raise TypeError(f"Unknown model type: {cls}")
+    i_str = " ".join(p for p in parameters if p is not None)
+    strings[instance.id] = i_str
+
+  filtered = process.extractBests(search_str,
+                                  strings,
+                                  score_cutoff=70,
+                                  limit=None)
+  matching_ids: List[int] = [i for _, _, i in filtered]
+
+  matches = s.query(cls).where(cls.id.in_(matching_ids)).all()
+  return matches

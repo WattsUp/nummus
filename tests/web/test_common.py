@@ -174,3 +174,36 @@ class TestCommon(WebTestBase):
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_enum,
                       self.random_string(), AccountCategory)
+
+  def test_search(self):
+    # Bulk of search testing happens in the appropriate controller tests
+    p = self._portfolio
+
+    # Create accounts
+    a_checking = Account(name="Monkey Bank Checking",
+                         institution="Monkey Bank",
+                         category=AccountCategory.CASH)
+    a_invest = Account(name="Monkey Investments",
+                       institution="Ape Trading",
+                       category=AccountCategory.INVESTMENT)
+    with p.get_session() as s:
+      s.add_all((a_checking, a_invest))
+      s.commit()
+
+      query = s.query(Account)
+
+      # Unknown Model
+      self.assertRaises(TypeError, common.search, s, query, None, "")
+
+      # No results return all
+      result = common.search(s, query, Account, None)
+      self.assertEqual([a_checking, a_invest], result)
+
+      result = common.search(s, query, Account, "checking")
+      self.assertEqual([a_checking], result)
+      result = common.search(s, query, Account, "bank")
+      self.assertEqual([a_checking], result)
+      result = common.search(s, query, Account, "monkey")
+      self.assertEqual([a_checking, a_invest], result)
+      result = common.search(s, query, Account, "trading")
+      self.assertEqual([a_invest], result)

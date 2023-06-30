@@ -111,12 +111,14 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = common.parse_enum(args.get("category"), AccountCategory)
+  category = common.parse_enum(args.get("category"), AccountCategory)
+  search = args.get("search")
 
   with p.get_session() as s:
     query = s.query(Account)
-    if filter_category is not None:
-      query = query.where(Account.category == filter_category)
+    if category is not None:
+      query = query.where(Account.category == category)
 
-    response = {"accounts": query.all()}
+    accounts = common.search(s, query, Account, search)
+    response = {"accounts": accounts}
     return flask.jsonify(response)

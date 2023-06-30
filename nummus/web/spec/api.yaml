@@ -142,7 +142,7 @@ paths:
       description: ""
       operationId: nummus.web.controller_account.get_all
       parameters:
-        # - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/AccountCategory"
       responses:
         "200":

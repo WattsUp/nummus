@@ -9,6 +9,5 @@ class TestControllerHTML(WebTestBase):
   """
 
   def test_get_home(self):
-    response = self.api_get("/")
-    self.assertEqual("text/html; charset=utf-8", response.content_type)
-    self.assertIn("Hello World page", response.text)
+    result = self.api_get("/", content_type="text/html; charset=utf-8")
+    self.assertIn("Hello World page", result)

@@ -72,18 +72,19 @@ class TestBase(unittest.TestCase):
       sql.drop_session()
       self._clean_test_root()
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-    self._test_start = time.perf_counter()
 
     # Remove sleeping by default, mainly in read hardware interaction
     self._original_sleep = time.sleep
     time.sleep = lambda *args: None
 
+    self._test_start = time.perf_counter()
+
   def tearDown(self, clean: bool = True):
+    duration = time.perf_counter() - self._test_start
+    with autodict.JSONAutoDict(TEST_LOG) as d:
+      d["methods"][self.id()] = duration
     if clean:
       sql.drop_session()
-      duration = time.perf_counter() - self._test_start
-      with autodict.JSONAutoDict(TEST_LOG) as d:
-        d["methods"][self.id()] = duration
       self._clean_test_root()
 
     # Restore sleeping

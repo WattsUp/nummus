@@ -38,9 +38,7 @@ class TestControllerBudget(WebTestBase):
         }
     }
 
-    response = self.api_post("/api/budget", json=req)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/budget", json=req)
     with p.get_session() as s:
       a = s.query(Budget).first()
       # Serialize then deserialize
@@ -48,18 +46,16 @@ class TestControllerBudget(WebTestBase):
 
       s.delete(a)
       s.commit()
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {"date": date}
-    response = self.api_post("/api/budget", json=req, rc=400)
+    self.api_post("/api/budget", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
 
-    # Create budget
+    # Create budgets
     today = datetime.date.today()
     b = Budget(date=today)
     with p.get_session() as s:
@@ -70,9 +66,7 @@ class TestControllerBudget(WebTestBase):
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     # Get by uuid
-    response = self.api_get(f"/api/budget/{b_uuid}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get(f"/api/budget/{b_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -97,17 +91,15 @@ class TestControllerBudget(WebTestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    response = self.api_put(f"/api/budget/{b_uuid}", json=req)
-    self.assertEqual("application/json", response.content_type)
+    result = self.api_put(f"/api/budget/{b_uuid}", json=req)
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
       self.assertEqualWithinError(new_home, b.home, 1e-6)
-    result = response.json
     self.assertEqual(target, result)
 
     # Read only properties
-    response = self.api_put(f"/api/budget/{b_uuid}", json=target, rc=400)
+    self.api_put(f"/api/budget/{b_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -127,9 +119,7 @@ class TestControllerBudget(WebTestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    response = self.api_delete(f"/api/budget/{b_uuid}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_delete(f"/api/budget/{b_uuid}")
     self.assertEqual(target, result)
 
     with p.get_session() as s:
@@ -149,10 +139,7 @@ class TestControllerBudget(WebTestBase):
       s.commit()
 
     # Get all
-    response = self.api_get("/api/budgets")
-    self.assertEqual("application/json", response.content_type)
-
-    result = response.json
+    result = self.api_get("/api/budgets")
     with p.get_session() as s:
       query = s.query(Budget).order_by(Budget.date)
       budgets: List[Dict[str, object]] = json.loads(
@@ -161,48 +148,41 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Sort by newest first
-    response = self.api_get("/api/budgets?sort=newest")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"sort": "newest"})
     target = {"budgets": budgets[::-1], "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
-    response = self.api_get("/api/budgets?limit=1")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"limit": 1})
     target = {"budgets": budgets[:1], "next_offset": 1}
     self.assertEqual(target, result)
 
-    response = self.api_get("/api/budgets?limit=1&offset=1")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
     target = {"budgets": budgets[1:], "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging reverse
-    response = self.api_get("/api/budgets?sort=newest&limit=1")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
     target = {"budgets": budgets[1:], "next_offset": 1}
     self.assertEqual(target, result)
 
-    response = self.api_get("/api/budgets?sort=newest&limit=1&offset=1")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {
+        "limit": 1,
+        "offset": 1,
+        "sort": "newest"
+    })
     target = {"budgets": budgets[:1], "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by start date
-    response = self.api_get(f"/api/budgets?start={today.isoformat()}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"start": today})
     target = {"budgets": budgets[1:], "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by end date
-    response = self.api_get(f"/api/budgets?end={yesterday.isoformat()}")
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get("/api/budgets", {"end": yesterday})
     target = {"budgets": budgets[:1], "next_offset": None}
     self.assertEqual(target, result)
+
+    # Strict query validation
+    self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)

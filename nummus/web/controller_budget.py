@@ -125,9 +125,9 @@ def get_all() -> flask.Response:
   next_offset: int = None
 
   with p.get_session() as s:
-    query = s.query(Budget).filter(Budget.date <= end)
+    query = s.query(Budget).where(Budget.date <= end)
     if start is not None:
-      query = query.filter(Budget.date >= start)
+      query = query.where(Budget.date >= start)
 
     # Get total number from filters
     # TODO (WattsUp) replace if counting is too slow
