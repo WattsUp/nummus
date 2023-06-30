@@ -117,6 +117,8 @@ def parse_uuid(s: str) -> uuid.UUID:
   Raises:
     BadRequestProblem if UUID is malformed
   """
+  if isinstance(s, uuid.UUID) or s is None:
+    return s
   try:
     return uuid.UUID(s)
   except ValueError as e:
@@ -136,6 +138,8 @@ def parse_date(s: str) -> datetime.date:
   Raises:
     BadRequestProblem if date is malformed
   """
+  if isinstance(s, datetime.date) or s is None:
+    return s
   try:
     return datetime.date.fromisoformat(s)
   except ValueError as e:
@@ -155,6 +159,8 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
   Raises:
     BadRequestProblem if enum is unknown
   """
+  if isinstance(s, cls) or s is None:
+    return s
   try:
     return cls.parse(s)
   except ValueError as e:

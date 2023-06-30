@@ -23,7 +23,6 @@ class TestControllerAsset(WebTestBase):
     req = {"name": name, "category": category}
 
     response = self.api_post("/api/asset", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     with p.get_session() as s:
@@ -50,7 +49,6 @@ class TestControllerAsset(WebTestBase):
     }
 
     response = self.api_post("/api/asset", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     with p.get_session() as s:
@@ -63,8 +61,7 @@ class TestControllerAsset(WebTestBase):
 
     # Fewer keys are bad
     req = {"name": name}
-    response = self.api_post("/api/asset", json=req)
-    self.assertEqual(400, response.status_code)
+    response = self.api_post("/api/asset", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -80,7 +77,6 @@ class TestControllerAsset(WebTestBase):
 
     # Get by uuid
     response = self.api_get(f"/api/asset/{a_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -105,7 +101,6 @@ class TestControllerAsset(WebTestBase):
     req = dict(target)
     req.pop("uuid")
     response = self.api_put(f"/api/asset/{a_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
@@ -115,8 +110,7 @@ class TestControllerAsset(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    response = self.api_put(f"/api/asset/{a_uuid}", json=target)
-    self.assertEqual(400, response.status_code)
+    response = self.api_put(f"/api/asset/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -147,7 +141,6 @@ class TestControllerAsset(WebTestBase):
 
     # Delete by uuid
     response = self.api_delete(f"/api/asset/{a_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -170,7 +163,6 @@ class TestControllerAsset(WebTestBase):
 
     # Get all
     response = self.api_get("/api/assets")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json
@@ -182,7 +174,6 @@ class TestControllerAsset(WebTestBase):
 
     # Get only cash
     response = self.api_get("/api/assets?category=item")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json

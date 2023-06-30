@@ -23,7 +23,6 @@ class TestControllerAccount(WebTestBase):
     req = {"name": name, "institution": institution, "category": category}
 
     response = self.api_post("/api/account", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     with p.get_session() as s:
@@ -36,8 +35,7 @@ class TestControllerAccount(WebTestBase):
 
     # Fewer keys are bad
     req = {"name": name, "institution": institution}
-    response = self.api_post("/api/account", json=req)
-    self.assertEqual(400, response.status_code)
+    response = self.api_post("/api/account", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -55,7 +53,6 @@ class TestControllerAccount(WebTestBase):
 
     # Get by uuid
     response = self.api_get(f"/api/account/{a_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -84,7 +81,6 @@ class TestControllerAccount(WebTestBase):
     req.pop("opened_on")
     req.pop("updated_on")
     response = self.api_put(f"/api/account/{a_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
       a = s.query(Account).where(Account.uuid == a_uuid).first()
@@ -94,8 +90,7 @@ class TestControllerAccount(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    response = self.api_put(f"/api/account/{a_uuid}", json=target)
-    self.assertEqual(400, response.status_code)
+    response = self.api_put(f"/api/account/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -132,7 +127,6 @@ class TestControllerAccount(WebTestBase):
 
     # Delete by uuid
     response = self.api_delete(f"/api/account/{a_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -161,7 +155,6 @@ class TestControllerAccount(WebTestBase):
 
     # Get all
     response = self.api_get("/api/accounts")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json
@@ -173,7 +166,6 @@ class TestControllerAccount(WebTestBase):
 
     # Get only cash
     response = self.api_get("/api/accounts?category=cash")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json
@@ -184,5 +176,4 @@ class TestControllerAccount(WebTestBase):
     self.assertEqual(target, result)
 
     # Strict query validation
-    response = self.api_get("/api/accounts?fake=invalid")
-    self.assertEqual(400, response.status_code)
+    response = self.api_get("/api/accounts?fake=invalid", rc=400)

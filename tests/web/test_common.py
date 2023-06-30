@@ -133,6 +133,12 @@ class TestCommon(WebTestBase):
     result = common.parse_uuid(s)
     self.assertEqual(target, result)
 
+    result = common.parse_uuid(target)
+    self.assertEqual(target, result)
+
+    result = common.parse_uuid(None)
+    self.assertIsNone(result)
+
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_uuid,
                       self.random_string())
@@ -143,6 +149,12 @@ class TestCommon(WebTestBase):
     result = common.parse_date(s)
     self.assertEqual(target, result)
 
+    result = common.parse_date(target)
+    self.assertEqual(target, result)
+
+    result = common.parse_date(None)
+    self.assertIsNone(result)
+
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_date,
                       self.random_string())
@@ -152,6 +164,12 @@ class TestCommon(WebTestBase):
     s = target.name.lower()
     result = common.parse_enum(s, AccountCategory)
     self.assertEqual(target, result)
+
+    result = common.parse_enum(target, AccountCategory)
+    self.assertEqual(target, result)
+
+    result = common.parse_enum(None, AccountCategory)
+    self.assertIsNone(result)
 
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_enum,

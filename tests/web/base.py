@@ -46,22 +46,31 @@ class WebTestBase(TestBase):
 
     super().tearDown()
 
-  def api_open(self, method: str, endpoint: str, **kwargs) -> werkzeug.Response:
+  def api_open(self,
+               method: str,
+               endpoint: str,
+               rc: int = 200,
+               **kwargs) -> werkzeug.Response:
     """Run a test API GET
 
     Args:
       client: Test client from get_api_client
       method: HTTP method to use
       endpoint: URL endpoint to test
+      rc: Expected HTTP return code
       All other arguments passed to client.get
     """
     kwargs["method"] = method
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       start = time.perf_counter()
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      if rc == 200:
         response = self._client.open(endpoint, **kwargs)
+      else:
+        with mock.patch("sys.stderr", new=io.StringIO()) as _:
+          response = self._client.open(endpoint, **kwargs)
       duration = time.perf_counter() - start
+      self.assertEqual(rc, response.status_code)
       self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
       with autodict.JSONAutoDict(TEST_LOG) as d:
         # Replace uuid with <uuid>
@@ -90,14 +99,18 @@ class WebTestBase(TestBase):
     """
     return self.api_open("PUT", endpoint, **kwargs)
 
-  def api_post(self, endpoint: str, **kwargs) -> werkzeug.Response:
+  def api_post(self,
+               endpoint: str,
+               rc: int = 200,
+               **kwargs) -> werkzeug.Response:
     """Run a test API POST
 
     Args:
       endpoint: URL endpoint to test
+      rc: Expected return code
       All other arguments passed to client.get
     """
-    return self.api_open("POST", endpoint, **kwargs)
+    return self.api_open("POST", endpoint, rc, **kwargs)
 
   def api_delete(self, endpoint: str, **kwargs) -> werkzeug.Response:
     """Run a test API GET

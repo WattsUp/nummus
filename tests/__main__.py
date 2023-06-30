@@ -48,7 +48,7 @@ def post_tests():
       print(f"  {method:{n_pad}}: {duration:6.2f}s")
 
   print(f"{n_slowest} slowest API calls")
-  if len(methods) != 0:
+  if len(api_latency) != 0:
     n_pad = max(len(k) for k, _ in api_latency) + 1
     for method, durations in api_latency:
       duration_ms = max(durations) * 1000

@@ -3,6 +3,8 @@
 
 from typing import Dict
 
+import datetime
+
 import flask
 
 from nummus import portfolio
@@ -112,11 +114,39 @@ def get_all() -> flask.Response:
   """
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
 
-  # args: Dict[str, object] = flask.request.args.to_dict()
+  args: Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start"))
+  end = common.parse_date(args.get("end", today))
+  limit = int(args.get("limit", 50))
+  offset = int(args.get("offset", 0))
+  sort = str(args.get("sort", "oldest"))
+  next_offset: int = None
 
   with p.get_session() as s:
-    query = s.query(Budget).order_by(Budget.date)
+    query = s.query(Budget).filter(Budget.date <= end)
+    if start is not None:
+      query = query.filter(Budget.date >= start)
 
-    response = {"budgets": query.all()}
+    # Get total number from filters
+    # TODO (WattsUp) replace if counting is too slow
+    # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+    count = query.count()
+
+    # Apply ordering, limiting, and offset
+    if sort == "oldest":
+      query = query.order_by(Budget.date)
+    else:
+      query = query.order_by(Budget.date.desc())
+    query = query.limit(limit).offset(offset)
+
+    budgets = query.all()
+
+    n_budgets = len(budgets)
+    remaining = count - n_budgets - offset
+    if remaining > 0:
+      next_offset = offset + n_budgets
+
+    response = {"budgets": budgets, "next_offset": next_offset}
     return flask.jsonify(response)

@@ -1,4 +1,3 @@
-# TODO (WattsUp) Implement endpoints into api.yaml and remove this temp file
 openapi: 3.0.0
 servers:
   - url: https://nummus/api
@@ -261,7 +260,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Asset"
-                  # next_page:
+                  # next_offset:
                   #   description: Offset to use to fetch next page, null
                   #     indicates no more pages available
                   #   type: integer
@@ -353,12 +352,12 @@ paths:
       summary: Get Budgets of Portfolio
       description: ""
       operationId: nummus.web.controller_budget.get_all
-      # parameters:
-      #   - $ref: "#/components/parameters/Start"
-      #   - $ref: "#/components/parameters/End"
-      #   - $ref: "#/components/parameters/SortByAge"
-      #   - $ref: "#/components/parameters/Limit"
-      #   - $ref: "#/components/parameters/Offset"
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - $ref: "#/components/parameters/SortByAge"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
       responses:
         "200":
           description: Successful operation
@@ -371,11 +370,11 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Budget"
-                  # next_page:
-                  #   description: Offset to use to fetch next page, null
-                  #     indicates no more pages available
-                  #   type: integer
-                  #   nullable: true
+                  next_offset:
+                    description: Offset to use to fetch next page, null
+                      indicates no more pages available
+                    type: integer
+                    nullable: true
         "400":
           description: Invalid parameter supplied
   /transaction:
@@ -490,7 +489,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Transaction"
-                  # next_page:
+                  # next_offset:
                   #   description: Offset to use to fetch next page, null
                   #     indicates no more pages available
                   #   type: integer

@@ -12,7 +12,6 @@ class TestControllerConfig(WebTestBase):
 
   def test_get_version(self):
     response = self.api_get("/api/version")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json

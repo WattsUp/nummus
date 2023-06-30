@@ -205,7 +205,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Transaction"
-                  next_page:
+                  next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available
                     type: integer
@@ -420,7 +420,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Asset"
-                  next_page:
+                  next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available
                     type: integer
@@ -530,7 +530,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Budget"
-                  next_page:
+                  next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available
                     type: integer
@@ -649,7 +649,7 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Transaction"
-                  next_page:
+                  next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available
                     type: integer

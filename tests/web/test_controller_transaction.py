@@ -44,7 +44,6 @@ class TestControllerTransaction(WebTestBase):
     }
 
     response = self.api_post("/api/transaction", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     with p.get_session() as s:
@@ -100,7 +99,6 @@ class TestControllerTransaction(WebTestBase):
     }
 
     response = self.api_post("/api/transaction", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     with p.get_session() as s:
@@ -137,8 +135,7 @@ class TestControllerTransaction(WebTestBase):
         "statement": statement,
         "locked": True
     }
-    response = self.api_post("/api/transaction", json=req)
-    self.assertEqual(400, response.status_code)
+    response = self.api_post("/api/transaction", json=req, rc=400)
 
     # Need at least one split
     req = {
@@ -149,8 +146,7 @@ class TestControllerTransaction(WebTestBase):
         "locked": True,
         "splits": []
     }
-    response = self.api_post("/api/transaction", json=req)
-    self.assertEqual(400, response.status_code)
+    response = self.api_post("/api/transaction", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -176,7 +172,6 @@ class TestControllerTransaction(WebTestBase):
 
     # Get by uuid
     response = self.api_get(f"/api/transaction/{t_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -219,7 +214,6 @@ class TestControllerTransaction(WebTestBase):
     req_split_0.pop("parent_uuid")
     req["splits"] = [req_split_0]
     response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
@@ -257,7 +251,6 @@ class TestControllerTransaction(WebTestBase):
     req_split_1.pop("parent_uuid")
     req["splits"] = [req_split_0, req_split_1]
     response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
@@ -295,7 +288,6 @@ class TestControllerTransaction(WebTestBase):
     req_split_0.pop("parent_uuid")
     req["splits"] = [req_split_0]
     response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
@@ -316,12 +308,10 @@ class TestControllerTransaction(WebTestBase):
 
     # Try to remove all splits
     req["splits"] = []
-    response = self.api_put(f"/api/transaction/{t_uuid}", json=req)
-    self.assertEqual(400, response.status_code)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=req, rc=400)
 
     # Read only properties
-    response = self.api_put(f"/api/transaction/{t_uuid}", json=target)
-    self.assertEqual(400, response.status_code)
+    response = self.api_put(f"/api/transaction/{t_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -353,7 +343,6 @@ class TestControllerTransaction(WebTestBase):
 
     # Delete by uuid
     response = self.api_delete(f"/api/transaction/{t_uuid}")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
     result = response.json
     self.assertEqual(target, result)
@@ -396,7 +385,6 @@ class TestControllerTransaction(WebTestBase):
 
     # Get all
     response = self.api_get("/api/transactions")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json
@@ -408,7 +396,6 @@ class TestControllerTransaction(WebTestBase):
 
     # Get only travel
     response = self.api_get("/api/transactions?category=travel")
-    self.assertEqual(200, response.status_code)
     self.assertEqual("application/json", response.content_type)
 
     result = response.json
