@@ -67,9 +67,10 @@ class TestBase(unittest.TestCase):
       error = np.abs(real / target - 1)
     self.assertLessEqual(error, threshold)
 
-  def setUp(self):
-    sql.drop_session()
-    self._clean_test_root()
+  def setUp(self, clean: bool = True):
+    if clean:
+      sql.drop_session()
+      self._clean_test_root()
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     self._test_start = time.perf_counter()
 
@@ -77,15 +78,13 @@ class TestBase(unittest.TestCase):
     self._original_sleep = time.sleep
     time.sleep = lambda *args: None
 
-    # Change all engines to NullPool so timing isn't an issue
-    sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # pylint: disable=protected-access
-
-  def tearDown(self):
-    sql.drop_session()
-    duration = time.perf_counter() - self._test_start
-    with autodict.JSONAutoDict(TEST_LOG) as d:
-      d["methods"][self.id()] = duration
-    self._clean_test_root()
+  def tearDown(self, clean: bool = True):
+    if clean:
+      sql.drop_session()
+      duration = time.perf_counter() - self._test_start
+      with autodict.JSONAutoDict(TEST_LOG) as d:
+        d["methods"][self.id()] = duration
+      self._clean_test_root()
 
     # Restore sleeping
     time.sleep = self._original_sleep
@@ -108,6 +107,9 @@ class TestBase(unittest.TestCase):
   def setUpClass(cls):
     print(f"{cls.__module__}.{cls.__qualname__}[", end="", flush=True)
     cls._CLASS_START = time.perf_counter()
+
+    # Change all engines to NullPool so timing isn't an issue
+    sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # pylint: disable=protected-access
 
   @classmethod
   def tearDownClass(cls):

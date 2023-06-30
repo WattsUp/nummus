@@ -13,7 +13,9 @@ import flask
 import flask.testing
 import werkzeug
 
-from nummus import portfolio, web
+from nummus import portfolio, sql, web
+from nummus.models import (Account, AssetValuation, Asset, Budget, Credentials,
+                           Transaction, TransactionSplit)
 
 from tests import TEST_LOG
 from tests.base import TestBase
@@ -26,25 +28,48 @@ class WebTestBase(TestBase):
   """TestBase with extra functions for web testing
   """
 
-  def setUp(self):
-    super().setUp()
+  @classmethod
+  def setUpClass(cls):
+    super().setUpClass()
+    cls._clean_test_root()
 
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    self._portfolio = portfolio.Portfolio.create(path_db, None)
+    # Create a portfolio for the test class
+    path_db = cls._TEST_ROOT.joinpath("portfolio.db")
+    cls._portfolio = portfolio.Portfolio.create(path_db, None)
 
-    s = web.Server(self._portfolio, "127.0.0.1", 8080, False)
+    s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
     s_server = s._server  # pylint: disable=protected-access
     connexion_app: connexion.FlaskApp = s_server.application
     flask_app: flask.Flask = connexion_app.app
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      self._client = flask_app.test_client()
+      cls._client = flask_app.test_client()
+
+  @classmethod
+  def tearDownClass(cls):
+    cls._client = None
+    cls._portfolio = None
+    sql.drop_session()
+    cls._clean_test_root()
+    super().tearDownClass()
+
+  def setUp(self):
+    super().setUp(clean=False)
 
   def tearDown(self):
-    self._client = None
-    self._portfolio = None
+    # Clean portfolio
+    # In order of deletion, so children models first
+    models = [
+        AssetValuation, Budget, Credentials, TransactionSplit, Transaction,
+        Asset, Account
+    ]
+    with self._portfolio.get_session() as s:
+      for model in models:
+        for instance in s.query(model).all():
+          s.delete(instance)
+        s.commit()
 
-    super().tearDown()
+    super().tearDown(clean=False)
 
   def api_open(self,
                method: str,
