@@ -46,7 +46,7 @@ class TestCommon(WebTestBase):
     p = self._portfolio
 
     # Create asset
-    a = Asset(name="Monkey Bank Checking", category=AssetCategory.ITEM)
+    a = Asset(name="Banana", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
       s.commit()

@@ -117,11 +117,10 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = common.parse_enum(args.get("category"), AssetCategory)
-  search = args.get("search")
   limit = int(args.get("limit", 50))
   offset = int(args.get("offset", 0))
-  next_offset: int = None
+  search = args.get("search")
+  filter_category = common.parse_enum(args.get("category"), AssetCategory)
 
   with p.get_session() as s:
     query = s.query(Asset)

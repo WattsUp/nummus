@@ -119,20 +119,14 @@ def get_all() -> flask.Response:
   args: Dict[str, object] = flask.request.args.to_dict()
   start = common.parse_date(args.get("start"))
   end = common.parse_date(args.get("end", today))
+  sort = str(args.get("sort", "oldest"))
   limit = int(args.get("limit", 50))
   offset = int(args.get("offset", 0))
-  sort = str(args.get("sort", "oldest"))
-  next_offset: int = None
 
   with p.get_session() as s:
     query = s.query(Budget).where(Budget.date <= end)
     if start is not None:
       query = query.where(Budget.date >= start)
-
-    # Get total number from filters
-    # TODO (WattsUp) replace if counting is too slow
-    # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-    count = query.count()
 
     # Apply ordering
     if sort == "oldest":

@@ -1,6 +1,8 @@
 """Test module nummus.web.controller_transaction
 """
 
+from typing import List
+
 import datetime
 import json
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
@@ -197,11 +199,17 @@ class TestControllerTransaction(WebTestBase):
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     target["splits"][0]["category"] = new_category_0.name.lower()
+    target["splits"][0]["date"] = new_date.isoformat()
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req.pop("uuid")
+    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
+    req_split_0.pop("account_uuid")
+    req_split_0.pop("date")
+    req_split_0.pop("locked")
+    req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
     result = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     with p.get_session() as s:
@@ -225,18 +233,30 @@ class TestControllerTransaction(WebTestBase):
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Duplicate split
+    target["is_split"] = True
     target["splits"].append(dict(target["splits"][0]))
     target["splits"][0]["category"] = new_category_0.name.lower()
+    target["splits"][0]["is_split"] = True
     target["splits"][1]["category"] = new_category_1.name.lower()
     target["splits"][1]["asset_uuid"] = asset_bananas_uuid
+    target["splits"][1]["is_split"] = True
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req_split_1 = dict(target["splits"][1])
     req.pop("uuid")
+    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
+    req_split_0.pop("account_uuid")
+    req_split_0.pop("date")
+    req_split_0.pop("locked")
+    req_split_0.pop("is_split")
     req_split_1.pop("uuid")
     req_split_1.pop("parent_uuid")
+    req_split_1.pop("account_uuid")
+    req_split_1.pop("date")
+    req_split_1.pop("locked")
+    req_split_1.pop("is_split")
     req["splits"] = [req_split_0, req_split_1]
     result = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     with p.get_session() as s:
@@ -265,13 +285,20 @@ class TestControllerTransaction(WebTestBase):
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Keep only the second one
+    target["is_split"] = False
     target["splits"] = [target["splits"][1]]
     target["splits"][0]["category"] = new_category_0.name.lower()
+    target["splits"][0]["is_split"] = False
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req.pop("uuid")
+    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
+    req_split_0.pop("account_uuid")
+    req_split_0.pop("date")
+    req_split_0.pop("locked")
+    req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
     result = self.api_put(f"/api/transaction/{t_uuid}", json=req)
     with p.get_session() as s:
@@ -339,48 +366,158 @@ class TestControllerTransaction(WebTestBase):
     p = self._portfolio
 
     #   # Create accounts
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    a_checking = Account(name="Monkey Bank Checking",
+                         institution="Monkey Bank",
+                         category=AccountCategory.CASH)
+    a_invest = Account(name="Monkey Investments",
+                       institution="Ape Trading",
+                       category=AccountCategory.INVESTMENT)
+    a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
     today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    subcategory = self.random_string()
+    tag = self.random_string()
     with p.get_session() as s:
-      s.add(a)
+      s.add_all((a_checking, a_invest, a_banana))
       s.commit()
 
-      for i, category in enumerate(TransactionCategory):
-        t = Transaction(account_id=a.id,
+      a_invest_uuid = a_invest.uuid
+      a_banana_uuid = a_banana.uuid
+
+      transactions: List[Transaction] = []
+      for category in TransactionCategory:
+        t = Transaction(account=a_checking,
                         date=today,
                         total=100,
                         statement=self.random_string())
-        t_split = TransactionSplit(total=100, parent=t, category=category)
+        t_split = TransactionSplit(total=100,
+                                   parent=t,
+                                   category=category,
+                                   payee=self.random_string(),
+                                   description=self.random_string(),
+                                   subcategory=self.random_string(),
+                                   tag=self.random_string())
         s.add_all((t, t_split))
-        if i == 0:
-          t_split = TransactionSplit(total=10,
-                                     parent=t,
-                                     category=TransactionCategory.TRAVEL)
-          s.add(t_split)
-          t_split = TransactionSplit(total=10,
-                                     parent=t,
-                                     category=TransactionCategory.TRAVEL)
-          s.add(t_split)
+        transactions.append(t)
+
+      transactions[-1].account = a_invest
+      transactions[-1].date = yesterday
+      transactions[-1].locked = True
+      transactions[-1].splits[0].asset = a_banana
+
+      # Split t0
+      t_split_extra_0 = TransactionSplit(total=10,
+                                         parent=transactions[0],
+                                         category=TransactionCategory.TRAVEL,
+                                         payee=self.random_string(),
+                                         description=self.random_string(),
+                                         subcategory=self.random_string(),
+                                         tag=tag)
+      t_split_extra_1 = TransactionSplit(total=10,
+                                         parent=transactions[0],
+                                         category=TransactionCategory.TRAVEL,
+                                         payee=self.random_string(),
+                                         description=self.random_string(),
+                                         subcategory=subcategory,
+                                         tag=self.random_string())
+      s.add_all((t_split_extra_0, t_split_extra_1))
+
       s.commit()
+      # Sort by date, then parent, then id
+      query = s.query(TransactionSplit).join(Transaction).order_by(
+          Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
+      t_splits = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
     result = self.api_get("/api/transactions")
-    with p.get_session() as s:
-      query = s.query(Transaction)
-      transactions = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"transactions": transactions}
+    target = {"transactions": t_splits, "count": 11, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only travel
     result = self.api_get("/api/transactions", {"category": "travel"})
-    with p.get_session() as s:
-      all_transactions = s.query(Transaction).all()
-      transactions = []
-      for t in all_transactions:
-        if any(t_split.category == TransactionCategory.TRAVEL
-               for t_split in t.splits):
-          transactions.append(json.loads(json.dumps(t, cls=NummusJSONEncoder)))
-    target = {"transactions": transactions}
+    target = {
+        "transactions": [t_splits[2], t_splits[3], t_splits[8]],
+        "count": 3,
+        "next_offset": None
+    }
     self.assertEqual(target, result)
+
+    # Sort by newest first
+    result = self.api_get("/api/transactions", {"sort": "newest"})
+    target = {
+        "transactions": t_splits[1:] + t_splits[:1],
+        "count": 11,
+        "next_offset": None
+    }
+    self.assertEqual(target, result)
+
+    # Filter by start date
+    result = self.api_get("/api/transactions", {"start": today})
+    target = {"transactions": t_splits[1:], "count": 10, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by end date
+    result = self.api_get("/api/transactions", {"end": yesterday})
+    target = {"transactions": t_splits[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by subcategory
+    result = self.api_get("/api/transactions", {"subcategory": subcategory})
+    target = {"transactions": [t_splits[3]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by tag
+    result = self.api_get("/api/transactions", {"tag": tag})
+    target = {"transactions": [t_splits[2]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by locked
+    result = self.api_get("/api/transactions", {"locked": True})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by account
+    result = self.api_get("/api/transactions", {"account": a_invest_uuid})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by account category
+    result = self.api_get("/api/transactions",
+                          {"account_category": "investment"})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by asset
+    result = self.api_get("/api/transactions", {"asset": a_banana_uuid})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by asset category
+    result = self.api_get("/api/transactions", {"asset_category": "item"})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by payee
+    result = self.api_get("/api/transactions", {"search": t_splits[0]["payee"]})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by description
+    result = self.api_get("/api/transactions",
+                          {"search": t_splits[0]["description"]})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by subcategory
+    result = self.api_get("/api/transactions",
+                          {"search": t_splits[0]["subcategory"]})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by tag
+    result = self.api_get("/api/transactions", {"search": t_splits[0]["tag"]})
+    target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Strict query validation
+    self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)

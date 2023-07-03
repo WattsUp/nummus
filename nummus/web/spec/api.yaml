@@ -472,23 +472,23 @@ paths:
       tags:
         - Transaction
       summary: Get Transactions of Portfolio
-      description: ""
+      description: Returns TransactionSplits matching criteria
       operationId: nummus.web.controller_transaction.get_all
       parameters:
-        # - $ref: "#/components/parameters/Start"
-        # - $ref: "#/components/parameters/End"
-        # - $ref: "#/components/parameters/SortByAge"
-        # - $ref: "#/components/parameters/Limit"
-        # - $ref: "#/components/parameters/Offset"
-        # - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - $ref: "#/components/parameters/SortByAge"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/TransactionCategory"
-        # - $ref: "#/components/parameters/TransactionSubcategory"
-        # - $ref: "#/components/parameters/TransactionTag"
-        # - $ref: "#/components/parameters/TransactionLocked"
-        # - $ref: "#/components/parameters/AccountUUID"
-        # - $ref: "#/components/parameters/AccountCategoryExplicit"
-        # - $ref: "#/components/parameters/AssetUUID"
-        # - $ref: "#/components/parameters/AssetCategoryExplicit"
+        - $ref: "#/components/parameters/TransactionSubcategory"
+        - $ref: "#/components/parameters/TransactionTag"
+        - $ref: "#/components/parameters/TransactionLocked"
+        - $ref: "#/components/parameters/AccountUUID"
+        - $ref: "#/components/parameters/AccountCategoryExplicit"
+        - $ref: "#/components/parameters/AssetUUID"
+        - $ref: "#/components/parameters/AssetCategoryExplicit"
       responses:
         "200":
           description: Successful operation
@@ -500,14 +500,16 @@ paths:
                   transactions:
                     type: array
                     items:
-                      $ref: "#/components/schemas/Transaction"
-                  # next_offset:
-                  #   description: Offset to use to fetch next page, null
-                  #     indicates no more pages available
-                  #   type: integer
-                  #   nullable: true
+                      $ref: "#/components/schemas/TransactionSplit"
+                  next_offset:
+                    description: Offset to use to fetch next page, null
+                      indicates no more pages available
+                    type: integer
+                    nullable: true
         "400":
           description: Invalid parameter supplied
+        "404":
+          description: Account or Asset not found
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus
@@ -854,6 +856,7 @@ components:
         - statement
         - locked
         - splits
+        - is_split
       properties:
         uuid:
           type: string
@@ -885,6 +888,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TransactionSplit"
+        is_split:
+          description: True if there are more than one TransactionSplit
+          type: boolean
+          readOnly: true
     TransactionSplit:
       description: Exchange of cash for an asset (or none)
       type: object
@@ -892,6 +899,10 @@ components:
         - uuid
         - total
         - parent_uuid
+        - account_uuid
+        - date
+        - locked
+        - is_split
       properties:
         uuid:
           type: string
@@ -901,6 +912,15 @@ components:
           description: ID of Transaction that owns this TransactionSplit
           type: string
           format: uuid
+          readOnly: true
+        account_uuid:
+          description: ID of Account that owns this Transaction
+          type: string
+          format: uuid
+          readOnly: true
+        date:
+          type: string
+          format: date
           readOnly: true
         total:
           description: >-
@@ -960,6 +980,14 @@ components:
           format: double
           example: -0.52
           nullable: true
+        locked:
+          description: Parameters can only be manually edited
+          type: boolean
+          readOnly: true
+        is_split:
+          description: True if part of a split Transaction
+          type: boolean
+          readOnly: true
     Dates:
       description: Dates when valuations occur
       type: array

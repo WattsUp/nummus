@@ -10,11 +10,13 @@ import connexion
 from sqlalchemy import orm
 from thefuzz import process
 
-from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction)
+from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction,
+                           TransactionSplit)
 
 _SEARCH_PROPERTIES: Dict[Type[Base], List[str]] = {
     Account: ["name", "institution"],
-    Asset: ["name", "description", "unit", "tag"]
+    Asset: ["name", "description", "unit", "tag"],
+    TransactionSplit: ["payee", "description", "subcategory", "tag"]
 }
 
 
@@ -186,7 +188,7 @@ def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
   Returns:
     List of results, count of total results
   """
-  # TODO (WattsUp) Caching and paging and cache invalidation
+  # TODO (WattsUp) Caching and cache invalidation
   if search_str is None or len(search_str) < 3:
     return query
 
@@ -216,7 +218,7 @@ def paginate(query: orm.Query[Base], limit: int,
     query: Session query to execute to get results
     limit: Maximum number of results per page
     offset: Result offset, advances to subsequent pages
-  
+
   Returns:
     Page (list of result from query), total count for query, next_offset for
     subsequent calls
@@ -224,7 +226,9 @@ def paginate(query: orm.Query[Base], limit: int,
   offset = max(0, offset)
 
   # Get total number from filters
-  count = query.count()
+  # TODO (WattsUp) replace if counting is too slow
+  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+  count = query.order_by(None).count()
 
   # Apply limiting, and offset
   query = query.limit(limit).offset(offset)

@@ -93,22 +93,23 @@ class WebTestBase(TestBase):
       rc: Expected HTTP return code
       All other arguments passed to client.get
     """
-    if queries is not None:
-      queries = [
+    if queries is None or len(queries) < 1:
+      url = endpoint
+    else:
+      queries_flat = [
           f"{k}={urllib.parse.quote(str(v))}" for k, v in queries.items()
       ]
-      if len(queries) > 0:
-        endpoint = f"{endpoint}?{'&'.join(queries)}"
+      url = f"{endpoint}?{'&'.join(queries_flat)}"
 
     kwargs["method"] = method
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       start = time.perf_counter()
       if rc == 200:
-        response = self._client.open(endpoint, **kwargs)
+        response = self._client.open(url, **kwargs)
       else:
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
-          response = self._client.open(endpoint, **kwargs)
+          response = self._client.open(url, **kwargs)
     duration = time.perf_counter() - start
     self.assertEqual(rc, response.status_code)
     if rc == 200:
@@ -118,7 +119,10 @@ class WebTestBase(TestBase):
     with autodict.JSONAutoDict(TEST_LOG) as d:
       # Replace uuid with <uuid>
       endpoint = _RE_UUID.sub("<uuid>", endpoint)
-      k = f"{method} {endpoint}"
+      k = f"{method:6} {endpoint}"
+      if queries is not None and len(queries) >= 1:
+        queries_flat = [f"{k}=<value>" for k in queries]
+        k += f"?{'&'.join(queries_flat)}"
       if k not in d["api_latency"]:
         d["api_latency"][k] = []
       d["api_latency"][k].append(duration)
