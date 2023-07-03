@@ -14,7 +14,7 @@ class TestAssetValuation(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     a = asset.Asset(name=self.random_string(),
@@ -55,7 +55,7 @@ class TestAsset(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     d = {

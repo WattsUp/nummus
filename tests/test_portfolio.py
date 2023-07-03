@@ -67,7 +67,7 @@ class TestPortfolio(TestBase):
     p = portfolio.Portfolio(path_db, None)
     with p.get_session() as s:
       # Good, now change root password
-      user: Credentials = s.query(Credentials).filter(
+      user: Credentials = s.query(Credentials).where(
           Credentials.site == p._NUMMUS_SITE,  # pylint: disable=protected-access
           Credentials.user == p._NUMMUS_USER).first()  # pylint: disable=protected-access
       user.password = self.random_string()
@@ -88,7 +88,7 @@ class TestPortfolio(TestBase):
     # Delete root
     p = portfolio.Portfolio(path_db, None)
     with p.get_session() as s:
-      user: Credentials = s.query(Credentials).filter(
+      user: Credentials = s.query(Credentials).where(
           Credentials.site == p._NUMMUS_SITE,  # pylint: disable=protected-access
           Credentials.user == p._NUMMUS_USER).first()  # pylint: disable=protected-access
       s.delete(user)
@@ -134,7 +134,7 @@ class TestPortfolio(TestBase):
     p = portfolio.Portfolio(path_db, key)
     with p.get_session() as s:
       # Good, now change root password
-      user: Credentials = s.query(Credentials).filter(
+      user: Credentials = s.query(Credentials).where(
           Credentials.site == p._NUMMUS_SITE,  # pylint: disable=protected-access
           Credentials.user == p._NUMMUS_USER).first()  # pylint: disable=protected-access
       user.password = p._enc.encrypt(self.random_string().encode())  # pylint: disable=protected-access
@@ -155,7 +155,7 @@ class TestPortfolio(TestBase):
     p = portfolio.Portfolio(path_db, key)
     with p.get_session() as s:
       # Good, now change root password
-      user: Credentials = s.query(Credentials).filter(
+      user: Credentials = s.query(Credentials).where(
           Credentials.site == p._NUMMUS_SITE,  # pylint: disable=protected-access
           Credentials.user == p._NUMMUS_USER).first()  # pylint: disable=protected-access
       user.password = key

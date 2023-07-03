@@ -3,11 +3,14 @@
 
 from typing import Dict, List
 
+import datetime
+
 import connexion
 import flask
 
 from nummus import portfolio
-from nummus.models import Transaction, TransactionCategory, TransactionSplit
+from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
+                           Transaction, TransactionCategory, TransactionSplit)
 from nummus.web import common
 
 
@@ -180,22 +183,69 @@ def get_all() -> flask.Response:
   """
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
 
   args: Dict[str, object] = flask.request.args.to_dict()
-  filter_category = common.parse_enum(args.get("category"), TransactionCategory)
+  start = common.parse_date(args.get("start"))
+  end = common.parse_date(args.get("end", today))
+  sort: str = args.get("sort", "oldest")
+  limit = int(args.get("limit", 50))
+  offset = int(args.get("offset", 0))
+  search: str = args.get("search")
+  category = common.parse_enum(args.get("category"), TransactionCategory)
+  subcategory: str = args.get("subcategory")
+  tag: str = args.get("tag")
+  locked: str = args.get("locked")
+  account_uuid: str = args.get("account")
+  account_category = common.parse_enum(args.get("account_category"),
+                                       AccountCategory)
+  asset_uuid: str = args.get("asset")
+  asset_category = common.parse_enum(args.get("asset_category"), AssetCategory)
 
   with p.get_session() as s:
-    # Get by splits
-    query = s.query(TransactionSplit)
-    if filter_category is not None:
-      query = query.where(TransactionSplit.category == filter_category)
+    query = s.query(TransactionSplit).join(Transaction)
+    query = query.where(Transaction.date <= end)
+    if start is not None:
+      query = query.where(Transaction.date >= start)
+    if category is not None:
+      query = query.where(TransactionSplit.category == category)
+    if subcategory is not None:
+      query = query.where(TransactionSplit.subcategory == subcategory)
+    if tag is not None:
+      query = query.where(TransactionSplit.tag == tag)
+    if locked is not None:
+      locked_bool = locked.lower() == "true"
+      query = query.where(Transaction.locked == locked_bool)
+    if account_uuid is not None:
+      a = common.find_account(s, account_uuid)
+      query = query.where(Transaction.account_id == a.id)
+    if account_category is not None:
+      query = query.join(Account)
+      query = query.where(Account.category == account_category)
+    if asset_uuid is not None:
+      a = common.find_asset(s, asset_uuid)
+      query = query.where(TransactionSplit.asset_id == a.id)
+    if asset_category is not None:
+      query = query.join(Asset)
+      query = query.where(Asset.category == asset_category)
 
-    transactions: Dict[str, Transaction] = {}
-    # Return a list of the unique transactions with at least one split matching
-    # the criteria
-    for t_split in query.all():
-      t = t_split.parent
-      transactions[t.id] = t
+    if search is None:
+      # Apply ordering
+      # Sort by date, then parent, then id
+      if sort == "oldest":
+        query = query.order_by(Transaction.date, TransactionSplit.parent_id,
+                               TransactionSplit.id)
+      else:
+        query = query.order_by(Transaction.date.desc(),
+                               TransactionSplit.parent_id, TransactionSplit.id)
+    else:
+      # Apply search, will order by best match
+      query = common.search(s, query, TransactionSplit, search)
 
-    response = {"transactions": list(transactions.values())}
+    page, count, next_offset = common.paginate(query, limit, offset)
+    response = {
+        "transactions": page,
+        "count": count,
+        "next_offset": next_offset
+    }
     return flask.jsonify(response)

@@ -6,21 +6,19 @@ import uuid
 
 import connexion
 
-from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Budget, Transaction, TransactionSplit)
 from nummus.web import common
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestCommon(TestBase):
+class TestCommon(WebTestBase):
   """Test web common methods
   """
 
   def test_find_account(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create accounts
     a = Account(name="Monkey Bank Checking",
@@ -45,11 +43,10 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_asset(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create asset
-    a = Asset(name="Monkey Bank Checking", category=AssetCategory.ITEM)
+    a = Asset(name="Banana", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
       s.commit()
@@ -69,8 +66,7 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_budget(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -94,8 +90,7 @@ class TestCommon(TestBase):
       self.assertEqual(404, e.status)
 
   def test_find_transaction(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
+    p = self._portfolio
 
     # Create accounts and transactions
     a = Account(name="Monkey Bank Checking",
@@ -138,6 +133,12 @@ class TestCommon(TestBase):
     result = common.parse_uuid(s)
     self.assertEqual(target, result)
 
+    result = common.parse_uuid(target)
+    self.assertEqual(target, result)
+
+    result = common.parse_uuid(None)
+    self.assertIsNone(result)
+
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_uuid,
                       self.random_string())
@@ -147,6 +148,12 @@ class TestCommon(TestBase):
     s = target.isoformat()
     result = common.parse_date(s)
     self.assertEqual(target, result)
+
+    result = common.parse_date(target)
+    self.assertEqual(target, result)
+
+    result = common.parse_date(None)
+    self.assertIsNone(result)
 
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_date,
@@ -158,6 +165,116 @@ class TestCommon(TestBase):
     result = common.parse_enum(s, AccountCategory)
     self.assertEqual(target, result)
 
+    result = common.parse_enum(target, AccountCategory)
+    self.assertEqual(target, result)
+
+    result = common.parse_enum(None, AccountCategory)
+    self.assertIsNone(result)
+
     # Bad UUID
     self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_enum,
                       self.random_string(), AccountCategory)
+
+  def test_search(self):
+    # Bulk of search testing happens in the appropriate controller tests
+    p = self._portfolio
+
+    # Create accounts
+    a_checking = Account(name="Monkey Bank Checking",
+                         institution="Monkey Bank",
+                         category=AccountCategory.CASH)
+    a_invest = Account(name="Monkey Investments",
+                       institution="Ape Trading",
+                       category=AccountCategory.INVESTMENT)
+    with p.get_session() as s:
+      s.add_all((a_checking, a_invest))
+      s.commit()
+
+      query = s.query(Account)
+
+      # Unknown Model
+      self.assertRaises(KeyError, common.search, s, query, None, "abc")
+
+      # No results return all
+      result = common.search(s, query, Account, None).all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      # Short query return all
+      result = common.search(s, query, Account, "ab").all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      # No matches return first 5
+      result = common.search(s, query, Account, "crazy unrelated words").all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      result = common.search(s, query, Account, "checking").all()
+      self.assertEqual([a_checking], result)
+
+      result = common.search(s, query, Account, "bank").all()
+      self.assertEqual([a_checking], result)
+
+      result = common.search(s, query, Account, "monkey").all()
+      self.assertEqual([a_checking, a_invest], result)
+
+      result = common.search(s, query, Account, "trading").all()
+      self.assertEqual([a_invest], result)
+
+  def test_paginate(self):
+    p = self._portfolio
+
+    # Create accounts
+    a = Account(name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH)
+    n_transactions = 10
+    today = datetime.date.today()
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      for _ in range(n_transactions):
+        t = Transaction(account_id=a.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=t)
+        s.add_all((t, t_split))
+      s.commit()
+
+      query = s.query(Transaction)
+      transactions = query.all()
+
+      page, count, next_offset = common.paginate(query, 50, 0)
+      self.assertEqual(transactions, page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 0)
+      self.assertEqual(transactions[0:3], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(3, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 3)
+      self.assertEqual(transactions[3:6], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(6, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 6)
+      self.assertEqual(transactions[6:9], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(9, next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 9)
+      self.assertEqual(transactions[9:], page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, 1000)
+      self.assertEqual([], page)
+      self.assertEqual(n_transactions, count)
+      self.assertIsNone(next_offset)
+
+      page, count, next_offset = common.paginate(query, 3, -1000)
+      self.assertEqual(transactions[0:3], page)
+      self.assertEqual(n_transactions, count)
+      self.assertEqual(3, next_offset)

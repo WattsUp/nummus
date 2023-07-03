@@ -10,7 +10,9 @@
     "poolclass",
     "pycryptodome",
     "robo-advising",
+    "thefuzz",
     "uselist",
+    "werkzeug",
     "Woot"
   ],
   "python.formatting.provider": "yapf",

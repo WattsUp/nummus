@@ -1,26 +1,21 @@
 """Test module nummus.web.controller_budget
 """
 
-import datetime
-import io
-import json
-from unittest import mock
-import warnings
+from typing import Dict, List
 
-from nummus import portfolio
+import datetime
+import json
 from nummus.models import Budget, NummusJSONEncoder
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerBudget(TestBase):
+class TestControllerBudget(WebTestBase):
   """Test controller_budget methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     date = datetime.date.today()
     home = float(self._RNG.uniform(0, 100))
@@ -43,12 +38,7 @@ class TestControllerBudget(TestBase):
         }
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/budget", json=req)
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/budget", json=req)
     with p.get_session() as s:
       a = s.query(Budget).first()
       # Serialize then deserialize
@@ -56,24 +46,16 @@ class TestControllerBudget(TestBase):
 
       s.delete(a)
       s.commit()
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {"date": date}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/budget", json=req)
-    self.assertEqual(400, response.status_code)
+    self.api_post("/api/budget", json=req, rc=400)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
-    # Create budget
+    # Create budgets
     today = datetime.date.today()
     b = Budget(date=today)
     with p.get_session() as s:
@@ -84,18 +66,11 @@ class TestControllerBudget(TestBase):
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/budget/{b_uuid}")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get(f"/api/budget/{b_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -116,29 +91,18 @@ class TestControllerBudget(TestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/budget/{b_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
+    result = self.api_put(f"/api/budget/{b_uuid}", json=req)
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
       self.assertEqualWithinError(new_home, b.home, 1e-6)
-    result = response.json
     self.assertEqual(target, result)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/budget/{b_uuid}", json=target)
-    self.assertEqual(400, response.status_code)
+    self.api_put(f"/api/budget/{b_uuid}", json=target, rc=400)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
@@ -155,12 +119,7 @@ class TestControllerBudget(TestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/budget/{b_uuid}")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_delete(f"/api/budget/{b_uuid}")
     self.assertEqual(target, result)
 
     with p.get_session() as s:
@@ -168,27 +127,61 @@ class TestControllerBudget(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create budget
     today = datetime.date.today()
-    b = Budget(date=today)
+    yesterday = today - datetime.timedelta(days=1)
+    b_today = Budget(date=today)
+    b_yesterday = Budget(date=yesterday)
     with p.get_session() as s:
-      s.add(b)
+      s.add_all((b_today, b_yesterday))
       s.commit()
+      query = s.query(Budget).order_by(Budget.date)
+      budgets: List[Dict[str, object]] = json.loads(
+          json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/budgets")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-
-    result = response.json
-    with p.get_session() as s:
-      query = s.query(Budget)
-      budgets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"budgets": budgets}
+    result = self.api_get("/api/budgets")
+    target = {"budgets": budgets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
+
+    # Sort by newest first
+    result = self.api_get("/api/budgets", {"sort": "newest"})
+    target = {"budgets": budgets[::-1], "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Get via paging
+    result = self.api_get("/api/budgets", {"limit": 1})
+    target = {"budgets": budgets[:1], "count": 2, "next_offset": 1}
+    self.assertEqual(target, result)
+
+    result = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
+    target = {"budgets": budgets[1:], "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Get via paging reverse
+    result = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
+    target = {"budgets": budgets[1:], "count": 2, "next_offset": 1}
+    self.assertEqual(target, result)
+
+    result = self.api_get("/api/budgets", {
+        "limit": 1,
+        "offset": 1,
+        "sort": "newest"
+    })
+    target = {"budgets": budgets[:1], "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by start date
+    result = self.api_get("/api/budgets", {"start": today})
+    target = {"budgets": budgets[1:], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Filter by end date
+    result = self.api_get("/api/budgets", {"end": yesterday})
+    target = {"budgets": budgets[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Strict query validation
+    self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)

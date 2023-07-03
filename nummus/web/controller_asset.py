@@ -117,6 +117,9 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   args: Dict[str, object] = flask.request.args.to_dict()
+  limit = int(args.get("limit", 50))
+  offset = int(args.get("offset", 0))
+  search = args.get("search")
   filter_category = common.parse_enum(args.get("category"), AssetCategory)
 
   with p.get_session() as s:
@@ -124,5 +127,8 @@ def get_all() -> flask.Response:
     if filter_category is not None:
       query = query.where(Asset.category == filter_category)
 
-    response = {"assets": query.all()}
+    query = common.search(s, query, Asset, search)
+
+    page, count, next_offset = common.paginate(query, limit, offset)
+    response = {"assets": page, "count": count, "next_offset": next_offset}
     return flask.jsonify(response)

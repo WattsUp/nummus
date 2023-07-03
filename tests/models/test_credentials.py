@@ -12,7 +12,7 @@ class TestCredentials(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     d = {

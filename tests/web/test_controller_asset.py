@@ -2,26 +2,19 @@
 """
 
 import datetime
-import io
 import json
-from unittest import mock
-import warnings
-
-from nummus import portfolio
 from nummus.models import (Asset, AssetCategory, AssetValuation,
                            NummusJSONEncoder)
 
-from tests.base import TestBase
+from tests.web.base import WebTestBase
 
 
-class TestControllerAsset(TestBase):
+class TestControllerAsset(WebTestBase):
   """Test controller_asset methods
   """
 
   def test_create(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     name = self.random_string()
     category = self._RNG.choice(AssetCategory)
@@ -29,12 +22,7 @@ class TestControllerAsset(TestBase):
     # Make the minimum
     req = {"name": name, "category": category}
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/asset", json=req)
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       # Serialize then deserialize
@@ -42,8 +30,6 @@ class TestControllerAsset(TestBase):
 
       s.delete(a)
       s.commit()
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Make the maximum
@@ -58,32 +44,19 @@ class TestControllerAsset(TestBase):
         "tag": tag
     }
 
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.post("/api/asset", json=req)
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-
+    result = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
-
-    result = response.json
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {"name": name}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.post("/api/asset", json=req)
-    self.assertEqual(400, response.status_code)
+    self.api_post("/api/asset", json=req, rc=400)
 
   def test_get(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -95,18 +68,11 @@ class TestControllerAsset(TestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get(f"/api/asset/{a_uuid}")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_get(f"/api/asset/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -124,29 +90,18 @@ class TestControllerAsset(TestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.put(f"/api/asset/{a_uuid}", json=req)
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
+    result = self.api_put(f"/api/asset/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
       self.assertEqual(new_category, a.category)
-    result = response.json
     self.assertEqual(target, result)
 
     # Read only properties
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      with mock.patch("sys.stderr", new=io.StringIO()) as _:
-        response = client.put(f"/api/asset/{a_uuid}", json=target)
-    self.assertEqual(400, response.status_code)
+    self.api_put(f"/api/asset/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
     # Create accounts
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
@@ -173,12 +128,7 @@ class TestControllerAsset(TestBase):
       self.assertEqual(n_valuations, result)
 
     # Delete by uuid
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.delete(f"/api/asset/{a_uuid}")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-    result = response.json
+    result = self.api_delete(f"/api/asset/{a_uuid}")
     self.assertEqual(target, result)
 
     with p.get_session() as s:
@@ -188,41 +138,62 @@ class TestControllerAsset(TestBase):
       self.assertEqual(0, result)
 
   def test_get_all(self):
-    path_db = self._TEST_ROOT.joinpath("portfolio.db")
-    p = portfolio.Portfolio.create(path_db, None)
-    client = self._get_api_client(p)
+    p = self._portfolio
 
-    # Create accounts
-    a_banana = Asset(name="Banana", category=AssetCategory.ITEM, unit="bunches")
-    a_banana_inc = Asset(name="BANANA", category=AssetCategory.SECURITY)
+    # Create assets
+    a_banana = Asset(name="Banana",
+                     category=AssetCategory.ITEM,
+                     unit="bunches",
+                     tag="fruit")
+    a_banana_inc = Asset(name="BANANA inc.",
+                         category=AssetCategory.SECURITY,
+                         description="Big 'ole farm")
     with p.get_session() as s:
       s.add_all((a_banana, a_banana_inc))
       s.commit()
+      query = s.query(Asset)
+      assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/assets")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
-
-    result = response.json
-    with p.get_session() as s:
-      query = s.query(Asset)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"assets": accounts}
+    result = self.api_get("/api/assets")
+    target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only cash
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      response = client.get("/api/assets?category=item")
-    self.assertEqual(200, response.status_code)
-    self.assertEqual("application/json", response.content_type)
+    result = self.api_get("/api/assets", {"category": "item"})
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
 
-    result = response.json
-    with p.get_session() as s:
-      query = s.query(Asset).where(Asset.category == AssetCategory.ITEM)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
-    target = {"assets": accounts}
+    # Get via paging
+    result = self.api_get("/api/assets", {"limit": 1})
+    target = {"assets": assets[:1], "count": 2, "next_offset": 1}
+    self.assertEqual(target, result)
+
+    result = self.api_get("/api/assets", {"limit": 1, "offset": 1})
+    target = {"assets": assets[1:], "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by name
+    result = self.api_get("/api/assets", {"search": "banana"})
+    target = {"assets": assets, "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Bad search, neither are over the threshold
+    result = self.api_get("/api/assets", {"search": "inc"})
+    target = {"assets": assets, "count": 2, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by description
+    result = self.api_get("/api/assets", {"search": "farm"})
+    target = {"assets": assets[1:], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by unit
+    result = self.api_get("/api/assets", {"search": "bunches"})
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    self.assertEqual(target, result)
+
+    # Search by tag
+    result = self.api_get("/api/assets", {"search": "fruit"})
+    target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)

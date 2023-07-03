@@ -1,15 +1,23 @@
 """Transaction API Controller
 """
 
-from typing import Type
+from typing import Dict, List, Tuple, Type
 
 import datetime
 import uuid
 
 import connexion
 from sqlalchemy import orm
+from thefuzz import process
 
-from nummus.models import (Account, Asset, BaseEnum, Budget, Transaction)
+from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction,
+                           TransactionSplit)
+
+_SEARCH_PROPERTIES: Dict[Type[Base], List[str]] = {
+    Account: ["name", "institution"],
+    Asset: ["name", "description", "unit", "tag"],
+    TransactionSplit: ["payee", "description", "subcategory", "tag"]
+}
 
 
 def find_account(s: orm.Session, query: str) -> Account:
@@ -117,6 +125,8 @@ def parse_uuid(s: str) -> uuid.UUID:
   Raises:
     BadRequestProblem if UUID is malformed
   """
+  if isinstance(s, uuid.UUID) or s is None:
+    return s
   try:
     return uuid.UUID(s)
   except ValueError as e:
@@ -136,6 +146,8 @@ def parse_date(s: str) -> datetime.date:
   Raises:
     BadRequestProblem if date is malformed
   """
+  if isinstance(s, datetime.date) or s is None:
+    return s
   try:
     return datetime.date.fromisoformat(s)
   except ValueError as e:
@@ -155,8 +167,80 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
   Raises:
     BadRequestProblem if enum is unknown
   """
+  if isinstance(s, cls) or s is None:
+    return s
   try:
     return cls.parse(s)
   except ValueError as e:
     raise connexion.exceptions.BadRequestProblem(
         detail=f"Unknown {cls.__name__}: {s}, {e}") from e
+
+
+def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
+           search_str: str) -> orm.Query[Base]:
+  """Perform a fuzzy search and return matches
+
+  Args:
+    query: Session query to execute before fuzzy searching
+    cls: Model type to search
+    search_str: String to search
+
+  Returns:
+    List of results, count of total results
+  """
+  # TODO (WattsUp) Caching and cache invalidation
+  if search_str is None or len(search_str) < 3:
+    return query
+
+  unfiltered = query.all()
+  strings: Dict[int, str] = {}
+  for instance in unfiltered:
+    parameters: List[str] = []
+    for k in _SEARCH_PROPERTIES[cls]:
+      parameters.append(getattr(instance, k))
+    i_str = " ".join(p for p in parameters if p is not None)
+    strings[instance.id] = i_str
+
+  extracted = process.extract(search_str, strings, limit=None)
+  matching_ids: List[int] = [i for _, score, i in extracted if score > 70]
+  if len(matching_ids) == 0:
+    # Include poor matches to return something
+    matching_ids: List[int] = [i for _, _, i in extracted[:5]]
+
+  return s.query(cls).where(cls.id.in_(matching_ids))
+
+
+def paginate(query: orm.Query[Base], limit: int,
+             offset: int) -> Tuple[List[Base], int, int]:
+  """Paginate query response for smaller results
+
+  Args:
+    query: Session query to execute to get results
+    limit: Maximum number of results per page
+    offset: Result offset, advances to subsequent pages
+
+  Returns:
+    Page (list of result from query), total count for query, next_offset for
+    subsequent calls
+  """
+  offset = max(0, offset)
+
+  # Get total number from filters
+  # TODO (WattsUp) replace if counting is too slow
+  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+  count = query.order_by(None).count()
+
+  # Apply limiting, and offset
+  query = query.limit(limit).offset(offset)
+
+  results = query.all()
+
+  # Compute next_offset
+  n_current = len(results)
+  remaining = count - n_current - offset
+  if remaining > 0:
+    next_offset = offset + n_current
+  else:
+    next_offset = None
+
+  return results, count, next_offset

@@ -301,4 +301,4 @@ class BaseEnum(enum.Enum):
     Returns:
       Dictionary {alternate names for enums: Enum}
     """
-    return {}
+    return {}  # pragma: no cover

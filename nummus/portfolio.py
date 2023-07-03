@@ -153,7 +153,7 @@ class Portfolio:
     sql.drop_session(self._path_db)
     try:
       with self.get_session() as s:
-        user: Credentials = s.query(Credentials).filter(
+        user: Credentials = s.query(Credentials).where(
             Credentials.site == self._NUMMUS_SITE,
             Credentials.user == self._NUMMUS_USER).first()
     except models.exc.DatabaseError as e:

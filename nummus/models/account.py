@@ -34,10 +34,12 @@ class TransactionSplit(base.Base):
 
   Attributes:
     uuid: TransactionSplit unique identifier
+    account: Account that owns this Transaction
+    date: Date on which Transaction occurred
     total: Total amount of cash exchanged. Positive indicated Account
-      increases in value (ingress)
+      increases in value (inflow)
     sales_tax: Amount of sales tax paid on Transaction, always negative
-    payee: Name of payee (for egress)/payer (for ingress)
+    payee: Name of payee (for outflow)/payer (for inflow)
     description: Description of exchange
     category: Type of Transaction
     subcategory: Subcategory of Transaction type
@@ -45,12 +47,16 @@ class TransactionSplit(base.Base):
     parent: Parent Transaction
     asset: Asset exchanged for cash, primarily for instrument transactions
     asset_quantity: Number of units of Asset exchanged, Positive indicates
-      Account gained Assets (ingress)
+      Account gained Assets (inflow)
+    locked: True only allows manually editing, False allows automatic changes
+      (namely auto labeling field based on similar Transactions)
+    is_split: True if part of a spit Transaction
   """
 
   _PROPERTIES_DEFAULT = [
-      "uuid", "total", "sales_tax", "payee", "description", "category",
-      "subcategory", "tag", "parent_uuid", "asset_uuid", "asset_quantity"
+      "uuid", "account_uuid", "date", "total", "sales_tax", "payee",
+      "description", "category", "subcategory", "tag", "parent_uuid",
+      "asset_uuid", "asset_quantity", "locked", "is_split"
   ]
 
   total: orm.Mapped[float]
@@ -85,6 +91,31 @@ class TransactionSplit(base.Base):
       return None
     return self.asset.uuid
 
+  @property
+  def account_uuid(self) -> str:
+    """UUID of account
+    """
+    return self.parent.account_uuid
+
+  @property
+  def date(self) -> datetime.date:
+    """Date on which Transaction occurred
+    """
+    return self.parent.date
+
+  @property
+  def locked(self) -> bool:
+    """True only allows manually editing, False allows automatic changes
+    (namely auto labeling field based on similar Transactions)
+    """
+    return self.parent.locked
+
+  @property
+  def is_split(self) -> bool:
+    """True if part of a split Transaction
+    """
+    return self.parent.is_split
+
 
 class Transaction(base.Base):
   """Transaction model for storing an exchange of cash for an asset (or none)
@@ -96,15 +127,17 @@ class Transaction(base.Base):
     account: Account that owns this Transaction
     date: Date on which Transaction occurred
     total: Total amount of cash exchanged. Positive indicated Account
-      increases in value (ingress)
+      increases in value (inflow)
     statement: Text appearing on Account statement
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
     splits: List of TransactionSplits
+    is_split: len(splits) > 1
   """
 
   _PROPERTIES_DEFAULT = [
-      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits"
+      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits",
+      "is_split"
   ]
 
   account_id: orm.Mapped[int] = orm.mapped_column(
@@ -124,6 +157,12 @@ class Transaction(base.Base):
     """UUID of account
     """
     return self.account.uuid
+
+  @property
+  def is_split(self) -> bool:
+    """True if more than one TransactionSplit
+    """
+    return len(self.splits) > 1
 
 
 class AccountCategory(base.BaseEnum):

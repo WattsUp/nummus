@@ -14,7 +14,7 @@ class TestBudget(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     today = datetime.date.today()
@@ -65,7 +65,7 @@ class TestBudget(TestBase):
     self.assertDictEqual(target, result)
 
   def test_set_categories(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     today = datetime.date.today()

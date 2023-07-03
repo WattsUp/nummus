@@ -119,7 +119,7 @@ class TestORMBase(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     base.Base.metadata.create_all(
         session.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
@@ -151,7 +151,7 @@ class TestORMBase(TestBase):
     self.assertIsNone(child.parent_hidden_id)
 
   def test_to_dict(self):
-    session = self._get_session()
+    session = self.get_session()
     base.Base.metadata.create_all(
         session.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
@@ -267,7 +267,7 @@ class TestORMBase(TestBase):
     self.assertDictEqual(target, d)
 
   def test_update(self):
-    session = self._get_session()
+    session = self.get_session()
     base.Base.metadata.create_all(
         session.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
@@ -391,7 +391,7 @@ class TestORMBase(TestBase):
     self.assertDictEqual({}, changes)
 
   def test_comparators(self):
-    session = self._get_session()
+    session = self.get_session()
     base.Base.metadata.create_all(
         session.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
@@ -414,7 +414,7 @@ class TestORMBase(TestBase):
       self.assertEqual(parent_a, parent_a_queried)
 
   def test_json_encoder(self):
-    session = self._get_session()
+    session = self.get_session()
     base.Base.metadata.create_all(
         session.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])

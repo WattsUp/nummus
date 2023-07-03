@@ -14,7 +14,7 @@ class TestTransaction(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     a = account.Account(name=self.random_string(),
@@ -51,6 +51,7 @@ class TestTransaction(TestBase):
     d["account_uuid"] = a.uuid
     d["splits"] = []
     d["locked"] = False
+    d["is_split"] = False
     result = t.to_dict()
     self.assertDictEqual(d, result)
 
@@ -63,6 +64,10 @@ class TestTransaction(TestBase):
     result = t_split_0.to_dict()
     self.assertEqual(t_split_0.uuid, result.pop("uuid"))
     self.assertEqual(t_split_0.total, result.pop("total"))
+    self.assertEqual(a.uuid, result.pop("account_uuid"))
+    self.assertEqual(t.date.isoformat(), result.pop("date"))
+    self.assertFalse(result.pop("is_split"))
+    self.assertFalse(result.pop("locked"))
     self.assertEqual(t.uuid, result.pop("parent_uuid"))
     # Rest should be None
     for k, v in result.items():
@@ -89,8 +94,12 @@ class TestTransaction(TestBase):
     d.pop("asset_id")
     d.pop("parent_id")
     d["uuid"] = t_split_1.uuid
+    d["account_uuid"] = a.uuid
+    d["date"] = t.date.isoformat()
     d["asset_uuid"] = asset_bananas.uuid
     d["parent_uuid"] = t.uuid
+    d["is_split"] = True
+    d["locked"] = False
     result = t_split_1.to_dict()
     self.assertDictEqual(d, result)
 
@@ -103,7 +112,7 @@ class TestAccount(TestBase):
   """
 
   def test_init_properties(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     d = {
@@ -131,7 +140,7 @@ class TestAccount(TestBase):
     self.assertDictEqual(d, result)
 
   def test_add_transactions(self):
-    session = self._get_session()
+    session = self.get_session()
     models.metadata_create_all(session)
 
     today = datetime.date.today()
