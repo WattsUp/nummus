@@ -548,6 +548,8 @@ paths:
                     nullable: true
         "400":
           description: Malformed request
+        "422":
+          description: Invalid parameter supplied
   /transaction:
     post:
       tags:
@@ -669,6 +671,8 @@ paths:
           description: Malformed request
         "404":
           description: Account or Asset not found
+        "422":
+          description: Invalid parameter supplied
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus

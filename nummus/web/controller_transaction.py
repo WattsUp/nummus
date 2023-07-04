@@ -206,6 +206,8 @@ def get_all() -> flask.Response:
     query = s.query(TransactionSplit).join(Transaction)
     query = query.where(Transaction.date <= end)
     if start is not None:
+      if end <= start:
+        raise HTTPError(422, detail="End date must be after Start date")
       query = query.where(Transaction.date >= start)
     if category is not None:
       query = query.where(TransactionSplit.category == category)

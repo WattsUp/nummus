@@ -10,6 +10,7 @@ import flask
 from nummus import portfolio
 from nummus.models import Budget
 from nummus.web import common
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
@@ -124,6 +125,8 @@ def get_all() -> flask.Response:
   with p.get_session() as s:
     query = s.query(Budget).where(Budget.date <= end)
     if start is not None:
+      if end <= start:
+        raise HTTPError(422, detail="End date must be after Start date")
       query = query.where(Budget.date >= start)
 
     # Apply ordering

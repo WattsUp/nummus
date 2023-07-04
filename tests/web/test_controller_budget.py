@@ -132,6 +132,7 @@ class TestControllerBudget(WebTestBase):
     # Create budget
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
     b_today = Budget(date=today)
     b_yesterday = Budget(date=yesterday)
     with p.get_session() as s:
@@ -174,7 +175,7 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by start date
-    result, _ = self.api_get("/api/budgets", {"start": today})
+    result, _ = self.api_get("/api/budgets", {"start": today, "end": tomorrow})
     target = {"budgets": budgets[1:], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
@@ -182,6 +183,9 @@ class TestControllerBudget(WebTestBase):
     result, _ = self.api_get("/api/budgets", {"end": yesterday})
     target = {"budgets": budgets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
+
+    # Invalid date filters
+    self.api_get("/api/budgets", {"start": today, "end": yesterday}, rc=422)
 
     # Strict query validation
     self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)

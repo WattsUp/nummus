@@ -375,6 +375,7 @@ class TestControllerTransaction(WebTestBase):
     a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
     subcategory = self.random_string()
     tag = self.random_string()
     with p.get_session() as s:
@@ -452,7 +453,10 @@ class TestControllerTransaction(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by start date
-    result, _ = self.api_get("/api/transactions", {"start": today})
+    result, _ = self.api_get("/api/transactions", {
+        "start": today,
+        "end": tomorrow
+    })
     target = {"transactions": t_splits[1:], "count": 10, "next_offset": None}
     self.assertEqual(target, result)
 
@@ -460,6 +464,13 @@ class TestControllerTransaction(WebTestBase):
     result, _ = self.api_get("/api/transactions", {"end": yesterday})
     target = {"transactions": t_splits[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
+
+    # Invalid date filters
+    self.api_get("/api/transactions", {
+        "start": today,
+        "end": yesterday
+    },
+                 rc=422)
 
     # Filter by subcategory
     result, _ = self.api_get("/api/transactions", {"subcategory": subcategory})
