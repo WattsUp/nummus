@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import datetime
 
@@ -74,7 +74,7 @@ class Asset(base.Base):
 
   # TODO (WattsUp) Move to write only relationship if too slow
   valuations: orm.Mapped[List[AssetValuation]] = orm.relationship(
-      back_populates="asset")
+      back_populates="asset", order_by=AssetValuation.date)
 
   @property
   def image_name(self) -> str:
@@ -84,3 +84,34 @@ class Asset(base.Base):
     if s is None:
       return None
     return f"{self.uuid}{s}"
+
+  def value(self, start: datetime.date,
+            end: datetime.date) -> Tuple[List[datetime.date], List[float]]:
+    """Get the value of Asset from start to end date
+
+    Args:
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      List[dates], list[values]
+    """
+    date = start
+
+    dates: List[datetime.date] = []
+    values: List[float] = []
+
+    value = 0
+    for valuation in self.valuations:
+      if valuation.date > end:
+        continue
+      while date < valuation.date:
+        values.append(value)
+        dates.append(date)
+        date += datetime.timedelta(days=1)
+      value = valuation.value
+    while date <= end:
+      values.append(value)
+      dates.append(date)
+      date += datetime.timedelta(days=1)
+    return dates, values

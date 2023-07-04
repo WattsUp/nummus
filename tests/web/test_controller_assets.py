@@ -21,8 +21,8 @@ class TestControllerAssets(WebTestBase):
 
     # Make the minimum
     req = {"name": name, "category": category}
-
-    result, headers = self.api_post("/api/assets", json=req)
+    endpoint = "/api/assets"
+    result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
@@ -46,7 +46,7 @@ class TestControllerAssets(WebTestBase):
         "tag": tag
     }
 
-    result, headers = self.api_post("/api/assets", json=req)
+    result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
@@ -57,7 +57,7 @@ class TestControllerAssets(WebTestBase):
 
     # Fewer keys are bad
     req = {"name": name}
-    self.api_post("/api/assets", json=req, rc=400)
+    self.api_post(endpoint, json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -155,49 +155,50 @@ class TestControllerAssets(WebTestBase):
       s.commit()
       query = s.query(Asset)
       assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+    endpoint = "/api/assets"
 
     # Get all
-    result, _ = self.api_get("/api/assets")
+    result, _ = self.api_get(endpoint)
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only cash
-    result, _ = self.api_get("/api/assets", {"category": "item"})
-    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"category": "item"})
+    target = {"assets": [assets[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
-    result, _ = self.api_get("/api/assets", {"limit": 1})
-    target = {"assets": assets[:1], "count": 2, "next_offset": 1}
+    result, _ = self.api_get(endpoint, {"limit": 1})
+    target = {"assets": [assets[0]], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result, _ = self.api_get("/api/assets", {"limit": 1, "offset": 1})
-    target = {"assets": assets[1:], "count": 2, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"limit": 1, "offset": 1})
+    target = {"assets": [assets[1]], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by name
-    result, _ = self.api_get("/api/assets", {"search": "banana"})
+    result, _ = self.api_get(endpoint, {"search": "banana"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Bad search, neither are over the threshold
-    result, _ = self.api_get("/api/assets", {"search": "inc"})
+    result, _ = self.api_get(endpoint, {"search": "inc"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by description
-    result, _ = self.api_get("/api/assets", {"search": "farm"})
-    target = {"assets": assets[1:], "count": 1, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"search": "farm"})
+    target = {"assets": [assets[1]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by unit
-    result, _ = self.api_get("/api/assets", {"search": "bunches"})
-    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"search": "bunches"})
+    target = {"assets": [assets[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by tag
-    result, _ = self.api_get("/api/assets", {"search": "fruit"})
-    target = {"assets": assets[:1], "count": 1, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"search": "fruit"})
+    target = {"assets": [assets[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
   def test_get_image(self):
@@ -210,9 +211,10 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
+    endpoint = f"/api/assets/{a_uuid}/image"
 
     # No image
-    self.api_get(f"/api/assets/{a_uuid}/image", rc=404)
+    self.api_get(endpoint, rc=404)
 
     path_img = p.image_path.joinpath(f"{a_uuid}.png")
     with p.get_session() as s:
@@ -221,14 +223,13 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
     # Still no image
-    self.api_get(f"/api/assets/{a_uuid}/image", rc=404)
+    self.api_get(endpoint, rc=404)
 
     fake_image = self.random_string().encode()
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    result, _ = self.api_get(f"/api/assets/{a_uuid}/image",
-                             content_type="image/png")
+    result, _ = self.api_get(endpoint, content_type="image/png")
     self.assertEqual(fake_image, result)
 
   def test_update_image(self):
@@ -244,8 +245,9 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
+    endpoint = f"/api/assets/{a_uuid}/image"
 
-    self.api_put(f"/api/assets/{a_uuid}/image",
+    self.api_put(endpoint,
                  data=fake_image,
                  headers={"Content-Type": "image/png"},
                  rc=204)
@@ -273,12 +275,13 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
+    endpoint = f"/api/assets/{a_uuid}/image"
 
     path_img = p.image_path.joinpath(a.image_name)
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    self.api_delete(f"/api/assets/{a_uuid}/image")
+    self.api_delete(endpoint)
 
     with p.get_session() as s:
       a = s.query(Asset).first()
@@ -287,7 +290,7 @@ class TestControllerAssets(WebTestBase):
     self.assertFalse(path_img.exists())
 
     # Doesn't exist anymore
-    self.api_delete(f"/api/assets/{a_uuid}/image", rc=404)
+    self.api_delete(endpoint, rc=404)
 
     # If img_suffix is set but image is gone, clean up img_suffix
     with p.get_session() as s:
@@ -295,6 +298,54 @@ class TestControllerAssets(WebTestBase):
       a.img_suffix = path_img.suffix
       s.commit()
 
-      self.api_delete(f"/api/assets/{a_uuid}/image")
+      self.api_delete(endpoint)
 
       self.assertIsNone(a.img_suffix)
+
+  def test_get_value(self):
+    p = self._portfolio
+
+    # Create accounts
+    a = Asset(name="BANANA", category=AssetCategory.ITEM)
+    today = datetime.date.today()
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      v_today = AssetValuation(asset=a,
+                               date=today,
+                               value=self._RNG.uniform(-1, 1))
+      v_before = AssetValuation(asset=a,
+                                date=today - datetime.timedelta(days=2),
+                                value=self._RNG.uniform(-1, 1))
+      v_after = AssetValuation(asset=a,
+                               date=today + datetime.timedelta(days=2),
+                               value=self._RNG.uniform(-1, 1))
+      s.add_all((v_today, v_before, v_after))
+      s.commit()
+
+      a_uuid = a.uuid
+
+      target_dates = [(today + datetime.timedelta(days=i)).isoformat()
+                      for i in range(-3, 3 + 1)]
+      target_values = [
+          0, v_before.value, v_before.value, v_today.value, v_today.value,
+          v_after.value, v_after.value
+      ]
+      start = target_dates[0]
+      end = target_dates[-1]
+
+    endpoint = f"/api/assets/{a_uuid}/value"
+
+    # Default to today's value
+    result, _ = self.api_get(endpoint)
+    target = {"dates": [target_dates[3]], "values": [target_values[3]]}
+    self.assertEqual(target, result)
+
+    # Default to today's value
+    result, _ = self.api_get(endpoint, {"start": start, "end": end})
+    target = {"dates": target_dates, "values": target_values}
+    self.assertEqual(target, result)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": end, "end": start}, rc=422)

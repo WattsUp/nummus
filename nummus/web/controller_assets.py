@@ -3,6 +3,8 @@
 
 from typing import Dict
 
+import datetime
+
 import flask
 
 from nummus import portfolio
@@ -211,3 +213,30 @@ def delete_image(asset_uuid: str) -> flask.Response:
 
     s.commit()
     return None
+
+
+def get_value(asset_uuid: str) -> flask.Response:
+  """GET /api/assets/{asset_uuid}/value
+
+  Args:
+    asset_uuid: UUID of Asset to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
+
+  args: Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start", today))
+  end = common.parse_date(args.get("end", today))
+  if end < start:
+    raise HTTPError(422, detail="End date must be on or after Start date")
+
+  with p.get_session() as s:
+    a = common.find_asset(s, asset_uuid)
+
+    dates, values = a.value(start, end)
+    response = {"values": values, "dates": dates}
+    return flask.jsonify(response)

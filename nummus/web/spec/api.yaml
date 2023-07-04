@@ -402,40 +402,36 @@ paths:
           description: Malformed request
         "404":
           description: Asset or Asset Image not found
-  # /assets/{assetUUID}/value:
-  #   get:
-  #     tags:
-  #       - Asset
-  #     summary: Get value of Asset
-  #     description: ""
-  #     operationId: nummus.web.controller_assets.get_value
-  #     parameters:
-  #       - $ref: "#/components/parameters/PathAssetUUID"
-  #       - $ref: "#/components/parameters/Start"
-  #       - $ref: "#/components/parameters/End"
-  #     responses:
-  #       "200":
-  #         description: Successful operation
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 value:
-  #                   description: Value of a single unit on specific days
-  #                   type: array
-  #                   items:
-  #                     type: number
-  #                     format: double
-  #                   example:
-  #                     - 10687.2
-  #                     - 1480.8
-  #                 dates:
-  #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Malformed request
-  #       "404":
-  #         description: Asset not found
+  # TODO (WattsUp) Figure out manual/auto AssetValuation API
+  /assets/{assetUUID}/value:
+    get:
+      tags:
+        - Asset
+      summary: Get value of Asset
+      description: ""
+      operationId: nummus.web.controller_assets.get_value
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+        - $ref: "#/components/parameters/StartToday"
+        - $ref: "#/components/parameters/End"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
+        "400":
+          description: Malformed request
+        "404":
+          description: Asset not found
+        "422":
+          description: Invalid parameter supplied
   /budgets:
     get:
       tags:
@@ -758,6 +754,13 @@ components:
       name: start
       in: query
       description: Filter data equal to or after this date
+      schema:
+        type: string
+        format: date
+    StartToday:
+      name: start
+      in: query
+      description: Filter data equal to or after this date, default is today
       schema:
         type: string
         format: date

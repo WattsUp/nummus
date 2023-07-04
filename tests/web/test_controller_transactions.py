@@ -44,8 +44,8 @@ class TestControllerTransactions(WebTestBase):
             "total": total
         }]
     }
-
-    result, headers = self.api_post("/api/transactions", json=req)
+    endpoint = "/api/transactions"
+    result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       t = s.query(Transaction).first()
       self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
@@ -97,7 +97,7 @@ class TestControllerTransactions(WebTestBase):
         "splits": [req_split]
     }
 
-    result, headers = self.api_post("/api/transactions", json=req)
+    result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       t = s.query(Transaction).first()
       self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
@@ -131,7 +131,7 @@ class TestControllerTransactions(WebTestBase):
         "statement": statement,
         "locked": True
     }
-    self.api_post("/api/transactions", json=req, rc=400)
+    self.api_post(endpoint, json=req, rc=400)
 
     # Need at least one split
     req = {
@@ -142,7 +142,7 @@ class TestControllerTransactions(WebTestBase):
         "locked": True,
         "splits": []
     }
-    self.api_post("/api/transactions", json=req, rc=422)
+    self.api_post(endpoint, json=req, rc=422)
 
   def test_get(self):
     p = self._portfolio
@@ -165,9 +165,10 @@ class TestControllerTransactions(WebTestBase):
       s.commit()
       t_uuid = t.uuid
       target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+    endpoint = f"/api/transactions/{t_uuid}"
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/transactions/{t_uuid}")
+    result, _ = self.api_get(endpoint)
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -193,6 +194,7 @@ class TestControllerTransactions(WebTestBase):
       s.commit()
       t_uuid = t.uuid
       target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+    endpoint = f"/api/transactions/{t_uuid}"
 
     # Update
     new_statement = self.random_string()
@@ -213,7 +215,7 @@ class TestControllerTransactions(WebTestBase):
     req_split_0.pop("locked")
     req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
-    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
+    result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -260,7 +262,7 @@ class TestControllerTransactions(WebTestBase):
     req_split_1.pop("locked")
     req_split_1.pop("is_split")
     req["splits"] = [req_split_0, req_split_1]
-    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
+    result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -302,7 +304,7 @@ class TestControllerTransactions(WebTestBase):
     req_split_0.pop("locked")
     req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
-    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
+    result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -321,10 +323,10 @@ class TestControllerTransactions(WebTestBase):
 
     # Try to remove all splits
     req["splits"] = []
-    self.api_put(f"/api/transactions/{t_uuid}", json=req, rc=422)
+    self.api_put(endpoint, json=req, rc=422)
 
     # Read only properties
-    self.api_put(f"/api/transactions/{t_uuid}", json=target, rc=400)
+    self.api_put(endpoint, json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -346,6 +348,7 @@ class TestControllerTransactions(WebTestBase):
       s.add_all((t, t_split))
       s.commit()
       t_uuid = t.uuid
+    endpoint = f"/api/transactions/{t_uuid}"
 
     with p.get_session() as s:
       result = s.query(Transaction).count()
@@ -354,7 +357,7 @@ class TestControllerTransactions(WebTestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    self.api_delete(f"/api/transactions/{t_uuid}")
+    self.api_delete(endpoint)
 
     with p.get_session() as s:
       result = s.query(Transaction).count()
@@ -428,14 +431,15 @@ class TestControllerTransactions(WebTestBase):
       query = s.query(TransactionSplit).join(Transaction).order_by(
           Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
       t_splits = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+    endpoint = "/api/transactions"
 
     # Get all
-    result, _ = self.api_get("/api/transactions")
+    result, _ = self.api_get(endpoint)
     target = {"transactions": t_splits, "count": 11, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only travel
-    result, _ = self.api_get("/api/transactions", {"category": "travel"})
+    result, _ = self.api_get(endpoint, {"category": "travel"})
     target = {
         "transactions": [t_splits[2], t_splits[3], t_splits[8]],
         "count": 3,
@@ -444,7 +448,7 @@ class TestControllerTransactions(WebTestBase):
     self.assertEqual(target, result)
 
     # Sort by newest first
-    result, _ = self.api_get("/api/transactions", {"sort": "newest"})
+    result, _ = self.api_get(endpoint, {"sort": "newest"})
     target = {
         "transactions": t_splits[1:] + t_splits[:1],
         "count": 11,
@@ -453,84 +457,72 @@ class TestControllerTransactions(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by start date
-    result, _ = self.api_get("/api/transactions", {
-        "start": today,
-        "end": tomorrow
-    })
+    result, _ = self.api_get(endpoint, {"start": today, "end": tomorrow})
     target = {"transactions": t_splits[1:], "count": 10, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by end date
-    result, _ = self.api_get("/api/transactions", {"end": yesterday})
+    result, _ = self.api_get(endpoint, {"end": yesterday})
     target = {"transactions": t_splits[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Invalid date filters
-    self.api_get("/api/transactions", {
-        "start": today,
-        "end": yesterday
-    },
-                 rc=422)
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
 
     # Filter by subcategory
-    result, _ = self.api_get("/api/transactions", {"subcategory": subcategory})
+    result, _ = self.api_get(endpoint, {"subcategory": subcategory})
     target = {"transactions": [t_splits[3]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by tag
-    result, _ = self.api_get("/api/transactions", {"tag": tag})
+    result, _ = self.api_get(endpoint, {"tag": tag})
     target = {"transactions": [t_splits[2]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by locked
-    result, _ = self.api_get("/api/transactions", {"locked": True})
+    result, _ = self.api_get(endpoint, {"locked": True})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by account
-    result, _ = self.api_get("/api/transactions", {"account": a_invest_uuid})
+    result, _ = self.api_get(endpoint, {"account": a_invest_uuid})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by account category
-    result, _ = self.api_get("/api/transactions",
-                             {"account_category": "investment"})
+    result, _ = self.api_get(endpoint, {"account_category": "investment"})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by asset
-    result, _ = self.api_get("/api/transactions", {"asset": a_banana_uuid})
+    result, _ = self.api_get(endpoint, {"asset": a_banana_uuid})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by asset category
-    result, _ = self.api_get("/api/transactions", {"asset_category": "item"})
+    result, _ = self.api_get(endpoint, {"asset_category": "item"})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by payee
-    result, _ = self.api_get("/api/transactions",
-                             {"search": t_splits[0]["payee"]})
+    result, _ = self.api_get(endpoint, {"search": t_splits[0]["payee"]})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by description
-    result, _ = self.api_get("/api/transactions",
-                             {"search": t_splits[0]["description"]})
+    result, _ = self.api_get(endpoint, {"search": t_splits[0]["description"]})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by subcategory
-    result, _ = self.api_get("/api/transactions",
-                             {"search": t_splits[0]["subcategory"]})
+    result, _ = self.api_get(endpoint, {"search": t_splits[0]["subcategory"]})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by tag
-    result, _ = self.api_get("/api/transactions",
-                             {"search": t_splits[0]["tag"]})
+    result, _ = self.api_get(endpoint, {"search": t_splits[0]["tag"]})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Strict query validation
-    self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)
+    self.api_get(endpoint, {"fake": "invalid"}, rc=400)

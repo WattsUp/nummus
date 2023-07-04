@@ -11,6 +11,7 @@ class TestControllerConfig(WebTestBase):
   """
 
   def test_get_version(self):
-    result, _ = self.api_get("/api/version",)
+    endpoint = "/api/version"
+    result, _ = self.api_get(endpoint)
     target = {"api": "0.1.0", "nummus": __version__}
     self.assertDictEqual(target, result)

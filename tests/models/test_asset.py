@@ -116,3 +116,94 @@ class TestAsset(TestBase):
     self.assertEqual([], result)
     result = session.query(asset.AssetValuation).all()
     self.assertEqual([], result)
+
+  def test_add_valuations(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    d = {
+        "name": self.random_string(),
+        "description": self.random_string(),
+        "category": asset.AssetCategory.SECURITY,
+        "unit": self.random_string(),
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
+    }
+
+    a = asset.Asset(**d)
+    session.add(a)
+    session.commit()
+
+    v_today = asset.AssetValuation(asset=a,
+                                   date=today,
+                                   value=self._RNG.uniform(-1, 1))
+    session.add(v_today)
+    session.commit()
+
+    self.assertEqual([v_today], a.valuations)
+
+    v_before = asset.AssetValuation(asset=a,
+                                    date=today - datetime.timedelta(days=1),
+                                    value=self._RNG.uniform(-1, 1))
+    session.add(v_before)
+    session.commit()
+
+    self.assertEqual([v_before, v_today], a.valuations)
+
+    v_after = asset.AssetValuation(asset=a,
+                                   date=today + datetime.timedelta(days=1),
+                                   value=self._RNG.uniform(-1, 1))
+    session.add(v_after)
+    session.commit()
+
+    self.assertEqual([v_before, v_today, v_after], a.valuations)
+
+  def test_value(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    d = {
+        "name": self.random_string(),
+        "description": self.random_string(),
+        "category": asset.AssetCategory.SECURITY,
+        "unit": self.random_string(),
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
+    }
+
+    a = asset.Asset(**d)
+    session.add(a)
+    session.commit()
+
+    v_today = asset.AssetValuation(asset=a,
+                                   date=today,
+                                   value=self._RNG.uniform(-1, 1))
+    v_before = asset.AssetValuation(asset=a,
+                                    date=today - datetime.timedelta(days=2),
+                                    value=self._RNG.uniform(-1, 1))
+    v_after = asset.AssetValuation(asset=a,
+                                   date=today + datetime.timedelta(days=2),
+                                   value=self._RNG.uniform(-1, 1))
+    session.add_all((v_today, v_before, v_after))
+    session.commit()
+
+    target_dates = [
+        today + datetime.timedelta(days=i) for i in range(-3, 3 + 1)
+    ]
+    target_values = [
+        0, v_before.value, v_before.value, v_today.value, v_today.value,
+        v_after.value, v_after.value
+    ]
+
+    result_dates, result_values = a.value(target_dates[0], target_dates[-1])
+    self.assertListEqual(target_dates, result_dates)
+    self.assertListEqual(target_values, result_values)
+
+    # Test single value
+    result_dates, result_values = a.value(today, today)
+    self.assertListEqual([today], result_dates)
+    self.assertListEqual([v_today.value], result_values)
