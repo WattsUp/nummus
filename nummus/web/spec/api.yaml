@@ -134,6 +134,83 @@ paths:
           description: Invalid parameter supplied
         "404":
           description: Account not found
+  # /account/{accountUUID}/value:
+  #   get:
+  #     tags:
+  #       - Account
+  #     summary: Get value of Account
+  #     description: ""
+  #     operationId: nummus.web.controller_account.get_value
+  #     parameters:
+  #       - $ref: "#/components/parameters/PathAccountUUID"
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 value:
+  #                   description: Worth of all assets held in this Account
+  #                   type: array
+  #                   items:
+  #                     type: number
+  #                     format: double
+  #                   example:
+  #                     - 10687.2
+  #                     - 1480.8
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  #       "404":
+  #         description: Account not found
+  # /account/{accountUUID}/transactions:
+  #   get:
+  #     tags:
+  #       - Account
+  #       - Transaction
+  #     summary: Get Transactions of Account
+  #     description: Returns same data as /transactions?account=Account.uuid
+  #     operationId: nummus.web.controller_account.get_transactions
+  #     parameters:
+  #       - $ref: "#/components/parameters/PathAccountUUID"
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/SortByAge"
+  #       - $ref: "#/components/parameters/Limit"
+  #       - $ref: "#/components/parameters/Offset"
+  #       - $ref: "#/components/parameters/Search"
+  #       - $ref: "#/components/parameters/TransactionCategory"
+  #       - $ref: "#/components/parameters/TransactionSubcategory"
+  #       - $ref: "#/components/parameters/TransactionTag"
+  #       - $ref: "#/components/parameters/TransactionLocked"
+  #       - $ref: "#/components/parameters/AssetUUID"
+  #       - $ref: "#/components/parameters/AssetCategoryExplicit"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 transactions:
+  #                   type: array
+  #                   items:
+  #                     $ref: "#/components/schemas/TransactionSplit"
+  #                 next_offset:
+  #                   description: Offset to use to fetch next page, null
+  #                     indicates no more pages available
+  #                   type: integer
+  #                   nullable: true
+  #       "400":
+  #         description: Invalid parameter supplied
+  #       "404":
+  #         description: Asset not found
   /accounts:
     get:
       tags:
@@ -240,6 +317,88 @@ paths:
           description: Invalid parameter supplied
         "404":
           description: Asset not found
+  /asset/{assetUUID}/image:
+    get:
+      tags:
+        - Asset
+      summary: Get image of asset
+      description: Returns image of asset
+      operationId: nummus.web.controller_asset.get_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Image"
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Asset or Asset Image not found
+    # put:
+    #   tags:
+    #     - Asset
+    #   summary: Upload image of asset
+    #   description: ""
+    #   operationId: nummus.web.controller_asset.update_image
+    #   parameters:
+    #     - $ref: "#/components/parameters/PathAssetUUID"
+    #   responses:
+    #     "200":
+    #       description: Successful operation
+    #     "400":
+    #       description: Invalid parameter supplied
+    #     "404":
+    #       description: Asset or Asset Image not found
+    #   requestBody:
+    #     $ref: "#/components/requestBodies/Image"
+    # delete:
+    #   tags:
+    #     - Asset
+    #   summary: Delete image of asset
+    #   description: Deletes image of asset
+    #   operationId: nummus.web.controller_asset.delete_image
+    #   parameters:
+    #     - $ref: "#/components/parameters/PathAssetUUID"
+    #   responses:
+    #     "200":
+    #       $ref: "#/components/responses/Image"
+    #     "400":
+    #       description: Invalid parameter supplied
+    #     "404":
+    #       description: Asset or Asset Image not found
+  # /asset/{assetUUID}/value:
+  #   get:
+  #     tags:
+  #       - Asset
+  #     summary: Get value of Asset
+  #     description: ""
+  #     operationId: nummus.web.controller_asset.get_value
+  #     parameters:
+  #       - $ref: "#/components/parameters/PathAssetUUID"
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 value:
+  #                   description: Value of a single unit on specific days
+  #                   type: array
+  #                   items:
+  #                     type: number
+  #                     format: double
+  #                   example:
+  #                     - 10687.2
+  #                     - 1480.8
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  #       "404":
+  #         description: Asset not found
   /assets:
     get:
       tags:
@@ -1000,8 +1159,8 @@ components:
     Image:
       description: base64 encoded image
       type: string
-      format: byte
-      example: 6tZMso4sTUeoJTDg3UB3xw==
+      format: binary
+      example: \x89PNG\r\n\x1a\n...
     DoubleList:
       description: List of floating point values
       type: array

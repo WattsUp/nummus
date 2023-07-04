@@ -1,6 +1,7 @@
 """Test module nummus.sql
 """
 
+import pathlib
 import uuid
 
 import autodict
@@ -52,7 +53,8 @@ class TestSQL(TestBase):
     self.assertRaises(ValueError, sql.get_session, path, config)
 
     # Relative file
-    path = self._TEST_ROOT.joinpath("unencrypted.db")
+    path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
+        pathlib.Path.cwd())
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     s = sql.get_session(path, config)
     self.assertIsNotNone(s)
@@ -118,7 +120,8 @@ class TestSQL(TestBase):
     enc = sql.Encryption(key)
 
     # Relative file
-    path = self._TEST_ROOT.joinpath("encrypted.db")
+    path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(
+        pathlib.Path.cwd())
     self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
     self.assertRaises(ValueError, sql.get_session, path,
                       config)  # No Encryption object

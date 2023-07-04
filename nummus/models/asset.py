@@ -70,7 +70,17 @@ class Asset(base.Base):
   category: orm.Mapped[AssetCategory]
   unit: orm.Mapped[Optional[str]]
   tag: orm.Mapped[Optional[str]]
+  img_suffix: orm.Mapped[Optional[str]]
 
   # TODO (WattsUp) Move to write only relationship if too slow
   valuations: orm.Mapped[List[AssetValuation]] = orm.relationship(
       back_populates="asset")
+
+  @property
+  def image_name(self) -> str:
+    """Get name of Asset's image, None if it doesn't exist
+    """
+    s = self.img_suffix
+    if s is None:
+      return None
+    return f"{self.uuid}.{s}"

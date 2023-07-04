@@ -63,7 +63,8 @@ class TestAsset(TestBase):
         "description": self.random_string(),
         "category": asset.AssetCategory.SECURITY,
         "unit": self.random_string(),
-        "tag": self.random_string()
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
     }
 
     a = asset.Asset(**d)
@@ -75,12 +76,18 @@ class TestAsset(TestBase):
     self.assertEqual(d["category"], a.category)
     self.assertEqual(d["unit"], a.unit)
     self.assertEqual(d["tag"], a.tag)
+    self.assertEqual(d["img_suffix"], a.img_suffix)
+    self.assertEqual(f"{a.uuid}.{d['img_suffix']}", a.image_name)
     self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
     d["uuid"] = a.uuid
+    d.pop("img_suffix")
     result = a.to_dict()
     self.assertDictEqual(d, result)
+
+    a.img_suffix = None
+    self.assertIsNone(a.image_name)
 
     d = {
         "asset_id": a.id,

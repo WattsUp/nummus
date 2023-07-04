@@ -3,6 +3,7 @@
 
 from typing import Dict
 
+import connexion
 import flask
 
 from nummus import portfolio
@@ -132,3 +133,28 @@ def get_all() -> flask.Response:
     page, count, next_offset = common.paginate(query, limit, offset)
     response = {"assets": page, "count": count, "next_offset": next_offset}
     return flask.jsonify(response)
+
+
+def get_image(asset_uuid: str) -> flask.Response:
+  """GET /api/asset/{asset_uuid}/image
+
+  Args:
+    asset_uuid: UUID of Asset to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    a = common.find_asset(s, asset_uuid)
+    img_name = a.image_name
+    if img_name is None:
+      raise connexion.exceptions.ProblemException(
+          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+    img = p.image_path.joinpath(img_name)
+    if not img.exists():
+      raise connexion.exceptions.ProblemException(
+          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+    return flask.send_file(img)

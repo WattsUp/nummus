@@ -197,3 +197,34 @@ class TestControllerAsset(WebTestBase):
     result = self.api_get("/api/assets", {"search": "fruit"})
     target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
+
+  def test_get_image(self):
+    p = self._portfolio
+
+    # Create accounts
+    a = Asset(name="BANANA", category=AssetCategory.ITEM)
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      a_uuid = a.uuid
+
+    # No image
+    self.api_get(f"/api/asset/{a_uuid}/image", rc=404)
+
+    path_img = p.image_path.joinpath(f"{a_uuid}.png")
+    with p.get_session() as s:
+      a = s.query(Asset).first()
+      a.img_suffix = "png"
+      s.commit()
+
+    # Still no image
+    self.api_get(f"/api/asset/{a_uuid}/image", rc=404)
+
+    fake_image = self.random_string().encode()
+    with open(path_img, "wb") as file:
+      file.write(fake_image)
+
+    result = self.api_get(f"/api/asset/{a_uuid}/image",
+                          content_type="image/png")
+    self.assertEqual(fake_image, result)

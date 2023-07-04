@@ -21,8 +21,8 @@ class TestBase(unittest.TestCase):
   """Test base class
   """
 
-  _TEST_ROOT = pathlib.Path(".test")
-  _DATA_ROOT = pathlib.Path(__file__).parent.joinpath("data")
+  _TEST_ROOT = pathlib.Path.cwd().joinpath(".test").resolve()
+  _DATA_ROOT = pathlib.Path(__file__).resolve().parent.joinpath("data")
   _P_FAIL = 1e-4
   _RNG = np.random.default_rng()
 

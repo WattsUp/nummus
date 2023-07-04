@@ -80,7 +80,7 @@ class WebTestBase(TestBase):
                queries: Dict[str, str],
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+               **kwargs) -> Union[Dict[str, object], str, bytes]:
     """Run a test API GET
 
     Args:
@@ -92,6 +92,11 @@ class WebTestBase(TestBase):
       content_type: Expected content type if rc == 200
       rc: Expected HTTP return code
       All other arguments passed to client.get
+
+    Returns:
+      response.json if content_type == application/json
+      response.text if content_type == text/html
+      response.get_data() otherwise
     """
     if queries is None or len(queries) < 1:
       url = endpoint
@@ -102,43 +107,48 @@ class WebTestBase(TestBase):
       url = f"{endpoint}?{'&'.join(queries_flat)}"
 
     kwargs["method"] = method
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      start = time.perf_counter()
-      if rc == 200:
-        response = self._client.open(url, **kwargs)
-      else:
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
+    response: werkzeug.Response = None
+    try:
+      with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        start = time.perf_counter()
+        if rc == 200:
           response = self._client.open(url, **kwargs)
-    duration = time.perf_counter() - start
-    self.assertEqual(rc, response.status_code)
-    if rc == 200:
-      self.assertEqual(content_type, response.content_type)
-    self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
+        else:
+          with mock.patch("sys.stderr", new=io.StringIO()) as _:
+            response = self._client.open(url, **kwargs)
+      duration = time.perf_counter() - start
+      self.assertEqual(rc, response.status_code, msg=response.text)
+      if rc == 200:
+        self.assertEqual(content_type, response.content_type)
+      self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
 
-    with autodict.JSONAutoDict(TEST_LOG) as d:
-      # Replace uuid with <uuid>
-      endpoint = _RE_UUID.sub("<uuid>", endpoint)
-      k = f"{method:6} {endpoint}"
-      if queries is not None and len(queries) >= 1:
-        queries_flat = [f"{k}=<value>" for k in queries]
-        k += f"?{'&'.join(queries_flat)}"
-      if k not in d["api_latency"]:
-        d["api_latency"][k] = []
-      d["api_latency"][k].append(duration)
+      with autodict.JSONAutoDict(TEST_LOG) as d:
+        # Replace uuid with <uuid>
+        endpoint = _RE_UUID.sub("<uuid>", endpoint)
+        k = f"{method:6} {endpoint}"
+        if queries is not None and len(queries) >= 1:
+          queries_flat = [f"{k}=<value>" for k in queries]
+          k += f"?{'&'.join(queries_flat)}"
+        if k not in d["api_latency"]:
+          d["api_latency"][k] = []
+        d["api_latency"][k].append(duration)
 
-    if content_type == "application/json":
-      return response.json
-    if content_type.startswith("text/html"):
-      return response.text
-    return response
+      if content_type == "application/json":
+        return response.json
+      if content_type.startswith("text/html"):
+        return response.text
+      return response.get_data()
+    finally:
+      if response is not None:
+        response.close()
 
   def api_get(self,
               endpoint: str,
               queries: Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+              **kwargs) -> Union[Dict[str, object], str, bytes]:
     """Run a test API GET
 
     Args:
@@ -152,7 +162,7 @@ class WebTestBase(TestBase):
     Returns:
       response.json if content_type == application/json
       response.text if content_type == text/html
-      response otherwise
+      response.get_data() otherwise
     """
     return self.api_open("GET",
                          endpoint,
@@ -166,7 +176,7 @@ class WebTestBase(TestBase):
               queries: Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+              **kwargs) -> Union[Dict[str, object], str, bytes]:
     """Run a test API PUT
 
     Args:
@@ -180,7 +190,7 @@ class WebTestBase(TestBase):
     Returns:
       response.json if content_type == application/json
       response.text if content_type == text/html
-      response otherwise
+      response.get_data() otherwise
     """
     return self.api_open("PUT",
                          endpoint,
@@ -194,7 +204,7 @@ class WebTestBase(TestBase):
                queries: Dict[str, str] = None,
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+               **kwargs) -> Union[Dict[str, object], str, bytes]:
     """Run a test API POST
 
     Args:
@@ -208,7 +218,7 @@ class WebTestBase(TestBase):
     Returns:
       response.json if content_type == application/json
       response.text if content_type == text/html
-      response otherwise
+      response.get_data() otherwise
     """
     return self.api_open("POST",
                          endpoint,
@@ -222,7 +232,7 @@ class WebTestBase(TestBase):
                  queries: Dict[str, str] = None,
                  content_type: str = "application/json",
                  rc: int = 200,
-                 **kwargs) -> Union[Dict[str, object], str, werkzeug.Response]:
+                 **kwargs) -> Union[Dict[str, object], str, bytes]:
     """Run a test API DELETE
 
     Args:
@@ -236,7 +246,7 @@ class WebTestBase(TestBase):
     Returns:
       response.json if content_type == application/json
       response.text if content_type == text/html
-      response otherwise
+      response.get_data() otherwise
     """
     return self.api_open("DELETE",
                          endpoint,
