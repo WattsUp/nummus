@@ -1,7 +1,7 @@
 """TestBase with extra functions for web testing
 """
 
-from typing import Dict, Union
+from typing import Callable, Dict, Union
 
 import io
 import re
@@ -74,6 +74,19 @@ class WebTestBase(TestBase):
 
     super().tearDown(clean=False)
 
+  def assertHTTPRaises(self, rc: int, func: Callable, *args, **kwargs) -> None:
+    """Test function raises ProblemException with the matching HTTP return code
+
+    Args:
+      rc: HTTP code to match
+      func: Callable to test
+      All other arguments passed to func()
+    """
+    with self.assertRaises(connexion.exceptions.ProblemException) as cm:
+      func(*args, **kwargs)
+    e: connexion.exceptions.ProblemException = cm.exception
+    self.assertEqual(rc, e.status)
+
   def api_open(self,
                method: str,
                endpoint: str,
@@ -107,7 +120,7 @@ class WebTestBase(TestBase):
       url = f"{endpoint}?{'&'.join(queries_flat)}"
 
     kwargs["method"] = method
-    response: werkzeug.Response = None
+    response: werkzeug.test.TestResponse = None
     try:
       with warnings.catch_warnings():
         warnings.simplefilter("ignore")

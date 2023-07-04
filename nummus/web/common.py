@@ -1,12 +1,14 @@
-"""Transaction API Controller
+"""Common API Controller
 """
 
 from typing import Dict, List, Tuple, Type
 
 import datetime
+import mimetypes
 import uuid
 
 import connexion
+import flask
 from sqlalchemy import orm
 from thefuzz import process
 
@@ -244,3 +246,42 @@ def paginate(query: orm.Query[Base], limit: int,
     next_offset = None
 
   return results, count, next_offset
+
+
+def validate_image_upload(req: flask.Request) -> str:
+  """Checks image upload meets criteria for accepting
+
+  Args:
+    req: Request to validate
+
+  Returns:
+    Suffix of image based on content-type
+
+  Raises:
+    400: Missing headers
+    411: Length required
+    413: Length > 1MB
+    415: Unsupported image type
+  """
+  if req.content_type is None:
+    raise connexion.exceptions.ProblemException(
+        detail="Request missing Content-Type")
+
+  if req.content_length is None:
+    raise connexion.exceptions.ProblemException(
+        detail="Request missing Content-Length")
+
+  if not req.content_type.startswith("image/"):
+    raise connexion.exceptions.UnsupportedMediaTypeProblem(
+        detail=f"Content-type must be image/*: {req.content_type}")
+
+  suffix = mimetypes.guess_extension(req.content_type)
+  if suffix is None:
+    raise connexion.exceptions.UnsupportedMediaTypeProblem(
+        detail=f"Unsupported image type: {req.content_type}")
+
+  if req.content_length > 1e6:
+    raise connexion.exceptions.ProblemException(
+        status=413, detail=f"Payload length > 1MB: {req.content_length}B")
+
+  return suffix

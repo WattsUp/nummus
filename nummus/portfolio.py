@@ -54,6 +54,7 @@ class Portfolio:
     if not self._path_config.exists():
       raise FileNotFoundError("Portfolio configuration does not exist, "
                               "cannot open database")
+    self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
     self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
 
     if key is None:
@@ -101,7 +102,7 @@ class Portfolio:
     Raises:
       FileExistsError if database already exists
     """
-    path_db = pathlib.Path(path)
+    path_db = pathlib.Path(path).resolve()
     if path_db.exists():
       raise FileExistsError(f"Database already exists at {path_db}")
     # Drop any existing engine to database
@@ -114,7 +115,7 @@ class Portfolio:
       enc = encryption.Encryption(key.encode())
 
     path_db.parent.mkdir(parents=True, exist_ok=True)
-    path_images.mkdir(parents=True, exist_ok=True)
+    path_images.mkdir(exist_ok=True)
     salt = common.random_string(min_length=50, max_length=100)
     config = autodict.JSONAutoDict(path_config)
     config.clear()

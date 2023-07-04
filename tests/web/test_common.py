@@ -4,7 +4,7 @@
 import datetime
 import uuid
 
-import connexion
+import flask
 
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Budget, Transaction, TransactionSplit)
@@ -37,10 +37,7 @@ class TestCommon(WebTestBase):
       self.assertEqual(a, result)
 
       # Account does not exist
-      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-        common.find_account(s, str(uuid.uuid4()))
-      e: connexion.exceptions.ProblemException = cm.exception
-      self.assertEqual(404, e.status)
+      self.assertHTTPRaises(404, common.find_account, s, str(uuid.uuid4()))
 
   def test_find_asset(self):
     p = self._portfolio
@@ -60,10 +57,7 @@ class TestCommon(WebTestBase):
       self.assertEqual(a, result)
 
       # Asset does not exist
-      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-        common.find_asset(s, str(uuid.uuid4()))
-      e: connexion.exceptions.ProblemException = cm.exception
-      self.assertEqual(404, e.status)
+      self.assertHTTPRaises(404, common.find_asset, s, str(uuid.uuid4()))
 
   def test_find_budget(self):
     p = self._portfolio
@@ -84,10 +78,7 @@ class TestCommon(WebTestBase):
       self.assertEqual(b, result)
 
       # Budget does not exist
-      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-        common.find_budget(s, str(uuid.uuid4()))
-      e: connexion.exceptions.ProblemException = cm.exception
-      self.assertEqual(404, e.status)
+      self.assertHTTPRaises(404, common.find_budget, s, str(uuid.uuid4()))
 
   def test_find_transaction(self):
     p = self._portfolio
@@ -118,10 +109,7 @@ class TestCommon(WebTestBase):
       self.assertEqual(t, result)
 
       # Transaction does not exist
-      with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-        common.find_transaction(s, str(uuid.uuid4()))
-      e: connexion.exceptions.ProblemException = cm.exception
-      self.assertEqual(404, e.status)
+      self.assertHTTPRaises(404, common.find_transaction, s, str(uuid.uuid4()))
 
   def test_parse_uuid(self):
     target = uuid.uuid4()
@@ -140,8 +128,7 @@ class TestCommon(WebTestBase):
     self.assertIsNone(result)
 
     # Bad UUID
-    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_uuid,
-                      self.random_string())
+    self.assertHTTPRaises(400, common.parse_uuid, self.random_string())
 
   def test_parse_date(self):
     target = datetime.date.today()
@@ -155,9 +142,8 @@ class TestCommon(WebTestBase):
     result = common.parse_date(None)
     self.assertIsNone(result)
 
-    # Bad UUID
-    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_date,
-                      self.random_string())
+    # Bad Date
+    self.assertHTTPRaises(400, common.parse_date, self.random_string())
 
   def test_parse_enum(self):
     target: AccountCategory = self._RNG.choice(AccountCategory)
@@ -171,9 +157,9 @@ class TestCommon(WebTestBase):
     result = common.parse_enum(None, AccountCategory)
     self.assertIsNone(result)
 
-    # Bad UUID
-    self.assertRaises(connexion.exceptions.BadRequestProblem, common.parse_enum,
-                      self.random_string(), AccountCategory)
+    # Bad Enum
+    self.assertHTTPRaises(400, common.parse_enum, self.random_string(),
+                          AccountCategory)
 
   def test_search(self):
     # Bulk of search testing happens in the appropriate controller tests
@@ -278,3 +264,41 @@ class TestCommon(WebTestBase):
       self.assertEqual(transactions[0:3], page)
       self.assertEqual(n_transactions, count)
       self.assertEqual(3, next_offset)
+
+  def test_validate_image_upload(self):
+    # Missing type
+    req = flask.Request({})
+    self.assertHTTPRaises(400, common.validate_image_upload, req)
+
+    # Still missing length
+    req = flask.Request({"CONTENT_TYPE": "application/pdf"})
+    self.assertHTTPRaises(400, common.validate_image_upload, req)
+
+    # Still bad type
+    req = flask.Request({
+        "CONTENT_TYPE": "application/pdf",
+        "CONTENT_LENGTH": "1000001"
+    })
+    self.assertHTTPRaises(415, common.validate_image_upload, req)
+
+    # Still bad type
+    req = flask.Request({
+        "CONTENT_TYPE": "image/pdf",
+        "CONTENT_LENGTH": "1000001"
+    })
+    self.assertHTTPRaises(415, common.validate_image_upload, req)
+
+    # Still too long
+    req = flask.Request({
+        "CONTENT_TYPE": "image/png",
+        "CONTENT_LENGTH": "1000001"
+    })
+    self.assertHTTPRaises(413, common.validate_image_upload, req)
+
+    # All good
+    req = flask.Request({
+        "CONTENT_TYPE": "image/png",
+        "CONTENT_LENGTH": "1000000"
+    })
+    suffix = common.validate_image_upload(req)
+    self.assertEqual(".png", suffix)

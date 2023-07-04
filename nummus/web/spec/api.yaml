@@ -333,38 +333,42 @@ paths:
           description: Invalid parameter supplied
         "404":
           description: Asset or Asset Image not found
-    # put:
-    #   tags:
-    #     - Asset
-    #   summary: Upload image of asset
-    #   description: ""
-    #   operationId: nummus.web.controller_asset.update_image
-    #   parameters:
-    #     - $ref: "#/components/parameters/PathAssetUUID"
-    #   responses:
-    #     "200":
-    #       description: Successful operation
-    #     "400":
-    #       description: Invalid parameter supplied
-    #     "404":
-    #       description: Asset or Asset Image not found
-    #   requestBody:
-    #     $ref: "#/components/requestBodies/Image"
-    # delete:
-    #   tags:
-    #     - Asset
-    #   summary: Delete image of asset
-    #   description: Deletes image of asset
-    #   operationId: nummus.web.controller_asset.delete_image
-    #   parameters:
-    #     - $ref: "#/components/parameters/PathAssetUUID"
-    #   responses:
-    #     "200":
-    #       $ref: "#/components/responses/Image"
-    #     "400":
-    #       description: Invalid parameter supplied
-    #     "404":
-    #       description: Asset or Asset Image not found
+    put:
+      tags:
+        - Asset
+      summary: Upload image of asset
+      description: Images limited to 1MB
+      operationId: nummus.web.controller_asset.update_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Asset or Asset Image not found
+        "413":
+          description: Payload is too large
+        "415":
+          description: Unsupported image type
+      requestBody:
+        $ref: "#/components/requestBodies/Image"
+    delete:
+      tags:
+        - Asset
+      summary: Delete image of asset
+      description: Deletes image of asset
+      operationId: nummus.web.controller_asset.delete_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "200":
+          description: Successful operation
+        "400":
+          description: Invalid parameter supplied
+        "404":
+          description: Asset or Asset Image not found
   # /asset/{assetUUID}/value:
   #   get:
   #     tags:

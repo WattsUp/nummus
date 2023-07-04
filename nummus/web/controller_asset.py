@@ -158,3 +158,68 @@ def get_image(asset_uuid: str) -> flask.Response:
       raise connexion.exceptions.ProblemException(
           status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
     return flask.send_file(img)
+
+
+def update_image(asset_uuid: str) -> flask.Response:
+  """PUT /api/asset/{asset_uuid}/image
+
+  Args:
+    asset_uuid: UUID of Asset to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  suffix = common.validate_image_upload(flask.request)
+
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    a = common.find_asset(s, asset_uuid)
+    a.img_suffix = suffix
+
+    img = p.image_path.joinpath(a.image_name)
+    with open(img, "wb") as file:
+      file.write(flask.request.get_data())
+
+    s.commit()
+    return flask.jsonify({
+        "detail": "Upload successful",
+        "status": 200,
+        "title": "Upload successful",
+        "type": "about:blank"
+    })
+
+
+def delete_image(asset_uuid: str) -> flask.Response:
+  """DELETE /api/asset/{asset_uuid}/image
+
+  Args:
+    asset_uuid: UUID of Asset to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    a = common.find_asset(s, asset_uuid)
+
+    img_name = a.image_name
+    if img_name is None:
+      raise connexion.exceptions.ProblemException(
+          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+    img = p.image_path.joinpath(img_name)
+    if img.exists():
+      img.unlink()
+
+    a.img_suffix = None
+
+    s.commit()
+    return flask.jsonify({
+        "detail": "Upload successful",
+        "status": 200,
+        "title": "Upload successful",
+        "type": "about:blank"
+    })

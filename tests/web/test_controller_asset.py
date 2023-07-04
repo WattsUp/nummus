@@ -201,7 +201,7 @@ class TestControllerAsset(WebTestBase):
   def test_get_image(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
@@ -215,7 +215,7 @@ class TestControllerAsset(WebTestBase):
     path_img = p.image_path.joinpath(f"{a_uuid}.png")
     with p.get_session() as s:
       a = s.query(Asset).first()
-      a.img_suffix = "png"
+      a.img_suffix = path_img.suffix
       s.commit()
 
     # Still no image
@@ -228,3 +228,84 @@ class TestControllerAsset(WebTestBase):
     result = self.api_get(f"/api/asset/{a_uuid}/image",
                           content_type="image/png")
     self.assertEqual(fake_image, result)
+
+  def test_update_image(self):
+    p = self._portfolio
+
+    suffix = ".png"
+    fake_image = self.random_string().encode()
+
+    # Create assets
+    a = Asset(name="BANANA", category=AssetCategory.ITEM)
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      a_uuid = a.uuid
+
+    result = self.api_put(f"/api/asset/{a_uuid}/image",
+                          data=fake_image,
+                          headers={"Content-Type": "image/png"})
+    target = {
+        "detail": "Upload successful",
+        "status": 200,
+        "title": "Upload successful",
+        "type": "about:blank"
+    }
+    self.assertEqual(target, result)
+
+    with p.get_session() as s:
+      a = s.query(Asset).first()
+      self.assertEqual(suffix, a.img_suffix)
+
+      path_img = p.image_path.joinpath(a.image_name)
+
+    with open(path_img, "rb") as file:
+      buf = file.read()
+      self.assertEqual(fake_image, buf)
+
+  def test_delete_image(self):
+    p = self._portfolio
+
+    suffix = ".png"
+    fake_image = self.random_string().encode()
+
+    # Create assets
+    a = Asset(name="BANANA", category=AssetCategory.ITEM, img_suffix=suffix)
+    with p.get_session() as s:
+      s.add(a)
+      s.commit()
+
+      a_uuid = a.uuid
+
+    path_img = p.image_path.joinpath(a.image_name)
+    with open(path_img, "wb") as file:
+      file.write(fake_image)
+
+    result = self.api_delete(f"/api/asset/{a_uuid}/image")
+    target = {
+        "detail": "Upload successful",
+        "status": 200,
+        "title": "Upload successful",
+        "type": "about:blank"
+    }
+    self.assertEqual(target, result)
+
+    with p.get_session() as s:
+      a = s.query(Asset).first()
+      self.assertIsNone(a.img_suffix)
+
+    self.assertFalse(path_img.exists())
+
+    # Doesn't exist anymore
+    self.api_delete(f"/api/asset/{a_uuid}/image", rc=404)
+
+    # If img_suffix is set but image is gone, clean up img_suffix
+    with p.get_session() as s:
+      a = s.query(Asset).first()
+      a.img_suffix = path_img.suffix
+      s.commit()
+
+      self.api_delete(f"/api/asset/{a_uuid}/image")
+
+      self.assertIsNone(a.img_suffix)

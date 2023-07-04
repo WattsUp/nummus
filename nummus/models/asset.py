@@ -83,4 +83,4 @@ class Asset(base.Base):
     s = self.img_suffix
     if s is None:
       return None
-    return f"{self.uuid}.{s}"
+    return f"{self.uuid}{s}"

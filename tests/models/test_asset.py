@@ -77,7 +77,7 @@ class TestAsset(TestBase):
     self.assertEqual(d["unit"], a.unit)
     self.assertEqual(d["tag"], a.tag)
     self.assertEqual(d["img_suffix"], a.img_suffix)
-    self.assertEqual(f"{a.uuid}.{d['img_suffix']}", a.image_name)
+    self.assertEqual(f"{a.uuid}{d['img_suffix']}", a.image_name)
     self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
