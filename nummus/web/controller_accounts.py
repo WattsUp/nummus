@@ -7,7 +7,7 @@ import flask
 
 from nummus import portfolio
 from nummus.models import Account, AccountCategory
-from nummus.web import common
+from nummus.web import common, controller_transactions
 
 
 def create() -> flask.Response:
@@ -117,7 +117,24 @@ def get_all() -> flask.Response:
     if category is not None:
       query = query.where(Account.category == category)
 
-    query = common.search(s, query, Account, search)
+    query = common.search(query, Account, search)
     accounts = query.all()
     response = {"accounts": accounts, "count": len(accounts)}
     return flask.jsonify(response)
+
+
+def get_transactions(account_uuid: str) -> flask.Response:
+  """GET /api/accounts/{account_uuid}/transactions
+
+  Args:
+    account_uuid: UUID of Account to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  # Use controller_transactions' implementation
+  # Won't be faster unless account.transactions is lazy?
+  # TODO (WattsUp) Investigate performance if slow
+  args = flask.request.args.to_dict()
+  args["account"] = account_uuid
+  return controller_transactions.get_all(args)

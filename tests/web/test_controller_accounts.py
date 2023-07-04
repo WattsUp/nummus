@@ -184,3 +184,54 @@ class TestControllerAccounts(WebTestBase):
 
     # Strict query validation
     self.api_get(endpoint, {"sort": "invalid"}, rc=400)
+
+  def test_get_transactions(self):
+    p = self._portfolio
+
+    # Create accounts
+    a_checking = Account(name="Monkey Bank Checking",
+                         institution="Monkey Bank",
+                         category=AccountCategory.CASH)
+    a_invest = Account(name="Monkey Investments",
+                       institution="Ape Trading",
+                       category=AccountCategory.INVESTMENT)
+    n_transactions = 10
+    today = datetime.date.today()
+    with p.get_session() as s:
+      s.add(a_checking)
+      s.commit()
+
+      for _ in range(n_transactions):
+        t = Transaction(account=a_checking,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=t)
+        s.add_all((t, t_split))
+
+      for _ in range(n_transactions):
+        t = Transaction(account=a_invest,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=t)
+        s.add_all((t, t_split))
+      s.commit()
+
+      # Sort by date, then parent, then id
+      t_splits_obj = [t.splits[0] for t in a_checking.transactions]
+      t_splits = json.loads(json.dumps(t_splits_obj, cls=NummusJSONEncoder))
+
+      a_uuid = a_checking.uuid
+    endpoint = f"/api/accounts/{a_uuid}/transactions"
+
+    result, _ = self.api_get(endpoint)
+    target = {
+        "transactions": t_splits,
+        "count": n_transactions,
+        "next_offset": None
+    }
+    self.assertEqual(target, result)
+
+    result_other_way, _ = self.api_get("/api/transactions", {"account": a_uuid})
+    self.assertEqual(result, result_other_way)

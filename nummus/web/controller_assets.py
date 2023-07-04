@@ -128,7 +128,7 @@ def get_all() -> flask.Response:
     if filter_category is not None:
       query = query.where(Asset.category == filter_category)
 
-    query = common.search(s, query, Asset, search)
+    query = common.search(query, Asset, search)
 
     page, count, next_offset = common.paginate(query, limit, offset)
     response = {"assets": page, "count": count, "next_offset": next_offset}

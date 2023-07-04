@@ -175,8 +175,11 @@ def delete(transaction_uuid: str) -> flask.Response:
     return None
 
 
-def get_all() -> flask.Response:
+def get_all(request_args: Dict[str, object] = None) -> flask.Response:
   """GET /api/transactions
+
+  Args:
+    request_args: Override flask.request.args
 
   Returns:
     JSON response, see api.yaml for details
@@ -185,7 +188,11 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  if request_args is None:
+    args = flask.request.args.to_dict()
+  else:
+    args = request_args
+
   start = common.parse_date(args.get("start"))
   end = common.parse_date(args.get("end", today))
   sort: str = args.get("sort", "oldest")
@@ -242,7 +249,7 @@ def get_all() -> flask.Response:
                                TransactionSplit.parent_id, TransactionSplit.id)
     else:
       # Apply search, will order by best match
-      query = common.search(s, query, TransactionSplit, search)
+      query = common.search(query, TransactionSplit, search)
 
     page, count, next_offset = common.paginate(query, limit, offset)
     response = {

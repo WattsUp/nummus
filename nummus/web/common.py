@@ -9,6 +9,7 @@ import uuid
 
 from connexion.exceptions import ProblemException as HTTPError
 import flask
+import sqlalchemy
 from sqlalchemy import orm
 from thefuzz import process
 
@@ -173,7 +174,7 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
     raise HTTPError(400, detail=f"Unknown {cls.__name__}: {s}, {e}") from e
 
 
-def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
+def search(query: orm.Query[Base], cls: Type[Base],
            search_str: str) -> orm.Query[Base]:
   """Perform a fuzzy search and return matches
 
@@ -204,7 +205,27 @@ def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
     # Include poor matches to return something
     matching_ids: List[int] = [i for _, _, i in extracted[:5]]
 
-  return s.query(cls).where(cls.id.in_(matching_ids))
+  return query.session.query(cls).where(cls.id.in_(matching_ids))
+
+
+def query_count(query: orm.Query[Base]) -> int:
+  """Count the number of result a query will return
+
+  Args:
+    query: Session query to execute
+
+  Returns:
+    Number of instances query will return upon execution
+  """
+  # From here:
+  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+  col_one = sqlalchemy.literal_column("1")
+  counter = query.statement.with_only_columns(
+      # It is callable, count returns a generator type
+      sqlalchemy.func.count(col_one),  # pylint: disable=not-callable
+      maintain_column_froms=True)
+  counter = counter.order_by(None)
+  return query.session.execute(counter).scalar()
 
 
 def paginate(query: orm.Query[Base], limit: int,
@@ -223,9 +244,7 @@ def paginate(query: orm.Query[Base], limit: int,
   offset = max(0, offset)
 
   # Get total number from filters
-  # TODO (WattsUp) replace if counting is too slow
-  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-  count = query.order_by(None).count()
+  count = query_count(query)
 
   # Apply limiting, and offset
   query = query.limit(limit).offset(offset)

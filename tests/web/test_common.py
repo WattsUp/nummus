@@ -179,30 +179,30 @@ class TestCommon(WebTestBase):
       query = s.query(Account)
 
       # Unknown Model
-      self.assertRaises(KeyError, common.search, s, query, None, "abc")
+      self.assertRaises(KeyError, common.search, query, None, "abc")
 
       # No results return all
-      result = common.search(s, query, Account, None).all()
+      result = common.search(query, Account, None).all()
       self.assertEqual([a_checking, a_invest], result)
 
       # Short query return all
-      result = common.search(s, query, Account, "ab").all()
+      result = common.search(query, Account, "ab").all()
       self.assertEqual([a_checking, a_invest], result)
 
       # No matches return first 5
-      result = common.search(s, query, Account, "crazy unrelated words").all()
+      result = common.search(query, Account, "crazy unrelated words").all()
       self.assertEqual([a_checking, a_invest], result)
 
-      result = common.search(s, query, Account, "checking").all()
+      result = common.search(query, Account, "checking").all()
       self.assertEqual([a_checking], result)
 
-      result = common.search(s, query, Account, "bank").all()
+      result = common.search(query, Account, "bank").all()
       self.assertEqual([a_checking], result)
 
-      result = common.search(s, query, Account, "monkey").all()
+      result = common.search(query, Account, "monkey").all()
       self.assertEqual([a_checking, a_invest], result)
 
-      result = common.search(s, query, Account, "trading").all()
+      result = common.search(query, Account, "trading").all()
       self.assertEqual([a_invest], result)
 
   def test_paginate(self):
@@ -229,6 +229,7 @@ class TestCommon(WebTestBase):
 
       query = s.query(Transaction)
       transactions = query.all()
+      query = s.query(Transaction)
 
       page, count, next_offset = common.paginate(query, 50, 0)
       self.assertEqual(transactions, page)
