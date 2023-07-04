@@ -3,12 +3,12 @@
 
 from typing import Dict
 
-import connexion
 import flask
 
 from nummus import portfolio
 from nummus.models import Asset, AssetCategory
 from nummus.web import common
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
@@ -35,7 +35,7 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(a)
     s.commit()
-    return flask.jsonify(a)
+    return flask.jsonify(a), 201, {"Location": f"/api/asset/{a.uuid}"}
 
 
 def get(asset_uuid: str) -> flask.Response:
@@ -98,14 +98,12 @@ def delete(asset_uuid: str) -> flask.Response:
   with p.get_session() as s:
     a = common.find_asset(s, asset_uuid)
 
-    response = flask.jsonify(a)
-
     # Delete the valuations as well
     for v in a.valuations:
       s.delete(v)
     s.delete(a)
     s.commit()
-    return response
+    return None
 
 
 def get_all() -> flask.Response:
@@ -151,12 +149,12 @@ def get_image(asset_uuid: str) -> flask.Response:
     a = common.find_asset(s, asset_uuid)
     img_name = a.image_name
     if img_name is None:
-      raise connexion.exceptions.ProblemException(
-          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+      raise HTTPError(404,
+                      detail=f"Asset image {asset_uuid} not found in Portfolio")
     img = p.image_path.joinpath(img_name)
     if not img.exists():
-      raise connexion.exceptions.ProblemException(
-          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+      raise HTTPError(404,
+                      detail=f"Asset image {asset_uuid} not found in Portfolio")
     return flask.send_file(img)
 
 
@@ -183,12 +181,7 @@ def update_image(asset_uuid: str) -> flask.Response:
       file.write(flask.request.get_data())
 
     s.commit()
-    return flask.jsonify({
-        "detail": "Upload successful",
-        "status": 200,
-        "title": "Upload successful",
-        "type": "about:blank"
-    })
+    return None
 
 
 def delete_image(asset_uuid: str) -> flask.Response:
@@ -208,8 +201,8 @@ def delete_image(asset_uuid: str) -> flask.Response:
 
     img_name = a.image_name
     if img_name is None:
-      raise connexion.exceptions.ProblemException(
-          status=404, detail=f"Asset image {asset_uuid} not found in Portfolio")
+      raise HTTPError(404,
+                      detail=f"Asset image {asset_uuid} not found in Portfolio")
     img = p.image_path.joinpath(img_name)
     if img.exists():
       img.unlink()
@@ -217,9 +210,4 @@ def delete_image(asset_uuid: str) -> flask.Response:
     a.img_suffix = None
 
     s.commit()
-    return flask.jsonify({
-        "detail": "Upload successful",
-        "status": 200,
-        "title": "Upload successful",
-        "type": "about:blank"
-    })
+    return None

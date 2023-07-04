@@ -28,7 +28,7 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(a)
     s.commit()
-    return flask.jsonify(a)
+    return flask.jsonify(a), 201, {"Location": f"/api/account/{a.uuid}"}
 
 
 def get(account_uuid: str) -> flask.Response:
@@ -89,8 +89,6 @@ def delete(account_uuid: str) -> flask.Response:
   with p.get_session() as s:
     a = common.find_account(s, account_uuid)
 
-    response = flask.jsonify(a)
-
     # Delete the transactions as well
     for t in a.transactions:
       for t_split in t.splits:
@@ -98,7 +96,7 @@ def delete(account_uuid: str) -> flask.Response:
       s.delete(t)
     s.delete(a)
     s.commit()
-    return response
+    return None
 
 
 def get_all() -> flask.Response:

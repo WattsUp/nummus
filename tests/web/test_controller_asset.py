@@ -22,9 +22,11 @@ class TestControllerAsset(WebTestBase):
     # Make the minimum
     req = {"name": name, "category": category}
 
-    result = self.api_post("/api/asset", json=req)
+    result, headers = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
+      self.assertEqual(f"/api/asset/{a.uuid}", headers["Location"])
+
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
@@ -44,9 +46,11 @@ class TestControllerAsset(WebTestBase):
         "tag": tag
     }
 
-    result = self.api_post("/api/asset", json=req)
+    result, headers = self.api_post("/api/asset", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
+      self.assertEqual(f"/api/asset/{a.uuid}", headers["Location"])
+
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
     self.assertDictEqual(target, result)
@@ -68,7 +72,7 @@ class TestControllerAsset(WebTestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result = self.api_get(f"/api/asset/{a_uuid}")
+    result, _ = self.api_get(f"/api/asset/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -90,7 +94,7 @@ class TestControllerAsset(WebTestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    result = self.api_put(f"/api/asset/{a_uuid}", json=req)
+    result, _ = self.api_put(f"/api/asset/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
@@ -119,7 +123,6 @@ class TestControllerAsset(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     with p.get_session() as s:
       result = s.query(Asset).count()
@@ -128,8 +131,7 @@ class TestControllerAsset(WebTestBase):
       self.assertEqual(n_valuations, result)
 
     # Delete by uuid
-    result = self.api_delete(f"/api/asset/{a_uuid}")
-    self.assertEqual(target, result)
+    self.api_delete(f"/api/asset/{a_uuid}")
 
     with p.get_session() as s:
       result = s.query(Asset).count()
@@ -155,46 +157,46 @@ class TestControllerAsset(WebTestBase):
       assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
-    result = self.api_get("/api/assets")
+    result, _ = self.api_get("/api/assets")
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get only cash
-    result = self.api_get("/api/assets", {"category": "item"})
+    result, _ = self.api_get("/api/assets", {"category": "item"})
     target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
-    result = self.api_get("/api/assets", {"limit": 1})
+    result, _ = self.api_get("/api/assets", {"limit": 1})
     target = {"assets": assets[:1], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/assets", {"limit": 1, "offset": 1})
+    result, _ = self.api_get("/api/assets", {"limit": 1, "offset": 1})
     target = {"assets": assets[1:], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by name
-    result = self.api_get("/api/assets", {"search": "banana"})
+    result, _ = self.api_get("/api/assets", {"search": "banana"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Bad search, neither are over the threshold
-    result = self.api_get("/api/assets", {"search": "inc"})
+    result, _ = self.api_get("/api/assets", {"search": "inc"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by description
-    result = self.api_get("/api/assets", {"search": "farm"})
+    result, _ = self.api_get("/api/assets", {"search": "farm"})
     target = {"assets": assets[1:], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by unit
-    result = self.api_get("/api/assets", {"search": "bunches"})
+    result, _ = self.api_get("/api/assets", {"search": "bunches"})
     target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Search by tag
-    result = self.api_get("/api/assets", {"search": "fruit"})
+    result, _ = self.api_get("/api/assets", {"search": "fruit"})
     target = {"assets": assets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
@@ -225,8 +227,8 @@ class TestControllerAsset(WebTestBase):
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    result = self.api_get(f"/api/asset/{a_uuid}/image",
-                          content_type="image/png")
+    result, _ = self.api_get(f"/api/asset/{a_uuid}/image",
+                             content_type="image/png")
     self.assertEqual(fake_image, result)
 
   def test_update_image(self):
@@ -243,16 +245,10 @@ class TestControllerAsset(WebTestBase):
 
       a_uuid = a.uuid
 
-    result = self.api_put(f"/api/asset/{a_uuid}/image",
-                          data=fake_image,
-                          headers={"Content-Type": "image/png"})
-    target = {
-        "detail": "Upload successful",
-        "status": 200,
-        "title": "Upload successful",
-        "type": "about:blank"
-    }
-    self.assertEqual(target, result)
+    self.api_put(f"/api/asset/{a_uuid}/image",
+                 data=fake_image,
+                 headers={"Content-Type": "image/png"},
+                 rc=204)
 
     with p.get_session() as s:
       a = s.query(Asset).first()
@@ -282,14 +278,7 @@ class TestControllerAsset(WebTestBase):
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    result = self.api_delete(f"/api/asset/{a_uuid}/image")
-    target = {
-        "detail": "Upload successful",
-        "status": 200,
-        "title": "Upload successful",
-        "type": "about:blank"
-    }
-    self.assertEqual(target, result)
+    self.api_delete(f"/api/asset/{a_uuid}/image")
 
     with p.get_session() as s:
       a = s.query(Asset).first()

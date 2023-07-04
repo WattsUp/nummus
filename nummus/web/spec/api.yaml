@@ -64,14 +64,14 @@ paths:
       description: ""
       operationId: nummus.web.controller_account.create
       responses:
-        "200":
-          description: Successful operation
+        "201":
+          description: Account created
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
         $ref: "#/components/requestBodies/Account"
   /account/{accountUUID}:
@@ -91,7 +91,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Account not found
     put:
@@ -110,7 +110,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Account not found
       requestBody:
@@ -124,14 +124,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathAccountUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Account not found
   # /account/{accountUUID}/value:
@@ -164,10 +160,12 @@ paths:
   #                     - 1480.8
   #                 dates:
   #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Invalid parameter supplied
+  #      "400":
+  #        description: Malformed request
   #       "404":
   #         description: Account not found
+  #       "422":
+  #         description: Invalid parameter supplied
   # /account/{accountUUID}/transactions:
   #   get:
   #     tags:
@@ -207,10 +205,12 @@ paths:
   #                     indicates no more pages available
   #                   type: integer
   #                   nullable: true
-  #       "400":
-  #         description: Invalid parameter supplied
+  #      "400":
+  #        description: Malformed request
   #       "404":
   #         description: Asset not found
+  #       "422":
+  #         description: Invalid parameter supplied
   /accounts:
     get:
       tags:
@@ -237,7 +237,7 @@ paths:
                     description: Number of matches to request query
                     type: number
                     format: integer
-        "400":
+        "422":
           description: Invalid parameter supplied
   /asset:
     post:
@@ -247,14 +247,14 @@ paths:
       description: ""
       operationId: nummus.web.controller_asset.create
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
         $ref: "#/components/requestBodies/Asset"
   /asset/{assetUUID}:
@@ -274,7 +274,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset not found
     put:
@@ -293,7 +293,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset not found
       requestBody:
@@ -307,14 +307,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathAssetUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset not found
   /asset/{assetUUID}/image:
@@ -330,7 +326,7 @@ paths:
         "200":
           $ref: "#/components/responses/Image"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset or Asset Image not found
     put:
@@ -342,16 +338,20 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathAssetUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset or Asset Image not found
+        "411":
+          description: Missing Content-Length
         "413":
           description: Payload is too large
         "415":
           description: Unsupported image type
+        "422":
+          description: Missing Content-Type
       requestBody:
         $ref: "#/components/requestBodies/Image"
     delete:
@@ -363,10 +363,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathAssetUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Asset or Asset Image not found
   # /asset/{assetUUID}/value:
@@ -400,7 +400,7 @@ paths:
   #                 dates:
   #                   $ref: "#/components/schemas/Dates"
   #       "400":
-  #         description: Invalid parameter supplied
+  #         description: Malformed request
   #       "404":
   #         description: Asset not found
   /assets:
@@ -437,7 +437,7 @@ paths:
                     type: integer
                     nullable: true
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
   /budget:
     post:
       tags:
@@ -446,14 +446,14 @@ paths:
       description: ""
       operationId: nummus.web.controller_budget.create
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
         $ref: "#/components/requestBodies/Budget"
   /budget/{budgetUUID}:
@@ -473,7 +473,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Budget not found
     put:
@@ -492,7 +492,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Budget not found
       requestBody:
@@ -506,14 +506,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathBudgetUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Budget not found
   /budgets:
@@ -551,7 +547,7 @@ paths:
                     type: integer
                     nullable: true
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
   /transaction:
     post:
       tags:
@@ -560,14 +556,16 @@ paths:
       description: ""
       operationId: nummus.web.controller_transaction.create
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/Transaction"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
+        "422":
+          description: Missing at least one TransactionSplit
       requestBody:
         $ref: "#/components/requestBodies/Transaction"
   /transaction/{transactionUUID}:
@@ -587,7 +585,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Transaction"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Transaction not found
     put:
@@ -606,9 +604,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Transaction"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Transaction not found
+        "422":
+          description: Missing at least one TransactionSplit
       requestBody:
         $ref: "#/components/requestBodies/Transaction"
     delete:
@@ -620,14 +620,10 @@ paths:
       parameters:
         - $ref: "#/components/parameters/PathTransactionUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Transaction not found
   /transactions:
@@ -670,7 +666,7 @@ paths:
                     type: integer
                     nullable: true
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Account or Asset not found
 externalDocs:

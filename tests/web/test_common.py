@@ -266,13 +266,13 @@ class TestCommon(WebTestBase):
       self.assertEqual(3, next_offset)
 
   def test_validate_image_upload(self):
-    # Missing type
+    # Missing length
     req = flask.Request({})
-    self.assertHTTPRaises(400, common.validate_image_upload, req)
+    self.assertHTTPRaises(411, common.validate_image_upload, req)
 
-    # Still missing length
-    req = flask.Request({"CONTENT_TYPE": "application/pdf"})
-    self.assertHTTPRaises(400, common.validate_image_upload, req)
+    # Still missing type
+    req = flask.Request({"CONTENT_LENGTH": "1000001"})
+    self.assertHTTPRaises(422, common.validate_image_upload, req)
 
     # Still bad type
     req = flask.Request({

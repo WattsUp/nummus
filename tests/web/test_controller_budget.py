@@ -38,13 +38,15 @@ class TestControllerBudget(WebTestBase):
         }
     }
 
-    result = self.api_post("/api/budget", json=req)
+    result, headers = self.api_post("/api/budget", json=req)
     with p.get_session() as s:
-      a = s.query(Budget).first()
-      # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      b = s.query(Budget).first()
+      self.assertEqual(f"/api/budget/{b.uuid}", headers["Location"])
 
-      s.delete(a)
+      # Serialize then deserialize
+      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      s.delete(b)
       s.commit()
     self.assertDictEqual(target, result)
 
@@ -66,7 +68,7 @@ class TestControllerBudget(WebTestBase):
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result = self.api_get(f"/api/budget/{b_uuid}")
+    result, _ = self.api_get(f"/api/budget/{b_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -91,7 +93,7 @@ class TestControllerBudget(WebTestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    result = self.api_put(f"/api/budget/{b_uuid}", json=req)
+    result, _ = self.api_put(f"/api/budget/{b_uuid}", json=req)
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
@@ -112,15 +114,13 @@ class TestControllerBudget(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     with p.get_session() as s:
       result = s.query(Budget).count()
       self.assertEqual(1, result)
 
     # Delete by uuid
-    result = self.api_delete(f"/api/budget/{b_uuid}")
-    self.assertEqual(target, result)
+    self.api_delete(f"/api/budget/{b_uuid}")
 
     with p.get_session() as s:
       result = s.query(Budget).count()
@@ -142,30 +142,30 @@ class TestControllerBudget(WebTestBase):
           json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
-    result = self.api_get("/api/budgets")
+    result, _ = self.api_get("/api/budgets")
     target = {"budgets": budgets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Sort by newest first
-    result = self.api_get("/api/budgets", {"sort": "newest"})
+    result, _ = self.api_get("/api/budgets", {"sort": "newest"})
     target = {"budgets": budgets[::-1], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
-    result = self.api_get("/api/budgets", {"limit": 1})
+    result, _ = self.api_get("/api/budgets", {"limit": 1})
     target = {"budgets": budgets[:1], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
+    result, _ = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
     target = {"budgets": budgets[1:], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging reverse
-    result = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
+    result, _ = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
     target = {"budgets": budgets[1:], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/budgets", {
+    result, _ = self.api_get("/api/budgets", {
         "limit": 1,
         "offset": 1,
         "sort": "newest"
@@ -174,12 +174,12 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by start date
-    result = self.api_get("/api/budgets", {"start": today})
+    result, _ = self.api_get("/api/budgets", {"start": today})
     target = {"budgets": budgets[1:], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by end date
-    result = self.api_get("/api/budgets", {"end": yesterday})
+    result, _ = self.api_get("/api/budgets", {"end": yesterday})
     target = {"budgets": budgets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 

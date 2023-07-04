@@ -5,13 +5,13 @@ from typing import Dict, List
 
 import datetime
 
-import connexion
 import flask
 
 from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Transaction, TransactionCategory, TransactionSplit)
 from nummus.web import common
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
@@ -47,8 +47,9 @@ def create() -> flask.Response:
     })
 
   if len(req_splits) < 1:
-    raise connexion.exceptions.BadRequestProblem(
-        detail="Transaction must have at least one TransactionSplit")
+    raise HTTPError(422,
+                    detail="Transaction must have at least one "
+                    "TransactionSplit")
 
   with p.get_session() as s:
     a = common.find_account(s, account_uuid)
@@ -64,7 +65,7 @@ def create() -> flask.Response:
       t_split = TransactionSplit(parent=t, asset=asset, **d)
       s.add(t_split)
     s.commit()
-    return flask.jsonify(t)
+    return flask.jsonify(t), 201, {"Location": f"/api/transaction/{t.uuid}"}
 
 
 def get(transaction_uuid: str) -> flask.Response:
@@ -111,8 +112,9 @@ def update(transaction_uuid: str) -> flask.Response:
     req_splits: List[Dict[str, object]] = req["splits"]
     n_split = len(req_splits)
     if n_split < 1:
-      raise connexion.exceptions.BadRequestProblem(
-          detail="Transaction must have at least one TransactionSplit")
+      raise HTTPError(422,
+                      detail="Transaction must have at least one "
+                      "TransactionSplit")
 
     n_split_current = len(t.splits)
     if n_split > n_split_current:
@@ -165,14 +167,12 @@ def delete(transaction_uuid: str) -> flask.Response:
   with p.get_session() as s:
     t = common.find_transaction(s, transaction_uuid)
 
-    response = flask.jsonify(t)
-
     # Delete the splits as well
     for t_split in t.splits:
       s.delete(t_split)
     s.delete(t)
     s.commit()
-    return response
+    return None
 
 
 def get_all() -> flask.Response:

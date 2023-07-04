@@ -22,10 +22,11 @@ class TestControllerAccount(WebTestBase):
 
     req = {"name": name, "institution": institution, "category": category}
 
-    result = self.api_post("/api/account", json=req)
-
+    result, headers = self.api_post("/api/account", json=req)
     with p.get_session() as s:
       a = s.query(Account).first()
+      self.assertEqual(f"/api/account/{a.uuid}", headers["Location"])
+
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
@@ -50,7 +51,7 @@ class TestControllerAccount(WebTestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result = self.api_get(f"/api/account/{a_uuid}")
+    result, _ = self.api_get(f"/api/account/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -76,7 +77,7 @@ class TestControllerAccount(WebTestBase):
     req.pop("uuid")
     req.pop("opened_on")
     req.pop("updated_on")
-    result = self.api_put(f"/api/account/{a_uuid}", json=req)
+    result, _ = self.api_put(f"/api/account/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Account).where(Account.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
@@ -109,7 +110,6 @@ class TestControllerAccount(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     with p.get_session() as s:
       result = s.query(Account).count()
@@ -120,8 +120,7 @@ class TestControllerAccount(WebTestBase):
       self.assertEqual(n_transactions, result)
 
     # Delete by uuid
-    result = self.api_delete(f"/api/account/{a_uuid}")
-    self.assertEqual(target, result)
+    self.api_delete(f"/api/account/{a_uuid}")
 
     with p.get_session() as s:
       result = s.query(Account).count()
@@ -148,35 +147,34 @@ class TestControllerAccount(WebTestBase):
       accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
 
     # Get all
-    result = self.api_get("/api/accounts")
-
+    result, _ = self.api_get("/api/accounts")
     target = {"accounts": accounts, "count": 2}
     self.assertEqual(target, result)
 
     # Get only cash
-    result = self.api_get("/api/accounts", {"category": "cash"})
+    result, _ = self.api_get("/api/accounts", {"category": "cash"})
     target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
     # Search by institution
-    result = self.api_get("/api/accounts", {"search": "Bank"})
+    result, _ = self.api_get("/api/accounts", {"search": "Bank"})
     target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/accounts", {"search": "Ape Trading"})
+    result, _ = self.api_get("/api/accounts", {"search": "Ape Trading"})
     target = {"accounts": accounts[1:], "count": 1}
     self.assertEqual(target, result)
 
     # Search by bank
-    result = self.api_get("/api/accounts", {"search": "Investments"})
+    result, _ = self.api_get("/api/accounts", {"search": "Investments"})
     target = {"accounts": accounts[1:], "count": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/accounts", {"search": "checking"})
+    result, _ = self.api_get("/api/accounts", {"search": "checking"})
     target = {"accounts": accounts[:1], "count": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/accounts", {"search": "Monkey"})
+    result, _ = self.api_get("/api/accounts", {"search": "Monkey"})
     target = {"accounts": accounts, "count": 2}
     self.assertEqual(target, result)
 

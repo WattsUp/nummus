@@ -41,7 +41,7 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(b)
     s.commit()
-    return flask.jsonify(b)
+    return flask.jsonify(b), 201, {"Location": f"/api/budget/{b.uuid}"}
 
 
 def get(budget_uuid: str) -> flask.Response:
@@ -99,11 +99,9 @@ def delete(budget_uuid: str) -> flask.Response:
   with p.get_session() as s:
     b = common.find_budget(s, budget_uuid)
 
-    response = flask.jsonify(b)
-
     s.delete(b)
     s.commit()
-    return response
+    return None
 
 
 def get_all() -> flask.Response:

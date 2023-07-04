@@ -1,7 +1,7 @@
 """TestBase with extra functions for web testing
 """
 
-from typing import Callable, Dict, Union
+from typing import Callable, Dict, Tuple, Union
 
 import io
 import re
@@ -25,6 +25,9 @@ from tests.base import TestBase
 
 _RE_UUID = re.compile(r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
                       r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}")
+
+ResultType = Union[Dict[str, object], str, bytes]
+HeadersType = Dict[str, str]
 
 
 class WebTestBase(TestBase):
@@ -93,7 +96,7 @@ class WebTestBase(TestBase):
                queries: Dict[str, str],
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> Union[Dict[str, object], str, bytes]:
+               **kwargs) -> Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
@@ -102,15 +105,17 @@ class WebTestBase(TestBase):
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc == 200
+      content_type: Expected content type if rc in [200, 201]
       rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      response.json if content_type == application/json
-      response.text if content_type == text/html
-      response.get_data() otherwise
+      (response.json, headers) if content_type == application/json
+      (response.text, headers) if content_type == text/html
+      (response.get_data(), headers) otherwise
     """
+    if rc == 204:
+      content_type = None
     if queries is None or len(queries) < 1:
       url = endpoint
     else:
@@ -125,15 +130,19 @@ class WebTestBase(TestBase):
       with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         start = time.perf_counter()
-        if rc == 200:
+        if rc in [200, 201]:
           response = self._client.open(url, **kwargs)
         else:
           with mock.patch("sys.stderr", new=io.StringIO()) as _:
             response = self._client.open(url, **kwargs)
       duration = time.perf_counter() - start
       self.assertEqual(rc, response.status_code, msg=response.text)
-      if rc == 200:
+      if rc in [200, 201]:
         self.assertEqual(content_type, response.content_type)
+      if rc == 201:
+        self.assertIn("Location", response.headers)
+      if rc == 204:
+        self.assertEqual(b"", response.get_data())
       self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
 
       with autodict.JSONAutoDict(TEST_LOG) as d:
@@ -147,11 +156,13 @@ class WebTestBase(TestBase):
           d["api_latency"][k] = []
         d["api_latency"][k].append(duration)
 
+      if content_type is None:
+        return response.get_data(), response.headers
       if content_type == "application/json":
-        return response.json
+        return response.json, response.headers
       if content_type.startswith("text/html"):
-        return response.text
-      return response.get_data()
+        return response.text, response.headers
+      return response.get_data(), response.headers
     finally:
       if response is not None:
         response.close()
@@ -161,21 +172,21 @@ class WebTestBase(TestBase):
               queries: Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Union[Dict[str, object], str, bytes]:
+              **kwargs) -> Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc == 200
-      rc: Expected return code
+      content_type: Expected content type if rc in [200, 201]
+      rc: Expected return code, default for GET is 200 OK
       All other arguments passed to client.get
 
     Returns:
-      response.json if content_type == application/json
-      response.text if content_type == text/html
-      response.get_data() otherwise
+      (response.json, headers) if content_type == application/json
+      (response.text, headers) if content_type == text/html
+      (response.get_data(), headers) otherwise
     """
     return self.api_open("GET",
                          endpoint,
@@ -189,21 +200,21 @@ class WebTestBase(TestBase):
               queries: Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Union[Dict[str, object], str, bytes]:
+              **kwargs) -> Tuple[ResultType, HeadersType]:
     """Run a test API PUT
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc == 200
-      rc: Expected return code
+      content_type: Expected content type if rc in [200, 201]
+      rc: Expected return code, default for PUT is 200 OK
       All other arguments passed to client.get
 
     Returns:
-      response.json if content_type == application/json
-      response.text if content_type == text/html
-      response.get_data() otherwise
+      (response.json, headers) if content_type == application/json
+      (response.text, headers) if content_type == text/html
+      (response.get_data(), headers) otherwise
     """
     return self.api_open("PUT",
                          endpoint,
@@ -212,26 +223,28 @@ class WebTestBase(TestBase):
                          rc=rc,
                          **kwargs)
 
+  #
+
   def api_post(self,
                endpoint: str,
                queries: Dict[str, str] = None,
                content_type: str = "application/json",
-               rc: int = 200,
-               **kwargs) -> Union[Dict[str, object], str, bytes]:
+               rc: int = 201,
+               **kwargs) -> Tuple[ResultType, HeadersType]:
     """Run a test API POST
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc == 200
-      rc: Expected return code
+      content_type: Expected content type if rc in [200, 201]
+      rc: Expected return code, default for POST is 201 Created
       All other arguments passed to client.get
 
     Returns:
-      response.json if content_type == application/json
-      response.text if content_type == text/html
-      response.get_data() otherwise
+      (response.json, headers) if content_type == application/json
+      (response.text, headers) if content_type == text/html
+      (response.get_data(), headers) otherwise
     """
     return self.api_open("POST",
                          endpoint,
@@ -243,23 +256,23 @@ class WebTestBase(TestBase):
   def api_delete(self,
                  endpoint: str,
                  queries: Dict[str, str] = None,
-                 content_type: str = "application/json",
-                 rc: int = 200,
-                 **kwargs) -> Union[Dict[str, object], str, bytes]:
+                 content_type: str = None,
+                 rc: int = 204,
+                 **kwargs) -> Tuple[ResultType, HeadersType]:
     """Run a test API DELETE
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc == 200
-      rc: Expected return code
+      content_type: Expected content type if rc in [200, 201]
+      rc: Expected return code, default for DELETE is 204 No Content
       All other arguments passed to client.get
 
     Returns:
-      response.json if content_type == application/json
-      response.text if content_type == text/html
-      response.get_data() otherwise
+      (response.json, headers) if content_type == application/json
+      (response.text, headers) if content_type == text/html
+      (response.get_data(), headers) otherwise
     """
     return self.api_open("DELETE",
                          endpoint,
