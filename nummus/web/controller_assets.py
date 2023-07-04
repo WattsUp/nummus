@@ -12,7 +12,7 @@ from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
-  """POST /api/asset
+  """POST /api/assets
 
   Returns:
     JSON response, see api.yaml for details
@@ -35,11 +35,11 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(a)
     s.commit()
-    return flask.jsonify(a), 201, {"Location": f"/api/asset/{a.uuid}"}
+    return flask.jsonify(a), 201, {"Location": f"/api/assets/{a.uuid}"}
 
 
 def get(asset_uuid: str) -> flask.Response:
-  """GET /api/asset/{asset_uuid}
+  """GET /api/assets/{asset_uuid}
 
   Args:
     asset_uuid: UUID of Asset to find
@@ -56,7 +56,7 @@ def get(asset_uuid: str) -> flask.Response:
 
 
 def update(asset_uuid: str) -> flask.Response:
-  """PUT /api/asset/{asset_uuid}
+  """PUT /api/assets/{asset_uuid}
 
   Args:
     asset_uuid: UUID of Asset to update
@@ -84,7 +84,7 @@ def update(asset_uuid: str) -> flask.Response:
 
 
 def delete(asset_uuid: str) -> flask.Response:
-  """DELETE /api/asset/{asset_uuid}
+  """DELETE /api/assets/{asset_uuid}
 
   Args:
     asset_uuid: UUID of Asset to delete
@@ -134,7 +134,7 @@ def get_all() -> flask.Response:
 
 
 def get_image(asset_uuid: str) -> flask.Response:
-  """GET /api/asset/{asset_uuid}/image
+  """GET /api/assets/{asset_uuid}/image
 
   Args:
     asset_uuid: UUID of Asset to find
@@ -159,7 +159,7 @@ def get_image(asset_uuid: str) -> flask.Response:
 
 
 def update_image(asset_uuid: str) -> flask.Response:
-  """PUT /api/asset/{asset_uuid}/image
+  """PUT /api/assets/{asset_uuid}/image
 
   Args:
     asset_uuid: UUID of Asset to find
@@ -185,7 +185,7 @@ def update_image(asset_uuid: str) -> flask.Response:
 
 
 def delete_image(asset_uuid: str) -> flask.Response:
-  """DELETE /api/asset/{asset_uuid}/image
+  """DELETE /api/assets/{asset_uuid}/image
 
   Args:
     asset_uuid: UUID of Asset to find

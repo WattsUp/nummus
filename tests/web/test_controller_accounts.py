@@ -1,4 +1,4 @@
-"""Test module nummus.web.controller_account
+"""Test module nummus.web.controller_accounts
 """
 
 import datetime
@@ -9,8 +9,8 @@ from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
 from tests.web.base import WebTestBase
 
 
-class TestControllerAccount(WebTestBase):
-  """Test controller_account methods
+class TestControllerAccounts(WebTestBase):
+  """Test controller_accounts methods
   """
 
   def test_create(self):
@@ -22,10 +22,10 @@ class TestControllerAccount(WebTestBase):
 
     req = {"name": name, "institution": institution, "category": category}
 
-    result, headers = self.api_post("/api/account", json=req)
+    result, headers = self.api_post("/api/accounts", json=req)
     with p.get_session() as s:
       a = s.query(Account).first()
-      self.assertEqual(f"/api/account/{a.uuid}", headers["Location"])
+      self.assertEqual(f"/api/accounts/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
@@ -34,7 +34,7 @@ class TestControllerAccount(WebTestBase):
 
     # Fewer keys are bad
     req = {"name": name, "institution": institution}
-    self.api_post("/api/account", json=req, rc=400)
+    self.api_post("/api/accounts", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -51,7 +51,7 @@ class TestControllerAccount(WebTestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/account/{a_uuid}")
+    result, _ = self.api_get(f"/api/accounts/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -77,7 +77,7 @@ class TestControllerAccount(WebTestBase):
     req.pop("uuid")
     req.pop("opened_on")
     req.pop("updated_on")
-    result, _ = self.api_put(f"/api/account/{a_uuid}", json=req)
+    result, _ = self.api_put(f"/api/accounts/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Account).where(Account.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
@@ -85,7 +85,7 @@ class TestControllerAccount(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    self.api_put(f"/api/account/{a_uuid}", json=target, rc=400)
+    self.api_put(f"/api/accounts/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -120,7 +120,7 @@ class TestControllerAccount(WebTestBase):
       self.assertEqual(n_transactions, result)
 
     # Delete by uuid
-    self.api_delete(f"/api/account/{a_uuid}")
+    self.api_delete(f"/api/accounts/{a_uuid}")
 
     with p.get_session() as s:
       result = s.query(Account).count()

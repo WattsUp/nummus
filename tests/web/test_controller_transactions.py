@@ -1,4 +1,4 @@
-"""Test module nummus.web.controller_transaction
+"""Test module nummus.web.controller_transactions
 """
 
 from typing import List
@@ -12,8 +12,8 @@ from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
 from tests.web.base import WebTestBase
 
 
-class TestControllerTransaction(WebTestBase):
-  """Test controller_transaction methods
+class TestControllerTransactions(WebTestBase):
+  """Test controller_transactions methods
   """
 
   def test_create(self):
@@ -45,10 +45,10 @@ class TestControllerTransaction(WebTestBase):
         }]
     }
 
-    result, headers = self.api_post("/api/transaction", json=req)
+    result, headers = self.api_post("/api/transactions", json=req)
     with p.get_session() as s:
       t = s.query(Transaction).first()
-      self.assertEqual(f"/api/transaction/{t.uuid}", headers["Location"])
+      self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
 
       self.assertEqual(a, t.account)
       self.assertEqual(today, t.date)
@@ -97,10 +97,10 @@ class TestControllerTransaction(WebTestBase):
         "splits": [req_split]
     }
 
-    result, headers = self.api_post("/api/transaction", json=req)
+    result, headers = self.api_post("/api/transactions", json=req)
     with p.get_session() as s:
       t = s.query(Transaction).first()
-      self.assertEqual(f"/api/transaction/{t.uuid}", headers["Location"])
+      self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
 
       self.assertEqual(a, t.account)
       self.assertEqual(today, t.date)
@@ -131,7 +131,7 @@ class TestControllerTransaction(WebTestBase):
         "statement": statement,
         "locked": True
     }
-    self.api_post("/api/transaction", json=req, rc=400)
+    self.api_post("/api/transactions", json=req, rc=400)
 
     # Need at least one split
     req = {
@@ -142,7 +142,7 @@ class TestControllerTransaction(WebTestBase):
         "locked": True,
         "splits": []
     }
-    self.api_post("/api/transaction", json=req, rc=422)
+    self.api_post("/api/transactions", json=req, rc=422)
 
   def test_get(self):
     p = self._portfolio
@@ -167,7 +167,7 @@ class TestControllerTransaction(WebTestBase):
       target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/transaction/{t_uuid}")
+    result, _ = self.api_get(f"/api/transactions/{t_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -213,7 +213,7 @@ class TestControllerTransaction(WebTestBase):
     req_split_0.pop("locked")
     req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
-    result, _ = self.api_put(f"/api/transaction/{t_uuid}", json=req)
+    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -260,7 +260,7 @@ class TestControllerTransaction(WebTestBase):
     req_split_1.pop("locked")
     req_split_1.pop("is_split")
     req["splits"] = [req_split_0, req_split_1]
-    result, _ = self.api_put(f"/api/transaction/{t_uuid}", json=req)
+    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -302,7 +302,7 @@ class TestControllerTransaction(WebTestBase):
     req_split_0.pop("locked")
     req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
-    result, _ = self.api_put(f"/api/transaction/{t_uuid}", json=req)
+    result, _ = self.api_put(f"/api/transactions/{t_uuid}", json=req)
     with p.get_session() as s:
       t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
       self.assertEqual(new_statement, t.statement)
@@ -321,10 +321,10 @@ class TestControllerTransaction(WebTestBase):
 
     # Try to remove all splits
     req["splits"] = []
-    self.api_put(f"/api/transaction/{t_uuid}", json=req, rc=422)
+    self.api_put(f"/api/transactions/{t_uuid}", json=req, rc=422)
 
     # Read only properties
-    self.api_put(f"/api/transaction/{t_uuid}", json=target, rc=400)
+    self.api_put(f"/api/transactions/{t_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -354,7 +354,7 @@ class TestControllerTransaction(WebTestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    self.api_delete(f"/api/transaction/{t_uuid}")
+    self.api_delete(f"/api/transactions/{t_uuid}")
 
     with p.get_session() as s:
       result = s.query(Transaction).count()

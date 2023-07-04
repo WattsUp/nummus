@@ -14,7 +14,7 @@ from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
-  """POST /api/budget
+  """POST /api/budgets
 
   Returns:
     JSON response, see api.yaml for details
@@ -42,11 +42,11 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(b)
     s.commit()
-    return flask.jsonify(b), 201, {"Location": f"/api/budget/{b.uuid}"}
+    return flask.jsonify(b), 201, {"Location": f"/api/budgets/{b.uuid}"}
 
 
 def get(budget_uuid: str) -> flask.Response:
-  """GET /api/budget/{budget_uuid}
+  """GET /api/budgets/{budget_uuid}
 
   Args:
     budget_uuid: UUID of Budget to find
@@ -63,7 +63,7 @@ def get(budget_uuid: str) -> flask.Response:
 
 
 def update(budget_uuid: str) -> flask.Response:
-  """PUT /api/budget/{budget_uuid}
+  """PUT /api/budgets/{budget_uuid}
 
   Args:
     budget_uuid: UUID of Budget to update
@@ -86,7 +86,7 @@ def update(budget_uuid: str) -> flask.Response:
 
 
 def delete(budget_uuid: str) -> flask.Response:
-  """DELETE /api/budget/{budget_uuid}
+  """DELETE /api/budgets/{budget_uuid}
 
   Args:
     budget_uuid: UUID of Budget to delete

@@ -11,7 +11,7 @@ from nummus.web import common
 
 
 def create() -> flask.Response:
-  """POST /api/account
+  """POST /api/accounts
 
   Returns:
     JSON response, see api.yaml for details
@@ -28,11 +28,11 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(a)
     s.commit()
-    return flask.jsonify(a), 201, {"Location": f"/api/account/{a.uuid}"}
+    return flask.jsonify(a), 201, {"Location": f"/api/accounts/{a.uuid}"}
 
 
 def get(account_uuid: str) -> flask.Response:
-  """GET /api/account/{account_uuid}
+  """GET /api/accounts/{account_uuid}
 
   Args:
     account_uuid: UUID of Account to find
@@ -75,7 +75,7 @@ def update(account_uuid: str) -> flask.Response:
 
 
 def delete(account_uuid: str) -> flask.Response:
-  """DELETE /api/account/{account_uuid}
+  """DELETE /api/accounts/{account_uuid}
 
   Args:
     account_uuid: UUID of Account to delete

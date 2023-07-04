@@ -1,4 +1,4 @@
-"""Test module nummus.web.controller_asset
+"""Test module nummus.web.controller_assets
 """
 
 import datetime
@@ -9,8 +9,8 @@ from nummus.models import (Asset, AssetCategory, AssetValuation,
 from tests.web.base import WebTestBase
 
 
-class TestControllerAsset(WebTestBase):
-  """Test controller_asset methods
+class TestControllerAssets(WebTestBase):
+  """Test controller_assets methods
   """
 
   def test_create(self):
@@ -22,10 +22,10 @@ class TestControllerAsset(WebTestBase):
     # Make the minimum
     req = {"name": name, "category": category}
 
-    result, headers = self.api_post("/api/asset", json=req)
+    result, headers = self.api_post("/api/assets", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
-      self.assertEqual(f"/api/asset/{a.uuid}", headers["Location"])
+      self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
@@ -46,10 +46,10 @@ class TestControllerAsset(WebTestBase):
         "tag": tag
     }
 
-    result, headers = self.api_post("/api/asset", json=req)
+    result, headers = self.api_post("/api/assets", json=req)
     with p.get_session() as s:
       a = s.query(Asset).first()
-      self.assertEqual(f"/api/asset/{a.uuid}", headers["Location"])
+      self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
@@ -57,7 +57,7 @@ class TestControllerAsset(WebTestBase):
 
     # Fewer keys are bad
     req = {"name": name}
-    self.api_post("/api/asset", json=req, rc=400)
+    self.api_post("/api/assets", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -72,7 +72,7 @@ class TestControllerAsset(WebTestBase):
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/asset/{a_uuid}")
+    result, _ = self.api_get(f"/api/assets/{a_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -94,7 +94,7 @@ class TestControllerAsset(WebTestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    result, _ = self.api_put(f"/api/asset/{a_uuid}", json=req)
+    result, _ = self.api_put(f"/api/assets/{a_uuid}", json=req)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
@@ -102,7 +102,7 @@ class TestControllerAsset(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    self.api_put(f"/api/asset/{a_uuid}", json=target, rc=400)
+    self.api_put(f"/api/assets/{a_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -131,7 +131,7 @@ class TestControllerAsset(WebTestBase):
       self.assertEqual(n_valuations, result)
 
     # Delete by uuid
-    self.api_delete(f"/api/asset/{a_uuid}")
+    self.api_delete(f"/api/assets/{a_uuid}")
 
     with p.get_session() as s:
       result = s.query(Asset).count()
@@ -212,7 +212,7 @@ class TestControllerAsset(WebTestBase):
       a_uuid = a.uuid
 
     # No image
-    self.api_get(f"/api/asset/{a_uuid}/image", rc=404)
+    self.api_get(f"/api/assets/{a_uuid}/image", rc=404)
 
     path_img = p.image_path.joinpath(f"{a_uuid}.png")
     with p.get_session() as s:
@@ -221,13 +221,13 @@ class TestControllerAsset(WebTestBase):
       s.commit()
 
     # Still no image
-    self.api_get(f"/api/asset/{a_uuid}/image", rc=404)
+    self.api_get(f"/api/assets/{a_uuid}/image", rc=404)
 
     fake_image = self.random_string().encode()
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    result, _ = self.api_get(f"/api/asset/{a_uuid}/image",
+    result, _ = self.api_get(f"/api/assets/{a_uuid}/image",
                              content_type="image/png")
     self.assertEqual(fake_image, result)
 
@@ -245,7 +245,7 @@ class TestControllerAsset(WebTestBase):
 
       a_uuid = a.uuid
 
-    self.api_put(f"/api/asset/{a_uuid}/image",
+    self.api_put(f"/api/assets/{a_uuid}/image",
                  data=fake_image,
                  headers={"Content-Type": "image/png"},
                  rc=204)
@@ -278,7 +278,7 @@ class TestControllerAsset(WebTestBase):
     with open(path_img, "wb") as file:
       file.write(fake_image)
 
-    self.api_delete(f"/api/asset/{a_uuid}/image")
+    self.api_delete(f"/api/assets/{a_uuid}/image")
 
     with p.get_session() as s:
       a = s.query(Asset).first()
@@ -287,7 +287,7 @@ class TestControllerAsset(WebTestBase):
     self.assertFalse(path_img.exists())
 
     # Doesn't exist anymore
-    self.api_delete(f"/api/asset/{a_uuid}/image", rc=404)
+    self.api_delete(f"/api/assets/{a_uuid}/image", rc=404)
 
     # If img_suffix is set but image is gone, clean up img_suffix
     with p.get_session() as s:
@@ -295,6 +295,6 @@ class TestControllerAsset(WebTestBase):
       a.img_suffix = path_img.suffix
       s.commit()
 
-      self.api_delete(f"/api/asset/{a_uuid}/image")
+      self.api_delete(f"/api/assets/{a_uuid}/image")
 
       self.assertIsNone(a.img_suffix)

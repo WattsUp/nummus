@@ -15,7 +15,7 @@ from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
-  """POST /api/transaction
+  """POST /api/transactions
 
   Returns:
     JSON response, see api.yaml for details
@@ -65,11 +65,11 @@ def create() -> flask.Response:
       t_split = TransactionSplit(parent=t, asset=asset, **d)
       s.add(t_split)
     s.commit()
-    return flask.jsonify(t), 201, {"Location": f"/api/transaction/{t.uuid}"}
+    return flask.jsonify(t), 201, {"Location": f"/api/transactions/{t.uuid}"}
 
 
 def get(transaction_uuid: str) -> flask.Response:
-  """GET /api/transaction/{transaction_uuid}
+  """GET /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to find
@@ -86,7 +86,7 @@ def get(transaction_uuid: str) -> flask.Response:
 
 
 def update(transaction_uuid: str) -> flask.Response:
-  """PUT /api/transaction/{transaction_uuid}
+  """PUT /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to update
@@ -153,7 +153,7 @@ def update(transaction_uuid: str) -> flask.Response:
 
 
 def delete(transaction_uuid: str) -> flask.Response:
-  """DELETE /api/transaction/{transaction_uuid}
+  """DELETE /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to delete

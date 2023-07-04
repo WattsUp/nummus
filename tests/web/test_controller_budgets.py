@@ -1,4 +1,4 @@
-"""Test module nummus.web.controller_budget
+"""Test module nummus.web.controller_budgets
 """
 
 from typing import Dict, List
@@ -10,8 +10,8 @@ from nummus.models import Budget, NummusJSONEncoder
 from tests.web.base import WebTestBase
 
 
-class TestControllerBudget(WebTestBase):
-  """Test controller_budget methods
+class TestControllerBudgets(WebTestBase):
+  """Test controller_budgets methods
   """
 
   def test_create(self):
@@ -38,10 +38,10 @@ class TestControllerBudget(WebTestBase):
         }
     }
 
-    result, headers = self.api_post("/api/budget", json=req)
+    result, headers = self.api_post("/api/budgets", json=req)
     with p.get_session() as s:
       b = s.query(Budget).first()
-      self.assertEqual(f"/api/budget/{b.uuid}", headers["Location"])
+      self.assertEqual(f"/api/budgets/{b.uuid}", headers["Location"])
 
       # Serialize then deserialize
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
@@ -52,7 +52,7 @@ class TestControllerBudget(WebTestBase):
 
     # Fewer keys are bad
     req = {"date": date}
-    self.api_post("/api/budget", json=req, rc=400)
+    self.api_post("/api/budgets", json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -68,7 +68,7 @@ class TestControllerBudget(WebTestBase):
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/budget/{b_uuid}")
+    result, _ = self.api_get(f"/api/budgets/{b_uuid}")
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -93,7 +93,7 @@ class TestControllerBudget(WebTestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    result, _ = self.api_put(f"/api/budget/{b_uuid}", json=req)
+    result, _ = self.api_put(f"/api/budgets/{b_uuid}", json=req)
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
@@ -101,7 +101,7 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    self.api_put(f"/api/budget/{b_uuid}", json=target, rc=400)
+    self.api_put(f"/api/budgets/{b_uuid}", json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -120,7 +120,7 @@ class TestControllerBudget(WebTestBase):
       self.assertEqual(1, result)
 
     # Delete by uuid
-    self.api_delete(f"/api/budget/{b_uuid}")
+    self.api_delete(f"/api/budgets/{b_uuid}")
 
     with p.get_session() as s:
       result = s.query(Budget).count()
