@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import datetime
 
@@ -10,6 +10,8 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus.models import base, asset
+
+Dates = List[datetime.date]
 
 
 class TransactionCategory(base.BaseEnum):
@@ -216,3 +218,111 @@ class Account(base.Base):
     if len(self.transactions) < 1:
       return None
     return self.transactions[-1].date
+
+  def get_value(
+      self, start: datetime.date,
+      end: datetime.date) -> Tuple[Dates, List[float], Dict[str, List[float]]]:
+    """Get the value of Account from start to end date
+
+    Args:
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      Also returns value by Asset (possibly empty for non-investment accounts)
+      List[dates], list[values], dict{Asset.uuid: list[values]}
+    """
+    date = start
+
+    dates: Dates = []
+    cash: List[float] = []
+    qty_assets: Dict[str, List[float]] = {}
+    assets: Dict[str, asset.Asset] = {}
+
+    current_cash = 0
+    current_qty_assets: Dict[str, float] = {}
+
+    for transaction in self.transactions:
+      if transaction.date > end:
+        continue
+      while date < transaction.date:
+        for k, v in current_qty_assets.items():
+          qty_assets[k].append(v)
+        dates.append(date)
+        cash.append(current_cash)
+        date += datetime.timedelta(days=1)
+
+      for split in transaction.splits:
+        a = split.asset
+        if a is None:
+          continue
+        if a.uuid not in current_qty_assets:
+          current_qty_assets[a.uuid] = 0
+          qty_assets[a.uuid] = [0] * len(dates)
+          assets[a.uuid] = a
+        current_qty_assets[a.uuid] += split.asset_quantity
+      current_cash += transaction.total
+
+    while date <= end:
+      for k, v in current_qty_assets.items():
+        qty_assets[k].append(v)
+      dates.append(date)
+      cash.append(current_cash)
+      date += datetime.timedelta(days=1)
+
+    # Assets qty to value
+    value_assets: Dict[str, List[float]] = {}
+    for asset_uuid, a in assets.items():
+      qty = qty_assets[asset_uuid]
+      # Value = quantity * price * multiplier
+      values = [p * m * q for p, m, q in zip(qty, *a.get_value(start, end)[1:])]
+      value_assets[asset_uuid] = values
+
+    # Sum with cash
+    values = [sum(x) for x in zip(cash, *value_assets.values())]
+
+    return dates, values, value_assets
+
+  def get_asset_qty(self, start: datetime.date,
+                    end: datetime.date) -> Tuple[Dates, Dict[str, List[float]]]:
+    """Get the quantity of Assets held from start to end date
+
+    Args:
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      List[dates], dict{Asset.uuid: list[values]}
+    """
+    date = start
+
+    dates: Dates = []
+    qty_assets: Dict[str, List[float]] = {}
+
+    current_qty_assets: Dict[str, float] = {}
+
+    for transaction in self.transactions:
+      if transaction.date > end:
+        continue
+      while date < transaction.date:
+        for k, v in current_qty_assets.items():
+          qty_assets[k].append(v)
+        dates.append(date)
+        date += datetime.timedelta(days=1)
+
+      for split in transaction.splits:
+        a = split.asset
+        if a is None:
+          continue
+        if a.uuid not in current_qty_assets:
+          current_qty_assets[a.uuid] = 0
+          qty_assets[a.uuid] = [0] * len(dates)
+        current_qty_assets[a.uuid] += split.asset_quantity
+
+    while date <= end:
+      for k, v in current_qty_assets.items():
+        qty_assets[k].append(v)
+      dates.append(date)
+      date += datetime.timedelta(days=1)
+
+    return dates, qty_assets

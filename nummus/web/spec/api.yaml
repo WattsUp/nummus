@@ -176,19 +176,12 @@ paths:
   #             schema:
   #               type: object
   #               properties:
-  #                 value:
-  #                   description: Worth of all assets held in this Account
-  #                   type: array
-  #                   items:
-  #                     type: number
-  #                     format: double
-  #                   example:
-  #                     - 10687.2
-  #                     - 1480.8
+  #                 values:
+  #                   $ref: "#/components/schemas/DoubleList"
   #                 dates:
   #                   $ref: "#/components/schemas/Dates"
-  #      "400":
-  #        description: Malformed request
+  #       "400":
+  #         description: Malformed request
   #       "404":
   #         description: Account not found
   #       "422":

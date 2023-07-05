@@ -160,7 +160,7 @@ class TestAsset(TestBase):
 
     self.assertEqual([v_before, v_today, v_after], a.valuations)
 
-  def test_value(self):
+  def test_get_value(self):
     session = self.get_session()
     models.metadata_create_all(session)
 
@@ -184,7 +184,8 @@ class TestAsset(TestBase):
                                    value=self._RNG.uniform(-1, 1))
     v_before = asset.AssetValuation(asset=a,
                                     date=today - datetime.timedelta(days=2),
-                                    value=self._RNG.uniform(-1, 1))
+                                    value=self._RNG.uniform(-1, 1),
+                                    multiplier=5)
     v_after = asset.AssetValuation(asset=a,
                                    date=today + datetime.timedelta(days=2),
                                    value=self._RNG.uniform(-1, 1))
@@ -198,12 +199,16 @@ class TestAsset(TestBase):
         0, v_before.value, v_before.value, v_today.value, v_today.value,
         v_after.value, v_after.value
     ]
+    target_multipliers = [1, 5, 5, 1, 1, 1, 1]
 
-    result_dates, result_values = a.value(target_dates[0], target_dates[-1])
-    self.assertListEqual(target_dates, result_dates)
-    self.assertListEqual(target_values, result_values)
+    r_dates, r_values, r_multipliers = a.get_value(target_dates[0],
+                                                   target_dates[-1])
+    self.assertListEqual(target_dates, r_dates)
+    self.assertListEqual(target_values, r_values)
+    self.assertListEqual(target_multipliers, r_multipliers)
 
     # Test single value
-    result_dates, result_values = a.value(today, today)
-    self.assertListEqual([today], result_dates)
-    self.assertListEqual([v_today.value], result_values)
+    r_dates, r_values, r_multipliers = a.get_value(today, today)
+    self.assertListEqual([today], r_dates)
+    self.assertListEqual([v_today.value], r_values)
+    self.assertListEqual([1], r_multipliers)

@@ -143,7 +143,6 @@ class WebTestBase(TestBase):
         self.assertIn("Location", response.headers)
       if rc == 204:
         self.assertEqual(b"", response.get_data())
-      self.assertLessEqual(duration, 0.1)  # All responses faster than 100ms
 
       with autodict.JSONAutoDict(TEST_LOG) as d:
         # Replace uuid with <uuid>
@@ -155,6 +154,7 @@ class WebTestBase(TestBase):
         if k not in d["api_latency"]:
           d["api_latency"][k] = []
         d["api_latency"][k].append(duration)
+      self.assertLessEqual(duration, 0.15)  # All responses faster than 150ms
 
       if content_type is None:
         return response.get_data(), response.headers

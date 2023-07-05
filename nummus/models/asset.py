@@ -11,6 +11,8 @@ from sqlalchemy import orm
 
 from nummus.models import base
 
+Dates = List[datetime.date]
+
 
 class AssetValuation(base.Base):
   """Asset Valuation model for storing a value of an asset on a specific date
@@ -85,8 +87,8 @@ class Asset(base.Base):
       return None
     return f"{self.uuid}{s}"
 
-  def value(self, start: datetime.date,
-            end: datetime.date) -> Tuple[List[datetime.date], List[float]]:
+  def get_value(self, start: datetime.date,
+                end: datetime.date) -> Tuple[Dates, List[float], List[float]]:
     """Get the value of Asset from start to end date
 
     Args:
@@ -94,24 +96,29 @@ class Asset(base.Base):
       end: Last date to evaluate (inclusive)
 
     Returns:
-      List[dates], list[values]
+      List[dates], list[values], list[multipliers]
     """
     date = start
 
-    dates: List[datetime.date] = []
+    dates: Dates = []
     values: List[float] = []
+    multipliers: List[float] = []
 
     value = 0
+    multiplier = 1
     for valuation in self.valuations:
       if valuation.date > end:
         continue
       while date < valuation.date:
         values.append(value)
+        multipliers.append(multiplier)
         dates.append(date)
         date += datetime.timedelta(days=1)
       value = valuation.value
+      multiplier = valuation.multiplier
     while date <= end:
       values.append(value)
+      multipliers.append(multiplier)
       dates.append(date)
       date += datetime.timedelta(days=1)
-    return dates, values
+    return dates, values, multipliers
