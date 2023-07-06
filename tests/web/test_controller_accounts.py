@@ -235,3 +235,46 @@ class TestControllerAccounts(WebTestBase):
 
     result_other_way, _ = self.api_get("/api/transactions", {"account": a_uuid})
     self.assertEqual(result, result_other_way)
+
+  def test_get_value(self):
+    p = self._portfolio
+
+    # Create accounts
+    a_checking = Account(name="Monkey Bank Checking",
+                         institution="Monkey Bank",
+                         category=AccountCategory.CASH)
+    n_transactions = 10
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    with p.get_session() as s:
+      s.add(a_checking)
+      s.commit()
+
+      value = 0
+      for _ in range(n_transactions):
+        t = Transaction(account=a_checking,
+                        date=today,
+                        total=self._RNG.uniform(-10, 10),
+                        statement=self.random_string())
+        t_split = TransactionSplit(total=t.total, parent=t)
+        value += t.total
+        s.add_all((t, t_split))
+      s.commit()
+
+      a_uuid = a_checking.uuid
+    endpoint = f"/api/accounts/{a_uuid}/value"
+
+    result, _ = self.api_get(endpoint)
+    target = {"values": [value], "dates": [today.isoformat()]}
+    self.assertEqual(target, result)
+
+    result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
+    target = {
+        "values": [0, value],
+        "dates": [yesterday.isoformat(),
+                  today.isoformat()]
+    }
+    self.assertEqual(target, result)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)

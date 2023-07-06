@@ -157,35 +157,35 @@ paths:
           description: Malformed request
         "404":
           description: Account not found
-  # /accounts/{accountUUID}/value:
-  #   get:
-  #     tags:
-  #       - Account
-  #     summary: Get value of Account
-  #     description: ""
-  #     operationId: nummus.web.controller_accounts.get_value
-  #     parameters:
-  #       - $ref: "#/components/parameters/PathAccountUUID"
-  #       - $ref: "#/components/parameters/Start"
-  #       - $ref: "#/components/parameters/End"
-  #     responses:
-  #       "200":
-  #         description: Successful operation
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 values:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 dates:
-  #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Malformed request
-  #       "404":
-  #         description: Account not found
-  #       "422":
-  #         description: Invalid parameter supplied
+  /accounts/{accountUUID}/value:
+    get:
+      tags:
+        - Account
+      summary: Get value of Account
+      description: ""
+      operationId: nummus.web.controller_accounts.get_value
+      parameters:
+        - $ref: "#/components/parameters/PathAccountUUID"
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  values:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
+        "400":
+          description: Malformed request
+        "404":
+          description: Account not found
+        "422":
+          description: Invalid parameter supplied
   /accounts/{accountUUID}/transactions:
     get:
       tags:

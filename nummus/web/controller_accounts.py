@@ -3,11 +3,14 @@
 
 from typing import Dict
 
+import datetime
+
 import flask
 
 from nummus import portfolio
 from nummus.models import Account, AccountCategory
 from nummus.web import common, controller_transactions
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
@@ -138,3 +141,30 @@ def get_transactions(account_uuid: str) -> flask.Response:
   args = flask.request.args.to_dict()
   args["account"] = account_uuid
   return controller_transactions.get_all(args)
+
+
+def get_value(account_uuid: str) -> flask.Response:
+  """GET /api/accounts/{account_uuid}/value
+
+  Args:
+    account_uuid: UUID of Account to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
+
+  args: Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start", today))
+  end = common.parse_date(args.get("end", today))
+  if end < start:
+    raise HTTPError(422, detail="End date must be on or after Start date")
+
+  with p.get_session() as s:
+    a = common.find_account(s, account_uuid)
+
+    dates, values, _ = a.get_value(start, end)
+    response = {"values": values, "dates": dates}
+    return flask.jsonify(response)
