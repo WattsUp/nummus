@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 import datetime
 
@@ -10,6 +10,8 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus.models import base
+
+Dates = List[datetime.date]
 
 
 class AssetValuation(base.Base):
@@ -70,7 +72,53 @@ class Asset(base.Base):
   category: orm.Mapped[AssetCategory]
   unit: orm.Mapped[Optional[str]]
   tag: orm.Mapped[Optional[str]]
+  img_suffix: orm.Mapped[Optional[str]]
 
   # TODO (WattsUp) Move to write only relationship if too slow
   valuations: orm.Mapped[List[AssetValuation]] = orm.relationship(
-      back_populates="asset")
+      back_populates="asset", order_by=AssetValuation.date)
+
+  @property
+  def image_name(self) -> str:
+    """Get name of Asset's image, None if it doesn't exist
+    """
+    s = self.img_suffix
+    if s is None:
+      return None
+    return f"{self.uuid}{s}"
+
+  def get_value(self, start: datetime.date,
+                end: datetime.date) -> Tuple[Dates, List[float], List[float]]:
+    """Get the value of Asset from start to end date
+
+    Args:
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      List[dates], list[values], list[multipliers]
+    """
+    date = start
+
+    dates: Dates = []
+    values: List[float] = []
+    multipliers: List[float] = []
+
+    value = 0
+    multiplier = 1
+    for valuation in self.valuations:
+      if valuation.date > end:
+        continue
+      while date < valuation.date:
+        values.append(value)
+        multipliers.append(multiplier)
+        dates.append(date)
+        date += datetime.timedelta(days=1)
+      value = valuation.value
+      multiplier = valuation.multiplier
+    while date <= end:
+      values.append(value)
+      multipliers.append(multiplier)
+      dates.append(date)
+      date += datetime.timedelta(days=1)
+    return dates, values, multipliers

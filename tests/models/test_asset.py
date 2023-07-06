@@ -63,7 +63,8 @@ class TestAsset(TestBase):
         "description": self.random_string(),
         "category": asset.AssetCategory.SECURITY,
         "unit": self.random_string(),
-        "tag": self.random_string()
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
     }
 
     a = asset.Asset(**d)
@@ -75,12 +76,18 @@ class TestAsset(TestBase):
     self.assertEqual(d["category"], a.category)
     self.assertEqual(d["unit"], a.unit)
     self.assertEqual(d["tag"], a.tag)
+    self.assertEqual(d["img_suffix"], a.img_suffix)
+    self.assertEqual(f"{a.uuid}{d['img_suffix']}", a.image_name)
     self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
     d["uuid"] = a.uuid
+    d.pop("img_suffix")
     result = a.to_dict()
     self.assertDictEqual(d, result)
+
+    a.img_suffix = None
+    self.assertIsNone(a.image_name)
 
     d = {
         "asset_id": a.id,
@@ -109,3 +116,99 @@ class TestAsset(TestBase):
     self.assertEqual([], result)
     result = session.query(asset.AssetValuation).all()
     self.assertEqual([], result)
+
+  def test_add_valuations(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    d = {
+        "name": self.random_string(),
+        "description": self.random_string(),
+        "category": asset.AssetCategory.SECURITY,
+        "unit": self.random_string(),
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
+    }
+
+    a = asset.Asset(**d)
+    session.add(a)
+    session.commit()
+
+    v_today = asset.AssetValuation(asset=a,
+                                   date=today,
+                                   value=self._RNG.uniform(-1, 1))
+    session.add(v_today)
+    session.commit()
+
+    self.assertEqual([v_today], a.valuations)
+
+    v_before = asset.AssetValuation(asset=a,
+                                    date=today - datetime.timedelta(days=1),
+                                    value=self._RNG.uniform(-1, 1))
+    session.add(v_before)
+    session.commit()
+
+    self.assertEqual([v_before, v_today], a.valuations)
+
+    v_after = asset.AssetValuation(asset=a,
+                                   date=today + datetime.timedelta(days=1),
+                                   value=self._RNG.uniform(-1, 1))
+    session.add(v_after)
+    session.commit()
+
+    self.assertEqual([v_before, v_today, v_after], a.valuations)
+
+  def test_get_value(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    d = {
+        "name": self.random_string(),
+        "description": self.random_string(),
+        "category": asset.AssetCategory.SECURITY,
+        "unit": self.random_string(),
+        "tag": self.random_string(),
+        "img_suffix": self.random_string()
+    }
+
+    a = asset.Asset(**d)
+    session.add(a)
+    session.commit()
+
+    v_today = asset.AssetValuation(asset=a,
+                                   date=today,
+                                   value=self._RNG.uniform(-1, 1))
+    v_before = asset.AssetValuation(asset=a,
+                                    date=today - datetime.timedelta(days=2),
+                                    value=self._RNG.uniform(-1, 1),
+                                    multiplier=5)
+    v_after = asset.AssetValuation(asset=a,
+                                   date=today + datetime.timedelta(days=2),
+                                   value=self._RNG.uniform(-1, 1))
+    session.add_all((v_today, v_before, v_after))
+    session.commit()
+
+    target_dates = [
+        today + datetime.timedelta(days=i) for i in range(-3, 3 + 1)
+    ]
+    target_values = [
+        0, v_before.value, v_before.value, v_today.value, v_today.value,
+        v_after.value, v_after.value
+    ]
+    target_multipliers = [1, 5, 5, 1, 1, 1, 1]
+
+    r_dates, r_values, r_multipliers = a.get_value(target_dates[0],
+                                                   target_dates[-1])
+    self.assertListEqual(target_dates, r_dates)
+    self.assertListEqual(target_values, r_values)
+    self.assertListEqual(target_multipliers, r_multipliers)
+
+    # Test single value
+    r_dates, r_values, r_multipliers = a.get_value(today, today)
+    self.assertListEqual([today], r_dates)
+    self.assertListEqual([v_today.value], r_values)
+    self.assertListEqual([1], r_multipliers)

@@ -1,4 +1,4 @@
-"""Test module nummus.web.controller_budget
+"""Test module nummus.web.controller_budgets
 """
 
 from typing import Dict, List
@@ -10,8 +10,8 @@ from nummus.models import Budget, NummusJSONEncoder
 from tests.web.base import WebTestBase
 
 
-class TestControllerBudget(WebTestBase):
-  """Test controller_budget methods
+class TestControllerBudgets(WebTestBase):
+  """Test controller_budgets methods
   """
 
   def test_create(self):
@@ -37,20 +37,22 @@ class TestControllerBudget(WebTestBase):
             "travel": travel
         }
     }
-
-    result = self.api_post("/api/budget", json=req)
+    endpoint = "/api/budgets"
+    result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
-      a = s.query(Budget).first()
-      # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      b = s.query(Budget).first()
+      self.assertEqual(f"/api/budgets/{b.uuid}", headers["Location"])
 
-      s.delete(a)
+      # Serialize then deserialize
+      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      s.delete(b)
       s.commit()
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {"date": date}
-    self.api_post("/api/budget", json=req, rc=400)
+    self.api_post(endpoint, json=req, rc=400)
 
   def test_get(self):
     p = self._portfolio
@@ -64,9 +66,10 @@ class TestControllerBudget(WebTestBase):
 
       b_uuid = b.uuid
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+    endpoint = f"/api/budgets/{b_uuid}"
 
     # Get by uuid
-    result = self.api_get(f"/api/budget/{b_uuid}")
+    result, _ = self.api_get(endpoint)
     self.assertEqual(target, result)
 
   def test_update(self):
@@ -81,6 +84,7 @@ class TestControllerBudget(WebTestBase):
 
       b_uuid = b.uuid
       target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+    endpoint = f"/api/budgets/{b_uuid}"
 
     # Update by uuid
     new_date = today - datetime.timedelta(days=1)
@@ -91,7 +95,7 @@ class TestControllerBudget(WebTestBase):
     req = dict(target)
     req.pop("uuid")
     req.pop("total")
-    result = self.api_put(f"/api/budget/{b_uuid}", json=req)
+    result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
@@ -99,7 +103,7 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    self.api_put(f"/api/budget/{b_uuid}", json=target, rc=400)
+    self.api_put(endpoint, json=target, rc=400)
 
   def test_delete(self):
     p = self._portfolio
@@ -112,15 +116,14 @@ class TestControllerBudget(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+    endpoint = f"/api/budgets/{b_uuid}"
 
     with p.get_session() as s:
       result = s.query(Budget).count()
       self.assertEqual(1, result)
 
     # Delete by uuid
-    result = self.api_delete(f"/api/budget/{b_uuid}")
-    self.assertEqual(target, result)
+    self.api_delete(endpoint)
 
     with p.get_session() as s:
       result = s.query(Budget).count()
@@ -132,6 +135,7 @@ class TestControllerBudget(WebTestBase):
     # Create budget
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
     b_today = Budget(date=today)
     b_yesterday = Budget(date=yesterday)
     with p.get_session() as s:
@@ -140,32 +144,33 @@ class TestControllerBudget(WebTestBase):
       query = s.query(Budget).order_by(Budget.date)
       budgets: List[Dict[str, object]] = json.loads(
           json.dumps(query.all(), cls=NummusJSONEncoder))
+    endpoint = "/api/budgets"
 
     # Get all
-    result = self.api_get("/api/budgets")
+    result, _ = self.api_get(endpoint)
     target = {"budgets": budgets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Sort by newest first
-    result = self.api_get("/api/budgets", {"sort": "newest"})
+    result, _ = self.api_get(endpoint, {"sort": "newest"})
     target = {"budgets": budgets[::-1], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging
-    result = self.api_get("/api/budgets", {"limit": 1})
+    result, _ = self.api_get(endpoint, {"limit": 1})
     target = {"budgets": budgets[:1], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/budgets", {"limit": 1, "offset": 1})
+    result, _ = self.api_get(endpoint, {"limit": 1, "offset": 1})
     target = {"budgets": budgets[1:], "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Get via paging reverse
-    result = self.api_get("/api/budgets", {"limit": 1, "sort": "newest"})
+    result, _ = self.api_get(endpoint, {"limit": 1, "sort": "newest"})
     target = {"budgets": budgets[1:], "count": 2, "next_offset": 1}
     self.assertEqual(target, result)
 
-    result = self.api_get("/api/budgets", {
+    result, _ = self.api_get(endpoint, {
         "limit": 1,
         "offset": 1,
         "sort": "newest"
@@ -174,14 +179,17 @@ class TestControllerBudget(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by start date
-    result = self.api_get("/api/budgets", {"start": today})
+    result, _ = self.api_get(endpoint, {"start": today, "end": tomorrow})
     target = {"budgets": budgets[1:], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
     # Filter by end date
-    result = self.api_get("/api/budgets", {"end": yesterday})
+    result, _ = self.api_get(endpoint, {"end": yesterday})
     target = {"budgets": budgets[:1], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
+
     # Strict query validation
-    self.api_get("/api/budgets", {"fake": "invalid"}, rc=400)
+    self.api_get(endpoint, {"fake": "invalid"}, rc=400)

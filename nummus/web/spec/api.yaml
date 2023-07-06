@@ -56,91 +56,13 @@ paths:
                     format: "[major].[minor].[patch](-tweak)"
                     pattern: ^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-?([a-zA-Z\d][-a-zA-Z.\d]*)?$
                     example: 10.2.0-rc1-alpha
-  /account:
-    post:
-      tags:
-        - Account
-      summary: Add a new Account to the portfolio
-      description: ""
-      operationId: nummus.web.controller_account.create
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Account"
-        "400":
-          description: Invalid parameter supplied
-      requestBody:
-        $ref: "#/components/requestBodies/Account"
-  /account/{accountUUID}:
-    get:
-      tags:
-        - Account
-      summary: Find Account by UUID
-      description: Returns a single Account
-      operationId: nummus.web.controller_account.get
-      parameters:
-        - $ref: "#/components/parameters/PathAccountUUID"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Account"
-        "400":
-          description: Invalid parameter supplied
-        "404":
-          description: Account not found
-    put:
-      tags:
-        - Account
-      summary: Update an existing Account
-      description: ""
-      operationId: nummus.web.controller_account.update
-      parameters:
-        - $ref: "#/components/parameters/PathAccountUUID"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Account"
-        "400":
-          description: Invalid parameter supplied
-        "404":
-          description: Account not found
-      requestBody:
-        $ref: "#/components/requestBodies/Account"
-    delete:
-      tags:
-        - Account
-      summary: Delete an Account
-      description: Deletes the Account and all associated Transactions
-      operationId: nummus.web.controller_account.delete
-      parameters:
-        - $ref: "#/components/parameters/PathAccountUUID"
-      responses:
-        "200":
-          description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Account"
-        "400":
-          description: Invalid parameter supplied
-        "404":
-          description: Account not found
   /accounts:
     get:
       tags:
         - Account
       summary: Get Accounts of Portfolio
       description: ""
-      operationId: nummus.web.controller_account.get_all
+      operationId: nummus.web.controller_accounts.get_all
       parameters:
         - $ref: "#/components/parameters/Search"
         - $ref: "#/components/parameters/AccountCategory"
@@ -160,93 +82,166 @@ paths:
                     description: Number of matches to request query
                     type: number
                     format: integer
-        "400":
+        "422":
           description: Invalid parameter supplied
-  /asset:
     post:
       tags:
-        - Asset
-      summary: Add a new Asset to the portfolio
+        - Account
+      summary: Add a new Account to the portfolio
       description: ""
-      operationId: nummus.web.controller_asset.create
+      operationId: nummus.web.controller_accounts.create
       responses:
-        "200":
-          description: Successful operation
+        "201":
+          description: Account created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Asset"
+                $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
-        $ref: "#/components/requestBodies/Asset"
-  /asset/{assetUUID}:
+        $ref: "#/components/requestBodies/Account"
+  /accounts/{accountUUID}:
     get:
       tags:
-        - Asset
-      summary: Find Asset by UUID
-      description: Returns a single Asset
-      operationId: nummus.web.controller_asset.get
+        - Account
+      summary: Find Account by UUID
+      description: Returns a single Account
+      operationId: nummus.web.controller_accounts.get
       parameters:
-        - $ref: "#/components/parameters/PathAssetUUID"
+        - $ref: "#/components/parameters/PathAccountUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Asset"
+                $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Asset not found
+          description: Account not found
     put:
       tags:
-        - Asset
-      summary: Update an existing Asset
+        - Account
+      summary: Update an existing Account
       description: ""
-      operationId: nummus.web.controller_asset.update
+      operationId: nummus.web.controller_accounts.update
       parameters:
-        - $ref: "#/components/parameters/PathAssetUUID"
+        - $ref: "#/components/parameters/PathAccountUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Asset"
+                $ref: "#/components/schemas/Account"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Asset not found
+          description: Account not found
       requestBody:
-        $ref: "#/components/requestBodies/Asset"
+        $ref: "#/components/requestBodies/Account"
     delete:
       tags:
-        - Asset
-      summary: Delete an Asset
-      description: Deletes the Asset
-      operationId: nummus.web.controller_asset.delete
+        - Account
+      summary: Delete an Account
+      description: Deletes the Account and all associated Transactions
+      operationId: nummus.web.controller_accounts.delete
       parameters:
-        - $ref: "#/components/parameters/PathAssetUUID"
+        - $ref: "#/components/parameters/PathAccountUUID"
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Malformed request
+        "404":
+          description: Account not found
+  /accounts/{accountUUID}/value:
+    get:
+      tags:
+        - Account
+      summary: Get value of Account
+      description: ""
+      operationId: nummus.web.controller_accounts.get_value
+      parameters:
+        - $ref: "#/components/parameters/PathAccountUUID"
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Asset"
+                type: object
+                properties:
+                  values:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Asset not found
+          description: Account not found
+        "422":
+          description: Invalid parameter supplied
+  /accounts/{accountUUID}/transactions:
+    get:
+      tags:
+        - Account
+        - Transaction
+      summary: Get Transactions of Account
+      description: Returns same data as /transactions?account=Account.uuid
+      operationId: nummus.web.controller_accounts.get_transactions
+      parameters:
+        - $ref: "#/components/parameters/PathAccountUUID"
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - $ref: "#/components/parameters/SortByAge"
+        - $ref: "#/components/parameters/Limit"
+        - $ref: "#/components/parameters/Offset"
+        - $ref: "#/components/parameters/Search"
+        - $ref: "#/components/parameters/TransactionCategory"
+        - $ref: "#/components/parameters/TransactionSubcategory"
+        - $ref: "#/components/parameters/TransactionTag"
+        - $ref: "#/components/parameters/TransactionLocked"
+        - $ref: "#/components/parameters/AssetUUID"
+        - $ref: "#/components/parameters/AssetCategoryExplicit"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/TransactionSplit"
+                  count:
+                    description: Number of matches to request query
+                    type: number
+                    format: integer
+                  next_offset:
+                    description: Offset to use to fetch next page, null
+                      indicates no more pages available
+                    type: integer
+                    nullable: true
+        "400":
+          description: Malformed request
+        "404":
+          description: Account or Asset not found
+        "422":
+          description: Invalid parameter supplied
   /assets:
     get:
       tags:
         - Asset
       summary: Get Assets of Portfolio
       description: ""
-      operationId: nummus.web.controller_asset.get_all
+      operationId: nummus.web.controller_assets.get_all
       parameters:
         - $ref: "#/components/parameters/Limit"
         - $ref: "#/components/parameters/Offset"
@@ -274,92 +269,173 @@ paths:
                     type: integer
                     nullable: true
         "400":
-          description: Invalid parameter supplied
-  /budget:
+          description: Malformed request
     post:
       tags:
-        - Budget
-      summary: Add a new Budget to the portfolio
+        - Asset
+      summary: Add a new Asset to the portfolio
       description: ""
-      operationId: nummus.web.controller_budget.create
+      operationId: nummus.web.controller_assets.create
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Budget"
+                $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
-        $ref: "#/components/requestBodies/Budget"
-  /budget/{budgetUUID}:
+        $ref: "#/components/requestBodies/Asset"
+  /assets/{assetUUID}:
     get:
       tags:
-        - Budget
-      summary: Find Budget by UUID
-      description: Returns a single Budget
-      operationId: nummus.web.controller_budget.get
+        - Asset
+      summary: Find Asset by UUID
+      description: Returns a single Asset
+      operationId: nummus.web.controller_assets.get
       parameters:
-        - $ref: "#/components/parameters/PathBudgetUUID"
+        - $ref: "#/components/parameters/PathAssetUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Budget"
+                $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Budget not found
+          description: Asset not found
     put:
       tags:
-        - Budget
-      summary: Update an existing Budget
+        - Asset
+      summary: Update an existing Asset
       description: ""
-      operationId: nummus.web.controller_budget.update
+      operationId: nummus.web.controller_assets.update
       parameters:
-        - $ref: "#/components/parameters/PathBudgetUUID"
+        - $ref: "#/components/parameters/PathAssetUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Budget"
+                $ref: "#/components/schemas/Asset"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Budget not found
+          description: Asset not found
       requestBody:
-        $ref: "#/components/requestBodies/Budget"
+        $ref: "#/components/requestBodies/Asset"
     delete:
       tags:
-        - Budget
-      summary: Delete an Budget
-      description: Deletes the Budget
-      operationId: nummus.web.controller_budget.delete
+        - Asset
+      summary: Delete an Asset
+      description: Deletes the Asset
+      operationId: nummus.web.controller_assets.delete
       parameters:
-        - $ref: "#/components/parameters/PathBudgetUUID"
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Malformed request
+        "404":
+          description: Asset not found
+  /assets/{assetUUID}/image:
+    get:
+      tags:
+        - Asset
+      summary: Get image of asset
+      description: Returns image of asset
+      operationId: nummus.web.controller_assets.get_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "200":
+          $ref: "#/components/responses/Image"
+        "400":
+          description: Malformed request
+        "404":
+          description: Asset or Asset Image not found
+    put:
+      tags:
+        - Asset
+      summary: Upload image of asset
+      description: Images limited to 1MB
+      operationId: nummus.web.controller_assets.update_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Malformed request
+        "404":
+          description: Asset or Asset Image not found
+        "411":
+          description: Missing Content-Length
+        "413":
+          description: Payload is too large
+        "415":
+          description: Unsupported image type
+        "422":
+          description: Missing Content-Type
+      requestBody:
+        $ref: "#/components/requestBodies/Image"
+    delete:
+      tags:
+        - Asset
+      summary: Delete image of asset
+      description: Deletes image of asset
+      operationId: nummus.web.controller_assets.delete_image
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Malformed request
+        "404":
+          description: Asset or Asset Image not found
+  # TODO (WattsUp) Figure out manual/auto AssetValuation API
+  /assets/{assetUUID}/value:
+    get:
+      tags:
+        - Asset
+      summary: Get value of Asset
+      description: ""
+      operationId: nummus.web.controller_assets.get_value
+      parameters:
+        - $ref: "#/components/parameters/PathAssetUUID"
+        - $ref: "#/components/parameters/StartToday"
+        - $ref: "#/components/parameters/End"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Budget"
+                type: object
+                properties:
+                  values:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Budget not found
+          description: Asset not found
+        "422":
+          description: Invalid parameter supplied
   /budgets:
     get:
       tags:
         - Budget
       summary: Get Budgets of Portfolio
       description: ""
-      operationId: nummus.web.controller_budget.get_all
+      operationId: nummus.web.controller_budgets.get_all
       parameters:
         - $ref: "#/components/parameters/Start"
         - $ref: "#/components/parameters/End"
@@ -388,92 +464,89 @@ paths:
                     type: integer
                     nullable: true
         "400":
+          description: Malformed request
+        "422":
           description: Invalid parameter supplied
-  /transaction:
     post:
       tags:
-        - Transaction
-      summary: Add a new Transaction to the portfolio
+        - Budget
+      summary: Add a new Budget to the portfolio
       description: ""
-      operationId: nummus.web.controller_transaction.create
+      operationId: nummus.web.controller_budgets.create
       responses:
-        "200":
+        "201":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Transaction"
+                $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
       requestBody:
-        $ref: "#/components/requestBodies/Transaction"
-  /transaction/{transactionUUID}:
+        $ref: "#/components/requestBodies/Budget"
+  /budgets/{budgetUUID}:
     get:
       tags:
-        - Transaction
-      summary: Find Transaction by UUID
-      description: Returns a single Transaction
-      operationId: nummus.web.controller_transaction.get
+        - Budget
+      summary: Find Budget by UUID
+      description: Returns a single Budget
+      operationId: nummus.web.controller_budgets.get
       parameters:
-        - $ref: "#/components/parameters/PathTransactionUUID"
+        - $ref: "#/components/parameters/PathBudgetUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Transaction"
+                $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Transaction not found
+          description: Budget not found
     put:
       tags:
-        - Transaction
-      summary: Update an existing Transaction
+        - Budget
+      summary: Update an existing Budget
       description: ""
-      operationId: nummus.web.controller_transaction.update
+      operationId: nummus.web.controller_budgets.update
       parameters:
-        - $ref: "#/components/parameters/PathTransactionUUID"
+        - $ref: "#/components/parameters/PathBudgetUUID"
       responses:
         "200":
           description: Successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Transaction"
+                $ref: "#/components/schemas/Budget"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Transaction not found
+          description: Budget not found
       requestBody:
-        $ref: "#/components/requestBodies/Transaction"
+        $ref: "#/components/requestBodies/Budget"
     delete:
       tags:
-        - Transaction
-      summary: Delete an Transaction
-      description: Deletes the Transaction
-      operationId: nummus.web.controller_transaction.delete
+        - Budget
+      summary: Delete an Budget
+      description: Deletes the Budget
+      operationId: nummus.web.controller_budgets.delete
       parameters:
-        - $ref: "#/components/parameters/PathTransactionUUID"
+        - $ref: "#/components/parameters/PathBudgetUUID"
       responses:
-        "200":
+        "204":
           description: Successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Transaction"
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
-          description: Transaction not found
+          description: Budget not found
   /transactions:
     get:
       tags:
         - Transaction
       summary: Get Transactions of Portfolio
       description: Returns TransactionSplits matching criteria
-      operationId: nummus.web.controller_transaction.get_all
+      operationId: nummus.web.controller_transactions.get_all
       parameters:
         - $ref: "#/components/parameters/Start"
         - $ref: "#/components/parameters/End"
@@ -501,15 +574,98 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/TransactionSplit"
+                  count:
+                    description: Number of matches to request query
+                    type: number
+                    format: integer
                   next_offset:
                     description: Offset to use to fetch next page, null
                       indicates no more pages available
                     type: integer
                     nullable: true
         "400":
-          description: Invalid parameter supplied
+          description: Malformed request
         "404":
           description: Account or Asset not found
+        "422":
+          description: Invalid parameter supplied
+    post:
+      tags:
+        - Transaction
+      summary: Add a new Transaction to the portfolio
+      description: ""
+      operationId: nummus.web.controller_transactions.create
+      responses:
+        "201":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Malformed request
+        "422":
+          description: Missing at least one TransactionSplit
+      requestBody:
+        $ref: "#/components/requestBodies/Transaction"
+  /transactions/{transactionUUID}:
+    get:
+      tags:
+        - Transaction
+      summary: Find Transaction by UUID
+      description: Returns a single Transaction
+      operationId: nummus.web.controller_transactions.get
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Malformed request
+        "404":
+          description: Transaction not found
+    put:
+      tags:
+        - Transaction
+      summary: Update an existing Transaction
+      description: ""
+      operationId: nummus.web.controller_transactions.update
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Transaction"
+        "400":
+          description: Malformed request
+        "404":
+          description: Transaction not found
+        "422":
+          description: Missing at least one TransactionSplit
+      requestBody:
+        $ref: "#/components/requestBodies/Transaction"
+    delete:
+      tags:
+        - Transaction
+      summary: Delete an Transaction
+      description: Deletes the Transaction
+      operationId: nummus.web.controller_transactions.delete
+      parameters:
+        - $ref: "#/components/parameters/PathTransactionUUID"
+      responses:
+        "204":
+          description: Successful operation
+        "400":
+          description: Malformed request
+        "404":
+          description: Transaction not found
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus
@@ -599,6 +755,13 @@ components:
       name: start
       in: query
       description: Filter data equal to or after this date
+      schema:
+        type: string
+        format: date
+    StartToday:
+      name: start
+      in: query
+      description: Filter data equal to or after this date, default is today
       schema:
         type: string
         format: date
@@ -1000,8 +1163,8 @@ components:
     Image:
       description: base64 encoded image
       type: string
-      format: byte
-      example: 6tZMso4sTUeoJTDg3UB3xw==
+      format: binary
+      example: \x89PNG\r\n\x1a\n...
     DoubleList:
       description: List of floating point values
       type: array

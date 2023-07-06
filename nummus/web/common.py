@@ -1,12 +1,15 @@
-"""Transaction API Controller
+"""Common API Controller
 """
 
 from typing import Dict, List, Tuple, Type
 
 import datetime
+import mimetypes
 import uuid
 
-import connexion
+from connexion.exceptions import ProblemException as HTTPError
+import flask
+import sqlalchemy
 from sqlalchemy import orm
 from thefuzz import process
 
@@ -31,15 +34,15 @@ def find_account(s: orm.Session, query: str) -> Account:
     Account
 
   Raises:
-    BadRequestProblem if UUID is malformed
-    ProblemException if Account is not found
+    HTTPError(400) if UUID is malformed
+    HTTPError(404) if Account is not found
   """
   # Clean
   account_uuid = str(parse_uuid(query))
   a = s.query(Account).where(Account.uuid == account_uuid).first()
   if a is None:
-    raise connexion.exceptions.ProblemException(
-        status=404, detail=f"Account {account_uuid} not found in Portfolio")
+    raise HTTPError(404,
+                    detail=f"Account {account_uuid} not found in Portfolio")
   return a
 
 
@@ -54,15 +57,14 @@ def find_asset(s: orm.Session, query: str) -> Asset:
     Asset
 
   Raises:
-    BadRequestProblem if UUID is malformed
-    ProblemException if Asset is not found
+    HTTPError(400) if UUID is malformed
+    HTTPError(404) if Asset is not found
   """
   # Clean
   asset_uuid = str(parse_uuid(query))
   a = s.query(Asset).where(Asset.uuid == asset_uuid).first()
   if a is None:
-    raise connexion.exceptions.ProblemException(
-        status=404, detail=f"Asset {asset_uuid} not found in Portfolio")
+    raise HTTPError(404, detail=f"Asset {asset_uuid} not found in Portfolio")
   return a
 
 
@@ -77,15 +79,14 @@ def find_budget(s: orm.Session, query: str) -> Budget:
     Budget
 
   Raises:
-    BadRequestProblem if UUID is malformed
-    ProblemException if Budget is not found
+    HTTPError(400) if UUID is malformed
+    HTTPError(404) if Budget is not found
   """
   # Clean
   asset_uuid = str(parse_uuid(query))
   a = s.query(Budget).where(Budget.uuid == asset_uuid).first()
   if a is None:
-    raise connexion.exceptions.ProblemException(
-        status=404, detail=f"Budget {asset_uuid} not found in Portfolio")
+    raise HTTPError(404, detail=f"Budget {asset_uuid} not found in Portfolio")
   return a
 
 
@@ -100,16 +101,16 @@ def find_transaction(s: orm.Session, query: str) -> Transaction:
     Transaction
 
   Raises:
-    BadRequestProblem if UUID is malformed
-    ProblemException if Transaction is not found
+    HTTPError(400) if UUID is malformed
+    HTTPError(404) if Transaction is not found
   """
   # Clean
   transaction_uuid = str(parse_uuid(query))
   t = s.query(Transaction).where(Transaction.uuid == transaction_uuid).first()
   if t is None:
-    raise connexion.exceptions.ProblemException(
-        status=404,
-        detail=f"Transaction{transaction_uuid} not found in Portfolio")
+    raise HTTPError(404,
+                    detail=f"Transaction{transaction_uuid} not "
+                    "found in Portfolio")
   return t
 
 
@@ -123,15 +124,14 @@ def parse_uuid(s: str) -> uuid.UUID:
     Parsed UUID
 
   Raises:
-    BadRequestProblem if UUID is malformed
+    HTTPError(400) if UUID is malformed
   """
   if isinstance(s, uuid.UUID) or s is None:
     return s
   try:
     return uuid.UUID(s)
   except ValueError as e:
-    raise connexion.exceptions.BadRequestProblem(
-        detail=f"Badly formed UUID: {s}, {e}") from e
+    raise HTTPError(400, detail=f"Badly formed UUID: {s}, {e}") from e
 
 
 def parse_date(s: str) -> datetime.date:
@@ -144,15 +144,14 @@ def parse_date(s: str) -> datetime.date:
     Parsed date
 
   Raises:
-    BadRequestProblem if date is malformed
+    HTTPError(400) if date is malformed
   """
   if isinstance(s, datetime.date) or s is None:
     return s
   try:
     return datetime.date.fromisoformat(s)
   except ValueError as e:
-    raise connexion.exceptions.BadRequestProblem(
-        detail=f"Badly formed date: {s}, {e}") from e
+    raise HTTPError(400, detail=f"Badly formed date: {s}, {e}") from e
 
 
 def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
@@ -165,18 +164,17 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
     Parsed enum
 
   Raises:
-    BadRequestProblem if enum is unknown
+    HTTPError(400) if enum is unknown
   """
   if isinstance(s, cls) or s is None:
     return s
   try:
     return cls.parse(s)
   except ValueError as e:
-    raise connexion.exceptions.BadRequestProblem(
-        detail=f"Unknown {cls.__name__}: {s}, {e}") from e
+    raise HTTPError(400, detail=f"Unknown {cls.__name__}: {s}, {e}") from e
 
 
-def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
+def search(query: orm.Query[Base], cls: Type[Base],
            search_str: str) -> orm.Query[Base]:
   """Perform a fuzzy search and return matches
 
@@ -207,7 +205,27 @@ def search(s: orm.Session, query: orm.Query[Base], cls: Type[Base],
     # Include poor matches to return something
     matching_ids: List[int] = [i for _, _, i in extracted[:5]]
 
-  return s.query(cls).where(cls.id.in_(matching_ids))
+  return query.session.query(cls).where(cls.id.in_(matching_ids))
+
+
+def query_count(query: orm.Query[Base]) -> int:
+  """Count the number of result a query will return
+
+  Args:
+    query: Session query to execute
+
+  Returns:
+    Number of instances query will return upon execution
+  """
+  # From here:
+  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
+  col_one = sqlalchemy.literal_column("1")
+  counter = query.statement.with_only_columns(
+      # It is callable, count returns a generator type
+      sqlalchemy.func.count(col_one),  # pylint: disable=not-callable
+      maintain_column_froms=True)
+  counter = counter.order_by(None)
+  return query.session.execute(counter).scalar()
 
 
 def paginate(query: orm.Query[Base], limit: int,
@@ -226,9 +244,7 @@ def paginate(query: orm.Query[Base], limit: int,
   offset = max(0, offset)
 
   # Get total number from filters
-  # TODO (WattsUp) replace if counting is too slow
-  # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
-  count = query.order_by(None).count()
+  count = query_count(query)
 
   # Apply limiting, and offset
   query = query.limit(limit).offset(offset)
@@ -244,3 +260,38 @@ def paginate(query: orm.Query[Base], limit: int,
     next_offset = None
 
   return results, count, next_offset
+
+
+def validate_image_upload(req: flask.Request) -> str:
+  """Checks image upload meets criteria for accepting
+
+  Args:
+    req: Request to validate
+
+  Returns:
+    Suffix of image based on content-type
+
+  Raises:
+    HTTPError(411): Missing Content-Length
+    HTTPError(413): Length > 1MB
+    HTTPError(415): Unsupported image type
+    HTTPError(422): Missing Content-Type
+  """
+  if req.content_length is None:
+    raise HTTPError(411, detail="Request missing Content-Length")
+
+  if req.content_type is None:
+    raise HTTPError(422, detail="Request missing Content-Type")
+
+  if not req.content_type.startswith("image/"):
+    raise HTTPError(415,
+                    detail=f"Content-type must be image/*: {req.content_type}")
+
+  suffix = mimetypes.guess_extension(req.content_type)
+  if suffix is None:
+    raise HTTPError(415, detail=f"Unsupported image type: {req.content_type}")
+
+  if req.content_length > 1e6:
+    raise HTTPError(413, detail=f"Payload length > 1MB: {req.content_length}B")
+
+  return suffix

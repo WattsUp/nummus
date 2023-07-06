@@ -3,15 +3,18 @@
 
 from typing import Dict
 
+import datetime
+
 import flask
 
 from nummus import portfolio
 from nummus.models import Account, AccountCategory
-from nummus.web import common
+from nummus.web import common, controller_transactions
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
-  """POST /api/account
+  """POST /api/accounts
 
   Returns:
     JSON response, see api.yaml for details
@@ -28,11 +31,11 @@ def create() -> flask.Response:
   with p.get_session() as s:
     s.add(a)
     s.commit()
-    return flask.jsonify(a)
+    return flask.jsonify(a), 201, {"Location": f"/api/accounts/{a.uuid}"}
 
 
 def get(account_uuid: str) -> flask.Response:
-  """GET /api/account/{account_uuid}
+  """GET /api/accounts/{account_uuid}
 
   Args:
     account_uuid: UUID of Account to find
@@ -75,7 +78,7 @@ def update(account_uuid: str) -> flask.Response:
 
 
 def delete(account_uuid: str) -> flask.Response:
-  """DELETE /api/account/{account_uuid}
+  """DELETE /api/accounts/{account_uuid}
 
   Args:
     account_uuid: UUID of Account to delete
@@ -89,8 +92,6 @@ def delete(account_uuid: str) -> flask.Response:
   with p.get_session() as s:
     a = common.find_account(s, account_uuid)
 
-    response = flask.jsonify(a)
-
     # Delete the transactions as well
     for t in a.transactions:
       for t_split in t.splits:
@@ -98,7 +99,7 @@ def delete(account_uuid: str) -> flask.Response:
       s.delete(t)
     s.delete(a)
     s.commit()
-    return response
+    return None
 
 
 def get_all() -> flask.Response:
@@ -119,7 +120,51 @@ def get_all() -> flask.Response:
     if category is not None:
       query = query.where(Account.category == category)
 
-    query = common.search(s, query, Account, search)
+    query = common.search(query, Account, search)
     accounts = query.all()
     response = {"accounts": accounts, "count": len(accounts)}
+    return flask.jsonify(response)
+
+
+def get_transactions(account_uuid: str) -> flask.Response:
+  """GET /api/accounts/{account_uuid}/transactions
+
+  Args:
+    account_uuid: UUID of Account to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  # Use controller_transactions' implementation
+  # Won't be faster unless account.transactions is lazy?
+  # TODO (WattsUp) Investigate performance if slow
+  args = flask.request.args.to_dict()
+  args["account"] = account_uuid
+  return controller_transactions.get_all(args)
+
+
+def get_value(account_uuid: str) -> flask.Response:
+  """GET /api/accounts/{account_uuid}/value
+
+  Args:
+    account_uuid: UUID of Account to find
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
+
+  args: Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start", today))
+  end = common.parse_date(args.get("end", today))
+  if end < start:
+    raise HTTPError(422, detail="End date must be on or after Start date")
+
+  with p.get_session() as s:
+    a = common.find_account(s, account_uuid)
+
+    dates, values, _ = a.get_value(start, end)
+    response = {"values": values, "dates": dates}
     return flask.jsonify(response)

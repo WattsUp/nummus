@@ -28,7 +28,7 @@ def main(command_line: List[str] = None) -> int:
   desc = """A personal financial information aggregator and planning tool.
 Collects and categorizes transactions, manages budgets, tracks investments,
 calculates net worth, and predicts future performance."""
-  home = pathlib.Path(os.path.expanduser("~"))
+  home = pathlib.Path(os.path.expanduser("~")).resolve()
   default_path = str(home.joinpath(".nummus", "portfolio.db"))
   parser = argparse.ArgumentParser(prog="nummus", description=desc)
   parser.add_argument("--version",

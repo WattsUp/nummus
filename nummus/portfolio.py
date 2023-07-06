@@ -45,14 +45,16 @@ class Portfolio:
     Raises:
       FileNotFoundError if database does not exist
     """
-    self._path_db = pathlib.Path(path)
+    self._path_db = pathlib.Path(path).resolve()
     self._path_config = self._path_db.with_suffix(".config")
+    self._path_images = self._path_db.parent.joinpath("images")
     if not self._path_db.exists():
       raise FileNotFoundError(f"Portfolio at {self._path_db} does not exist, "
                               "use Portfolio.create()")
     if not self._path_config.exists():
       raise FileNotFoundError("Portfolio configuration does not exist, "
                               "cannot open database")
+    self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
     self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
 
     if key is None:
@@ -100,18 +102,20 @@ class Portfolio:
     Raises:
       FileExistsError if database already exists
     """
-    path_db = pathlib.Path(path)
+    path_db = pathlib.Path(path).resolve()
     if path_db.exists():
       raise FileExistsError(f"Database already exists at {path_db}")
     # Drop any existing engine to database
     sql.drop_session(path_db)
     path_config = path_db.with_suffix(".config")
+    path_images = path_db.parent.joinpath("images")
 
     enc = None
     if encryption is not None and key is not None:
       enc = encryption.Encryption(key.encode())
 
     path_db.parent.mkdir(parents=True, exist_ok=True)
+    path_images.mkdir(exist_ok=True)
     salt = common.random_string(min_length=50, max_length=100)
     config = autodict.JSONAutoDict(path_config)
     config.clear()
@@ -121,6 +125,7 @@ class Portfolio:
     config["encrypt"] = enc is not None
     config.save()
     path_config.chmod(0o600)  # Only owner can read/write
+    path_images.chmod(0o700)  # Only owner can read/write
 
     if enc is None:
       password = Portfolio._NUMMUS_PASSWORD
@@ -346,3 +351,9 @@ class Portfolio:
 
     # Update config
     self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
+
+  @property
+  def image_path(self) -> pathlib.Path:
+    """Get path  path to image folder
+    """
+    return self._path_images

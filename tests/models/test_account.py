@@ -1,6 +1,8 @@
 """Test module nummus.models.account
 """
 
+from typing import List
+
 import datetime
 
 from nummus import models
@@ -193,3 +195,230 @@ class TestAccount(TestBase):
     self.assertEqual([t_before, t_today, t_after], a.transactions)
     self.assertEqual(t_before.date, a.opened_on)
     self.assertEqual(t_after.date, a.updated_on)
+
+  def test_get_asset_qty(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    a = account.Account(name=self.random_string(),
+                        institution=self.random_string(),
+                        category=account.AccountCategory.INVESTMENT)
+    assets: List[asset.Asset] = []
+    for _ in range(3):
+      new_asset = asset.Asset(name=self.random_string(),
+                              category=asset.AssetCategory.SECURITY)
+      assets.append(new_asset)
+    session.add(a)
+    session.add_all(assets)
+    session.commit()
+
+    target_dates = [
+        (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
+    ]
+    target_qty = {}
+
+    result_dates, result_qty = a.get_asset_qty(target_dates[0],
+                                               target_dates[-1])
+    self.assertEqual(target_dates, result_dates)
+    self.assertEqual(target_qty, result_qty)
+
+    # Fund account on first day
+    t = account.Transaction(account=a,
+                            date=target_dates[1],
+                            total=self._RNG.uniform(10, 100),
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t, total=t.total)
+    session.add_all((t, t_split))
+    session.commit()
+
+    # Buy asset[0] on the second day
+    q0 = self._RNG.uniform(0, 10)
+    t = account.Transaction(account=a,
+                            date=target_dates[1],
+                            total=self._RNG.uniform(-10, -1),
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t,
+                                       total=t.total,
+                                       asset=assets[0],
+                                       asset_quantity=q0)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0]}
+
+    result_dates, result_qty = a.get_asset_qty(target_dates[0],
+                                               target_dates[-1])
+    self.assertEqual(target_dates, result_dates)
+    self.assertEqual(target_qty, result_qty)
+
+    # Sell asset[0] on the last day
+    q1 = self._RNG.uniform(0, 10)
+    t = account.Transaction(account=a,
+                            date=target_dates[-1],
+                            total=self._RNG.uniform(1, 10),
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t,
+                                       total=t.total,
+                                       asset=assets[0],
+                                       asset_quantity=-q1)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0 - q1]}
+
+    result_dates, result_qty = a.get_asset_qty(target_dates[0],
+                                               target_dates[-1])
+    self.assertEqual(target_dates, result_dates)
+    self.assertEqual(target_qty, result_qty)
+
+    # Buy asset[1] on today
+    q2 = self._RNG.uniform(0, 10)
+    t = account.Transaction(account=a,
+                            date=today,
+                            total=self._RNG.uniform(-10, -1),
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t,
+                                       total=t.total,
+                                       asset=assets[1],
+                                       asset_quantity=q2)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_qty = {
+        assets[0].uuid: [0, q0, q0, q0],
+        assets[1].uuid: [0, 0, 0, q2]
+    }
+
+    result_dates, result_qty = a.get_asset_qty(target_dates[0], today)
+    self.assertEqual(target_dates[0:4], result_dates)
+    self.assertEqual(target_qty, result_qty)
+
+    # Test single value
+    target_qty = {assets[0].uuid: [q0], assets[1].uuid: [q2]}
+    result_dates, result_qty = a.get_asset_qty(today, today)
+    self.assertListEqual([today], result_dates)
+    self.assertEqual(target_qty, result_qty)
+
+  def test_get_value(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    a = account.Account(name=self.random_string(),
+                        institution=self.random_string(),
+                        category=account.AccountCategory.INVESTMENT)
+    assets: List[asset.Asset] = []
+    for _ in range(3):
+      new_asset = asset.Asset(name=self.random_string(),
+                              category=asset.AssetCategory.SECURITY)
+      assets.append(new_asset)
+    session.add(a)
+    session.add_all(assets)
+    session.commit()
+
+    target_dates = [
+        (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
+    ]
+    target_values = [0] * 7
+    target_assets = {}
+    start = target_dates[0]
+    end = target_dates[-1]
+
+    r_dates, r_values, r_assets = a.get_value(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+    self.assertEqual(target_assets, r_assets)
+
+    # Fund account on first day
+    t_fund = self._RNG.uniform(10, 100)
+    t = account.Transaction(account=a,
+                            date=target_dates[1],
+                            total=t_fund,
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t, total=t.total)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_values = [0, t_fund, t_fund, t_fund, t_fund, t_fund, t_fund]
+
+    r_dates, r_values, r_assets = a.get_value(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+    self.assertEqual(target_assets, r_assets)
+
+    # Buy asset[0] on the second day
+    t0 = self._RNG.uniform(-10, -1)
+    q0 = self._RNG.uniform(0, 10)
+    t = account.Transaction(account=a,
+                            date=target_dates[1],
+                            total=t0,
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t,
+                                       total=t.total,
+                                       asset=assets[0],
+                                       asset_quantity=q0)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_values = [
+        0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0,
+        t_fund + t0
+    ]
+    target_assets = {assets[0].uuid: [0] * 7}
+
+    r_dates, r_values, r_assets = a.get_value(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+    self.assertEqual(target_assets, r_assets)
+
+    # Sell asset[0] on the last day
+    t1 = self._RNG.uniform(1, 10)
+    q1 = self._RNG.uniform(0, 10)
+    t = account.Transaction(account=a,
+                            date=target_dates[-1],
+                            total=t1,
+                            statement=self.random_string())
+    t_split = account.TransactionSplit(parent=t,
+                                       total=t.total,
+                                       asset=assets[0],
+                                       asset_quantity=-q1)
+    session.add_all((t, t_split))
+    session.commit()
+
+    target_values = [
+        0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0,
+        t_fund + t0 + t1
+    ]
+    target_assets = {assets[0].uuid: [0] * 7}
+
+    r_dates, r_values, r_assets = a.get_value(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+    self.assertEqual(target_assets, r_assets)
+
+    # Add valuations to Asset
+    prices = self._RNG.uniform(1, 10, len(target_dates))
+    for date, p in zip(target_dates, prices):
+      v = asset.AssetValuation(asset=assets[0], date=date, value=p)
+      session.add(v)
+    session.commit()
+
+    asset_values = [
+        p * q for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
+    ]
+    target_values = [c + v for c, v in zip(target_values, asset_values)]
+    target_assets = {assets[0].uuid: asset_values}
+
+    r_dates, r_values, r_assets = a.get_value(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+    self.assertEqual(target_assets, r_assets)
+
+    # # Test single value
+    r_dates, r_values, r_assets = a.get_value(today, today)
+    self.assertEqual([today], r_dates)
+    self.assertEqual([target_values[3]], r_values)
+    self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)

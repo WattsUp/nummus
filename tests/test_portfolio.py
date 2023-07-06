@@ -42,13 +42,19 @@ class TestPortfolio(TestBase):
   def test_create_unencrypted(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
+    path_images = path_db.parent.joinpath("images")
 
     # Create unencrypted portfolio
-    portfolio.Portfolio.create(path_db)
+    p = portfolio.Portfolio.create(path_db)
     self.assertTrue(path_db.exists(), "Portfolio does not exist")
     self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertTrue(path_images.exists(), "images does not exist")
+    self.assertTrue(path_images.is_dir(), "images is not a directory")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
+    self.assertEqual(path_images, p.image_path)
+    p = None
     sql.drop_session()
 
     # Check portfolio is unencrypted
@@ -103,6 +109,7 @@ class TestPortfolio(TestBase):
 
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
+    path_images = path_db.parent.joinpath("images")
 
     key = self.random_string()
 
@@ -110,8 +117,11 @@ class TestPortfolio(TestBase):
     portfolio.Portfolio.create(path_db, key)
     self.assertTrue(path_db.exists(), "Portfolio does not exist")
     self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertTrue(path_images.exists(), "images does not exist")
+    self.assertTrue(path_images.is_dir(), "images is not a directory")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
     sql.drop_session()
 
     # Check portfolio is encrypted

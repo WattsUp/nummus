@@ -5,17 +5,17 @@ from typing import Dict, List
 
 import datetime
 
-import connexion
 import flask
 
 from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Transaction, TransactionCategory, TransactionSplit)
 from nummus.web import common
+from nummus.web.common import HTTPError
 
 
 def create() -> flask.Response:
-  """POST /api/transaction
+  """POST /api/transactions
 
   Returns:
     JSON response, see api.yaml for details
@@ -47,8 +47,9 @@ def create() -> flask.Response:
     })
 
   if len(req_splits) < 1:
-    raise connexion.exceptions.BadRequestProblem(
-        detail="Transaction must have at least one TransactionSplit")
+    raise HTTPError(422,
+                    detail="Transaction must have at least one "
+                    "TransactionSplit")
 
   with p.get_session() as s:
     a = common.find_account(s, account_uuid)
@@ -64,11 +65,11 @@ def create() -> flask.Response:
       t_split = TransactionSplit(parent=t, asset=asset, **d)
       s.add(t_split)
     s.commit()
-    return flask.jsonify(t)
+    return flask.jsonify(t), 201, {"Location": f"/api/transactions/{t.uuid}"}
 
 
 def get(transaction_uuid: str) -> flask.Response:
-  """GET /api/transaction/{transaction_uuid}
+  """GET /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to find
@@ -85,7 +86,7 @@ def get(transaction_uuid: str) -> flask.Response:
 
 
 def update(transaction_uuid: str) -> flask.Response:
-  """PUT /api/transaction/{transaction_uuid}
+  """PUT /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to update
@@ -111,8 +112,9 @@ def update(transaction_uuid: str) -> flask.Response:
     req_splits: List[Dict[str, object]] = req["splits"]
     n_split = len(req_splits)
     if n_split < 1:
-      raise connexion.exceptions.BadRequestProblem(
-          detail="Transaction must have at least one TransactionSplit")
+      raise HTTPError(422,
+                      detail="Transaction must have at least one "
+                      "TransactionSplit")
 
     n_split_current = len(t.splits)
     if n_split > n_split_current:
@@ -151,7 +153,7 @@ def update(transaction_uuid: str) -> flask.Response:
 
 
 def delete(transaction_uuid: str) -> flask.Response:
-  """DELETE /api/transaction/{transaction_uuid}
+  """DELETE /api/transactions/{transaction_uuid}
 
   Args:
     transaction_uuid: UUID of Transaction to delete
@@ -165,18 +167,19 @@ def delete(transaction_uuid: str) -> flask.Response:
   with p.get_session() as s:
     t = common.find_transaction(s, transaction_uuid)
 
-    response = flask.jsonify(t)
-
     # Delete the splits as well
     for t_split in t.splits:
       s.delete(t_split)
     s.delete(t)
     s.commit()
-    return response
+    return None
 
 
-def get_all() -> flask.Response:
+def get_all(request_args: Dict[str, object] = None) -> flask.Response:
   """GET /api/transactions
+
+  Args:
+    request_args: Override flask.request.args
 
   Returns:
     JSON response, see api.yaml for details
@@ -185,7 +188,11 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  if request_args is None:
+    args = flask.request.args.to_dict()
+  else:
+    args = request_args
+
   start = common.parse_date(args.get("start"))
   end = common.parse_date(args.get("end", today))
   sort: str = args.get("sort", "oldest")
@@ -206,6 +213,8 @@ def get_all() -> flask.Response:
     query = s.query(TransactionSplit).join(Transaction)
     query = query.where(Transaction.date <= end)
     if start is not None:
+      if end <= start:
+        raise HTTPError(422, detail="End date must be after Start date")
       query = query.where(Transaction.date >= start)
     if category is not None:
       query = query.where(TransactionSplit.category == category)
@@ -240,7 +249,7 @@ def get_all() -> flask.Response:
                                TransactionSplit.parent_id, TransactionSplit.id)
     else:
       # Apply search, will order by best match
-      query = common.search(s, query, TransactionSplit, search)
+      query = common.search(query, TransactionSplit, search)
 
     page, count, next_offset = common.paginate(query, limit, offset)
     response = {
