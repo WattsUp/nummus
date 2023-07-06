@@ -4,11 +4,13 @@
 import typing as t
 
 import io
+import pathlib
 import re
 import time
 from unittest import mock
 import urllib.parse
 import warnings
+import yaml
 
 import autodict
 import connexion
@@ -146,8 +148,23 @@ class WebTestBase(TestBase):
         self.assertEqual(b"", response.get_data())
 
       with autodict.JSONAutoDict(TEST_LOG) as d:
-        # Replace uuid with <uuid>
-        endpoint = _RE_UUID.sub("<uuid>", endpoint)
+        # Replace uuid with {accountUUID, assetUUID, ...}
+        parts = []
+        for p in endpoint.split("/"):
+          if _RE_UUID.match(p):
+            if "account" in parts[-1]:
+              parts.append("{accountUUID}")
+            elif "asset" in parts[-1]:
+              parts.append("{assetUUID}")
+            elif "budget" in parts[-1]:
+              parts.append("{budgetUUID}")
+            elif "transaction" in parts[-1]:
+              parts.append("{transactionUUID}")
+            else:
+              parts.append("{uuid}")
+          else:
+            parts.append(p)
+        endpoint = "/".join(parts)
         k = f"{method:6} {endpoint}"
         if queries is not None and len(queries) >= 1:
           queries_flat = [f"{k}=<value>" for k in queries]
@@ -155,6 +172,18 @@ class WebTestBase(TestBase):
         if k not in d["api_latency"]:
           d["api_latency"][k] = []
         d["api_latency"][k].append(duration)
+
+        # Add to api_coverage
+        if endpoint.startswith("/api"):
+          if method not in d["api_coverage"][endpoint]:
+            d["api_coverage"][endpoint][method] = []
+          d["api_coverage"][endpoint][method].append(response.status_code)
+          if queries is not None and len(queries) >= 1:
+            for k in queries:
+              d["api_coverage"][endpoint][method].append(k)
+          else:
+            d["api_coverage"][endpoint][method].append(None)
+
       self.assertLessEqual(duration, 0.15)  # All responses faster than 150ms
 
       if content_type is None:
@@ -224,8 +253,6 @@ class WebTestBase(TestBase):
                          rc=rc,
                          **kwargs)
 
-  #
-
   def api_post(self,
                endpoint: str,
                queries: t.Dict[str, str] = None,
@@ -281,3 +308,65 @@ class WebTestBase(TestBase):
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
+
+
+def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
+  """Get API Coverage results
+
+  Returns:
+    {endpoint: {method: {permutations: covered bool}}}
+  """
+  # Initialize data from api.yaml with all False
+  d: t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]] = {}
+
+  api_yaml = pathlib.Path(web.__file__).parent.joinpath("spec", "api.yaml")
+  with open(api_yaml, "r", encoding="utf-8") as file:
+    APIYaml = t.Dict[str, t.Dict[str, t.Dict[str, t.Dict[str, object]]]]
+    y: APIYaml = yaml.safe_load(file)
+
+  server: str = y["servers"][0]["url"]
+  prefix = server.split("/")[-1]
+
+  comp_params = y["components"]["parameters"]
+
+  for path, data in y["paths"].items():
+    endpoint = f"/{prefix}{path}"
+    if endpoint not in d:
+      d[endpoint] = {}
+
+    for method, options in data.items():
+      d_method: t.Dict[t.Union[int, str], bool] = {}
+
+      for rc in options["responses"]:
+        rc: str
+        d_method[int(rc)] = False
+
+      parameters = options.get("parameters", [])
+      any_required = False
+      for param in parameters:
+        param: t.Dict[str, str]
+        ref = param["$ref"].replace("#/components/parameters/", "")
+        p = comp_params[ref]
+        if p["in"] == "path":
+          continue
+
+        if p.get("required", False):
+          any_required = True
+        d_method[p["name"]] = False
+
+      if not any_required:
+        d_method[None] = False
+
+      d[endpoint][method.upper()] = d_method
+
+  # Iterate through test log
+  with autodict.JSONAutoDict(TEST_LOG) as log:
+    LogYaml = t.Dict[str, t.Dict[str, t.List[str]]]
+    d_log: LogYaml = log["api_coverage"]
+
+  for endpoint, data in d_log.items():
+    for method, branches in data.items():
+      for branch in branches:
+        d[endpoint][method][branch] = True
+
+  return d
