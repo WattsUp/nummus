@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional
+import typing as t
 
 import datetime
 import json
@@ -31,9 +31,10 @@ class Parent(base.Base):
 
   _PROPERTIES_HIDDEN = ["age"]
 
-  _hidden_column: orm.Mapped[Optional[int]]
-  generic_column: orm.Mapped[Optional[int]]
-  children: orm.Mapped[List[Child]] = orm.relationship(back_populates="parent")
+  _hidden_column: orm.Mapped[t.Optional[int]]
+  generic_column: orm.Mapped[t.Optional[int]]
+  children: orm.Mapped[t.List[Child]] = orm.relationship(
+      back_populates="parent")
 
   _age = 40
 
@@ -68,9 +69,9 @@ class ParentHidden(base.Base):
 
   _PROPERTIES_HIDDEN = ["generic_column"]
 
-  _hidden_column: orm.Mapped[Optional[int]]
-  generic_column: orm.Mapped[Optional[int]]
-  _children: orm.Mapped[List[Child]] = orm.relationship(
+  _hidden_column: orm.Mapped[t.Optional[int]]
+  generic_column: orm.Mapped[t.Optional[int]]
+  _children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent_hidden")
 
   _age = 43
@@ -92,11 +93,11 @@ class Child(base.Base):
 
   _PROPERTIES_DEFAULT = ["uuid", "age"]
 
-  _hidden_column: orm.Mapped[Optional[int]]
+  _hidden_column: orm.Mapped[t.Optional[int]]
   parent_id: orm.Mapped[int] = orm.mapped_column(
       sqlalchemy.ForeignKey("parent.id"))
   parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
-  parent_hidden_id: orm.Mapped[Optional[int]] = orm.mapped_column(
+  parent_hidden_id: orm.Mapped[t.Optional[int]] = orm.mapped_column(
       sqlalchemy.ForeignKey("parent_hidden.id"))
   parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
       back_populates="_children")
@@ -451,7 +452,7 @@ class Derived(base.BaseEnum):
   BLUE = 2
 
   @classmethod
-  def _lut(cls) -> Dict[str, Derived]:
+  def _lut(cls) -> t.Dict[str, Derived]:
     return {"r": cls.RED, "b": cls.BLUE}
 
 

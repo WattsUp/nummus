@@ -3,6 +3,7 @@
 
 import datetime
 import json
+
 from nummus.models import (Asset, AssetCategory, AssetValuation,
                            NummusJSONEncoder)
 
@@ -62,7 +63,7 @@ class TestControllerAssets(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
@@ -70,15 +71,16 @@ class TestControllerAssets(WebTestBase):
 
       a_uuid = a.uuid
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+    endpoint = f"/api/assets/{a_uuid}"
 
     # Get by uuid
-    result, _ = self.api_get(f"/api/assets/{a_uuid}")
+    result, _ = self.api_get(endpoint)
     self.assertEqual(target, result)
 
   def test_update(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
@@ -107,7 +109,7 @@ class TestControllerAssets(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     n_valuations = 10
     today = datetime.date.today()
@@ -201,6 +203,12 @@ class TestControllerAssets(WebTestBase):
     target = {"assets": [assets[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
+    # Bad enum
+    self.api_get(endpoint, {"category": "fruit"}, rc=400)
+
+    # Bad limit type
+    self.api_get(endpoint, {"limit": "ten"}, rc=400)
+
   def test_get_image(self):
     p = self._portfolio
 
@@ -261,6 +269,24 @@ class TestControllerAssets(WebTestBase):
     with open(path_img, "rb") as file:
       buf = file.read()
       self.assertEqual(fake_image, buf)
+
+    # Missing length
+    self.api_put(endpoint, rc=411)
+
+    # Too long
+    self.api_put(endpoint,
+                 data="a" * 1000001,
+                 headers={"Content-Type": "image/png"},
+                 rc=413)
+
+    # Bad type
+    self.api_put(endpoint,
+                 data=fake_image,
+                 headers={"Content-Type": "application/pdf"},
+                 rc=415)
+
+    # Missing type
+    self.api_put(endpoint, data=fake_image, headers={}, rc=422)
 
   def test_delete_image(self):
     p = self._portfolio

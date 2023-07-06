@@ -1,7 +1,7 @@
 """Test module nummus.web.controller_budgets
 """
 
-from typing import Dict, List
+import typing as t
 
 import datetime
 import json
@@ -142,7 +142,7 @@ class TestControllerBudgets(WebTestBase):
       s.add_all((b_today, b_yesterday))
       s.commit()
       query = s.query(Budget).order_by(Budget.date)
-      budgets: List[Dict[str, object]] = json.loads(
+      budgets: t.List[t.Dict[str, object]] = json.loads(
           json.dumps(query.all(), cls=NummusJSONEncoder))
     endpoint = "/api/budgets"
 
@@ -192,4 +192,4 @@ class TestControllerBudgets(WebTestBase):
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
 
     # Strict query validation
-    self.api_get(endpoint, {"fake": "invalid"}, rc=400)
+    self.api_get(endpoint, {"limit": "invalid"}, rc=400)

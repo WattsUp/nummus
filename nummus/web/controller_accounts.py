@@ -1,7 +1,7 @@
 """Account API Controller
 """
 
-from typing import Dict
+import typing as t
 
 import datetime
 
@@ -22,16 +22,16 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: Dict[str, object] = flask.request.json
+  req: t.Dict[str, object] = flask.request.json
   name = req["name"]
   institution = req["institution"]
   category = common.parse_enum(req["category"], AccountCategory)
 
-  a = Account(name=name, institution=institution, category=category)
+  acct = Account(name=name, institution=institution, category=category)
   with p.get_session() as s:
-    s.add(a)
+    s.add(acct)
     s.commit()
-    return flask.jsonify(a), 201, {"Location": f"/api/accounts/{a.uuid}"}
+    return flask.jsonify(acct), 201, {"Location": f"/api/accounts/{acct.uuid}"}
 
 
 def get(account_uuid: str) -> flask.Response:
@@ -47,8 +47,8 @@ def get(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
-    return flask.jsonify(a)
+    acct = common.find_account(s, account_uuid)
+    return flask.jsonify(acct)
 
 
 def update(account_uuid: str) -> flask.Response:
@@ -64,17 +64,17 @@ def update(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    acct = common.find_account(s, account_uuid)
 
-    req: Dict[str, object] = flask.request.json
-    d: Dict[str, object] = {}
+    req: t.Dict[str, object] = flask.request.json
+    d: t.Dict[str, object] = {}
     d["name"] = req["name"]
     d["institution"] = req["institution"]
     d["category"] = common.parse_enum(req["category"], AccountCategory)
 
-    a.update(d)
+    acct.update(d)
     s.commit()
-    return flask.jsonify(a)
+    return flask.jsonify(acct)
 
 
 def delete(account_uuid: str) -> flask.Response:
@@ -90,14 +90,14 @@ def delete(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    acct = common.find_account(s, account_uuid)
 
     # Delete the transactions as well
-    for t in a.transactions:
-      for t_split in t.splits:
+    for txn in acct.transactions:
+      for t_split in txn.splits:
         s.delete(t_split)
-      s.delete(t)
-    s.delete(a)
+      s.delete(txn)
+    s.delete(acct)
     s.commit()
     return None
 
@@ -111,7 +111,7 @@ def get_all() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  args: t.Dict[str, object] = flask.request.args.to_dict()
   category = common.parse_enum(args.get("category"), AccountCategory)
   search = args.get("search")
 
@@ -156,15 +156,15 @@ def get_value(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  args: t.Dict[str, object] = flask.request.args.to_dict()
   start = common.parse_date(args.get("start", today))
   end = common.parse_date(args.get("end", today))
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
+    acct = common.find_account(s, account_uuid)
 
-    dates, values, _ = a.get_value(start, end)
+    dates, values, _ = acct.get_value(start, end)
     response = {"values": values, "dates": dates}
     return flask.jsonify(response)

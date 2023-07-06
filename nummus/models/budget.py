@@ -4,7 +4,7 @@ categories
 All number are annual allocations
 """
 
-from typing import Dict
+import typing as t
 
 import datetime
 
@@ -37,7 +37,7 @@ class Budget(base.Base):
   travel: orm.Mapped[float] = orm.mapped_column(default=0)
 
   @property
-  def categories(self) -> Dict[str, float]:
+  def categories(self) -> t.Dict[str, float]:
     """Categorical breakdown of total
     """
     return {
@@ -50,7 +50,7 @@ class Budget(base.Base):
     }
 
   @categories.setter
-  def categories(self, data: Dict[str, float]) -> None:
+  def categories(self, data: t.Dict[str, float]) -> None:
     keys = self.categories.keys()
     if keys != data.keys():
       raise KeyError(f"Categories must have these keys: {keys}")

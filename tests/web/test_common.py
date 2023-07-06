@@ -21,20 +21,20 @@ class TestCommon(WebTestBase):
     p = self._portfolio
 
     # Create accounts
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
     with p.get_session() as s:
-      s.add(a)
+      s.add(acct)
       s.commit()
 
-      a_uuid = str(a.uuid)
-      result = common.find_account(s, a_uuid)
-      self.assertEqual(a, result)
+      acct_uuid = str(acct.uuid)
+      result = common.find_account(s, acct_uuid)
+      self.assertEqual(acct, result)
 
       # Get by uuid without dashes
-      result = common.find_account(s, a_uuid.replace("-", ""))
-      self.assertEqual(a, result)
+      result = common.find_account(s, acct_uuid.replace("-", ""))
+      self.assertEqual(acct, result)
 
       # Account does not exist
       self.assertHTTPRaises(404, common.find_account, s, str(uuid.uuid4()))
@@ -84,29 +84,29 @@ class TestCommon(WebTestBase):
     p = self._portfolio
 
     # Create accounts and transactions
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(a)
+      s.add(acct)
       s.commit()
 
-      t = Transaction(account_id=a.id,
-                      date=today,
-                      total=100,
-                      statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=t)
-      s.add_all((t, t_split))
+      txn = Transaction(account_id=acct.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+      t_split = TransactionSplit(total=100, parent=txn)
+      s.add_all((txn, t_split))
       s.commit()
 
-      t_uuid = str(t.uuid)
+      t_uuid = str(txn.uuid)
       result = common.find_transaction(s, t_uuid)
-      self.assertEqual(t, result)
+      self.assertEqual(txn, result)
 
       # Get by uuid without dashes
       result = common.find_transaction(s, t_uuid.replace("-", ""))
-      self.assertEqual(t, result)
+      self.assertEqual(txn, result)
 
       # Transaction does not exist
       self.assertHTTPRaises(404, common.find_transaction, s, str(uuid.uuid4()))
@@ -166,14 +166,14 @@ class TestCommon(WebTestBase):
     p = self._portfolio
 
     # Create accounts
-    a_checking = Account(name="Monkey Bank Checking",
-                         institution="Monkey Bank",
-                         category=AccountCategory.CASH)
-    a_invest = Account(name="Monkey Investments",
-                       institution="Ape Trading",
-                       category=AccountCategory.INVESTMENT)
+    acct_checking = Account(name="Monkey Bank Checking",
+                            institution="Monkey Bank",
+                            category=AccountCategory.CASH)
+    acct_invest = Account(name="Monkey Investments",
+                          institution="Ape Trading",
+                          category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
-      s.add_all((a_checking, a_invest))
+      s.add_all((acct_checking, acct_invest))
       s.commit()
 
       query = s.query(Account)
@@ -183,48 +183,48 @@ class TestCommon(WebTestBase):
 
       # No results return all
       result = common.search(query, Account, None).all()
-      self.assertEqual([a_checking, a_invest], result)
+      self.assertEqual([acct_checking, acct_invest], result)
 
       # Short query return all
       result = common.search(query, Account, "ab").all()
-      self.assertEqual([a_checking, a_invest], result)
+      self.assertEqual([acct_checking, acct_invest], result)
 
       # No matches return first 5
       result = common.search(query, Account, "crazy unrelated words").all()
-      self.assertEqual([a_checking, a_invest], result)
+      self.assertEqual([acct_checking, acct_invest], result)
 
       result = common.search(query, Account, "checking").all()
-      self.assertEqual([a_checking], result)
+      self.assertEqual([acct_checking], result)
 
       result = common.search(query, Account, "bank").all()
-      self.assertEqual([a_checking], result)
+      self.assertEqual([acct_checking], result)
 
       result = common.search(query, Account, "monkey").all()
-      self.assertEqual([a_checking, a_invest], result)
+      self.assertEqual([acct_checking, acct_invest], result)
 
       result = common.search(query, Account, "trading").all()
-      self.assertEqual([a_invest], result)
+      self.assertEqual([acct_invest], result)
 
   def test_paginate(self):
     p = self._portfolio
 
     # Create accounts
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
     n_transactions = 10
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(a)
+      s.add(acct)
       s.commit()
 
       for _ in range(n_transactions):
-        t = Transaction(account_id=a.id,
-                        date=today,
-                        total=100,
-                        statement=self.random_string())
-        t_split = TransactionSplit(total=100, parent=t)
-        s.add_all((t, t_split))
+        txn = Transaction(account_id=acct.id,
+                          date=today,
+                          total=100,
+                          statement=self.random_string())
+        t_split = TransactionSplit(total=100, parent=txn)
+        s.add_all((txn, t_split))
       s.commit()
 
       query = s.query(Transaction)

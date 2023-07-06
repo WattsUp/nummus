@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import Dict, List, Optional, Tuple
+import typing as t
 
 import datetime
 
@@ -11,7 +11,8 @@ from sqlalchemy import orm
 
 from nummus.models import base, asset
 
-Dates = List[datetime.date]
+Dates = t.List[datetime.date]
+Values = t.List[float]
 
 
 class TransactionCategory(base.BaseEnum):
@@ -62,22 +63,22 @@ class TransactionSplit(base.Base):
   ]
 
   total: orm.Mapped[float]
-  sales_tax: orm.Mapped[Optional[float]]
-  payee: orm.Mapped[Optional[str]]
-  description: orm.Mapped[Optional[str]]
-  category: orm.Mapped[Optional[TransactionCategory]]
-  subcategory: orm.Mapped[Optional[str]]
-  tag: orm.Mapped[Optional[str]]
+  sales_tax: orm.Mapped[t.Optional[float]]
+  payee: orm.Mapped[t.Optional[str]]
+  description: orm.Mapped[t.Optional[str]]
+  category: orm.Mapped[t.Optional[TransactionCategory]]
+  subcategory: orm.Mapped[t.Optional[str]]
+  tag: orm.Mapped[t.Optional[str]]
 
   parent_id: orm.Mapped[int] = orm.mapped_column(
       sqlalchemy.ForeignKey("transaction.id"))
   parent: orm.Mapped[Transaction] = orm.relationship(back_populates="splits")
 
-  asset_id: orm.Mapped[Optional[int]] = orm.mapped_column(
+  asset_id: orm.Mapped[t.Optional[int]] = orm.mapped_column(
       sqlalchemy.ForeignKey("asset.id"))
   asset: orm.Mapped[asset.Asset] = orm.relationship()
 
-  asset_quantity: orm.Mapped[Optional[float]]
+  asset_quantity: orm.Mapped[t.Optional[float]]
 
   @property
   def parent_uuid(self) -> str:
@@ -151,7 +152,7 @@ class Transaction(base.Base):
   statement: orm.Mapped[str]
   locked: orm.Mapped[bool] = orm.mapped_column(default=False)
 
-  splits: orm.Mapped[List[TransactionSplit]] = orm.relationship(
+  splits: orm.Mapped[t.List[TransactionSplit]] = orm.relationship(
       back_populates="parent")
 
   @property
@@ -200,7 +201,7 @@ class Account(base.Base):
   institution: orm.Mapped[str]
   category: orm.Mapped[AccountCategory]
 
-  transactions: orm.Mapped[List[Transaction]] = orm.relationship(
+  transactions: orm.Mapped[t.List[Transaction]] = orm.relationship(
       back_populates="account", order_by=Transaction.date)
 
   @property
@@ -221,7 +222,7 @@ class Account(base.Base):
 
   def get_value(
       self, start: datetime.date,
-      end: datetime.date) -> Tuple[Dates, List[float], Dict[str, List[float]]]:
+      end: datetime.date) -> t.Tuple[Dates, Values, t.Dict[str, Values]]:
     """Get the value of Account from start to end date
 
     Args:
@@ -235,12 +236,12 @@ class Account(base.Base):
     date = start
 
     dates: Dates = []
-    cash: List[float] = []
-    qty_assets: Dict[str, List[float]] = {}
-    assets: Dict[str, asset.Asset] = {}
+    cash: Values = []
+    qty_assets: t.Dict[str, Values] = {}
+    assets: t.Dict[str, asset.Asset] = {}
 
     current_cash = 0
-    current_qty_assets: Dict[str, float] = {}
+    current_qty_assets: t.Dict[str, float] = {}
 
     for transaction in self.transactions:
       if transaction.date > end:
@@ -271,7 +272,7 @@ class Account(base.Base):
       date += datetime.timedelta(days=1)
 
     # Assets qty to value
-    value_assets: Dict[str, List[float]] = {}
+    value_assets: t.Dict[str, Values] = {}
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
       # Value = quantity * price * multiplier
@@ -284,7 +285,7 @@ class Account(base.Base):
     return dates, values, value_assets
 
   def get_asset_qty(self, start: datetime.date,
-                    end: datetime.date) -> Tuple[Dates, Dict[str, List[float]]]:
+                    end: datetime.date) -> t.Tuple[Dates, t.Dict[str, Values]]:
     """Get the quantity of Assets held from start to end date
 
     Args:
@@ -297,9 +298,9 @@ class Account(base.Base):
     date = start
 
     dates: Dates = []
-    qty_assets: Dict[str, List[float]] = {}
+    qty_assets: t.Dict[str, Values] = {}
 
-    current_qty_assets: Dict[str, float] = {}
+    current_qty_assets: t.Dict[str, float] = {}
 
     for transaction in self.transactions:
       if transaction.date > end:

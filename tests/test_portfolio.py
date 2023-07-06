@@ -210,49 +210,44 @@ class TestPortfolio(TestBase):
     self.assertIsNone(result)
 
     # Create accounts
-    a_checking = Account(name="Monkey Bank Checking",
-                         institution="Monkey Bank",
-                         category=AccountCategory.CASH)
-    a_invest_0 = Account(name="Primate Investments",
-                         institution="Monkey Bank",
-                         category=AccountCategory.INVESTMENT)
-    a_invest_1 = Account(name="Primate Investments",
-                         institution="Gorilla Bank",
-                         category=AccountCategory.INVESTMENT)
+    acct_checking = Account(name="Monkey Bank Checking",
+                            institution="Monkey Bank",
+                            category=AccountCategory.CASH)
+    acct_invest_0 = Account(name="Primate Investments",
+                            institution="Monkey Bank",
+                            category=AccountCategory.INVESTMENT)
+    acct_invest_1 = Account(name="Primate Investments",
+                            institution="Gorilla Bank",
+                            category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
-      s.add_all((a_checking, a_invest_0, a_invest_1))
+      s.add_all((acct_checking, acct_invest_0, acct_invest_1))
       s.commit()
 
-      # Refresh the objects whilst in the session, else DetachedInstanceError
-      a_checking = s.query(Account).where(Account.id == a_checking.id).first()
-      a_invest_0 = s.query(Account).where(Account.id == a_invest_0.id).first()
-      a_invest_1 = s.query(Account).where(Account.id == a_invest_1.id).first()
+      # Find by ID, kinda redundant but lol: id = find(id)
+      result = p.find_account(acct_checking.id)
+      self.assertEqual(acct_checking.id, result)
+      result = p.find_account(acct_invest_0.id)
+      self.assertEqual(acct_invest_0.id, result)
+      result = p.find_account(acct_invest_1.id)
+      self.assertEqual(acct_invest_1.id, result)
+      result = p.find_account(10)
+      self.assertIsNone(result)
 
-    # Find by ID, kinda redundant but lol: id = find(id)
-    result = p.find_account(a_checking.id)
-    self.assertEqual(a_checking.id, result)
-    result = p.find_account(a_invest_0.id)
-    self.assertEqual(a_invest_0.id, result)
-    result = p.find_account(a_invest_1.id)
-    self.assertEqual(a_invest_1.id, result)
-    result = p.find_account(10)
-    self.assertIsNone(result)
+      # Find by UUID
+      result = p.find_account(acct_checking.uuid)
+      self.assertEqual(acct_checking.id, result)
 
-    # Find by UUID
-    result = p.find_account(a_checking.uuid)
-    self.assertEqual(a_checking.id, result)
+      # Find by name
+      result = p.find_account("Monkey Bank Checking")
+      self.assertEqual(acct_checking.id, result)
 
-    # Find by name
-    result = p.find_account("Monkey Bank Checking")
-    self.assertEqual(a_checking.id, result)
+      # More than 1 match by name
+      result = p.find_account("Primate Investments")
+      self.assertIsNone(result)
 
-    # More than 1 match by name
-    result = p.find_account("Primate Investments")
-    self.assertIsNone(result)
-
-    # Find by institution
-    result = p.find_account("Gorilla Bank")
-    self.assertEqual(a_invest_1.id, result)
+      # Find by institution
+      result = p.find_account("Gorilla Bank")
+      self.assertEqual(acct_invest_1.id, result)
 
   def test_find_asset(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
@@ -261,7 +256,7 @@ class TestPortfolio(TestBase):
     result = p.find_asset("BANANA")
     self.assertIsNone(result)
 
-    # Create accounts
+    # Create assets
     a_banana = Asset(name="BANANA", category=AssetCategory.ITEM)
     a_apple_0 = Asset(name="APPLE", category=AssetCategory.ITEM)
     a_apple_1 = Asset(name="APPLE", category=AssetCategory.SECURITY)
@@ -269,32 +264,27 @@ class TestPortfolio(TestBase):
       s.add_all((a_banana, a_apple_0, a_apple_1))
       s.commit()
 
-      # Refresh the objects whilst in the session, else DetachedInstanceError
-      a_banana = s.query(Asset).where(Asset.id == a_banana.id).first()
-      a_apple_0 = s.query(Asset).where(Asset.id == a_apple_0.id).first()
-      a_apple_1 = s.query(Asset).where(Asset.id == a_apple_1.id).first()
+      # Find by ID, kinda redundant but lol: id = find(id)
+      result = p.find_asset(a_banana.id)
+      self.assertEqual(a_banana.id, result)
+      result = p.find_asset(a_apple_0.id)
+      self.assertEqual(a_apple_0.id, result)
+      result = p.find_asset(a_apple_1.id)
+      self.assertEqual(a_apple_1.id, result)
+      result = p.find_asset(10)
+      self.assertIsNone(result)
 
-    # Find by ID, kinda redundant but lol: id = find(id)
-    result = p.find_asset(a_banana.id)
-    self.assertEqual(a_banana.id, result)
-    result = p.find_asset(a_apple_0.id)
-    self.assertEqual(a_apple_0.id, result)
-    result = p.find_asset(a_apple_1.id)
-    self.assertEqual(a_apple_1.id, result)
-    result = p.find_asset(10)
-    self.assertIsNone(result)
+      # Find by UUID
+      result = p.find_asset(a_banana.uuid)
+      self.assertEqual(a_banana.id, result)
 
-    # Find by UUID
-    result = p.find_asset(a_banana.uuid)
-    self.assertEqual(a_banana.id, result)
+      # Find by name
+      result = p.find_asset("BANANA")
+      self.assertEqual(a_banana.id, result)
 
-    # Find by name
-    result = p.find_asset("BANANA")
-    self.assertEqual(a_banana.id, result)
-
-    # More than 1 match by name
-    result = p.find_asset("APPLE")
-    self.assertIsNone(result)
+      # More than 1 match by name
+      result = p.find_asset("APPLE")
+      self.assertIsNone(result)
 
   def test_import_file(self):
     path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
@@ -309,35 +299,26 @@ class TestPortfolio(TestBase):
     self.assertRaises(KeyError, p.import_file, path)
 
     # Create accounts
-    a_checking = Account(name="Monkey Bank Checking",
-                         institution="Monkey Bank",
-                         category=AccountCategory.CASH)
-    a_invest = Account(name="Monkey Investments",
-                       institution="Monkey Bank",
-                       category=AccountCategory.INVESTMENT)
+    acct_checking = Account(name="Monkey Bank Checking",
+                            institution="Monkey Bank",
+                            category=AccountCategory.CASH)
+    acct_invest = Account(name="Monkey Investments",
+                          institution="Monkey Bank",
+                          category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
-      s.add_all((a_checking, a_invest))
+      s.add_all((acct_checking, acct_invest))
       s.commit()
 
-      # Refresh the objects whilst in the session, else DetachedInstanceError
-      a_checking = s.query(Account).where(Account.id == a_checking.id).first()
-      a_invest = s.query(Account).where(Account.id == a_invest.id).first()
+      # Still missing assets
+      self.assertRaises(KeyError, p.import_file, path)
 
-    # Still missing assets
-    self.assertRaises(KeyError, p.import_file, path)
-
-    a_banana = Asset(name="BANANA", category=AssetCategory.SECURITY)
-    with p.get_session() as s:
-      s.add(a_banana)
+      asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
+      s.add(asset)
       s.commit()
 
-      # Refresh the objects whilst in the session, else DetachedInstanceError
-      a_banana = s.query(Asset).where(Asset.id == a_banana.id).first()
+      # We good now
+      p.import_file(path)
 
-    # We good now
-    p.import_file(path)
-
-    with p.get_session() as s:
       transactions = s.query(Transaction).all()
 
       target = TRANSACTIONS_EXTRAS
@@ -346,27 +327,27 @@ class TestPortfolio(TestBase):
           "sales_tax", "payee", "description", "category", "subcategory", "tag",
           "asset", "asset_quantity"
       ]
-      for t, r in zip(target, transactions):
-        self.assertEqual(1, len(r.splits))
-        r_split = r.splits[0]
-        for k, t_v in t.items():
+      for tgt, res in zip(target, transactions):
+        self.assertEqual(1, len(res.splits))
+        r_split = res.splits[0]
+        for k, t_v in tgt.items():
           # Fix test value for linked properties
           if k == "asset":
-            t_v = a_banana
+            t_v = asset
           elif k == "account":
             if t_v == "Monkey Bank Checking":
-              t_v = a_checking
+              t_v = acct_checking
             else:
-              t_v = a_invest
+              t_v = acct_invest
 
           if k in split_properties:
             r_v = getattr(r_split, k)
             self.assertEqual(t_v, r_v)
           elif k == "total":
-            self.assertEqual(t_v, r.total)
+            self.assertEqual(t_v, res.total)
             self.assertEqual(t_v, r_split.total)
           else:
-            r_v = getattr(r, k)
+            r_v = getattr(res, k)
             self.assertEqual(t_v, r_v)
 
   def test_backup_restore(self):
@@ -381,10 +362,10 @@ class TestPortfolio(TestBase):
 
     # Create Account
     with p.get_session() as s:
-      a = Account(name="Monkey Bank Checking",
-                  institution="Monkey Bank",
-                  category=AccountCategory.CASH)
-      s.add(a)
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      s.add(acct)
       s.commit()
 
       accounts = s.query(Account).all()
@@ -415,10 +396,10 @@ class TestPortfolio(TestBase):
 
     # Accidentally add a new Account
     with p.get_session() as s:
-      a = Account(name="Monkey Bank Checking Duplicate",
-                  institution="Monkey Bank",
-                  category=AccountCategory.CASH)
-      s.add(a)
+      acct = Account(name="Monkey Bank Checking Duplicate",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      s.add(acct)
       s.commit()
 
       accounts = s.query(Account).all()
@@ -448,10 +429,10 @@ class TestPortfolio(TestBase):
       accounts = s.query(Account).all()
       self.assertEqual(1, len(accounts))
 
-    # Can't restore if backup config is missing
+    # Can'tgt restore if backup config is missing
     path_config_backup.unlink()
     self.assertRaises(FileNotFoundError, p.restore)
 
-    # Can't restore if backup database is missing
+    # Can'tgt restore if backup database is missing
     path_db_backup.unlink()
     self.assertRaises(FileNotFoundError, p.restore)

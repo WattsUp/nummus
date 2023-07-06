@@ -1,7 +1,7 @@
 """Asset API Controller
 """
 
-from typing import Dict
+import typing as t
 
 import datetime
 
@@ -22,7 +22,7 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: Dict[str, object] = flask.request.json
+  req: t.Dict[str, object] = flask.request.json
   name = str(req["name"])
   description = req.get("description")
   category = common.parse_enum(req["category"], AssetCategory)
@@ -72,8 +72,8 @@ def update(asset_uuid: str) -> flask.Response:
   with p.get_session() as s:
     a = common.find_asset(s, asset_uuid)
 
-    req: Dict[str, object] = flask.request.json
-    d: Dict[str, object] = {}
+    req: t.Dict[str, object] = flask.request.json
+    d: t.Dict[str, object] = {}
     d["name"] = req["name"]
     d["institution"] = req.get("description")
     d["category"] = common.parse_enum(req["category"], AssetCategory)
@@ -117,7 +117,7 @@ def get_all() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  args: t.Dict[str, object] = flask.request.args.to_dict()
   limit = int(args.get("limit", 50))
   offset = int(args.get("offset", 0))
   search = args.get("search")
@@ -228,7 +228,7 @@ def get_value(asset_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  args: t.Dict[str, object] = flask.request.args.to_dict()
   start = common.parse_date(args.get("start", today))
   end = common.parse_date(args.get("end", today))
   if end < start:

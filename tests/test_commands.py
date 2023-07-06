@@ -1,7 +1,7 @@
 """Test module nummus.commands
 """
 
-from typing import List
+import typing as t
 
 import io
 import shutil
@@ -24,7 +24,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: List[str] = []
+    queue: t.List[str] = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -91,7 +91,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: List[str] = []
+    queue: t.List[str] = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -189,7 +189,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: List[str] = []
+    queue: t.List[str] = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -235,7 +235,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: List[str] = []
+    queue: t.List[str] = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -344,14 +344,14 @@ class TestCommands(TestBase):
 
     # Create Accounts and Assets
     with p.get_session() as s:
-      a_checking = Account(name="Monkey Bank Checking",
-                           institution="Monkey Bank",
-                           category=AccountCategory.CASH)
-      a_invest = Account(name="Monkey Investments",
-                         institution="Monkey Bank",
-                         category=AccountCategory.INVESTMENT)
-      a_banana = Asset(name="BANANA", category=AssetCategory.SECURITY)
-      s.add_all((a_checking, a_invest, a_banana))
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Monkey Bank",
+                            category=AccountCategory.INVESTMENT)
+      asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
+      s.add_all((acct_checking, acct_invest, asset))
       s.commit()
 
     file_dir = self._TEST_ROOT.joinpath("statements")

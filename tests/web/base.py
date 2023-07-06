@@ -1,14 +1,16 @@
 """TestBase with extra functions for web testing
 """
 
-from typing import Callable, Dict, Tuple, Union
+import typing as t
 
 import io
+import pathlib
 import re
 import time
 from unittest import mock
 import urllib.parse
 import warnings
+import yaml
 
 import autodict
 import connexion
@@ -26,8 +28,8 @@ from tests.base import TestBase
 _RE_UUID = re.compile(r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
                       r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}")
 
-ResultType = Union[Dict[str, object], str, bytes]
-HeadersType = Dict[str, str]
+ResultType = t.Union[t.Dict[str, object], str, bytes]
+HeadersType = t.Dict[str, str]
 
 
 class WebTestBase(TestBase):
@@ -77,7 +79,8 @@ class WebTestBase(TestBase):
 
     super().tearDown(clean=False)
 
-  def assertHTTPRaises(self, rc: int, func: Callable, *args, **kwargs) -> None:
+  def assertHTTPRaises(self, rc: int, func: t.Callable, *args,
+                       **kwargs) -> None:
     """Test function raises ProblemException with the matching HTTP return code
 
     Args:
@@ -93,10 +96,10 @@ class WebTestBase(TestBase):
   def api_open(self,
                method: str,
                endpoint: str,
-               queries: Dict[str, str],
+               queries: t.Dict[str, str],
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
@@ -145,8 +148,23 @@ class WebTestBase(TestBase):
         self.assertEqual(b"", response.get_data())
 
       with autodict.JSONAutoDict(TEST_LOG) as d:
-        # Replace uuid with <uuid>
-        endpoint = _RE_UUID.sub("<uuid>", endpoint)
+        # Replace uuid with {accountUUID, assetUUID, ...}
+        parts = []
+        for p in endpoint.split("/"):
+          if _RE_UUID.match(p):
+            if "account" in parts[-1]:
+              parts.append("{accountUUID}")
+            elif "asset" in parts[-1]:
+              parts.append("{assetUUID}")
+            elif "budget" in parts[-1]:
+              parts.append("{budgetUUID}")
+            elif "transaction" in parts[-1]:
+              parts.append("{transactionUUID}")
+            else:
+              parts.append("{uuid}")
+          else:
+            parts.append(p)
+        endpoint = "/".join(parts)
         k = f"{method:6} {endpoint}"
         if queries is not None and len(queries) >= 1:
           queries_flat = [f"{k}=<value>" for k in queries]
@@ -154,6 +172,18 @@ class WebTestBase(TestBase):
         if k not in d["api_latency"]:
           d["api_latency"][k] = []
         d["api_latency"][k].append(duration)
+
+        # Add to api_coverage
+        if endpoint.startswith("/api"):
+          if method not in d["api_coverage"][endpoint]:
+            d["api_coverage"][endpoint][method] = []
+          d["api_coverage"][endpoint][method].append(response.status_code)
+          if queries is not None and len(queries) >= 1:
+            for k in queries:
+              d["api_coverage"][endpoint][method].append(k)
+          else:
+            d["api_coverage"][endpoint][method].append(None)
+
       self.assertLessEqual(duration, 0.15)  # All responses faster than 150ms
 
       if content_type is None:
@@ -169,10 +199,10 @@ class WebTestBase(TestBase):
 
   def api_get(self,
               endpoint: str,
-              queries: Dict[str, str] = None,
+              queries: t.Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
@@ -197,10 +227,10 @@ class WebTestBase(TestBase):
 
   def api_put(self,
               endpoint: str,
-              queries: Dict[str, str] = None,
+              queries: t.Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API PUT
 
     Args:
@@ -223,14 +253,12 @@ class WebTestBase(TestBase):
                          rc=rc,
                          **kwargs)
 
-  #
-
   def api_post(self,
                endpoint: str,
-               queries: Dict[str, str] = None,
+               queries: t.Dict[str, str] = None,
                content_type: str = "application/json",
                rc: int = 201,
-               **kwargs) -> Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API POST
 
     Args:
@@ -255,10 +283,10 @@ class WebTestBase(TestBase):
 
   def api_delete(self,
                  endpoint: str,
-                 queries: Dict[str, str] = None,
+                 queries: t.Dict[str, str] = None,
                  content_type: str = None,
                  rc: int = 204,
-                 **kwargs) -> Tuple[ResultType, HeadersType]:
+                 **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API DELETE
 
     Args:
@@ -280,3 +308,81 @@ class WebTestBase(TestBase):
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
+
+
+def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
+  """Get API Coverage results
+
+  Returns:
+    {endpoint: {method: {permutations: covered bool}}}
+  """
+  # Initialize data from api.yaml with all False
+  d: t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]] = {}
+
+  api_yaml = pathlib.Path(web.__file__).parent.joinpath("spec", "api.yaml")
+  with open(api_yaml, "r", encoding="utf-8") as file:
+    APIYaml = t.Dict[str, t.Dict[str, t.Dict[str, t.Dict[str, object]]]]
+    y: APIYaml = yaml.safe_load(file)
+
+  server: str = y["servers"][0]["url"]
+  prefix = server.split("/")[-1]
+
+  comp_params = y["components"]["parameters"]
+
+  for path, data in y["paths"].items():
+    endpoint = f"/{prefix}{path}"
+    if endpoint not in d:
+      d[endpoint] = {}
+
+    for method, options in data.items():
+      d_method: t.Dict[t.Union[int, str], bool] = {}
+
+      for rc in options["responses"]:
+        rc_int = int(rc)
+        if rc_int in [400, 404] and "UUID" in endpoint:
+          # Malformed uuid and missing instance are covered by common tests
+          # which don't touch the endpoint
+          d_method[rc_int] = True
+        else:
+          d_method[rc_int] = False
+
+      parameters = options.get("parameters", [])
+      any_required = False
+      for param in parameters:
+        param: t.Dict[str, str]
+        ref = param["$ref"].replace("#/components/parameters/", "")
+        p = comp_params[ref]
+        if p["in"] == "path":
+          continue
+
+        if p.get("required", False):
+          any_required = True
+        d_method[p["name"]] = False
+
+      if not any_required:
+        d_method[None] = False
+
+      d[endpoint][method.upper()] = d_method
+
+  # Iterate through test log
+  with autodict.JSONAutoDict(TEST_LOG) as log:
+    LogYaml = t.Dict[str, t.Dict[str, t.List[str]]]
+    d_log: LogYaml = log["api_coverage"]
+
+  for endpoint, data in d_log.items():
+    for method, branches in data.items():
+      for branch in branches:
+        if branch not in d[endpoint][method]:
+          raise KeyError(f"API call not in spec: {method} {endpoint} {branch}")
+        d[endpoint][method][branch] = True
+
+  # List of endpoints and methods to remove from coverage
+  no_cover: t.List[t.Tuple[str, str]] = [
+      # Same as /api/transactions?account=
+      ("/api/accounts/{accountUUID}/transactions", "GET"),
+  ]
+  for endpoint, method in no_cover:
+    # Remove misses
+    d[endpoint][method] = {k: v for k, v in d[endpoint][method].items() if v}
+
+  return d
