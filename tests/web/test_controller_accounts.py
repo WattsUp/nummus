@@ -183,7 +183,7 @@ class TestControllerAccounts(WebTestBase):
     self.assertEqual(target, result)
 
     # Strict query validation
-    self.api_get(endpoint, {"sort": "invalid"}, rc=400)
+    self.api_get(endpoint, {"category": "invalid"}, rc=400)
 
   def test_get_transactions(self):
     p = self._portfolio

@@ -5,6 +5,8 @@ import typing as t
 
 import datetime
 import json
+import uuid
+
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            NummusJSONEncoder, Transaction, TransactionCategory,
                            TransactionSplit)
@@ -499,6 +501,9 @@ class TestControllerTransactions(WebTestBase):
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
+    # Unknown asset
+    self.api_get(endpoint, {"asset": uuid.uuid4()}, rc=404)
+
     # Filter by asset category
     result, _ = self.api_get(endpoint, {"asset_category": "item"})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
@@ -525,4 +530,13 @@ class TestControllerTransactions(WebTestBase):
     self.assertEqual(target, result)
 
     # Strict query validation
-    self.api_get(endpoint, {"fake": "invalid"}, rc=400)
+    self.api_get(endpoint, {"category": "invalid"}, rc=400)
+
+    # Get via paging
+    result, _ = self.api_get(endpoint, {"limit": 1})
+    target = {"transactions": [t_splits[0]], "count": 11, "next_offset": 1}
+    self.assertEqual(target, result)
+
+    result, _ = self.api_get(endpoint, {"limit": 1, "offset": 10})
+    target = {"transactions": [t_splits[-1]], "count": 11, "next_offset": None}
+    self.assertEqual(target, result)

@@ -192,4 +192,4 @@ class TestControllerBudgets(WebTestBase):
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
 
     # Strict query validation
-    self.api_get(endpoint, {"fake": "invalid"}, rc=400)
+    self.api_get(endpoint, {"limit": "invalid"}, rc=400)

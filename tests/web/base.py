@@ -338,8 +338,13 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
       d_method: t.Dict[t.Union[int, str], bool] = {}
 
       for rc in options["responses"]:
-        rc: str
-        d_method[int(rc)] = False
+        rc_int = int(rc)
+        if rc_int in [400, 404] and "UUID" in endpoint:
+          # Malformed uuid and missing instance are covered by common tests
+          # which don't touch the endpoint
+          d_method[rc_int] = True
+        else:
+          d_method[rc_int] = False
 
       parameters = options.get("parameters", [])
       any_required = False
@@ -367,6 +372,17 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
   for endpoint, data in d_log.items():
     for method, branches in data.items():
       for branch in branches:
+        if branch not in d[endpoint][method]:
+          raise KeyError(f"API call not in spec: {method} {endpoint} {branch}")
         d[endpoint][method][branch] = True
+
+  # List of endpoints and methods to remove from coverage
+  no_cover: t.List[t.Tuple[str, str]] = [
+      # Same as /api/transactions?account=
+      ("/api/accounts/{accountUUID}/transactions", "GET"),
+  ]
+  for endpoint, method in no_cover:
+    # Remove misses
+    d[endpoint][method] = {k: v for k, v in d[endpoint][method].items() if v}
 
   return d

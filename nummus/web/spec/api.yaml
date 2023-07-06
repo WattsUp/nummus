@@ -85,8 +85,8 @@ paths:
                     description: Number of matches to request query
                     type: number
                     format: integer
-        "422":
-          description: Invalid parameter supplied
+        "400":
+          description: Malformed request
     post:
       tags:
         - Account

@@ -7,7 +7,7 @@ import unittest
 
 import autodict
 import colorama
-from colorama import Fore
+from colorama import Back, Fore
 
 from nummus.version import __version__
 
@@ -27,8 +27,11 @@ def pre_tests():
     d["methods"] = {}
 
 
-def post_tests():
+def post_tests() -> bool:
   """Things to run after all tests
+
+  Returns:
+    True if post tests were successful, False otherwise
   """
   n_slowest = 10
   with autodict.JSONAutoDict(TEST_LOG) as d:
@@ -63,11 +66,11 @@ def post_tests():
   if len(api_coverage) != 0:
     n_pad = max(len(k) for k in api_coverage) + 1
 
-    print(f"{'Endpoint':{n_pad}} Method "
+    print(f"{'Endpoint':{n_pad}}  Method "
           "Codes CMiss "
           "Query QMiss "
           "  Cover  Missing")
-    print_width = (n_pad + 1 + 6 + 1 + 5 + 1 + 5 + 1 + 5 + 1 + 5 + 1 + 7 + 2 +
+    print_width = (n_pad + 1 + 7 + 1 + 5 + 1 + 5 + 1 + 5 + 1 + 5 + 1 + 7 + 2 +
                    7)
     print("-" * print_width)
 
@@ -109,15 +112,23 @@ def post_tests():
         cover = 1 - n_miss / max(1, n_total)
 
         if method == "GET":
-          method = f"{Fore.BLUE}{method:6}{Fore.RESET}"
+          method = f"{Fore.CYAN}{method:7}{Fore.RESET}"
         elif method == "POST":
-          method = f"{Fore.GREEN}{method:6}{Fore.RESET}"
+          method = f"{Fore.GREEN}{method:7}{Fore.RESET}"
         elif method == "PUT":
-          method = f"{Fore.YELLOW}{method:6}{Fore.RESET}"
+          method = f"{Fore.YELLOW}{method:7}{Fore.RESET}"
         elif method == "DELETE":
-          method = f"{Fore.RED}{method:6}{Fore.RESET}"
+          method = f"{Fore.RED}{method:7}{Fore.RESET}"
+        elif method == "OPTIONS":
+          method = f"{Fore.BLUE}{method:7}{Fore.RESET}"
+        elif method == "HEAD":
+          method = f"{Fore.MAGENTA}{method:7}{Fore.RESET}"
+        elif method == "PATCH":
+          method = f"{Fore.BLACK}{Back.GREEN}{method:7}{Fore.RESET}{Back.RESET}"
+        elif method == "TRACE":
+          method = f"{Fore.BLACK}{Back.WHITE}{method:7}{Fore.RESET}{Back.RESET}"
         else:
-          method = f"{method:6}"
+          method = f"{method:7}"
 
         print(f"{endpoint:{n_pad}} {method} "
               f"{rc:5} {rc_miss:5} "
@@ -129,13 +140,19 @@ def post_tests():
     n_total = total_rc + total_queries
     cover = 1 - n_miss / max(1, n_total)
     print("-" * print_width)
-    print(f"{'TOTAL':{n_pad}} {'':6} "
+    print(f"{'TOTAL':{n_pad}} {'':7} "
           f"{total_rc:5} {total_rc_miss:5} "
           f"{total_queries:5} {total_queries_miss:5} "
           f"{cover * 100:6.2f}%")
 
+    if cover != 1:
+      print(f"{Fore.RED}API Coverage failure: total of {cover*100:.2f} "
+            "is less than fail-under=100.00")
+      return False
+  return True
+
 
 pre_tests()
 m = unittest.main(module=None, exit=False)
-post_tests()
-sys.exit(not m.result.wasSuccessful())
+post = post_tests()
+sys.exit(not m.result.wasSuccessful() or not post)
