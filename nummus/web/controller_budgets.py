@@ -1,7 +1,7 @@
 """Budget API Controller
 """
 
-from typing import Dict
+import typing as t
 
 import datetime
 
@@ -22,8 +22,8 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: Dict[str, object] = flask.request.json
-  req_categories: Dict[str, float] = req["categories"]
+  req: t.Dict[str, object] = flask.request.json
+  req_categories: t.Dict[str, float] = req["categories"]
   date = common.parse_date(req["date"])
   home = req_categories["home"]
   food = req_categories["food"]
@@ -77,7 +77,7 @@ def update(budget_uuid: str) -> flask.Response:
   with p.get_session() as s:
     b = common.find_budget(s, budget_uuid)
 
-    req: Dict[str, object] = flask.request.json
+    req: t.Dict[str, object] = flask.request.json
     b.date = common.parse_date(req["date"])
     b.categories = req["categories"]
 
@@ -115,7 +115,7 @@ def get_all() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: Dict[str, object] = flask.request.args.to_dict()
+  args: t.Dict[str, object] = flask.request.args.to_dict()
   start = common.parse_date(args.get("start"))
   end = common.parse_date(args.get("end", today))
   sort = str(args.get("sort", "oldest"))

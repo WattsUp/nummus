@@ -1,10 +1,12 @@
 """Base importer interfaces
 """
 
-from typing import Dict, List, Union
+import typing as t
 
 from abc import ABC, abstractmethod
 import datetime
+
+TransactionDict = t.Dict[str, t.Union[str, float, datetime.date, object]]
 
 
 class TransactionImporter(ABC):
@@ -41,7 +43,7 @@ class TransactionImporter(ABC):
     pass  # pragma: no cover
 
   @abstractmethod
-  def run(self) -> List[Dict[str, Union[str, float, datetime.date, object]]]:
+  def run(self) -> t.List[TransactionDict]:
     """Run importer
 
     Returns:

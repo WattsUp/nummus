@@ -1,12 +1,14 @@
 """Test module nummus.models.account
 """
 
-from typing import List
+import typing as t
 
 import datetime
 
 from nummus import models
-from nummus.models import account, asset
+from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
+                           AssetValuation, Transaction, TransactionCategory,
+                           TransactionSplit)
 
 from tests.base import TestBase
 
@@ -19,58 +21,57 @@ class TestTransaction(TestBase):
     session = self.get_session()
     models.metadata_create_all(session)
 
-    a = account.Account(name=self.random_string(),
-                        institution=self.random_string(),
-                        category=account.AccountCategory.CASH)
-    session.add(a)
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.CASH)
+    session.add(acct)
     session.commit()
 
-    asset_bananas = asset.Asset(name="bananas",
-                                category=asset.AssetCategory.ITEM)
-    session.add(asset_bananas)
+    asset = Asset(name="bananas", category=AssetCategory.ITEM)
+    session.add(asset)
     session.commit()
 
     d = {
-        "account_id": a.id,
+        "account_id": acct.id,
         "date": datetime.date.today(),
         "total": self._RNG.uniform(-1, 1),
         "statement": self.random_string()
     }
 
-    t = account.Transaction(**d)
-    session.add(t)
+    txn = Transaction(**d)
+    session.add(txn)
     session.commit()
 
-    self.assertEqual(d["account_id"], t.account_id)
-    self.assertEqual(a, t.account)
-    self.assertEqual(d["date"], t.date)
-    self.assertEqual(d["total"], t.total)
-    self.assertEqual(d["statement"], t.statement)
-    self.assertFalse(t.locked, "Transaction is unexpectedly locked")
+    self.assertEqual(d["account_id"], txn.account_id)
+    self.assertEqual(acct, txn.account)
+    self.assertEqual(d["date"], txn.date)
+    self.assertEqual(d["total"], txn.total)
+    self.assertEqual(d["statement"], txn.statement)
+    self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
 
     d.pop("account_id")
-    d["uuid"] = t.uuid
-    d["account_uuid"] = a.uuid
+    d["uuid"] = txn.uuid
+    d["account_uuid"] = acct.uuid
     d["splits"] = []
     d["locked"] = False
     d["is_split"] = False
-    result = t.to_dict()
+    result = txn.to_dict()
     self.assertDictEqual(d, result)
 
-    d = {"total": self._RNG.uniform(-1, 1), "parent_id": t.id}
+    d = {"total": self._RNG.uniform(-1, 1), "parent_id": txn.id}
 
-    t_split_0 = account.TransactionSplit(**d)
+    t_split_0 = TransactionSplit(**d)
     session.add(t_split_0)
     session.commit()
 
     result = t_split_0.to_dict()
     self.assertEqual(t_split_0.uuid, result.pop("uuid"))
     self.assertEqual(t_split_0.total, result.pop("total"))
-    self.assertEqual(a.uuid, result.pop("account_uuid"))
-    self.assertEqual(t.date.isoformat(), result.pop("date"))
+    self.assertEqual(acct.uuid, result.pop("account_uuid"))
+    self.assertEqual(txn.date.isoformat(), result.pop("date"))
     self.assertFalse(result.pop("is_split"))
     self.assertFalse(result.pop("locked"))
-    self.assertEqual(t.uuid, result.pop("parent_uuid"))
+    self.assertEqual(txn.uuid, result.pop("parent_uuid"))
     # Rest should be None
     for k, v in result.items():
       self.assertIsNone(v, f"result[{k}] is not None")
@@ -80,15 +81,15 @@ class TestTransaction(TestBase):
         "sales_tax": self._RNG.uniform(-1, 0),
         "payee": self.random_string(),
         "description": self.random_string(),
-        "category": account.TransactionCategory.FOOD,
+        "category": TransactionCategory.FOOD,
         "subcategory": self.random_string(),
         "tag": self.random_string(),
-        "asset_id": asset_bananas.id,
+        "asset_id": asset.id,
         "asset_quantity": self._RNG.uniform(-1, 1),
-        "parent_id": t.id
+        "parent_id": txn.id
     }
 
-    t_split_1 = account.TransactionSplit(**d)
+    t_split_1 = TransactionSplit(**d)
     session.add(t_split_1)
     session.commit()
 
@@ -96,17 +97,17 @@ class TestTransaction(TestBase):
     d.pop("asset_id")
     d.pop("parent_id")
     d["uuid"] = t_split_1.uuid
-    d["account_uuid"] = a.uuid
-    d["date"] = t.date.isoformat()
-    d["asset_uuid"] = asset_bananas.uuid
-    d["parent_uuid"] = t.uuid
+    d["account_uuid"] = acct.uuid
+    d["date"] = txn.date.isoformat()
+    d["asset_uuid"] = asset.uuid
+    d["parent_uuid"] = txn.uuid
     d["is_split"] = True
     d["locked"] = False
     result = t_split_1.to_dict()
     self.assertDictEqual(d, result)
 
-    self.assertEqual([t_split_0, t_split_1], t.splits)
-    self.assertEqual(asset_bananas, t_split_1.asset)
+    self.assertEqual([t_split_0, t_split_1], txn.splits)
+    self.assertEqual(asset, t_split_1.asset)
 
 
 class TestAccount(TestBase):
@@ -120,25 +121,25 @@ class TestAccount(TestBase):
     d = {
         "name": self.random_string(),
         "institution": self.random_string(),
-        "category": account.AccountCategory.CASH
+        "category": AccountCategory.CASH
     }
 
-    a = account.Account(**d)
-    session.add(a)
+    acct = Account(**d)
+    session.add(acct)
     session.commit()
 
-    self.assertEqual(d["name"], a.name)
-    self.assertEqual(d["institution"], a.institution)
-    self.assertEqual(d["category"], a.category)
-    self.assertEqual([], a.transactions)
-    self.assertIsNone(a.opened_on)
-    self.assertIsNone(a.updated_on)
+    self.assertEqual(d["name"], acct.name)
+    self.assertEqual(d["institution"], acct.institution)
+    self.assertEqual(d["category"], acct.category)
+    self.assertEqual([], acct.transactions)
+    self.assertIsNone(acct.opened_on)
+    self.assertIsNone(acct.updated_on)
 
     # Test default and hidden properties
-    d["uuid"] = a.uuid
+    d["uuid"] = acct.uuid
     d["opened_on"] = None
     d["updated_on"] = None
-    result = a.to_dict()
+    result = acct.to_dict()
     self.assertDictEqual(d, result)
 
   def test_add_transactions(self):
@@ -150,51 +151,51 @@ class TestAccount(TestBase):
     d = {
         "name": self.random_string(),
         "institution": self.random_string(),
-        "category": account.AccountCategory.CASH
+        "category": AccountCategory.CASH
     }
 
-    a = account.Account(**d)
-    session.add(a)
+    acct = Account(**d)
+    session.add(acct)
     session.commit()
 
-    self.assertEqual([], a.transactions)
-    self.assertIsNone(a.opened_on)
-    self.assertIsNone(a.updated_on)
+    self.assertEqual([], acct.transactions)
+    self.assertIsNone(acct.opened_on)
+    self.assertIsNone(acct.updated_on)
 
     # Transaction are sorted by date
 
-    t_today = account.Transaction(account=a,
-                                  date=today,
-                                  total=self._RNG.uniform(-1, 1),
-                                  statement=self.random_string())
+    t_today = Transaction(account=acct,
+                          date=today,
+                          total=self._RNG.uniform(-1, 1),
+                          statement=self.random_string())
     session.add(t_today)
     session.commit()
 
-    self.assertEqual([t_today], a.transactions)
-    self.assertEqual(today, a.opened_on)
-    self.assertEqual(today, a.updated_on)
+    self.assertEqual([t_today], acct.transactions)
+    self.assertEqual(today, acct.opened_on)
+    self.assertEqual(today, acct.updated_on)
 
-    t_before = account.Transaction(account=a,
-                                   date=today - datetime.timedelta(days=1),
-                                   total=self._RNG.uniform(-1, 1),
-                                   statement=self.random_string())
+    t_before = Transaction(account=acct,
+                           date=today - datetime.timedelta(days=1),
+                           total=self._RNG.uniform(-1, 1),
+                           statement=self.random_string())
     session.add(t_before)
     session.commit()
 
-    self.assertEqual([t_before, t_today], a.transactions)
-    self.assertEqual(t_before.date, a.opened_on)
-    self.assertEqual(today, a.updated_on)
+    self.assertEqual([t_before, t_today], acct.transactions)
+    self.assertEqual(t_before.date, acct.opened_on)
+    self.assertEqual(today, acct.updated_on)
 
-    t_after = account.Transaction(account=a,
-                                  date=today + datetime.timedelta(days=1),
-                                  total=self._RNG.uniform(-1, 1),
-                                  statement=self.random_string())
+    t_after = Transaction(account=acct,
+                          date=today + datetime.timedelta(days=1),
+                          total=self._RNG.uniform(-1, 1),
+                          statement=self.random_string())
     session.add(t_after)
     session.commit()
 
-    self.assertEqual([t_before, t_today, t_after], a.transactions)
-    self.assertEqual(t_before.date, a.opened_on)
-    self.assertEqual(t_after.date, a.updated_on)
+    self.assertEqual([t_before, t_today, t_after], acct.transactions)
+    self.assertEqual(t_before.date, acct.opened_on)
+    self.assertEqual(t_after.date, acct.updated_on)
 
   def test_get_asset_qty(self):
     session = self.get_session()
@@ -202,15 +203,15 @@ class TestAccount(TestBase):
 
     today = datetime.date.today()
 
-    a = account.Account(name=self.random_string(),
-                        institution=self.random_string(),
-                        category=account.AccountCategory.INVESTMENT)
-    assets: List[asset.Asset] = []
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.INVESTMENT)
+    assets: t.List[Asset] = []
     for _ in range(3):
-      new_asset = asset.Asset(name=self.random_string(),
-                              category=asset.AssetCategory.SECURITY)
+      new_asset = Asset(name=self.random_string(),
+                        category=AssetCategory.SECURITY)
       assets.append(new_asset)
-    session.add(a)
+    session.add(acct)
     session.add_all(assets)
     session.commit()
 
@@ -219,71 +220,71 @@ class TestAccount(TestBase):
     ]
     target_qty = {}
 
-    result_dates, result_qty = a.get_asset_qty(target_dates[0],
-                                               target_dates[-1])
+    result_dates, result_qty = acct.get_asset_qty(target_dates[0],
+                                                  target_dates[-1])
     self.assertEqual(target_dates, result_dates)
     self.assertEqual(target_qty, result_qty)
 
     # Fund account on first day
-    t = account.Transaction(account=a,
-                            date=target_dates[1],
-                            total=self._RNG.uniform(10, 100),
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t, total=t.total)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=self._RNG.uniform(10, 100),
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
     session.commit()
 
     # Buy asset[0] on the second day
     q0 = self._RNG.uniform(0, 10)
-    t = account.Transaction(account=a,
-                            date=target_dates[1],
-                            total=self._RNG.uniform(-10, -1),
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t,
-                                       total=t.total,
-                                       asset=assets[0],
-                                       asset_quantity=q0)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=self._RNG.uniform(-10, -1),
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               asset=assets[0],
+                               asset_quantity=q0)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0]}
 
-    result_dates, result_qty = a.get_asset_qty(target_dates[0],
-                                               target_dates[-1])
+    result_dates, result_qty = acct.get_asset_qty(target_dates[0],
+                                                  target_dates[-1])
     self.assertEqual(target_dates, result_dates)
     self.assertEqual(target_qty, result_qty)
 
     # Sell asset[0] on the last day
     q1 = self._RNG.uniform(0, 10)
-    t = account.Transaction(account=a,
-                            date=target_dates[-1],
-                            total=self._RNG.uniform(1, 10),
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t,
-                                       total=t.total,
-                                       asset=assets[0],
-                                       asset_quantity=-q1)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[-1],
+                      total=self._RNG.uniform(1, 10),
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               asset=assets[0],
+                               asset_quantity=-q1)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0 - q1]}
 
-    result_dates, result_qty = a.get_asset_qty(target_dates[0],
-                                               target_dates[-1])
+    result_dates, result_qty = acct.get_asset_qty(target_dates[0],
+                                                  target_dates[-1])
     self.assertEqual(target_dates, result_dates)
     self.assertEqual(target_qty, result_qty)
 
     # Buy asset[1] on today
     q2 = self._RNG.uniform(0, 10)
-    t = account.Transaction(account=a,
-                            date=today,
-                            total=self._RNG.uniform(-10, -1),
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t,
-                                       total=t.total,
-                                       asset=assets[1],
-                                       asset_quantity=q2)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=today,
+                      total=self._RNG.uniform(-10, -1),
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               asset=assets[1],
+                               asset_quantity=q2)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_qty = {
@@ -291,13 +292,13 @@ class TestAccount(TestBase):
         assets[1].uuid: [0, 0, 0, q2]
     }
 
-    result_dates, result_qty = a.get_asset_qty(target_dates[0], today)
+    result_dates, result_qty = acct.get_asset_qty(target_dates[0], today)
     self.assertEqual(target_dates[0:4], result_dates)
     self.assertEqual(target_qty, result_qty)
 
     # Test single value
     target_qty = {assets[0].uuid: [q0], assets[1].uuid: [q2]}
-    result_dates, result_qty = a.get_asset_qty(today, today)
+    result_dates, result_qty = acct.get_asset_qty(today, today)
     self.assertListEqual([today], result_dates)
     self.assertEqual(target_qty, result_qty)
 
@@ -307,15 +308,15 @@ class TestAccount(TestBase):
 
     today = datetime.date.today()
 
-    a = account.Account(name=self.random_string(),
-                        institution=self.random_string(),
-                        category=account.AccountCategory.INVESTMENT)
-    assets: List[asset.Asset] = []
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.INVESTMENT)
+    assets: t.List[Asset] = []
     for _ in range(3):
-      new_asset = asset.Asset(name=self.random_string(),
-                              category=asset.AssetCategory.SECURITY)
+      new_asset = Asset(name=self.random_string(),
+                        category=AssetCategory.SECURITY)
       assets.append(new_asset)
-    session.add(a)
+    session.add(acct)
     session.add_all(assets)
     session.commit()
 
@@ -327,24 +328,24 @@ class TestAccount(TestBase):
     start = target_dates[0]
     end = target_dates[-1]
 
-    r_dates, r_values, r_assets = a.get_value(start, end)
+    r_dates, r_values, r_assets = acct.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
     # Fund account on first day
     t_fund = self._RNG.uniform(10, 100)
-    t = account.Transaction(account=a,
-                            date=target_dates[1],
-                            total=t_fund,
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t, total=t.total)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t_fund,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_values = [0, t_fund, t_fund, t_fund, t_fund, t_fund, t_fund]
 
-    r_dates, r_values, r_assets = a.get_value(start, end)
+    r_dates, r_values, r_assets = acct.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
@@ -352,15 +353,15 @@ class TestAccount(TestBase):
     # Buy asset[0] on the second day
     t0 = self._RNG.uniform(-10, -1)
     q0 = self._RNG.uniform(0, 10)
-    t = account.Transaction(account=a,
-                            date=target_dates[1],
-                            total=t0,
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t,
-                                       total=t.total,
-                                       asset=assets[0],
-                                       asset_quantity=q0)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t0,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               asset=assets[0],
+                               asset_quantity=q0)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_values = [
@@ -369,7 +370,7 @@ class TestAccount(TestBase):
     ]
     target_assets = {assets[0].uuid: [0] * 7}
 
-    r_dates, r_values, r_assets = a.get_value(start, end)
+    r_dates, r_values, r_assets = acct.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
@@ -377,15 +378,15 @@ class TestAccount(TestBase):
     # Sell asset[0] on the last day
     t1 = self._RNG.uniform(1, 10)
     q1 = self._RNG.uniform(0, 10)
-    t = account.Transaction(account=a,
-                            date=target_dates[-1],
-                            total=t1,
-                            statement=self.random_string())
-    t_split = account.TransactionSplit(parent=t,
-                                       total=t.total,
-                                       asset=assets[0],
-                                       asset_quantity=-q1)
-    session.add_all((t, t_split))
+    txn = Transaction(account=acct,
+                      date=target_dates[-1],
+                      total=t1,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               asset=assets[0],
+                               asset_quantity=-q1)
+    session.add_all((txn, t_split))
     session.commit()
 
     target_values = [
@@ -394,7 +395,7 @@ class TestAccount(TestBase):
     ]
     target_assets = {assets[0].uuid: [0] * 7}
 
-    r_dates, r_values, r_assets = a.get_value(start, end)
+    r_dates, r_values, r_assets = acct.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
@@ -402,7 +403,7 @@ class TestAccount(TestBase):
     # Add valuations to Asset
     prices = self._RNG.uniform(1, 10, len(target_dates))
     for date, p in zip(target_dates, prices):
-      v = asset.AssetValuation(asset=assets[0], date=date, value=p)
+      v = AssetValuation(asset=assets[0], date=date, value=p)
       session.add(v)
     session.commit()
 
@@ -412,13 +413,13 @@ class TestAccount(TestBase):
     target_values = [c + v for c, v in zip(target_values, asset_values)]
     target_assets = {assets[0].uuid: asset_values}
 
-    r_dates, r_values, r_assets = a.get_value(start, end)
+    r_dates, r_values, r_assets = acct.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
     # # Test single value
-    r_dates, r_values, r_assets = a.get_value(today, today)
+    r_dates, r_values, r_assets = acct.get_value(today, today)
     self.assertEqual([today], r_dates)
     self.assertEqual([target_values[3]], r_values)
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)

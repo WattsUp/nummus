@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import Dict, List, Union, Tuple
+import typing as t
 
 import datetime
 import enum
@@ -14,6 +14,8 @@ from sqlalchemy import orm, schema
 
 from nummus import common
 
+ModelDict = t.Dict[str, t.Union[str, float, int, bool, object]]
+
 
 class Base(orm.DeclarativeBase):
   """Base ORM model
@@ -24,9 +26,9 @@ class Base(orm.DeclarativeBase):
   """
   metadata: schema.MetaData
 
-  _PROPERTIES_DEFAULT: List[str] = ["uuid"]
-  _PROPERTIES_HIDDEN: List[str] = ["id"]
-  _PROPERTIES_READONLY: List[str] = ["id", "uuid"]
+  _PROPERTIES_DEFAULT: t.List[str] = ["uuid"]
+  _PROPERTIES_HIDDEN: t.List[str] = ["id"]
+  _PROPERTIES_READONLY: t.List[str] = ["id", "uuid"]
 
   @orm.declared_attr
   def __tablename__(self):
@@ -47,11 +49,10 @@ class Base(orm.DeclarativeBase):
     except orm.exc.DetachedInstanceError:
       return f"<{self.__class__.__name__} id=Detached Instance>"
 
-  def to_dict(
-      self,
-      show: List[str] = None,
-      hide: List[str] = None,
-      path: str = None) -> Dict[str, Union[str, float, int, bool, object]]:
+  def to_dict(self,
+              show: t.List[str] = None,
+              hide: t.List[str] = None,
+              path: str = None) -> ModelDict:
     """Return a dictionary representation of this model
 
     Adds all columns that are not hidden (in hide or in _hidden_properties) and
@@ -127,7 +128,7 @@ class Base(orm.DeclarativeBase):
       hide.append(check)
       is_list = self.__mapper__.relationships[key].uselist
       if is_list:
-        items: List[Base] = getattr(self, key)
+        items: t.List[Base] = getattr(self, key)
         l = []
         for item in items:
           item_d = item.to_dict(show=list(show),
@@ -170,8 +171,8 @@ class Base(orm.DeclarativeBase):
     return d
 
   def update(self,
-             data: Dict[str, Union[str, float, int, bool, object]],
-             force: bool = False) -> Dict[str, Tuple[object, object]]:
+             data: ModelDict,
+             force: bool = False) -> t.Dict[str, t.Tuple[object, object]]:
     """Update model from dictionary
 
     Only updates columns
@@ -189,7 +190,7 @@ class Base(orm.DeclarativeBase):
     relationships = self.__mapper__.relationships.keys()
     properties = dir(self)
 
-    changes: Dict[str, Tuple[object, object]] = {}
+    changes: t.Dict[str, t.Tuple[object, object]] = {}
 
     # Update columns
     for key in columns:
@@ -289,13 +290,13 @@ class BaseEnum(enum.Enum):
 
     s = s.lower()
     # LUT of common strings to the matching enum
-    r = cls._lut().get(s)
-    if r is None:
+    res = cls._lut().get(s)
+    if res is None:
       raise ValueError(f"String not found in {cls.__name__}: {s}")
-    return r
+    return res
 
   @classmethod
-  def _lut(cls) -> Dict[str, BaseEnum]:
+  def _lut(cls) -> t.Dict[str, BaseEnum]:
     """Look up table, mapping of strings to matching Enums
 
     Returns:

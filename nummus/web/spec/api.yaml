@@ -1,3 +1,4 @@
+# TODO (WattsUp) Implement endpoints into api.yaml and remove this temp file
 openapi: 3.0.0
 servers:
   - url: https://nummus/api
@@ -25,8 +26,10 @@ tags:
   - name: Budget
     description: Allocation of cash flow transactions by categories
   - name: Investment
+    # TODO (WattsUp) Implement
     description: Tools and metrics involved with investable Assets
   - name: Retirement
+    # TODO (WattsUp) Implement
     description: Tools and metrics involved with retirement
 paths:
   /version:
@@ -666,6 +669,292 @@ paths:
           description: Malformed request
         "404":
           description: Transaction not found
+  # /portfolio/budget:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #       - Budget
+  #     summary: Get Budget performance of Portfolio
+  #     description: Returns both target outflow (budget) and actual outflow
+  #     operationId: nummus.web.controller_portfolio.get_budget
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/SortByValue"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 outflow:
+  #                   description: Sum of outflows (same data as
+  #                     /portfolio/cash-flow?integrate=true)
+  #                   type: array
+  #                   items:
+  #                     type: number
+  #                     format: double
+  #                   example:
+  #                     - 0.2
+  #                     - 1480.8
+  #                 outflow_categorized:
+  #                   $ref: "#/components/schemas/DoubleListBudgeted"
+  #                 target:
+  #                   description: Target outflow based on budget, integrated.
+  #                     Directly comparable to outflow.
+  #                   type: array
+  #                   items:
+  #                     type: number
+  #                     format: double
+  #                   example:
+  #                     - 100
+  #                     - 200
+  #                 target_categorized:
+  #                   $ref: "#/components/schemas/DoubleListBudgeted"
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/cash-flow:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #     summary: Get cash flow of Portfolio
+  #     description: Sum of inflow and outflow, excludes transfers and asset
+  #       appreciation or depreciation.
+  #     operationId: nummus.web.controller_portfolio.get_cash_flow
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/AccountCategoryExplicit"
+  #       - name: integrate
+  #         in: query
+  #         description: >-
+  #           false returns daily incomes and expenses, see formula:
+  #           cash-flow(t)=inflow(t) - outflow(t). true will accumulate cash flow
+  #           along the way, see formula: cash-flow(t)=integral(inflow(x) -
+  #           outflow(x), dx, start, t). This applies to value, inflow, and
+  #           outflow in response
+  #         schema:
+  #           type: boolean
+  #           default: false
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 inflow:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 outflow:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/value:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #     summary: Get value of Portfolio
+  #     description: Assets are Accounts with positive value, liabilities are
+  #       Accounts with negative value
+  #     operationId: nummus.web.controller_portfolio.get_value
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/AccountCategoryExplicit"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 assets:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 liabilities:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/value-by-account:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #       - Account
+  #     summary: Get value of Portfolio categorized by Account
+  #     description: Same data as multiple calls to /account/{accountUUID}/value
+  #     operationId: nummus.web.controller_portfolio.get_value_by_account
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/SortByValue"
+  #       - $ref: "#/components/parameters/AccountCategory"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 accounts:
+  #                   description: Value by individual Accounts
+  #                   type: object
+  #                   additionalProperties:
+  #                     $ref: "#/components/schemas/DoubleList"
+  #                   example:
+  #                     3fa85f64-5717-4562-b3fc-2c963f66afa6:
+  #                       - 100.0
+  #                       - 10687.2
+  #                     e22b7880-acd7-4355-b9ea-1b0e9f174d1d:
+  #                       - 10.0
+  #                       - 1687.2
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/value-by-category:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #       - Account
+  #     summary: Get value of Portfolio categorized by Account categories
+  #     description: >-
+  #       Same data as multiple calls to
+  #       /portfolio/value?account_category=[cash,loan,etc]
+  #     operationId: nummus.web.controller_portfolio.get_value_by_category
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/SortByValue"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 categories:
+  #                   description: Value by individual Account categories
+  #                   type: object
+  #                   properties:
+  #                     cash:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     credit:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     investment:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     mortgage:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     loan:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     fixed:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                     other:
+  #                       $ref: "#/components/schemas/DoubleList"
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/value-by-asset:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #       - Asset
+  #     summary: Get value of Portfolio categorized by Assets
+  #     description: ""
+  #     operationId: nummus.web.controller_portfolio.get_value_by_asset
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - $ref: "#/components/parameters/SortByValue"
+  #       - $ref: "#/components/parameters/AssetCategory"
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 total:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 assets:
+  #                   description: Value by individual Assets
+  #                   type: object
+  #                   additionalProperties:
+  #                     $ref: "#/components/schemas/DoubleList"
+  #                   example:
+  #                     3fa85f64-5717-4562-b3fc-2c963f66afa6:
+  #                       - 100.0
+  #                       - 10687.2
+  #                     e22b7880-acd7-4355-b9ea-1b0e9f174d1d:
+  #                       - 10.0
+  #                       - 1687.2
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
+  # /portfolio/emergency-fund:
+  #   get:
+  #     tags:
+  #       - Portfolio
+  #     summary: Get emergency fund of Portfolio
+  #     description: >-
+  #       Compares savings to emergency fund requirements, based on portfolio
+  #       outflow over past period. Default is 3 to 6 months of spending. Excess
+  #       savings would be considered investible cash.
+  #     operationId: nummus.web.controller_portfolio.get_emergency fund
+  #     parameters:
+  #       - $ref: "#/components/parameters/Start"
+  #       - $ref: "#/components/parameters/End"
+  #       - name: lower
+  #         in: query
+  #         description: Lower requirement for emergency fund in days
+  #         schema:
+  #           type: integer
+  #           default: 92
+  #       - name: upper
+  #         in: query
+  #         description: Upper requirement for emergency fund in days
+  #         schema:
+  #           type: integer
+  #           default: 183
+  #     responses:
+  #       "200":
+  #         description: Successful operation
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 actual_balance:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 lower_balance:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 upper_balance:
+  #                   $ref: "#/components/schemas/DoubleList"
+  #                 dates:
+  #                   $ref: "#/components/schemas/Dates"
+  #       "400":
+  #         description: Invalid parameter supplied
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus

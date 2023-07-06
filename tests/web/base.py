@@ -1,7 +1,7 @@
 """TestBase with extra functions for web testing
 """
 
-from typing import Callable, Dict, Tuple, Union
+import typing as t
 
 import io
 import re
@@ -26,8 +26,8 @@ from tests.base import TestBase
 _RE_UUID = re.compile(r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
                       r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}")
 
-ResultType = Union[Dict[str, object], str, bytes]
-HeadersType = Dict[str, str]
+ResultType = t.Union[t.Dict[str, object], str, bytes]
+HeadersType = t.Dict[str, str]
 
 
 class WebTestBase(TestBase):
@@ -77,7 +77,8 @@ class WebTestBase(TestBase):
 
     super().tearDown(clean=False)
 
-  def assertHTTPRaises(self, rc: int, func: Callable, *args, **kwargs) -> None:
+  def assertHTTPRaises(self, rc: int, func: t.Callable, *args,
+                       **kwargs) -> None:
     """Test function raises ProblemException with the matching HTTP return code
 
     Args:
@@ -93,10 +94,10 @@ class WebTestBase(TestBase):
   def api_open(self,
                method: str,
                endpoint: str,
-               queries: Dict[str, str],
+               queries: t.Dict[str, str],
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
@@ -169,10 +170,10 @@ class WebTestBase(TestBase):
 
   def api_get(self,
               endpoint: str,
-              queries: Dict[str, str] = None,
+              queries: t.Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API GET
 
     Args:
@@ -197,10 +198,10 @@ class WebTestBase(TestBase):
 
   def api_put(self,
               endpoint: str,
-              queries: Dict[str, str] = None,
+              queries: t.Dict[str, str] = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API PUT
 
     Args:
@@ -227,10 +228,10 @@ class WebTestBase(TestBase):
 
   def api_post(self,
                endpoint: str,
-               queries: Dict[str, str] = None,
+               queries: t.Dict[str, str] = None,
                content_type: str = "application/json",
                rc: int = 201,
-               **kwargs) -> Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API POST
 
     Args:
@@ -255,10 +256,10 @@ class WebTestBase(TestBase):
 
   def api_delete(self,
                  endpoint: str,
-                 queries: Dict[str, str] = None,
+                 queries: t.Dict[str, str] = None,
                  content_type: str = None,
                  rc: int = 204,
-                 **kwargs) -> Tuple[ResultType, HeadersType]:
+                 **kwargs) -> t.Tuple[ResultType, HeadersType]:
     """Run a test API DELETE
 
     Args:

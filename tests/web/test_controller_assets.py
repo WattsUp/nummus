@@ -62,7 +62,7 @@ class TestControllerAssets(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
@@ -78,7 +78,7 @@ class TestControllerAssets(WebTestBase):
   def test_update(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
       s.add(a)
@@ -107,7 +107,7 @@ class TestControllerAssets(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create accounts
+    # Create assets
     a = Asset(name="BANANA", category=AssetCategory.ITEM)
     n_valuations = 10
     today = datetime.date.today()

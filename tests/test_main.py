@@ -1,7 +1,7 @@
 """Test module nummus.main
 """
 
-from typing import List, Dict
+import typing as t
 
 import functools
 import io
@@ -31,8 +31,8 @@ class TestMain(TestBase):
       if callable(value) and value.__module__.startswith("nummus"):
         self._original_commands[name] = value
 
-    self._called_args: List[str] = []
-    self._called_kwargs: Dict[str, object] = {}
+    self._called_args: t.List[str] = []
+    self._called_kwargs: t.Dict[str, object] = {}
 
     def check_call(*args, **kwargs):
       self._called_args.clear()

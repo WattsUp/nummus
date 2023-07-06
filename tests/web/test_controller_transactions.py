@@ -1,7 +1,7 @@
 """Test module nummus.web.controller_transactions
 """
 
-from typing import List
+import typing as t
 
 import datetime
 import json
@@ -20,22 +20,22 @@ class TestControllerTransactions(WebTestBase):
     p = self._portfolio
 
     # Create accounts
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
-    asset_bananas = Asset(name="bananas", category=AssetCategory.ITEM)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
+    asset = Asset(name="bananas", category=AssetCategory.ITEM)
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add_all((a, asset_bananas))
+      s.add_all((acct, asset))
       s.commit()
-      a_uuid = a.uuid
-      asset_bananas_uuid = asset_bananas.uuid
+      acct_uuid = acct.uuid
+      asset_uuid = asset.uuid
 
     # Make the minimum
     total = float(self._RNG.uniform(-10, 10))
     statement = self.random_string()
     req = {
-        "account_uuid": a_uuid,
+        "account_uuid": acct_uuid,
         "date": today.isoformat(),
         "total": total,
         "statement": statement,
@@ -47,23 +47,23 @@ class TestControllerTransactions(WebTestBase):
     endpoint = "/api/transactions"
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
-      t = s.query(Transaction).first()
-      self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
+      txn = s.query(Transaction).first()
+      self.assertEqual(f"/api/transactions/{txn.uuid}", headers["Location"])
 
-      self.assertEqual(a, t.account)
-      self.assertEqual(today, t.date)
-      self.assertEqualWithinError(total, t.total, 1e-6)
-      self.assertEqual(statement, t.statement)
-      self.assertTrue(t.locked, "Transaction is not locked")
-      self.assertEqual(1, len(t.splits))
-      t_split = t.splits[0]
+      self.assertEqual(acct, txn.account)
+      self.assertEqual(today, txn.date)
+      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(statement, txn.statement)
+      self.assertTrue(txn.locked, "Transaction is not locked")
+      self.assertEqual(1, len(txn.splits))
+      t_split = txn.splits[0]
       self.assertEqualWithinError(total, t_split.total, 1e-6)
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
 
       s.delete(t_split)
-      s.delete(t)
+      s.delete(txn)
       s.commit()
     self.assertDictEqual(target, result)
 
@@ -85,11 +85,11 @@ class TestControllerTransactions(WebTestBase):
         "category": category.name.lower(),
         "subcategory": subcategory,
         "tag": tag,
-        "asset_uuid": asset_bananas_uuid,
+        "asset_uuid": asset_uuid,
         "asset_quantity": asset_qty
     }
     req = {
-        "account_uuid": a_uuid,
+        "account_uuid": acct_uuid,
         "date": today.isoformat(),
         "total": total,
         "statement": statement,
@@ -99,16 +99,16 @@ class TestControllerTransactions(WebTestBase):
 
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
-      t = s.query(Transaction).first()
-      self.assertEqual(f"/api/transactions/{t.uuid}", headers["Location"])
+      txn = s.query(Transaction).first()
+      self.assertEqual(f"/api/transactions/{txn.uuid}", headers["Location"])
 
-      self.assertEqual(a, t.account)
-      self.assertEqual(today, t.date)
-      self.assertEqualWithinError(total, t.total, 1e-6)
-      self.assertEqual(statement, t.statement)
-      self.assertTrue(t.locked, "Transaction is not locked")
-      self.assertEqual(1, len(t.splits))
-      t_split = t.splits[0]
+      self.assertEqual(acct, txn.account)
+      self.assertEqual(today, txn.date)
+      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(statement, txn.statement)
+      self.assertTrue(txn.locked, "Transaction is not locked")
+      self.assertEqual(1, len(txn.splits))
+      t_split = txn.splits[0]
       self.assertEqualWithinError(total, t_split.total, 1e-6)
       self.assertEqualWithinError(sales_tax, t_split.sales_tax, 1e-6)
       self.assertEqual(payee, t_split.payee)
@@ -116,16 +116,16 @@ class TestControllerTransactions(WebTestBase):
       self.assertEqual(category, t_split.category)
       self.assertEqual(subcategory, t_split.subcategory)
       self.assertEqual(tag, t_split.tag)
-      self.assertEqual(asset_bananas, t_split.asset)
+      self.assertEqual(asset, t_split.asset)
       self.assertEqual(asset_qty, t_split.asset_quantity)
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
     req = {
-        "account_uuid": a_uuid,
+        "account_uuid": acct_uuid,
         "date": today.isoformat(),
         "total": total,
         "statement": statement,
@@ -135,7 +135,7 @@ class TestControllerTransactions(WebTestBase):
 
     # Need at least one split
     req = {
-        "account_uuid": a_uuid,
+        "account_uuid": acct_uuid,
         "date": today.isoformat(),
         "total": total,
         "statement": statement,
@@ -148,23 +148,23 @@ class TestControllerTransactions(WebTestBase):
     p = self._portfolio
 
     # Create accounts and transactions
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(a)
+      s.add(acct)
       s.commit()
 
-      t = Transaction(account_id=a.id,
-                      date=today,
-                      total=100,
-                      statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=t)
-      s.add_all((t, t_split))
+      txn = Transaction(account_id=acct.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+      t_split = TransactionSplit(total=100, parent=txn)
+      s.add_all((txn, t_split))
       s.commit()
-      t_uuid = t.uuid
-      target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+      t_uuid = txn.uuid
+      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Get by uuid
@@ -175,25 +175,25 @@ class TestControllerTransactions(WebTestBase):
     p = self._portfolio
 
     # Create accounts and transactions
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
-    asset_bananas = Asset(name="bananas", category=AssetCategory.ITEM)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
+    asset = Asset(name="bananas", category=AssetCategory.ITEM)
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add_all((a, asset_bananas))
+      s.add_all((acct, asset))
       s.commit()
-      asset_bananas_uuid = asset_bananas.uuid
+      asset_uuid = asset.uuid
 
-      t = Transaction(account_id=a.id,
-                      date=today,
-                      total=100,
-                      statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=t)
-      s.add_all((t, t_split))
+      txn = Transaction(account_id=acct.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+      t_split = TransactionSplit(total=100, parent=txn)
+      s.add_all((txn, t_split))
       s.commit()
-      t_uuid = t.uuid
-      target = json.loads(json.dumps(t, cls=NummusJSONEncoder))
+      t_uuid = txn.uuid
+      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Update
@@ -217,11 +217,11 @@ class TestControllerTransactions(WebTestBase):
     req["splits"] = [req_split_0]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
-      t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
-      self.assertEqual(new_statement, t.statement)
-      self.assertEqual(new_date, t.date)
-      self.assertEqual(1, len(t.splits))
-      t_split = t.splits[0]
+      txn = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
+      self.assertEqual(new_statement, txn.statement)
+      self.assertEqual(new_date, txn.date)
+      self.assertEqual(1, len(txn.splits))
+      t_split = txn.splits[0]
       self.assertEqual(new_category_0, t_split.category)
 
       # Check no other splits were created
@@ -242,7 +242,7 @@ class TestControllerTransactions(WebTestBase):
     target["splits"][0]["category"] = new_category_0.name.lower()
     target["splits"][0]["is_split"] = True
     target["splits"][1]["category"] = new_category_1.name.lower()
-    target["splits"][1]["asset_uuid"] = asset_bananas_uuid
+    target["splits"][1]["asset_uuid"] = asset_uuid
     target["splits"][1]["is_split"] = True
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
@@ -264,15 +264,15 @@ class TestControllerTransactions(WebTestBase):
     req["splits"] = [req_split_0, req_split_1]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
-      t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
-      self.assertEqual(new_statement, t.statement)
-      self.assertEqual(new_date, t.date)
-      self.assertEqual(2, len(t.splits))
-      t_split = t.splits[0]
+      txn = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
+      self.assertEqual(new_statement, txn.statement)
+      self.assertEqual(new_date, txn.date)
+      self.assertEqual(2, len(txn.splits))
+      t_split = txn.splits[0]
       self.assertEqual(new_category_0, t_split.category)
-      t_split = t.splits[1]
+      t_split = txn.splits[1]
       self.assertEqual(new_category_1, t_split.category)
-      self.assertEqual(asset_bananas_uuid, t_split.asset_uuid)
+      self.assertEqual(asset_uuid, t_split.asset_uuid)
 
       # Update target t_split_1 uuid since it is new
       target["splits"][1]["uuid"] = t_split.uuid
@@ -306,11 +306,11 @@ class TestControllerTransactions(WebTestBase):
     req["splits"] = [req_split_0]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
-      t = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
-      self.assertEqual(new_statement, t.statement)
-      self.assertEqual(new_date, t.date)
-      self.assertEqual(1, len(t.splits))
-      t_split = t.splits[0]
+      txn = s.query(Transaction).where(Transaction.uuid == t_uuid).first()
+      self.assertEqual(new_statement, txn.statement)
+      self.assertEqual(new_date, txn.date)
+      self.assertEqual(1, len(txn.splits))
+      t_split = txn.splits[0]
       self.assertEqual(new_category_0, t_split.category)
 
       # Update target t_split_0 uuid since it might be different
@@ -332,22 +332,22 @@ class TestControllerTransactions(WebTestBase):
     p = self._portfolio
 
     # Create accounts and transactions
-    a = Account(name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH)
+    acct = Account(name="Monkey Bank Checking",
+                   institution="Monkey Bank",
+                   category=AccountCategory.CASH)
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(a)
+      s.add(acct)
       s.commit()
 
-      t = Transaction(account_id=a.id,
-                      date=today,
-                      total=100,
-                      statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=t)
-      s.add_all((t, t_split))
+      txn = Transaction(account_id=acct.id,
+                        date=today,
+                        total=100,
+                        statement=self.random_string())
+      t_split = TransactionSplit(total=100, parent=txn)
+      s.add_all((txn, t_split))
       s.commit()
-      t_uuid = t.uuid
+      t_uuid = txn.uuid
     endpoint = f"/api/transactions/{t_uuid}"
 
     with p.get_session() as s:
@@ -368,46 +368,46 @@ class TestControllerTransactions(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    #   # Create accounts
-    a_checking = Account(name="Monkey Bank Checking",
-                         institution="Monkey Bank",
-                         category=AccountCategory.CASH)
-    a_invest = Account(name="Monkey Investments",
-                       institution="Ape Trading",
-                       category=AccountCategory.INVESTMENT)
-    a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
+    # Create accounts
+    acct_checking = Account(name="Monkey Bank Checking",
+                            institution="Monkey Bank",
+                            category=AccountCategory.CASH)
+    acct_invest = Account(name="Monkey Investments",
+                          institution="Ape Trading",
+                          category=AccountCategory.INVESTMENT)
+    asset = Asset(name="Banana", category=AssetCategory.ITEM)
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
     tomorrow = today + datetime.timedelta(days=1)
     subcategory = self.random_string()
     tag = self.random_string()
     with p.get_session() as s:
-      s.add_all((a_checking, a_invest, a_banana))
+      s.add_all((acct_checking, acct_invest, asset))
       s.commit()
 
-      a_invest_uuid = a_invest.uuid
-      a_banana_uuid = a_banana.uuid
+      acct_invest_uuid = acct_invest.uuid
+      asset_uuid = asset.uuid
 
-      transactions: List[Transaction] = []
+      transactions: t.List[Transaction] = []
       for category in TransactionCategory:
-        t = Transaction(account=a_checking,
-                        date=today,
-                        total=100,
-                        statement=self.random_string())
+        txn = Transaction(account=acct_checking,
+                          date=today,
+                          total=100,
+                          statement=self.random_string())
         t_split = TransactionSplit(total=100,
-                                   parent=t,
+                                   parent=txn,
                                    category=category,
                                    payee=self.random_string(),
                                    description=self.random_string(),
                                    subcategory=self.random_string(),
                                    tag=self.random_string())
-        s.add_all((t, t_split))
-        transactions.append(t)
+        s.add_all((txn, t_split))
+        transactions.append(txn)
 
-      transactions[-1].account = a_invest
+      transactions[-1].account = acct_invest
       transactions[-1].date = yesterday
       transactions[-1].locked = True
-      transactions[-1].splits[0].asset = a_banana
+      transactions[-1].splits[0].asset = asset
 
       # Split t0
       t_split_extra_0 = TransactionSplit(total=10,
@@ -485,7 +485,7 @@ class TestControllerTransactions(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by account
-    result, _ = self.api_get(endpoint, {"account": a_invest_uuid})
+    result, _ = self.api_get(endpoint, {"account": acct_invest_uuid})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 
@@ -495,7 +495,7 @@ class TestControllerTransactions(WebTestBase):
     self.assertEqual(target, result)
 
     # Filter by asset
-    result, _ = self.api_get(endpoint, {"asset": a_banana_uuid})
+    result, _ = self.api_get(endpoint, {"asset": asset_uuid})
     target = {"transactions": [t_splits[0]], "count": 1, "next_offset": None}
     self.assertEqual(target, result)
 

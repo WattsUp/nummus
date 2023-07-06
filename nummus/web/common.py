@@ -1,7 +1,7 @@
 """Common API Controller
 """
 
-from typing import Dict, List, Tuple, Type
+import typing as t
 
 import datetime
 import mimetypes
@@ -16,7 +16,7 @@ from thefuzz import process
 from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction,
                            TransactionSplit)
 
-_SEARCH_PROPERTIES: Dict[Type[Base], List[str]] = {
+_SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.List[str]] = {
     Account: ["name", "institution"],
     Asset: ["name", "description", "unit", "tag"],
     TransactionSplit: ["payee", "description", "subcategory", "tag"]
@@ -39,11 +39,11 @@ def find_account(s: orm.Session, query: str) -> Account:
   """
   # Clean
   account_uuid = str(parse_uuid(query))
-  a = s.query(Account).where(Account.uuid == account_uuid).first()
-  if a is None:
+  acct = s.query(Account).where(Account.uuid == account_uuid).first()
+  if acct is None:
     raise HTTPError(404,
                     detail=f"Account {account_uuid} not found in Portfolio")
-  return a
+  return acct
 
 
 def find_asset(s: orm.Session, query: str) -> Asset:
@@ -84,10 +84,10 @@ def find_budget(s: orm.Session, query: str) -> Budget:
   """
   # Clean
   asset_uuid = str(parse_uuid(query))
-  a = s.query(Budget).where(Budget.uuid == asset_uuid).first()
-  if a is None:
+  b = s.query(Budget).where(Budget.uuid == asset_uuid).first()
+  if b is None:
     raise HTTPError(404, detail=f"Budget {asset_uuid} not found in Portfolio")
-  return a
+  return b
 
 
 def find_transaction(s: orm.Session, query: str) -> Transaction:
@@ -106,12 +106,12 @@ def find_transaction(s: orm.Session, query: str) -> Transaction:
   """
   # Clean
   transaction_uuid = str(parse_uuid(query))
-  t = s.query(Transaction).where(Transaction.uuid == transaction_uuid).first()
-  if t is None:
+  txn = s.query(Transaction).where(Transaction.uuid == transaction_uuid).first()
+  if txn is None:
     raise HTTPError(404,
                     detail=f"Transaction{transaction_uuid} not "
                     "found in Portfolio")
-  return t
+  return txn
 
 
 def parse_uuid(s: str) -> uuid.UUID:
@@ -154,7 +154,7 @@ def parse_date(s: str) -> datetime.date:
     raise HTTPError(400, detail=f"Badly formed date: {s}, {e}") from e
 
 
-def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
+def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
   """Parse a string in an enum
 
   Args:
@@ -174,7 +174,7 @@ def parse_enum(s: str, cls: Type[BaseEnum]) -> BaseEnum:
     raise HTTPError(400, detail=f"Unknown {cls.__name__}: {s}, {e}") from e
 
 
-def search(query: orm.Query[Base], cls: Type[Base],
+def search(query: orm.Query[Base], cls: t.Type[Base],
            search_str: str) -> orm.Query[Base]:
   """Perform a fuzzy search and return matches
 
@@ -191,19 +191,19 @@ def search(query: orm.Query[Base], cls: Type[Base],
     return query
 
   unfiltered = query.all()
-  strings: Dict[int, str] = {}
+  strings: t.Dict[int, str] = {}
   for instance in unfiltered:
-    parameters: List[str] = []
+    parameters: t.List[str] = []
     for k in _SEARCH_PROPERTIES[cls]:
       parameters.append(getattr(instance, k))
     i_str = " ".join(p for p in parameters if p is not None)
     strings[instance.id] = i_str
 
   extracted = process.extract(search_str, strings, limit=None)
-  matching_ids: List[int] = [i for _, score, i in extracted if score > 70]
+  matching_ids: t.List[int] = [i for _, score, i in extracted if score > 70]
   if len(matching_ids) == 0:
     # Include poor matches to return something
-    matching_ids: List[int] = [i for _, _, i in extracted[:5]]
+    matching_ids: t.List[int] = [i for _, _, i in extracted[:5]]
 
   return query.session.query(cls).where(cls.id.in_(matching_ids))
 
@@ -229,7 +229,7 @@ def query_count(query: orm.Query[Base]) -> int:
 
 
 def paginate(query: orm.Query[Base], limit: int,
-             offset: int) -> Tuple[List[Base], int, int]:
+             offset: int) -> t.Tuple[t.List[Base], int, int]:
   """Paginate query response for smaller results
 
   Args:

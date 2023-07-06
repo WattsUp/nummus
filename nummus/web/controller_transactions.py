@@ -1,7 +1,7 @@
 """Transaction API Controller
 """
 
-from typing import Dict, List
+import typing as t
 
 import datetime
 
@@ -23,16 +23,16 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: Dict[str, object] = flask.request.json
+  req: t.Dict[str, object] = flask.request.json
   account_uuid = req["account_uuid"]
   date = common.parse_date(req["date"])
   locked = req["locked"]
   statement = req["statement"]
   total = req["total"]
 
-  req_splits: List[Dict[str, object]] = []
+  req_splits: t.List[t.Dict[str, object]] = []
   for split in req["splits"]:
-    split: Dict[str, object]
+    split: t.Dict[str, object]
     req_splits.append({
         "total": split["total"],
         "sales_tax": split.get("sales_tax"),
@@ -52,20 +52,22 @@ def create() -> flask.Response:
                     "TransactionSplit")
 
   with p.get_session() as s:
-    a = common.find_account(s, account_uuid)
-    t = Transaction(account=a,
-                    date=date,
-                    total=total,
-                    statement=statement,
-                    locked=locked)
-    s.add(t)
+    acct = common.find_account(s, account_uuid)
+    txn = Transaction(account=acct,
+                      date=date,
+                      total=total,
+                      statement=statement,
+                      locked=locked)
+    s.add(txn)
     for d in req_splits:
       asset_uuid = d.pop("asset_uuid")
       asset = None if asset_uuid is None else common.find_asset(s, asset_uuid)
-      t_split = TransactionSplit(parent=t, asset=asset, **d)
+      t_split = TransactionSplit(parent=txn, asset=asset, **d)
       s.add(t_split)
     s.commit()
-    return flask.jsonify(t), 201, {"Location": f"/api/transactions/{t.uuid}"}
+    return flask.jsonify(txn), 201, {
+        "Location": f"/api/transactions/{txn.uuid}"
+    }
 
 
 def get(transaction_uuid: str) -> flask.Response:
@@ -81,8 +83,8 @@ def get(transaction_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    t = common.find_transaction(s, transaction_uuid)
-    return flask.jsonify(t)
+    txn = common.find_transaction(s, transaction_uuid)
+    return flask.jsonify(txn)
 
 
 def update(transaction_uuid: str) -> flask.Response:
@@ -98,38 +100,38 @@ def update(transaction_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    t = common.find_transaction(s, transaction_uuid)
+    txn = common.find_transaction(s, transaction_uuid)
 
-    req: Dict[str, object] = flask.request.json
-    d: Dict[str, object] = {}
-    a = common.find_account(s, req["account_uuid"])
-    d["account_id"] = a.id
+    req: t.Dict[str, object] = flask.request.json
+    d: t.Dict[str, object] = {}
+    acct = common.find_account(s, req["account_uuid"])
+    d["account_id"] = acct.id
     d["date"] = common.parse_date(req["date"])
     d["total"] = req["total"]
     d["statement"] = req["statement"]
     d["locked"] = req["locked"]
 
-    req_splits: List[Dict[str, object]] = req["splits"]
+    req_splits: t.List[t.Dict[str, object]] = req["splits"]
     n_split = len(req_splits)
     if n_split < 1:
       raise HTTPError(422,
                       detail="Transaction must have at least one "
                       "TransactionSplit")
 
-    n_split_current = len(t.splits)
+    n_split_current = len(txn.splits)
     if n_split > n_split_current:
       splits = [
-          TransactionSplit(parent=t, total=0)
+          TransactionSplit(parent=txn, total=0)
           for _ in range(n_split - n_split_current)
       ]
       s.add_all(splits)
     elif n_split < n_split_current:
       # Mark the excess ones for deletion
-      for t_split in t.splits[n_split:]:
+      for t_split in txn.splits[n_split:]:
         s.delete(t_split)
 
-    for t_split, req_split in zip(t.splits, req_splits):
-      d_split: Dict[str, object] = {}
+    for t_split, req_split in zip(txn.splits, req_splits):
+      d_split: t.Dict[str, object] = {}
       d_split["total"] = req_split["total"]
       d_split["sales_tax"] = req_split.get("sales_tax")
       d_split["payee"] = req_split.get("payee")
@@ -147,9 +149,9 @@ def update(transaction_uuid: str) -> flask.Response:
 
       t_split.update(d_split)
 
-    t.update(d)
+    txn.update(d)
     s.commit()
-    return flask.jsonify(t)
+    return flask.jsonify(txn)
 
 
 def delete(transaction_uuid: str) -> flask.Response:
@@ -165,17 +167,17 @@ def delete(transaction_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    t = common.find_transaction(s, transaction_uuid)
+    txn = common.find_transaction(s, transaction_uuid)
 
     # Delete the splits as well
-    for t_split in t.splits:
+    for t_split in txn.splits:
       s.delete(t_split)
-    s.delete(t)
+    s.delete(txn)
     s.commit()
     return None
 
 
-def get_all(request_args: Dict[str, object] = None) -> flask.Response:
+def get_all(request_args: t.Dict[str, object] = None) -> flask.Response:
   """GET /api/transactions
 
   Args:
@@ -226,8 +228,8 @@ def get_all(request_args: Dict[str, object] = None) -> flask.Response:
       locked_bool = locked.lower() == "true"
       query = query.where(Transaction.locked == locked_bool)
     if account_uuid is not None:
-      a = common.find_account(s, account_uuid)
-      query = query.where(Transaction.account_id == a.id)
+      acct = common.find_account(s, account_uuid)
+      query = query.where(Transaction.account_id == acct.id)
     if account_category is not None:
       query = query.join(Account)
       query = query.where(Account.category == account_category)

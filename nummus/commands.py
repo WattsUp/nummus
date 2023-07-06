@@ -1,7 +1,7 @@
 """Command line interface commands
 """
 
-from typing import List
+import typing as t
 
 import pathlib
 
@@ -125,7 +125,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
   return None
 
 
-def import_files(p: portfolio.Portfolio, paths: List[str]) -> int:
+def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
   """Import a list of files or directories into a portfolio
 
   Args:

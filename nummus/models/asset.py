@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import List, Optional, Tuple
+import typing as t
 
 import datetime
 
@@ -11,7 +11,8 @@ from sqlalchemy import orm
 
 from nummus.models import base
 
-Dates = List[datetime.date]
+Dates = t.List[datetime.date]
+Values = t.List[float]
 
 
 class AssetValuation(base.Base):
@@ -68,14 +69,14 @@ class Asset(base.Base):
   ]
 
   name: orm.Mapped[str]
-  description: orm.Mapped[Optional[str]]
+  description: orm.Mapped[t.Optional[str]]
   category: orm.Mapped[AssetCategory]
-  unit: orm.Mapped[Optional[str]]
-  tag: orm.Mapped[Optional[str]]
-  img_suffix: orm.Mapped[Optional[str]]
+  unit: orm.Mapped[t.Optional[str]]
+  tag: orm.Mapped[t.Optional[str]]
+  img_suffix: orm.Mapped[t.Optional[str]]
 
   # TODO (WattsUp) Move to write only relationship if too slow
-  valuations: orm.Mapped[List[AssetValuation]] = orm.relationship(
+  valuations: orm.Mapped[t.List[AssetValuation]] = orm.relationship(
       back_populates="asset", order_by=AssetValuation.date)
 
   @property
@@ -88,7 +89,7 @@ class Asset(base.Base):
     return f"{self.uuid}{s}"
 
   def get_value(self, start: datetime.date,
-                end: datetime.date) -> Tuple[Dates, List[float], List[float]]:
+                end: datetime.date) -> t.Tuple[Dates, Values, Values]:
     """Get the value of Asset from start to end date
 
     Args:
@@ -101,8 +102,8 @@ class Asset(base.Base):
     date = start
 
     dates: Dates = []
-    values: List[float] = []
-    multipliers: List[float] = []
+    values: Values = []
+    multipliers: Values = []
 
     value = 0
     multiplier = 1

@@ -1,7 +1,7 @@
 """SQL interface
 """
 
-from typing import Dict
+import typing as t
 
 import os
 import sys
@@ -22,9 +22,9 @@ except ImportError:
   Encryption = None
 
 # Cache engines so recomputing db_key is avoided
-_ENGINES: Dict[str, sqlalchemy.engine.Engine] = {}
+_ENGINES: t.Dict[str, sqlalchemy.engine.Engine] = {}
 
-_ENGINE_ARGS: Dict[str, object] = {}
+_ENGINE_ARGS: t.Dict[str, object] = {}
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")

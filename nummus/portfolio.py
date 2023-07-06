@@ -2,7 +2,7 @@
 """
 
 from __future__ import annotations
-from typing import Dict, List, Tuple, Union
+import typing as t
 
 import datetime
 import pathlib
@@ -203,12 +203,12 @@ class Portfolio:
       raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
-    account_mapping: Dict[str, str] = {}
-    asset_mapping: Dict[str, str] = {}
-    transactions: List[Tuple[Transaction, TransactionSplit]] = []
+    account_mapping: t.Dict[str, str] = {}
+    asset_mapping: t.Dict[str, str] = {}
+    transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
     for d in i.run():
       # Create a single split for each transaction
-      d_split: Dict[str, Union[str, float, datetime.date, object]] = {
+      d_split: t.Dict[str, t.Union[str, float, datetime.date, object]] = {
           "total": d["total"],  # Both split and parent have total
           "sales_tax": d.pop("sales_tax", None),
           "payee": d.pop("payee", None),
@@ -244,16 +244,17 @@ class Portfolio:
     # All good, add transactions and commit
     with self.get_session() as session:
       # Add just the transactions first
-      session.add_all(t for t, _ in transactions)
+      session.add_all(txn for txn, _ in transactions)
       session.commit()
 
       # Update the parent_ids
-      for t, t_split in transactions:
-        t_split.parent_id = t.id
+      for txn, t_split in transactions:
+        t_split.parent_id = txn.id
         session.add(t_split)
       session.commit()
 
-  def find_account(self, query: Union[int, str]) -> Union[models.Account, int]:
+  def find_account(self, query: t.Union[int,
+                                        str]) -> t.Union[models.Account, int]:
     """Find a matching Account by name, UUID, institution, or ID
 
     Args:
@@ -288,7 +289,7 @@ class Portfolio:
           return matches[0].id
     return None
 
-  def find_asset(self, query: Union[int, str]) -> int:
+  def find_asset(self, query: t.Union[int, str]) -> int:
     """Find a matching Asset by name, UUID, or ID
 
     Args:

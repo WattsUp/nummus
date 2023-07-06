@@ -1,7 +1,7 @@
 """Raw CSV importers
 """
 
-from typing import Callable, Dict, List, Tuple, Union
+import typing as t
 
 import csv
 import datetime
@@ -19,7 +19,7 @@ class CSVTransactionImporter(base.TransactionImporter):
   Other columns are allowed
   """
 
-  _COLUMNS: Dict[str, Tuple[bool, Callable[[str], object]]] = {
+  _COLUMNS: t.Dict[str, t.Tuple[bool, t.Callable[[str], object]]] = {
       "account": (True, str),
       "date": (True, datetime.date.fromisoformat),
       "total": (True, common.parse_financial),
@@ -47,13 +47,13 @@ class CSVTransactionImporter(base.TransactionImporter):
         return False
     return True
 
-  def run(self) -> List[Dict[str, Union[str, float, datetime.date, object]]]:
+  def run(self) -> t.List[base.TransactionDict]:
     first_line, remaining = self._buf.decode().split("\n", 1)
     first_line = first_line.lower().replace(" ", "_")
     reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))
-    transactions: List[Dict[str, Union[str, float, datetime.date, object]]] = []
+    transactions: t.List[base.TransactionDict] = []
     for row in reader:
-      t: Dict[str, Union[str, float, datetime.date, object]] = {}
+      txn: base.TransactionDict = {}
       for key, item in self._COLUMNS.items():
         required, cleaner = item
         value = row.get(key)
@@ -61,7 +61,7 @@ class CSVTransactionImporter(base.TransactionImporter):
           if required:
             raise KeyError(f"CSV is missing column: {key}")
         else:
-          t[key] = cleaner(value)
-      t["statement"] = t["description"]
-      transactions.append(t)
+          txn[key] = cleaner(value)
+      txn["statement"] = txn["description"]
+      transactions.append(txn)
     return transactions

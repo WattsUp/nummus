@@ -1,8 +1,7 @@
 """Test module nummus.importers.raw_csv
 """
 
-import datetime
-from typing import Dict, List, Union
+import typing as t
 
 from nummus import importers
 from nummus.importers import base
@@ -18,7 +17,7 @@ class Derived(base.TransactionImporter):
   def is_importable(cls, name: str, buf: bytes) -> bool:
     return False
 
-  def run(self) -> List[Dict[str, Union[str, float, datetime.date, object]]]:
+  def run(self) -> t.List[base.TransactionDict]:
     return []
 
 
@@ -45,10 +44,10 @@ class TestCSVTransactionImporter(test_base.TestBase):
         "transactions_extras.csv": importers.CSVTransactionImporter,
         "transactions_lacking.csv": None
     }
-    for f, c in files.items():
+    for f, cls in files.items():
       path = self._DATA_ROOT.joinpath(f)
       i = importers.get_importer(path)
-      if c is None:
+      if cls is None:
         self.assertIsNone(i)
       else:
-        self.assertIsInstance(i, c)
+        self.assertIsInstance(i, cls)
