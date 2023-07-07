@@ -60,6 +60,12 @@ class TestControllerAssets(WebTestBase):
     req = {"name": name}
     self.api_post(endpoint, json=req, rc=400)
 
+    # Wrong Content-Type
+    self.api_post(endpoint,
+                  data="raw",
+                  headers={"Content-Type": "text/plain"},
+                  rc=415)
+
   def test_get(self):
     p = self._portfolio
 
@@ -88,6 +94,7 @@ class TestControllerAssets(WebTestBase):
 
       a_uuid = a.uuid
       target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+    endpoint = f"/api/assets/{a_uuid}"
 
     # Update by uuid
     new_name = self.random_string()
@@ -96,7 +103,7 @@ class TestControllerAssets(WebTestBase):
     target["category"] = new_category.name.lower()
     req = dict(target)
     req.pop("uuid")
-    result, _ = self.api_put(f"/api/assets/{a_uuid}", json=req)
+    result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
       a = s.query(Asset).where(Asset.uuid == a_uuid).first()
       self.assertEqual(new_name, a.name)
@@ -104,7 +111,13 @@ class TestControllerAssets(WebTestBase):
     self.assertEqual(target, result)
 
     # Read only properties
-    self.api_put(f"/api/assets/{a_uuid}", json=target, rc=400)
+    self.api_put(endpoint, json=target, rc=400)
+
+    # Wrong Content-Type
+    self.api_put(endpoint,
+                 data="raw",
+                 headers={"Content-Type": "text/plain"},
+                 rc=415)
 
   def test_delete(self):
     p = self._portfolio

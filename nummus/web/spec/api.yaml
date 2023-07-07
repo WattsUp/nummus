@@ -102,6 +102,8 @@ paths:
                 $ref: "#/components/schemas/Account"
         "400":
           description: Malformed request
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Account"
   /accounts/{accountUUID}:
@@ -143,6 +145,8 @@ paths:
           description: Malformed request
         "404":
           description: Account not found
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Account"
     delete:
@@ -288,6 +292,8 @@ paths:
                 $ref: "#/components/schemas/Asset"
         "400":
           description: Malformed request
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Asset"
   /assets/{assetUUID}:
@@ -329,6 +335,8 @@ paths:
           description: Malformed request
         "404":
           description: Asset not found
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Asset"
     delete:
@@ -485,6 +493,8 @@ paths:
                 $ref: "#/components/schemas/Budget"
         "400":
           description: Malformed request
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Budget"
   /budgets/{budgetUUID}:
@@ -526,6 +536,8 @@ paths:
           description: Malformed request
         "404":
           description: Budget not found
+        "415":
+          description: Content-Type not JSON
       requestBody:
         $ref: "#/components/requestBodies/Budget"
     delete:
@@ -607,6 +619,8 @@ paths:
                 $ref: "#/components/schemas/Transaction"
         "400":
           description: Malformed request
+        "415":
+          description: Content-Type not JSON
         "422":
           description: Missing at least one TransactionSplit
       requestBody:
@@ -650,6 +664,8 @@ paths:
           description: Malformed request
         "404":
           description: Transaction not found
+        "415":
+          description: Content-Type not JSON
         "422":
           description: Missing at least one TransactionSplit
       requestBody:
@@ -787,6 +803,8 @@ paths:
   #                 dates:
   #                   $ref: "#/components/schemas/Dates"
   #       "400":
+  #         description: Malformed request
+  #       "422":
   #         description: Invalid parameter supplied
   # /portfolio/value-by-account:
   #   get:

@@ -54,6 +54,12 @@ class TestControllerBudgets(WebTestBase):
     req = {"date": date}
     self.api_post(endpoint, json=req, rc=400)
 
+    # Wrong Content-Type
+    self.api_post(endpoint,
+                  data="raw",
+                  headers={"Content-Type": "text/plain"},
+                  rc=415)
+
   def test_get(self):
     p = self._portfolio
 
@@ -104,6 +110,12 @@ class TestControllerBudgets(WebTestBase):
 
     # Read only properties
     self.api_put(endpoint, json=target, rc=400)
+
+    # Wrong Content-Type
+    self.api_put(endpoint,
+                 data="raw",
+                 headers={"Content-Type": "text/plain"},
+                 rc=415)
 
   def test_delete(self):
     p = self._portfolio
