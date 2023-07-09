@@ -61,11 +61,28 @@ class TestBase(unittest.TestCase):
       threshold: Fractional amount real can be off
     """
     self.assertIsNotNone(real)
-    if target == 0.0:
-      error = np.abs(real - target)
+    if isinstance(target, dict):
+      self.assertIsInstance(real, dict)
+      self.assertEqual(target.keys(), real.keys())
+      for k, t_v in target.items():
+        r_v = real[k]
+        self.assertEqualWithinError(t_v, r_v, threshold)
+      return
+    elif isinstance(target, list):
+      self.assertIsInstance(real, list)
+      self.assertEqual(len(target), len(real))
+      for t_v, r_v in zip(target, real):
+        self.assertEqualWithinError(t_v, r_v, threshold)
+      return
+    elif isinstance(target, (int, float)):
+      self.assertIsInstance(real, (int, float))
+      if target == 0.0:
+        error = np.abs(real - target)
+      else:
+        error = np.abs(real / target - 1)
+      self.assertLessEqual(error, threshold)
     else:
-      error = np.abs(real / target - 1)
-    self.assertLessEqual(error, threshold)
+      self.assertEqual(target, real)
 
   def setUp(self, clean: bool = True):
     if clean:

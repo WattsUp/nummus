@@ -774,38 +774,38 @@ paths:
   #                   $ref: "#/components/schemas/Dates"
   #       "400":
   #         description: Invalid parameter supplied
-  # /portfolio/value:
-  #   get:
-  #     tags:
-  #       - Portfolio
-  #     summary: Get value of Portfolio
-  #     description: Assets are Accounts with positive value, liabilities are
-  #       Accounts with negative value
-  #     operationId: nummus.web.controller_portfolio.get_value
-  #     parameters:
-  #       - $ref: "#/components/parameters/Start"
-  #       - $ref: "#/components/parameters/End"
-  #       - $ref: "#/components/parameters/AccountCategoryExplicit"
-  #     responses:
-  #       "200":
-  #         description: Successful operation
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 total:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 assets:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 liabilities:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 dates:
-  #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Malformed request
-  #       "422":
-  #         description: Invalid parameter supplied
+  /portfolio/value:
+    get:
+      tags:
+        - Portfolio
+      summary: Get value of Portfolio
+      description: Assets are Accounts with positive value, liabilities are
+        Accounts with negative value
+      operationId: nummus.web.controller_portfolio.get_value
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - $ref: "#/components/parameters/AccountCategoryExplicit"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    $ref: "#/components/schemas/DoubleList"
+                  assets:
+                    $ref: "#/components/schemas/DoubleList"
+                  liabilities:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
+        "400":
+          description: Malformed request
+        "422":
+          description: Invalid parameter supplied
   # /portfolio/value-by-account:
   #   get:
   #     tags:

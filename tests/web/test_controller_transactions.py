@@ -148,9 +148,9 @@ class TestControllerTransactions(WebTestBase):
 
     # Wrong Content-Type
     self.api_post(endpoint,
-                 data="raw",
-                 headers={"Content-Type": "text/plain"},
-                 rc=415)
+                  data="raw",
+                  headers={"Content-Type": "text/plain"},
+                  rc=415)
 
   def test_get(self):
     p = self._portfolio
