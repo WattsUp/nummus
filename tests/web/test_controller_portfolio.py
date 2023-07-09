@@ -112,7 +112,6 @@ class TestControllerPortfolio(WebTestBase):
     self.api_get(endpoint, {"start": self.random_string()}, rc=400)
 
     # Just cash Accounts
-
     with p.get_session() as s:
       assets = 0
       liabilities = 0
@@ -127,11 +126,79 @@ class TestControllerPortfolio(WebTestBase):
           liabilities += value
       total = assets + liabilities
 
-    result, _ = self.api_get(endpoint, {"account_category": "cash"})
+    result, _ = self.api_get(endpoint, {"category": "cash"})
     target = {
         "total": [total],
         "assets": [assets],
         "liabilities": [liabilities],
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+  def test_get_value_by_account(self):
+    p = self._portfolio
+    self.prepare_portfolio()
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+
+    with p.get_session() as s:
+      total = 0
+      accounts = {}
+
+      q = s.query(Account)
+      for acct in q.all():
+        _, values, _ = acct.get_value(today, today)
+        value = values[0]
+        accounts[acct.uuid] = value
+        total += value
+
+    endpoint = "/api/portfolio/value-by-account"
+
+    result, _ = self.api_get(endpoint)
+    target = {
+        "total": [total],
+        "accounts": {
+            k: [v] for k, v in accounts.items()
+        },
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
+    target = {
+        "total": [0, total],
+        "accounts": {
+            k: [0, v] for k, v in accounts.items()
+        },
+        "dates": [yesterday.isoformat(),
+                  today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
+
+    # Invalid date format
+    self.api_get(endpoint, {"start": self.random_string()}, rc=400)
+
+    # Just cash Accounts
+    with p.get_session() as s:
+      total = 0
+      accounts = {}
+
+      q = s.query(Account).where(Account.category == AccountCategory.CASH)
+      for acct in q.all():
+        _, values, _ = acct.get_value(today, today)
+        value = values[0]
+        accounts[acct.uuid] = value
+        total += value
+
+    result, _ = self.api_get(endpoint, {"category": "cash"})
+    target = {
+        "total": [total],
+        "accounts": {
+            k: [v] for k, v in accounts.items()
+        },
         "dates": [today.isoformat()]
     }
     self.assertEqualWithinError(target, result, 1e-6)
