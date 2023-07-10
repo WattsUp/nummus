@@ -522,15 +522,14 @@ class TestAccount(TestBase):
     target_dates = [
         (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
     ]
-    target_inflow = [0] * 7
-    target_outflow = [0] * 7
+    target_categories = {cat: [0] * 7 for cat in TransactionCategory}
+    target_categories[None] = [0] * 7
     start = target_dates[0]
     end = target_dates[-1]
 
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)
-    self.assertEqual(target_inflow, r_inflow)
-    self.assertEqual(target_outflow, r_outflow)
+    self.assertEqual(target_categories, r_categories)
 
     # Fund account on second day
     t_fund = self._RNG.uniform(10, 100)
@@ -542,12 +541,11 @@ class TestAccount(TestBase):
     session.add_all((txn, t_split))
     session.commit()
 
-    target_inflow = [0, t_fund, 0, 0, 0, 0, 0]
+    target_categories[None][1] += t_fund
 
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)
-    self.assertEqual(target_inflow, r_inflow)
-    self.assertEqual(target_outflow, r_outflow)
+    self.assertEqual(target_categories, r_categories)
 
     # Buy something on the second day
     t0 = self._RNG.uniform(-10, -1)
@@ -559,12 +557,11 @@ class TestAccount(TestBase):
     session.add_all((txn, t_split))
     session.commit()
 
-    target_outflow = [0, t0, 0, 0, 0, 0, 0]
+    target_categories[None][1] += t0
 
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)
-    self.assertEqual(target_inflow, r_inflow)
-    self.assertEqual(target_outflow, r_outflow)
+    self.assertEqual(target_categories, r_categories)
 
     # Sell something on the last day
     t1 = self._RNG.uniform(1, 10)
@@ -572,24 +569,27 @@ class TestAccount(TestBase):
                       date=target_dates[-1],
                       total=t1,
                       statement=self.random_string())
-    t_split = TransactionSplit(parent=txn, total=txn.total)
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               category=TransactionCategory.INCOME)
     session.add_all((txn, t_split))
     session.commit()
 
-    target_inflow = [0, t_fund, 0, 0, 0, 0, t1]
+    target_categories[TransactionCategory.INCOME][-1] += t1
 
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)
-    self.assertEqual(target_inflow, r_inflow)
-    self.assertEqual(target_outflow, r_outflow)
+    self.assertEqual(target_categories, r_categories)
 
     # Test single value
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(today, today)
+    r_dates, r_categories = acct.get_cash_flow(today, today)
     self.assertEqual([today], r_dates)
-    self.assertEqual([0], r_inflow)
-    self.assertEqual([0], r_outflow)
+    self.assertEqual({
+        cat: [v[3]] for cat, v in target_categories.items()
+    }, r_categories)
 
-    r_dates, r_inflow, r_outflow = acct.get_cash_flow(end, end)
+    r_dates, r_categories = acct.get_cash_flow(end, end)
     self.assertEqual([end], r_dates)
-    self.assertEqual([t1], r_inflow)
-    self.assertEqual([0], r_outflow)
+    self.assertEqual({
+        cat: [v[-1]] for cat, v in target_categories.items()
+    }, r_categories)

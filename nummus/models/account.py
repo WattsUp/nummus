@@ -338,11 +338,10 @@ class Account(base.Base):
 
     return dates, values, value_assets
 
-  def get_cash_flow(self, start: datetime.date,
-                    end: datetime.date) -> t.Tuple[Dates, Values, Values]:
+  def get_cash_flow(
+      self, start: datetime.date, end: datetime.date
+  ) -> t.Tuple[Dates, t.Dict[TransactionCategory, Values]]:
     """Get the cash_flow of Account from start to end date
-
-    TODO return Dict[Category: Values]
 
     Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
     third day; inflow[4] may be zero
@@ -352,44 +351,46 @@ class Account(base.Base):
       end: Last date to evaluate (inclusive)
 
     Returns:
-      List[dates], list[inflow], list[outflow]}
+      List[dates], dict{Category: list[values]}
+      Includes None in categories
     """
     date = start
 
     dates: Dates = []
-    inflow: Values = []
-    outflow: Values = []
+    categories: t.Dict[TransactionCategory, Values] = {
+        cat: [] for cat in TransactionCategory
+    }
+    categories[None] = []  # Category is nullable
 
-    daily_in = 0
-    daily_out = 0
+    daily_categories: t.Dict[TransactionCategory, float] = {
+        cat: 0 for cat in TransactionCategory
+    }
+    daily_categories[None] = 0
 
     for transaction in self.transactions:
       if transaction.date > end:
         continue
       while date < transaction.date:
         dates.append(date)
-        inflow.append(daily_in)
-        outflow.append(daily_out)
-        daily_in = 0
-        daily_out = 0
+        # Append and clear daily
+        for k, v in daily_categories.items():
+          categories[k].append(v)
+          daily_categories[k] = 0
         date += datetime.timedelta(days=1)
 
       if date == transaction.date:
         for t_split in transaction.splits:
-          if t_split.total > 0:
-            daily_in += t_split.total
-          else:
-            daily_out += t_split.total
+          daily_categories[t_split.category] += t_split.total
 
     while date <= end:
       dates.append(date)
-      inflow.append(daily_in)
-      outflow.append(daily_out)
-      daily_in = 0
-      daily_out = 0
+      # Append and clear daily
+      for k, v in daily_categories.items():
+        categories[k].append(v)
+        daily_categories[k] = 0
       date += datetime.timedelta(days=1)
 
-    return dates, inflow, outflow
+    return dates, categories
 
   def get_asset_qty(self, start: datetime.date,
                     end: datetime.date) -> t.Tuple[Dates, t.Dict[str, Values]]:

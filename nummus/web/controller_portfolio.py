@@ -8,7 +8,8 @@ import datetime
 import flask
 
 from nummus import portfolio
-from nummus.models import Account, AccountCategory, Asset, AssetCategory
+from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
+                           TransactionCategory)
 from nummus.web import common
 from nummus.web.common import HTTPError
 
@@ -233,33 +234,42 @@ def get_cash_flow() -> flask.Response:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    inflow: t.List[float] = [0] * len(dates)
-    outflow: t.List[float] = [0] * len(dates)
+    categories: t.Dict[TransactionCategory, t.List[float]] = {
+        cat: [0] * len(dates) for cat in TransactionCategory
+    }
+    categories[None] = [0] * len(dates)  # Category is nullable
 
     for acct in query.all():
       acct: Account
-      _, acct_in, acct_out = acct.get_cash_flow(start, end)
-      for i, v in enumerate(acct_in):
-        inflow[i] += v
-      for i, v in enumerate(acct_out):
-        outflow[i] += v
+      _, acct_categories = acct.get_cash_flow(start, end)
+      for cat, values in acct_categories.items():
+        values_sum = categories[cat]
+        for i, v in enumerate(values):
+          values_sum[i] += v
 
     if integrate:
-      integral = 0
-      for i, v in enumerate(inflow):
-        integral += v
-        inflow[i] = integral
-      integral = 0
-      for i, v in enumerate(outflow):
-        integral += v
-        outflow[i] = integral
+      for cat, values in categories.items():
+        integral = 0
+        for i, v in enumerate(values):
+          integral += v
+          values[i] = integral
 
-    total = [sum(x) for x in zip(inflow, outflow)]
+    total = [0] * len(dates)
+    for cat, values in categories.items():
+      for i, v in enumerate(values):
+        total[i] += v
+
+    # Convert to string
+    def enum_to_str(e: TransactionCategory) -> str:
+      if e is None:
+        return "none"
+      return e.name.lower()
 
     response = {
         "total": total,
-        "inflow": inflow,
-        "outflow": outflow,
+        "categories": {
+            enum_to_str(cat): v for cat, v in categories.items()
+        },
         "dates": dates
     }
     return flask.jsonify(response)

@@ -3,7 +3,8 @@
 
 import datetime
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           AssetValuation, Transaction, TransactionSplit)
+                           AssetValuation, Transaction, TransactionCategory,
+                           TransactionSplit)
 
 from tests.web.base import WebTestBase
 
@@ -353,24 +354,30 @@ class TestControllerPortfolio(WebTestBase):
 
     # All assets
     with p.get_session() as s:
-      inflow = 0
-      outflow = 0
+      categories = {cat: 0 for cat in TransactionCategory}
+      categories[None] = 0
 
       q = s.query(Account)
       for acct in q.all():
-        _, acct_in, acct_out = acct.get_cash_flow(today, today)
-        inflow += acct_in[0]
-        outflow += acct_out[0]
+        _, acct_categories = acct.get_cash_flow(today, today)
+        for cat, v in acct_categories.items():
+          categories[cat] += v[0]
 
-      total = inflow + outflow
+      total = sum(categories.values())
 
     endpoint = "/api/portfolio/cash-flow"
+
+    def enum_to_str(e: TransactionCategory) -> str:
+      if e is None:
+        return "none"
+      return e.name.lower()
 
     result, _ = self.api_get(endpoint)
     target = {
         "total": [total],
-        "inflow": [inflow],
-        "outflow": [outflow],
+        "categories": {
+            enum_to_str(cat): [v] for cat, v in categories.items()
+        },
         "dates": [today.isoformat()]
     }
     self.assertEqualWithinError(target, result, 1e-6)
@@ -378,8 +385,9 @@ class TestControllerPortfolio(WebTestBase):
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": tomorrow})
     target = {
         "total": [0, total, 0],
-        "inflow": [0, inflow, 0],
-        "outflow": [0, outflow, 0],
+        "categories": {
+            enum_to_str(cat): [0, v, 0] for cat, v in categories.items()
+        },
         "dates": [
             yesterday.isoformat(),
             today.isoformat(),
@@ -395,8 +403,9 @@ class TestControllerPortfolio(WebTestBase):
     })
     target = {
         "total": [0, total, total],
-        "inflow": [0, inflow, inflow],
-        "outflow": [0, outflow, outflow],
+        "categories": {
+            enum_to_str(cat): [0, v, v] for cat, v in categories.items()
+        },
         "dates": [
             yesterday.isoformat(),
             today.isoformat(),
@@ -413,22 +422,23 @@ class TestControllerPortfolio(WebTestBase):
 
     # Just cash Accounts
     with p.get_session() as s:
-      inflow = 0
-      outflow = 0
+      categories = {cat: 0 for cat in TransactionCategory}
+      categories[None] = 0
 
       q = s.query(Account).where(Account.category == AccountCategory.CASH)
       for acct in q.all():
-        _, acct_in, acct_out = acct.get_cash_flow(today, today)
-        inflow += acct_in[0]
-        outflow += acct_out[0]
+        _, acct_categories = acct.get_cash_flow(today, today)
+        for cat, v in acct_categories.items():
+          categories[cat] += v[0]
 
-      total = inflow + outflow
+      total = sum(categories.values())
 
     result, _ = self.api_get(endpoint, {"category": "cash"})
     target = {
         "total": [total],
-        "inflow": [inflow],
-        "outflow": [outflow],
+        "categories": {
+            enum_to_str(cat): [v] for cat, v in categories.items()
+        },
         "dates": [today.isoformat()]
     }
     self.assertEqualWithinError(target, result, 1e-6)

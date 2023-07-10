@@ -767,10 +767,30 @@ paths:
                 properties:
                   total:
                     $ref: "#/components/schemas/DoubleList"
-                  inflow:
-                    $ref: "#/components/schemas/DoubleList"
-                  outflow:
-                    $ref: "#/components/schemas/DoubleList"
+                  categories:
+                    description: Cash flow by individual Transaction categories
+                    type: object
+                    properties:
+                      home:
+                        $ref: "#/components/schemas/DoubleList"
+                      food:
+                        $ref: "#/components/schemas/DoubleList"
+                      shopping:
+                        $ref: "#/components/schemas/DoubleList"
+                      hobbies:
+                        $ref: "#/components/schemas/DoubleList"
+                      services:
+                        $ref: "#/components/schemas/DoubleList"
+                      travel:
+                        $ref: "#/components/schemas/DoubleList"
+                      income:
+                        $ref: "#/components/schemas/DoubleList"
+                      instrument:
+                        $ref: "#/components/schemas/DoubleList"
+                      transfer:
+                        $ref: "#/components/schemas/DoubleList"
+                      none:
+                        $ref: "#/components/schemas/DoubleList"
                   dates:
                     $ref: "#/components/schemas/Dates"
         "400":
