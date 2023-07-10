@@ -343,3 +343,92 @@ class TestControllerPortfolio(WebTestBase):
 
     # Invalid date format
     self.api_get(endpoint, {"start": self.random_string()}, rc=400)
+
+  def test_get_cash_flow(self):
+    p = self._portfolio
+    self.prepare_portfolio()
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
+
+    # All assets
+    with p.get_session() as s:
+      inflow = 0
+      outflow = 0
+
+      q = s.query(Account)
+      for acct in q.all():
+        _, acct_in, acct_out = acct.get_cash_flow(today, today)
+        inflow += acct_in[0]
+        outflow += acct_out[0]
+
+      total = inflow + outflow
+
+    endpoint = "/api/portfolio/cash-flow"
+
+    result, _ = self.api_get(endpoint)
+    target = {
+        "total": [total],
+        "inflow": [inflow],
+        "outflow": [outflow],
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    result, _ = self.api_get(endpoint, {"start": yesterday, "end": tomorrow})
+    target = {
+        "total": [0, total, 0],
+        "inflow": [0, inflow, 0],
+        "outflow": [0, outflow, 0],
+        "dates": [
+            yesterday.isoformat(),
+            today.isoformat(),
+            tomorrow.isoformat()
+        ]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    result, _ = self.api_get(endpoint, {
+        "start": yesterday,
+        "end": tomorrow,
+        "integrate": True
+    })
+    target = {
+        "total": [0, total, total],
+        "inflow": [0, inflow, inflow],
+        "outflow": [0, outflow, outflow],
+        "dates": [
+            yesterday.isoformat(),
+            today.isoformat(),
+            tomorrow.isoformat()
+        ]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
+
+    # Invalid date format
+    self.api_get(endpoint, {"start": self.random_string()}, rc=400)
+
+    # Just cash Accounts
+    with p.get_session() as s:
+      inflow = 0
+      outflow = 0
+
+      q = s.query(Account).where(Account.category == AccountCategory.CASH)
+      for acct in q.all():
+        _, acct_in, acct_out = acct.get_cash_flow(today, today)
+        inflow += acct_in[0]
+        outflow += acct_out[0]
+
+      total = inflow + outflow
+
+    result, _ = self.api_get(endpoint, {"category": "cash"})
+    target = {
+        "total": [total],
+        "inflow": [inflow],
+        "outflow": [outflow],
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)

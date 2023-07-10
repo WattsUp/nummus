@@ -418,8 +418,95 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
-    # # Test single value
+    # Test single value
     r_dates, r_values, r_assets = acct.get_value(today, today)
     self.assertEqual([today], r_dates)
     self.assertEqual([target_values[3]], r_values)
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)
+
+  def test_get_cash_flow(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.INVESTMENT)
+    session.add(acct)
+    session.commit()
+
+    target_dates = [
+        (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
+    ]
+    target_inflow = [0] * 7
+    target_outflow = [0] * 7
+    start = target_dates[0]
+    end = target_dates[-1]
+
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_inflow, r_inflow)
+    self.assertEqual(target_outflow, r_outflow)
+
+    # Fund account on second day
+    t_fund = self._RNG.uniform(10, 100)
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t_fund,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_inflow = [0, t_fund, 0, 0, 0, 0, 0]
+
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_inflow, r_inflow)
+    self.assertEqual(target_outflow, r_outflow)
+
+    # Buy something on the second day
+    t0 = self._RNG.uniform(-10, -1)
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t0,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_outflow = [0, t0, 0, 0, 0, 0, 0]
+
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_inflow, r_inflow)
+    self.assertEqual(target_outflow, r_outflow)
+
+    # Sell something on the last day
+    t1 = self._RNG.uniform(1, 10)
+    txn = Transaction(account=acct,
+                      date=target_dates[-1],
+                      total=t1,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_inflow = [0, t_fund, 0, 0, 0, 0, t1]
+
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_inflow, r_inflow)
+    self.assertEqual(target_outflow, r_outflow)
+
+    # Test single value
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(today, today)
+    self.assertEqual([today], r_dates)
+    self.assertEqual([0], r_inflow)
+    self.assertEqual([0], r_outflow)
+
+    r_dates, r_inflow, r_outflow = acct.get_cash_flow(end, end)
+    self.assertEqual([end], r_dates)
+    self.assertEqual([t1], r_inflow)
+    self.assertEqual([0], r_outflow)

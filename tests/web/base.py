@@ -350,8 +350,11 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
       any_required = False
       for param in parameters:
         param: t.Dict[str, str]
-        ref = param["$ref"].replace("#/components/parameters/", "")
-        p = comp_params[ref]
+        if "$ref" in param:
+          ref = param["$ref"].replace("#/components/parameters/", "")
+          p = comp_params[ref]
+        else:
+          p = param
         if p["in"] == "path":
           continue
 

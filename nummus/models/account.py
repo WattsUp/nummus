@@ -284,6 +284,57 @@ class Account(base.Base):
 
     return dates, values, value_assets
 
+  def get_cash_flow(self, start: datetime.date,
+                    end: datetime.date) -> t.Tuple[Dates, Values, Values]:
+    """Get the cash_flow of Account from start to end date
+
+    Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
+    third day; inflow[4] may be zero
+
+    Args:
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      List[dates], list[inflow], list[outflow]}
+    """
+    date = start
+
+    dates: Dates = []
+    inflow: Values = []
+    outflow: Values = []
+
+    daily_in = 0
+    daily_out = 0
+
+    for transaction in self.transactions:
+      if transaction.date > end:
+        continue
+      while date < transaction.date:
+        dates.append(date)
+        inflow.append(daily_in)
+        outflow.append(daily_out)
+        daily_in = 0
+        daily_out = 0
+        date += datetime.timedelta(days=1)
+
+      if date == transaction.date:
+        for t_split in transaction.splits:
+          if t_split.total > 0:
+            daily_in += t_split.total
+          else:
+            daily_out += t_split.total
+
+    while date <= end:
+      dates.append(date)
+      inflow.append(daily_in)
+      outflow.append(daily_out)
+      daily_in = 0
+      daily_out = 0
+      date += datetime.timedelta(days=1)
+
+    return dates, inflow, outflow
+
   def get_asset_qty(self, start: datetime.date,
                     end: datetime.date) -> t.Tuple[Dates, t.Dict[str, Values]]:
     """Get the quantity of Assets held from start to end date

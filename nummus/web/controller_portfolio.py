@@ -48,8 +48,8 @@ def get_value() -> flask.Response:
 
     for acct in query.all():
       acct: Account
-      _, a_values, _ = acct.get_value(start, end)
-      for i, v in enumerate(a_values):
+      _, acct_values, _ = acct.get_value(start, end)
+      for i, v in enumerate(acct_values):
         total[i] += v
         if v >= 0:
           assets[i] += v
@@ -99,10 +99,10 @@ def get_value_by_account() -> flask.Response:
 
     for acct in query.all():
       acct: Account
-      _, a_values, _ = acct.get_value(start, end)
-      for i, v in enumerate(a_values):
+      _, acct_values, _ = acct.get_value(start, end)
+      for i, v in enumerate(acct_values):
         total[i] += v
-      accounts[acct.uuid] = a_values
+      accounts[acct.uuid] = acct_values
 
     response = {"total": total, "accounts": accounts, "dates": dates}
     return flask.jsonify(response)
@@ -141,9 +141,9 @@ def get_value_by_category() -> flask.Response:
 
     for acct in query.all():
       acct: Account
-      _, a_values, _ = acct.get_value(start, end)
+      _, acct_values, _ = acct.get_value(start, end)
       cat_values = categories[acct.category.name.lower()]
-      for i, v in enumerate(a_values):
+      for i, v in enumerate(acct_values):
         total[i] += v
         cat_values[i] += v
 
@@ -200,4 +200,66 @@ def get_value_by_asset() -> flask.Response:
             a_values_sum[i] += v
 
     response = {"assets": assets, "dates": dates}
+    return flask.jsonify(response)
+
+
+def get_cash_flow() -> flask.Response:
+  """GET /api/portfolio/cash-flow
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+  today = datetime.date.today()
+
+  args: t.Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start", today))
+  end = common.parse_date(args.get("end", today))
+  category = common.parse_enum(args.get("category"), AccountCategory)
+  integrate = bool(args.get("integrate", False))
+  if end < start:
+    raise HTTPError(422, detail="End date must be on or after Start date")
+
+  with p.get_session() as s:
+    query = s.query(Account)
+    if category is not None:
+      query = query.where(Account.category == category)
+
+    # Prepare dates
+    dates: t.List[datetime.date] = []
+    date = start
+    while date <= end:
+      dates.append(date)
+      date += datetime.timedelta(days=1)
+
+    inflow: t.List[float] = [0] * len(dates)
+    outflow: t.List[float] = [0] * len(dates)
+
+    for acct in query.all():
+      acct: Account
+      _, acct_in, acct_out = acct.get_cash_flow(start, end)
+      for i, v in enumerate(acct_in):
+        inflow[i] += v
+      for i, v in enumerate(acct_out):
+        outflow[i] += v
+
+    if integrate:
+      integral = 0
+      for i, v in enumerate(inflow):
+        integral += v
+        inflow[i] = integral
+      integral = 0
+      for i, v in enumerate(outflow):
+        integral += v
+        outflow[i] = integral
+
+    total = [sum(x) for x in zip(inflow, outflow)]
+
+    response = {
+        "total": total,
+        "inflow": inflow,
+        "outflow": outflow,
+        "dates": dates
+    }
     return flask.jsonify(response)
