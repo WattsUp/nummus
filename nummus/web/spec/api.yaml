@@ -767,6 +767,10 @@ paths:
                 properties:
                   total:
                     $ref: "#/components/schemas/DoubleList"
+                  inflow:
+                    $ref: "#/components/schemas/DoubleList"
+                  outflow:
+                    $ref: "#/components/schemas/DoubleList"
                   categories:
                     description: Cash flow by individual Transaction categories
                     type: object

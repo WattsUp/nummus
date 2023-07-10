@@ -255,9 +255,15 @@ def get_cash_flow() -> flask.Response:
           values[i] = integral
 
     total = [0] * len(dates)
+    inflow = [0] * len(dates)
+    outflow = [0] * len(dates)
     for cat, values in categories.items():
       for i, v in enumerate(values):
         total[i] += v
+        if v > 0:
+          inflow[i] += v
+        else:
+          outflow[i] += v
 
     # Convert to string
     def enum_to_str(e: TransactionCategory) -> str:
@@ -267,6 +273,8 @@ def get_cash_flow() -> flask.Response:
 
     response = {
         "total": total,
+        "inflow": inflow,
+        "outflow": outflow,
         "categories": {
             enum_to_str(cat): v for cat, v in categories.items()
         },

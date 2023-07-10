@@ -52,7 +52,7 @@ class TestControllerPortfolio(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_savings,
                           date=today,
-                          total=self._RNG.uniform(-10, 10),
+                          total=self._RNG.uniform(1, 10),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total, parent=txn)
         t_split_1 = TransactionSplit(total=txn.total,
@@ -364,6 +364,8 @@ class TestControllerPortfolio(WebTestBase):
           categories[cat] += v[0]
 
       total = sum(categories.values())
+      inflow = sum(v for v in categories.values() if v > 0)
+      outflow = sum(v for v in categories.values() if v < 0)
 
     endpoint = "/api/portfolio/cash-flow"
 
@@ -375,6 +377,8 @@ class TestControllerPortfolio(WebTestBase):
     result, _ = self.api_get(endpoint)
     target = {
         "total": [total],
+        "inflow": [inflow],
+        "outflow": [outflow],
         "categories": {
             enum_to_str(cat): [v] for cat, v in categories.items()
         },
@@ -385,6 +389,8 @@ class TestControllerPortfolio(WebTestBase):
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": tomorrow})
     target = {
         "total": [0, total, 0],
+        "inflow": [0, inflow, 0],
+        "outflow": [0, outflow, 0],
         "categories": {
             enum_to_str(cat): [0, v, 0] for cat, v in categories.items()
         },
@@ -403,6 +409,8 @@ class TestControllerPortfolio(WebTestBase):
     })
     target = {
         "total": [0, total, total],
+        "inflow": [0, inflow, inflow],
+        "outflow": [0, outflow, outflow],
         "categories": {
             enum_to_str(cat): [0, v, v] for cat, v in categories.items()
         },
@@ -432,10 +440,14 @@ class TestControllerPortfolio(WebTestBase):
           categories[cat] += v[0]
 
       total = sum(categories.values())
+      inflow = sum(v for v in categories.values() if v > 0)
+      outflow = sum(v for v in categories.values() if v < 0)
 
     result, _ = self.api_get(endpoint, {"category": "cash"})
     target = {
         "total": [total],
+        "inflow": [inflow],
+        "outflow": [outflow],
         "categories": {
             enum_to_str(cat): [v] for cat, v in categories.items()
         },
