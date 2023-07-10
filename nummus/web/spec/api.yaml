@@ -731,6 +731,8 @@ paths:
   #                 dates:
   #                   $ref: "#/components/schemas/Dates"
   #       "400":
+  #         description: Malformed request
+  #       "422":
   #         description: Invalid parameter supplied
   /portfolio/cash-flow:
     get:

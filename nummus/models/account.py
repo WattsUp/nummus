@@ -18,15 +18,39 @@ Values = t.List[float]
 class TransactionCategory(base.BaseEnum):
   """Categories of Transactions
   """
+  # Outflow, checked TransactionSplit.total < 0
   HOME = 1
   FOOD = 2
   SHOPPING = 3
   HOBBIES = 4
   SERVICES = 5
   TRAVEL = 6
+
+  # Inflow, checked TransactionSplit.total < 0
   INCOME = 7
+
+  # Outflow/inflow, no check
   INSTRUMENT = 8
   TRANSFER = 9
+
+  def is_valid_amount(self, amount: float) -> bool:
+    """Test amount is valid sign for the Category
+
+    Args:
+      amount: Amount of TransactionSplit to test
+
+    Returns:
+      True if sign(amount) matches the proper category, False otherwise
+    """
+    if (self in [
+        self.HOME, self.FOOD, self.SHOPPING, self.HOBBIES, self.SERVICES,
+        self.TRAVEL
+    ]):
+      return amount <= 0
+    elif self == self.INCOME:
+      return amount >= 0
+    # Other categories are bidirectional
+    return True
 
 
 class TransactionSplit(base.Base):
@@ -79,6 +103,36 @@ class TransactionSplit(base.Base):
   asset: orm.Mapped[asset.Asset] = orm.relationship()
 
   asset_quantity: orm.Mapped[t.Optional[float]]
+
+  @orm.validates("total", "category")
+  def validate_category(
+      self, key: str, field: t.Union[float, TransactionCategory]
+  ) -> t.Union[float, TransactionCategory]:
+    """Validate inflow/outflow constraints are met
+
+    Args:
+      key: Field being updated
+      field: Updated value
+
+    Returns:
+      field
+
+    Raises:
+      ValueError if category and sign(total) do not agree
+    """
+    total = self.total
+    category = self.category
+    if key == "total":
+      total: float = field
+    else:
+      category: TransactionCategory = field
+    if category is None:
+      # It's fine
+      return field
+
+    if not category.is_valid_amount(total):
+      raise ValueError(f"{category} does not match sign({total})")
+    return field
 
   @property
   def parent_uuid(self) -> str:
@@ -287,6 +341,8 @@ class Account(base.Base):
   def get_cash_flow(self, start: datetime.date,
                     end: datetime.date) -> t.Tuple[Dates, Values, Values]:
     """Get the cash_flow of Account from start to end date
+
+    TODO return Dict[Category: Values]
 
     Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
     third day; inflow[4] may be zero
