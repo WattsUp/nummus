@@ -685,55 +685,56 @@ paths:
           description: Malformed request
         "404":
           description: Transaction not found
-  # /portfolio/budget:
-  #   get:
-  #     tags:
-  #       - Portfolio
-  #       - Budget
-  #     summary: Get Budget performance of Portfolio
-  #     description: Returns both target outflow (budget) and actual outflow
-  #     operationId: nummus.web.controller_portfolio.get_budget
-  #     parameters:
-  #       - $ref: "#/components/parameters/Start"
-  #       - $ref: "#/components/parameters/End"
-  #     responses:
-  #       "200":
-  #         description: Successful operation
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 outflow:
-  #                   description: Sum of outflows (same data as
-  #                     /portfolio/cash-flow?integrate=true)
-  #                   type: array
-  #                   items:
-  #                     type: number
-  #                     format: double
-  #                   example:
-  #                     - 0.2
-  #                     - 1480.8
-  #                 outflow_categorized:
-  #                   $ref: "#/components/schemas/DoubleListBudgeted"
-  #                 target:
-  #                   description: Target outflow based on budget, integrated.
-  #                     Directly comparable to outflow.
-  #                   type: array
-  #                   items:
-  #                     type: number
-  #                     format: double
-  #                   example:
-  #                     - 100
-  #                     - 200
-  #                 target_categorized:
-  #                   $ref: "#/components/schemas/DoubleListBudgeted"
-  #                 dates:
-  #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Malformed request
-  #       "422":
-  #         description: Invalid parameter supplied
+  /portfolio/budget:
+    get:
+      tags:
+        - Portfolio
+        - Budget
+      summary: Get Budget performance of Portfolio
+      description: Returns both target outflow (budget) and actual outflow
+      operationId: nummus.web.controller_portfolio.get_budget
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - $ref: "#/components/parameters/Integrate"
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  outflow:
+                    description: Sum of outflows (same data as
+                      /portfolio/cash-flow)
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                    example:
+                      - 0.2
+                      - 1480.8
+                  outflow_categorized:
+                    $ref: "#/components/schemas/DoubleListBudgeted"
+                  target:
+                    description: Target outflow based on budget.
+                      Directly comparable to outflow.
+                    type: array
+                    items:
+                      type: number
+                      format: double
+                    example:
+                      - 100
+                      - 200
+                  target_categorized:
+                    $ref: "#/components/schemas/DoubleListBudgeted"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
+        "400":
+          description: Malformed request
+        "422":
+          description: Invalid parameter supplied
   /portfolio/cash-flow:
     get:
       tags:
@@ -746,17 +747,7 @@ paths:
         - $ref: "#/components/parameters/Start"
         - $ref: "#/components/parameters/End"
         - $ref: "#/components/parameters/AccountCategory"
-        - name: integrate
-          in: query
-          description: >-
-            false returns daily incomes and expenses, see formula:
-            cash-flow(t)=inflow(t) - outflow(t). true will accumulate cash flow
-            along the way, see formula: cash-flow(t)=integral(inflow(x) -
-            outflow(x), dx, start, t). This applies to value, inflow, and
-            outflow in response
-          schema:
-            type: boolean
-            default: false
+        - $ref: "#/components/parameters/Integrate"
       responses:
         "200":
           description: Successful operation
@@ -793,7 +784,9 @@ paths:
                         $ref: "#/components/schemas/DoubleList"
                       transfer:
                         $ref: "#/components/schemas/DoubleList"
-                      none:
+                      unknown-inflow:
+                        $ref: "#/components/schemas/DoubleList"
+                      unknown-outflow:
                         $ref: "#/components/schemas/DoubleList"
                   dates:
                     $ref: "#/components/schemas/Dates"
@@ -1202,6 +1195,18 @@ components:
         sorted by best match.
       schema:
         type: string
+    Integrate:
+      name: integrate
+      in: query
+      description: >-
+        false returns daily incomes and expenses, see formula:
+        cash-flow(t)=inflow(t) - outflow(t). true will accumulate cash flow
+        along the way, see formula: cash-flow(t)=integral(inflow(x) -
+        outflow(x), dx, start, t). This applies to value, inflow, and
+        outflow in response
+      schema:
+        type: boolean
+        default: false
   schemas:
     Account:
       description: An financial Account of the portfolio
@@ -1520,4 +1525,6 @@ components:
         services:
           $ref: "#/components/schemas/DoubleList"
         travel:
+          $ref: "#/components/schemas/DoubleList"
+        unknown-outflow:
           $ref: "#/components/schemas/DoubleList"

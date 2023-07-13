@@ -18,12 +18,12 @@ class TestControllerBudgets(WebTestBase):
     p = self._portfolio
 
     date = datetime.date.today()
-    home = float(self._RNG.uniform(0, 100))
-    food = float(self._RNG.uniform(0, 100))
-    shopping = float(self._RNG.uniform(0, 100))
-    hobbies = float(self._RNG.uniform(0, 100))
-    services = float(self._RNG.uniform(0, 100))
-    travel = float(self._RNG.uniform(0, 100))
+    home = float(self._RNG.uniform(-100, 0))
+    food = float(self._RNG.uniform(-100, 0))
+    shopping = float(self._RNG.uniform(-100, 0))
+    hobbies = float(self._RNG.uniform(-100, 0))
+    services = float(self._RNG.uniform(-100, 0))
+    travel = float(self._RNG.uniform(-100, 0))
 
     # Make the minimum
     req = {
@@ -94,7 +94,7 @@ class TestControllerBudgets(WebTestBase):
 
     # Update by uuid
     new_date = today - datetime.timedelta(days=1)
-    new_home = float(self._RNG.uniform(0, 100))
+    new_home = float(self._RNG.uniform(-100, 0))
     target["date"] = new_date.isoformat()
     target["categories"]["home"] = new_home
     target["total"] = new_home

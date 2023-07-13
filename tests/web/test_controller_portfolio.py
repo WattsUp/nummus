@@ -1,10 +1,12 @@
 """Test module nummus.web.controller_portfolio
 """
 
+import calendar
 import datetime
+
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           AssetValuation, Transaction, TransactionCategory,
-                           TransactionSplit)
+                           AssetValuation, Budget, Transaction,
+                           TransactionCategory, TransactionSplit)
 
 from tests.web.base import WebTestBase
 
@@ -78,6 +80,24 @@ class TestControllerPortfolio(WebTestBase):
                                      asset_quantity=self._RNG.uniform(
                                          100, 1000))
         s.add_all((txn, t_split_0, t_split_1))
+
+      b = Budget(date=today,
+                 home=self._RNG.uniform(-100, 0),
+                 food=self._RNG.uniform(-100, 0),
+                 shopping=self._RNG.uniform(-100, 0),
+                 hobbies=self._RNG.uniform(-100, 0),
+                 services=self._RNG.uniform(-100, 0),
+                 travel=self._RNG.uniform(-100, 0))
+      s.add(b)
+
+      b = Budget(date=today + datetime.timedelta(days=2),
+                 home=self._RNG.uniform(-100, 0),
+                 food=self._RNG.uniform(-100, 0),
+                 shopping=self._RNG.uniform(-100, 0),
+                 hobbies=self._RNG.uniform(-100, 0),
+                 services=self._RNG.uniform(-100, 0),
+                 travel=self._RNG.uniform(-100, 0))
+      s.add(b)
       s.commit()
 
   def test_get_value(self):
@@ -355,7 +375,8 @@ class TestControllerPortfolio(WebTestBase):
     # All assets
     with p.get_session() as s:
       categories = {cat: 0 for cat in TransactionCategory}
-      categories[None] = 0
+      categories["unknown-inflow"] = 0
+      categories["unknown-outflow"] = 0
 
       q = s.query(Account)
       for acct in q.all():
@@ -370,8 +391,8 @@ class TestControllerPortfolio(WebTestBase):
     endpoint = "/api/portfolio/cash-flow"
 
     def enum_to_str(e: TransactionCategory) -> str:
-      if e is None:
-        return "none"
+      if isinstance(e, str):
+        return e
       return e.name.lower()
 
     result, _ = self.api_get(endpoint)
@@ -431,7 +452,8 @@ class TestControllerPortfolio(WebTestBase):
     # Just cash Accounts
     with p.get_session() as s:
       categories = {cat: 0 for cat in TransactionCategory}
-      categories[None] = 0
+      categories["unknown-inflow"] = 0
+      categories["unknown-outflow"] = 0
 
       q = s.query(Account).where(Account.category == AccountCategory.CASH)
       for acct in q.all():
@@ -452,5 +474,155 @@ class TestControllerPortfolio(WebTestBase):
             enum_to_str(cat): [v] for cat, v in categories.items()
         },
         "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+  def test_get_budget(self):
+    p = self._portfolio
+    self.prepare_portfolio()
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
+    future = today + datetime.timedelta(days=2)
+
+    def enum_to_str(e: TransactionCategory) -> str:
+      if isinstance(e, str):
+        return e
+      return e.name.lower()
+
+    # All assets
+    with p.get_session() as s:
+      outflow_categorized = {cat: 0 for cat in TransactionCategory}
+      outflow_categorized["unknown-inflow"] = 0
+      outflow_categorized["unknown-outflow"] = 0
+
+      q = s.query(Account)
+      for acct in q.all():
+        _, acct_categories = acct.get_cash_flow(today, today)
+        for cat, v in acct_categories.items():
+          outflow_categorized[cat] += v[0]
+
+      to_skip = ["income", "transfer", "instrument", "unknown-inflow"]
+      outflow_categorized = {
+          enum_to_str(cat): v
+          for cat, v in outflow_categorized.items()
+          if enum_to_str(cat) not in to_skip
+      }
+      outflow = sum(outflow_categorized.values())
+
+      b_today = s.query(Budget).order_by(Budget.date).first()
+      b_future = s.query(Budget).order_by(Budget.date.desc()).first()
+
+      d = b_today.date
+      month_len_today = calendar.monthrange(d.year, d.month)[1]
+      d = b_future.date
+      month_len_future = calendar.monthrange(d.year, d.month)[1]
+
+      daily_factor_today = 1 / (12 * month_len_today)
+      daily_factor_future = 1 / (12 * month_len_future)
+
+      budget_categorized_today = {
+          enum_to_str(cat): v * daily_factor_today
+          for cat, v in b_today.categories.items()
+          if enum_to_str(cat) not in to_skip
+      }
+      budget_today = sum(budget_categorized_today.values())
+
+      budget_categorized_future = {
+          enum_to_str(cat): v * daily_factor_future
+          for cat, v in b_future.categories.items()
+          if enum_to_str(cat) not in to_skip
+      }
+      budget_future = sum(budget_categorized_future.values())
+      budget_future_annual = b_future.total
+
+    endpoint = "/api/portfolio/budget"
+
+    result, _ = self.api_get(endpoint)
+    target = {
+        "outflow": [outflow],
+        "outflow_categorized": {
+            cat: [v] for cat, v in outflow_categorized.items()
+        },
+        "target": [budget_today],
+        "target_categorized": {
+            cat: [v] for cat, v in budget_categorized_today.items()
+        },
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    result, _ = self.api_get(endpoint, {"start": yesterday, "end": future})
+    target = {
+        "outflow": [0, outflow, 0, 0],
+        "outflow_categorized": {
+            cat: [0, v, 0, 0] for cat, v in outflow_categorized.items()
+        },
+        "target": [0, budget_today, budget_today, budget_future],
+        "target_categorized": {
+            cat: [0, v0, v0, v1]
+            for cat, v0, v1 in zip(budget_categorized_today.keys(),
+                                   budget_categorized_today.values(),
+                                   budget_categorized_future.values())
+        },
+        "dates": [
+            yesterday.isoformat(),
+            today.isoformat(),
+            tomorrow.isoformat(),
+            future.isoformat()
+        ]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    # Validate sum(month) == annual / 12
+    next_month = datetime.date(future.year + ((future.month + 1) // 12),
+                               future.month % 12 + 1, 1)
+    eom = datetime.date(
+        next_month.year, next_month.month,
+        calendar.monthrange(next_month.year, next_month.month)[1])
+    result, _ = self.api_get(endpoint, {"start": next_month, "end": eom})
+    self.assertEqualWithinError(budget_future_annual / 12,
+                                sum(result["target"]), 1e-6)
+
+    # Validate sum(year) == annual
+    next_year = datetime.date(next_month.year + 1, 1, 1)
+    eoy = datetime.date(next_month.year + 1, 12, 31)
+    result, _ = self.api_get(endpoint, {"start": next_year, "end": eoy})
+    self.assertEqualWithinError(budget_future_annual, sum(result["target"]),
+                                1e-6)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
+
+    # Invalid date format
+    self.api_get(endpoint, {"start": self.random_string()}, rc=400)
+
+    # Test integration
+    result, _ = self.api_get(endpoint, {
+        "start": yesterday,
+        "end": future,
+        "integrate": True
+    })
+    target = {
+        "outflow": [0, outflow, outflow, outflow],
+        "outflow_categorized": {
+            cat: [0, v, v, v] for cat, v in outflow_categorized.items()
+        },
+        "target": [
+            0, budget_today, budget_today + budget_today,
+            budget_today + budget_today + budget_future
+        ],
+        "target_categorized": {
+            cat: [0, v0, v0 + v0, v0 + v0 + v1]
+            for cat, v0, v1 in zip(budget_categorized_today.keys(),
+                                   budget_categorized_today.values(),
+                                   budget_categorized_future.values())
+        },
+        "dates": [
+            yesterday.isoformat(),
+            today.isoformat(),
+            tomorrow.isoformat(),
+            future.isoformat()
+        ]
     }
     self.assertEqualWithinError(target, result, 1e-6)

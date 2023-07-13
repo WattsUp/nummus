@@ -23,12 +23,12 @@ class Budget(base.Base):
     uuid: Budget unique identifier
     date: Date on which Budget is effective
     total: Total limit of Budget
-    categories: Categorical breakdown of total
+    categories: Categorical breakdown of total, all amounts <= 0
   """
 
   _PROPERTIES_DEFAULT = ["uuid", "date", "total", "categories"]
 
-  date: orm.Mapped[datetime.date]
+  date: orm.Mapped[datetime.date] = orm.mapped_column(unique=True)
   home: orm.Mapped[float] = orm.mapped_column(default=0)
   food: orm.Mapped[float] = orm.mapped_column(default=0)
   shopping: orm.Mapped[float] = orm.mapped_column(default=0)
@@ -48,6 +48,24 @@ class Budget(base.Base):
         "services": self.services,
         "travel": self.travel
     }
+
+  @orm.validates("home", "food", "shopping", "hobbies", "services", "travel")
+  def validate_category(self, key: str, field: float) -> float:
+    """Validate budget amounts are <= 0
+
+    Args:
+      key: Field being updated
+      field: Updated value
+
+    Returns:
+      field
+
+    Raises:
+      ValueError if budget amount > 0
+    """
+    if field > 0:
+      raise ValueError(f"Budget.{key} must be <= 0")
+    return field
 
   @categories.setter
   def categories(self, data: t.Dict[str, float]) -> None:

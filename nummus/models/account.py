@@ -360,12 +360,14 @@ class Account(base.Base):
     categories: t.Dict[TransactionCategory, Values] = {
         cat: [] for cat in TransactionCategory
     }
-    categories[None] = []  # Category is nullable
+    categories["unknown-inflow"] = []  # Category is nullable
+    categories["unknown-outflow"] = []  # Category is nullable
 
     daily_categories: t.Dict[TransactionCategory, float] = {
         cat: 0 for cat in TransactionCategory
     }
-    daily_categories[None] = 0
+    daily_categories["unknown-inflow"] = 0
+    daily_categories["unknown-outflow"] = 0
 
     for transaction in self.transactions:
       if transaction.date > end:
@@ -380,7 +382,13 @@ class Account(base.Base):
 
       if date == transaction.date:
         for t_split in transaction.splits:
-          daily_categories[t_split.category] += t_split.total
+          if t_split.category is None:
+            if t_split.total > 0:
+              daily_categories["unknown-inflow"] += t_split.total
+            else:
+              daily_categories["unknown-outflow"] += t_split.total
+          else:
+            daily_categories[t_split.category] += t_split.total
 
     while date <= end:
       dates.append(date)

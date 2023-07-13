@@ -523,7 +523,8 @@ class TestAccount(TestBase):
         (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
     ]
     target_categories = {cat: [0] * 7 for cat in TransactionCategory}
-    target_categories[None] = [0] * 7
+    target_categories["unknown-inflow"] = [0] * 7
+    target_categories["unknown-outflow"] = [0] * 7
     start = target_dates[0]
     end = target_dates[-1]
 
@@ -541,7 +542,7 @@ class TestAccount(TestBase):
     session.add_all((txn, t_split))
     session.commit()
 
-    target_categories[None][1] += t_fund
+    target_categories["unknown-inflow"][1] += t_fund
 
     r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)
@@ -557,7 +558,7 @@ class TestAccount(TestBase):
     session.add_all((txn, t_split))
     session.commit()
 
-    target_categories[None][1] += t0
+    target_categories["unknown-outflow"][1] += t0
 
     r_dates, r_categories = acct.get_cash_flow(start, end)
     self.assertEqual(target_dates, r_dates)

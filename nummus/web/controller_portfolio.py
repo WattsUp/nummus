@@ -3,13 +3,14 @@
 
 import typing as t
 
+import calendar
 import datetime
 
 import flask
 
 from nummus import portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           TransactionCategory)
+                           Budget, TransactionCategory)
 from nummus.web import common
 from nummus.web.common import HTTPError
 
@@ -204,17 +205,28 @@ def get_value_by_asset() -> flask.Response:
     return flask.jsonify(response)
 
 
-def get_cash_flow() -> flask.Response:
+def get_cash_flow(
+    request_args: t.Dict[str, object] = None
+) -> t.Union[flask.Response, t.Dict[str, object]]:
   """GET /api/portfolio/cash-flow
+
+  Args:
+    request_args: Override flask.request.args
 
   Returns:
     JSON response, see api.yaml for details
+    If request_args is not None, the JSON response is returned before
+    flask.jsonify is applied
   """
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
+  if request_args is None:
+    args = flask.request.args.to_dict()
+  else:
+    args = request_args
+
   start = common.parse_date(args.get("start", today))
   end = common.parse_date(args.get("end", today))
   category = common.parse_enum(args.get("category"), AccountCategory)
@@ -237,7 +249,8 @@ def get_cash_flow() -> flask.Response:
     categories: t.Dict[TransactionCategory, t.List[float]] = {
         cat: [0] * len(dates) for cat in TransactionCategory
     }
-    categories[None] = [0] * len(dates)  # Category is nullable
+    categories["unknown-inflow"] = [0] * len(dates)  # Category is nullable
+    categories["unknown-outflow"] = [0] * len(dates)  # Category is nullable
 
     for acct in query.all():
       acct: Account
@@ -267,8 +280,8 @@ def get_cash_flow() -> flask.Response:
 
     # Convert to string
     def enum_to_str(e: TransactionCategory) -> str:
-      if e is None:
-        return "none"
+      if isinstance(e, str):
+        return e
       return e.name.lower()
 
     response = {
@@ -280,4 +293,96 @@ def get_cash_flow() -> flask.Response:
         },
         "dates": dates
     }
+    if request_args is not None:
+      return response
     return flask.jsonify(response)
+
+
+def get_budget() -> flask.Response:
+  """GET /api/portfolio/budget
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  args: t.Dict[str, object] = flask.request.args.to_dict()
+  integrate = bool(args.get("integrate", False))
+
+  result = get_cash_flow(request_args=args)
+
+  to_skip = ["income", "transfer", "instrument", "unknown-inflow"]
+
+  outflow: t.List[float] = result["outflow"]
+  outflow_categorized: t.Dict[str, t.List[float]] = {
+      cat: v for cat, v in result["categories"].items() if cat not in to_skip
+  }
+  dates: t.List[datetime.date] = result["dates"]
+  start = dates[0]
+  end = dates[-1]
+
+  target_categorized: t.Dict[str, t.List[float]] = {
+      cat: [] for cat in outflow_categorized if cat != "unknown-outflow"
+  }
+
+  with p.get_session() as s:
+    query = s.query(Budget).order_by(Budget.date)
+
+    date = start
+
+    current_categories = {cat: 0 for cat in target_categorized}
+    for b in query.all():
+      if b.date > end:
+        continue
+      while date < b.date:
+        for k, v in current_categories.items():
+          target_categorized[k].append(v)
+        date += datetime.timedelta(days=1)
+
+      for cat, v in b.categories.items():
+        current_categories[cat] = v
+
+    while date <= end:
+      for k, v in current_categories.items():
+        target_categorized[k].append(v)
+      date += datetime.timedelta(days=1)
+
+  # Adjust annual budget to daily amounts
+  current_month = None
+  daily_factor = 0
+  factors = []
+  for date in dates:
+    if date.month != current_month:
+      current_month = date.month
+      month_len = calendar.monthrange(date.year, date.month)[1]
+      # Daily budget = (annual budget) / (12 months) / (days in month)
+      # So the sum(budget[any single month]) = annual / 12
+      daily_factor = 1 / (12 * month_len)
+    factors.append(daily_factor)
+
+  for cat, values in target_categorized.items():
+    target_categorized[cat] = [v * f for v, f in zip(values, factors)]
+
+  if integrate:
+    for cat, values in target_categorized.items():
+      integral = 0
+      for i, v in enumerate(values):
+        integral += v
+        values[i] = integral
+
+  # Sum for total
+  target = [0] * len(dates)
+  for cat, values in target_categorized.items():
+    for i, v in enumerate(values):
+      target[i] += v
+
+  response = {
+      "outflow": outflow,
+      "outflow_categorized": outflow_categorized,
+      "target": target,
+      "target_categorized": target_categorized,
+      "dates": dates
+  }
+
+  return flask.jsonify(response)
