@@ -372,7 +372,7 @@ class TestControllerPortfolio(WebTestBase):
     yesterday = today - datetime.timedelta(days=1)
     tomorrow = today + datetime.timedelta(days=1)
 
-    # All assets
+    # All accounts
     with p.get_session() as s:
       categories = {cat: 0 for cat in TransactionCategory}
       categories["unknown-inflow"] = 0
@@ -626,3 +626,65 @@ class TestControllerPortfolio(WebTestBase):
         ]
     }
     self.assertEqualWithinError(target, result, 1e-6)
+
+  def test_get_emergency_fund(self):
+    p = self._portfolio
+    self.prepare_portfolio()
+    today = datetime.date.today()
+    yesterday = today - datetime.timedelta(days=1)
+    tomorrow = today + datetime.timedelta(days=1)
+    future = today + datetime.timedelta(days=2)
+
+    # All accounts
+    with p.get_session() as s:
+      outflow = 0
+
+      q = s.query(Account)
+      for acct in q.all():
+        _, acct_categories = acct.get_cash_flow(today, today)
+        for cat, v in acct_categories.items():
+          if cat in ["home", "food", "services"]:
+            outflow += v[0]
+
+      balance = 0
+
+      q = s.query(Account).where(Account.category == AccountCategory.CASH)
+      for acct in q.all():
+        _, values, _ = acct.get_value(today, today)
+        balance += values[0]
+
+    endpoint = "/api/portfolio/emergency-fund"
+
+    result, _ = self.api_get(endpoint)
+    target = {
+        "actual_balance": [balance],
+        "lower_balance": [outflow],
+        "upper_balance": [outflow],
+        "dates": [today.isoformat()]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    result, _ = self.api_get(endpoint, {
+        "lower": 1,
+        "upper": 2,
+        "start": yesterday,
+        "end": future
+    })
+    target = {
+        "actual_balance": [0, balance, balance, balance],
+        "lower_balance": [0, outflow, 0, 0],
+        "upper_balance": [0, outflow, outflow, 0],
+        "dates": [
+            yesterday.isoformat(),
+            today.isoformat(),
+            tomorrow.isoformat(),
+            future.isoformat()
+        ]
+    }
+    self.assertEqualWithinError(target, result, 1e-6)
+
+    # Invalid date filters
+    self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
+
+    # Invalid date format
+    self.api_get(endpoint, {"start": self.random_string()}, rc=400)

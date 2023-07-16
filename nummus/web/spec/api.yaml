@@ -951,49 +951,51 @@ paths:
           description: Malformed request
         "422":
           description: Invalid parameter supplied
-  # /portfolio/emergency-fund:
-  #   get:
-  #     tags:
-  #       - Portfolio
-  #     summary: Get emergency fund of Portfolio
-  #     description: >-
-  #       Compares savings to emergency fund requirements, based on portfolio
-  #       outflow over past period. Default is 3 to 6 months of spending. Excess
-  #       savings would be considered investible cash.
-  #     operationId: nummus.web.controller_portfolio.get_emergency fund
-  #     parameters:
-  #       - $ref: "#/components/parameters/Start"
-  #       - $ref: "#/components/parameters/End"
-  #       - name: lower
-  #         in: query
-  #         description: Lower requirement for emergency fund in days
-  #         schema:
-  #           type: integer
-  #           default: 92
-  #       - name: upper
-  #         in: query
-  #         description: Upper requirement for emergency fund in days
-  #         schema:
-  #           type: integer
-  #           default: 183
-  #     responses:
-  #       "200":
-  #         description: Successful operation
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 actual_balance:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 lower_balance:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 upper_balance:
-  #                   $ref: "#/components/schemas/DoubleList"
-  #                 dates:
-  #                   $ref: "#/components/schemas/Dates"
-  #       "400":
-  #         description: Invalid parameter supplied
+  /portfolio/emergency-fund:
+    get:
+      tags:
+        - Portfolio
+      summary: Get emergency fund of Portfolio
+      description: >-
+        Compares savings to emergency fund requirements, based on portfolio
+        outflow over past period. Default is 3 to 6 months of spending. Excess
+        savings would be considered investible cash.
+      operationId: nummus.web.controller_portfolio.get_emergency_fund
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - name: lower
+          in: query
+          description: Lower requirement for emergency fund in days
+          schema:
+            type: integer
+            default: 92
+        - name: upper
+          in: query
+          description: Upper requirement for emergency fund in days
+          schema:
+            type: integer
+            default: 183
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  actual_balance:
+                    $ref: "#/components/schemas/DoubleList"
+                  lower_balance:
+                    $ref: "#/components/schemas/DoubleList"
+                  upper_balance:
+                    $ref: "#/components/schemas/DoubleList"
+                  dates:
+                    $ref: "#/components/schemas/Dates"
+        "400":
+          description: Malformed request
+        "422":
+          description: Invalid parameter supplied
 externalDocs:
   description: Find out more about nummus
   url: https://github.com/WattsUp/nummus

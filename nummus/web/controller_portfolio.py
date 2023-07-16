@@ -14,6 +14,9 @@ from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
 from nummus.web import common
 from nummus.web.common import HTTPError
 
+# TODO (WattsUp) If other features use this data, move to Portfolio
+# Aka no import controller_*
+
 
 def get_value() -> flask.Response:
   """GET /api/portfolio/value
@@ -110,17 +113,27 @@ def get_value_by_account() -> flask.Response:
     return flask.jsonify(response)
 
 
-def get_value_by_category() -> flask.Response:
+def get_value_by_category(
+    request_args: t.Dict[str, object] = None) -> flask.Response:
   """GET /api/portfolio/value-by-category
+
+  Args:
+    request_args: Override flask.request.args
 
   Returns:
     JSON response, see api.yaml for details
+    If request_args is not None, the JSON response is returned before
+    flask.jsonify is applied
   """
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
+  if request_args is None:
+    args = flask.request.args.to_dict()
+  else:
+    args = request_args
+
   start = common.parse_date(args.get("start", today))
   end = common.parse_date(args.get("end", today))
   if end < start:
@@ -150,6 +163,8 @@ def get_value_by_category() -> flask.Response:
         cat_values[i] += v
 
     response = {"total": total, "categories": categories, "dates": dates}
+    if request_args is not None:
+      return response
     return flask.jsonify(response)
 
 
@@ -385,4 +400,61 @@ def get_budget() -> flask.Response:
       "dates": dates
   }
 
+  return flask.jsonify(response)
+
+
+def get_emergency_fund() -> flask.Response:
+  """GET /api/portfolio/emergency-fund
+
+  Returns:
+    JSON response, see api.yaml for details
+  """
+  today = datetime.date.today()
+
+  args: t.Dict[str, object] = flask.request.args.to_dict()
+  start = common.parse_date(args.get("start", today))
+  end = common.parse_date(args.get("end", today))
+  lower = int(args.get("lower", 92))  # 3 months
+  upper = int(args.get("upper", 183))  # 6 months
+
+  result = get_value_by_category(request_args={"start": start, "end": end})
+  actual_balance: t.List[float] = result["categories"]["cash"]
+  dates: t.List[datetime.date] = result["dates"]
+
+  result = get_cash_flow(request_args={
+      "start": start - datetime.timedelta(days=upper),
+      "end": end
+  })
+  # Emergency spending categories
+  # TODO (WattsUp) Replace with is_essential
+  # Possibly combined with budget?
+  to_keep = ["home", "food", "services"]
+  outflow_categorized: t.Dict[str, t.List[float]] = {
+      cat: v for cat, v in result["categories"].items() if cat in to_keep
+  }
+  outflow: t.List[float] = [sum(x) for x in zip(*outflow_categorized.values())]
+  cash_flow_dates: t.List[datetime.date] = result["dates"]
+
+  lower_balance: t.List[float] = []
+  upper_balance: t.List[float] = []
+
+  current_lower: t.List[float] = []
+  current_upper: t.List[float] = []
+  for i, date in enumerate(cash_flow_dates):
+    current_lower.append(outflow[i])
+    current_upper.append(outflow[i])
+    if len(current_lower) > lower:
+      current_lower.pop(0)
+    if len(current_upper) > upper:
+      current_lower.pop(0)
+    if date >= start:
+      lower_balance.append(sum(current_lower))
+      upper_balance.append(sum(current_upper))
+
+  response = {
+      "actual_balance": actual_balance,
+      "lower_balance": lower_balance,
+      "upper_balance": upper_balance,
+      "dates": dates
+  }
   return flask.jsonify(response)
