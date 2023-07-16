@@ -70,12 +70,12 @@ class TestControllerTransactions(WebTestBase):
     self.assertDictEqual(target, result)
 
     # Make the maximum
-    total = float(self._RNG.uniform(-10, 10))
+    total = float(self._RNG.uniform(-10, 0))
     sales_tax = float(self._RNG.uniform(-10, 0))
     statement = self.random_string()
     payee = self.random_string()
     description = self.random_string()
-    category = self._RNG.choice(TransactionCategory)
+    category = TransactionCategory.FOOD
     subcategory = self.random_string()
     tag = self.random_string()
     asset_qty = float(self._RNG.uniform(-1, 1))
@@ -146,6 +146,12 @@ class TestControllerTransactions(WebTestBase):
     }
     self.api_post(endpoint, json=req, rc=422)
 
+    # Wrong Content-Type
+    self.api_post(endpoint,
+                  data="raw",
+                  headers={"Content-Type": "text/plain"},
+                  rc=415)
+
   def test_get(self):
     p = self._portfolio
 
@@ -189,9 +195,9 @@ class TestControllerTransactions(WebTestBase):
 
       txn = Transaction(account_id=acct.id,
                         date=today,
-                        total=100,
+                        total=-100,
                         statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=txn)
+      t_split = TransactionSplit(total=txn.total, parent=txn)
       s.add_all((txn, t_split))
       s.commit()
       t_uuid = txn.uuid
@@ -201,7 +207,7 @@ class TestControllerTransactions(WebTestBase):
     # Update
     new_statement = self.random_string()
     new_date = today - datetime.timedelta(days=1)
-    new_category_0 = self._RNG.choice(TransactionCategory)
+    new_category_0 = TransactionCategory.SERVICES
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     target["splits"][0]["category"] = new_category_0.name.lower()
@@ -234,8 +240,8 @@ class TestControllerTransactions(WebTestBase):
     # Update and add a split
     new_statement = self.random_string()
     new_date = today - datetime.timedelta(days=1)
-    new_category_0 = self._RNG.choice(TransactionCategory)
-    new_category_1 = self._RNG.choice(TransactionCategory)
+    new_category_0 = TransactionCategory.FOOD
+    new_category_1 = TransactionCategory.HOBBIES
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Duplicate split
@@ -287,7 +293,7 @@ class TestControllerTransactions(WebTestBase):
     # Update and remove a split
     new_statement = self.random_string()
     new_date = today - datetime.timedelta(days=1)
-    new_category_0 = self._RNG.choice(TransactionCategory)
+    new_category_0 = TransactionCategory.TRAVEL
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Keep only the second one
@@ -329,6 +335,12 @@ class TestControllerTransactions(WebTestBase):
 
     # Read only properties
     self.api_put(endpoint, json=target, rc=400)
+
+    # Wrong Content-Type
+    self.api_put(endpoint,
+                 data="raw",
+                 headers={"Content-Type": "text/plain"},
+                 rc=415)
 
   def test_delete(self):
     p = self._portfolio
@@ -391,12 +403,16 @@ class TestControllerTransactions(WebTestBase):
       asset_uuid = asset.uuid
 
       transactions: t.List[Transaction] = []
-      for category in TransactionCategory:
+      for category in [
+          TransactionCategory.HOME, TransactionCategory.FOOD,
+          TransactionCategory.SHOPPING, TransactionCategory.HOBBIES,
+          TransactionCategory.SERVICES, TransactionCategory.TRAVEL
+      ]:
         txn = Transaction(account=acct_checking,
                           date=today,
-                          total=100,
+                          total=-100,
                           statement=self.random_string())
-        t_split = TransactionSplit(total=100,
+        t_split = TransactionSplit(total=txn.total,
                                    parent=txn,
                                    category=category,
                                    payee=self.random_string(),
@@ -412,16 +428,16 @@ class TestControllerTransactions(WebTestBase):
       transactions[-1].splits[0].asset = asset
 
       # Split t0
-      t_split_extra_0 = TransactionSplit(total=10,
+      t_split_extra_0 = TransactionSplit(total=-10,
                                          parent=transactions[0],
-                                         category=TransactionCategory.TRAVEL,
+                                         category=TransactionCategory.HOBBIES,
                                          payee=self.random_string(),
                                          description=self.random_string(),
                                          subcategory=self.random_string(),
                                          tag=tag)
-      t_split_extra_1 = TransactionSplit(total=10,
+      t_split_extra_1 = TransactionSplit(total=-10,
                                          parent=transactions[0],
-                                         category=TransactionCategory.TRAVEL,
+                                         category=TransactionCategory.HOBBIES,
                                          payee=self.random_string(),
                                          description=self.random_string(),
                                          subcategory=subcategory,
@@ -433,17 +449,20 @@ class TestControllerTransactions(WebTestBase):
       query = s.query(TransactionSplit).join(Transaction).order_by(
           Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
       t_splits = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+      n_splits = len(t_splits)
     endpoint = "/api/transactions"
 
     # Get all
     result, _ = self.api_get(endpoint)
-    target = {"transactions": t_splits, "count": 11, "next_offset": None}
+    target = {"transactions": t_splits, "count": n_splits, "next_offset": None}
     self.assertEqual(target, result)
 
-    # Get only travel
-    result, _ = self.api_get(endpoint, {"category": "travel"})
+    # Get only HOBBIES
+    result, _ = self.api_get(endpoint, {"category": "hobbies"})
     target = {
-        "transactions": [t_splits[2], t_splits[3], t_splits[8]],
+        "transactions": [
+            t_split for t_split in t_splits if t_split["category"] == "hobbies"
+        ],
         "count": 3,
         "next_offset": None
     }
@@ -453,14 +472,18 @@ class TestControllerTransactions(WebTestBase):
     result, _ = self.api_get(endpoint, {"sort": "newest"})
     target = {
         "transactions": t_splits[1:] + t_splits[:1],
-        "count": 11,
+        "count": n_splits,
         "next_offset": None
     }
     self.assertEqual(target, result)
 
     # Filter by start date
     result, _ = self.api_get(endpoint, {"start": today, "end": tomorrow})
-    target = {"transactions": t_splits[1:], "count": 10, "next_offset": None}
+    target = {
+        "transactions": t_splits[1:],
+        "count": n_splits - 1,
+        "next_offset": None
+    }
     self.assertEqual(target, result)
 
     # Filter by end date
@@ -534,9 +557,17 @@ class TestControllerTransactions(WebTestBase):
 
     # Get via paging
     result, _ = self.api_get(endpoint, {"limit": 1})
-    target = {"transactions": [t_splits[0]], "count": 11, "next_offset": 1}
+    target = {
+        "transactions": [t_splits[0]],
+        "count": n_splits,
+        "next_offset": 1
+    }
     self.assertEqual(target, result)
 
-    result, _ = self.api_get(endpoint, {"limit": 1, "offset": 10})
-    target = {"transactions": [t_splits[-1]], "count": 11, "next_offset": None}
+    result, _ = self.api_get(endpoint, {"limit": 1, "offset": n_splits - 1})
+    target = {
+        "transactions": [t_splits[-1]],
+        "count": n_splits,
+        "next_offset": None
+    }
     self.assertEqual(target, result)

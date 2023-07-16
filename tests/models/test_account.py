@@ -77,7 +77,7 @@ class TestTransaction(TestBase):
       self.assertIsNone(v, f"result[{k}] is not None")
 
     d = {
-        "total": self._RNG.uniform(-1, 1),
+        "total": self._RNG.uniform(-1, 0),
         "sales_tax": self._RNG.uniform(-1, 0),
         "payee": self.random_string(),
         "description": self.random_string(),
@@ -108,6 +108,89 @@ class TestTransaction(TestBase):
 
     self.assertEqual([t_split_0, t_split_1], txn.splits)
     self.assertEqual(asset, t_split_1.asset)
+
+  def test_is_valid_amount(self):
+
+    not_covered = list(TransactionCategory)
+
+    cat_inflow = [TransactionCategory.INCOME]
+    cat_outflow = [
+        TransactionCategory.HOME, TransactionCategory.FOOD,
+        TransactionCategory.SHOPPING, TransactionCategory.HOBBIES,
+        TransactionCategory.SERVICES, TransactionCategory.TRAVEL
+    ]
+    cat_either = [TransactionCategory.INSTRUMENT, TransactionCategory.TRANSFER]
+
+    for cat in cat_inflow:
+      self.assertTrue(cat.is_valid_amount(10),
+                      f"Positive amount is invalid for {cat}")
+      self.assertTrue(cat.is_valid_amount(0), f"Zero is invalid for {cat}")
+      self.assertFalse(cat.is_valid_amount(-10),
+                       f"Negative amount is valid for {cat}")
+      not_covered.remove(cat)
+
+    for cat in cat_outflow:
+      self.assertFalse(cat.is_valid_amount(10),
+                       f"Positive amount is invalid for {cat}")
+      self.assertTrue(cat.is_valid_amount(0), f"Zero is invalid for {cat}")
+      self.assertTrue(cat.is_valid_amount(-10),
+                      f"Negative amount is invalid for {cat}")
+      not_covered.remove(cat)
+
+    for cat in cat_either:
+      self.assertTrue(cat.is_valid_amount(10),
+                      f"Positive amount is invalid for {cat}")
+      self.assertTrue(cat.is_valid_amount(0), f"Zero is invalid for {cat}")
+      self.assertTrue(cat.is_valid_amount(-10),
+                      f"Negative amount is invalid for {cat}")
+      not_covered.remove(cat)
+
+    self.assertEqual(0, len(not_covered),
+                     f"Categories not covered: {not_covered}")
+
+  def test_validate_category(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.CASH)
+    session.add(acct)
+    session.commit()
+
+    today = datetime.date.today()
+
+    # No category is okay
+    txn = Transaction(account=acct,
+                      date=today,
+                      statement=self.random_string(),
+                      total=10)
+    t_split = TransactionSplit(parent=txn, total=10, category=None)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    # Positive total is okay for INCOME
+    t_split.category = TransactionCategory.INCOME
+
+    # Positive total is not okay for FOOD
+    self.assertRaises(ValueError, setattr, t_split, "category",
+                      TransactionCategory.FOOD)
+
+    # No category is okay
+    txn = Transaction(account=acct,
+                      date=today,
+                      statement=self.random_string(),
+                      total=-10)
+    t_split = TransactionSplit(parent=txn, total=-10, category=None)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    # Negative total is okay for HOME
+    t_split.category = TransactionCategory.HOME
+
+    # Negative total is not okay for INCOME
+    self.assertRaises(ValueError, setattr, t_split, "category",
+                      TransactionCategory.INCOME)
 
 
 class TestAccount(TestBase):
@@ -418,8 +501,96 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
-    # # Test single value
+    # Test single value
     r_dates, r_values, r_assets = acct.get_value(today, today)
     self.assertEqual([today], r_dates)
     self.assertEqual([target_values[3]], r_values)
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)
+
+  def test_get_cash_flow(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    today = datetime.date.today()
+
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.INVESTMENT)
+    session.add(acct)
+    session.commit()
+
+    target_dates = [
+        (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
+    ]
+    target_categories = {cat: [0] * 7 for cat in TransactionCategory}
+    target_categories["unknown-inflow"] = [0] * 7
+    target_categories["unknown-outflow"] = [0] * 7
+    start = target_dates[0]
+    end = target_dates[-1]
+
+    r_dates, r_categories = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_categories, r_categories)
+
+    # Fund account on second day
+    t_fund = self._RNG.uniform(10, 100)
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t_fund,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_categories["unknown-inflow"][1] += t_fund
+
+    r_dates, r_categories = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_categories, r_categories)
+
+    # Buy something on the second day
+    t0 = self._RNG.uniform(-10, -1)
+    txn = Transaction(account=acct,
+                      date=target_dates[1],
+                      total=t0,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn, total=txn.total)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_categories["unknown-outflow"][1] += t0
+
+    r_dates, r_categories = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_categories, r_categories)
+
+    # Sell something on the last day
+    t1 = self._RNG.uniform(1, 10)
+    txn = Transaction(account=acct,
+                      date=target_dates[-1],
+                      total=t1,
+                      statement=self.random_string())
+    t_split = TransactionSplit(parent=txn,
+                               total=txn.total,
+                               category=TransactionCategory.INCOME)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    target_categories[TransactionCategory.INCOME][-1] += t1
+
+    r_dates, r_categories = acct.get_cash_flow(start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_categories, r_categories)
+
+    # Test single value
+    r_dates, r_categories = acct.get_cash_flow(today, today)
+    self.assertEqual([today], r_dates)
+    self.assertEqual({
+        cat: [v[3]] for cat, v in target_categories.items()
+    }, r_categories)
+
+    r_dates, r_categories = acct.get_cash_flow(end, end)
+    self.assertEqual([end], r_dates)
+    self.assertEqual({
+        cat: [v[-1]] for cat, v in target_categories.items()
+    }, r_categories)

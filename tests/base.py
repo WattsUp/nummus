@@ -52,20 +52,38 @@ class TestBase(unittest.TestCase):
     if cls._TEST_ROOT.exists():
       shutil.rmtree(cls._TEST_ROOT)
 
-  def assertEqualWithinError(self, target, real, threshold):
+  def assertEqualWithinError(self, target, real, threshold, msg=None):
     """Assert if target != real within threshold
 
     Args:
       target: Target value
       real: Test value
       threshold: Fractional amount real can be off
+      msg: Error message to print
     """
     self.assertIsNotNone(real)
-    if target == 0.0:
-      error = np.abs(real - target)
+    if isinstance(target, dict):
+      self.assertIsInstance(real, dict, msg)
+      self.assertEqual(target.keys(), real.keys(), msg)
+      for k, t_v in target.items():
+        r_v = real[k]
+        self.assertEqualWithinError(t_v, r_v, threshold, msg=f"Key: {k}")
+      return
+    elif isinstance(target, list):
+      self.assertIsInstance(real, list, msg)
+      self.assertEqual(len(target), len(real), msg)
+      for t_v, r_v in zip(target, real):
+        self.assertEqualWithinError(t_v, r_v, threshold, msg)
+      return
+    elif isinstance(target, (int, float)):
+      self.assertIsInstance(real, (int, float), msg)
+      if target == 0.0:
+        error = np.abs(real - target)
+      else:
+        error = np.abs(real / target - 1)
+      self.assertLessEqual(error, threshold, msg)
     else:
-      error = np.abs(real / target - 1)
-    self.assertLessEqual(error, threshold)
+      self.assertEqual(target, real, msg)
 
   def setUp(self, clean: bool = True):
     if clean:

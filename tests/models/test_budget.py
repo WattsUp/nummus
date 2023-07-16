@@ -3,6 +3,8 @@
 
 import datetime
 
+import sqlalchemy.exc
+
 from nummus import models
 from nummus.models import budget
 
@@ -33,13 +35,13 @@ class TestBudget(TestBase):
     self.assertEqual(0, b.travel)
 
     d = {
-        "date": datetime.date.today(),
-        "home": self._RNG.uniform(0, 1),
-        "food": self._RNG.uniform(0, 1),
-        "shopping": self._RNG.uniform(0, 1),
-        "hobbies": self._RNG.uniform(0, 1),
-        "services": self._RNG.uniform(0, 1),
-        "travel": self._RNG.uniform(0, 1)
+        "date": today + datetime.timedelta(days=1),
+        "home": self._RNG.uniform(-1, 0),
+        "food": self._RNG.uniform(-1, 0),
+        "shopping": self._RNG.uniform(-1, 0),
+        "hobbies": self._RNG.uniform(-1, 0),
+        "services": self._RNG.uniform(-1, 0),
+        "travel": self._RNG.uniform(-1, 0)
     }
 
     b = budget.Budget(**d)
@@ -64,6 +66,19 @@ class TestBudget(TestBase):
     result = b.to_dict()
     self.assertDictEqual(target, result)
 
+    # Zero amounts are okay
+    for cat in d:
+      setattr(b, cat, 0)
+
+    # Positive amounts are bad
+    for cat in d:
+      self.assertRaises(ValueError, setattr, b, cat, 1)
+
+    # Duplicate dates are bad
+    b.date = today
+    self.assertRaises(sqlalchemy.exc.IntegrityError, session.commit)
+    session.rollback()
+
   def test_set_categories(self):
     session = self.get_session()
     models.metadata_create_all(session)
@@ -78,12 +93,12 @@ class TestBudget(TestBase):
     self.assertRaises(KeyError, setattr, b, "categories", {"home": 1})
 
     d = {
-        "hobbies": self._RNG.uniform(0, 1),
-        "services": self._RNG.uniform(0, 1),
-        "travel": self._RNG.uniform(0, 1),
-        "home": self._RNG.uniform(0, 1),
-        "food": self._RNG.uniform(0, 1),
-        "shopping": self._RNG.uniform(0, 1)
+        "home": self._RNG.uniform(-1, 0),
+        "food": self._RNG.uniform(-1, 0),
+        "shopping": self._RNG.uniform(-1, 0),
+        "hobbies": self._RNG.uniform(-1, 0),
+        "services": self._RNG.uniform(-1, 0),
+        "travel": self._RNG.uniform(-1, 0)
     }
     b.categories = d
 

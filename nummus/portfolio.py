@@ -324,6 +324,9 @@ class Portfolio:
     backup_db = self._path_db.with_suffix(".backup.db")
     backup_config = self._path_config.with_suffix(".backup.config")
 
+    # TODO (WattsUp) Add images to backup
+    # Put in a .backup#.tar.gz file
+
     shutil.copyfile(self._path_db, backup_db)
     shutil.copyfile(self._path_config, backup_config)
 

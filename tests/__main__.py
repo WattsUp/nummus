@@ -152,7 +152,11 @@ def post_tests() -> bool:
   return True
 
 
+post_fail = "--no-post-fail" not in sys.argv
+if not post_fail:
+  sys.argv.remove("--no-post-fail")
+
 pre_tests()
 m = unittest.main(module=None, exit=False)
 post = post_tests()
-sys.exit(not m.result.wasSuccessful() or not post)
+sys.exit(not m.result.wasSuccessful() or (post_fail and not post))
