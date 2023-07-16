@@ -66,6 +66,24 @@ calculates net worth, and predicts future performance."""
                             help="test unlocking portfolio",
                             description="Test unlocking portfolio")
 
+  _ = subparsers.add_parser("backup",
+                            help="backup portfolio",
+                            description="Backup portfolio to a tar.gz")
+
+  sub_restore = subparsers.add_parser(
+      "restore",
+      help="restore portfolio from backup",
+      description="Restore portfolio from backup")
+  sub_restore.add_argument("-v",
+                           metavar="VERSION",
+                           type=int,
+                           help="number of backup to use for restore, "
+                           "omit for latest")
+
+  _ = subparsers.add_parser("clean",
+                            help="clean portfolio folder",
+                            description="Delete unused portfolio files")
+
   sub_import = subparsers.add_parser(
       "import",
       help="import files into portfolio",
@@ -116,6 +134,11 @@ calculates net worth, and predicts future performance."""
                            pass_file=path_password,
                            force=force,
                            no_encrypt=no_encrypt)
+  elif cmd == "restore":
+    tar_ver: int = args.v
+    return commands.restore(path=path_db,
+                            pass_file=path_password,
+                            tar_ver=tar_ver)
 
   p = commands.unlock(path=path_db, pass_file=path_password)
   if p is None:
@@ -132,6 +155,10 @@ calculates net worth, and predicts future performance."""
   elif cmd == "unlock":
     # Already unlocked
     return 0
+  elif cmd == "backup":
+    return commands.backup(p)
+  elif cmd == "clean":
+    return commands.clean(p)
   elif cmd == "import":
     paths: t.List[str] = args.paths
     return commands.import_files(p, paths=paths)
