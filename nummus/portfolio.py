@@ -368,7 +368,7 @@ class Portfolio:
     """Delete any unused files, creates a new backup
     """
     # Create a backup
-    path_backup = self.backup()
+    path_backup, _ = self.backup()
 
     # Optimize database
     with self.get_session() as s:
@@ -376,9 +376,10 @@ class Portfolio:
       s.execute(sqlalchemy.text("VACUUM"))
 
     # If anything failed, restore from path_backup
+    # TODO (WattsUp)
 
     # Backup again
-    path_backup = self.backup()
+    path_backup, _ = self.backup()
 
     # Delete all files that start with name except path_backup
     parent = self._path_db.parent

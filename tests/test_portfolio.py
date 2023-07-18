@@ -488,3 +488,67 @@ class TestPortfolio(TestBase):
     self.assertTrue(path_a_img.exists(), "Asset image does not exist")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+  def test_clean(self):
+    path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+    path_other_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+    path_config = path_db.with_suffix(".config")
+    p = portfolio.Portfolio.create(path_db)
+    _ = portfolio.Portfolio.create(path_other_db)
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+    # Create Account
+    with p.get_session() as s:
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      s.add(acct)
+      s.commit()
+
+      accounts = s.query(Account).all()
+      self.assertEqual(1, len(accounts))
+
+    path_backup_1, tar_ver = p.backup()
+    self.assertEqual(1, tar_ver)
+    path_backup_2, tar_ver = p.backup()
+    self.assertEqual(2, tar_ver)
+    path_backup_3, tar_ver = p.backup()
+    self.assertEqual(3, tar_ver)
+
+    # Test for real this time
+    result, tar_ver = p.backup()
+
+    path_backup_4 = path_db.with_suffix(".backup4.tar.gz")
+    self.assertEqual(path_backup_4, result)
+    self.assertEqual(4, tar_ver)
+
+    self.assertTrue(path_backup_4.exists(), "Backup portfolio does not exist")
+    self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)
+
+    # Make an asset image
+    path_a_img = p.image_path.joinpath(f"{uuid.uuid4()}.png")
+    with open(path_a_img, "wb") as file:
+      file.write(self.random_string().encode())
+
+    # Clean, expect old backups and old images to be purged
+    p.clean()
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+    self.assertFalse(path_a_img.exists(), "Asset image does exist")
+
+    self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
+    self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")
+    self.assertFalse(path_backup_3.exists(), "Backup #3 does exist")
+    self.assertFalse(path_backup_4.exists(), "Backup #4 does exist")
