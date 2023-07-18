@@ -1,6 +1,7 @@
 """Test module nummus.portfolio
 """
 
+import tarfile
 import uuid
 
 import autodict
@@ -42,7 +43,7 @@ class TestPortfolio(TestBase):
   def test_create_unencrypted(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
-    path_images = path_db.parent.joinpath("images")
+    path_images = path_db.parent.joinpath("portfolio.images")
 
     # Create unencrypted portfolio
     p = portfolio.Portfolio.create(path_db)
@@ -54,6 +55,7 @@ class TestPortfolio(TestBase):
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
     self.assertEqual(path_images, p.image_path)
+    self.assertEqual(path_db, p.path)
     p = None
     sql.drop_session()
 
@@ -109,7 +111,7 @@ class TestPortfolio(TestBase):
 
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
-    path_images = path_db.parent.joinpath("images")
+    path_images = path_db.parent.joinpath("portfolio.images")
 
     key = self.random_string()
 
@@ -371,26 +373,25 @@ class TestPortfolio(TestBase):
       accounts = s.query(Account).all()
       self.assertEqual(1, len(accounts))
 
-    p.backup()
+    result, tar_ver = p.backup()
 
-    path_db_backup = path_db.with_suffix(".backup.db")
-    path_config_backup = path_config.with_suffix(".backup.config")
+    path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
+    self.assertEqual(path_backup_1, result)
+    self.assertEqual(1, tar_ver)
 
-    self.assertTrue(path_db_backup.exists(), "Backup portfolio does not exist")
-    self.assertTrue(path_config_backup.exists(), "Backup config does not exist")
-    self.assertEqual(path_db_backup.stat().st_mode & 0o777, 0o600)
-    self.assertEqual(path_config_backup.stat().st_mode & 0o777, 0o600)
+    self.assertTrue(path_backup_1.exists(), "Backup portfolio does not exist")
+    self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
 
-    with open(path_db_backup, "rb") as file:
-      buf_backup = file.read()
-    with open(path_db, "rb") as file:
-      buf = file.read()
-    self.assertEqual(buf, buf_backup)
-    with open(path_config_backup, "rb") as file:
-      buf_backup = file.read()
-    with open(path_config, "rb") as file:
-      buf = file.read()
-    self.assertEqual(buf, buf_backup)
+    with tarfile.open(path_backup_1, "r:gz") as tar:
+      buf_backup = tar.extractfile(path_db.name).read()
+      with open(path_db, "rb") as file:
+        buf = file.read()
+      self.assertEqual(buf, buf_backup)
+
+      buf_backup = tar.extractfile(path_config.name).read()
+      with open(path_config, "rb") as file:
+        buf = file.read()
+      self.assertEqual(buf, buf_backup)
     buf = None
     buf_backup = None
 
@@ -405,22 +406,27 @@ class TestPortfolio(TestBase):
       accounts = s.query(Account).all()
       self.assertEqual(2, len(accounts))
 
-    with open(path_db_backup, "rb") as file:
-      buf_backup = file.read()
-    with open(path_db, "rb") as file:
-      buf = file.read()
-    self.assertNotEqual(buf, buf_backup)
+    with tarfile.open(path_backup_1, "r:gz") as tar:
+      buf_backup = tar.extractfile(path_db.name).read()
+      with open(path_db, "rb") as file:
+        buf = file.read()
+      self.assertNotEqual(buf, buf_backup)
     buf = None
     buf_backup = None
 
-    p.restore()
+    portfolio.Portfolio.restore(p)
 
     # Files should match again
-    with open(path_db_backup, "rb") as file:
-      buf_backup = file.read()
-    with open(path_db, "rb") as file:
-      buf = file.read()
-    self.assertEqual(buf, buf_backup)
+    with tarfile.open(path_backup_1, "r:gz") as tar:
+      buf_backup = tar.extractfile(path_db.name).read()
+      with open(path_db, "rb") as file:
+        buf = file.read()
+      self.assertEqual(buf, buf_backup)
+
+      buf_backup = tar.extractfile(path_config.name).read()
+      with open(path_config, "rb") as file:
+        buf = file.read()
+      self.assertEqual(buf, buf_backup)
     buf = None
     buf_backup = None
 
@@ -429,10 +435,56 @@ class TestPortfolio(TestBase):
       accounts = s.query(Account).all()
       self.assertEqual(1, len(accounts))
 
-    # Can'tgt restore if backup config is missing
-    path_config_backup.unlink()
-    self.assertRaises(FileNotFoundError, p.restore)
+    # Can't restore if wrong version requested
+    self.assertRaises(FileNotFoundError,
+                      portfolio.Portfolio.restore,
+                      p,
+                      tar_ver=2)
 
-    # Can'tgt restore if backup database is missing
-    path_db_backup.unlink()
-    self.assertRaises(FileNotFoundError, p.restore)
+    # Another backup should increment the version
+    p.backup()
+
+    path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
+
+    self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
+    self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
+
+    # Can't restore if no backup exists
+    path_backup_1.unlink()
+    path_backup_2.unlink()
+    self.assertRaises(FileNotFoundError, portfolio.Portfolio.restore, p)
+
+    # Backups should include the images
+    with p.get_session() as s:
+      asset = Asset(name=self.random_string(),
+                    category=AssetCategory.CASH,
+                    img_suffix=".png")
+      s.add(asset)
+      s.commit()
+
+      path_a_img = p.image_path.joinpath(asset.image_name)
+      path_a_img_rel = str(path_a_img.relative_to(self._TEST_ROOT))
+      a_img = self.random_string().encode()
+
+      with open(path_a_img, "wb") as file:
+        file.write(a_img)
+
+    p.backup()
+    with tarfile.open(path_backup_1, "r:gz") as tar:
+      buf_backup = tar.extractfile(path_a_img_rel).read()
+      self.assertEqual(a_img, buf_backup)
+    a_img = None
+    buf_backup = None
+
+    path_db.unlink()
+    path_config.unlink()
+    path_a_img.unlink()
+
+    # Restoring brings asset images back too
+    portfolio.Portfolio.restore(path_db)
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    self.assertTrue(path_config.exists(), "Config does not exist")
+    self.assertTrue(path_a_img.exists(), "Asset image does not exist")
+    self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)

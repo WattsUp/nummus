@@ -117,8 +117,9 @@ class Portfolio:
       raise FileExistsError(f"Database already exists at {path_db}")
     # Drop any existing engine to database
     sql.drop_session(path_db)
+    name = path_db.with_suffix("").name
     path_config = path_db.with_suffix(".config")
-    path_images = path_db.parent.joinpath("images")
+    path_images = path_db.parent.joinpath(f"{name}.images")
 
     enc = None
     if encryption is not None and key is not None:
@@ -328,11 +329,11 @@ class Portfolio:
           return matches[0].id
     return None
 
-  def backup(self) -> pathlib.Path:
+  def backup(self) -> t.Tuple[pathlib.Path, int]:
     """Back up database, duplicates files
 
     Returns:
-      Path to newly created backup tar.gz
+      (Path to newly created backup tar.gz, backup version)
     """
     # Find latest backup file for this Portfolio
     i = 0
@@ -343,8 +344,9 @@ class Portfolio:
       m = re_filter.match(file.name)
       if m is not None:
         i = max(i, int(m.group(1)))
+    tar_ver = i + 1
 
-    path_backup = self._path_db.with_suffix(f".backup{i + 1}.tar.gz")
+    path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
     with tarfile.open(path_backup, "w:gz") as tar:
       files: t.List[pathlib.Path] = [self._path_db, self._path_config]
@@ -360,7 +362,7 @@ class Portfolio:
         tar.add(file, arcname=file.relative_to(parent))
 
     path_backup.chmod(0o600)  # Only owner can read/write
-    return path_backup
+    return path_backup, tar_ver
 
   def clean(self) -> None:
     """Delete any unused files, creates a new backup
@@ -394,20 +396,23 @@ class Portfolio:
     shutil.move(path_backup, parent.joinpath(f"{name}.backup1.tar.gz"))
 
     # Restore
-    Portfolio.restore(self._path_db, tar_ver=1)
+    Portfolio.restore(self, tar_ver=1)
 
   @staticmethod
-  def restore(path: str, tar_ver: int = None) -> None:
-    """Initialize Portfolio
+  def restore(p: t.Union[str, Portfolio], tar_ver: int = None) -> None:
+    """Restore Portfolio from backup
 
     Args:
-      path: Path to database file
-      key: String password to unlock database encryption
+      p: Path to database file, or Portfolio which will get its path
+      tar_ver: Backup version to restore, None will use latest
 
     Raises:
       FileNotFoundError if backup does not exist
     """
-    path_db = pathlib.Path(path).resolve().with_suffix(".db")
+    if isinstance(p, Portfolio):
+      path_db = pathlib.Path(p._path_db).resolve().with_suffix(".db")  # pylint: disable=protected-access
+    else:
+      path_db = pathlib.Path(p).resolve().with_suffix(".db")
     parent = path_db.parent
     name = path_db.with_suffix("").name
 
@@ -433,6 +438,11 @@ class Portfolio:
     # tar archive preserved owner and mode so no need to set these
     with tarfile.open(path_backup, "r:gz") as tar:
       tar.extractall(parent)
+
+    # Reload Portfolio
+    if isinstance(p, Portfolio):
+      p._config = autodict.JSONAutoDict(p._path_config, save_on_exit=False)  # pylint: disable=protected-access
+      p._unlock()  # pylint: disable=protected-access
 
   @property
   def image_path(self) -> pathlib.Path:

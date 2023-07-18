@@ -190,7 +190,7 @@ def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
     non-zero on failure
   """
   # Back up Portfolio
-  p.backup()
+  _, tar_ver = p.backup()
   success = False
 
   count = 0
@@ -218,7 +218,7 @@ def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
     # Restore backup if anything went wrong
     # Coverage gets confused with finally blocks
     if not success:  # pragma: no cover
-      p.restore()
+      portfolio.Portfolio.restore(p, tar_ver=tar_ver)
       print(f"{Fore.RED}Abandoned import, restored from backup")
   print(f"{Fore.GREEN}Imported {count} files")
   return 0
