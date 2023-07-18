@@ -419,3 +419,71 @@ class TestCommands(TestBase):
     with p.get_session() as s:
       transactions = s.query(Transaction).all()
       self.assertEqual(6 + 4, len(transactions))
+
+  def test_backup_restore(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    path_backup = path_db.with_suffix(".backup1.tar.gz")
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path_db, None, False, True)
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    p = portfolio.Portfolio(path_db, None)
+
+    with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+      rc = commands.backup(p)
+    self.assertEqual(rc, 0)
+
+    fake_stdout = fake_stdout.getvalue()
+    target = f"{Fore.GREEN}Portfolio backed up to {path_backup}\n"
+    self.assertEqual(target, fake_stdout)
+
+    self.assertTrue(path_backup.exists(), "Backup does not exist")
+
+    path_db.unlink()
+    self.assertFalse(path_db.exists(), "Portfolio does exist")
+
+    with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+      rc = commands.restore(path_db, None)
+    self.assertEqual(rc, 0)
+
+    fake_stdout = fake_stdout.getvalue()
+    target = (f"{Fore.CYAN}Extracted backup tar.gz\n"
+              f"{Fore.GREEN}Portfolio is unlocked\n"
+              f"{Fore.GREEN}Portfolio restored for {path_db}\n")
+    self.assertEqual(target, fake_stdout)
+
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+
+    path_backup.unlink()
+    with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+      rc = commands.restore(path_db, None, tar_ver=1)
+    self.assertNotEqual(rc, 0)
+
+    fake_stdout = fake_stdout.getvalue()
+    target = f"{Fore.RED}Backup does not exist {path_backup}\n"
+    self.assertEqual(target, fake_stdout)
+
+  def test_clean(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
+    path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path_db, None, False, True)
+    self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    p = portfolio.Portfolio(path_db, None)
+
+    p.backup()
+    p.backup()
+
+    self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
+    self.assertTrue(path_backup_2.exists(), "Backup #2 does not exist")
+
+    with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+      rc = commands.clean(p)
+    self.assertEqual(rc, 0)
+
+    fake_stdout = fake_stdout.getvalue()
+    target = f"{Fore.GREEN}Portfolio cleaned\n"
+    self.assertEqual(target, fake_stdout)
+
+    self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
+    self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")

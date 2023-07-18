@@ -135,7 +135,7 @@ def backup(p: portfolio.Portfolio) -> int:
     0 on success
     non-zero on failure
   """
-  backup_tar = p.backup()
+  backup_tar, _ = p.backup()
   print(f"{Fore.GREEN}Portfolio backed up to {backup_tar}")
   return 0
 
