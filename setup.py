@@ -20,9 +20,11 @@ required = [
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "pylint", "numpy"],
-    "dev": ["coverage", "pylint", "numpy", "toml", "witch-ver", "yapf>=0.40.0"]
+    "test": ["coverage", "pylint", "numpy"]
 }
+extras_require["dev"] = extras_require["test"] + [
+    "toml", "witch-ver", "yapf>=0.40.0", "swagger-ui-bundle>=0.0.2,<0.1"
+]
 
 setuptools.setup(
     name=module_name,
