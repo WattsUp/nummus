@@ -125,6 +125,59 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
   return None
 
 
+def backup(p: portfolio.Portfolio) -> int:
+  """Backup portfolio to tar.gz
+
+  Args:
+    p: Working Portfolio
+
+  Returns:
+    0 on success
+    non-zero on failure
+  """
+  backup_tar, _ = p.backup()
+  print(f"{Fore.GREEN}Portfolio backed up to {backup_tar}")
+  return 0
+
+
+def restore(path: str, pass_file: str, tar_ver: int = None) -> int:
+  """Backup portfolio to tar.gz
+
+  Args:
+    path: Path to Portfolio DB to restore
+    pass_file: Path to password file, None will prompt when necessary
+    tar_ver: Backup tar version to restore from, None will restore latest
+
+  Returns:
+    0 on success
+    non-zero on failure
+  """
+  try:
+    portfolio.Portfolio.restore(path, tar_ver=tar_ver)
+    print(f"{Fore.CYAN}Extracted backup tar.gz")
+  except FileNotFoundError as e:
+    print(f"{Fore.RED}{e}")
+    return 1
+  p = unlock(path, pass_file)
+  print(f"{Fore.GREEN}Portfolio restored for {p.path}")
+  return 0
+
+
+def clean(p: portfolio.Portfolio) -> int:
+  """Clean portfolio and delete unused files
+
+  Args:
+    p: Working Portfolio
+
+  Returns:
+    0 on success
+    non-zero on failure
+  """
+  p.clean()
+  print(f"{Fore.GREEN}Portfolio cleaned")
+  return 0
+
+
 def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
   """Import a list of files or directories into a portfolio
 
@@ -137,7 +190,7 @@ def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
     non-zero on failure
   """
   # Back up Portfolio
-  p.backup()
+  _, tar_ver = p.backup()
   success = False
 
   count = 0
@@ -165,7 +218,7 @@ def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
     # Restore backup if anything went wrong
     # Coverage gets confused with finally blocks
     if not success:  # pragma: no cover
-      p.restore()
+      portfolio.Portfolio.restore(p, tar_ver=tar_ver)
       print(f"{Fore.RED}Abandoned import, restored from backup")
   print(f"{Fore.GREEN}Imported {count} files")
   return 0

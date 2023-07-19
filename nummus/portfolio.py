@@ -6,9 +6,12 @@ import typing as t
 
 import datetime
 import pathlib
+import re
 import shutil
+import tarfile
 
 import autodict
+import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import common, importers, models, sql, version
@@ -45,9 +48,10 @@ class Portfolio:
     Raises:
       FileNotFoundError if database does not exist
     """
-    self._path_db = pathlib.Path(path).resolve()
+    self._path_db = pathlib.Path(path).resolve().with_suffix(".db")
+    name = self._path_db.with_suffix("").name
     self._path_config = self._path_db.with_suffix(".config")
-    self._path_images = self._path_db.parent.joinpath("images")
+    self._path_images = self._path_db.parent.joinpath(f"{name}.images")
     if not self._path_db.exists():
       raise FileNotFoundError(f"Portfolio at {self._path_db} does not exist, "
                               "use Portfolio.create()")
@@ -62,6 +66,12 @@ class Portfolio:
     else:
       self._enc = encryption.Encryption(key.encode())
     self._unlock()
+
+  @property
+  def path(self) -> pathlib.Path:
+    """Path to Portfolio database
+    """
+    return self._path_db
 
   @staticmethod
   def is_encrypted(path: str) -> bool:
@@ -107,8 +117,9 @@ class Portfolio:
       raise FileExistsError(f"Database already exists at {path_db}")
     # Drop any existing engine to database
     sql.drop_session(path_db)
+    name = path_db.with_suffix("").name
     path_config = path_db.with_suffix(".config")
-    path_images = path_db.parent.joinpath("images")
+    path_images = path_db.parent.joinpath(f"{name}.images")
 
     enc = None
     if encryption is not None and key is not None:
@@ -318,43 +329,121 @@ class Portfolio:
           return matches[0].id
     return None
 
-  def backup(self) -> None:
+  def backup(self) -> t.Tuple[pathlib.Path, int]:
     """Back up database, duplicates files
+
+    Returns:
+      (Path to newly created backup tar.gz, backup version)
     """
-    backup_db = self._path_db.with_suffix(".backup.db")
-    backup_config = self._path_config.with_suffix(".backup.config")
+    # Find latest backup file for this Portfolio
+    i = 0
+    parent = self._path_db.parent
+    name = self._path_db.with_suffix("").name
+    re_filter = re.compile(fr"^{name}.backup(\d+).tar.gz$")
+    for file in parent.iterdir():
+      m = re_filter.match(file.name)
+      if m is not None:
+        i = max(i, int(m.group(1)))
+    tar_ver = i + 1
 
-    # TODO (WattsUp) Add images to backup
-    # Put in a .backup#.tar.gz file
+    path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
-    shutil.copyfile(self._path_db, backup_db)
-    shutil.copyfile(self._path_config, backup_config)
+    with tarfile.open(path_backup, "w:gz") as tar:
+      files: t.List[pathlib.Path] = [self._path_db, self._path_config]
 
-    backup_db.chmod(0o600)  # Only owner can read/write
-    backup_config.chmod(0o600)  # Only owner can read/write
+      # Get every image
+      with self.get_session() as s:
+        query = s.query(Asset).where(Asset.img_suffix.is_not(None))
+        for asset in query.all():
+          file = self._path_images.joinpath(asset.image_name)
+          files.append(file)
 
-  def restore(self) -> None:
-    """Restore database from backup
+      for file in files:
+        tar.add(file, arcname=file.relative_to(parent))
+
+    path_backup.chmod(0o600)  # Only owner can read/write
+    return path_backup, tar_ver
+
+  def clean(self) -> None:
+    """Delete any unused files, creates a new backup
     """
-    backup_db = self._path_db.with_suffix(".backup.db")
-    backup_config = self._path_config.with_suffix(".backup.config")
+    # Create a backup
+    path_backup, _ = self.backup()
 
-    if not backup_db.exists():
-      raise FileNotFoundError(f"Backup database {backup_db} does not exist")
-    if not backup_config.exists():
-      raise FileNotFoundError(f"Backup config {backup_config} does not exist")
+    # Optimize database
+    with self.get_session() as s:
+      # TODO (WattsUp) Defragment primary keys?
+      s.execute(sqlalchemy.text("VACUUM"))
+
+    # If anything failed, restore from path_backup
+    # TODO (WattsUp)
+
+    # Backup again
+    path_backup, _ = self.backup()
+
+    # Delete all files that start with name except path_backup
+    parent = self._path_db.parent
+    name = self._path_db.with_suffix("").name
+    for file in parent.iterdir():
+      if file == path_backup:
+        continue
+      elif file.name.startswith(f"{name}."):
+        if file.is_dir():
+          shutil.rmtree(file)
+        else:
+          file.unlink()
+
+    # Move backup to i=1
+    shutil.move(path_backup, parent.joinpath(f"{name}.backup1.tar.gz"))
+
+    # Restore
+    Portfolio.restore(self, tar_ver=1)
+
+  @staticmethod
+  def restore(p: t.Union[str, Portfolio], tar_ver: int = None) -> None:
+    """Restore Portfolio from backup
+
+    Args:
+      p: Path to database file, or Portfolio which will get its path
+      tar_ver: Backup version to restore, None will use latest
+
+    Raises:
+      FileNotFoundError if backup does not exist
+    """
+    if isinstance(p, Portfolio):
+      path_db = pathlib.Path(p._path_db).resolve().with_suffix(".db")  # pylint: disable=protected-access
+    else:
+      path_db = pathlib.Path(p).resolve().with_suffix(".db")
+    parent = path_db.parent
+    name = path_db.with_suffix("").name
+
+    if tar_ver is None:
+      # Find latest backup file for this Portfolio
+      i = 0
+      re_filter = re.compile(fr"^{name}.backup(\d+).tar.gz$")
+      for file in parent.iterdir():
+        m = re_filter.match(file.name)
+        if m is not None:
+          i = max(i, int(m.group(1)))
+      if i == 0:
+        raise FileNotFoundError(f"No backup exists for {path_db}")
+      tar_ver = i
+
+    path_backup = parent.joinpath(f"{name}.backup{tar_ver}.tar.gz")
+    if not path_backup.exists():
+      raise FileNotFoundError(f"Backup does not exist {path_backup}")
 
     # Drop any dangling sessions
-    sql.drop_session(self._path_db)
+    sql.drop_session(path_db)
 
-    shutil.copyfile(backup_db, self._path_db)
-    shutil.copyfile(backup_config, self._path_config)
+    # tar archive preserved owner and mode so no need to set these
+    with tarfile.open(path_backup, "r:gz") as tar:
+      tar.extractall(parent)
 
-    backup_db.chmod(0o600)  # Only owner can read/write
-    backup_config.chmod(0o600)  # Only owner can read/write
-
-    # Update config
-    self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
+    # Reload Portfolio
+    if isinstance(p, Portfolio):
+      p._config = autodict.JSONAutoDict(p._path_config, save_on_exit=False)  # pylint: disable=protected-access
+      p._unlock()  # pylint: disable=protected-access
 
   @property
   def image_path(self) -> pathlib.Path:
