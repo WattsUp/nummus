@@ -293,10 +293,14 @@ class TestMain(TestBase):
       self._tear_down_commands()
 
   def test_backup(self):
+    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path, None, False, True)
+
     try:
       self._set_up_commands()
 
-      args = ["backup"]
+      args = ["--portfolio", path, "backup"]
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
       self.assertEqual(1, len(self._called_args))
@@ -306,10 +310,14 @@ class TestMain(TestBase):
       self._tear_down_commands()
 
   def test_clean(self):
+    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+    with mock.patch("sys.stdout", new=io.StringIO()) as _:
+      commands.create(path, None, False, True)
+
     try:
       self._set_up_commands()
 
-      args = ["clean"]
+      args = ["--portfolio", path, "clean"]
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
       self.assertEqual(1, len(self._called_args))
