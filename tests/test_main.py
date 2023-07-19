@@ -248,3 +248,72 @@ class TestMain(TestBase):
           }, self._called_kwargs)
     finally:
       self._tear_down_commands()
+
+  def test_restore(self):
+    home = pathlib.Path(os.path.expanduser("~"))
+    path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+    path_password = str(self._TEST_ROOT.joinpath(".password"))
+    try:
+      self._set_up_commands()
+
+      args = ["restore"]
+      main(args)
+      self.assertListEqual([], self._called_args)
+      self.assertDictEqual(
+          {
+              "_func": "restore",
+              "path": str(home.joinpath(".nummus", "portfolio.db")),
+              "pass_file": None,
+              "tar_ver": None
+          }, self._called_kwargs)
+
+      tar_ver = self._RNG.integers(1, 100)
+      args = ["restore", "-v", str(tar_ver)]
+      main(args)
+      self.assertListEqual([], self._called_args)
+      self.assertDictEqual(
+          {
+              "_func": "restore",
+              "path": str(home.joinpath(".nummus", "portfolio.db")),
+              "pass_file": None,
+              "tar_ver": tar_ver
+          }, self._called_kwargs)
+
+      args = ["--portfolio", path, "--pass-file", path_password, "restore"]
+      main(args)
+      self.assertListEqual([], self._called_args)
+      self.assertDictEqual(
+          {
+              "_func": "restore",
+              "path": path,
+              "pass_file": path_password,
+              "tar_ver": None
+          }, self._called_kwargs)
+    finally:
+      self._tear_down_commands()
+
+  def test_backup(self):
+    try:
+      self._set_up_commands()
+
+      args = ["backup"]
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        main(args)
+      self.assertEqual(1, len(self._called_args))
+      self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+      self.assertDictEqual({"_func": "backup"}, self._called_kwargs)
+    finally:
+      self._tear_down_commands()
+
+  def test_clean(self):
+    try:
+      self._set_up_commands()
+
+      args = ["clean"]
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        main(args)
+      self.assertEqual(1, len(self._called_args))
+      self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+      self.assertDictEqual({"_func": "clean"}, self._called_kwargs)
+    finally:
+      self._tear_down_commands()
