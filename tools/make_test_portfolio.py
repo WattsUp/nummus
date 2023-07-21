@@ -4,6 +4,7 @@
 import typing as t
 
 import datetime
+import time
 
 import colorama
 from colorama import Fore
@@ -95,12 +96,15 @@ def make_accounts(p: Portfolio) -> t.Dict[str, int]:
     investment = Account(name="Fruit Trading",
                          institution="Monkey Bank",
                          category=AccountCategory.INVESTMENT)
+    retirement = Account(name="401k",
+                         institution="Monkey Bank Retirement",
+                         category=AccountCategory.INVESTMENT)
     real_estate = Account(name="Real Estate",
                           institution="Real Estate",
                           category=AccountCategory.FIXED)
 
     s.add_all((checking, savings, cc_0, cc_1, loan, mortgage, investment,
-               real_estate))
+               retirement, real_estate))
     s.commit()
 
     accounts["checking"] = checking.id
@@ -110,6 +114,7 @@ def make_accounts(p: Portfolio) -> t.Dict[str, int]:
     accounts["loan"] = loan.id
     accounts["mortgage"] = mortgage.id
     accounts["investment"] = investment.id
+    accounts["retirement"] = retirement.id
     accounts["real_estate"] = real_estate.id
 
   print(f"{Fore.GREEN}Created accounts")
@@ -141,8 +146,8 @@ def print_stats(p: Portfolio) -> None:
       _, values, _ = acct.get_value(death_day, death_day)
       v = values[0]
       net_worth += v
-      buf[f"Acct '{acct.name}' final"] = f"${v:13,.3f}"
-    buf["Net worth final"] = f"${net_worth:13,.2f}"
+      buf[f"Acct '{acct.name}' final"] = f"${v:15,.3f}"
+    buf["Net worth final"] = f"${net_worth:15,.3f}"
 
     n_transactions = s.query(Transaction).count()
     buf["# of Transactions"] = n_transactions
@@ -182,6 +187,74 @@ def generate_early_savings(p: Portfolio, accts: t.Dict[str, int]) -> None:
       s.add_all((txn, txn_split))
     s.commit()
   print(f"{Fore.GREEN}Generated early savings")
+
+
+def generate_income(p: Portfolio, accts: t.Dict[str, int]) -> None:
+  """Generate income from working, stopping at retirement
+
+  Args:
+    p: Portfolio to edit
+    accts: Account IDs to use
+  """
+  with p.get_session() as s:
+    for age in range(16, 65):
+      if age <= 22:
+        job = "Barista"
+        salary = 20e3 + 2e3 * (age - 16)
+      elif age <= 35:
+        job = "Software Engineer"
+        salary = 70e3 + 5e3 * (age - 22)
+      else:
+        job = "Engineering Manager"
+        salary = 175e3 + 6e3 * (age - 35)
+      total = round(salary / 24, 2)
+      # At age 24, decide to start contributing to retirement
+      if age < 24:
+        savings = 0
+        paycheck = total
+      else:
+        savings = round(total * 0.1, 2)
+        paycheck = total - savings
+
+      # Paychecks on the 5th and 20th unless that day falls on a weekend
+      def adjust_date(date: datetime.date) -> datetime.datetime:
+        if date.weekday() == 5:
+          return date - datetime.timedelta(days=1)
+        elif date.weekday() == 6:
+          return date + datetime.timedelta(days=1)
+        return date
+
+      dates: t.List[datetime.date] = []
+      for m in range(12):
+        date_0 = datetime.date(BIRTH_YEAR + age, m + 1, 5)
+        date_1 = datetime.date(BIRTH_YEAR + age, m + 1, 20)
+
+        dates.append(adjust_date(date_0))
+        dates.append(adjust_date(date_1))
+
+      for date in dates:
+        txn = Transaction(account_id=accts["checking"],
+                          date=date,
+                          total=paycheck,
+                          statement=job)
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.INCOME,
+                                     subcategory="Paycheck")
+        s.add_all((txn, txn_split))
+        if savings != 0:
+          txn = Transaction(account_id=accts["retirement"],
+                            date=date,
+                            total=savings,
+                            statement=job)
+          txn_split = TransactionSplit(parent=txn,
+                                       total=txn.total,
+                                       category=TransactionCategory.INCOME,
+                                       subcategory="Retirement Contribution")
+          s.add_all((txn, txn_split))
+
+    s.commit()
+  print(f"{Fore.GREEN}Generated income")
 
 
 def add_interest(p: Portfolio, acct_id: int) -> None:
@@ -227,14 +300,20 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
 def main() -> None:
   """Main program entry
   """
+  start = time.perf_counter()
   p = Portfolio.create("portfolio.db")
 
   accts = make_accounts(p)
 
   generate_early_savings(p, accts)
 
+  generate_income(p, accts)
+
   for name in ["checking", "savings"]:
     add_interest(p, accts[name])
+
+  duration = time.perf_counter() - start
+  print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")
 
   print_stats(p)
 
