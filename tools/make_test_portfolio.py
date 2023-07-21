@@ -11,8 +11,9 @@ from colorama import Fore
 import numpy as np
 
 from nummus.portfolio import Portfolio
-from nummus.models import (Account, AccountCategory, Transaction,
-                           TransactionCategory, TransactionSplit)
+from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
+                           AssetValuation, Transaction, TransactionCategory,
+                           TransactionSplit)
 
 colorama.init(autoreset=True)
 
@@ -122,6 +123,70 @@ def make_accounts(p: Portfolio) -> t.Dict[str, int]:
   return accounts
 
 
+def make_assets(p: Portfolio) -> t.Dict[str, int]:
+  """Create assets to buy and sell
+
+  Args:
+    p: Portfolio to edit
+
+  Returns:
+    Dict{asset name: id}
+  """
+  assets: t.Dict[str, int] = {}
+  with p.get_session() as s:
+    growth = Asset(name="GROWTH",
+                   description="Growth ETF",
+                   category=AssetCategory.SECURITY)
+    value = Asset(name="VALUE",
+                  description="Value ETF",
+                  category=AssetCategory.SECURITY)
+
+    # Name: [Asset, current price, growth mean, growth stddev]
+    stocks: t.Dict[str, t.List[t.Union[Asset, float]]] = {
+        "growth": [growth, 100, 0.1, 0.2],
+        "value": [value, 100, 0.05, 0.05]
+    }
+    s.add_all(v[0] for v in stocks.values())
+    s.commit()
+
+    # TODO (WattsUp) Add stock splits
+
+    start = datetime.date(BIRTH_YEAR, 1, 1)
+    date = start
+    end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    while date <= end:
+      # Skip weekends
+      w = date.weekday()
+      if w == 5:
+        date += datetime.timedelta(days=2)
+      elif w == 6:
+        date += datetime.timedelta(days=1)
+
+      for item in stocks.values():
+        rate = RNG.normal(item[2] / 252, item[3] / np.sqrt(252))
+        v = round(item[1] * (1 + rate), 2)
+
+        valuation = AssetValuation(asset=item[0], value=v, date=date)
+        s.add(valuation)
+
+        item[1] = v
+
+      date += datetime.timedelta(days=1)
+    s.commit()
+
+    # dates, values0, _ = growth.get_value(start, end)
+    # dates, values1, _ = value.get_value(start, end)
+    # with open("stocks.csv", "w", encoding="utf-8") as file:
+    #   for d, v0, v1 in zip(dates, values0, values1):
+    #     file.write(f"{d},{v0},{v1}\n")
+
+    assets = {k: v[0].id for k, v in stocks.items()}
+
+  print(f"{Fore.GREEN}Created assets")
+
+  return assets
+
+
 def print_stats(p: Portfolio) -> None:
   """Print statistics on Portfolio
 
@@ -143,10 +208,15 @@ def print_stats(p: Portfolio) -> None:
     buf["# of Accounts"] = n_accounts
     net_worth = 0
     for acct in s.query(Account).all():
-      _, values, _ = acct.get_value(death_day, death_day)
+      _, values, assets = acct.get_value(death_day, death_day)
       v = values[0]
       net_worth += v
       buf[f"Acct '{acct.name}' final"] = f"${v:15,.3f}"
+      for asset_uuid, a_values in assets.items():
+        asset = s.query(Asset).where(Asset.uuid == asset_uuid).first()
+        v = a_values[0]
+        buf[f"  Asset '{asset.name}' final"] = f"${v:15,.3f}"
+
     buf["Net worth final"] = f"${net_worth:15,.3f}"
 
     n_transactions = s.query(Transaction).count()
@@ -157,6 +227,9 @@ def print_stats(p: Portfolio) -> None:
     days = (last_txn.date - first_txn.date).days
     years = days / 365.25
     buf["# of Txn/year"] = f"{n_transactions / years:.1f}"
+
+    n_asset_valuations = s.query(AssetValuation).count()
+    buf["# of Valuations"] = n_asset_valuations
 
     buf["DB Size"] = f"{p.path.stat().st_size / 1e6:.1f}MB"
 
@@ -189,15 +262,24 @@ def generate_early_savings(p: Portfolio, accts: t.Dict[str, int]) -> None:
   print(f"{Fore.GREEN}Generated early savings")
 
 
-def generate_income(p: Portfolio, accts: t.Dict[str, int]) -> None:
+def generate_income(p: Portfolio, accts: t.Dict[str, int],
+                    assets: t.Dict[str, int]) -> None:
   """Generate income from working, stopping at retirement
 
   Args:
     p: Portfolio to edit
     accts: Account IDs to use
+    assets: Asset IDs to use
   """
   with p.get_session() as s:
-    for age in range(16, 65):
+    a_growth = s.query(Asset).where(Asset.id == assets["growth"]).first()
+    a_value = s.query(Asset).where(Asset.id == assets["value"]).first()
+    a_values_start = datetime.date(BIRTH_YEAR, 1, 1)
+    a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    _, a_growth_values, _ = a_growth.get_value(a_values_start, a_values_end)
+    _, a_value_values, _ = a_value.get_value(a_values_start, a_values_end)
+
+    for age in range(16, min(65, FINAL_AGE)):
       if age <= 22:
         job = "Barista"
         salary = 20e3 + 2e3 * (age - 16)
@@ -253,6 +335,38 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int]) -> None:
                                        subcategory="Retirement Contribution")
           s.add_all((txn, txn_split))
 
+          # Now buy stocks with that funding
+          if age < 35:
+            cost_growth = round(savings * 0.9, 2)
+          elif age < 45:
+            cost_growth = round(savings * 0.5, 2)
+          else:
+            cost_growth = round(savings * 0.1, 2)
+          cost_value = savings - cost_growth
+
+          a_values_i = (date - a_values_start).days
+
+          qty_growth = round(cost_growth / a_growth_values[a_values_i], 6)
+          qty_value = round(cost_value / a_value_values[a_values_i], 6)
+
+          txn = Transaction(account_id=accts["retirement"],
+                            date=date,
+                            total=-savings,
+                            statement=job)
+          txn_split_0 = TransactionSplit(
+              parent=txn,
+              total=-cost_growth,
+              category=TransactionCategory.INSTRUMENT,
+              asset=a_growth,
+              asset_quantity=qty_growth)
+          txn_split_1 = TransactionSplit(
+              parent=txn,
+              total=-cost_value,
+              category=TransactionCategory.INSTRUMENT,
+              asset=a_value,
+              asset_quantity=qty_value)
+          s.add_all((txn, txn_split_0, txn_split_1))
+
     s.commit()
   print(f"{Fore.GREEN}Generated income")
 
@@ -304,10 +418,11 @@ def main() -> None:
   p = Portfolio.create("portfolio.db")
 
   accts = make_accounts(p)
+  assets = make_assets(p)
 
   generate_early_savings(p, accts)
 
-  generate_income(p, accts)
+  generate_income(p, accts, assets)
 
   for name in ["checking", "savings"]:
     add_interest(p, accts[name])
