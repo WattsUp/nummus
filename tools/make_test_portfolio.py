@@ -140,13 +140,28 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
     value = Asset(name="VALUE",
                   description="Value ETF",
                   category=AssetCategory.SECURITY)
+    house_main = Asset(name="Main St. House",
+                       description="House on Main St.",
+                       category=AssetCategory.REAL_ESTATE)
+    house_second = Asset(name="Second Ave. House",
+                         description="House on Second Ave.",
+                         category=AssetCategory.REAL_ESTATE)
+    house_third = Asset(name="Third Blvd. House",
+                        description="House on Third Blvd.",
+                        category=AssetCategory.REAL_ESTATE)
 
     # Name: [Asset, current price, growth mean, growth stddev]
     stocks: t.Dict[str, t.List[t.Union[Asset, float]]] = {
         "growth": [growth, 100, 0.1, 0.2],
-        "value": [value, 100, 0.05, 0.05]
+        "value": [value, 100, 0.05, 0.05],
+    }
+    real_estate: t.Dict[str, t.List[t.Union[Asset, float]]] = {
+        "house_main": [house_main, 50e3, 0.05, 0.02],
+        "house_second": [house_second, 100e3, 0.04, 0.02],
+        "house_third": [house_third, 100e3, 0.05, 0.02],
     }
     s.add_all(v[0] for v in stocks.values())
+    s.add_all(v[0] for v in real_estate.values())
     s.commit()
 
     # TODO (WattsUp) Add stock splits
@@ -174,6 +189,24 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
       date += datetime.timedelta(days=1)
     s.commit()
 
+    # Real estate valued once a month
+    date = start
+    end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    while date <= end:
+      for item in real_estate.values():
+        rate = RNG.normal(item[2] / 12, item[3] / np.sqrt(12))
+        v = round(item[1] * (1 + rate), 2)
+
+        valuation = AssetValuation(asset=item[0], value=v, date=date)
+        s.add(valuation)
+
+        item[1] = v
+
+      y = date.year
+      m = date.month
+      date = datetime.date(y + m // 12, m % 12 + 1, 1)
+    s.commit()
+
     # dates, values0, _ = growth.get_value(start, end)
     # dates, values1, _ = value.get_value(start, end)
     # with open("stocks.csv", "w", encoding="utf-8") as file:
@@ -181,6 +214,8 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
     #     file.write(f"{d},{v0},{v1}\n")
 
     assets = {k: v[0].id for k, v in stocks.items()}
+    for k, v in real_estate.items():
+      assets[k] = v[0].id
 
   print(f"{Fore.GREEN}Created assets")
 
@@ -279,7 +314,7 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
     _, a_growth_values, _ = a_growth.get_value(a_values_start, a_values_end)
     _, a_value_values, _ = a_value.get_value(a_values_start, a_values_end)
 
-    for age in range(16, min(65, FINAL_AGE)):
+    for age in range(16, min(65, FINAL_AGE) + 1):
       if age <= 22:
         job = "Barista"
         salary = 20e3 + 2e3 * (age - 16)
@@ -291,12 +326,12 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
         salary = 175e3 + 6e3 * (age - 35)
       total = round(salary / 24, 2)
       # At age 24, decide to start contributing to retirement
+      savings = round(total * 0.1, 2)
       if age < 24:
-        savings = 0
-        paycheck = total
+        retirement = 0
       else:
-        savings = round(total * 0.1, 2)
-        paycheck = total - savings
+        retirement = round(total * 0.1, 2)
+      paycheck = total - savings - retirement
 
       # Paychecks on the 5th and 20th unless that day falls on a weekend
       def adjust_date(date: datetime.date) -> datetime.datetime:
@@ -324,10 +359,19 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
                                      category=TransactionCategory.INCOME,
                                      subcategory="Paycheck")
         s.add_all((txn, txn_split))
-        if savings != 0:
+        txn = Transaction(account_id=accts["savings"],
+                          date=date,
+                          total=savings,
+                          statement=job)
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.INCOME,
+                                     subcategory="Paycheck")
+        s.add_all((txn, txn_split))
+        if retirement != 0:
           txn = Transaction(account_id=accts["retirement"],
                             date=date,
-                            total=savings,
+                            total=retirement,
                             statement=job)
           txn_split = TransactionSplit(parent=txn,
                                        total=txn.total,
@@ -337,12 +381,12 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
 
           # Now buy stocks with that funding
           if age < 35:
-            cost_growth = round(savings * 0.9, 2)
+            cost_growth = round(retirement * 0.9, 2)
           elif age < 45:
-            cost_growth = round(savings * 0.5, 2)
+            cost_growth = round(retirement * 0.5, 2)
           else:
-            cost_growth = round(savings * 0.1, 2)
-          cost_value = savings - cost_growth
+            cost_growth = round(retirement * 0.1, 2)
+          cost_value = retirement - cost_growth
 
           a_values_i = (date - a_values_start).days
 
@@ -351,7 +395,7 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
 
           txn = Transaction(account_id=accts["retirement"],
                             date=date,
-                            total=-savings,
+                            total=-retirement,
                             statement=job)
           txn_split_0 = TransactionSplit(
               parent=txn,
@@ -369,6 +413,340 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
 
     s.commit()
   print(f"{Fore.GREEN}Generated income")
+
+
+def generate_housing(p: Portfolio, accts: t.Dict[str, int],
+                     assets: t.Dict[str, int]) -> None:
+  """Generate housing payments
+
+  Args:
+    p: Portfolio to edit
+    accts: Account IDs to use
+    assets: Asset IDs to use
+  """
+  with p.get_session() as s:
+    house_1 = s.query(Asset).where(Asset.id == assets["house_main"]).first()
+    house_2 = s.query(Asset).where(Asset.id == assets["house_second"]).first()
+    house_3 = s.query(Asset).where(Asset.id == assets["house_third"]).first()
+    a_values_start = datetime.date(BIRTH_YEAR, 1, 1)
+    a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    _, house_1_values, _ = house_1.get_value(a_values_start, a_values_end)
+    _, house_2_values, _ = house_2.get_value(a_values_start, a_values_end)
+    _, house_3_values, _ = house_3.get_value(a_values_start, a_values_end)
+
+    savings = s.query(Account).where(Account.id == accts["savings"]).first()
+
+    def buy_house(date: datetime.date, house: Asset,
+                  price: float) -> t.Tuple[float, float, float, float, float]:
+      """Add transactions to buy a house
+
+      Args:
+        date: Transaction date
+        house: Asset to buy
+        price: Price to buy it at
+
+      Returns:
+        (Mortgage principal, monthly interest rate, monthly payment, pmi,
+        pmi threshold)
+      """
+      _, values, _ = savings.get_value(date, date)
+      closing_costs = round(price * 0.05, 2)
+      down_payment = min(values[0] - closing_costs, round(price * 0.2, 2))
+
+      p = price - down_payment
+      r = round(RNG.uniform(0.03, 0.1), 4) / 12
+      pi = round(p * (r * (1 + r)**360) / ((1 + r)**360 - 1), 2)
+
+      # Pay down payment and closing costs
+      txn = Transaction(account_id=accts["savings"],
+                        date=date,
+                        total=-(down_payment + closing_costs),
+                        statement="Home closing")
+      txn_dp = TransactionSplit(parent=txn,
+                                total=-down_payment,
+                                category=TransactionCategory.TRANSFER)
+      txn_cc = TransactionSplit(parent=txn,
+                                total=-closing_costs,
+                                category=TransactionCategory.SERVICES,
+                                subcategory="Fees")
+      s.add_all((txn, txn_dp, txn_cc))
+
+      # Open a mortgage
+      txn = Transaction(account_id=accts["mortgage"],
+                        date=date,
+                        total=-p,
+                        statement="Home closing")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.INSTRUMENT)
+      s.add_all((txn, txn_split))
+
+      # Buy the house
+      txn = Transaction(account_id=accts["real_estate"],
+                        date=date,
+                        total=0,
+                        statement="Home closing")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.INSTRUMENT,
+                                   asset=house,
+                                   asset_quantity=1)
+      s.add_all((txn, txn_split))
+
+      pmi = round(0.01 * pi * 12, 2)
+      pmi_threshold = 0.8 * price
+
+      print(f"{Fore.CYAN}Bought {house.description}")
+      return p, r, pi, pmi, pmi_threshold
+
+    def sell_house(date: datetime.date, house: Asset, price: float,
+                   balance: float) -> None:
+      """Add transactions to sell a house
+
+      Args:
+        date: Transaction date
+        house: Asset to sell
+        price: Price to sell it at
+      """
+      closing_costs = round(price * 0.08, 2)
+
+      # Pay down payment and closing costs
+      txn = Transaction(account_id=accts["savings"],
+                        date=date,
+                        total=price - closing_costs,
+                        statement="Home closing")
+      txn_sell = TransactionSplit(parent=txn,
+                                  total=price,
+                                  category=TransactionCategory.TRANSFER)
+      txn_cc = TransactionSplit(parent=txn,
+                                total=-closing_costs,
+                                category=TransactionCategory.SERVICES,
+                                subcategory="Fees")
+      s.add_all((txn, txn_sell, txn_cc))
+
+      # Sell the house
+      txn = Transaction(account_id=accts["real_estate"],
+                        date=date,
+                        total=0,
+                        statement="Home closing")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.INSTRUMENT,
+                                   asset=house,
+                                   asset_quantity=-1)
+      s.add_all((txn, txn_split))
+
+      if balance > 0:
+        # Close a mortgage
+        txn = Transaction(account_id=accts["mortgage"],
+                          date=date,
+                          total=balance,
+                          statement="Home closing")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.INSTRUMENT)
+        s.add_all((txn, txn_split))
+
+        txn = Transaction(account_id=accts["savings"],
+                          date=date,
+                          total=-balance,
+                          statement="Home closing")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.INSTRUMENT)
+        s.add_all((txn, txn_split))
+
+      print(f"{Fore.CYAN}Sold {house.description}")
+
+    def monthly_payment(date: datetime.date, balance: float, rate: float,
+                        payment: float, escrow: float, pmi: float,
+                        pmi_threshold: float) -> float:
+      """Add monthly payment transactions
+
+      Args:
+        date: Transaction date
+        balance: Mortgage balance
+        rate: Monthly interest rate
+        payment: Monthly payment
+        escrow: Escrow payment
+        pmi: Amount of private mortgage insurance
+        pmi_threshold: Balance amount that PMI is no longer paid
+      """
+      i = round(balance * rate, 2)
+      p = min(balance, payment - i)
+      total = i + p + escrow
+      if balance > pmi_threshold:
+        total += pmi
+      txn = Transaction(account_id=accts["checking"],
+                        date=date,
+                        total=-total,
+                        statement="House payment")
+      txn_ti = TransactionSplit(parent=txn,
+                                total=-escrow,
+                                category=TransactionCategory.SERVICES,
+                                subcategory="Fees",
+                                description="Taxes and Insurance")
+      if p > 0:
+        txn_i = TransactionSplit(parent=txn,
+                                 total=-i,
+                                 category=TransactionCategory.HOME,
+                                 subcategory="Rent",
+                                 description="Interest")
+        txn_p = TransactionSplit(parent=txn,
+                                 total=-p,
+                                 category=TransactionCategory.TRANSFER,
+                                 description="Principal")
+        if balance > pmi_threshold:
+          txn_pmi = TransactionSplit(parent=txn,
+                                     total=-pmi,
+                                     category=TransactionCategory.SERVICES,
+                                     description="PMI")
+          s.add_all((txn, txn_i, txn_p, txn_ti, txn_pmi))
+        else:
+          s.add_all((txn, txn_i, txn_p, txn_ti))
+      else:
+        s.add_all((txn, txn_ti))
+
+      if p > 0:
+        txn = Transaction(account_id=accts["mortgage"],
+                          date=date,
+                          total=p,
+                          statement="Principal")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.TRANSFER)
+        s.add_all((txn, txn_split))
+
+      balance -= p
+
+      utilities = max(50, round(payment * RNG.normal(0.1, 0.01), 2))
+
+      txn = Transaction(account_id=accts["checking"],
+                        date=date,
+                        total=-utilities,
+                        statement="Utilities")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.HOME,
+                                   subcategory="Utilities")
+      s.add_all((txn, txn_split))
+
+      return balance
+
+    bought_1 = False
+    bought_2 = False
+    bought_3 = False
+
+    balance = 0
+    rate = 0
+    payment = 0
+    escrow = 0
+    pmi = 0
+    pmi_th = 0
+
+    for age in range(18, FINAL_AGE + 1):
+      dates: t.List[datetime.date] = []
+      for m in range(12):
+        date = datetime.date(BIRTH_YEAR + age, m + 1, 1)
+        dates.append(date)
+
+      if age < 30:
+        # Renting until age 30
+        rent = 1000 + 100 * (age - 18)
+        for date in dates:
+          txn = Transaction(account_id=accts["checking"],
+                            date=date,
+                            total=-rent,
+                            statement="Rent")
+          txn_split = TransactionSplit(parent=txn,
+                                       total=txn.total,
+                                       category=TransactionCategory.HOME,
+                                       subcategory="Rent")
+          s.add_all((txn, txn_split))
+
+          utilities = round(rent * RNG.normal(0.1, 0.01), 2)
+
+          txn = Transaction(account_id=accts["checking"],
+                            date=date,
+                            total=-utilities,
+                            statement="Utilities")
+          txn_split = TransactionSplit(parent=txn,
+                                       total=txn.total,
+                                       category=TransactionCategory.HOME,
+                                       subcategory="Utilities")
+          s.add_all((txn, txn_split))
+      elif age < 45:
+        # Buy house 1 with 20% down
+        if not bought_1:
+          date = dates[0]
+          a_values_i = (date - a_values_start).days
+          price = round(house_1_values[a_values_i], -3)
+
+          balance, rate, payment, pmi, pmi_th = buy_house(date, house_1, price)
+          escrow = round(price * 0.02 / 12, 2)
+          bought_1 = True
+
+        # Pay monthly payment
+        for date in dates:
+          balance = monthly_payment(date, balance, rate, payment, escrow, pmi,
+                                    pmi_th)
+
+        # Escrow increases each year
+        r = max(0, RNG.normal(0.03, 0.01))
+        escrow = round(escrow * (1 + r), 2)
+      elif age < 60:
+        # Buy house 2 with proceeds of house 1
+        if not bought_2:
+          date = dates[0]
+          a_values_i = (date - a_values_start).days
+
+          # Sell house 1
+          price = round(house_1_values[a_values_i], -3)
+          sell_house(date, house_1, price, balance)
+
+          # Buy house 2
+          price = round(house_2_values[a_values_i], -3)
+
+          balance, rate, payment, pmi, pmi_th = buy_house(date, house_2, price)
+          escrow = round(price * 0.02 / 12, 2)
+          bought_2 = True
+
+        # Pay monthly payment
+        for date in dates:
+          balance = monthly_payment(date, balance, rate, payment, escrow, pmi,
+                                    pmi_th)
+
+        # Escrow increases each year
+        r = max(0, RNG.normal(0.03, 0.01))
+        escrow = round(escrow * (1 + r), 2)
+      else:
+        # Buy house 2 with proceeds of house 1
+        if not bought_3:
+          date = dates[0]
+          a_values_i = (date - a_values_start).days
+
+          # Sell house 2
+          price = round(house_2_values[a_values_i], -3)
+          sell_house(date, house_2, price, balance)
+
+          # Buy house 3
+          price = round(house_3_values[a_values_i], -3)
+
+          balance, rate, payment, pmi, pmi_th = buy_house(date, house_3, price)
+          escrow = round(price * 0.02 / 12, 2)
+          bought_3 = True
+
+        # Pay monthly payment
+        for date in dates:
+          balance = monthly_payment(date, balance, rate, payment, escrow, pmi,
+                                    pmi_th)
+
+        # Escrow increases each year
+        r = max(0, RNG.normal(0.03, 0.01))
+        escrow = round(escrow * (1 + r), 2)
+
+    s.commit()
+  print(f"{Fore.GREEN}Generated housing")
 
 
 def add_interest(p: Portfolio, acct_id: int) -> None:
@@ -391,6 +769,10 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
       # Interest on the average balance
       _, values, _ = acct.get_value(date, next_date)
       avg_value = sum(values[:-1]) / len(values[:-1])
+
+      if avg_value < 0:
+        raise ValueError(f"Account {acct.name} was over-drafted by "
+                         f"{avg_value:.2f}")
 
       rate = INTEREST_RATES[date.year]
       interest = round(rate / 12 * avg_value, 2)
@@ -423,6 +805,8 @@ def main() -> None:
   generate_early_savings(p, accts)
 
   generate_income(p, accts, assets)
+
+  generate_housing(p, accts, assets)
 
   for name in ["checking", "savings"]:
     add_interest(p, accts[name])
