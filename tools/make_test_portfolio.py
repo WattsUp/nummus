@@ -86,7 +86,8 @@ def rng_choice(choices: t.List[object]) -> object:
 
 
 FINAL_AGE = 80
-BIRTH_YEAR = datetime.date.today().year - FINAL_AGE
+# Base prices on real US prices
+BIRTH_YEAR = 1940
 
 BIRTHDAYS: t.Dict[str, datetime.date] = {
     "self": datetime.date.today().replace(year=BIRTH_YEAR)
@@ -222,9 +223,9 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
         "value": [value, 100, 0.05, 0.05],
     }
     real_estate: t.Dict[str, t.List[t.Union[Asset, float]]] = {
-        "house_main": [house_main, 50e3, 0.03, 0.02],
-        "house_second": [house_second, 100e3, 0.04, 0.02],
-        "house_third": [house_third, 150e3, 0.05, 0.02],
+        "house_main": [house_main, 1.5e3, 0.05, 0.02],
+        "house_second": [house_second, 3e3, 0.06, 0.02],
+        "house_third": [house_third, 5e3, 0.07, 0.02],
     }
     s.add_all(v[0] for v in stocks.values())
     s.add_all(v[0] for v in real_estate.values())
@@ -354,7 +355,7 @@ def generate_early_savings(p: Portfolio, accts: t.Dict[str, int]) -> None:
       date = birthday("self", age)
       txn = Transaction(account_id=accts["savings"],
                         date=date,
-                        total=round(rng_uniform(10, 100), 2),
+                        total=round(rng_uniform(1, 10), 2),
                         statement="Birthday money")
       txn_split = TransactionSplit(parent=txn,
                                    total=txn.total,
@@ -385,13 +386,13 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
     for age in range(16, min(60, FINAL_AGE) + 1):
       if age <= 22:
         job = "Barista"
-        salary = 20e3 + 2e3 * (age - 16)
+        salary = 1.5e3 * (1.03)**(age - 16)
       elif age <= 35:
         job = "Software Engineer"
-        salary = 70e3 + 5e3 * (age - 22)
+        salary = 6e3 * (1.05)**(age - 22)
       else:
         job = "Engineering Manager"
-        salary = 175e3 + 6e3 * (age - 35)
+        salary = 15e3 * (1.06)**(age - 35)
       total = round(salary / 24, 2)
       # At age 24, decide to start contributing to retirement
       savings = round(total * 0.1, 2)
@@ -531,7 +532,6 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
       p = price - down_payment
       r = round(rng_uniform(0.03, 0.1), 4) / 12
       pi = round(p * (r * (1 + r)**360) / ((1 + r)**360 - 1), 2)
-      print(down_payment / price, max_dp, down_payment, pi)
 
       # Pay down payment and closing costs
       txn = Transaction(account_id=accts["savings"],
@@ -697,7 +697,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       balance -= p
 
-      utilities = max(50, round(payment * rng_normal(0.1, 0.01), 2))
+      utilities = max(10, round(payment * rng_normal(0.1, 0.01), 2))
 
       txn = Transaction(account_id=accts["cc_0"],
                         date=date,
@@ -709,12 +709,13 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                    subcategory="Utilities")
       s.add_all((txn, txn_split))
 
-      # Adds a repair cost 25% of the time with an average cost of $400
-      # Equates to $100/month
-      repair_cost = round(100 / np.sqrt(rng_uniform(1e-5, 1)), 2)
-      if repair_cost > 200:
+      # Adds a repair cost 25% of the time with an average cost target_price
+      # per month
+      target_price = payment * 0.05
+      repair_cost = round(target_price / np.sqrt(rng_uniform(1e-5, 1)), 2)
+      if repair_cost > (2 * target_price):
         acct_id = accts["cc_0"]
-        if repair_cost > 1000:
+        if repair_cost > (10 * target_price):
           # Use savings for big repairs
           acct_id = accts["savings"]
         txn = Transaction(account_id=acct_id,
@@ -749,7 +750,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       if age < 30:
         # Renting until age 30
-        rent = 1000 + 100 * (age - 18)
+        rent = 71 * (1.03)**(age - 18)
         for date in dates:
           txn = Transaction(account_id=accts["checking"],
                             date=date,
@@ -872,8 +873,8 @@ def generate_food(p: Portfolio, accts: t.Dict[str, int]) -> None:
         return date - datetime.timedelta(days=rng_int(2, 4))
       return date
 
-    grocery_budget = 300
-    restaurant_cost = 10
+    grocery_budget = 30
+    restaurant_cost = 2
     restaurant_freq = 2
     restaurant_plates = 1
 
@@ -888,17 +889,17 @@ def generate_food(p: Portfolio, accts: t.Dict[str, int]) -> None:
 
       if age == 28:
         # Add a spouse
-        grocery_budget = 500
+        grocery_budget = 60
         restaurant_freq = 4
         restaurant_plates = 2
       elif age == 35:
         # Add children
-        grocery_budget = 800
+        grocery_budget = 150
         restaurant_freq = 2
         restaurant_plates = 4
       elif age == (35 + 20):
         # Remove children
-        grocery_budget = 500 * (1 + 0.0376)**20
+        grocery_budget = 200
         restaurant_freq = 6
         restaurant_plates = 2
 
