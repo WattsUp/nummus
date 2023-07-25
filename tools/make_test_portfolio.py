@@ -38,7 +38,22 @@ def rng_uniform(low: float, high: float) -> float:
   """
   if NO_RNG:
     return (low + high) / 2
-  return RNG.uniform(low, high)
+  return float(RNG.uniform(low, high))
+
+
+def rng_int(low: int, high: int) -> int:
+  """Return an integer from a uniform distribution
+
+  Args:
+    low: Lower bounds
+    high: Upper bounds
+
+  Returns:
+    Random number from distribution
+  """
+  if NO_RNG:
+    return int((low + high) / 2)
+  return int(RNG.integers(low, high, endpoint=True))
 
 
 def rng_normal(loc: float, scale: float) -> float:
@@ -54,6 +69,20 @@ def rng_normal(loc: float, scale: float) -> float:
   if NO_RNG:
     return loc
   return RNG.normal(loc, scale)
+
+
+def rng_choice(choices: t.List[object]) -> object:
+  """Return an random selection from a list of choices
+
+  Args:
+    choices: List of choices to choose from
+
+  Returns:
+    Random choice
+  """
+  if NO_RNG:
+    return choices[0]
+  return RNG.choice(choices)
 
 
 FINAL_AGE = 80
@@ -193,9 +222,9 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
         "value": [value, 100, 0.05, 0.05],
     }
     real_estate: t.Dict[str, t.List[t.Union[Asset, float]]] = {
-        "house_main": [house_main, 50e3, 0.05, 0.02],
+        "house_main": [house_main, 50e3, 0.03, 0.02],
         "house_second": [house_second, 100e3, 0.04, 0.02],
-        "house_third": [house_third, 100e3, 0.05, 0.02],
+        "house_third": [house_third, 150e3, 0.05, 0.02],
     }
     s.add_all(v[0] for v in stocks.values())
     s.add_all(v[0] for v in real_estate.values())
@@ -490,11 +519,19 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
       """
       _, values, _ = savings.get_value(date, date)
       closing_costs = round(price * 0.05, 2)
-      down_payment = min(values[0] - closing_costs, round(price * 0.2, 2))
+      max_dp = values[0] - closing_costs
+      no_pmi_dp = price * 0.2
+      if max_dp < no_pmi_dp:
+        # Clear out savings to avoid PMI
+        down_payment = round(max_dp, 2)
+      else:
+        # Pay 20% unless there is more than 50k of excess cash
+        down_payment = round(max(no_pmi_dp, max_dp - 50e3), 2)
 
       p = price - down_payment
       r = round(rng_uniform(0.03, 0.1), 4) / 12
       pi = round(p * (r * (1 + r)**360) / ((1 + r)**360 - 1), 2)
+      print(down_payment / price, max_dp, down_payment, pi)
 
       # Pay down payment and closing costs
       txn = Transaction(account_id=accts["savings"],
@@ -535,6 +572,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
       pmi = round(0.01 * pi * 12, 2)
       pmi_threshold = 0.8 * price
 
+      s.commit()
       print(f"{Fore.CYAN}  Bought {house.description}")
       return p, r, pi, pmi, pmi_threshold
 
@@ -595,6 +633,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                      category=TransactionCategory.INSTRUMENT)
         s.add_all((txn, txn_split))
 
+      s.commit()
       print(f"{Fore.CYAN}  Sold {house.description}")
 
     def monthly_payment(date: datetime.date, balance: float, rate: float,
@@ -807,6 +846,171 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
   print(f"{Fore.GREEN}Generated housing")
 
 
+def generate_food(p: Portfolio, accts: t.Dict[str, int]) -> None:
+  """Generate food payments
+
+  Args:
+    p: Portfolio to edit
+    accts: Account IDs to use
+  """
+  with p.get_session() as s:
+    grocery_stores: t.List[str] = [
+        "Walmart", "Grocery Outlet", "Safeway", "Fred Meyer", "QFC", "Kroger"
+    ]
+    restaurants: t.List[str] = [
+        "Pizza Palace", "Fine Dining R Us", "Italian Garden", "Chinese Kitchen",
+        "Burgers and Beef", "Only Spam", "Thai 42", "Fajitas and More"
+    ]
+
+    # Never groceries on a Monday, Friday, or Saturday
+    def adjust_date(date: datetime.date) -> datetime.datetime:
+      if date.weekday() == 0:
+        return date + datetime.timedelta(days=rng_int(1, 3))
+      elif date.weekday() == 4:
+        return date - datetime.timedelta(days=rng_int(1, 3))
+      elif date.weekday() == 5:
+        return date - datetime.timedelta(days=rng_int(2, 4))
+      return date
+
+    grocery_budget = 300
+    restaurant_cost = 10
+    restaurant_freq = 2
+    restaurant_plates = 1
+
+    for age in range(18, FINAL_AGE + 1):
+      dates: t.List[datetime.date] = []
+      for m in range(12):
+        # Groceries twice a month
+        date_0 = datetime.date(BIRTH_YEAR + age, m + 1, 1)
+        date_1 = datetime.date(BIRTH_YEAR + age, m + 1, 15)
+        dates.append(adjust_date(date_0))
+        dates.append(adjust_date(date_1))
+
+      if age == 28:
+        # Add a spouse
+        grocery_budget = 500
+        restaurant_freq = 4
+        restaurant_plates = 2
+      elif age == 35:
+        # Add children
+        grocery_budget = 800
+        restaurant_freq = 2
+        restaurant_plates = 4
+      elif age == (35 + 20):
+        # Remove children
+        grocery_budget = 500 * (1 + 0.0376)**20
+        restaurant_freq = 6
+        restaurant_plates = 2
+
+      r = INFLATION_RATES[BIRTH_YEAR + age]
+      grocery_budget = grocery_budget * (1 + r)
+      restaurant_cost = restaurant_cost * (1 + r)
+
+      acct_id = accts["cc_0"]
+      if age > 32:
+        # Open a new credit card
+        acct_id = accts["cc_1"]
+
+      for date in dates:
+        store = rng_choice(grocery_stores)
+        total = round(grocery_budget / 2 * rng_normal(1, 0.2), 2)
+        if total > 0:
+          txn = Transaction(account_id=acct_id,
+                            date=date,
+                            total=-total,
+                            statement=store)
+          txn_split = TransactionSplit(parent=txn,
+                                       total=txn.total,
+                                       payee=store,
+                                       category=TransactionCategory.FOOD,
+                                       subcategory="Groceries")
+          s.add_all((txn, txn_split))
+
+      # Go out to restaurants
+      dates: t.List[datetime.date] = []
+      for m in range(12):
+        days = RNG.choice(range(1, 29), restaurant_freq, replace=False)
+        for day in days:
+          date = datetime.date(BIRTH_YEAR + age, m + 1, day)
+          restaurant = rng_choice(restaurants)
+          total_exp = restaurant_cost * restaurant_plates
+          total = round(total_exp * rng_normal(1, 0.2), 2)
+          txn = Transaction(account_id=acct_id,
+                            date=date,
+                            total=-total,
+                            statement=restaurant)
+          txn_split = TransactionSplit(parent=txn,
+                                       total=txn.total,
+                                       payee=restaurant,
+                                       category=TransactionCategory.FOOD,
+                                       subcategory="Restaurant")
+          s.add_all((txn, txn_split))
+
+    s.commit()
+  print(f"{Fore.GREEN}Generated food")
+
+
+def add_retirement(p: Portfolio, accts: t.Dict[str, int],
+                   assets: t.Dict[str, int]) -> None:
+  """Perform retirement changeover
+
+  Args:
+    p: Portfolio to edit
+    accts: Account IDs to use
+    assets: Asset IDs to use
+  """
+  with p.get_session() as s:
+    acct = s.query(Account).where(Account.id == accts["retirement"]).first()
+    a_growth = s.query(Asset).where(Asset.id == assets["growth"]).first()
+    a_value = s.query(Asset).where(Asset.id == assets["value"]).first()
+    date_sell = next_month(acct.transactions[-1].date)
+    date_transfer = date_sell + datetime.timedelta(days=7)
+
+    _, asset_qty = acct.get_asset_qty(date_sell, date_sell)
+
+    def sell_asset(asset: Asset, qty: float) -> None:
+      """Add transactions to sell an Asset
+
+      Args:
+        asset: Asset to sell
+        qty: Quantity to sell
+      """
+      _, values, _ = asset.get_value(date_sell, date_sell)
+      total = round(qty * values[0], 2)
+      txn = Transaction(account_id=accts["retirement"],
+                        date=date_sell,
+                        total=total,
+                        statement="Security Sell")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.INSTRUMENT,
+                                   asset=asset,
+                                   asset_quantity=-qty)
+      s.add_all((txn, txn_split))
+
+      txn = Transaction(account_id=accts["retirement"],
+                        date=date_transfer,
+                        total=-total,
+                        statement="Account Transfer")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.TRANSFER)
+      s.add_all((txn, txn_split))
+
+      txn = Transaction(account_id=accts["checking"],
+                        date=date_transfer,
+                        total=total,
+                        statement="Account Transfer")
+      txn_split = TransactionSplit(parent=txn,
+                                   total=txn.total,
+                                   category=TransactionCategory.TRANSFER)
+      s.add_all((txn, txn_split))
+
+    sell_asset(a_growth, asset_qty[a_growth.uuid][0])
+    sell_asset(a_value, asset_qty[a_value.uuid][0])
+    s.commit()
+
+
 def add_interest(p: Portfolio, acct_id: int) -> None:
   """Adds dividend/interest to Account
 
@@ -837,7 +1041,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
 
       if avg_value < 0:
         raise ValueError(f"Account {acct.name} was over-drafted by "
-                         f"{avg_value:.2f}")
+                         f"{avg_value:.2f} on {date}")
 
       rate = INTEREST_RATES[date.year]
       interest = round(rate / 12 * avg_value, 2)
@@ -860,14 +1064,16 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
     print(f"{Fore.GREEN}Added interest for {acct.name}")
 
 
-def add_cc_payments(p: Portfolio, acct_id: int) -> None:
+def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
   """Adds credit card payments to Account
 
   Args:
     acct_id: Account to generate for
+    acct_id_fund: Account to withdraw funds from
   """
   with p.get_session() as s:
     acct = s.query(Account).where(Account.id == acct_id).first()
+    acct_fund = s.query(Account).where(Account.id == acct_id_fund).first()
     if len(acct.transactions) == 0:
       print(f"{Fore.RED}No transaction to generate CC payments on for "
             f"{acct.name}")
@@ -888,9 +1094,20 @@ def add_cc_payments(p: Portfolio, acct_id: int) -> None:
       balance = round(values[i_end] + total_payment, 2)
 
       if balance < 0:
+        due_date = next_date.replace(day=15)
         txn = Transaction(account=acct,
-                          date=next_date.replace(day=15),
+                          date=due_date,
                           total=-balance,
+                          statement="Credit Card Payment")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.TRANSFER,
+                                     subcategory="Credit Card Payments")
+        s.add_all((txn, txn_split))
+
+        txn = Transaction(account=acct_fund,
+                          date=due_date,
+                          total=balance,
                           statement="Credit Card Payment")
         txn_split = TransactionSplit(parent=txn,
                                      total=txn.total,
@@ -920,8 +1137,12 @@ def main() -> None:
 
   generate_housing(p, accts, assets)
 
+  generate_food(p, accts)
+
+  add_retirement(p, accts, assets)
+
   for name in ["cc_0", "cc_1"]:
-    add_cc_payments(p, accts[name])
+    add_cc_payments(p, accts[name], accts["checking"])
 
   for name in ["checking", "savings"]:
     add_interest(p, accts[name])
