@@ -23,8 +23,40 @@ colorama.init(autoreset=True)
 # Try to make it semi-realistic
 
 RNG = np.random.default_rng()
+NO_RNG = True
 
-FINAL_AGE = 75
+
+def rng_uniform(low: float, high: float) -> float:
+  """Return a number from a uniform distribution
+
+  Args:
+    low: Lower bounds
+    high: Upper bounds
+
+  Returns:
+    Random number from distribution
+  """
+  if NO_RNG:
+    return (low + high) / 2
+  return RNG.uniform(low, high)
+
+
+def rng_normal(loc: float, scale: float) -> float:
+  """Return a number from a normal distribution
+
+  Args:
+    loc: Center of distribution
+    scale: Std. dev of distribution
+
+  Returns:
+    Random number from distribution
+  """
+  if NO_RNG:
+    return loc
+  return RNG.normal(loc, scale)
+
+
+FINAL_AGE = 80
 BIRTH_YEAR = datetime.date.today().year - FINAL_AGE
 
 BIRTHDAYS: t.Dict[str, datetime.date] = {
@@ -32,7 +64,12 @@ BIRTHDAYS: t.Dict[str, datetime.date] = {
 }
 
 INTEREST_RATES: t.Dict[int, float] = {
-    y: 10**RNG.uniform(-3, -1.3)
+    y: 10**rng_uniform(-3, -1.3)
+    for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
+}
+
+INFLATION_RATES: t.Dict[int, float] = {
+    y: rng_normal(0.0376, 0.0278)
     for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
 }
 
@@ -152,7 +189,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
 
     # Name: [Asset, current price, growth mean, growth stddev]
     stocks: t.Dict[str, t.List[t.Union[Asset, float]]] = {
-        "growth": [growth, 100, 0.1, 0.2],
+        "growth": [growth, 100, 0.07, 0.2],
         "value": [value, 100, 0.05, 0.05],
     }
     real_estate: t.Dict[str, t.List[t.Union[Asset, float]]] = {
@@ -178,7 +215,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
         date += datetime.timedelta(days=1)
 
       for item in stocks.values():
-        rate = RNG.normal(item[2] / 252, item[3] / np.sqrt(252))
+        rate = rng_normal(item[2] / 252, item[3] / np.sqrt(252))
         v = round(item[1] * (1 + rate), 2)
 
         valuation = AssetValuation(asset=item[0], value=v, date=date)
@@ -195,7 +232,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
     end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
     while date <= end:
       for item in real_estate.values():
-        rate = RNG.normal(item[2] / 12, item[3] / np.sqrt(12))
+        rate = rng_normal(item[2] / 12, item[3] / np.sqrt(12))
         v = round(item[1] * (1 + rate), 2)
 
         valuation = AssetValuation(asset=item[0], value=v, date=date)
@@ -288,7 +325,7 @@ def generate_early_savings(p: Portfolio, accts: t.Dict[str, int]) -> None:
       date = birthday("self", age)
       txn = Transaction(account_id=accts["savings"],
                         date=date,
-                        total=round(RNG.uniform(10, 100), 2),
+                        total=round(rng_uniform(10, 100), 2),
                         statement="Birthday money")
       txn_split = TransactionSplit(parent=txn,
                                    total=txn.total,
@@ -316,7 +353,7 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
     _, a_growth_values, _ = a_growth.get_value(a_values_start, a_values_end)
     _, a_value_values, _ = a_value.get_value(a_values_start, a_values_end)
 
-    for age in range(16, min(65, FINAL_AGE) + 1):
+    for age in range(16, min(60, FINAL_AGE) + 1):
       if age <= 22:
         job = "Barista"
         salary = 20e3 + 2e3 * (age - 16)
@@ -382,9 +419,9 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
           s.add_all((txn, txn_split))
 
           # Now buy stocks with that funding
-          if age < 35:
+          if age < 30:
             cost_growth = round(retirement * 0.9, 2)
-          elif age < 45:
+          elif age < 40:
             cost_growth = round(retirement * 0.5, 2)
           else:
             cost_growth = round(retirement * 0.1, 2)
@@ -456,7 +493,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
       down_payment = min(values[0] - closing_costs, round(price * 0.2, 2))
 
       p = price - down_payment
-      r = round(RNG.uniform(0.03, 0.1), 4) / 12
+      r = round(rng_uniform(0.03, 0.1), 4) / 12
       pi = round(p * (r * (1 + r)**360) / ((1 + r)**360 - 1), 2)
 
       # Pay down payment and closing costs
@@ -621,7 +658,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       balance -= p
 
-      utilities = max(50, round(payment * RNG.normal(0.1, 0.01), 2))
+      utilities = max(50, round(payment * rng_normal(0.1, 0.01), 2))
 
       txn = Transaction(account_id=accts["cc_0"],
                         date=date,
@@ -632,6 +669,25 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                    category=TransactionCategory.HOME,
                                    subcategory="Utilities")
       s.add_all((txn, txn_split))
+
+      # Adds a repair cost 25% of the time with an average cost of $400
+      # Equates to $100/month
+      repair_cost = round(100 / np.sqrt(rng_uniform(1e-5, 1)), 2)
+      if repair_cost > 200:
+        acct_id = accts["cc_0"]
+        if repair_cost > 1000:
+          # Use savings for big repairs
+          acct_id = accts["savings"]
+        txn = Transaction(account_id=acct_id,
+                          date=date +
+                          datetime.timedelta(days=rng_uniform(1, 28)),
+                          total=-repair_cost,
+                          statement="Repairs")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.HOME,
+                                     subcategory="Repairs")
+        s.add_all((txn, txn_split))
 
       return balance
 
@@ -666,7 +722,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                        subcategory="Rent")
           s.add_all((txn, txn_split))
 
-          utilities = round(rent * RNG.normal(0.1, 0.01), 2)
+          utilities = round(rent * rng_normal(0.1, 0.01), 2)
 
           txn = Transaction(account_id=accts["cc_0"],
                             date=date,
@@ -694,7 +750,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                     pmi_th)
 
         # Escrow increases each year
-        r = max(0, RNG.normal(0.03, 0.01))
+        r = max(0, INTEREST_RATES[date.year])
         escrow = round(escrow * (1 + r), 2)
       elif age < 60:
         # Buy house 2 with proceeds of house 1
@@ -719,7 +775,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                     pmi_th)
 
         # Escrow increases each year
-        r = max(0, RNG.normal(0.03, 0.01))
+        r = max(0, INTEREST_RATES[date.year])
         escrow = round(escrow * (1 + r), 2)
       else:
         # Buy house 2 with proceeds of house 1
@@ -744,7 +800,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                     pmi_th)
 
         # Escrow increases each year
-        r = max(0, RNG.normal(0.03, 0.01))
+        r = max(0, INTEREST_RATES[date.year])
         escrow = round(escrow * (1 + r), 2)
 
     s.commit()
