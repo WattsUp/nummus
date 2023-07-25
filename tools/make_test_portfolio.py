@@ -24,8 +24,8 @@ colorama.init(autoreset=True)
 
 RNG = np.random.default_rng()
 
-BIRTH_YEAR = 2000
 FINAL_AGE = 75
+BIRTH_YEAR = datetime.date.today().year - FINAL_AGE
 
 BIRTHDAYS: t.Dict[str, datetime.date] = {
     "self": datetime.date.today().replace(year=BIRTH_YEAR)
@@ -188,6 +188,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
 
       date += datetime.timedelta(days=1)
     s.commit()
+    print(f"{Fore.CYAN}  Valued stocks")
 
     # Real estate valued once a month
     date = start
@@ -206,6 +207,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
       m = date.month
       date = datetime.date(y + m // 12, m % 12 + 1, 1)
     s.commit()
+    print(f"{Fore.CYAN}  Valued real estate")
 
     # dates, values0, _ = growth.get_value(start, end)
     # dates, values1, _ = value.get_value(start, end)
@@ -496,7 +498,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
       pmi = round(0.01 * pi * 12, 2)
       pmi_threshold = 0.8 * price
 
-      print(f"{Fore.CYAN}Bought {house.description}")
+      print(f"{Fore.CYAN}  Bought {house.description}")
       return p, r, pi, pmi, pmi_threshold
 
     def sell_house(date: datetime.date, house: Asset, price: float,
@@ -556,7 +558,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                      category=TransactionCategory.INSTRUMENT)
         s.add_all((txn, txn_split))
 
-      print(f"{Fore.CYAN}Sold {house.description}")
+      print(f"{Fore.CYAN}  Sold {house.description}")
 
     def monthly_payment(date: datetime.date, balance: float, rate: float,
                         payment: float, escrow: float, pmi: float,
@@ -621,7 +623,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       utilities = max(50, round(payment * RNG.normal(0.1, 0.01), 2))
 
-      txn = Transaction(account_id=accts["checking"],
+      txn = Transaction(account_id=accts["cc_0"],
                         date=date,
                         total=-utilities,
                         statement="Utilities")
@@ -666,7 +668,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
           utilities = round(rent * RNG.normal(0.1, 0.01), 2)
 
-          txn = Transaction(account_id=accts["checking"],
+          txn = Transaction(account_id=accts["cc_0"],
                             date=date,
                             total=-utilities,
                             statement="Utilities")
@@ -762,13 +764,20 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
       return
     date = acct.transactions[0].date
     end = birthday("self", FINAL_AGE)
+    a_values_start = datetime.date(BIRTH_YEAR, 1, 1)
+    a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    _, values, _ = acct.get_value(a_values_start, a_values_end)
+
+    total_interest = 0
 
     while date < end:
       next_date = next_month(date)
 
       # Interest on the average balance
-      _, values, _ = acct.get_value(date, next_date)
-      avg_value = sum(values[:-1]) / len(values[:-1])
+      i_start = (date - a_values_start).days
+      i_end = (next_date - a_values_start).days
+      avg_value = (sum(values[i_start:i_end]) / (i_end - i_start) +
+                   total_interest)
 
       if avg_value < 0:
         raise ValueError(f"Account {acct.name} was over-drafted by "
@@ -777,20 +786,67 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
       rate = INTEREST_RATES[date.year]
       interest = round(rate / 12 * avg_value, 2)
 
-      txn = Transaction(account=acct,
-                        date=next_date,
-                        total=interest,
-                        statement="Dividend/interest")
-      txn_split = TransactionSplit(parent=txn,
-                                   total=txn.total,
-                                   category=TransactionCategory.INCOME,
-                                   subcategory="Interest")
-      s.add_all((txn, txn_split))
+      if interest > 0:
+        txn = Transaction(account=acct,
+                          date=next_date,
+                          total=interest,
+                          statement="Dividend/interest")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.INCOME,
+                                     subcategory="Interest")
+        s.add_all((txn, txn_split))
 
       date = next_date
+      total_interest += interest
 
     s.commit()
     print(f"{Fore.GREEN}Added interest for {acct.name}")
+
+
+def add_cc_payments(p: Portfolio, acct_id: int) -> None:
+  """Adds credit card payments to Account
+
+  Args:
+    acct_id: Account to generate for
+  """
+  with p.get_session() as s:
+    acct = s.query(Account).where(Account.id == acct_id).first()
+    if len(acct.transactions) == 0:
+      print(f"{Fore.RED}No transaction to generate CC payments on for "
+            f"{acct.name}")
+      return
+    date = acct.transactions[0].date
+    end = birthday("self", FINAL_AGE)
+    a_values_start = datetime.date(BIRTH_YEAR, 1, 1)
+    a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
+    _, values, _ = acct.get_value(a_values_start, a_values_end)
+
+    total_payment = 0
+
+    while date < end:
+      next_date = next_month(date)
+
+      # Interest on the average balance
+      i_end = (next_date - a_values_start).days
+      balance = round(values[i_end] + total_payment, 2)
+
+      if balance < 0:
+        txn = Transaction(account=acct,
+                          date=next_date.replace(day=15),
+                          total=-balance,
+                          statement="Credit Card Payment")
+        txn_split = TransactionSplit(parent=txn,
+                                     total=txn.total,
+                                     category=TransactionCategory.TRANSFER,
+                                     subcategory="Credit Card Payments")
+        s.add_all((txn, txn_split))
+
+      date = next_date
+      total_payment += -balance
+
+    s.commit()
+    print(f"{Fore.GREEN}Added CC payments for {acct.name}")
 
 
 def main() -> None:
@@ -807,6 +863,9 @@ def main() -> None:
   generate_income(p, accts, assets)
 
   generate_housing(p, accts, assets)
+
+  for name in ["cc_0", "cc_1"]:
+    add_cc_payments(p, accts[name])
 
   for name in ["checking", "savings"]:
     add_interest(p, accts[name])

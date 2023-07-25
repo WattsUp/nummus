@@ -202,7 +202,7 @@ class Transaction(base.Base):
   account: orm.Mapped[Account] = orm.relationship(back_populates="transactions")
 
   date: orm.Mapped[datetime.date]
-  total: orm.Mapped[float]
+  total: orm.Mapped[float]  # TODO convert to micro-cents
   statement: orm.Mapped[str]
   locked: orm.Mapped[bool] = orm.mapped_column(default=False)
 
