@@ -17,13 +17,8 @@ from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
 
 colorama.init(autoreset=True)
 
-# TODO (WattsUp) Create a portfolio with 50 years of data
-# ~1000 transactions/yr
-# ~100 stock transactions/yr
-# Try to make it semi-realistic
-
 RNG = np.random.default_rng()
-NO_RNG = True
+NO_RNG = False
 
 
 def rng_uniform(low: float, high: float) -> float:
@@ -155,15 +150,9 @@ def make_accounts(p: Portfolio) -> t.Dict[str, int]:
     cc_1 = Account(name="Peanut Credit",
                    institution="PB Loans",
                    category=AccountCategory.CREDIT)
-    loan = Account(name="Personal Loans",
-                   institution="Personal",
-                   category=AccountCategory.LOAN)
     mortgage = Account(name="Monkey Mortgage",
                        institution="Monkey Bank",
                        category=AccountCategory.MORTGAGE)
-    investment = Account(name="Fruit Trading",
-                         institution="Monkey Bank",
-                         category=AccountCategory.INVESTMENT)
     retirement = Account(name="401k",
                          institution="Monkey Bank Retirement",
                          category=AccountCategory.INVESTMENT)
@@ -171,17 +160,15 @@ def make_accounts(p: Portfolio) -> t.Dict[str, int]:
                           institution="Real Estate",
                           category=AccountCategory.FIXED)
 
-    s.add_all((checking, savings, cc_0, cc_1, loan, mortgage, investment,
-               retirement, real_estate))
+    accts = [checking, savings, cc_0, cc_1, mortgage, retirement, real_estate]
+    s.add_all(accts)
     s.commit()
 
     accounts["checking"] = checking.id
     accounts["savings"] = savings.id
     accounts["cc_0"] = cc_0.id
     accounts["cc_1"] = cc_1.id
-    accounts["loan"] = loan.id
     accounts["mortgage"] = mortgage.id
-    accounts["investment"] = investment.id
     accounts["retirement"] = retirement.id
     accounts["real_estate"] = real_estate.id
 
