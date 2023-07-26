@@ -24,7 +24,7 @@ class TestAssetValuation(TestBase):
 
     d = {
         "asset_id": a.id,
-        "value": self._RNG.uniform(0, 1),
+        "value": self.random_decimal(0, 1),
         "date": datetime.date.today()
     }
 
@@ -36,12 +36,7 @@ class TestAssetValuation(TestBase):
     self.assertEqual(a, v.asset)
     self.assertEqual(a.uuid, v.asset_uuid)
     self.assertEqual(d["value"], v.value)
-    self.assertEqual(1.0, v.multiplier)
     self.assertEqual(d["date"], v.date)
-
-    d["multiplier"] = self._RNG.uniform(0, 1)
-    v.update(d)
-    self.assertEqual(d["multiplier"], v.multiplier)
 
     # Test default and hidden properties
     d.pop("asset_id")
@@ -91,8 +86,7 @@ class TestAsset(TestBase):
 
     d = {
         "asset_id": a.id,
-        "value": self._RNG.uniform(0, 1),
-        "multiplier": self._RNG.uniform(0, 1),
+        "value": self.random_decimal(0, 1),
         "date": datetime.date.today()
     }
 
@@ -138,7 +132,7 @@ class TestAsset(TestBase):
 
     v_today = asset.AssetValuation(asset=a,
                                    date=today,
-                                   value=self._RNG.uniform(-1, 1))
+                                   value=self.random_decimal(-1, 1))
     session.add(v_today)
     session.commit()
 
@@ -146,7 +140,7 @@ class TestAsset(TestBase):
 
     v_before = asset.AssetValuation(asset=a,
                                     date=today - datetime.timedelta(days=1),
-                                    value=self._RNG.uniform(-1, 1))
+                                    value=self.random_decimal(-1, 1))
     session.add(v_before)
     session.commit()
 
@@ -154,7 +148,7 @@ class TestAsset(TestBase):
 
     v_after = asset.AssetValuation(asset=a,
                                    date=today + datetime.timedelta(days=1),
-                                   value=self._RNG.uniform(-1, 1))
+                                   value=self.random_decimal(-1, 1))
     session.add(v_after)
     session.commit()
 
@@ -181,14 +175,13 @@ class TestAsset(TestBase):
 
     v_today = asset.AssetValuation(asset=a,
                                    date=today,
-                                   value=self._RNG.uniform(-1, 1))
+                                   value=self.random_decimal(-1, 1))
     v_before = asset.AssetValuation(asset=a,
                                     date=today - datetime.timedelta(days=2),
-                                    value=self._RNG.uniform(-1, 1),
-                                    multiplier=5)
+                                    value=self.random_decimal(-1, 1))
     v_after = asset.AssetValuation(asset=a,
                                    date=today + datetime.timedelta(days=2),
-                                   value=self._RNG.uniform(-1, 1))
+                                   value=self.random_decimal(-1, 1))
     session.add_all((v_today, v_before, v_after))
     session.commit()
 
@@ -199,16 +192,12 @@ class TestAsset(TestBase):
         0, v_before.value, v_before.value, v_today.value, v_today.value,
         v_after.value, v_after.value
     ]
-    target_multipliers = [1, 5, 5, 1, 1, 1, 1]
 
-    r_dates, r_values, r_multipliers = a.get_value(target_dates[0],
-                                                   target_dates[-1])
+    r_dates, r_values = a.get_value(target_dates[0], target_dates[-1])
     self.assertListEqual(target_dates, r_dates)
     self.assertListEqual(target_values, r_values)
-    self.assertListEqual(target_multipliers, r_multipliers)
 
     # Test single value
-    r_dates, r_values, r_multipliers = a.get_value(today, today)
+    r_dates, r_values = a.get_value(today, today)
     self.assertListEqual([today], r_dates)
     self.assertListEqual([v_today.value], r_values)
-    self.assertListEqual([1], r_multipliers)

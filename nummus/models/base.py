@@ -5,12 +5,13 @@ from __future__ import annotations
 import typing as t
 
 import datetime
+import decimal
 import enum
 import json
 import uuid
 
 import sqlalchemy
-from sqlalchemy import orm, schema
+from sqlalchemy import orm, schema, types
 
 from nummus import common
 
@@ -303,3 +304,24 @@ class BaseEnum(enum.Enum):
       Dictionary {alternate names for enums: Enum}
     """
     return {}  # pragma: no cover
+
+
+class Decimal6(types.TypeDecorator):
+  """SQL type for fixed point numbers, stores as micro-integer
+  """
+
+  impl = types.BigInteger
+
+  cache_ok = True
+
+  _FACTOR = decimal.Decimal("1e6")
+
+  def process_bind_param(self, value: decimal.Decimal, _) -> int:
+    if value is None:
+      return None
+    return int(value * self._FACTOR)
+
+  def process_result_value(self, value: int, _) -> decimal.Decimal:
+    if value is None:
+      return None
+    return decimal.Decimal(value) / self._FACTOR

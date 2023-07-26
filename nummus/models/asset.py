@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing as t
 
 import datetime
+import decimal
 
 import sqlalchemy
 from sqlalchemy import orm
@@ -14,6 +15,8 @@ from nummus.models import base
 Dates = t.List[datetime.date]
 Values = t.List[float]
 
+# TODO (WattsUp) Add AssetSplits
+
 
 class AssetValuation(base.Base):
   """Asset Valuation model for storing a value of an asset on a specific date
@@ -22,7 +25,6 @@ class AssetValuation(base.Base):
     asset_uuid: Asset unique identifier
     date: Date of valuation
     value: Value of assert
-    multiplier: Multiplier to mutate quantity (ex: share splits)
   """
 
   _PROPERTIES_DEFAULT = ["asset_uuid", "value", "multiplier", "date"]
@@ -31,8 +33,7 @@ class AssetValuation(base.Base):
   asset_id: orm.Mapped[int] = orm.mapped_column(
       sqlalchemy.ForeignKey("asset.id"))
   asset: orm.Mapped[Asset] = orm.relationship()
-  value: orm.Mapped[float]
-  multiplier: orm.Mapped[float] = orm.mapped_column(default=1)
+  value: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6)
   date: orm.Mapped[datetime.date]
 
   @property
@@ -89,7 +90,7 @@ class Asset(base.Base):
     return f"{self.uuid}{s}"
 
   def get_value(self, start: datetime.date,
-                end: datetime.date) -> t.Tuple[Dates, Values, Values]:
+                end: datetime.date) -> t.Tuple[Dates, Values]:
     """Get the value of Asset from start to end date
 
     Args:
@@ -97,29 +98,24 @@ class Asset(base.Base):
       end: Last date to evaluate (inclusive)
 
     Returns:
-      List[dates], list[values], list[multipliers]
+      List[dates], list[values]
     """
     date = start
 
     dates: Dates = []
     values: Values = []
-    multipliers: Values = []
 
     value = 0
-    multiplier = 1
     for valuation in self.valuations:
       if valuation.date > end:
         continue
       while date < valuation.date:
         values.append(value)
-        multipliers.append(multiplier)
         dates.append(date)
         date += datetime.timedelta(days=1)
       value = valuation.value
-      multiplier = valuation.multiplier
     while date <= end:
       values.append(value)
-      multipliers.append(multiplier)
       dates.append(date)
       date += datetime.timedelta(days=1)
-    return dates, values, multipliers
+    return dates, values

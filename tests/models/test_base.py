@@ -5,6 +5,7 @@ from __future__ import annotations
 import typing as t
 
 import datetime
+import decimal
 import json
 import uuid
 
@@ -102,6 +103,9 @@ class Child(base.Base):
   parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
       back_populates="_children")
 
+  height: orm.Mapped[t.Optional[decimal.Decimal]] = orm.mapped_column(
+      base.Decimal6)
+
   _age = 10
 
   @property
@@ -150,6 +154,23 @@ class TestORMBase(TestBase):
     self.assertIsNotNone(child.parent_id)
     self.assertIsNone(child.parent_hidden)
     self.assertIsNone(child.parent_hidden_id)
+
+    child.height = None
+    session.commit()
+    self.assertIsNone(child.height)
+
+    height = decimal.Decimal("1.2")
+    child.height = height
+    session.commit()
+    self.assertIsInstance(child.height, decimal.Decimal)
+    self.assertEqual(height, child.height)
+
+    # Only 6 decimals
+    height = decimal.Decimal("1.23456789")
+    child.height = height
+    session.commit()
+    self.assertIsInstance(child.height, decimal.Decimal)
+    self.assertEqual(decimal.Decimal("1.234567"), child.height)
 
   def test_to_dict(self):
     session = self.get_session()

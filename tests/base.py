@@ -1,6 +1,9 @@
 """Test base class
 """
 
+import typing as t
+
+import decimal
 import pathlib
 import shutil
 import string
@@ -37,6 +40,30 @@ class TestBase(unittest.TestCase):
       Random string
     """
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
+
+  @classmethod
+  def random_decimal(cls,
+                     low: t.Union[str, float, decimal.Decimal],
+                     high: t.Union[str, float, decimal.Decimal],
+                     precision: int = 6) -> decimal.Decimal:
+    """Generate a random decimal from a uniform distribution
+
+    Args:
+      low: lower bound
+      high: upper bound
+      precision: Digits to round to
+
+    Returns:
+      Decimal between bounds rounded to precision
+    """
+    d_low = round(decimal.Decimal(low), precision)
+    d_high = round(decimal.Decimal(high), precision)
+    result = round(decimal.Decimal(cls._RNG.uniform(d_low, d_high)), precision)
+    if result <= d_low:
+      return d_low
+    if result >= d_high:
+      return d_high
+    return result
 
   def get_session(self) -> orm.Session:
     """Obtain a test sql session
