@@ -13,7 +13,7 @@ from sqlalchemy import orm
 from nummus.models import base
 
 Dates = t.List[datetime.date]
-Values = t.List[float]
+Values = t.List[decimal.Decimal]
 
 # TODO (WattsUp) Add AssetSplits
 

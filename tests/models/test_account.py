@@ -34,7 +34,7 @@ class TestTransaction(TestBase):
     d = {
         "account_id": acct.id,
         "date": datetime.date.today(),
-        "total": self._RNG.uniform(-1, 1),
+        "total": self.random_decimal(-1, 1),
         "statement": self.random_string()
     }
 
@@ -58,7 +58,7 @@ class TestTransaction(TestBase):
     result = txn.to_dict()
     self.assertDictEqual(d, result)
 
-    d = {"total": self._RNG.uniform(-1, 1), "parent_id": txn.id}
+    d = {"total": self.random_decimal(-1, 1), "parent_id": txn.id}
 
     t_split_0 = TransactionSplit(**d)
     session.add(t_split_0)
@@ -77,15 +77,15 @@ class TestTransaction(TestBase):
       self.assertIsNone(v, f"result[{k}] is not None")
 
     d = {
-        "total": self._RNG.uniform(-1, 0),
-        "sales_tax": self._RNG.uniform(-1, 0),
+        "total": self.random_decimal(-1, 0),
+        "sales_tax": self.random_decimal(-1, 0),
         "payee": self.random_string(),
         "description": self.random_string(),
         "category": TransactionCategory.FOOD,
         "subcategory": self.random_string(),
         "tag": self.random_string(),
         "asset_id": asset.id,
-        "asset_quantity": self._RNG.uniform(-1, 1),
+        "asset_quantity": self.random_decimal(-1, 1),
         "parent_id": txn.id
     }
 
@@ -249,7 +249,7 @@ class TestAccount(TestBase):
 
     t_today = Transaction(account=acct,
                           date=today,
-                          total=self._RNG.uniform(-1, 1),
+                          total=self.random_decimal(-1, 1),
                           statement=self.random_string())
     session.add(t_today)
     session.commit()
@@ -260,7 +260,7 @@ class TestAccount(TestBase):
 
     t_before = Transaction(account=acct,
                            date=today - datetime.timedelta(days=1),
-                           total=self._RNG.uniform(-1, 1),
+                           total=self.random_decimal(-1, 1),
                            statement=self.random_string())
     session.add(t_before)
     session.commit()
@@ -271,7 +271,7 @@ class TestAccount(TestBase):
 
     t_after = Transaction(account=acct,
                           date=today + datetime.timedelta(days=1),
-                          total=self._RNG.uniform(-1, 1),
+                          total=self.random_decimal(-1, 1),
                           statement=self.random_string())
     session.add(t_after)
     session.commit()
@@ -311,17 +311,17 @@ class TestAccount(TestBase):
     # Fund account on first day
     txn = Transaction(account=acct,
                       date=target_dates[1],
-                      total=self._RNG.uniform(10, 100),
+                      total=self.random_decimal(10, 100),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn, total=txn.total)
     session.add_all((txn, t_split))
     session.commit()
 
     # Buy asset[0] on the second day
-    q0 = self._RNG.uniform(0, 10)
+    q0 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=target_dates[1],
-                      total=self._RNG.uniform(-10, -1),
+                      total=self.random_decimal(-10, -1),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
@@ -338,10 +338,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_qty, result_qty)
 
     # Sell asset[0] on the last day
-    q1 = self._RNG.uniform(0, 10)
+    q1 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=target_dates[-1],
-                      total=self._RNG.uniform(1, 10),
+                      total=self.random_decimal(1, 10),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
@@ -358,10 +358,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_qty, result_qty)
 
     # Buy asset[1] on today
-    q2 = self._RNG.uniform(0, 10)
+    q2 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=today,
-                      total=self._RNG.uniform(-10, -1),
+                      total=self.random_decimal(-10, -1),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
@@ -417,7 +417,7 @@ class TestAccount(TestBase):
     self.assertEqual(target_assets, r_assets)
 
     # Fund account on first day
-    t_fund = self._RNG.uniform(10, 100)
+    t_fund = self.random_decimal(10, 100)
     txn = Transaction(account=acct,
                       date=target_dates[1],
                       total=t_fund,
@@ -434,8 +434,8 @@ class TestAccount(TestBase):
     self.assertEqual(target_assets, r_assets)
 
     # Buy asset[0] on the second day
-    t0 = self._RNG.uniform(-10, -1)
-    q0 = self._RNG.uniform(0, 10)
+    t0 = self.random_decimal(-10, -1)
+    q0 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=target_dates[1],
                       total=t0,
@@ -459,8 +459,8 @@ class TestAccount(TestBase):
     self.assertEqual(target_assets, r_assets)
 
     # Sell asset[0] on the last day
-    t1 = self._RNG.uniform(1, 10)
-    q1 = self._RNG.uniform(0, 10)
+    t1 = self.random_decimal(1, 10)
+    q1 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=target_dates[-1],
                       total=t1,
@@ -484,7 +484,7 @@ class TestAccount(TestBase):
     self.assertEqual(target_assets, r_assets)
 
     # Add valuations to Asset
-    prices = self._RNG.uniform(1, 10, len(target_dates))
+    prices = self.random_decimal(1, 10, size=len(target_dates))
     for date, p in zip(target_dates, prices):
       v = AssetValuation(asset=assets[0], date=date, value=p)
       session.add(v)
@@ -533,7 +533,7 @@ class TestAccount(TestBase):
     self.assertEqual(target_categories, r_categories)
 
     # Fund account on second day
-    t_fund = self._RNG.uniform(10, 100)
+    t_fund = self.random_decimal(10, 100)
     txn = Transaction(account=acct,
                       date=target_dates[1],
                       total=t_fund,
@@ -549,7 +549,7 @@ class TestAccount(TestBase):
     self.assertEqual(target_categories, r_categories)
 
     # Buy something on the second day
-    t0 = self._RNG.uniform(-10, -1)
+    t0 = self.random_decimal(-10, -1)
     txn = Transaction(account=acct,
                       date=target_dates[1],
                       total=t0,
@@ -565,7 +565,7 @@ class TestAccount(TestBase):
     self.assertEqual(target_categories, r_categories)
 
     # Sell something on the last day
-    t1 = self._RNG.uniform(1, 10)
+    t1 = self.random_decimal(1, 10)
     txn = Transaction(account=acct,
                       date=target_dates[-1],
                       total=t1,

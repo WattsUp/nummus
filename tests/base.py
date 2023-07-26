@@ -42,20 +42,25 @@ class TestBase(unittest.TestCase):
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
 
   @classmethod
-  def random_decimal(cls,
-                     low: t.Union[str, float, decimal.Decimal],
-                     high: t.Union[str, float, decimal.Decimal],
-                     precision: int = 6) -> decimal.Decimal:
+  def random_decimal(
+      cls,
+      low: t.Union[str, float, decimal.Decimal],
+      high: t.Union[str, float, decimal.Decimal],
+      precision: int = 6,
+      size: int = 1) -> t.Union[decimal.Decimal, t.List[decimal.Decimal]]:
     """Generate a random decimal from a uniform distribution
 
     Args:
       low: lower bound
       high: upper bound
       precision: Digits to round to
+      size: number of Decimals to generate
 
     Returns:
       Decimal between bounds rounded to precision
     """
+    if size > 1:
+      return [cls.random_decimal(low, high, precision) for _ in range(size)]
     d_low = round(decimal.Decimal(low), precision)
     d_high = round(decimal.Decimal(high), precision)
     result = round(decimal.Decimal(cls._RNG.uniform(d_low, d_high)), precision)
