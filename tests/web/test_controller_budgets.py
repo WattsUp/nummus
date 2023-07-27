@@ -45,8 +45,8 @@ class TestControllerBudgets(WebTestBase):
       self.assertEqual(f"/api/budgets/{b_uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
       s.delete(b)
       s.commit()
@@ -76,8 +76,8 @@ class TestControllerBudgets(WebTestBase):
       b_uuid = b.uuid
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Get by uuid
@@ -97,8 +97,8 @@ class TestControllerBudgets(WebTestBase):
       b_uuid = b.uuid
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Update by uuid
@@ -165,10 +165,10 @@ class TestControllerBudgets(WebTestBase):
       query = s.query(Budget).order_by(Budget.date)
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(query.all(),
-                                  cls=NummusJSONEncoder,
-                                  use_decimal=True)
-      budgets = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      budgets = simplejson.loads(json_s, use_decimal=True)
     endpoint = "/api/budgets"
 
     # Get all

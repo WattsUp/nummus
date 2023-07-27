@@ -63,8 +63,8 @@ class TestControllerTransactions(WebTestBase):
       self.assertEqualWithinError(total, t_split.total, 1e-6)
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
       s.delete(t_split)
       s.delete(txn)
@@ -124,8 +124,8 @@ class TestControllerTransactions(WebTestBase):
       self.assertEqual(asset_qty, t_split.asset_quantity)
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -177,8 +177,8 @@ class TestControllerTransactions(WebTestBase):
       t_uuid = txn.uuid
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Get by uuid
@@ -209,8 +209,8 @@ class TestControllerTransactions(WebTestBase):
       t_uuid = txn.uuid
 
       # Serialize then deserialize
-      target_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
-      target = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Update
@@ -458,10 +458,10 @@ class TestControllerTransactions(WebTestBase):
       query = s.query(TransactionSplit).join(Transaction).order_by(
           Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
       # Serialize then deserialize
-      target_s = simplejson.dumps(query.all(),
-                                  cls=NummusJSONEncoder,
-                                  use_decimal=True)
-      t_splits = simplejson.loads(target_s, use_decimal=True)
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      t_splits = simplejson.loads(json_s, use_decimal=True)
       n_splits = len(t_splits)
     endpoint = "/api/transactions"
 

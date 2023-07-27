@@ -2,7 +2,9 @@
 """
 
 import datetime
-import json
+
+import simplejson
+
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
                            Transaction, TransactionSplit)
 
@@ -28,7 +30,8 @@ class TestControllerAccounts(WebTestBase):
       self.assertEqual(f"/api/accounts/{acct.uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(acct, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(acct, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
     self.assertDictEqual(target, result)
 
@@ -54,7 +57,10 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       acct_uuid = acct.uuid
-      target = json.loads(json.dumps(acct, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(acct, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/accounts/{acct_uuid}"
 
     # Get by uuid
@@ -73,7 +79,10 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       acct_uuid = acct.uuid
-      target = json.loads(json.dumps(acct, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(acct, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/accounts/{acct_uuid}"
 
     # Update by uuid
@@ -159,7 +168,12 @@ class TestControllerAccounts(WebTestBase):
       s.add_all((acct_checking, acct_invest))
       s.commit()
       query = s.query(Account)
-      accounts = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      accounts = simplejson.loads(json_s, use_decimal=True)
     endpoint = "/api/accounts"
 
     # Get all
@@ -232,7 +246,12 @@ class TestControllerAccounts(WebTestBase):
 
       # Sort by date, then parent, then id
       t_splits_obj = [txn.splits[0] for txn in acct_checking.transactions]
-      t_splits = json.loads(json.dumps(t_splits_obj, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(t_splits_obj,
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      t_splits = simplejson.loads(json_s, use_decimal=True)
 
       acct_uuid = acct_checking.uuid
     endpoint = f"/api/accounts/{acct_uuid}/transactions"
@@ -267,7 +286,7 @@ class TestControllerAccounts(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_checking,
                           date=today,
-                          total=self._RNG.uniform(-10, 10),
+                          total=self.random_decimal(-10, 10),
                           statement=self.random_string())
         t_split = TransactionSplit(total=txn.total, parent=txn)
         value += txn.total
