@@ -1,6 +1,7 @@
 """Miscellaneous functions and classes
 """
 
+import decimal
 import getpass
 import random
 import re
@@ -109,4 +110,4 @@ def parse_financial(s: str) -> float:
   s = _REGEX_FINANCIAL_CLEAN.sub("", s)
   if s == "":
     return None
-  return float(s)
+  return decimal.Decimal(s)

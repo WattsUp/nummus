@@ -4,7 +4,6 @@
 from __future__ import annotations
 import typing as t
 
-import datetime
 import pathlib
 import re
 import shutil
@@ -219,7 +218,7 @@ class Portfolio:
     transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
     for d in i.run():
       # Create a single split for each transaction
-      d_split: t.Dict[str, t.Union[str, float, datetime.date, object]] = {
+      d_split: importers.TransactionDict = {
           "total": d["total"],  # Both split and parent have total
           "sales_tax": d.pop("sales_tax", None),
           "payee": d.pop("payee", None),
