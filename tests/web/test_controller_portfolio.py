@@ -3,6 +3,7 @@
 
 import calendar
 import datetime
+import decimal
 
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            AssetValuation, Budget, Transaction,
@@ -46,7 +47,7 @@ class TestControllerPortfolio(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_checking,
                           date=today,
-                          total=self._RNG.uniform(-10, -1),
+                          total=self.random_decimal(-10, -1),
                           statement=self.random_string())
         t_split = TransactionSplit(total=txn.total, parent=txn)
         s.add_all((txn, t_split))
@@ -54,49 +55,49 @@ class TestControllerPortfolio(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_savings,
                           date=today,
-                          total=self._RNG.uniform(1, 10),
+                          total=self.random_decimal(1, 10),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total, parent=txn)
         t_split_1 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_apple,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          0.001, 0.01))
         s.add_all((txn, t_split_0, t_split_1))
 
       for _ in range(n_transactions):
         txn = Transaction(account=acct_invest,
                           date=today,
-                          total=self._RNG.uniform(-10, -1),
+                          total=self.random_decimal(-10, -1),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_banana,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          100, 1000))
         t_split_1 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_apple,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          100, 1000))
         s.add_all((txn, t_split_0, t_split_1))
 
       b = Budget(date=today,
-                 home=self._RNG.uniform(-100, 0),
-                 food=self._RNG.uniform(-100, 0),
-                 shopping=self._RNG.uniform(-100, 0),
-                 hobbies=self._RNG.uniform(-100, 0),
-                 services=self._RNG.uniform(-100, 0),
-                 travel=self._RNG.uniform(-100, 0))
+                 home=self.random_decimal(-100, 0),
+                 food=self.random_decimal(-100, 0),
+                 shopping=self.random_decimal(-100, 0),
+                 hobbies=self.random_decimal(-100, 0),
+                 services=self.random_decimal(-100, 0),
+                 travel=self.random_decimal(-100, 0))
       s.add(b)
 
       b = Budget(date=today + datetime.timedelta(days=2),
-                 home=self._RNG.uniform(-100, 0),
-                 food=self._RNG.uniform(-100, 0),
-                 shopping=self._RNG.uniform(-100, 0),
-                 hobbies=self._RNG.uniform(-100, 0),
-                 services=self._RNG.uniform(-100, 0),
-                 travel=self._RNG.uniform(-100, 0))
+                 home=self.random_decimal(-100, 0),
+                 food=self.random_decimal(-100, 0),
+                 shopping=self.random_decimal(-100, 0),
+                 hobbies=self.random_decimal(-100, 0),
+                 services=self.random_decimal(-100, 0),
+                 travel=self.random_decimal(-100, 0))
       s.add(b)
       s.commit()
 
@@ -518,8 +519,8 @@ class TestControllerPortfolio(WebTestBase):
       d = b_future.date
       month_len_future = calendar.monthrange(d.year, d.month)[1]
 
-      daily_factor_today = 1 / (12 * month_len_today)
-      daily_factor_future = 1 / (12 * month_len_future)
+      daily_factor_today = 1 / decimal.Decimal(12 * month_len_today)
+      daily_factor_future = 1 / decimal.Decimal(12 * month_len_future)
 
       budget_categorized_today = {
           enum_to_str(cat): v * daily_factor_today
@@ -553,14 +554,15 @@ class TestControllerPortfolio(WebTestBase):
     self.assertEqualWithinError(target, result, 1e-6)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": future})
+    zero = decimal.Decimal(0)
     target = {
-        "outflow": [0, outflow, 0, 0],
+        "outflow": [zero, outflow, zero, zero],
         "outflow_categorized": {
-            cat: [0, v, 0, 0] for cat, v in outflow_categorized.items()
+            cat: [zero, v, zero, zero] for cat, v in outflow_categorized.items()
         },
-        "target": [0, budget_today, budget_today, budget_future],
+        "target": [zero, budget_today, budget_today, budget_future],
         "target_categorized": {
-            cat: [0, v0, v0, v1]
+            cat: [zero, v0, v0, v1]
             for cat, v0, v1 in zip(budget_categorized_today.keys(),
                                    budget_categorized_today.values(),
                                    budget_categorized_future.values())

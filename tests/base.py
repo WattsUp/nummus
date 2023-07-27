@@ -107,8 +107,8 @@ class TestBase(unittest.TestCase):
       for t_v, r_v in zip(target, real):
         self.assertEqualWithinError(t_v, r_v, threshold, msg)
       return
-    elif isinstance(target, (int, float)):
-      self.assertIsInstance(real, (int, float), msg)
+    elif isinstance(target, (int, float, decimal.Decimal)):
+      self.assertIsInstance(real, (int, float, decimal.Decimal), msg)
       if target == 0.0:
         error = np.abs(real - target)
       else:

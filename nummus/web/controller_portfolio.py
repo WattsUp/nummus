@@ -5,6 +5,7 @@ import typing as t
 
 import calendar
 import datetime
+import decimal
 
 import flask
 
@@ -47,9 +48,9 @@ def get_value() -> flask.Response:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
-    assets: t.List[float] = [0] * len(dates)
-    liabilities: t.List[float] = [0] * len(dates)
+    total: t.List[float] = [decimal.Decimal(0)] * len(dates)
+    assets: t.List[float] = [decimal.Decimal(0)] * len(dates)
+    liabilities: t.List[float] = [decimal.Decimal(0)] * len(dates)
 
     for acct in query.all():
       acct: Account
@@ -99,7 +100,7 @@ def get_value_by_account() -> flask.Response:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
+    total: t.List[float] = [decimal.Decimal(0)] * len(dates)
     accounts: t.Dict[str, t.List[float]] = {}
 
     for acct in query.all():
@@ -149,9 +150,10 @@ def get_value_by_category(
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
+    total: t.List[float] = [decimal.Decimal(0)] * len(dates)
     categories: t.Dict[str, t.List[float]] = {
-        k.name.lower(): [0] * len(dates) for k in AccountCategory
+        k.name.lower(): [decimal.Decimal(0)] * len(dates)
+        for k in AccountCategory
     }
 
     for acct in query.all():
@@ -262,10 +264,12 @@ def get_cash_flow(
       date += datetime.timedelta(days=1)
 
     categories: t.Dict[TransactionCategory, t.List[float]] = {
-        cat: [0] * len(dates) for cat in TransactionCategory
+        cat: [decimal.Decimal(0)] * len(dates) for cat in TransactionCategory
     }
-    categories["unknown-inflow"] = [0] * len(dates)  # Category is nullable
-    categories["unknown-outflow"] = [0] * len(dates)  # Category is nullable
+    categories["unknown-inflow"] = [decimal.Decimal(0)] * len(
+        dates)  # Category is nullable
+    categories["unknown-outflow"] = [decimal.Decimal(0)] * len(
+        dates)  # Category is nullable
 
     for acct in query.all():
       acct: Account
@@ -277,14 +281,14 @@ def get_cash_flow(
 
     if integrate:
       for cat, values in categories.items():
-        integral = 0
+        integral = decimal.Decimal(0)
         for i, v in enumerate(values):
           integral += v
           values[i] = integral
 
-    total = [0] * len(dates)
-    inflow = [0] * len(dates)
-    outflow = [0] * len(dates)
+    total = [decimal.Decimal(0)] * len(dates)
+    inflow = [decimal.Decimal(0)] * len(dates)
+    outflow = [decimal.Decimal(0)] * len(dates)
     for cat, values in categories.items():
       for i, v in enumerate(values):
         total[i] += v
@@ -346,7 +350,7 @@ def get_budget() -> flask.Response:
 
     date = start
 
-    current_categories = {cat: 0 for cat in target_categorized}
+    current_categories = {cat: decimal.Decimal(0) for cat in target_categorized}
     for b in query.all():
       if b.date > end:
         continue
@@ -365,7 +369,7 @@ def get_budget() -> flask.Response:
 
   # Adjust annual budget to daily amounts
   current_month = None
-  daily_factor = 0
+  daily_factor = decimal.Decimal(0)
   factors = []
   for date in dates:
     if date.month != current_month:
@@ -373,7 +377,7 @@ def get_budget() -> flask.Response:
       month_len = calendar.monthrange(date.year, date.month)[1]
       # Daily budget = (annual budget) / (12 months) / (days in month)
       # So the sum(budget[any single month]) = annual / 12
-      daily_factor = 1 / (12 * month_len)
+      daily_factor = 1 / decimal.Decimal(12 * month_len)
     factors.append(daily_factor)
 
   for cat, values in target_categorized.items():
@@ -381,13 +385,13 @@ def get_budget() -> flask.Response:
 
   if integrate:
     for cat, values in target_categorized.items():
-      integral = 0
+      integral = decimal.Decimal(0)
       for i, v in enumerate(values):
         integral += v
         values[i] = integral
 
   # Sum for total
-  target = [0] * len(dates)
+  target = [decimal.Decimal(0)] * len(dates)
   for cat, values in target_categorized.items():
     for i, v in enumerate(values):
       target[i] += v
