@@ -108,3 +108,22 @@ class TestServer(TestBase):
               "stop\n"
               f"{Fore.YELLOW}nummus web shutdown at ")  # skip timestamp
     self.assertEqual(target, fake_stdout[:len(target)])
+
+
+class TestNummusJSONProvider(TestBase):
+  """Test NummusJSONProvider class
+  """
+
+  def test_dumps(self):
+    d = {"a": self.random_decimal(0, 1, precision=18)}
+
+    target = f'{{"a": {d["a"]}}}'
+    s = server.NummusJSONProvider.dumps(d)
+    self.assertEqual(target, s)
+
+  def test_loads(self):
+    d = {"a": self.random_decimal(0, 1, precision=18)}
+    s = server.NummusJSONProvider.dumps(d)
+    d_loaded = server.NummusJSONProvider.loads(s)
+
+    self.assertDictEqual(d, d_loaded)

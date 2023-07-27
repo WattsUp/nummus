@@ -61,7 +61,18 @@ class Parent(base.Base):
   def uuid_bytes(self) -> bytes:
     """Get ID as bytes
     """
-    return self.uuid.encode(encoding="utf-8")
+
+    class Bytes:
+      """Unserializable class
+      """
+
+      def __init__(self, s: str) -> None:
+        self._data = s.encode(encoding="utf-8")
+
+      def __eq__(self, other: Bytes) -> bool:
+        return self._data == other._data
+
+    return Bytes(self.uuid)
 
 
 class ParentHidden(base.Base):

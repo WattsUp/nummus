@@ -105,7 +105,7 @@ class Asset(base.Base):
     dates: Dates = []
     values: Values = []
 
-    value = 0
+    value = decimal.Decimal(0)
     for valuation in self.valuations:
       if valuation.date > end:
         continue

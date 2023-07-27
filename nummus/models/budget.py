@@ -7,6 +7,7 @@ All number are annual allocations
 import typing as t
 
 import datetime
+import decimal
 
 from sqlalchemy import orm
 
@@ -29,12 +30,18 @@ class Budget(base.Base):
   _PROPERTIES_DEFAULT = ["uuid", "date", "total", "categories"]
 
   date: orm.Mapped[datetime.date] = orm.mapped_column(unique=True)
-  home: orm.Mapped[float] = orm.mapped_column(default=0)
-  food: orm.Mapped[float] = orm.mapped_column(default=0)
-  shopping: orm.Mapped[float] = orm.mapped_column(default=0)
-  hobbies: orm.Mapped[float] = orm.mapped_column(default=0)
-  services: orm.Mapped[float] = orm.mapped_column(default=0)
-  travel: orm.Mapped[float] = orm.mapped_column(default=0)
+  home: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                        default=0)
+  food: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                        default=0)
+  shopping: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                            default=0)
+  hobbies: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                           default=0)
+  services: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                            default=0)
+  travel: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6,
+                                                          default=0)
 
   @property
   def categories(self) -> t.Dict[str, float]:

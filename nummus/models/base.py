@@ -7,9 +7,9 @@ import typing as t
 import datetime
 import decimal
 import enum
-import json
 import uuid
 
+import simplejson
 import sqlalchemy
 from sqlalchemy import orm, schema, types
 
@@ -167,7 +167,8 @@ class Base(orm.DeclarativeBase):
                               hide=list(hide),
                               path=f"{path}.{key.lower()}")
       else:
-        d[key] = json.loads(json.dumps(item, cls=NummusJSONEncoder))
+        s = simplejson.dumps(item, cls=NummusJSONEncoder, use_decimal=True)
+        d[key] = simplejson.loads(s, use_decimal=True)
 
     return d
 
@@ -251,17 +252,21 @@ class Base(orm.DeclarativeBase):
     return self.uuid != other.uuid
 
 
-class NummusJSONEncoder(json.JSONEncoder):
+class NummusJSONEncoder(simplejson.JSONEncoder):
   """Custom JSON Encoder for nummus models
   """
 
-  def default(self, o: object) -> object:
+  @classmethod
+  def default(cls, o: object) -> object:
     if isinstance(o, Base):
       return o.to_dict()
     if isinstance(o, enum.Enum):
       return o.name.lower()
     if isinstance(o, datetime.date):
       return o.isoformat()
+    # if isinstance(o, decimal.Decimal):
+    #   # Dangerous, I know, DO NOT do arithmetic in JS
+    #   return float(o)
     return super().default(o)
 
 
