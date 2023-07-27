@@ -58,13 +58,12 @@ class TestBudget(TestBase):
 
     d.pop("date")
     total = sum(d.values())
-    self.assertEqualWithinError(total, b.total, 1e-6)
+    self.assertEqual(total, b.total)
 
     self.assertDictEqual(d, b.categories)
 
     target = {"uuid": b.uuid, "date": b.date, "total": total, "categories": d}
     result = b.to_dict()
-    self.maxDiff = None
     self.assertDictEqual(target, result)
 
     # Zero amounts are okay

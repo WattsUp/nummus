@@ -9,10 +9,10 @@ from decimal import Decimal
 
 import flask
 
-from nummus import portfolio
+from nummus import common, portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Budget, TransactionCategory)
-from nummus.web import common
+from nummus.web import common as web_common
 from nummus.web.common import HTTPError
 
 # TODO (WattsUp) If other features use this data, move to Portfolio
@@ -30,9 +30,9 @@ def get_value() -> flask.Response:
   today = datetime.date.today()
 
   args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -82,9 +82,9 @@ def get_value_by_account() -> flask.Response:
   today = datetime.date.today()
 
   args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -135,8 +135,8 @@ def get_value_by_category(
   else:
     args = request_args
 
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -180,9 +180,9 @@ def get_value_by_asset() -> flask.Response:
   today = datetime.date.today()
 
   args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AssetCategory)
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AssetCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -243,9 +243,9 @@ def get_cash_flow(
   else:
     args = request_args
 
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   integrate = bool(args.get("integrate", False))
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
@@ -395,11 +395,17 @@ def get_budget() -> flask.Response:
     for i, v in enumerate(values):
       target[i] += v
 
+  # Use round_list to limit response precision whilst maintaining
+  # sum(list) = sum(round_list)
+
   response = {
       "outflow": outflow,
       "outflow_categorized": outflow_categorized,
-      "target": target,
-      "target_categorized": target_categorized,
+      "target": common.round_list(target),
+      "target_categorized": {
+          cat: common.round_list(values)
+          for cat, values in target_categorized.items()
+      },
       "dates": dates
   }
 
@@ -415,8 +421,8 @@ def get_emergency_fund() -> flask.Response:
   today = datetime.date.today()
 
   args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
   lower = int(args.get("lower", 92))  # 3 months
   upper = int(args.get("upper", 183))  # 6 months
 

@@ -1,6 +1,8 @@
 """Miscellaneous functions and classes
 """
 
+import typing as t
+
 from decimal import Decimal
 import getpass
 import random
@@ -96,7 +98,7 @@ def confirm(prompt: str = None, default=False) -> bool:
     print()
 
 
-def parse_financial(s: str) -> float:
+def parse_financial(s: str) -> Decimal:
   """Parse a string number written in financial notation
 
   Args:
@@ -111,3 +113,24 @@ def parse_financial(s: str) -> float:
   if s == "":
     return None
   return Decimal(s)
+
+
+def round_list(l: t.List[Decimal], precision: int = 6) -> t.List[Decimal]:
+  """Round a list, carrying over error such that sum(list) == sum(round_list)
+
+  Args:
+    l: List to round
+    precision: Precision to round list to
+
+  Returns:
+    List with rounded elements
+  """
+  residual = Decimal(0)
+  l_rounded: t.List[Decimal] = []
+  for v in l:
+    v = v + residual
+    v_round = round(v, precision)
+    residual = v - v_round
+    l_rounded.append(v_round)
+
+  return l_rounded

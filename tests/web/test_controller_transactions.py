@@ -55,12 +55,12 @@ class TestControllerTransactions(WebTestBase):
 
       self.assertEqual(acct, txn.account)
       self.assertEqual(today, txn.date)
-      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(total, txn.total)
       self.assertEqual(statement, txn.statement)
       self.assertTrue(txn.locked, "Transaction is not locked")
       self.assertEqual(1, len(txn.splits))
       t_split = txn.splits[0]
-      self.assertEqualWithinError(total, t_split.total, 1e-6)
+      self.assertEqual(total, t_split.total)
 
       # Serialize then deserialize
       json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
@@ -108,13 +108,13 @@ class TestControllerTransactions(WebTestBase):
 
       self.assertEqual(acct, txn.account)
       self.assertEqual(today, txn.date)
-      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(total, txn.total)
       self.assertEqual(statement, txn.statement)
       self.assertTrue(txn.locked, "Transaction is not locked")
       self.assertEqual(1, len(txn.splits))
       t_split = txn.splits[0]
-      self.assertEqualWithinError(total, t_split.total, 1e-6)
-      self.assertEqualWithinError(sales_tax, t_split.sales_tax, 1e-6)
+      self.assertEqual(total, t_split.total)
+      self.assertEqual(sales_tax, t_split.sales_tax)
       self.assertEqual(payee, t_split.payee)
       self.assertEqual(description, t_split.description)
       self.assertEqual(category, t_split.category)

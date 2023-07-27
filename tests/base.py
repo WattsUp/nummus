@@ -106,14 +106,15 @@ class TestBase(unittest.TestCase):
       for t_v, r_v in zip(target, real):
         self.assertEqualWithinError(t_v, r_v, threshold, msg)
       return
-    elif isinstance(target, (int, float, Decimal)):
-      self.assertIsInstance(real, (int, float, Decimal), msg)
+    elif isinstance(target, (int, float)):
+      self.assertIsInstance(real, (int, float), msg)
       if target == 0.0:
         error = np.abs(real - target)
       else:
         error = np.abs(real / target - 1)
       self.assertLessEqual(error, threshold, msg)
     else:
+      # Decimals included here since their math should be immune from FP error
       self.assertEqual(target, real, msg)
 
   def setUp(self, clean: bool = True):
