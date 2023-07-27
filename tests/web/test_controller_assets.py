@@ -132,7 +132,7 @@ class TestControllerAssets(WebTestBase):
 
       for _ in range(n_valuations):
         v = AssetValuation(asset=a,
-                           value=float(self._RNG.uniform(0, 10)),
+                           value=self.random_decimal(0, 10),
                            date=today)
         s.add(v)
       s.commit()
@@ -353,13 +353,13 @@ class TestControllerAssets(WebTestBase):
 
       v_today = AssetValuation(asset=a,
                                date=today,
-                               value=self._RNG.uniform(-1, 1))
+                               value=self.random_decimal(-1, 1))
       v_before = AssetValuation(asset=a,
                                 date=today - datetime.timedelta(days=2),
-                                value=self._RNG.uniform(-1, 1))
+                                value=self.random_decimal(-1, 1))
       v_after = AssetValuation(asset=a,
                                date=today + datetime.timedelta(days=2),
-                               value=self._RNG.uniform(-1, 1))
+                               value=self.random_decimal(-1, 1))
       s.add_all((v_today, v_before, v_after))
       s.commit()
 
@@ -371,6 +371,7 @@ class TestControllerAssets(WebTestBase):
           0, v_before.value, v_before.value, v_today.value, v_today.value,
           v_after.value, v_after.value
       ]
+      target_values = [v for v in target_values]
       start = target_dates[0]
       end = target_dates[-1]
 

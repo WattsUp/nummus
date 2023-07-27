@@ -237,6 +237,6 @@ def get_value(asset_uuid: str) -> flask.Response:
   with p.get_session() as s:
     a = common.find_asset(s, asset_uuid)
 
-    dates, values, _ = a.get_value(start, end)
+    dates, values = a.get_value(start, end)
     response = {"values": values, "dates": dates}
     return flask.jsonify(response)

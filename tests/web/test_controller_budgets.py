@@ -18,12 +18,12 @@ class TestControllerBudgets(WebTestBase):
     p = self._portfolio
 
     date = datetime.date.today()
-    home = float(self._RNG.uniform(-100, 0))
-    food = float(self._RNG.uniform(-100, 0))
-    shopping = float(self._RNG.uniform(-100, 0))
-    hobbies = float(self._RNG.uniform(-100, 0))
-    services = float(self._RNG.uniform(-100, 0))
-    travel = float(self._RNG.uniform(-100, 0))
+    home = self.random_decimal(-100, 0)
+    food = self.random_decimal(-100, 0)
+    shopping = self.random_decimal(-100, 0)
+    hobbies = self.random_decimal(-100, 0)
+    services = self.random_decimal(-100, 0)
+    travel = self.random_decimal(-100, 0)
 
     # Make the minimum
     req = {
@@ -41,13 +41,15 @@ class TestControllerBudgets(WebTestBase):
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       b = s.query(Budget).first()
-      self.assertEqual(f"/api/budgets/{b.uuid}", headers["Location"])
-
-      # Serialize then deserialize
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
-
+      b_uuid = b.uuid
+      self.assertEqual(f"/api/budgets/{b_uuid}", headers["Location"])
       s.delete(b)
       s.commit()
+
+    target = dict(req)
+    target["uuid"] = b_uuid
+    target["date"] = str(target["date"])
+    target["total"] = sum(target["categories"].values())
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -94,7 +96,7 @@ class TestControllerBudgets(WebTestBase):
 
     # Update by uuid
     new_date = today - datetime.timedelta(days=1)
-    new_home = float(self._RNG.uniform(-100, 0))
+    new_home = self.random_decimal(-100, 0)
     target["date"] = new_date.isoformat()
     target["categories"]["home"] = new_home
     target["total"] = new_home
@@ -105,7 +107,7 @@ class TestControllerBudgets(WebTestBase):
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
-      self.assertEqualWithinError(new_home, b.home, 1e-6)
+      self.assertEqual(new_home, b.home)
     self.assertEqual(target, result)
 
     # Read only properties
