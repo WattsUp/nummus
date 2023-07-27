@@ -2,7 +2,8 @@
 """
 
 import datetime
-import json
+
+import simplejson
 
 from nummus.models import (Asset, AssetCategory, AssetValuation,
                            NummusJSONEncoder)
@@ -29,7 +30,8 @@ class TestControllerAssets(WebTestBase):
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      target_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
 
       s.delete(a)
       s.commit()
@@ -53,7 +55,8 @@ class TestControllerAssets(WebTestBase):
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      target_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -76,7 +79,10 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
     endpoint = f"/api/assets/{a_uuid}"
 
     # Get by uuid
@@ -93,7 +99,10 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
     endpoint = f"/api/assets/{a_uuid}"
 
     # Update by uuid
@@ -169,7 +178,11 @@ class TestControllerAssets(WebTestBase):
       s.add_all((a_banana, a_banana_inc))
       s.commit()
       query = s.query(Asset)
-      assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+      # Serialize then deserialize
+      target_s = simplejson.dumps(query.all(),
+                                  cls=NummusJSONEncoder,
+                                  use_decimal=True)
+      assets = simplejson.loads(target_s, use_decimal=True)
     endpoint = "/api/assets"
 
     # Get all

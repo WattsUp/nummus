@@ -1,10 +1,10 @@
 """Test module nummus.web.controller_budgets
 """
 
-import typing as t
-
 import datetime
-import json
+
+import simplejson
+
 from nummus.models import Budget, NummusJSONEncoder
 
 from tests.web.base import WebTestBase
@@ -43,13 +43,14 @@ class TestControllerBudgets(WebTestBase):
       b = s.query(Budget).first()
       b_uuid = b.uuid
       self.assertEqual(f"/api/budgets/{b_uuid}", headers["Location"])
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
+
       s.delete(b)
       s.commit()
 
-    target = dict(req)
-    target["uuid"] = b_uuid
-    target["date"] = str(target["date"])
-    target["total"] = sum(target["categories"].values())
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -73,7 +74,10 @@ class TestControllerBudgets(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Get by uuid
@@ -91,7 +95,10 @@ class TestControllerBudgets(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(target_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Update by uuid
@@ -156,8 +163,12 @@ class TestControllerBudgets(WebTestBase):
       s.add_all((b_today, b_yesterday))
       s.commit()
       query = s.query(Budget).order_by(Budget.date)
-      budgets: t.List[t.Dict[str, object]] = json.loads(
-          json.dumps(query.all(), cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      target_s = simplejson.dumps(query.all(),
+                                  cls=NummusJSONEncoder,
+                                  use_decimal=True)
+      budgets = simplejson.loads(target_s, use_decimal=True)
     endpoint = "/api/budgets"
 
     # Get all
