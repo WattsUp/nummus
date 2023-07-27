@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 
 import datetime
-import decimal
+from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import orm
@@ -13,7 +13,7 @@ from sqlalchemy import orm
 from nummus.models import base
 
 Dates = t.List[datetime.date]
-Values = t.List[decimal.Decimal]
+Values = t.List[Decimal]
 
 # TODO (WattsUp) Add AssetSplits
 
@@ -33,7 +33,7 @@ class AssetValuation(base.Base):
   asset_id: orm.Mapped[int] = orm.mapped_column(
       sqlalchemy.ForeignKey("asset.id"))
   asset: orm.Mapped[Asset] = orm.relationship()
-  value: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6)
+  value: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
   date: orm.Mapped[datetime.date]
 
   @property
@@ -105,7 +105,7 @@ class Asset(base.Base):
     dates: Dates = []
     values: Values = []
 
-    value = decimal.Decimal(0)
+    value = Decimal(0)
     for valuation in self.valuations:
       if valuation.date > end:
         continue

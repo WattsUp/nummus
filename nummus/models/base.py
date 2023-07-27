@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 
 import datetime
-import decimal
+from decimal import Decimal
 import enum
 import uuid
 
@@ -264,7 +264,7 @@ class NummusJSONEncoder(simplejson.JSONEncoder):
       return o.name.lower()
     if isinstance(o, datetime.date):
       return o.isoformat()
-    # if isinstance(o, decimal.Decimal):
+    # if isinstance(o, Decimal):
     #   # Dangerous, I know, DO NOT do arithmetic in JS
     #   return float(o)
     return super().default(o)
@@ -319,14 +319,14 @@ class Decimal6(types.TypeDecorator):
 
   cache_ok = True
 
-  _FACTOR = decimal.Decimal("1e6")
+  _FACTOR = Decimal("1e6")
 
-  def process_bind_param(self, value: decimal.Decimal, _) -> int:
+  def process_bind_param(self, value: Decimal, _) -> int:
     if value is None:
       return None
     return int(value * self._FACTOR)
 
-  def process_result_value(self, value: int, _) -> decimal.Decimal:
+  def process_result_value(self, value: int, _) -> Decimal:
     if value is None:
       return None
-    return decimal.Decimal(value) / self._FACTOR
+    return Decimal(value) / self._FACTOR

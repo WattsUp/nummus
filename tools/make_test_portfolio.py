@@ -4,7 +4,7 @@
 import typing as t
 
 import datetime
-import decimal
+from decimal import Decimal
 import time
 
 import colorama
@@ -22,7 +22,7 @@ RNG = np.random.default_rng()
 NO_RNG = False
 
 
-def rng_uniform(low: float, high: float, precision: int = 6) -> decimal.Decimal:
+def rng_uniform(low: float, high: float, precision: int = 6) -> Decimal:
   """Return a number from a uniform distribution
 
   Args:
@@ -34,8 +34,8 @@ def rng_uniform(low: float, high: float, precision: int = 6) -> decimal.Decimal:
     Random number from distribution
   """
   if NO_RNG:
-    return round(decimal.Decimal(low + high) / 2, precision)
-  return round(decimal.Decimal(RNG.uniform(low, high)), precision)
+    return round(Decimal(low + high) / 2, precision)
+  return round(Decimal(RNG.uniform(low, high)), precision)
 
 
 def rng_int(low: int, high: int) -> int:
@@ -53,7 +53,7 @@ def rng_int(low: int, high: int) -> int:
   return int(RNG.integers(low, high, endpoint=True))
 
 
-def rng_normal(loc: float, scale: float, precision: int = 6) -> decimal.Decimal:
+def rng_normal(loc: float, scale: float, precision: int = 6) -> Decimal:
   """Return a number from a normal distribution
 
   Args:
@@ -65,8 +65,8 @@ def rng_normal(loc: float, scale: float, precision: int = 6) -> decimal.Decimal:
     Random number from distribution
   """
   if NO_RNG:
-    return round(decimal.Decimal(loc) / 2, precision)
-  return round(decimal.Decimal(RNG.normal(loc, scale)), precision)
+    return round(Decimal(loc) / 2, precision)
+  return round(Decimal(RNG.normal(loc, scale)), precision)
 
 
 def rng_choice(choices: t.List[object]) -> object:
@@ -208,38 +208,32 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
                         category=AssetCategory.REAL_ESTATE)
 
     # Name: [Asset, current price, growth mean, growth stddev]
-    stocks: t.Dict[str, t.List[t.Union[Asset, decimal.Decimal]]] = {
-        "growth": [
-            growth,
-            decimal.Decimal(100),
-            decimal.Decimal(0.07),
-            decimal.Decimal(0.2)
-        ],
-        "value": [
-            value,
-            decimal.Decimal(100),
-            decimal.Decimal(0.05),
-            decimal.Decimal(0.05)
-        ],
+    stocks: t.Dict[str, t.List[t.Union[Asset, Decimal]]] = {
+        "growth": [growth, Decimal(100),
+                   Decimal(0.07),
+                   Decimal(0.2)],
+        "value": [value, Decimal(100),
+                  Decimal(0.05),
+                  Decimal(0.05)],
     }
-    real_estate: t.Dict[str, t.List[t.Union[Asset, decimal.Decimal]]] = {
+    real_estate: t.Dict[str, t.List[t.Union[Asset, Decimal]]] = {
         "house_main": [
             house_main,
-            decimal.Decimal(1.5e3),
-            decimal.Decimal(0.05),
-            decimal.Decimal(0.02)
+            Decimal(1.5e3),
+            Decimal(0.05),
+            Decimal(0.02)
         ],
         "house_second": [
             house_second,
-            decimal.Decimal(3e3),
-            decimal.Decimal(0.06),
-            decimal.Decimal(0.02)
+            Decimal(3e3),
+            Decimal(0.06),
+            Decimal(0.02)
         ],
         "house_third": [
             house_third,
-            decimal.Decimal(5e3),
-            decimal.Decimal(0.07),
-            decimal.Decimal(0.02)
+            Decimal(5e3),
+            Decimal(0.07),
+            Decimal(0.02)
         ],
     }
     s.add_all(v[0] for v in stocks.values())
@@ -260,8 +254,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
         date += datetime.timedelta(days=1)
 
       for item in stocks.values():
-        rate = rng_normal(item[2] / 252,
-                          item[3] / decimal.Decimal(np.sqrt(252)))
+        rate = rng_normal(item[2] / 252, item[3] / Decimal(np.sqrt(252)))
         v = round(item[1] * (1 + rate), 2)
 
         valuation = AssetValuation(asset=item[0], value=v, date=date)
@@ -278,7 +271,7 @@ def make_assets(p: Portfolio) -> t.Dict[str, int]:
     end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
     while date <= end:
       for item in real_estate.values():
-        rate = rng_normal(item[2] / 12, item[3] / decimal.Decimal(np.sqrt(12)))
+        rate = rng_normal(item[2] / 12, item[3] / Decimal(np.sqrt(12)))
         v = round(item[1] * (1 + rate), 2)
 
         valuation = AssetValuation(asset=item[0], value=v, date=date)
@@ -409,14 +402,14 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
       else:
         job = "Engineering Manager"
         salary = 15e3 * (1.06)**(age - 35)
-      salary = decimal.Decimal(salary)
+      salary = Decimal(salary)
       total = round(salary / 24, 2)
       # At age 24, decide to start contributing to retirement
-      savings = round(total * decimal.Decimal(0.1), 2)
+      savings = round(total * Decimal(0.1), 2)
       if age < 24:
         retirement = 0
       else:
-        retirement = round(total * decimal.Decimal(0.1), 2)
+        retirement = round(total * Decimal(0.1), 2)
       paycheck = total - savings - retirement
 
       # Paychecks on the 5th and 20th unless that day falls on a weekend
@@ -467,11 +460,11 @@ def generate_income(p: Portfolio, accts: t.Dict[str, int],
 
           # Now buy stocks with that funding
           if age < 30:
-            cost_growth = round(retirement * decimal.Decimal(0.9), 2)
+            cost_growth = round(retirement * Decimal(0.9), 2)
           elif age < 40:
-            cost_growth = round(retirement * decimal.Decimal(0.5), 2)
+            cost_growth = round(retirement * Decimal(0.5), 2)
           else:
-            cost_growth = round(retirement * decimal.Decimal(0.1), 2)
+            cost_growth = round(retirement * Decimal(0.1), 2)
           cost_value = retirement - cost_growth
 
           a_values_i = (date - a_values_start).days
@@ -536,15 +529,15 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
         pmi threshold)
       """
       _, values, _ = savings.get_value(date, date)
-      closing_costs = round(price * decimal.Decimal(0.05), 2)
+      closing_costs = round(price * Decimal(0.05), 2)
       max_dp = values[0] - closing_costs
-      no_pmi_dp = price * decimal.Decimal(0.2)
+      no_pmi_dp = price * Decimal(0.2)
       if max_dp < no_pmi_dp:
         # Clear out savings to avoid PMI
         down_payment = round(max_dp, 2)
       else:
         # Pay 20% unless there is more than 50k of excess cash
-        down_payment = round(max(no_pmi_dp, max_dp - decimal.Decimal(50e3)), 2)
+        down_payment = round(max(no_pmi_dp, max_dp - Decimal(50e3)), 2)
 
       p = price - down_payment
       r = round(rng_uniform(0.03, 0.1), 4) / 12
@@ -586,8 +579,8 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
                                    asset_quantity=1)
       s.add_all((txn, txn_split))
 
-      pmi = round(decimal.Decimal(0.01) * pi * 12, 2)
-      pmi_threshold = decimal.Decimal(0.8) * price
+      pmi = round(Decimal(0.01) * pi * 12, 2)
+      pmi_threshold = Decimal(0.8) * price
 
       s.commit()
       print(f"{Fore.CYAN}  Bought {house.description}")
@@ -602,7 +595,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
         house: Asset to sell
         price: Price to sell it at
       """
-      closing_costs = round(price * decimal.Decimal(0.08), 2)
+      closing_costs = round(price * Decimal(0.08), 2)
 
       # Pay down payment and closing costs
       txn = Transaction(account_id=accts["savings"],
@@ -728,7 +721,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       # Adds a repair cost 25% of the time with an average cost target_price
       # per month
-      target_price = payment * decimal.Decimal(0.05)
+      target_price = payment * Decimal(0.05)
       repair_cost = round(target_price / np.sqrt(rng_uniform(1e-5, 1)), 2)
       if repair_cost > (2 * target_price):
         acct_id = accts["cc_0"]
@@ -766,7 +759,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
 
       if age < 30:
         # Renting until age 30
-        rent = decimal.Decimal(71 * (1.03)**(age - 18))
+        rent = Decimal(71 * (1.03)**(age - 18))
         for date in dates:
           txn = Transaction(account_id=accts["checking"],
                             date=date,
@@ -797,7 +790,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
           price = round(house_1_values[a_values_i], -3)
 
           balance, rate, payment, pmi, pmi_th = buy_house(date, house_1, price)
-          escrow = round(price * decimal.Decimal(0.02) / 12, 2)
+          escrow = round(price * Decimal(0.02) / 12, 2)
           bought_1 = True
 
         # Pay monthly payment
@@ -822,7 +815,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
           price = round(house_2_values[a_values_i], -3)
 
           balance, rate, payment, pmi, pmi_th = buy_house(date, house_2, price)
-          escrow = round(price * decimal.Decimal(0.02) / 12, 2)
+          escrow = round(price * Decimal(0.02) / 12, 2)
           bought_2 = True
 
         # Pay monthly payment
@@ -847,7 +840,7 @@ def generate_housing(p: Portfolio, accts: t.Dict[str, int],
           price = round(house_3_values[a_values_i], -3)
 
           balance, rate, payment, pmi, pmi_th = buy_house(date, house_3, price)
-          escrow = round(price * decimal.Decimal(0.02) / 12, 2)
+          escrow = round(price * Decimal(0.02) / 12, 2)
           bought_3 = True
 
         # Pay monthly payment
@@ -1045,7 +1038,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
     a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
     _, values, _ = acct.get_value(a_values_start, a_values_end)
 
-    total_interest = decimal.Decimal(0)
+    total_interest = Decimal(0)
 
     while date < end:
       next_date = next_month(date)
@@ -1101,7 +1094,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
     a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
     _, values, _ = acct.get_value(a_values_start, a_values_end)
 
-    total_payment = decimal.Decimal(0)
+    total_payment = Decimal(0)
 
     while date < end:
       next_date = next_month(date)

@@ -3,7 +3,7 @@
 
 import calendar
 import datetime
-import decimal
+from decimal import Decimal
 
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            AssetValuation, Budget, Transaction,
@@ -519,8 +519,8 @@ class TestControllerPortfolio(WebTestBase):
       d = b_future.date
       month_len_future = calendar.monthrange(d.year, d.month)[1]
 
-      daily_factor_today = 1 / decimal.Decimal(12 * month_len_today)
-      daily_factor_future = 1 / decimal.Decimal(12 * month_len_future)
+      daily_factor_today = 1 / Decimal(12 * month_len_today)
+      daily_factor_future = 1 / Decimal(12 * month_len_future)
 
       budget_categorized_today = {
           enum_to_str(cat): v * daily_factor_today
@@ -554,7 +554,7 @@ class TestControllerPortfolio(WebTestBase):
     self.assertEqualWithinError(target, result, 1e-6)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": future})
-    zero = decimal.Decimal(0)
+    zero = Decimal(0)
     target = {
         "outflow": [zero, outflow, zero, zero],
         "outflow_categorized": {

@@ -3,7 +3,7 @@
 
 import typing as t
 
-import decimal
+from decimal import Decimal
 import pathlib
 import shutil
 import string
@@ -42,12 +42,11 @@ class TestBase(unittest.TestCase):
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
 
   @classmethod
-  def random_decimal(
-      cls,
-      low: t.Union[str, float, decimal.Decimal],
-      high: t.Union[str, float, decimal.Decimal],
-      precision: int = 6,
-      size: int = 1) -> t.Union[decimal.Decimal, t.List[decimal.Decimal]]:
+  def random_decimal(cls,
+                     low: t.Union[str, float, Decimal],
+                     high: t.Union[str, float, Decimal],
+                     precision: int = 6,
+                     size: int = 1) -> t.Union[Decimal, t.List[Decimal]]:
     """Generate a random decimal from a uniform distribution
 
     Args:
@@ -61,9 +60,9 @@ class TestBase(unittest.TestCase):
     """
     if size > 1:
       return [cls.random_decimal(low, high, precision) for _ in range(size)]
-    d_low = round(decimal.Decimal(low), precision)
-    d_high = round(decimal.Decimal(high), precision)
-    result = round(decimal.Decimal(cls._RNG.uniform(d_low, d_high)), precision)
+    d_low = round(Decimal(low), precision)
+    d_high = round(Decimal(high), precision)
+    result = round(Decimal(cls._RNG.uniform(d_low, d_high)), precision)
     if result <= d_low:
       return d_low
     if result >= d_high:
@@ -107,8 +106,8 @@ class TestBase(unittest.TestCase):
       for t_v, r_v in zip(target, real):
         self.assertEqualWithinError(t_v, r_v, threshold, msg)
       return
-    elif isinstance(target, (int, float, decimal.Decimal)):
-      self.assertIsInstance(real, (int, float, decimal.Decimal), msg)
+    elif isinstance(target, (int, float, Decimal)):
+      self.assertIsInstance(real, (int, float, Decimal), msg)
       if target == 0.0:
         error = np.abs(real - target)
       else:

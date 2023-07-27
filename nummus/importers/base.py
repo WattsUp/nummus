@@ -5,10 +5,9 @@ import typing as t
 
 from abc import ABC, abstractmethod
 import datetime
-import decimal
+from decimal import Decimal
 
-TransactionDict = t.Dict[str, t.Union[str, decimal.Decimal, datetime.date,
-                                      object]]
+TransactionDict = t.Dict[str, t.Union[str, Decimal, datetime.date, object]]
 
 
 class TransactionImporter(ABC):

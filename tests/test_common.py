@@ -1,7 +1,7 @@
 """Test module nummus.common
 """
 
-import decimal
+from decimal import Decimal
 import io
 from unittest import mock
 
@@ -177,16 +177,16 @@ class TestCommon(TestBase):
 
     s = "1000.1"
     result = common.parse_financial(s)
-    self.assertEqual(decimal.Decimal("1000.1"), result)
+    self.assertEqual(Decimal("1000.1"), result)
 
     s = "1,000.1"
     result = common.parse_financial(s)
-    self.assertEqual(decimal.Decimal("1000.1"), result)
+    self.assertEqual(Decimal("1000.1"), result)
 
     s = "$1000.1"
     result = common.parse_financial(s)
-    self.assertEqual(decimal.Decimal("1000.1"), result)
+    self.assertEqual(Decimal("1000.1"), result)
 
     s = "-$1,000.1"
     result = common.parse_financial(s)
-    self.assertEqual(decimal.Decimal("-1000.1"), result)
+    self.assertEqual(Decimal("-1000.1"), result)

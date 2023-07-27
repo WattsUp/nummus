@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 
 import datetime
-import decimal
+from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import orm
@@ -13,7 +13,7 @@ from sqlalchemy import orm
 from nummus.models import base, asset
 
 Dates = t.List[datetime.date]
-Values = t.List[decimal.Decimal]
+Values = t.List[Decimal]
 
 
 class TransactionCategory(base.BaseEnum):
@@ -87,9 +87,8 @@ class TransactionSplit(base.Base):
       "asset_uuid", "asset_quantity", "locked", "is_split"
   ]
 
-  total: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6)
-  sales_tax: orm.Mapped[t.Optional[decimal.Decimal]] = orm.mapped_column(
-      base.Decimal6)
+  total: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
+  sales_tax: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(base.Decimal6)
   payee: orm.Mapped[t.Optional[str]]
   description: orm.Mapped[t.Optional[str]]
   category: orm.Mapped[t.Optional[TransactionCategory]]
@@ -107,7 +106,7 @@ class TransactionSplit(base.Base):
   # TODO (WattsUp) Store as qty_int (Int) and qty_frac (Decimal18)
   # Combine with a property, int, frac = divmod(value, 1)
   # Because ETH uses 18 digits of precision...
-  asset_quantity: orm.Mapped[t.Optional[decimal.Decimal]] = orm.mapped_column(
+  asset_quantity: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(
       base.Decimal6)
 
   @orm.validates("total", "category")
@@ -208,7 +207,7 @@ class Transaction(base.Base):
   account: orm.Mapped[Account] = orm.relationship(back_populates="transactions")
 
   date: orm.Mapped[datetime.date]
-  total: orm.Mapped[decimal.Decimal] = orm.mapped_column(base.Decimal6)
+  total: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
   statement: orm.Mapped[str]
   locked: orm.Mapped[bool] = orm.mapped_column(default=False)
 
@@ -300,7 +299,7 @@ class Account(base.Base):
     qty_assets: t.Dict[str, Values] = {}
     assets: t.Dict[str, asset.Asset] = {}
 
-    current_cash = decimal.Decimal(0)
+    current_cash = Decimal(0)
     current_qty_assets: t.Dict[str, float] = {}
 
     for transaction in self.transactions:
