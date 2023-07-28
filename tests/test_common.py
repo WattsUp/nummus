@@ -190,3 +190,13 @@ class TestCommon(TestBase):
     s = "-$1,000.1"
     result = common.parse_financial(s)
     self.assertEqual(Decimal("-1000.1"), result)
+
+  def test_round_list(self):
+    n = 9
+    l = [1 / Decimal(n) for _ in range(n)]
+    self.assertNotEqual(1, sum(l))
+
+    l_round = common.round_list(l)
+    self.assertEqual(1, sum(l_round))
+    self.assertNotEqual(l[0], l_round[0])
+    self.assertEqual(round(l[0], 6), l_round[0])
