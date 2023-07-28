@@ -23,11 +23,27 @@ class NummusJSONProvider(flask.json.provider.JSONProvider):
   """
 
   @classmethod
-  def loads(cls, s: str, **kwargs: t.DictAny) -> t.DictAny:
+  def loads(cls, s: str, **kwargs: t.DictAny) -> t.Any:
+    """Deserialize data as JSON
+
+    Args:
+      s: Text to deserialize
+
+    Returns:
+      Deserialized object
+    """
     return simplejson.loads(s, **kwargs, use_decimal=True)
 
   @classmethod
-  def dumps(cls, obj: object, **kwargs: t.DictAny) -> str:
+  def dumps(cls, obj: t.Any, **kwargs: t.DictAny) -> str:
+    """Serialize data as JSON
+
+    Args:
+      obj: The data to serialize
+
+    Returns:
+      Serialized object as a string
+    """
     return simplejson.dumps(obj,
                             **kwargs,
                             use_decimal=True,

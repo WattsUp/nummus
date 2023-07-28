@@ -253,7 +253,15 @@ class NummusJSONEncoder(simplejson.JSONEncoder):
   """
 
   @classmethod
-  def default(cls, o: object) -> t.JSONVal:
+  def default(cls, o: t.Any) -> t.JSONVal:
+    """Serialize an object with non-standard type
+
+    Args:
+      o: Object to serialize
+
+    Returns:
+      Serialized object as a JSON friendly value
+    """
     if isinstance(o, Base):
       return o.to_dict()
     if isinstance(o, enum.Enum):
@@ -315,11 +323,27 @@ class Decimal6(types.TypeDecorator):
   _FACTOR = Decimal("1e6")
 
   def process_bind_param(self, value: t.Real, _) -> int:
+    """Receive a bound parameter value to be converted
+
+    Args:
+      value: Python side value to convert
+
+    Returns:
+      SQL side representation of value
+    """
     if value is None:
       return None
     return int(value * self._FACTOR)
 
   def process_result_value(self, value: int, _) -> t.Real:
+    """Receive a result-row column value to be converted
+
+    Args:
+      value: SQL side value to convert
+
+    Returns:
+      Python side representation of value
+    """
     if value is None:
       return None
     return Decimal(value) / self._FACTOR
