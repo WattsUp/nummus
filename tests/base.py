@@ -1,8 +1,6 @@
 """Test base class
 """
 
-import typing as t
-
 from decimal import Decimal
 import pathlib
 import shutil
@@ -16,6 +14,7 @@ import numpy as np
 from sqlalchemy import orm, pool
 
 from nummus import sql
+from nummus import custom_types as t
 
 from tests import TEST_LOG
 
@@ -43,10 +42,10 @@ class TestBase(unittest.TestCase):
 
   @classmethod
   def random_decimal(cls,
-                     low: t.Union[str, float, Decimal],
-                     high: t.Union[str, float, Decimal],
+                     low: t.Union[str, float, t.Real],
+                     high: t.Union[str, float, t.Real],
                      precision: int = 6,
-                     size: int = 1) -> t.Union[Decimal, t.List[Decimal]]:
+                     size: int = 1) -> t.Union[t.Real, t.Reals]:
     """Generate a random decimal from a uniform distribution
 
     Args:
@@ -125,7 +124,7 @@ class TestBase(unittest.TestCase):
 
     # Remove sleeping by default, mainly in read hardware interaction
     self._original_sleep = time.sleep
-    time.sleep = lambda *args: None
+    time.sleep = lambda *_: None
 
     self._test_start = time.perf_counter()
 

@@ -1,8 +1,6 @@
 """TestBase with extra functions for web testing
 """
 
-import typing as t
-
 import io
 import pathlib
 import re
@@ -19,6 +17,7 @@ import flask.testing
 import werkzeug
 
 from nummus import portfolio, sql, web
+from nummus import custom_types as t
 from nummus.models import (Account, AssetValuation, Asset, Budget, Credentials,
                            Transaction, TransactionSplit)
 
@@ -28,8 +27,8 @@ from tests.base import TestBase
 _RE_UUID = re.compile(r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
                       r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}")
 
-ResultType = t.Union[t.Dict[str, object], str, bytes]
-HeadersType = t.Dict[str, str]
+ResultType = t.Union[t.DictAny, str, bytes]
+CovMethods = t.Dict[t.Union[int, str], bool]
 
 
 class WebTestBase(TestBase):
@@ -96,10 +95,10 @@ class WebTestBase(TestBase):
   def api_open(self,
                method: str,
                endpoint: str,
-               queries: t.Dict[str, str],
+               queries: t.DictStr,
                content_type: str = "application/json",
                rc: int = 200,
-               **kwargs) -> t.Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API GET
 
     Args:
@@ -199,10 +198,10 @@ class WebTestBase(TestBase):
 
   def api_get(self,
               endpoint: str,
-              queries: t.Dict[str, str] = None,
+              queries: t.DictStr = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> t.Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API GET
 
     Args:
@@ -227,10 +226,10 @@ class WebTestBase(TestBase):
 
   def api_put(self,
               endpoint: str,
-              queries: t.Dict[str, str] = None,
+              queries: t.DictStr = None,
               content_type: str = "application/json",
               rc: int = 200,
-              **kwargs) -> t.Tuple[ResultType, HeadersType]:
+              **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API PUT
 
     Args:
@@ -255,10 +254,10 @@ class WebTestBase(TestBase):
 
   def api_post(self,
                endpoint: str,
-               queries: t.Dict[str, str] = None,
+               queries: t.DictStr = None,
                content_type: str = "application/json",
                rc: int = 201,
-               **kwargs) -> t.Tuple[ResultType, HeadersType]:
+               **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API POST
 
     Args:
@@ -283,10 +282,10 @@ class WebTestBase(TestBase):
 
   def api_delete(self,
                  endpoint: str,
-                 queries: t.Dict[str, str] = None,
+                 queries: t.DictStr = None,
                  content_type: str = None,
                  rc: int = 204,
-                 **kwargs) -> t.Tuple[ResultType, HeadersType]:
+                 **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API DELETE
 
     Args:
@@ -310,14 +309,14 @@ class WebTestBase(TestBase):
                          **kwargs)
 
 
-def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
+def api_coverage() -> t.Dict[str, t.Dict[str, CovMethods]]:
   """Get API Coverage results
 
   Returns:
     {endpoint: {method: {permutations: covered bool}}}
   """
   # Initialize data from api.yaml with all False
-  d: t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]] = {}
+  d: t.Dict[str, t.Dict[str, CovMethods]] = {}
 
   api_yaml = pathlib.Path(web.__file__).parent.joinpath("spec", "api.yaml")
   with open(api_yaml, "r", encoding="utf-8") as file:
@@ -335,7 +334,7 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
       d[endpoint] = {}
 
     for method, options in data.items():
-      d_method: t.Dict[t.Union[int, str], bool] = {}
+      d_method: CovMethods = {}
 
       for rc in options["responses"]:
         rc_int = int(rc)
@@ -349,7 +348,7 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
       parameters = options.get("parameters", [])
       any_required = False
       for param in parameters:
-        param: t.Dict[str, str]
+        param: t.DictStr
         if "$ref" in param:
           ref = param["$ref"].replace("#/components/parameters/", "")
           p = comp_params[ref]
@@ -369,7 +368,7 @@ def api_coverage() -> t.Dict[str, t.Dict[str, t.Dict[t.Union[int, str], bool]]]:
 
   # Iterate through test log
   with autodict.JSONAutoDict(TEST_LOG) as log:
-    LogYaml = t.Dict[str, t.Dict[str, t.List[str]]]
+    LogYaml = t.Dict[str, t.DictStrings]
     d_log: LogYaml = log["api_coverage"]
 
   for endpoint, data in d_log.items():

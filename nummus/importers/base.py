@@ -1,13 +1,12 @@
 """Base importer interfaces
 """
 
-import typing as t
-
 from abc import ABC, abstractmethod
-import datetime
-from decimal import Decimal
 
-TransactionDict = t.Dict[str, t.Union[str, Decimal, datetime.date, object]]
+from nummus import custom_types as t
+
+TxnDict = t.Dict[str, t.Union[str, t.Real, t.Date, t.Any]]
+TxnDicts = t.List[TxnDict]
 
 
 class TransactionImporter(ABC):
@@ -44,7 +43,7 @@ class TransactionImporter(ABC):
     pass  # pragma: no cover
 
   @abstractmethod
-  def run(self) -> t.List[TransactionDict]:
+  def run(self) -> TxnDicts:
     """Run importer
 
     Returns:

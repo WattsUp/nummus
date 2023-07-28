@@ -1,8 +1,6 @@
 """Common API Controller
 """
 
-import typing as t
-
 import datetime
 import mimetypes
 import uuid
@@ -13,10 +11,11 @@ import sqlalchemy
 from sqlalchemy import orm
 from thefuzz import process
 
+from nummus import custom_types as t
 from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction,
                            TransactionSplit)
 
-_SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.List[str]] = {
+_SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
     Account: ["name", "institution"],
     Asset: ["name", "description", "unit", "tag"],
     TransactionSplit: ["payee", "description", "subcategory", "tag"]
@@ -191,19 +190,19 @@ def search(query: orm.Query[Base], cls: t.Type[Base],
     return query
 
   unfiltered = query.all()
-  strings: t.Dict[int, str] = {}
+  strings: t.DictIntStr = {}
   for instance in unfiltered:
-    parameters: t.List[str] = []
+    parameters: t.Strings = []
     for k in _SEARCH_PROPERTIES[cls]:
       parameters.append(getattr(instance, k))
     i_str = " ".join(p for p in parameters if p is not None)
     strings[instance.id] = i_str
 
   extracted = process.extract(search_str, strings, limit=None)
-  matching_ids: t.List[int] = [i for _, score, i in extracted if score > 70]
+  matching_ids: t.Ints = [i for _, score, i in extracted if score > 70]
   if len(matching_ids) == 0:
     # Include poor matches to return something
-    matching_ids: t.List[int] = [i for _, _, i in extracted[:5]]
+    matching_ids: t.Ints = [i for _, _, i in extracted[:5]]
 
   return query.session.query(cls).where(cls.id.in_(matching_ids))
 

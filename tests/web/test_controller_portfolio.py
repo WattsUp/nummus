@@ -553,7 +553,6 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.maxDiff = None
     self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": future})

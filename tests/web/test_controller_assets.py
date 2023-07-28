@@ -384,7 +384,6 @@ class TestControllerAssets(WebTestBase):
           0, v_before.value, v_before.value, v_today.value, v_today.value,
           v_after.value, v_after.value
       ]
-      target_values = [v for v in target_values]
       start = target_dates[0]
       end = target_dates[-1]
 

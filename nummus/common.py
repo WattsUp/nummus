@@ -1,14 +1,14 @@
 """Miscellaneous functions and classes
 """
 
-import typing as t
-
 from decimal import Decimal
 import getpass
 import random
 import re
 import string
 import sys
+
+from nummus import custom_types as t
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
@@ -67,7 +67,7 @@ def get_input(prompt: str = "",
   return input_
 
 
-def confirm(prompt: str = None, default=False) -> bool:
+def confirm(prompt: str = None, default: bool = False) -> bool:
   """Prompt user for yes/no confirmation
 
   Args:
@@ -98,7 +98,7 @@ def confirm(prompt: str = None, default=False) -> bool:
     print()
 
 
-def parse_financial(s: str) -> Decimal:
+def parse_financial(s: str) -> t.Real:
   """Parse a string number written in financial notation
 
   Args:
@@ -112,10 +112,10 @@ def parse_financial(s: str) -> Decimal:
   s = _REGEX_FINANCIAL_CLEAN.sub("", s)
   if s == "":
     return None
-  return Decimal(s)
+  return t.Real(s)
 
 
-def round_list(l: t.List[Decimal], precision: int = 6) -> t.List[Decimal]:
+def round_list(l: t.Reals, precision: int = 6) -> t.Reals:
   """Round a list, carrying over error such that sum(list) == sum(round_list)
 
   Args:
@@ -126,7 +126,7 @@ def round_list(l: t.List[Decimal], precision: int = 6) -> t.List[Decimal]:
     List with rounded elements
   """
   residual = Decimal(0)
-  l_rounded: t.List[Decimal] = []
+  l_rounded: t.Reals = []
   for v in l:
     v = v + residual
     v_round = round(v, precision)

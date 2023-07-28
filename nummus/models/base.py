@@ -2,7 +2,6 @@
 """
 
 from __future__ import annotations
-import typing as t
 
 import datetime
 from decimal import Decimal
@@ -14,8 +13,7 @@ import sqlalchemy
 from sqlalchemy import orm, schema, types
 
 from nummus import common
-
-ModelDict = t.Dict[str, t.Union[str, float, int, bool, object]]
+from nummus import custom_types as t
 
 
 class Base(orm.DeclarativeBase):
@@ -27,19 +25,19 @@ class Base(orm.DeclarativeBase):
   """
   metadata: schema.MetaData
 
-  _PROPERTIES_DEFAULT: t.List[str] = ["uuid"]
-  _PROPERTIES_HIDDEN: t.List[str] = ["id"]
-  _PROPERTIES_READONLY: t.List[str] = ["id", "uuid"]
+  _PROPERTIES_DEFAULT: t.Strings = ["uuid"]
+  _PROPERTIES_HIDDEN: t.Strings = ["id"]
+  _PROPERTIES_READONLY: t.Strings = ["id", "uuid"]
 
   @orm.declared_attr
-  def __tablename__(self):
+  def __tablename__(self) -> str:
     return common.camel_to_snake(self.__name__)
 
-  id: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
+  id: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
   # Could be better with storing a uuid as a 16B int but SQLite doesn't have
   # that large of integers
-  uuid: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(36),
-                                            default=lambda: str(uuid.uuid4()))
+  uuid: t.ORMStr = orm.mapped_column(sqlalchemy.String(36),
+                                     default=lambda: str(uuid.uuid4()))
 
   def __str__(self) -> str:
     return str(self.to_dict())
@@ -51,9 +49,9 @@ class Base(orm.DeclarativeBase):
       return f"<{self.__class__.__name__} id=Detached Instance>"
 
   def to_dict(self,
-              show: t.List[str] = None,
-              hide: t.List[str] = None,
-              path: str = None) -> ModelDict:
+              show: t.Strings = None,
+              hide: t.Strings = None,
+              path: str = None) -> t.JSONObj:
     """Return a dictionary representation of this model
 
     Adds all columns that are not hidden (in hide or in _hidden_properties) and
@@ -106,7 +104,7 @@ class Base(orm.DeclarativeBase):
     relationships = self.__mapper__.relationships.keys()
     properties = dir(self)
 
-    d = {}
+    d: t.JSONObj = {}
 
     # Add columns
     for key in columns:
@@ -172,9 +170,7 @@ class Base(orm.DeclarativeBase):
 
     return d
 
-  def update(self,
-             data: ModelDict,
-             force: bool = False) -> t.Dict[str, t.Tuple[object, object]]:
+  def update(self, data: t.JSONObj, force: bool = False) -> t.DictTuple:
     """Update model from dictionary
 
     Only updates columns
@@ -192,7 +188,7 @@ class Base(orm.DeclarativeBase):
     relationships = self.__mapper__.relationships.keys()
     properties = dir(self)
 
-    changes: t.Dict[str, t.Tuple[object, object]] = {}
+    changes: t.DictTuple = {}
 
     # Update columns
     for key in columns:
@@ -257,16 +253,13 @@ class NummusJSONEncoder(simplejson.JSONEncoder):
   """
 
   @classmethod
-  def default(cls, o: object) -> object:
+  def default(cls, o: object) -> t.JSONVal:
     if isinstance(o, Base):
       return o.to_dict()
     if isinstance(o, enum.Enum):
       return o.name.lower()
     if isinstance(o, datetime.date):
       return o.isoformat()
-    # if isinstance(o, Decimal):
-    #   # Dangerous, I know, DO NOT do arithmetic in JS
-    #   return float(o)
     return super().default(o)
 
 
@@ -321,12 +314,12 @@ class Decimal6(types.TypeDecorator):
 
   _FACTOR = Decimal("1e6")
 
-  def process_bind_param(self, value: Decimal, _) -> int:
+  def process_bind_param(self, value: t.Real, _) -> int:
     if value is None:
       return None
     return int(value * self._FACTOR)
 
-  def process_result_value(self, value: int, _) -> Decimal:
+  def process_result_value(self, value: int, _) -> t.Real:
     if value is None:
       return None
     return Decimal(value) / self._FACTOR

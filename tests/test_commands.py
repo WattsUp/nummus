@@ -1,8 +1,6 @@
 """Test module nummus.commands
 """
 
-import typing as t
-
 import io
 import shutil
 from unittest import mock
@@ -10,6 +8,7 @@ from unittest import mock
 from colorama import Fore
 
 from nummus import commands, portfolio
+from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Transaction)
 
@@ -24,7 +23,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: t.List[str] = []
+    queue: t.Strings = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -91,7 +90,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: t.List[str] = []
+    queue: t.Strings = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -189,7 +188,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: t.List[str] = []
+    queue: t.Strings = []
 
     def mock_input(to_print: str):
       print(to_print)
@@ -235,7 +234,7 @@ class TestCommands(TestBase):
     original_input = mock.builtins.input
     original_get_pass = commands.common.getpass.getpass
 
-    queue: t.List[str] = []
+    queue: t.Strings = []
 
     def mock_input(to_print: str):
       print(to_print)

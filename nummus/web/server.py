@@ -1,8 +1,6 @@
 """Web server for nummus
 """
 
-import typing as t
-
 import datetime
 import pathlib
 import warnings
@@ -14,6 +12,7 @@ import gevent.pywsgi
 import simplejson
 
 from nummus import models, portfolio
+from nummus import custom_types as t
 from nummus.web import controller_html
 
 
@@ -24,11 +23,11 @@ class NummusJSONProvider(flask.json.provider.JSONProvider):
   """
 
   @classmethod
-  def loads(cls, s: str, **kwargs: t.Dict[str, object]) -> t.Dict[str, object]:
+  def loads(cls, s: str, **kwargs: t.DictAny) -> t.DictAny:
     return simplejson.loads(s, **kwargs, use_decimal=True)
 
   @classmethod
-  def dumps(cls, obj: object, **kwargs: t.Dict[str, object]) -> str:
+  def dumps(cls, obj: object, **kwargs: t.DictAny) -> str:
     return simplejson.dumps(obj,
                             **kwargs,
                             use_decimal=True,

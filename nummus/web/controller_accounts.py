@@ -1,13 +1,12 @@
 """Account API Controller
 """
 
-import typing as t
-
 import datetime
 
 import flask
 
 from nummus import portfolio
+from nummus import custom_types as t
 from nummus.models import Account, AccountCategory
 from nummus.web import common, controller_transactions
 from nummus.web.common import HTTPError
@@ -22,7 +21,7 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: t.Dict[str, object] = flask.request.json
+  req: t.JSONObj = flask.request.json
   name = req["name"]
   institution = req["institution"]
   category = common.parse_enum(req["category"], AccountCategory)
@@ -66,8 +65,8 @@ def update(account_uuid: str) -> flask.Response:
   with p.get_session() as s:
     acct = common.find_account(s, account_uuid)
 
-    req: t.Dict[str, object] = flask.request.json
-    d: t.Dict[str, object] = {}
+    req: t.JSONObj = flask.request.json
+    d: t.JSONObj = {}
     d["name"] = req["name"]
     d["institution"] = req["institution"]
     d["category"] = common.parse_enum(req["category"], AccountCategory)
@@ -111,7 +110,7 @@ def get_all() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
+  args: t.JSONObj = flask.request.args.to_dict()
   category = common.parse_enum(args.get("category"), AccountCategory)
   search = args.get("search")
 
@@ -156,7 +155,7 @@ def get_value(account_uuid: str) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
+  args: t.JSONObj = flask.request.args.to_dict()
   start = common.parse_date(args.get("start", today))
   end = common.parse_date(args.get("end", today))
   if end < start:

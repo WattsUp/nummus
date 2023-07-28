@@ -2,17 +2,16 @@
 """
 
 from __future__ import annotations
-import typing as t
 
 import datetime
 from decimal import Decimal
 import json
 import uuid
 
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import ForeignKey, orm
 
 from nummus import models
+from nummus import custom_types as t
 from nummus.models import base
 
 from tests.base import TestBase
@@ -32,8 +31,8 @@ class Parent(base.Base):
 
   _PROPERTIES_HIDDEN = ["age"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  generic_column: orm.Mapped[t.Optional[int]]
+  _hidden_column: t.ORMIntOpt
+  generic_column: t.ORMIntOpt
   children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent")
 
@@ -81,8 +80,8 @@ class ParentHidden(base.Base):
 
   _PROPERTIES_HIDDEN = ["generic_column"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  generic_column: orm.Mapped[t.Optional[int]]
+  _hidden_column: t.ORMIntOpt
+  generic_column: t.ORMIntOpt
   _children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent_hidden")
 
@@ -105,16 +104,15 @@ class Child(base.Base):
 
   _PROPERTIES_DEFAULT = ["uuid", "age"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  parent_id: orm.Mapped[int] = orm.mapped_column(
-      sqlalchemy.ForeignKey("parent.id"))
+  _hidden_column: t.ORMIntOpt
+  parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id"))
   parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
-  parent_hidden_id: orm.Mapped[t.Optional[int]] = orm.mapped_column(
-      sqlalchemy.ForeignKey("parent_hidden.id"))
+  parent_hidden_id: t.ORMIntOpt = orm.mapped_column(
+      ForeignKey("parent_hidden.id"))
   parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
       back_populates="_children")
 
-  height: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(base.Decimal6)
+  height: t.ORMRealOpt = orm.mapped_column(base.Decimal6)
 
   _age = 10
 

@@ -1,8 +1,6 @@
 """Test module nummus.web.controller_transactions
 """
 
-import typing as t
-
 import datetime
 import uuid
 
@@ -10,7 +8,7 @@ import simplejson
 
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            NummusJSONEncoder, Transaction, TransactionCategory,
-                           TransactionSplit)
+                           TransactionSplit, TxnList)
 
 from tests.web.base import WebTestBase
 
@@ -411,7 +409,7 @@ class TestControllerTransactions(WebTestBase):
       acct_invest_uuid = acct_invest.uuid
       asset_uuid = asset.uuid
 
-      transactions: t.List[Transaction] = []
+      transactions: TxnList = []
       for category in [
           TransactionCategory.HOME, TransactionCategory.FOOD,
           TransactionCategory.SHOPPING, TransactionCategory.HOBBIES,

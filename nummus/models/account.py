@@ -2,21 +2,36 @@
 """
 
 from __future__ import annotations
-import typing as t
 
 import datetime
 from decimal import Decimal
 
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import ForeignKey, orm
 
-from nummus.models import base, asset
+from nummus import custom_types as t
+from nummus.models.base import Base, BaseEnum, Decimal6, Decimal18
+from nummus.models.asset import ORMAsset, DictStrAsset
 
-Dates = t.List[datetime.date]
-Values = t.List[Decimal]
+ORMTxn = orm.Mapped["Transaction"]
+ORMTxnList = orm.Mapped[t.List["Transaction"]]
+ORMTxnOpt = orm.Mapped[t.Optional["Transaction"]]
+ORMTxnSplit = orm.Mapped["TransactionSplit"]
+ORMTxnSplitList = orm.Mapped[t.List["TransactionSplit"]]
+ORMTxnSplitOpt = orm.Mapped[t.Optional["TransactionSplit"]]
+ORMTxnCat = orm.Mapped["TransactionCategory"]
+ORMTxnCatOpt = orm.Mapped[t.Optional["TransactionCategory"]]
+ORMAcct = orm.Mapped["Account"]
+ORMAcctOpt = orm.Mapped[t.Optional["Account"]]
+ORMAcctCat = orm.Mapped["AccountCategory"]
+ORMAcctCatOpt = orm.Mapped[t.Optional["AccountCategory"]]
+
+RealOrTxnCat = t.Union[t.Real, "TransactionCategory"]
+
+DictTxnCatReal = t.Dict["TransactionCategory", t.Real]
+DictTxnCatReals = t.Dict["TransactionCategory", t.Reals]
 
 
-class TransactionCategory(base.BaseEnum):
+class TransactionCategory(BaseEnum):
   """Categories of Transactions
   """
   # Outflow, checked TransactionSplit.total < 0
@@ -34,7 +49,7 @@ class TransactionCategory(base.BaseEnum):
   INSTRUMENT = 8
   TRANSFER = 9
 
-  def is_valid_amount(self, amount: float) -> bool:
+  def is_valid_amount(self, amount: t.Real) -> bool:
     """Test amount is valid sign for the Category
 
     Args:
@@ -54,7 +69,7 @@ class TransactionCategory(base.BaseEnum):
     return True
 
 
-class TransactionSplit(base.Base):
+class TransactionSplit(Base):
   """TransactionSplit model for storing an exchange of cash for an asset
   (or none)
 
@@ -87,30 +102,25 @@ class TransactionSplit(base.Base):
       "asset_uuid", "asset_quantity", "locked", "is_split"
   ]
 
-  total: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
-  sales_tax: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(base.Decimal6)
-  payee: orm.Mapped[t.Optional[str]]
-  description: orm.Mapped[t.Optional[str]]
-  category: orm.Mapped[t.Optional[TransactionCategory]]
-  subcategory: orm.Mapped[t.Optional[str]]
-  tag: orm.Mapped[t.Optional[str]]
+  total: t.ORMReal = orm.mapped_column(Decimal6)
+  sales_tax: t.ORMRealOpt = orm.mapped_column(Decimal6)
+  payee: t.ORMStrOpt
+  description: t.ORMStrOpt
+  category: ORMTxnCatOpt
+  subcategory: t.ORMStrOpt
+  tag: t.ORMStrOpt
 
-  parent_id: orm.Mapped[int] = orm.mapped_column(
-      sqlalchemy.ForeignKey("transaction.id"))
-  parent: orm.Mapped[Transaction] = orm.relationship(back_populates="splits")
+  parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id"))
+  parent: ORMTxn = orm.relationship(back_populates="splits")
 
-  asset_id: orm.Mapped[t.Optional[int]] = orm.mapped_column(
-      sqlalchemy.ForeignKey("asset.id"))
-  asset: orm.Mapped[asset.Asset] = orm.relationship()
+  asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id"))
+  asset: ORMAsset = orm.relationship()
 
-  _asset_qty_int: orm.Mapped[t.Optional[int]]
-  _asset_qty_frac: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(
-      base.Decimal18)
+  _asset_qty_int: t.ORMIntOpt
+  _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
 
   @orm.validates("total", "category")
-  def validate_category(
-      self, key: str, field: t.Union[float, TransactionCategory]
-  ) -> t.Union[float, TransactionCategory]:
+  def validate_category(self, key: str, field: RealOrTxnCat) -> RealOrTxnCat:
     """Validate inflow/outflow constraints are met
 
     Args:
@@ -126,7 +136,7 @@ class TransactionSplit(base.Base):
     total = self.total
     category = self.category
     if key == "total":
-      total: float = field
+      total: t.Real = field
     else:
       category: TransactionCategory = field
     if category is None:
@@ -158,7 +168,7 @@ class TransactionSplit(base.Base):
     return self.parent.account_uuid
 
   @property
-  def date(self) -> datetime.date:
+  def date(self) -> t.Date:
     """Date on which Transaction occurred
     """
     return self.parent.date
@@ -177,7 +187,7 @@ class TransactionSplit(base.Base):
     return self.parent.is_split
 
   @property
-  def asset_quantity(self) -> Decimal:
+  def asset_quantity(self) -> t.Real:
     """Number of units of Asset exchanged, Positive indicates
     Account gained Assets (inflow)
     """
@@ -186,7 +196,7 @@ class TransactionSplit(base.Base):
     return self._asset_qty_int + self._asset_qty_frac
 
   @asset_quantity.setter
-  def asset_quantity(self, qty: Decimal) -> None:
+  def asset_quantity(self, qty: t.Real) -> None:
     if qty is None:
       self._asset_qty_int = None
       self._asset_qty_frac = None
@@ -196,7 +206,7 @@ class TransactionSplit(base.Base):
     self._asset_qty_frac = f
 
 
-class Transaction(base.Base):
+class Transaction(Base):
   """Transaction model for storing an exchange of cash for an asset (or none)
 
   Every Transaction has at least one TransactionSplit.
@@ -219,17 +229,15 @@ class Transaction(base.Base):
       "is_split"
   ]
 
-  account_id: orm.Mapped[int] = orm.mapped_column(
-      sqlalchemy.ForeignKey("account.id"))
-  account: orm.Mapped[Account] = orm.relationship(back_populates="transactions")
+  account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
+  account: ORMAcct = orm.relationship(back_populates="transactions")
 
-  date: orm.Mapped[datetime.date]
-  total: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
-  statement: orm.Mapped[str]
-  locked: orm.Mapped[bool] = orm.mapped_column(default=False)
+  date: t.ORMDate
+  total: t.ORMReal = orm.mapped_column(Decimal6)
+  statement: t.ORMStr
+  locked: t.ORMBool = orm.mapped_column(default=False)
 
-  splits: orm.Mapped[t.List[TransactionSplit]] = orm.relationship(
-      back_populates="parent")
+  splits: ORMTxnSplitList = orm.relationship(back_populates="parent")
 
   @property
   def account_uuid(self) -> str:
@@ -244,7 +252,7 @@ class Transaction(base.Base):
     return len(self.splits) > 1
 
 
-class AccountCategory(base.BaseEnum):
+class AccountCategory(BaseEnum):
   """Categories of Accounts
   """
   CASH = 1
@@ -256,7 +264,7 @@ class AccountCategory(base.BaseEnum):
   OTHER = 7
 
 
-class Account(base.Base):
+class Account(Base):
   """Account model for storing a financial account
 
   Attributes:
@@ -273,15 +281,15 @@ class Account(base.Base):
       "uuid", "name", "institution", "category", "opened_on", "updated_on"
   ]
 
-  name: orm.Mapped[str]
-  institution: orm.Mapped[str]
-  category: orm.Mapped[AccountCategory]
+  name: t.ORMStr
+  institution: t.ORMStr
+  category: ORMAcctCat
 
-  transactions: orm.Mapped[t.List[Transaction]] = orm.relationship(
-      back_populates="account", order_by=Transaction.date)
+  transactions: ORMTxnList = orm.relationship(back_populates="account",
+                                              order_by=Transaction.date)
 
   @property
-  def opened_on(self) -> datetime.date:
+  def opened_on(self) -> t.Date:
     """Date of first Transaction
     """
     if len(self.transactions) < 1:
@@ -289,16 +297,15 @@ class Account(base.Base):
     return self.transactions[0].date
 
   @property
-  def updated_on(self) -> datetime.date:
+  def updated_on(self) -> t.Date:
     """Date of latest Transaction
     """
     if len(self.transactions) < 1:
       return None
     return self.transactions[-1].date
 
-  def get_value(
-      self, start: datetime.date,
-      end: datetime.date) -> t.Tuple[Dates, Values, t.Dict[str, Values]]:
+  def get_value(self, start: t.Date,
+                end: t.Date) -> t.Tuple[t.Dates, t.Reals, t.DictReals]:
     """Get the value of Account from start to end date
 
     Args:
@@ -311,13 +318,13 @@ class Account(base.Base):
     """
     date = start
 
-    dates: Dates = []
-    cash: Values = []
-    qty_assets: t.Dict[str, Values] = {}
-    assets: t.Dict[str, asset.Asset] = {}
+    dates: t.Dates = []
+    cash: t.Reals = []
+    qty_assets: t.DictReals = {}
+    assets: DictStrAsset = {}
 
     current_cash = Decimal(0)
-    current_qty_assets: t.Dict[str, float] = {}
+    current_qty_assets: t.DictReal = {}
 
     for transaction in self.transactions:
       if transaction.date > end:
@@ -348,7 +355,7 @@ class Account(base.Base):
       date += datetime.timedelta(days=1)
 
     # Assets qty to value
-    value_assets: t.Dict[str, Values] = {}
+    value_assets: t.DictReals = {}
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
       # Value = quantity * price * multiplier
@@ -360,9 +367,8 @@ class Account(base.Base):
 
     return dates, values, value_assets
 
-  def get_cash_flow(
-      self, start: datetime.date, end: datetime.date
-  ) -> t.Tuple[Dates, t.Dict[TransactionCategory, Values]]:
+  def get_cash_flow(self, start: t.Date,
+                    end: t.Date) -> t.Tuple[t.Dates, DictTxnCatReals]:
     """Get the cash_flow of Account from start to end date
 
     Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
@@ -378,16 +384,12 @@ class Account(base.Base):
     """
     date = start
 
-    dates: Dates = []
-    categories: t.Dict[TransactionCategory, Values] = {
-        cat: [] for cat in TransactionCategory
-    }
+    dates: t.Dates = []
+    categories: DictTxnCatReals = {cat: [] for cat in TransactionCategory}
     categories["unknown-inflow"] = []  # Category is nullable
     categories["unknown-outflow"] = []  # Category is nullable
 
-    daily_categories: t.Dict[TransactionCategory, float] = {
-        cat: 0 for cat in TransactionCategory
-    }
+    daily_categories: DictTxnCatReal = {cat: 0 for cat in TransactionCategory}
     daily_categories["unknown-inflow"] = 0
     daily_categories["unknown-outflow"] = 0
 
@@ -422,8 +424,8 @@ class Account(base.Base):
 
     return dates, categories
 
-  def get_asset_qty(self, start: datetime.date,
-                    end: datetime.date) -> t.Tuple[Dates, t.Dict[str, Values]]:
+  def get_asset_qty(self, start: t.Date,
+                    end: t.Date) -> t.Tuple[t.Dates, t.DictReals]:
     """Get the quantity of Assets held from start to end date
 
     Args:
@@ -435,10 +437,10 @@ class Account(base.Base):
     """
     date = start
 
-    dates: Dates = []
-    qty_assets: t.Dict[str, Values] = {}
+    dates: t.Dates = []
+    qty_assets: t.DictReals = {}
 
-    current_qty_assets: t.Dict[str, float] = {}
+    current_qty_assets: t.DictReal = {}
 
     for transaction in self.transactions:
       if transaction.date > end:

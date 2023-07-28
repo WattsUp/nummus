@@ -2,7 +2,6 @@
 """
 
 from __future__ import annotations
-import typing as t
 
 import datetime
 from decimal import Decimal
@@ -10,15 +9,23 @@ from decimal import Decimal
 import sqlalchemy
 from sqlalchemy import orm
 
-from nummus.models import base
+from nummus import custom_types as t
+from nummus.models.base import Base, BaseEnum, Decimal6
 
-Dates = t.List[datetime.date]
-Values = t.List[Decimal]
+ORMAsset = orm.Mapped["Asset"]
+ORMAssetOpt = orm.Mapped[t.Optional["Asset"]]
+ORMAssetCat = orm.Mapped["AssetCategory"]
+ORMAssetCatOpt = orm.Mapped[t.Optional["AssetCategory"]]
+ORMAssetVal = orm.Mapped["AssetValuation"]
+ORMAssetValList = orm.Mapped[t.List["AssetValuation"]]
+ORMAssetValOpt = orm.Mapped[t.Optional["AssetValuation"]]
+
+DictStrAsset = t.Dict[str, "Asset"]
 
 # TODO (WattsUp) Add AssetSplits
 
 
-class AssetValuation(base.Base):
+class AssetValuation(Base):
   """Asset Valuation model for storing a value of an asset on a specific date
 
   Attributes:
@@ -30,11 +37,10 @@ class AssetValuation(base.Base):
   _PROPERTIES_DEFAULT = ["asset_uuid", "value", "multiplier", "date"]
   _PROPERTIES_HIDDEN = ["id", "uuid"]
 
-  asset_id: orm.Mapped[int] = orm.mapped_column(
-      sqlalchemy.ForeignKey("asset.id"))
-  asset: orm.Mapped[Asset] = orm.relationship()
-  value: orm.Mapped[Decimal] = orm.mapped_column(base.Decimal6)
-  date: orm.Mapped[datetime.date]
+  asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
+  asset: ORMAsset = orm.relationship()
+  value: t.ORMReal = orm.mapped_column(Decimal6)
+  date: t.ORMDate
 
   @property
   def asset_uuid(self) -> str:
@@ -43,7 +49,7 @@ class AssetValuation(base.Base):
     return self.asset.uuid
 
 
-class AssetCategory(base.BaseEnum):
+class AssetCategory(BaseEnum):
   """Categories of Assets
   """
   CASH = 1
@@ -53,7 +59,7 @@ class AssetCategory(base.BaseEnum):
   ITEM = 5
 
 
-class Asset(base.Base):
+class Asset(Base):
   """Asset model for storing an individual item with dynamic worth
 
   Attributes:
@@ -69,16 +75,16 @@ class Asset(base.Base):
       "uuid", "name", "description", "category", "unit", "tag"
   ]
 
-  name: orm.Mapped[str]
-  description: orm.Mapped[t.Optional[str]]
-  category: orm.Mapped[AssetCategory]
-  unit: orm.Mapped[t.Optional[str]]
-  tag: orm.Mapped[t.Optional[str]]
-  img_suffix: orm.Mapped[t.Optional[str]]
+  name: t.ORMStr
+  description: t.ORMStrOpt
+  category: ORMAssetCat
+  unit: t.ORMStrOpt
+  tag: t.ORMStrOpt
+  img_suffix: t.ORMStrOpt
 
   # TODO (WattsUp) Move to write only relationship if too slow
-  valuations: orm.Mapped[t.List[AssetValuation]] = orm.relationship(
-      back_populates="asset", order_by=AssetValuation.date)
+  valuations: ORMAssetValList = orm.relationship(back_populates="asset",
+                                                 order_by=AssetValuation.date)
 
   @property
   def image_name(self) -> str:
@@ -89,8 +95,7 @@ class Asset(base.Base):
       return None
     return f"{self.uuid}{s}"
 
-  def get_value(self, start: datetime.date,
-                end: datetime.date) -> t.Tuple[Dates, Values]:
+  def get_value(self, start: t.Date, end: t.Date) -> t.Tuple[t.Dates, t.Reals]:
     """Get the value of Asset from start to end date
 
     Args:
@@ -102,8 +107,8 @@ class Asset(base.Base):
     """
     date = start
 
-    dates: Dates = []
-    values: Values = []
+    dates: t.Dates = []
+    values: t.Reals = []
 
     value = Decimal(0)
     for valuation in self.valuations:

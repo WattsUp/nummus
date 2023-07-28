@@ -1,8 +1,6 @@
 """SQL interface
 """
 
-import typing as t
-
 import os
 import sys
 
@@ -13,10 +11,12 @@ import sqlalchemy
 import sqlalchemy.event
 from sqlalchemy import orm
 
+from nummus import custom_types as t
+
 try:
   # TODO (WattsUp) figure out Windows sqlcipher installation
-  import sqlcipher3  # pylint: disable=import-outside-toplevel
   from nummus.encryption import Encryption  # pylint: disable=import-outside-toplevel
+  import sqlcipher3  # pylint: disable=import-outside-toplevel
 except ImportError:
   # Helpful information printed in nummus.portfolio
   Encryption = None
@@ -24,7 +24,7 @@ except ImportError:
 # Cache engines so recomputing db_key is avoided
 _ENGINES: t.Dict[str, sqlalchemy.engine.Engine] = {}
 
-_ENGINE_ARGS: t.Dict[str, object] = {}
+_ENGINE_ARGS: t.DictAny = {}
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")

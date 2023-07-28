@@ -1,14 +1,12 @@
 """Test module nummus.models.account
 """
 
-import typing as t
-
 import datetime
 
 from nummus import models
-from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           AssetValuation, Transaction, TransactionCategory,
-                           TransactionSplit)
+from nummus.models import (Account, AccountCategory, Asset, AssetList,
+                           AssetCategory, AssetValuation, Transaction,
+                           TransactionCategory, TransactionSplit)
 
 from tests.base import TestBase
 
@@ -317,7 +315,7 @@ class TestAccount(TestBase):
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.INVESTMENT)
-    assets: t.List[Asset] = []
+    assets: AssetList = []
     for _ in range(3):
       new_asset = Asset(name=self.random_string(),
                         category=AssetCategory.SECURITY)
@@ -422,7 +420,7 @@ class TestAccount(TestBase):
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.INVESTMENT)
-    assets: t.List[Asset] = []
+    assets: AssetList = []
     for _ in range(3):
       new_asset = Asset(name=self.random_string(),
                         category=AssetCategory.SECURITY)

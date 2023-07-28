@@ -1,8 +1,6 @@
 """Test module nummus.importers.raw_csv
 """
 
-import typing as t
-
 from nummus import importers
 from nummus.importers import base
 
@@ -17,7 +15,7 @@ class Derived(base.TransactionImporter):
   def is_importable(cls, name: str, buf: bytes) -> bool:
     return False
 
-  def run(self) -> t.List[base.TransactionDict]:
+  def run(self) -> base.TxnDicts:
     return []
 
 
