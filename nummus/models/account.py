@@ -103,11 +103,9 @@ class TransactionSplit(base.Base):
       sqlalchemy.ForeignKey("asset.id"))
   asset: orm.Mapped[asset.Asset] = orm.relationship()
 
-  # TODO (WattsUp) Store as qty_int (Int) and qty_frac (Decimal18)
-  # Combine with a property, int, frac = divmod(value, 1)
-  # Because ETH uses 18 digits of precision...
-  asset_quantity: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(
-      base.Decimal6)
+  _asset_qty_int: orm.Mapped[t.Optional[int]]
+  _asset_qty_frac: orm.Mapped[t.Optional[Decimal]] = orm.mapped_column(
+      base.Decimal18)
 
   @orm.validates("total", "category")
   def validate_category(
@@ -177,6 +175,25 @@ class TransactionSplit(base.Base):
     """True if part of a split Transaction
     """
     return self.parent.is_split
+
+  @property
+  def asset_quantity(self) -> Decimal:
+    """Number of units of Asset exchanged, Positive indicates
+    Account gained Assets (inflow)
+    """
+    if self._asset_qty_int is None:
+      return None
+    return self._asset_qty_int + self._asset_qty_frac
+
+  @asset_quantity.setter
+  def asset_quantity(self, qty: Decimal) -> None:
+    if qty is None:
+      self._asset_qty_int = None
+      self._asset_qty_frac = None
+      return
+    i, f = divmod(qty, 1)
+    self._asset_qty_int = int(i)
+    self._asset_qty_frac = f
 
 
 class Transaction(base.Base):

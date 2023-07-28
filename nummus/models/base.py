@@ -330,3 +330,10 @@ class Decimal6(types.TypeDecorator):
     if value is None:
       return None
     return Decimal(value) / self._FACTOR
+
+
+class Decimal18(Decimal6):
+  """SQL type for fixed point numbers, stores as atto-integer
+  """
+
+  _FACTOR = Decimal("1e18")

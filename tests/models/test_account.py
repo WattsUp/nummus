@@ -192,6 +192,34 @@ class TestTransaction(TestBase):
     self.assertRaises(ValueError, setattr, t_split, "category",
                       TransactionCategory.INCOME)
 
+  def test_asset_quantity(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.CASH)
+    session.add(acct)
+    session.commit()
+
+    today = datetime.date.today()
+
+    qty = self.random_decimal(10, 100, precision=18)
+    txn = Transaction(account=acct,
+                      date=today,
+                      statement=self.random_string(),
+                      total=10)
+    t_split = TransactionSplit(parent=txn, total=10, asset_quantity=qty)
+    session.add_all((txn, t_split))
+    session.commit()
+
+    self.assertEqual(qty, t_split.asset_quantity)
+
+    t_split.asset_quantity = None
+    session.commit()
+
+    self.assertIsNone(t_split.asset_quantity)
+
 
 class TestAccount(TestBase):
   """Test Account class
