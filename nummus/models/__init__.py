@@ -3,6 +3,8 @@
 
 from sqlalchemy import exc, orm
 
+from nummus import custom_types as t
+
 from nummus.models.base import Base, BaseEnum, NummusJSONEncoder
 
 from nummus.models.account import (AccountCategory, Account,
@@ -11,6 +13,10 @@ from nummus.models.account import (AccountCategory, Account,
 from nummus.models.asset import AssetValuation, AssetCategory, Asset
 from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
+
+AssetList = t.List[Asset]
+TxnList = t.List[Transaction]
+TxnSplitList = t.List[TransactionSplit]
 
 
 def metadata_create_all(session: orm.Session) -> None:

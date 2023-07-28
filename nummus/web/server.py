@@ -9,9 +9,45 @@ from colorama import Fore
 import connexion
 import flask
 import gevent.pywsgi
+import simplejson
 
 from nummus import models, portfolio
+from nummus import custom_types as t
 from nummus.web import controller_html
+
+
+class NummusJSONProvider(flask.json.provider.JSONProvider):
+  """Custom JSON Provider for nummus models
+
+  Loads and dumps real numbers as Decimals
+  """
+
+  @classmethod
+  def loads(cls, s: str, **kwargs: t.DictAny) -> t.Any:
+    """Deserialize data as JSON
+
+    Args:
+      s: Text to deserialize
+
+    Returns:
+      Deserialized object
+    """
+    return simplejson.loads(s, **kwargs, use_decimal=True)
+
+  @classmethod
+  def dumps(cls, obj: t.Any, **kwargs: t.DictAny) -> str:
+    """Serialize data as JSON
+
+    Args:
+      obj: The data to serialize
+
+    Returns:
+      Serialized object as a string
+    """
+    return simplejson.dumps(obj,
+                            **kwargs,
+                            use_decimal=True,
+                            cls=models.NummusJSONEncoder)
 
 
 class Server:
@@ -50,7 +86,7 @@ class Server:
     # TODO (WattsUp) Fix deprecation warning once connexion updates
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      flask_app.json_encoder = models.NummusJSONEncoder
+      flask_app.json = NummusJSONProvider(flask_app)
 
     self._server = gevent.pywsgi.WSGIServer((host, port), app)
     self._enable_api_ui = enable_api_ui

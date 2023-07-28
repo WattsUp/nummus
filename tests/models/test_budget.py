@@ -36,12 +36,12 @@ class TestBudget(TestBase):
 
     d = {
         "date": today + datetime.timedelta(days=1),
-        "home": self._RNG.uniform(-1, 0),
-        "food": self._RNG.uniform(-1, 0),
-        "shopping": self._RNG.uniform(-1, 0),
-        "hobbies": self._RNG.uniform(-1, 0),
-        "services": self._RNG.uniform(-1, 0),
-        "travel": self._RNG.uniform(-1, 0)
+        "home": self.random_decimal(-1, 0),
+        "food": self.random_decimal(-1, 0),
+        "shopping": self.random_decimal(-1, 0),
+        "hobbies": self.random_decimal(-1, 0),
+        "services": self.random_decimal(-1, 0),
+        "travel": self.random_decimal(-1, 0)
     }
 
     b = budget.Budget(**d)
@@ -58,7 +58,7 @@ class TestBudget(TestBase):
 
     d.pop("date")
     total = sum(d.values())
-    self.assertEqualWithinError(total, b.total, 1e-6)
+    self.assertEqual(total, b.total)
 
     self.assertDictEqual(d, b.categories)
 
@@ -93,12 +93,12 @@ class TestBudget(TestBase):
     self.assertRaises(KeyError, setattr, b, "categories", {"home": 1})
 
     d = {
-        "home": self._RNG.uniform(-1, 0),
-        "food": self._RNG.uniform(-1, 0),
-        "shopping": self._RNG.uniform(-1, 0),
-        "hobbies": self._RNG.uniform(-1, 0),
-        "services": self._RNG.uniform(-1, 0),
-        "travel": self._RNG.uniform(-1, 0)
+        "home": self.random_decimal(-1, 0),
+        "food": self.random_decimal(-1, 0),
+        "shopping": self.random_decimal(-1, 0),
+        "hobbies": self.random_decimal(-1, 0),
+        "services": self.random_decimal(-1, 0),
+        "travel": self.random_decimal(-1, 0)
     }
     b.categories = d
 

@@ -1,17 +1,16 @@
 """Raw CSV importers
 """
 
-import typing as t
-
 import csv
 import datetime
 import io
 
 from nummus import common, models
-from nummus.importers import base
+from nummus import custom_types as t
+from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 
 
-class CSVTransactionImporter(base.TransactionImporter):
+class CSVTransactionImporter(TransactionImporter):
   """Import a CSV of transactions
 
   Required Columns: account,date,total,payee,description
@@ -19,7 +18,7 @@ class CSVTransactionImporter(base.TransactionImporter):
   Other columns are allowed
   """
 
-  _COLUMNS: t.Dict[str, t.Tuple[bool, t.Callable[[str], object]]] = {
+  _COLUMNS: t.Dict[str, t.Tuple[bool, t.StrToObj]] = {
       "account": (True, str),
       "date": (True, datetime.date.fromisoformat),
       "total": (True, common.parse_financial),
@@ -47,13 +46,13 @@ class CSVTransactionImporter(base.TransactionImporter):
         return False
     return True
 
-  def run(self) -> t.List[base.TransactionDict]:
+  def run(self) -> TxnDicts:
     first_line, remaining = self._buf.decode().split("\n", 1)
     first_line = first_line.lower().replace(" ", "_")
     reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))
-    transactions: t.List[base.TransactionDict] = []
+    transactions: TxnDicts = []
     for row in reader:
-      txn: base.TransactionDict = {}
+      txn: TxnDict = {}
       for key, item in self._COLUMNS.items():
         required, cleaner = item
         value = row.get(key)

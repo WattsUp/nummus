@@ -2,9 +2,7 @@
 """
 
 from __future__ import annotations
-import typing as t
 
-import datetime
 import pathlib
 import re
 import shutil
@@ -15,6 +13,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import common, importers, models, sql, version
+from nummus import custom_types as t
 from nummus.models import (Account, Asset, Credentials, Transaction,
                            TransactionSplit)
 
@@ -214,12 +213,12 @@ class Portfolio:
       raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
-    account_mapping: t.Dict[str, str] = {}
-    asset_mapping: t.Dict[str, str] = {}
+    account_mapping: t.DictStr = {}
+    asset_mapping: t.DictStr = {}
     transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
     for d in i.run():
       # Create a single split for each transaction
-      d_split: t.Dict[str, t.Union[str, float, datetime.date, object]] = {
+      d_split: importers.TxnDict = {
           "total": d["total"],  # Both split and parent have total
           "sales_tax": d.pop("sales_tax", None),
           "payee": d.pop("payee", None),
@@ -264,8 +263,7 @@ class Portfolio:
         session.add(t_split)
       session.commit()
 
-  def find_account(self, query: t.Union[int,
-                                        str]) -> t.Union[models.Account, int]:
+  def find_account(self, query: t.IntOrStr) -> int:
     """Find a matching Account by name, UUID, institution, or ID
 
     Args:
@@ -300,7 +298,7 @@ class Portfolio:
           return matches[0].id
     return None
 
-  def find_asset(self, query: t.Union[int, str]) -> int:
+  def find_asset(self, query: t.IntOrStr) -> int:
     """Find a matching Asset by name, UUID, or ID
 
     Args:
@@ -349,7 +347,7 @@ class Portfolio:
     path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
     with tarfile.open(path_backup, "w:gz") as tar:
-      files: t.List[pathlib.Path] = [self._path_db, self._path_config]
+      files: t.Paths = [self._path_db, self._path_config]
 
       # Get every image
       with self.get_session() as s:

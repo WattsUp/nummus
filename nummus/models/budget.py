@@ -4,16 +4,16 @@ categories
 All number are annual allocations
 """
 
-import typing as t
-
-import datetime
-
 from sqlalchemy import orm
 
-from nummus.models import base
+from nummus import custom_types as t
+from nummus.models.base import Base, Decimal6
+
+ORMBudget = orm.Mapped["Budget"]
+ORMBudgetOpt = orm.Mapped[t.Optional["Budget"]]
 
 
-class Budget(base.Base):
+class Budget(Base):
   """Budget model for storing an allocation of cash flow transactions by
   categories
 
@@ -28,16 +28,16 @@ class Budget(base.Base):
 
   _PROPERTIES_DEFAULT = ["uuid", "date", "total", "categories"]
 
-  date: orm.Mapped[datetime.date] = orm.mapped_column(unique=True)
-  home: orm.Mapped[float] = orm.mapped_column(default=0)
-  food: orm.Mapped[float] = orm.mapped_column(default=0)
-  shopping: orm.Mapped[float] = orm.mapped_column(default=0)
-  hobbies: orm.Mapped[float] = orm.mapped_column(default=0)
-  services: orm.Mapped[float] = orm.mapped_column(default=0)
-  travel: orm.Mapped[float] = orm.mapped_column(default=0)
+  date: t.ORMDate = orm.mapped_column(unique=True)
+  home: t.ORMReal = orm.mapped_column(Decimal6, default=0)
+  food: t.ORMReal = orm.mapped_column(Decimal6, default=0)
+  shopping: t.ORMReal = orm.mapped_column(Decimal6, default=0)
+  hobbies: t.ORMReal = orm.mapped_column(Decimal6, default=0)
+  services: t.ORMReal = orm.mapped_column(Decimal6, default=0)
+  travel: t.ORMReal = orm.mapped_column(Decimal6, default=0)
 
   @property
-  def categories(self) -> t.Dict[str, float]:
+  def categories(self) -> t.DictReal:
     """Categorical breakdown of total
     """
     return {
@@ -50,7 +50,7 @@ class Budget(base.Base):
     }
 
   @orm.validates("home", "food", "shopping", "hobbies", "services", "travel")
-  def validate_category(self, key: str, field: float) -> float:
+  def validate_category(self, key: str, field: t.Real) -> t.Real:
     """Validate budget amounts are <= 0
 
     Args:
@@ -68,7 +68,7 @@ class Budget(base.Base):
     return field
 
   @categories.setter
-  def categories(self, data: t.Dict[str, float]) -> None:
+  def categories(self, data: t.DictReal) -> None:
     keys = self.categories.keys()
     if keys != data.keys():
       raise KeyError(f"Categories must have these keys: {keys}")
@@ -76,7 +76,7 @@ class Budget(base.Base):
       setattr(self, f"{k}", v)
 
   @property
-  def total(self) -> float:
+  def total(self) -> t.Real:
     """Total budget
     """
     return sum(self.categories.values())

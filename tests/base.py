@@ -1,6 +1,7 @@
 """Test base class
 """
 
+from decimal import Decimal
 import pathlib
 import shutil
 import string
@@ -13,6 +14,7 @@ import numpy as np
 from sqlalchemy import orm, pool
 
 from nummus import sql
+from nummus import custom_types as t
 
 from tests import TEST_LOG
 
@@ -37,6 +39,34 @@ class TestBase(unittest.TestCase):
       Random string
     """
     return "".join(list(cls._RNG.choice(list(string.ascii_letters), length)))
+
+  @classmethod
+  def random_decimal(cls,
+                     low: t.Union[str, float, t.Real],
+                     high: t.Union[str, float, t.Real],
+                     precision: int = 6,
+                     size: int = 1) -> t.Union[t.Real, t.Reals]:
+    """Generate a random decimal from a uniform distribution
+
+    Args:
+      low: lower bound
+      high: upper bound
+      precision: Digits to round to
+      size: number of Decimals to generate
+
+    Returns:
+      Decimal between bounds rounded to precision
+    """
+    if size > 1:
+      return [cls.random_decimal(low, high, precision) for _ in range(size)]
+    d_low = round(Decimal(low), precision)
+    d_high = round(Decimal(high), precision)
+    result = round(Decimal(cls._RNG.uniform(d_low, d_high)), precision)
+    if result <= d_low:
+      return d_low
+    if result >= d_high:
+      return d_high
+    return result
 
   def get_session(self) -> orm.Session:
     """Obtain a test sql session
@@ -83,6 +113,7 @@ class TestBase(unittest.TestCase):
         error = np.abs(real / target - 1)
       self.assertLessEqual(error, threshold, msg)
     else:
+      # Decimals included here since their math should be immune from FP error
       self.assertEqual(target, real, msg)
 
   def setUp(self, clean: bool = True):
@@ -93,7 +124,7 @@ class TestBase(unittest.TestCase):
 
     # Remove sleeping by default, mainly in read hardware interaction
     self._original_sleep = time.sleep
-    time.sleep = lambda *args: None
+    time.sleep = lambda *_: None
 
     self._test_start = time.perf_counter()
 

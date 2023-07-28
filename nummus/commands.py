@@ -1,14 +1,13 @@
 """Command line interface commands
 """
 
-import typing as t
-
 import pathlib
 
 import colorama
 from colorama import Fore
 
 from nummus import common, portfolio, web
+from nummus import custom_types as t
 
 colorama.init(autoreset=True)
 
@@ -178,7 +177,7 @@ def clean(p: portfolio.Portfolio) -> int:
   return 0
 
 
-def import_files(p: portfolio.Portfolio, paths: t.List[str]) -> int:
+def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
   """Import a list of files or directories into a portfolio
 
   Args:

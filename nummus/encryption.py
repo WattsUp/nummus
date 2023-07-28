@@ -6,6 +6,7 @@ import base64
 import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
+from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Hash import SHA256
 
 from nummus import common
@@ -43,7 +44,7 @@ class Encryption:
       key = self.salted_key
     return SHA256.new(key).digest()
 
-  def _get_aes(self, iv) -> Crypto.Cipher:
+  def _get_aes(self, iv) -> CbcMode:
     """Get AES cipher from digest key and initialization vector
 
     Args:

@@ -12,6 +12,7 @@
     "poolclass",
     "pycryptodome",
     "robo-advising",
+    "simplejson",
     "thefuzz",
     "uselist",
     "werkzeug",

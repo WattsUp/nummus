@@ -1,12 +1,11 @@
 """Credential model for storing a user/password set for a site
 """
 
-from sqlalchemy import orm
+from nummus import custom_types as t
+from nummus.models.base import Base
 
-from nummus.models import base
 
-
-class Credentials(base.Base):
+class Credentials(Base):
   """Credential model for storing a user/password set for a site
 
   Attributes:
@@ -18,6 +17,6 @@ class Credentials(base.Base):
   _PROPERTIES_DEFAULT = ["id", "site", "user"]
   _PROPERTIES_HIDDEN = ["password"]
 
-  site: orm.Mapped[str]
-  user: orm.Mapped[str]
-  password: orm.Mapped[str]
+  site: t.ORMStr
+  user: t.ORMStr
+  password: t.ORMStr

@@ -1,15 +1,14 @@
 """Test module nummus.web.controller_transactions
 """
 
-import typing as t
-
 import datetime
-import json
 import uuid
+
+import simplejson
 
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            NummusJSONEncoder, Transaction, TransactionCategory,
-                           TransactionSplit)
+                           TransactionSplit, TxnList)
 
 from tests.web.base import WebTestBase
 
@@ -34,7 +33,7 @@ class TestControllerTransactions(WebTestBase):
       asset_uuid = asset.uuid
 
     # Make the minimum
-    total = float(self._RNG.uniform(-10, 10))
+    total = self.random_decimal(-10, 10)
     statement = self.random_string()
     req = {
         "account_uuid": acct_uuid,
@@ -54,15 +53,16 @@ class TestControllerTransactions(WebTestBase):
 
       self.assertEqual(acct, txn.account)
       self.assertEqual(today, txn.date)
-      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(total, txn.total)
       self.assertEqual(statement, txn.statement)
       self.assertTrue(txn.locked, "Transaction is not locked")
       self.assertEqual(1, len(txn.splits))
       t_split = txn.splits[0]
-      self.assertEqualWithinError(total, t_split.total, 1e-6)
+      self.assertEqual(total, t_split.total)
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
       s.delete(t_split)
       s.delete(txn)
@@ -70,15 +70,15 @@ class TestControllerTransactions(WebTestBase):
     self.assertDictEqual(target, result)
 
     # Make the maximum
-    total = float(self._RNG.uniform(-10, 0))
-    sales_tax = float(self._RNG.uniform(-10, 0))
+    total = self.random_decimal(-10, 0)
+    sales_tax = self.random_decimal(-10, 0)
     statement = self.random_string()
     payee = self.random_string()
     description = self.random_string()
     category = TransactionCategory.FOOD
     subcategory = self.random_string()
     tag = self.random_string()
-    asset_qty = float(self._RNG.uniform(-1, 1))
+    asset_qty = self.random_decimal(-1, 1)
     req_split = {
         "total": total,
         "sales_tax": sales_tax,
@@ -106,13 +106,13 @@ class TestControllerTransactions(WebTestBase):
 
       self.assertEqual(acct, txn.account)
       self.assertEqual(today, txn.date)
-      self.assertEqualWithinError(total, txn.total, 1e-6)
+      self.assertEqual(total, txn.total)
       self.assertEqual(statement, txn.statement)
       self.assertTrue(txn.locked, "Transaction is not locked")
       self.assertEqual(1, len(txn.splits))
       t_split = txn.splits[0]
-      self.assertEqualWithinError(total, t_split.total, 1e-6)
-      self.assertEqualWithinError(sales_tax, t_split.sales_tax, 1e-6)
+      self.assertEqual(total, t_split.total)
+      self.assertEqual(sales_tax, t_split.sales_tax)
       self.assertEqual(payee, t_split.payee)
       self.assertEqual(description, t_split.description)
       self.assertEqual(category, t_split.category)
@@ -122,7 +122,8 @@ class TestControllerTransactions(WebTestBase):
       self.assertEqual(asset_qty, t_split.asset_quantity)
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -172,7 +173,10 @@ class TestControllerTransactions(WebTestBase):
       s.add_all((txn, t_split))
       s.commit()
       t_uuid = txn.uuid
-      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Get by uuid
@@ -201,7 +205,10 @@ class TestControllerTransactions(WebTestBase):
       s.add_all((txn, t_split))
       s.commit()
       t_uuid = txn.uuid
-      target = json.loads(json.dumps(txn, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(txn, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/transactions/{t_uuid}"
 
     # Update
@@ -402,7 +409,7 @@ class TestControllerTransactions(WebTestBase):
       acct_invest_uuid = acct_invest.uuid
       asset_uuid = asset.uuid
 
-      transactions: t.List[Transaction] = []
+      transactions: TxnList = []
       for category in [
           TransactionCategory.HOME, TransactionCategory.FOOD,
           TransactionCategory.SHOPPING, TransactionCategory.HOBBIES,
@@ -448,7 +455,11 @@ class TestControllerTransactions(WebTestBase):
       # Sort by date, then parent, then id
       query = s.query(TransactionSplit).join(Transaction).order_by(
           Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
-      t_splits = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+      # Serialize then deserialize
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      t_splits = simplejson.loads(json_s, use_decimal=True)
       n_splits = len(t_splits)
     endpoint = "/api/transactions"
 

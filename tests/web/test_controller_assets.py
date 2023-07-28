@@ -2,7 +2,8 @@
 """
 
 import datetime
-import json
+
+import simplejson
 
 from nummus.models import (Asset, AssetCategory, AssetValuation,
                            NummusJSONEncoder)
@@ -29,7 +30,8 @@ class TestControllerAssets(WebTestBase):
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
       s.delete(a)
       s.commit()
@@ -53,7 +55,8 @@ class TestControllerAssets(WebTestBase):
       self.assertEqual(f"/api/assets/{a.uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -76,7 +79,10 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/assets/{a_uuid}"
 
     # Get by uuid
@@ -93,7 +99,10 @@ class TestControllerAssets(WebTestBase):
       s.commit()
 
       a_uuid = a.uuid
-      target = json.loads(json.dumps(a, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(a, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/assets/{a_uuid}"
 
     # Update by uuid
@@ -132,7 +141,7 @@ class TestControllerAssets(WebTestBase):
 
       for _ in range(n_valuations):
         v = AssetValuation(asset=a,
-                           value=float(self._RNG.uniform(0, 10)),
+                           value=self.random_decimal(0, 10),
                            date=today)
         s.add(v)
       s.commit()
@@ -169,7 +178,11 @@ class TestControllerAssets(WebTestBase):
       s.add_all((a_banana, a_banana_inc))
       s.commit()
       query = s.query(Asset)
-      assets = json.loads(json.dumps(query.all(), cls=NummusJSONEncoder))
+      # Serialize then deserialize
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      assets = simplejson.loads(json_s, use_decimal=True)
     endpoint = "/api/assets"
 
     # Get all
@@ -353,13 +366,13 @@ class TestControllerAssets(WebTestBase):
 
       v_today = AssetValuation(asset=a,
                                date=today,
-                               value=self._RNG.uniform(-1, 1))
+                               value=self.random_decimal(-1, 1))
       v_before = AssetValuation(asset=a,
                                 date=today - datetime.timedelta(days=2),
-                                value=self._RNG.uniform(-1, 1))
+                                value=self.random_decimal(-1, 1))
       v_after = AssetValuation(asset=a,
                                date=today + datetime.timedelta(days=2),
-                               value=self._RNG.uniform(-1, 1))
+                               value=self.random_decimal(-1, 1))
       s.add_all((v_today, v_before, v_after))
       s.commit()
 

@@ -1,13 +1,12 @@
 """Transaction API Controller
 """
 
-import typing as t
-
 import datetime
 
 import flask
 
 from nummus import portfolio
+from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Transaction, TransactionCategory, TransactionSplit)
 from nummus.web import common
@@ -23,16 +22,16 @@ def create() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  req: t.Dict[str, object] = flask.request.json
+  req: t.JSONObj = flask.request.json
   account_uuid = req["account_uuid"]
   date = common.parse_date(req["date"])
   locked = req["locked"]
   statement = req["statement"]
   total = req["total"]
 
-  req_splits: t.List[t.Dict[str, object]] = []
+  req_splits: t.List[t.JSONObj] = []
   for split in req["splits"]:
-    split: t.Dict[str, object]
+    split: t.JSONObj
     req_splits.append({
         "total": split["total"],
         "sales_tax": split.get("sales_tax"),
@@ -102,8 +101,8 @@ def update(transaction_uuid: str) -> flask.Response:
   with p.get_session() as s:
     txn = common.find_transaction(s, transaction_uuid)
 
-    req: t.Dict[str, object] = flask.request.json
-    d: t.Dict[str, object] = {}
+    req: t.JSONObj = flask.request.json
+    d: t.JSONObj = {}
     acct = common.find_account(s, req["account_uuid"])
     d["account_id"] = acct.id
     d["date"] = common.parse_date(req["date"])
@@ -111,7 +110,7 @@ def update(transaction_uuid: str) -> flask.Response:
     d["statement"] = req["statement"]
     d["locked"] = req["locked"]
 
-    req_splits: t.List[t.Dict[str, object]] = req["splits"]
+    req_splits: t.List[t.JSONObj] = req["splits"]
     n_split = len(req_splits)
     if n_split < 1:
       raise HTTPError(422,
@@ -131,7 +130,7 @@ def update(transaction_uuid: str) -> flask.Response:
         s.delete(t_split)
 
     for t_split, req_split in zip(txn.splits, req_splits):
-      d_split: t.Dict[str, object] = {}
+      d_split: t.JSONObj = {}
       d_split["total"] = req_split["total"]
       d_split["sales_tax"] = req_split.get("sales_tax")
       d_split["payee"] = req_split.get("payee")
@@ -177,7 +176,7 @@ def delete(transaction_uuid: str) -> flask.Response:
     return None
 
 
-def get_all(request_args: t.Dict[str, object] = None) -> flask.Response:
+def get_all(request_args: t.JSONObj = None) -> flask.Response:
   """GET /api/transactions
 
   Args:

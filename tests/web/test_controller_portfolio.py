@@ -3,7 +3,9 @@
 
 import calendar
 import datetime
+from decimal import Decimal
 
+from nummus import common
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            AssetValuation, Budget, Transaction,
                            TransactionCategory, TransactionSplit)
@@ -46,7 +48,7 @@ class TestControllerPortfolio(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_checking,
                           date=today,
-                          total=self._RNG.uniform(-10, -1),
+                          total=self.random_decimal(-10, -1),
                           statement=self.random_string())
         t_split = TransactionSplit(total=txn.total, parent=txn)
         s.add_all((txn, t_split))
@@ -54,49 +56,49 @@ class TestControllerPortfolio(WebTestBase):
       for _ in range(n_transactions):
         txn = Transaction(account=acct_savings,
                           date=today,
-                          total=self._RNG.uniform(1, 10),
+                          total=self.random_decimal(1, 10),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total, parent=txn)
         t_split_1 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_apple,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          0.001, 0.01))
         s.add_all((txn, t_split_0, t_split_1))
 
       for _ in range(n_transactions):
         txn = Transaction(account=acct_invest,
                           date=today,
-                          total=self._RNG.uniform(-10, -1),
+                          total=self.random_decimal(-10, -1),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_banana,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          100, 1000))
         t_split_1 = TransactionSplit(total=txn.total,
                                      parent=txn,
                                      asset=a_apple,
-                                     asset_quantity=self._RNG.uniform(
+                                     asset_quantity=self.random_decimal(
                                          100, 1000))
         s.add_all((txn, t_split_0, t_split_1))
 
       b = Budget(date=today,
-                 home=self._RNG.uniform(-100, 0),
-                 food=self._RNG.uniform(-100, 0),
-                 shopping=self._RNG.uniform(-100, 0),
-                 hobbies=self._RNG.uniform(-100, 0),
-                 services=self._RNG.uniform(-100, 0),
-                 travel=self._RNG.uniform(-100, 0))
+                 home=self.random_decimal(-100, 0),
+                 food=self.random_decimal(-100, 0),
+                 shopping=self.random_decimal(-100, 0),
+                 hobbies=self.random_decimal(-100, 0),
+                 services=self.random_decimal(-100, 0),
+                 travel=self.random_decimal(-100, 0))
       s.add(b)
 
       b = Budget(date=today + datetime.timedelta(days=2),
-                 home=self._RNG.uniform(-100, 0),
-                 food=self._RNG.uniform(-100, 0),
-                 shopping=self._RNG.uniform(-100, 0),
-                 hobbies=self._RNG.uniform(-100, 0),
-                 services=self._RNG.uniform(-100, 0),
-                 travel=self._RNG.uniform(-100, 0))
+                 home=self.random_decimal(-100, 0),
+                 food=self.random_decimal(-100, 0),
+                 shopping=self.random_decimal(-100, 0),
+                 hobbies=self.random_decimal(-100, 0),
+                 services=self.random_decimal(-100, 0),
+                 travel=self.random_decimal(-100, 0))
       s.add(b)
       s.commit()
 
@@ -129,7 +131,7 @@ class TestControllerPortfolio(WebTestBase):
         "liabilities": [liabilities],
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
     target = {
@@ -139,7 +141,7 @@ class TestControllerPortfolio(WebTestBase):
         "dates": [yesterday.isoformat(),
                   today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -169,7 +171,7 @@ class TestControllerPortfolio(WebTestBase):
         "liabilities": [liabilities],
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
   def test_get_value_by_account(self):
     p = self._portfolio
@@ -198,7 +200,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
     target = {
@@ -209,7 +211,7 @@ class TestControllerPortfolio(WebTestBase):
         "dates": [yesterday.isoformat(),
                   today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -237,7 +239,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
   def test_get_value_by_category(self):
     p = self._portfolio
@@ -273,7 +275,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
     target = {
@@ -284,7 +286,7 @@ class TestControllerPortfolio(WebTestBase):
         "dates": [yesterday.isoformat(),
                   today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -320,7 +322,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": today})
     target = {
@@ -330,7 +332,7 @@ class TestControllerPortfolio(WebTestBase):
         "dates": [yesterday.isoformat(),
                   today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Only SECURITIES
     with p.get_session() as s:
@@ -357,7 +359,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -405,7 +407,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": tomorrow})
     target = {
@@ -421,7 +423,7 @@ class TestControllerPortfolio(WebTestBase):
             tomorrow.isoformat()
         ]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {
         "start": yesterday,
@@ -441,7 +443,7 @@ class TestControllerPortfolio(WebTestBase):
             tomorrow.isoformat()
         ]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -475,7 +477,7 @@ class TestControllerPortfolio(WebTestBase):
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
   def test_get_budget(self):
     p = self._portfolio
@@ -518,8 +520,8 @@ class TestControllerPortfolio(WebTestBase):
       d = b_future.date
       month_len_future = calendar.monthrange(d.year, d.month)[1]
 
-      daily_factor_today = 1 / (12 * month_len_today)
-      daily_factor_future = 1 / (12 * month_len_future)
+      daily_factor_today = 1 / Decimal(12 * month_len_today)
+      daily_factor_future = 1 / Decimal(12 * month_len_future)
 
       budget_categorized_today = {
           enum_to_str(cat): v * daily_factor_today
@@ -544,23 +546,27 @@ class TestControllerPortfolio(WebTestBase):
         "outflow_categorized": {
             cat: [v] for cat, v in outflow_categorized.items()
         },
-        "target": [budget_today],
+        "target": common.round_list([budget_today]),
         "target_categorized": {
-            cat: [v] for cat, v in budget_categorized_today.items()
+            cat: common.round_list([v])
+            for cat, v in budget_categorized_today.items()
         },
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {"start": yesterday, "end": future})
     target = {
-        "outflow": [0, outflow, 0, 0],
+        "outflow": [Decimal(0), outflow,
+                    Decimal(0), Decimal(0)],
         "outflow_categorized": {
-            cat: [0, v, 0, 0] for cat, v in outflow_categorized.items()
+            cat: [Decimal(0), v, Decimal(0),
+                  Decimal(0)] for cat, v in outflow_categorized.items()
         },
-        "target": [0, budget_today, budget_today, budget_future],
+        "target":
+            common.round_list([0, budget_today, budget_today, budget_future]),
         "target_categorized": {
-            cat: [0, v0, v0, v1]
+            cat: common.round_list([0, v0, v0, v1])
             for cat, v0, v1 in zip(budget_categorized_today.keys(),
                                    budget_categorized_today.values(),
                                    budget_categorized_future.values())
@@ -572,7 +578,7 @@ class TestControllerPortfolio(WebTestBase):
             future.isoformat()
         ]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Validate sum(month) == annual / 12
     next_month = datetime.date(future.year + ((future.month + 1) // 12),
@@ -581,15 +587,13 @@ class TestControllerPortfolio(WebTestBase):
         next_month.year, next_month.month,
         calendar.monthrange(next_month.year, next_month.month)[1])
     result, _ = self.api_get(endpoint, {"start": next_month, "end": eom})
-    self.assertEqualWithinError(budget_future_annual / 12,
-                                sum(result["target"]), 1e-6)
+    self.assertEqual(round(budget_future_annual / 12, 6), sum(result["target"]))
 
     # Validate sum(year) == annual
     next_year = datetime.date(next_month.year + 1, 1, 1)
     eoy = datetime.date(next_month.year + 1, 12, 31)
     result, _ = self.api_get(endpoint, {"start": next_year, "end": eoy})
-    self.assertEqualWithinError(budget_future_annual, sum(result["target"]),
-                                1e-6)
+    self.assertEqual(budget_future_annual, sum(result["target"]))
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)
@@ -604,16 +608,17 @@ class TestControllerPortfolio(WebTestBase):
         "integrate": True
     })
     target = {
-        "outflow": [0, outflow, outflow, outflow],
+        "outflow": [Decimal(0), outflow, outflow, outflow],
         "outflow_categorized": {
-            cat: [0, v, v, v] for cat, v in outflow_categorized.items()
+            cat: [Decimal(0), v, v, v] for cat, v in outflow_categorized.items()
         },
-        "target": [
-            0, budget_today, budget_today + budget_today,
-            budget_today + budget_today + budget_future
-        ],
+        "target":
+            common.round_list([
+                0, budget_today, budget_today + budget_today,
+                budget_today + budget_today + budget_future
+            ]),
         "target_categorized": {
-            cat: [0, v0, v0 + v0, v0 + v0 + v1]
+            cat: common.round_list([0, v0, v0 + v0, v0 + v0 + v1])
             for cat, v0, v1 in zip(budget_categorized_today.keys(),
                                    budget_categorized_today.values(),
                                    budget_categorized_future.values())
@@ -625,7 +630,7 @@ class TestControllerPortfolio(WebTestBase):
             future.isoformat()
         ]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
   def test_get_emergency_fund(self):
     p = self._portfolio
@@ -662,7 +667,7 @@ class TestControllerPortfolio(WebTestBase):
         "upper_balance": [outflow],
         "dates": [today.isoformat()]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     result, _ = self.api_get(endpoint, {
         "lower": 1,
@@ -681,7 +686,7 @@ class TestControllerPortfolio(WebTestBase):
             future.isoformat()
         ]
     }
-    self.assertEqualWithinError(target, result, 1e-6)
+    self.assertDictEqual(target, result)
 
     # Invalid date filters
     self.api_get(endpoint, {"start": today, "end": yesterday}, rc=422)

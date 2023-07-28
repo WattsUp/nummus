@@ -1,10 +1,10 @@
 """Test module nummus.web.controller_budgets
 """
 
-import typing as t
-
 import datetime
-import json
+
+import simplejson
+
 from nummus.models import Budget, NummusJSONEncoder
 
 from tests.web.base import WebTestBase
@@ -18,12 +18,12 @@ class TestControllerBudgets(WebTestBase):
     p = self._portfolio
 
     date = datetime.date.today()
-    home = float(self._RNG.uniform(-100, 0))
-    food = float(self._RNG.uniform(-100, 0))
-    shopping = float(self._RNG.uniform(-100, 0))
-    hobbies = float(self._RNG.uniform(-100, 0))
-    services = float(self._RNG.uniform(-100, 0))
-    travel = float(self._RNG.uniform(-100, 0))
+    home = self.random_decimal(-100, 0)
+    food = self.random_decimal(-100, 0)
+    shopping = self.random_decimal(-100, 0)
+    hobbies = self.random_decimal(-100, 0)
+    services = self.random_decimal(-100, 0)
+    travel = self.random_decimal(-100, 0)
 
     # Make the minimum
     req = {
@@ -41,13 +41,16 @@ class TestControllerBudgets(WebTestBase):
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
       b = s.query(Budget).first()
-      self.assertEqual(f"/api/budgets/{b.uuid}", headers["Location"])
+      b_uuid = b.uuid
+      self.assertEqual(f"/api/budgets/{b_uuid}", headers["Location"])
 
       # Serialize then deserialize
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
 
       s.delete(b)
       s.commit()
+
     self.assertDictEqual(target, result)
 
     # Fewer keys are bad
@@ -71,7 +74,10 @@ class TestControllerBudgets(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Get by uuid
@@ -89,12 +95,15 @@ class TestControllerBudgets(WebTestBase):
       s.commit()
 
       b_uuid = b.uuid
-      target = json.loads(json.dumps(b, cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(b, cls=NummusJSONEncoder, use_decimal=True)
+      target = simplejson.loads(json_s, use_decimal=True)
     endpoint = f"/api/budgets/{b_uuid}"
 
     # Update by uuid
     new_date = today - datetime.timedelta(days=1)
-    new_home = float(self._RNG.uniform(-100, 0))
+    new_home = self.random_decimal(-100, 0)
     target["date"] = new_date.isoformat()
     target["categories"]["home"] = new_home
     target["total"] = new_home
@@ -105,7 +114,7 @@ class TestControllerBudgets(WebTestBase):
     with p.get_session() as s:
       b = s.query(Budget).where(Budget.uuid == b_uuid).first()
       self.assertEqual(new_date, b.date)
-      self.assertEqualWithinError(new_home, b.home, 1e-6)
+      self.assertEqual(new_home, b.home)
     self.assertEqual(target, result)
 
     # Read only properties
@@ -154,8 +163,12 @@ class TestControllerBudgets(WebTestBase):
       s.add_all((b_today, b_yesterday))
       s.commit()
       query = s.query(Budget).order_by(Budget.date)
-      budgets: t.List[t.Dict[str, object]] = json.loads(
-          json.dumps(query.all(), cls=NummusJSONEncoder))
+
+      # Serialize then deserialize
+      json_s = simplejson.dumps(query.all(),
+                                cls=NummusJSONEncoder,
+                                use_decimal=True)
+      budgets = simplejson.loads(json_s, use_decimal=True)
     endpoint = "/api/budgets"
 
     # Get all

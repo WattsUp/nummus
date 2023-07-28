@@ -3,7 +3,7 @@
 
 import pathlib
 
-from nummus.importers.base import TransactionImporter
+from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 from nummus.importers.raw_csv import CSVTransactionImporter
 
 

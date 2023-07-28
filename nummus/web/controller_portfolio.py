@@ -1,17 +1,17 @@
 """Portfolio API Controller
 """
 
-import typing as t
-
 import calendar
 import datetime
+from decimal import Decimal
 
 import flask
 
-from nummus import portfolio
+from nummus import common, portfolio
+from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Budget, TransactionCategory)
-from nummus.web import common
+from nummus.web import common as web_common
 from nummus.web.common import HTTPError
 
 # TODO (WattsUp) If other features use this data, move to Portfolio
@@ -28,10 +28,10 @@ def get_value() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  args: t.JSONObj = flask.request.args.to_dict()
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -41,15 +41,15 @@ def get_value() -> flask.Response:
       query = query.where(Account.category == category)
 
     # Prepare dates
-    dates: t.List[datetime.date] = []
+    dates: t.Dates = []
     date = start
     while date <= end:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
-    assets: t.List[float] = [0] * len(dates)
-    liabilities: t.List[float] = [0] * len(dates)
+    total: t.Reals = [Decimal(0)] * len(dates)
+    assets: t.Reals = [Decimal(0)] * len(dates)
+    liabilities: t.Reals = [Decimal(0)] * len(dates)
 
     for acct in query.all():
       acct: Account
@@ -80,10 +80,10 @@ def get_value_by_account() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  args: t.JSONObj = flask.request.args.to_dict()
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -93,14 +93,14 @@ def get_value_by_account() -> flask.Response:
       query = query.where(Account.category == category)
 
     # Prepare dates
-    dates: t.List[datetime.date] = []
+    dates: t.Dates = []
     date = start
     while date <= end:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
-    accounts: t.Dict[str, t.List[float]] = {}
+    total: t.Reals = [Decimal(0)] * len(dates)
+    accounts: t.DictReals = {}
 
     for acct in query.all():
       acct: Account
@@ -113,8 +113,7 @@ def get_value_by_account() -> flask.Response:
     return flask.jsonify(response)
 
 
-def get_value_by_category(
-    request_args: t.Dict[str, object] = None) -> flask.Response:
+def get_value_by_category(request_args: t.JSONObj = None) -> flask.Response:
   """GET /api/portfolio/value-by-category
 
   Args:
@@ -134,8 +133,8 @@ def get_value_by_category(
   else:
     args = request_args
 
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -143,15 +142,15 @@ def get_value_by_category(
     query = s.query(Account)
 
     # Prepare dates
-    dates: t.List[datetime.date] = []
+    dates: t.Dates = []
     date = start
     while date <= end:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    total: t.List[float] = [0] * len(dates)
-    categories: t.Dict[str, t.List[float]] = {
-        k.name.lower(): [0] * len(dates) for k in AccountCategory
+    total: t.Reals = [Decimal(0)] * len(dates)
+    categories: t.DictReals = {
+        k.name.lower(): [Decimal(0)] * len(dates) for k in AccountCategory
     }
 
     for acct in query.all():
@@ -178,10 +177,10 @@ def get_value_by_asset() -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AssetCategory)
+  args: t.JSONObj = flask.request.args.to_dict()
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AssetCategory)
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
 
@@ -191,16 +190,16 @@ def get_value_by_asset() -> flask.Response:
     q_assets = s.query(Asset.uuid)
     if category is not None:
       q_assets = q_assets.where(Asset.category == category)
-    allowed_assets: t.List[str] = [uuid for uuid, in q_assets.all()]
+    allowed_assets: t.Strings = [uuid for uuid, in q_assets.all()]
 
     # Prepare dates
-    dates: t.List[datetime.date] = []
+    dates: t.Dates = []
     date = start
     while date <= end:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    assets: t.Dict[str, t.List[float]] = {}
+    assets: t.DictReals = {}
 
     for acct in q_accts.all():
       acct: Account
@@ -221,8 +220,7 @@ def get_value_by_asset() -> flask.Response:
 
 
 def get_cash_flow(
-    request_args: t.Dict[str, object] = None
-) -> t.Union[flask.Response, t.Dict[str, object]]:
+    request_args: t.JSONObj = None) -> t.Union[flask.Response, t.JSONObj]:
   """GET /api/portfolio/cash-flow
 
   Args:
@@ -242,9 +240,9 @@ def get_cash_flow(
   else:
     args = request_args
 
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
-  category = common.parse_enum(args.get("category"), AccountCategory)
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
+  category = web_common.parse_enum(args.get("category"), AccountCategory)
   integrate = bool(args.get("integrate", False))
   if end < start:
     raise HTTPError(422, detail="End date must be on or after Start date")
@@ -255,17 +253,19 @@ def get_cash_flow(
       query = query.where(Account.category == category)
 
     # Prepare dates
-    dates: t.List[datetime.date] = []
+    dates: t.Dates = []
     date = start
     while date <= end:
       dates.append(date)
       date += datetime.timedelta(days=1)
 
-    categories: t.Dict[TransactionCategory, t.List[float]] = {
-        cat: [0] * len(dates) for cat in TransactionCategory
+    categories: t.Dict[TransactionCategory, t.Reals] = {
+        cat: [Decimal(0)] * len(dates) for cat in TransactionCategory
     }
-    categories["unknown-inflow"] = [0] * len(dates)  # Category is nullable
-    categories["unknown-outflow"] = [0] * len(dates)  # Category is nullable
+    categories["unknown-inflow"] = [Decimal(0)] * len(
+        dates)  # Category is nullable
+    categories["unknown-outflow"] = [Decimal(0)] * len(
+        dates)  # Category is nullable
 
     for acct in query.all():
       acct: Account
@@ -277,14 +277,14 @@ def get_cash_flow(
 
     if integrate:
       for cat, values in categories.items():
-        integral = 0
+        integral = Decimal(0)
         for i, v in enumerate(values):
           integral += v
           values[i] = integral
 
-    total = [0] * len(dates)
-    inflow = [0] * len(dates)
-    outflow = [0] * len(dates)
+    total = [Decimal(0)] * len(dates)
+    inflow = [Decimal(0)] * len(dates)
+    outflow = [Decimal(0)] * len(dates)
     for cat, values in categories.items():
       for i, v in enumerate(values):
         total[i] += v
@@ -322,22 +322,22 @@ def get_budget() -> flask.Response:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
+  args: t.JSONObj = flask.request.args.to_dict()
   integrate = bool(args.get("integrate", False))
 
   result = get_cash_flow(request_args=args)
 
   to_skip = ["income", "transfer", "instrument", "unknown-inflow"]
 
-  outflow: t.List[float] = result["outflow"]
-  outflow_categorized: t.Dict[str, t.List[float]] = {
+  outflow: t.Reals = result["outflow"]
+  outflow_categorized: t.DictReals = {
       cat: v for cat, v in result["categories"].items() if cat not in to_skip
   }
-  dates: t.List[datetime.date] = result["dates"]
+  dates: t.Dates = result["dates"]
   start = dates[0]
   end = dates[-1]
 
-  target_categorized: t.Dict[str, t.List[float]] = {
+  target_categorized: t.DictReals = {
       cat: [] for cat in outflow_categorized if cat != "unknown-outflow"
   }
 
@@ -346,7 +346,7 @@ def get_budget() -> flask.Response:
 
     date = start
 
-    current_categories = {cat: 0 for cat in target_categorized}
+    current_categories = {cat: Decimal(0) for cat in target_categorized}
     for b in query.all():
       if b.date > end:
         continue
@@ -365,7 +365,7 @@ def get_budget() -> flask.Response:
 
   # Adjust annual budget to daily amounts
   current_month = None
-  daily_factor = 0
+  daily_factor = Decimal(0)
   factors = []
   for date in dates:
     if date.month != current_month:
@@ -373,7 +373,7 @@ def get_budget() -> flask.Response:
       month_len = calendar.monthrange(date.year, date.month)[1]
       # Daily budget = (annual budget) / (12 months) / (days in month)
       # So the sum(budget[any single month]) = annual / 12
-      daily_factor = 1 / (12 * month_len)
+      daily_factor = 1 / Decimal(12 * month_len)
     factors.append(daily_factor)
 
   for cat, values in target_categorized.items():
@@ -381,22 +381,28 @@ def get_budget() -> flask.Response:
 
   if integrate:
     for cat, values in target_categorized.items():
-      integral = 0
+      integral = Decimal(0)
       for i, v in enumerate(values):
         integral += v
         values[i] = integral
 
   # Sum for total
-  target = [0] * len(dates)
+  target = [Decimal(0)] * len(dates)
   for cat, values in target_categorized.items():
     for i, v in enumerate(values):
       target[i] += v
 
+  # Use round_list to limit response precision whilst maintaining
+  # sum(list) = sum(round_list)
+
   response = {
       "outflow": outflow,
       "outflow_categorized": outflow_categorized,
-      "target": target,
-      "target_categorized": target_categorized,
+      "target": common.round_list(target),
+      "target_categorized": {
+          cat: common.round_list(values)
+          for cat, values in target_categorized.items()
+      },
       "dates": dates
   }
 
@@ -411,15 +417,15 @@ def get_emergency_fund() -> flask.Response:
   """
   today = datetime.date.today()
 
-  args: t.Dict[str, object] = flask.request.args.to_dict()
-  start = common.parse_date(args.get("start", today))
-  end = common.parse_date(args.get("end", today))
+  args: t.JSONObj = flask.request.args.to_dict()
+  start = web_common.parse_date(args.get("start", today))
+  end = web_common.parse_date(args.get("end", today))
   lower = int(args.get("lower", 92))  # 3 months
   upper = int(args.get("upper", 183))  # 6 months
 
   result = get_value_by_category(request_args={"start": start, "end": end})
-  actual_balance: t.List[float] = result["categories"]["cash"]
-  dates: t.List[datetime.date] = result["dates"]
+  actual_balance: t.Reals = result["categories"]["cash"]
+  dates: t.Dates = result["dates"]
 
   result = get_cash_flow(request_args={
       "start": start - datetime.timedelta(days=upper),
@@ -429,17 +435,17 @@ def get_emergency_fund() -> flask.Response:
   # TODO (WattsUp) Replace with is_essential
   # Possibly combined with budget?
   to_keep = ["home", "food", "services"]
-  outflow_categorized: t.Dict[str, t.List[float]] = {
+  outflow_categorized: t.DictReals = {
       cat: v for cat, v in result["categories"].items() if cat in to_keep
   }
-  outflow: t.List[float] = [sum(x) for x in zip(*outflow_categorized.values())]
-  cash_flow_dates: t.List[datetime.date] = result["dates"]
+  outflow: t.Reals = [sum(x) for x in zip(*outflow_categorized.values())]
+  cash_flow_dates: t.Dates = result["dates"]
 
-  lower_balance: t.List[float] = []
-  upper_balance: t.List[float] = []
+  lower_balance: t.Reals = []
+  upper_balance: t.Reals = []
 
-  current_lower: t.List[float] = []
-  current_upper: t.List[float] = []
+  current_lower: t.Reals = []
+  current_upper: t.Reals = []
   for i, date in enumerate(cash_flow_dates):
     current_lower.append(outflow[i])
     current_upper.append(outflow[i])

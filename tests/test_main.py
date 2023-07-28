@@ -1,8 +1,6 @@
 """Test module nummus.main
 """
 
-import typing as t
-
 import functools
 import io
 import os
@@ -11,6 +9,7 @@ import subprocess
 from unittest import mock
 
 from nummus import main, commands, portfolio, version
+from nummus import custom_types as t
 
 from tests.base import TestBase
 
@@ -31,8 +30,8 @@ class TestMain(TestBase):
       if callable(value) and value.__module__.startswith("nummus"):
         self._original_commands[name] = value
 
-    self._called_args: t.List[str] = []
-    self._called_kwargs: t.Dict[str, object] = {}
+    self._called_args: t.Strings = []
+    self._called_kwargs: t.DictAny = {}
 
     def check_call(*args, **kwargs):
       self._called_args.clear()

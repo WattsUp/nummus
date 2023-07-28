@@ -2,16 +2,16 @@
 """
 
 from __future__ import annotations
-import typing as t
 
 import datetime
+from decimal import Decimal
 import json
 import uuid
 
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import ForeignKey, orm
 
 from nummus import models
+from nummus import custom_types as t
 from nummus.models import base
 
 from tests.base import TestBase
@@ -31,8 +31,8 @@ class Parent(base.Base):
 
   _PROPERTIES_HIDDEN = ["age"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  generic_column: orm.Mapped[t.Optional[int]]
+  _hidden_column: t.ORMIntOpt
+  generic_column: t.ORMIntOpt
   children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent")
 
@@ -60,7 +60,18 @@ class Parent(base.Base):
   def uuid_bytes(self) -> bytes:
     """Get ID as bytes
     """
-    return self.uuid.encode(encoding="utf-8")
+
+    class Bytes:
+      """Unserializable class
+      """
+
+      def __init__(self, s: str) -> None:
+        self._data = s.encode(encoding="utf-8")
+
+      def __eq__(self, other: Bytes) -> bool:
+        return self._data == other._data
+
+    return Bytes(self.uuid)
 
 
 class ParentHidden(base.Base):
@@ -69,8 +80,8 @@ class ParentHidden(base.Base):
 
   _PROPERTIES_HIDDEN = ["generic_column"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  generic_column: orm.Mapped[t.Optional[int]]
+  _hidden_column: t.ORMIntOpt
+  generic_column: t.ORMIntOpt
   _children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent_hidden")
 
@@ -93,14 +104,15 @@ class Child(base.Base):
 
   _PROPERTIES_DEFAULT = ["uuid", "age"]
 
-  _hidden_column: orm.Mapped[t.Optional[int]]
-  parent_id: orm.Mapped[int] = orm.mapped_column(
-      sqlalchemy.ForeignKey("parent.id"))
+  _hidden_column: t.ORMIntOpt
+  parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id"))
   parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
-  parent_hidden_id: orm.Mapped[t.Optional[int]] = orm.mapped_column(
-      sqlalchemy.ForeignKey("parent_hidden.id"))
+  parent_hidden_id: t.ORMIntOpt = orm.mapped_column(
+      ForeignKey("parent_hidden.id"))
   parent_hidden: orm.Mapped[ParentHidden] = orm.relationship(
       back_populates="_children")
+
+  height: t.ORMRealOpt = orm.mapped_column(base.Decimal6)
 
   _age = 10
 
@@ -150,6 +162,23 @@ class TestORMBase(TestBase):
     self.assertIsNotNone(child.parent_id)
     self.assertIsNone(child.parent_hidden)
     self.assertIsNone(child.parent_hidden_id)
+
+    child.height = None
+    session.commit()
+    self.assertIsNone(child.height)
+
+    height = Decimal("1.2")
+    child.height = height
+    session.commit()
+    self.assertIsInstance(child.height, Decimal)
+    self.assertEqual(height, child.height)
+
+    # Only 6 decimals
+    height = Decimal("1.23456789")
+    child.height = height
+    session.commit()
+    self.assertIsInstance(child.height, Decimal)
+    self.assertEqual(Decimal("1.234567"), child.height)
 
   def test_to_dict(self):
     session = self.get_session()

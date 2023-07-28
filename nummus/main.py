@@ -5,17 +5,16 @@ categorizes transactions, manages budgets, tracks investments, calculates net
 worth, and predicts future performance.
 """
 
-import typing as t
-
 import argparse
 import os
 import pathlib
 import sys
 
 from nummus import version
+from nummus import custom_types as t
 
 
-def main(command_line: t.List[str] = None) -> int:
+def main(command_line: t.Strings = None) -> int:
   """Main program entry
 
   Args:
@@ -160,7 +159,7 @@ calculates net worth, and predicts future performance."""
   elif cmd == "clean":
     return commands.clean(p)
   elif cmd == "import":
-    paths: t.List[str] = args.paths
+    paths: t.Strings = args.paths
     return commands.import_files(p, paths=paths)
   else:
     raise ValueError(f"Unknown command '{cmd}'")  # pragma: no cover
