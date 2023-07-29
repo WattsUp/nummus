@@ -93,13 +93,12 @@ class TransactionSplit(Base):
       Account gained Assets (inflow)
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
-    is_split: True if part of a spit Transaction
   """
 
   _PROPERTIES_DEFAULT = [
       "uuid", "account_uuid", "date", "total", "sales_tax", "payee",
       "description", "category", "subcategory", "tag", "parent_uuid",
-      "asset_uuid", "asset_quantity", "locked", "is_split"
+      "asset_uuid", "asset_quantity", "locked"
   ]
 
   total: t.ORMReal = orm.mapped_column(Decimal6)
@@ -181,12 +180,6 @@ class TransactionSplit(Base):
     return self.parent.locked
 
   @property
-  def is_split(self) -> bool:
-    """True if part of a split Transaction
-    """
-    return self.parent.is_split
-
-  @property
   def asset_quantity(self) -> t.Real:
     """Number of units of Asset exchanged, Positive indicates
     Account gained Assets (inflow)
@@ -221,12 +214,10 @@ class Transaction(Base):
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
     splits: List of TransactionSplits
-    is_split: len(splits) > 1
   """
 
   _PROPERTIES_DEFAULT = [
-      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits",
-      "is_split"
+      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits"
   ]
 
   account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
@@ -244,12 +235,6 @@ class Transaction(Base):
     """UUID of account
     """
     return self.account.uuid
-
-  @property
-  def is_split(self) -> bool:
-    """True if more than one TransactionSplit
-    """
-    return len(self.splits) > 1
 
 
 class AccountCategory(BaseEnum):

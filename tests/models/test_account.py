@@ -52,7 +52,6 @@ class TestTransaction(TestBase):
     d["account_uuid"] = acct.uuid
     d["splits"] = []
     d["locked"] = False
-    d["is_split"] = False
     result = txn.to_dict()
     self.assertDictEqual(d, result)
 
@@ -67,7 +66,6 @@ class TestTransaction(TestBase):
     self.assertEqual(t_split_0.total, result.pop("total"))
     self.assertEqual(acct.uuid, result.pop("account_uuid"))
     self.assertEqual(txn.date.isoformat(), result.pop("date"))
-    self.assertFalse(result.pop("is_split"))
     self.assertFalse(result.pop("locked"))
     self.assertEqual(txn.uuid, result.pop("parent_uuid"))
     # Rest should be None
@@ -99,7 +97,6 @@ class TestTransaction(TestBase):
     d["date"] = txn.date.isoformat()
     d["asset_uuid"] = asset.uuid
     d["parent_uuid"] = txn.uuid
-    d["is_split"] = True
     d["locked"] = False
     result = t_split_1.to_dict()
     self.assertDictEqual(d, result)

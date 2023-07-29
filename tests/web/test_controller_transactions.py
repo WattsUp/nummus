@@ -222,13 +222,11 @@ class TestControllerTransactions(WebTestBase):
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req.pop("uuid")
-    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
     req_split_0.pop("account_uuid")
     req_split_0.pop("date")
     req_split_0.pop("locked")
-    req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
@@ -252,30 +250,24 @@ class TestControllerTransactions(WebTestBase):
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Duplicate split
-    target["is_split"] = True
     target["splits"].append(dict(target["splits"][0]))
     target["splits"][0]["category"] = new_category_0.name.lower()
-    target["splits"][0]["is_split"] = True
     target["splits"][1]["category"] = new_category_1.name.lower()
     target["splits"][1]["asset_uuid"] = asset_uuid
-    target["splits"][1]["is_split"] = True
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req_split_1 = dict(target["splits"][1])
     req.pop("uuid")
-    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
     req_split_0.pop("account_uuid")
     req_split_0.pop("date")
     req_split_0.pop("locked")
-    req_split_0.pop("is_split")
     req_split_1.pop("uuid")
     req_split_1.pop("parent_uuid")
     req_split_1.pop("account_uuid")
     req_split_1.pop("date")
     req_split_1.pop("locked")
-    req_split_1.pop("is_split")
     req["splits"] = [req_split_0, req_split_1]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
@@ -304,20 +296,16 @@ class TestControllerTransactions(WebTestBase):
     target["statement"] = new_statement
     target["date"] = new_date.isoformat()
     # Keep only the second one
-    target["is_split"] = False
     target["splits"] = [target["splits"][1]]
     target["splits"][0]["category"] = new_category_0.name.lower()
-    target["splits"][0]["is_split"] = False
     req = dict(target)
     req_split_0 = dict(target["splits"][0])
     req.pop("uuid")
-    req.pop("is_split")
     req_split_0.pop("uuid")
     req_split_0.pop("parent_uuid")
     req_split_0.pop("account_uuid")
     req_split_0.pop("date")
     req_split_0.pop("locked")
-    req_split_0.pop("is_split")
     req["splits"] = [req_split_0]
     result, _ = self.api_put(endpoint, json=req)
     with p.get_session() as s:
