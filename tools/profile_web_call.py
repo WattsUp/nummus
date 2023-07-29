@@ -87,11 +87,17 @@ def main(command_line: t.Strings = None) -> int:
       response = client.open(url, method="GET")
       duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Reply took {duration:.6}s")
-    print(f"{Fore.CYAN}Server replied with HTTP.{response.status_code}")
 
     if path_response is not None:
       with open(path_response, "wb") as file:
         file.write(response.get_data())
+
+    if response.status_code == 200:
+      print(f"{Fore.GREEN}Server replied with HTTP.200")
+    else:
+      print(response.get_data(as_text=True))
+      print(f"{Fore.RED}Server replied with HTTP.{response.status_code}")
+      return 1
 
   finally:
     if response is not None:

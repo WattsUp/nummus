@@ -277,17 +277,23 @@ class Account(Base):
   def opened_on(self) -> t.Date:
     """Date of first Transaction
     """
-    if len(self.transactions) < 1:
+    s = orm.object_session(self)
+    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
+    date = query.order_by(Transaction.date).first()
+    if date is None:
       return None
-    return self.transactions[0].date
+    return date[0]
 
   @property
   def updated_on(self) -> t.Date:
     """Date of latest Transaction
     """
-    if len(self.transactions) < 1:
+    s = orm.object_session(self)
+    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
+    date = query.order_by(Transaction.date.desc()).first()
+    if date is None:
       return None
-    return self.transactions[-1].date
+    return date[0]
 
   def get_value(self, start: t.Date,
                 end: t.Date) -> t.Tuple[t.Dates, t.Reals, t.DictReals]:
