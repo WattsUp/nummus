@@ -23,7 +23,8 @@ extras_require = {
     "test": ["coverage", "pylint", "numpy"]
 }
 extras_require["dev"] = extras_require["test"] + [
-    "toml", "witch-ver", "yapf>=0.40.0", "swagger-ui-bundle>=0.0.2,<0.1"
+    "toml", "witch-ver", "yapf>=0.40.0", "swagger-ui-bundle>=0.0.2,<0.1",
+    "viztracer"
 ]
 
 setuptools.setup(
