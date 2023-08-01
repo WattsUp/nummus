@@ -6,11 +6,12 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, orm
+import sqlalchemy
+from sqlalchemy import ForeignKey, event, orm
 
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum, Decimal6, Decimal18
-from nummus.models.asset import ORMAsset, DictStrAsset
+from nummus.models.asset import Asset, DictStrAsset
 
 ORMTxn = orm.Mapped["Transaction"]
 ORMTxnList = orm.Mapped[t.List["Transaction"]]
@@ -110,13 +111,24 @@ class TransactionSplit(Base):
   tag: t.ORMStrOpt
 
   parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id"))
-  parent: ORMTxn = orm.relationship(back_populates="splits")
+  parent_uuid: t.ORMStr
+  date: t.ORMDate
+  locked: t.ORMBool
+  account_uuid: t.ORMStr
 
   asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id"))
-  asset: ORMAsset = orm.relationship()
-
+  asset_uuid: t.ORMStrOpt
   _asset_qty_int: t.ORMIntOpt
   _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
+
+  def __setattr__(self, name: str, value: t.Any) -> None:
+    if name in ["parent_id", "parent_uuid", "date", "locked", "account_uuid"]:
+      raise PermissionError("Call TransactionSplit.parent = Transaction. "
+                            "Do not set parent properties directly")
+    if name in ["asset_id", "asset_uuid"]:
+      raise PermissionError("Call TransactionSplit.asset = Asset. "
+                            "Do not set asset properties directly")
+    super().__setattr__(name, value)
 
   @orm.validates("total", "category")
   def validate_category(self, key: str, field: RealOrTxnCat) -> RealOrTxnCat:
@@ -147,39 +159,6 @@ class TransactionSplit(Base):
     return field
 
   @property
-  def parent_uuid(self) -> str:
-    """UUID of parent
-    """
-    return self.parent.uuid
-
-  @property
-  def asset_uuid(self) -> str:
-    """UUID of asset
-    """
-    if self.asset is None:
-      return None
-    return self.asset.uuid
-
-  @property
-  def account_uuid(self) -> str:
-    """UUID of account
-    """
-    return self.parent.account_uuid
-
-  @property
-  def date(self) -> t.Date:
-    """Date on which Transaction occurred
-    """
-    return self.parent.date
-
-  @property
-  def locked(self) -> bool:
-    """True only allows manually editing, False allows automatic changes
-    (namely auto labeling field based on similar Transactions)
-    """
-    return self.parent.locked
-
-  @property
   def asset_quantity(self) -> t.Real:
     """Number of units of Asset exchanged, Positive indicates
     Account gained Assets (inflow)
@@ -197,6 +176,60 @@ class TransactionSplit(Base):
     i, f = divmod(qty, 1)
     self._asset_qty_int = int(i)
     self._asset_qty_frac = f
+
+  @property
+  def parent(self) -> Transaction:
+    """Parent Transaction
+    """
+    s = orm.object_session(self)
+    return s.query(Transaction).where(Transaction.id == self.parent_id).first()
+
+  @parent.setter
+  def parent(self, parent: Transaction) -> None:
+    if parent.id is None:
+      self._parent_tmp = parent
+      return
+    super().__setattr__("parent_id", parent.id)
+    super().__setattr__("parent_uuid", parent.uuid)
+    super().__setattr__("date", parent.date)
+    super().__setattr__("locked", parent.locked)
+    super().__setattr__("account_uuid", parent.account_uuid)
+
+  @property
+  def asset(self) -> Asset:
+    """Asset exchanged for cash, primarily for instrument transactions
+    """
+    if self.asset_id is None:
+      return None
+    s = orm.object_session(self)
+    return s.query(Asset).where(Asset.id == self.asset_id).first()
+
+  @asset.setter
+  def asset(self, asset: Asset) -> None:
+    if asset is None:
+      super().__setattr__("asset_id", None)
+      super().__setattr__("asset_uuid", None)
+      return
+    if asset.id is None:
+      raise ValueError("Commit Asset before adding to split")
+    super().__setattr__("asset_id", asset.id)
+    super().__setattr__("asset_uuid", asset.uuid)
+
+
+@event.listens_for(TransactionSplit, "before_insert")
+def before_insert_transaction_split(
+    mapper: orm.Mapper,  # pylint: disable=unused-argument
+    connection: sqlalchemy.Connection,  # pylint: disable=unused-argument
+    target: TransactionSplit) -> None:
+  """Handle event before insert of TransactionSplit
+
+  Args:
+    target: TransactionSplit being inserted
+  """
+  # If TransactionSplit has parent_tmp set, move it to real parent
+  if hasattr(target, "_parent_tmp"):
+    target.parent = target._parent_tmp  # pylint: disable=protected-access
+    delattr(target, "_parent_tmp")
 
 
 class Transaction(Base):
@@ -221,20 +254,34 @@ class Transaction(Base):
   ]
 
   account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
-  account: ORMAcct = orm.relationship(back_populates="transactions")
+  account_uuid: t.ORMStr
 
   date: t.ORMDate
   total: t.ORMReal = orm.mapped_column(Decimal6)
   statement: t.ORMStr
   locked: t.ORMBool = orm.mapped_column(default=False)
 
-  splits: ORMTxnSplitList = orm.relationship(back_populates="parent")
+  splits: ORMTxnSplitList = orm.relationship()
+
+  def __setattr__(self, name: str, value: t.Any) -> None:
+    if name in ["account_id", "account_uuid"]:
+      raise PermissionError("Call Transaction.account = Account. "
+                            "Do not set account properties directly")
+    super().__setattr__(name, value)
 
   @property
-  def account_uuid(self) -> str:
-    """UUID of account
+  def account(self) -> Account:
+    """Account that owns this Transaction
     """
-    return self.account.uuid
+    s = orm.object_session(self)
+    return s.query(Account).where(Account.id == self.account_id).first()
+
+  @account.setter
+  def account(self, acct: Account) -> None:
+    if acct.id is None:
+      raise ValueError("Commit Account before adding Transaction")
+    super().__setattr__("account_id", acct.id)
+    super().__setattr__("account_uuid", acct.uuid)
 
 
 class AccountCategory(BaseEnum):
@@ -270,8 +317,7 @@ class Account(Base):
   institution: t.ORMStr
   category: ORMAcctCat
 
-  transactions: ORMTxnList = orm.relationship(back_populates="account",
-                                              order_by=Transaction.date)
+  transactions: ORMTxnList = orm.relationship(order_by=Transaction.date)
 
   @property
   def opened_on(self) -> t.Date:
@@ -317,26 +363,31 @@ class Account(Base):
     current_cash = Decimal(0)
     current_qty_assets: t.DictReal = {}
 
-    for transaction in self.transactions:
-      if transaction.date > end:
+    s = orm.object_session(self)
+    query = s.query(TransactionSplit).join(Transaction)
+    query = query.where(Transaction.account_id == self.id)
+    query = query.order_by(Transaction.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      if t_split.date > end:
         continue
-      while date < transaction.date:
+      while date < t_split.date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         cash.append(current_cash)
         date += datetime.timedelta(days=1)
 
-      for split in transaction.splits:
-        a = split.asset
-        if a is None:
-          continue
-        if a.uuid not in current_qty_assets:
-          current_qty_assets[a.uuid] = 0
-          qty_assets[a.uuid] = [0] * len(dates)
-          assets[a.uuid] = a
-        current_qty_assets[a.uuid] += split.asset_quantity
-      current_cash += transaction.total
+      current_cash += t_split.total
+      a = t_split.asset
+      if a is None:
+        continue
+      if a.uuid not in current_qty_assets:
+        current_qty_assets[a.uuid] = 0
+        qty_assets[a.uuid] = [0] * len(dates)
+        assets[a.uuid] = a
+      current_qty_assets[a.uuid] += t_split.asset_quantity
 
     while date <= end:
       for k, v in current_qty_assets.items():
