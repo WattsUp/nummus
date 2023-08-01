@@ -104,11 +104,12 @@ def update(transaction_uuid: str) -> flask.Response:
     req: t.JSONObj = flask.request.json
     d: t.JSONObj = {}
     acct = common.find_account(s, req["account_uuid"])
-    d["account_id"] = acct.id
+    txn.account = acct
     d["date"] = common.parse_date(req["date"])
     d["total"] = req["total"]
     d["statement"] = req["statement"]
     d["locked"] = req["locked"]
+    txn.update(d)
 
     req_splits: t.List[t.JSONObj] = req["splits"]
     n_split = len(req_splits)
@@ -117,19 +118,22 @@ def update(transaction_uuid: str) -> flask.Response:
                       detail="Transaction must have at least one "
                       "TransactionSplit")
 
-    n_split_current = len(txn.splits)
+    txn_splits = txn.splits
+    n_split_current = len(txn_splits)
     if n_split > n_split_current:
       splits = [
           TransactionSplit(parent=txn, total=0)
           for _ in range(n_split - n_split_current)
       ]
       s.add_all(splits)
+      txn_splits.extend(splits)
     elif n_split < n_split_current:
       # Mark the excess ones for deletion
-      for t_split in txn.splits[n_split:]:
+      for t_split in txn_splits[n_split:]:
         s.delete(t_split)
+      txn_splits = txn_splits[:n_split]
 
-    for t_split, req_split in zip(txn.splits, req_splits):
+    for t_split, req_split in zip(txn_splits, req_splits):
       d_split: t.JSONObj = {}
       d_split["total"] = req_split["total"]
       d_split["sales_tax"] = req_split.get("sales_tax")
@@ -141,14 +145,13 @@ def update(transaction_uuid: str) -> flask.Response:
       d_split["tag"] = req_split.get("tag")
 
       asset_uuid = req_split.get("asset_uuid")
-      asset_id = (None if asset_uuid is None else common.find_asset(
-          s, asset_uuid).id)
-      d_split["asset_id"] = asset_id
+      asset = None if asset_uuid is None else common.find_asset(s, asset_uuid)
       d_split["asset_quantity"] = req_split.get("asset_quantity")
 
       t_split.update(d_split)
+      t_split.parent = txn  # Update parent properties
+      t_split.asset = asset  # Update asset properties
 
-    txn.update(d)
     s.commit()
     return flask.jsonify(txn)
 

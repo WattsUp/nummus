@@ -165,7 +165,7 @@ class TestControllerTransactions(WebTestBase):
       s.add(acct)
       s.commit()
 
-      txn = Transaction(account_id=acct.id,
+      txn = Transaction(account=acct,
                         date=today,
                         total=100,
                         statement=self.random_string())
@@ -197,7 +197,7 @@ class TestControllerTransactions(WebTestBase):
       s.commit()
       asset_uuid = asset.uuid
 
-      txn = Transaction(account_id=acct.id,
+      txn = Transaction(account=acct,
                         date=today,
                         total=-100,
                         statement=self.random_string())
@@ -349,7 +349,7 @@ class TestControllerTransactions(WebTestBase):
       s.add(acct)
       s.commit()
 
-      txn = Transaction(account_id=acct.id,
+      txn = Transaction(account=acct,
                         date=today,
                         total=100,
                         statement=self.random_string())
@@ -416,6 +416,7 @@ class TestControllerTransactions(WebTestBase):
                                    tag=self.random_string())
         s.add_all((txn, t_split))
         transactions.append(txn)
+      s.commit()
 
       transactions[-1].account = acct_invest
       transactions[-1].date = yesterday

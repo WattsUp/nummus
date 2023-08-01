@@ -124,7 +124,7 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       for _ in range(n_transactions):
-        txn = Transaction(account_id=acct.id,
+        txn = Transaction(account=acct,
                           date=today,
                           total=100,
                           statement=self.random_string())
@@ -224,7 +224,7 @@ class TestControllerAccounts(WebTestBase):
     n_transactions = 10
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(acct_checking)
+      s.add_all((acct_checking, acct_invest))
       s.commit()
 
       for _ in range(n_transactions):
