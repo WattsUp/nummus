@@ -34,15 +34,18 @@ class TestAssetValuation(TestBase):
 
     self.assertEqual(d["asset_id"], v.asset_id)
     self.assertEqual(a, v.asset)
-    self.assertEqual(a.uuid, v.asset_uuid)
     self.assertEqual(d["value"], v.value)
     self.assertEqual(d["date"], v.date)
 
     # Test default and hidden properties
     d.pop("asset_id")
-    d["asset_uuid"] = a.uuid
     result = v.to_dict()
     self.assertDictEqual(d, result)
+
+    # Set an uncommitted Asset
+    a = asset.Asset(name=self.random_string(),
+                    category=asset.AssetCategory.SECURITY)
+    self.assertRaises(ValueError, setattr, v, "asset", a)
 
 
 class TestAsset(TestBase):

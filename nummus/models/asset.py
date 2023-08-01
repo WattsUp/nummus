@@ -34,19 +34,25 @@ class AssetValuation(Base):
     value: Value of assert
   """
 
-  _PROPERTIES_DEFAULT = ["asset_uuid", "value", "multiplier", "date"]
+  _PROPERTIES_DEFAULT = ["value", "date"]
   _PROPERTIES_HIDDEN = ["id", "uuid"]
 
   asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
-  asset: ORMAsset = orm.relationship()
   value: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
 
   @property
-  def asset_uuid(self) -> str:
-    """UUID of asset
+  def asset(self) -> Asset:
+    """Asset for which this AssetValuation is for
     """
-    return self.asset.uuid
+    s = orm.object_session(self)
+    return s.query(Asset).where(Asset.id == self.asset_id).first()
+
+  @asset.setter
+  def asset(self, asset: Asset) -> None:
+    if asset.id is None:
+      raise ValueError("Commit Asset before adding to split")
+    super().__setattr__("asset_id", asset.id)
 
 
 class AssetCategory(BaseEnum):
@@ -83,8 +89,7 @@ class Asset(Base):
   img_suffix: t.ORMStrOpt
 
   # TODO (WattsUp) Move to write only relationship if too slow
-  valuations: ORMAssetValList = orm.relationship(back_populates="asset",
-                                                 order_by=AssetValuation.date)
+  valuations: ORMAssetValList = orm.relationship(order_by=AssetValuation.date)
 
   @property
   def image_name(self) -> str:
