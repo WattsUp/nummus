@@ -213,119 +213,145 @@ class Portfolio:
       raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
-    account_mapping: t.DictStr = {}
-    asset_mapping: t.DictStr = {}
-    transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
-    for d in i.run():
-      # Create a single split for each transaction
-      d_split: importers.TxnDict = {
-          "total": d["total"],  # Both split and parent have total
-          "sales_tax": d.pop("sales_tax", None),
-          "payee": d.pop("payee", None),
-          "description": d.pop("description", None),
-          "category": d.pop("category", None),
-          "subcategory": d.pop("subcategory", None),
-          "tag": d.pop("tag", None),
-          "asset_quantity": d.pop("asset_quantity", None)
-      }
-
-      account = d.pop("account")
-      account_id = account_mapping.get(account)
-      if account_id is None:
-        account_id = self.find_account(account)
-        if account_id is None:
-          raise KeyError(f"Could not find Account by '{account}'")
-        account_mapping[account] = account_id
-      d["account_id"] = account_id
-
-      asset = d.pop("asset", None)
-      if asset is not None:
-        # Find its ID
-        asset_id = asset_mapping.get(asset)
-        if asset_id is None:
-          asset_id = self.find_asset(asset)
-          if asset_id is None:
-            raise KeyError(f"Could not find Asset by '{asset}'")
-          asset_mapping[asset] = asset_id
-        d_split["asset_id"] = asset_id
-
-      transactions.append((Transaction(**d), TransactionSplit(**d_split)))
-
-    # All good, add transactions and commit
     with self.get_session() as session:
+      account_mapping: t.Dict[str, Account] = {}
+      asset_mapping: t.Dict[str, Asset] = {}
+      transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
+      for d in i.run():
+        # Create a single split for each transaction
+        d_split: importers.TxnDict = {
+            "total": d["total"],  # Both split and parent have total
+            "sales_tax": d.pop("sales_tax", None),
+            "payee": d.pop("payee", None),
+            "description": d.pop("description", None),
+            "category": d.pop("category", None),
+            "subcategory": d.pop("subcategory", None),
+            "tag": d.pop("tag", None),
+            "asset_quantity": d.pop("asset_quantity", None)
+        }
+
+        account_raw = d.pop("account")
+        account = account_mapping.get(account_raw)
+        if account is None:
+          account = self.find_account(account_raw, session=session)
+          if account is None:
+            raise KeyError(f"Could not find Account by '{account_raw}'")
+          account_mapping[account_raw] = account
+        d["account"] = account
+
+        asset_raw = d.pop("asset", None)
+        if asset_raw is not None:
+          # Find its ID
+          asset = asset_mapping.get(asset_raw)
+          if asset is None:
+            asset = self.find_asset(asset_raw, session=session)
+            if asset is None:
+              raise KeyError(f"Could not find Asset by '{asset_raw}'")
+            asset_mapping[asset_raw] = asset
+          d_split["asset"] = asset
+
+        transactions.append((Transaction(**d), TransactionSplit(**d_split)))
+
+      # All good, add transactions and commit
       # Add just the transactions first
       session.add_all(txn for txn, _ in transactions)
       session.commit()
 
       # Update the parent_ids
       for txn, t_split in transactions:
-        t_split.parent_id = txn.id
+        t_split.parent = txn
         session.add(t_split)
       session.commit()
 
-  def find_account(self, query: t.IntOrStr) -> int:
+  def find_account(self,
+                   query: t.IntOrStr,
+                   session: orm.Session = None) -> t.Union[int, Account]:
     """Find a matching Account by name, UUID, institution, or ID
 
     Args:
       query: Search query
+      session: Session to use, will return Account not id
 
     Returns:
       Account ID or None if no matches found
+      If session is not None: return Account object or None
     """
-    with self.get_session() as session:
+
+    def _find(s: orm.Session) -> Account:
       if isinstance(query, int):
         # See if account is an ID first...
-        matches = session.query(Account).where(Account.id == query).all()
+        matches = s.query(Account).where(Account.id == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
+          return matches[0]
       else:
         # See if account is an UUID first...
-        matches = session.query(Account).where(Account.uuid == query).all()
+        matches = s.query(Account).where(Account.uuid == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
+          return matches[0]
         # Maybe a name next
-        matches = session.query(Account).where(Account.name == query).all()
+        matches = s.query(Account).where(Account.name == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
+          return matches[0]
         # Last chance, institution
-        matches = session.query(Account).where(
-            Account.institution == query).all()
+        matches = s.query(Account).where(Account.institution == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
-    return None
+          return matches[0]
+      return None
 
-  def find_asset(self, query: t.IntOrStr) -> int:
+    if session is None:
+      with self.get_session() as s:
+        acct = _find(s)
+        if acct is None:
+          return None
+        return acct.id
+    else:
+      return _find(session)
+
+  def find_asset(self,
+                 query: t.IntOrStr,
+                 session: orm.Session = None) -> t.Union[int, Asset]:
     """Find a matching Asset by name, UUID, or ID
 
     Args:
       query: Search query
+      session: Session to use, will return Asset not id
 
     Returns:
       Asset ID or None if no matches found
+      If session is not None: return Asset object or None
     """
-    with self.get_session() as session:
+
+    def _find(s: orm.Session) -> Asset:
       if isinstance(query, int):
         # See if asset is an ID first...
-        matches = session.query(Asset).where(Asset.id == query).all()
+        matches = s.query(Asset).where(Asset.id == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
+          return matches[0]
       else:
         # See if asset is an UUID first...
-        matches = session.query(Asset).where(Asset.uuid == query).all()
+        matches = s.query(Asset).where(Asset.uuid == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
+          return matches[0]
         # Maybe a name next
-        matches = session.query(Asset).where(Asset.name == query).all()
+        matches = s.query(Asset).where(Asset.name == query).all()
         if len(matches) == 1:
           # Woot
-          return matches[0].id
-    return None
+          return matches[0]
+
+    if session is None:
+      with self.get_session() as s:
+        acct = _find(s)
+        if acct is None:
+          return None
+        return acct.id
+    else:
+      return _find(session)
 
   def backup(self) -> t.Tuple[pathlib.Path, int]:
     """Back up database, duplicates files

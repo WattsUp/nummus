@@ -186,6 +186,8 @@ class TransactionSplit(Base):
 
   @parent.setter
   def parent(self, parent: Transaction) -> None:
+    if not isinstance(parent, Transaction):
+      raise TypeError("TransactionSplit.parent must be of type Transaction")
     if parent.id is None:
       self._parent_tmp = parent
       return
@@ -210,6 +212,8 @@ class TransactionSplit(Base):
       super().__setattr__("asset_id", None)
       super().__setattr__("asset_uuid", None)
       return
+    if not isinstance(asset, Asset):
+      raise TypeError("TransactionSplit.asset must be of type Asset")
     if asset.id is None:
       raise ValueError("Commit Asset before adding to split")
     super().__setattr__("asset_id", asset.id)
@@ -278,6 +282,8 @@ class Transaction(Base):
 
   @account.setter
   def account(self, acct: Account) -> None:
+    if not isinstance(acct, Account):
+      raise TypeError("Transaction.account must be of type Account")
     if acct.id is None:
       raise ValueError("Commit Account before adding Transaction")
     super().__setattr__("account_id", acct.id)

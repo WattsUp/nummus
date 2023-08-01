@@ -50,6 +50,8 @@ class AssetValuation(Base):
 
   @asset.setter
   def asset(self, asset: Asset) -> None:
+    if not isinstance(asset, Asset):
+      raise TypeError("AssetValuation.asset must be of type Asset")
     if asset.id is None:
       raise ValueError("Commit Asset before adding to split")
     super().__setattr__("asset_id", asset.id)

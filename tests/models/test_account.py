@@ -121,11 +121,22 @@ class TestTransaction(TestBase):
     asset = Asset(name=self.random_string(), category=AssetCategory.SECURITY)
     self.assertRaises(ValueError, setattr, t_split_1, "asset", asset)
 
+    # Set an not an Asset
+    self.assertRaises(TypeError, setattr, t_split_1, "asset",
+                      self.random_string())
+
     # Set an uncommitted Account
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.CASH)
     self.assertRaises(ValueError, setattr, txn, "account", acct)
+
+    # Set an not an Account
+    self.assertRaises(TypeError, setattr, txn, "account", self.random_string())
+
+    # Set an not an Transaction
+    self.assertRaises(TypeError, setattr, t_split_0, "parent",
+                      self.random_string())
 
     # Set parent_id directly
     self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id)

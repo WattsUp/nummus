@@ -47,6 +47,9 @@ class TestAssetValuation(TestBase):
                     category=asset.AssetCategory.SECURITY)
     self.assertRaises(ValueError, setattr, v, "asset", a)
 
+    # Set an not an Asset
+    self.assertRaises(TypeError, setattr, v, "asset", self.random_string())
+
 
 class TestAsset(TestBase):
   """Test Asset class
