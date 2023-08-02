@@ -165,6 +165,7 @@ class TestAsset(TestBase):
     models.metadata_create_all(session)
 
     today = datetime.date.today()
+    tomorrow = today + datetime.timedelta(days=1)
 
     d = {
         "name": self.random_string(),
@@ -206,4 +207,9 @@ class TestAsset(TestBase):
     # Test single value
     r_dates, r_values = a.get_value(today, today)
     self.assertListEqual([today], r_dates)
+    self.assertListEqual([v_today.value], r_values)
+
+    # Test single value
+    r_dates, r_values = a.get_value(tomorrow, tomorrow)
+    self.assertListEqual([tomorrow], r_dates)
     self.assertListEqual([v_today.value], r_values)

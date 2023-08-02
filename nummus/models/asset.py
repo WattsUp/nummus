@@ -118,9 +118,32 @@ class Asset(Base):
     values: t.Reals = []
 
     value = Decimal(0)
-    for valuation in self.valuations:
-      if valuation.date > end:
-        continue
+
+    s = orm.object_session(self)
+
+    # Get latest Valuation before start date
+    query_iv = s.query(AssetValuation.value)
+    query_iv = query_iv.where(AssetValuation.asset_id == self.id)
+    query_iv = query_iv.where(AssetValuation.date < start)
+    query_iv = query_iv.order_by(AssetValuation.date.desc())
+    iv = query_iv.first()
+    if iv is None:
+      value = Decimal(0)
+    else:
+      value = iv[0]
+
+    # Valuations between start and end
+    query = s.query(AssetValuation)
+    query = query.where(AssetValuation.asset_id == self.id)
+    query = query.where(AssetValuation.date <= end)
+    query = query.where(AssetValuation.date >= start)
+    query = query.order_by(AssetValuation.date)
+
+    for valuation in query.all():
+      valuation: AssetValuation
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
       while date < valuation.date:
         values.append(value)
         dates.append(date)
