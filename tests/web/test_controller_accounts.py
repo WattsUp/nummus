@@ -5,6 +5,7 @@ import datetime
 
 import simplejson
 
+from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
                            Transaction, TransactionSplit)
 
@@ -245,7 +246,9 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       # Sort by date, then parent, then id
-      t_splits_obj = [txn.splits[0] for txn in acct_checking.transactions]
+      query = s.query(TransactionSplit).where(
+          TransactionSplit.account_id == acct_checking.id)
+      t_splits_obj: t.List[TransactionSplit] = query.all()
 
       # Serialize then deserialize
       json_s = simplejson.dumps(t_splits_obj,

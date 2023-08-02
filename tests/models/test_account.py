@@ -279,7 +279,6 @@ class TestAccount(TestBase):
     self.assertEqual(d["name"], acct.name)
     self.assertEqual(d["institution"], acct.institution)
     self.assertEqual(d["category"], acct.category)
-    self.assertEqual([], acct.transactions)
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
 
@@ -306,7 +305,6 @@ class TestAccount(TestBase):
     session.add(acct)
     session.commit()
 
-    self.assertEqual([], acct.transactions)
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
 
@@ -319,7 +317,6 @@ class TestAccount(TestBase):
     session.add(t_today)
     session.commit()
 
-    self.assertEqual([t_today], acct.transactions)
     self.assertEqual(today, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
 
@@ -330,7 +327,6 @@ class TestAccount(TestBase):
     session.add(t_before)
     session.commit()
 
-    self.assertEqual([t_before, t_today], acct.transactions)
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
 
@@ -341,7 +337,6 @@ class TestAccount(TestBase):
     session.add(t_after)
     session.commit()
 
-    self.assertEqual([t_before, t_today, t_after], acct.transactions)
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(t_after.date, acct.updated_on)
 

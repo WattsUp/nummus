@@ -79,7 +79,6 @@ class TestAsset(TestBase):
     self.assertEqual(d["tag"], a.tag)
     self.assertEqual(d["img_suffix"], a.img_suffix)
     self.assertEqual(f"{a.uuid}{d['img_suffix']}", a.image_name)
-    self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
     d["uuid"] = a.uuid
@@ -100,16 +99,15 @@ class TestAsset(TestBase):
     session.add(v)
     session.commit()
 
-    self.assertEqual([v], a.valuations)
-
     session.delete(a)
 
     # Cannot delete Parent before all children
     self.assertRaises(models.exc.IntegrityError, session.commit)
     session.rollback()  # Undo the attempt
 
-    session.delete(a)
     session.delete(v)
+    session.commit()
+    session.delete(a)
     session.commit()
 
     result = session.query(asset.Asset).all()
@@ -141,24 +139,6 @@ class TestAsset(TestBase):
                                    value=self.random_decimal(-1, 1))
     session.add(v_today)
     session.commit()
-
-    self.assertEqual([v_today], a.valuations)
-
-    v_before = asset.AssetValuation(asset=a,
-                                    date=today - datetime.timedelta(days=1),
-                                    value=self.random_decimal(-1, 1))
-    session.add(v_before)
-    session.commit()
-
-    self.assertEqual([v_before, v_today], a.valuations)
-
-    v_after = asset.AssetValuation(asset=a,
-                                   date=today + datetime.timedelta(days=1),
-                                   value=self.random_decimal(-1, 1))
-    session.add(v_after)
-    session.commit()
-
-    self.assertEqual([v_before, v_today, v_after], a.valuations)
 
   def test_get_value(self):
     session = self.get_session()

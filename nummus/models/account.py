@@ -328,8 +328,6 @@ class Account(Base):
   institution: t.ORMStr
   category: ORMAcctCat
 
-  transactions: ORMTxnList = orm.relationship(order_by=Transaction.date)
-
   @property
   def opened_on(self) -> t.Date:
     """Date of first Transaction

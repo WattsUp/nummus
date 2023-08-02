@@ -7,7 +7,7 @@ import flask
 
 from nummus import portfolio
 from nummus import custom_types as t
-from nummus.models import Asset, AssetCategory
+from nummus.models import Asset, AssetCategory, AssetValuation
 from nummus.web import common
 from nummus.web.common import HTTPError
 
@@ -100,8 +100,10 @@ def delete(asset_uuid: str) -> flask.Response:
     a = common.find_asset(s, asset_uuid)
 
     # Delete the valuations as well
-    for v in a.valuations:
+    query = s.query(AssetValuation).where(AssetValuation.asset_id == a.id)
+    for v in query.all():
       s.delete(v)
+    s.commit()
     s.delete(a)
     s.commit()
     return None

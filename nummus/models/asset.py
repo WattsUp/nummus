@@ -90,9 +90,6 @@ class Asset(Base):
   tag: t.ORMStrOpt
   img_suffix: t.ORMStrOpt
 
-  # TODO (WattsUp) Move to write only relationship if too slow
-  valuations: ORMAssetValList = orm.relationship(order_by=AssetValuation.date)
-
   @property
   def image_name(self) -> str:
     """Get name of Asset's image, None if it doesn't exist
