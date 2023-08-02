@@ -234,7 +234,7 @@ class Base(orm.DeclarativeBase):
     Returns:
       True if UUIDs match
     """
-    return self.uuid == other.uuid
+    return other is not None and self.uuid == other.uuid
 
   def __ne__(self, other: Base) -> bool:
     """Test inequality by UUID
@@ -245,7 +245,7 @@ class Base(orm.DeclarativeBase):
     Returns:
       True if UUIDs do not match
     """
-    return self.uuid != other.uuid
+    return other is None or self.uuid != other.uuid
 
 
 class NummusJSONEncoder(simplejson.JSONEncoder):
@@ -352,5 +352,7 @@ class Decimal6(types.TypeDecorator):
 class Decimal18(Decimal6):
   """SQL type for fixed point numbers, stores as atto-integer
   """
+
+  cache_ok = True
 
   _FACTOR = Decimal("1e18")

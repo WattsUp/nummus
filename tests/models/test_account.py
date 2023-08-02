@@ -30,7 +30,7 @@ class TestTransaction(TestBase):
     session.commit()
 
     d = {
-        "account_id": acct.id,
+        "account": acct,
         "date": datetime.date.today(),
         "total": self.random_decimal(-1, 1),
         "statement": self.random_string()
@@ -40,34 +40,38 @@ class TestTransaction(TestBase):
     session.add(txn)
     session.commit()
 
-    self.assertEqual(d["account_id"], txn.account_id)
     self.assertEqual(acct, txn.account)
+    self.assertEqual(acct.id, txn.account_id)
+    self.assertEqual(acct.uuid, txn.account_uuid)
     self.assertEqual(d["date"], txn.date)
     self.assertEqual(d["total"], txn.total)
     self.assertEqual(d["statement"], txn.statement)
     self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
 
-    d.pop("account_id")
+    d.pop("account")
     d["uuid"] = txn.uuid
     d["account_uuid"] = acct.uuid
     d["splits"] = []
     d["locked"] = False
-    d["is_split"] = False
     result = txn.to_dict()
     self.assertDictEqual(d, result)
 
-    d = {"total": self.random_decimal(-1, 1), "parent_id": txn.id}
+    d = {"total": self.random_decimal(-1, 1), "parent": txn}
 
     t_split_0 = TransactionSplit(**d)
     session.add(t_split_0)
     session.commit()
+    self.assertEqual(t_split_0.parent, txn)
+    self.assertEqual(t_split_0.parent_id, txn.id)
+    self.assertIsNone(t_split_0.asset)
+    self.assertIsNone(t_split_0.asset_id)
+    self.assertIsNone(t_split_0.asset_uuid)
 
     result = t_split_0.to_dict()
     self.assertEqual(t_split_0.uuid, result.pop("uuid"))
     self.assertEqual(t_split_0.total, result.pop("total"))
     self.assertEqual(acct.uuid, result.pop("account_uuid"))
-    self.assertEqual(txn.date.isoformat(), result.pop("date"))
-    self.assertFalse(result.pop("is_split"))
+    self.assertEqual(txn.date, result.pop("date"))
     self.assertFalse(result.pop("locked"))
     self.assertEqual(txn.uuid, result.pop("parent_uuid"))
     # Rest should be None
@@ -82,9 +86,9 @@ class TestTransaction(TestBase):
         "category": TransactionCategory.FOOD,
         "subcategory": self.random_string(),
         "tag": self.random_string(),
-        "asset_id": asset.id,
-        "asset_quantity": self.random_decimal(-1, 1),
-        "parent_id": txn.id
+        "asset": asset,
+        "asset_quantity": self.random_decimal(-1, 1, precision=18),
+        "parent": txn
     }
 
     t_split_1 = TransactionSplit(**d)
@@ -92,14 +96,13 @@ class TestTransaction(TestBase):
     session.commit()
 
     # Test default and hidden properties
-    d.pop("asset_id")
-    d.pop("parent_id")
+    d.pop("asset")
+    d.pop("parent")
     d["uuid"] = t_split_1.uuid
     d["account_uuid"] = acct.uuid
-    d["date"] = txn.date.isoformat()
+    d["date"] = txn.date
     d["asset_uuid"] = asset.uuid
     d["parent_uuid"] = txn.uuid
-    d["is_split"] = True
     d["locked"] = False
     result = t_split_1.to_dict()
     self.assertDictEqual(d, result)
@@ -107,8 +110,44 @@ class TestTransaction(TestBase):
     self.assertEqual([t_split_0, t_split_1], txn.splits)
     self.assertEqual(asset, t_split_1.asset)
 
-  def test_is_valid_amount(self):
+    # Remove asset
+    t_split_1.asset = None
+    session.commit()
+    self.assertIsNone(t_split_1.asset)
+    self.assertIsNone(t_split_1.asset_id)
+    self.assertIsNone(t_split_1.asset_uuid)
 
+    # Set an uncommitted Asset
+    asset = Asset(name=self.random_string(), category=AssetCategory.SECURITY)
+    self.assertRaises(ValueError, setattr, t_split_1, "asset", asset)
+
+    # Set an not an Asset
+    self.assertRaises(TypeError, setattr, t_split_1, "asset",
+                      self.random_string())
+
+    # Set an uncommitted Account
+    acct = Account(name=self.random_string(),
+                   institution=self.random_string(),
+                   category=AccountCategory.CASH)
+    self.assertRaises(ValueError, setattr, txn, "account", acct)
+
+    # Set an not an Account
+    self.assertRaises(TypeError, setattr, txn, "account", self.random_string())
+
+    # Set an not an Transaction
+    self.assertRaises(TypeError, setattr, t_split_0, "parent",
+                      self.random_string())
+
+    # Set parent_id directly
+    self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id)
+
+    # Set asset_id directly
+    self.assertRaises(PermissionError, setattr, t_split_0, "asset_id", asset.id)
+
+    # Set account_id directly
+    self.assertRaises(PermissionError, setattr, txn, "account_id", acct.id)
+
+  def test_is_valid_amount(self):
     not_covered = list(TransactionCategory)
 
     cat_inflow = [TransactionCategory.INCOME]
@@ -240,7 +279,6 @@ class TestAccount(TestBase):
     self.assertEqual(d["name"], acct.name)
     self.assertEqual(d["institution"], acct.institution)
     self.assertEqual(d["category"], acct.category)
-    self.assertEqual([], acct.transactions)
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
 
@@ -267,7 +305,6 @@ class TestAccount(TestBase):
     session.add(acct)
     session.commit()
 
-    self.assertEqual([], acct.transactions)
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
 
@@ -280,7 +317,6 @@ class TestAccount(TestBase):
     session.add(t_today)
     session.commit()
 
-    self.assertEqual([t_today], acct.transactions)
     self.assertEqual(today, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
 
@@ -291,7 +327,6 @@ class TestAccount(TestBase):
     session.add(t_before)
     session.commit()
 
-    self.assertEqual([t_before, t_today], acct.transactions)
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
 
@@ -302,7 +337,6 @@ class TestAccount(TestBase):
     session.add(t_after)
     session.commit()
 
-    self.assertEqual([t_before, t_today, t_after], acct.transactions)
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(t_after.date, acct.updated_on)
 
@@ -519,7 +553,9 @@ class TestAccount(TestBase):
     asset_values = [
         p * q for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
     ]
-    target_values = [c + v for c, v in zip(target_values, asset_values)]
+    target_values = [
+        round(c + v, 6) for c, v in zip(target_values, asset_values)
+    ]
     target_assets = {assets[0].uuid: asset_values}
 
     r_dates, r_values, r_assets = acct.get_value(start, end)

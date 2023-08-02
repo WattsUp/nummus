@@ -16,3 +16,7 @@ version.py
 .coverage
 coverage.json
 test_log.json
+portfolio.db
+portfolio.config
+portfolio.images
+result.json

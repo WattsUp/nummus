@@ -5,6 +5,7 @@ import datetime
 
 import simplejson
 
+from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
                            Transaction, TransactionSplit)
 
@@ -124,7 +125,7 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       for _ in range(n_transactions):
-        txn = Transaction(account_id=acct.id,
+        txn = Transaction(account=acct,
                           date=today,
                           total=100,
                           statement=self.random_string())
@@ -224,7 +225,7 @@ class TestControllerAccounts(WebTestBase):
     n_transactions = 10
     today = datetime.date.today()
     with p.get_session() as s:
-      s.add(acct_checking)
+      s.add_all((acct_checking, acct_invest))
       s.commit()
 
       for _ in range(n_transactions):
@@ -245,7 +246,9 @@ class TestControllerAccounts(WebTestBase):
       s.commit()
 
       # Sort by date, then parent, then id
-      t_splits_obj = [txn.splits[0] for txn in acct_checking.transactions]
+      query = s.query(TransactionSplit).where(
+          TransactionSplit.account_id == acct_checking.id)
+      t_splits_obj: t.List[TransactionSplit] = query.all()
 
       # Serialize then deserialize
       json_s = simplejson.dumps(t_splits_obj,

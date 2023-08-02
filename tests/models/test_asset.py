@@ -34,15 +34,21 @@ class TestAssetValuation(TestBase):
 
     self.assertEqual(d["asset_id"], v.asset_id)
     self.assertEqual(a, v.asset)
-    self.assertEqual(a.uuid, v.asset_uuid)
     self.assertEqual(d["value"], v.value)
     self.assertEqual(d["date"], v.date)
 
     # Test default and hidden properties
     d.pop("asset_id")
-    d["asset_uuid"] = a.uuid
     result = v.to_dict()
     self.assertDictEqual(d, result)
+
+    # Set an uncommitted Asset
+    a = asset.Asset(name=self.random_string(),
+                    category=asset.AssetCategory.SECURITY)
+    self.assertRaises(ValueError, setattr, v, "asset", a)
+
+    # Set an not an Asset
+    self.assertRaises(TypeError, setattr, v, "asset", self.random_string())
 
 
 class TestAsset(TestBase):
@@ -73,7 +79,6 @@ class TestAsset(TestBase):
     self.assertEqual(d["tag"], a.tag)
     self.assertEqual(d["img_suffix"], a.img_suffix)
     self.assertEqual(f"{a.uuid}{d['img_suffix']}", a.image_name)
-    self.assertEqual([], a.valuations)
 
     # Test default and hidden properties
     d["uuid"] = a.uuid
@@ -94,16 +99,15 @@ class TestAsset(TestBase):
     session.add(v)
     session.commit()
 
-    self.assertEqual([v], a.valuations)
-
     session.delete(a)
 
     # Cannot delete Parent before all children
     self.assertRaises(models.exc.IntegrityError, session.commit)
     session.rollback()  # Undo the attempt
 
-    session.delete(a)
     session.delete(v)
+    session.commit()
+    session.delete(a)
     session.commit()
 
     result = session.query(asset.Asset).all()
@@ -136,29 +140,12 @@ class TestAsset(TestBase):
     session.add(v_today)
     session.commit()
 
-    self.assertEqual([v_today], a.valuations)
-
-    v_before = asset.AssetValuation(asset=a,
-                                    date=today - datetime.timedelta(days=1),
-                                    value=self.random_decimal(-1, 1))
-    session.add(v_before)
-    session.commit()
-
-    self.assertEqual([v_before, v_today], a.valuations)
-
-    v_after = asset.AssetValuation(asset=a,
-                                   date=today + datetime.timedelta(days=1),
-                                   value=self.random_decimal(-1, 1))
-    session.add(v_after)
-    session.commit()
-
-    self.assertEqual([v_before, v_today, v_after], a.valuations)
-
   def test_get_value(self):
     session = self.get_session()
     models.metadata_create_all(session)
 
     today = datetime.date.today()
+    tomorrow = today + datetime.timedelta(days=1)
 
     d = {
         "name": self.random_string(),
@@ -200,4 +187,9 @@ class TestAsset(TestBase):
     # Test single value
     r_dates, r_values = a.get_value(today, today)
     self.assertListEqual([today], r_dates)
+    self.assertListEqual([v_today.value], r_values)
+
+    # Test single value
+    r_dates, r_values = a.get_value(tomorrow, tomorrow)
+    self.assertListEqual([tomorrow], r_dates)
     self.assertListEqual([v_today.value], r_values)

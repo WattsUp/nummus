@@ -15,6 +15,7 @@
     "simplejson",
     "thefuzz",
     "uselist",
+    "viztracer",
     "werkzeug",
     "Woot"
   ],

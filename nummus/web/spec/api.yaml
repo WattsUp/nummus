@@ -1349,7 +1349,6 @@ components:
         - statement
         - locked
         - splits
-        - is_split
       properties:
         uuid:
           type: string
@@ -1381,10 +1380,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TransactionSplit"
-        is_split:
-          description: True if there are more than one TransactionSplit
-          type: boolean
-          readOnly: true
     TransactionSplit:
       description: Exchange of cash for an asset (or none)
       type: object
@@ -1395,7 +1390,6 @@ components:
         - account_uuid
         - date
         - locked
-        - is_split
       properties:
         uuid:
           type: string
@@ -1475,10 +1469,6 @@ components:
           nullable: true
         locked:
           description: Parameters can only be manually edited
-          type: boolean
-          readOnly: true
-        is_split:
-          description: True if part of a split Transaction
           type: boolean
           readOnly: true
     Dates:

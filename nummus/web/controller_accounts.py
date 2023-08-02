@@ -7,7 +7,8 @@ import flask
 
 from nummus import portfolio
 from nummus import custom_types as t
-from nummus.models import Account, AccountCategory
+from nummus.models import (Account, AccountCategory, Transaction,
+                           TransactionSplit)
 from nummus.web import common, controller_transactions
 from nummus.web.common import HTTPError
 
@@ -92,10 +93,15 @@ def delete(account_uuid: str) -> flask.Response:
     acct = common.find_account(s, account_uuid)
 
     # Delete the transactions as well
-    for txn in acct.transactions:
-      for t_split in txn.splits:
-        s.delete(t_split)
-      s.delete(txn)
+    query = s.query(TransactionSplit).where(
+        TransactionSplit.account_id == acct.id)
+    for v in query.all():
+      s.delete(v)
+    s.commit()
+    query = s.query(Transaction).where(Transaction.account_id == acct.id)
+    for v in query.all():
+      s.delete(v)
+    s.commit()
     s.delete(acct)
     s.commit()
     return None
@@ -135,8 +141,6 @@ def get_transactions(account_uuid: str) -> flask.Response:
     JSON response, see api.yaml for details
   """
   # Use controller_transactions' implementation
-  # Won't be faster unless account.transactions is lazy?
-  # TODO (WattsUp) Investigate performance if slow
   args = flask.request.args.to_dict()
   args["account"] = account_uuid
   return controller_transactions.get_all(args)

@@ -6,11 +6,12 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-from sqlalchemy import ForeignKey, orm
+import sqlalchemy
+from sqlalchemy import ForeignKey, event, orm
 
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum, Decimal6, Decimal18
-from nummus.models.asset import ORMAsset, DictStrAsset
+from nummus.models.asset import Asset, DictStrAsset
 
 ORMTxn = orm.Mapped["Transaction"]
 ORMTxnList = orm.Mapped[t.List["Transaction"]]
@@ -93,13 +94,12 @@ class TransactionSplit(Base):
       Account gained Assets (inflow)
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
-    is_split: True if part of a spit Transaction
   """
 
   _PROPERTIES_DEFAULT = [
       "uuid", "account_uuid", "date", "total", "sales_tax", "payee",
       "description", "category", "subcategory", "tag", "parent_uuid",
-      "asset_uuid", "asset_quantity", "locked", "is_split"
+      "asset_uuid", "asset_quantity", "locked"
   ]
 
   total: t.ORMReal = orm.mapped_column(Decimal6)
@@ -111,13 +111,28 @@ class TransactionSplit(Base):
   tag: t.ORMStrOpt
 
   parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id"))
-  parent: ORMTxn = orm.relationship(back_populates="splits")
+  parent_uuid: t.ORMStr
+  date: t.ORMDate
+  locked: t.ORMBool
+  account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
+  account_uuid: t.ORMStr
 
   asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id"))
-  asset: ORMAsset = orm.relationship()
-
+  asset_uuid: t.ORMStrOpt
   _asset_qty_int: t.ORMIntOpt
   _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
+
+  def __setattr__(self, name: str, value: t.Any) -> None:
+    if name in [
+        "parent_id", "parent_uuid", "date", "locked", "account_uuid",
+        "account_id"
+    ]:
+      raise PermissionError("Call TransactionSplit.parent = Transaction. "
+                            "Do not set parent properties directly")
+    if name in ["asset_id", "asset_uuid"]:
+      raise PermissionError("Call TransactionSplit.asset = Asset. "
+                            "Do not set asset properties directly")
+    super().__setattr__(name, value)
 
   @orm.validates("total", "category")
   def validate_category(self, key: str, field: RealOrTxnCat) -> RealOrTxnCat:
@@ -148,45 +163,6 @@ class TransactionSplit(Base):
     return field
 
   @property
-  def parent_uuid(self) -> str:
-    """UUID of parent
-    """
-    return self.parent.uuid
-
-  @property
-  def asset_uuid(self) -> str:
-    """UUID of asset
-    """
-    if self.asset is None:
-      return None
-    return self.asset.uuid
-
-  @property
-  def account_uuid(self) -> str:
-    """UUID of account
-    """
-    return self.parent.account_uuid
-
-  @property
-  def date(self) -> t.Date:
-    """Date on which Transaction occurred
-    """
-    return self.parent.date
-
-  @property
-  def locked(self) -> bool:
-    """True only allows manually editing, False allows automatic changes
-    (namely auto labeling field based on similar Transactions)
-    """
-    return self.parent.locked
-
-  @property
-  def is_split(self) -> bool:
-    """True if part of a split Transaction
-    """
-    return self.parent.is_split
-
-  @property
   def asset_quantity(self) -> t.Real:
     """Number of units of Asset exchanged, Positive indicates
     Account gained Assets (inflow)
@@ -205,6 +181,65 @@ class TransactionSplit(Base):
     self._asset_qty_int = int(i)
     self._asset_qty_frac = f
 
+  @property
+  def parent(self) -> Transaction:
+    """Parent Transaction
+    """
+    s = orm.object_session(self)
+    return s.query(Transaction).where(Transaction.id == self.parent_id).first()
+
+  @parent.setter
+  def parent(self, parent: Transaction) -> None:
+    if not isinstance(parent, Transaction):
+      raise TypeError("TransactionSplit.parent must be of type Transaction")
+    if parent.id is None:
+      self._parent_tmp = parent
+      return
+    super().__setattr__("parent_id", parent.id)
+    super().__setattr__("parent_uuid", parent.uuid)
+    super().__setattr__("date", parent.date)
+    super().__setattr__("locked", parent.locked)
+    super().__setattr__("account_id", parent.account_id)
+    super().__setattr__("account_uuid", parent.account_uuid)
+
+  @property
+  def asset(self) -> Asset:
+    """Asset exchanged for cash, primarily for instrument transactions
+    """
+    if self.asset_id is None:
+      return None
+    s = orm.object_session(self)
+    return s.query(Asset).where(Asset.id == self.asset_id).first()
+
+  @asset.setter
+  def asset(self, asset: Asset) -> None:
+    if asset is None:
+      super().__setattr__("asset_id", None)
+      super().__setattr__("asset_uuid", None)
+      return
+    if not isinstance(asset, Asset):
+      raise TypeError("TransactionSplit.asset must be of type Asset")
+    if asset.id is None:
+      raise ValueError("Commit Asset before adding to split")
+    super().__setattr__("asset_id", asset.id)
+    super().__setattr__("asset_uuid", asset.uuid)
+
+
+@event.listens_for(TransactionSplit, "before_insert")
+def before_insert_transaction_split(
+    mapper: orm.Mapper,  # pylint: disable=unused-argument
+    connection: sqlalchemy.Connection,  # pylint: disable=unused-argument
+    target: TransactionSplit) -> None:
+  """Handle event before insert of TransactionSplit
+
+  Args:
+    target: TransactionSplit being inserted
+  """
+  # If TransactionSplit has parent_tmp set, move it to real parent
+  if hasattr(target, "_parent_tmp"):
+    target.parent = target._parent_tmp  # pylint: disable=protected-access
+    delattr(target, "_parent_tmp")
+
 
 class Transaction(Base):
   """Transaction model for storing an exchange of cash for an asset (or none)
@@ -221,35 +256,43 @@ class Transaction(Base):
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
     splits: List of TransactionSplits
-    is_split: len(splits) > 1
   """
 
   _PROPERTIES_DEFAULT = [
-      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits",
-      "is_split"
+      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits"
   ]
 
   account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
-  account: ORMAcct = orm.relationship(back_populates="transactions")
+  account_uuid: t.ORMStr
 
   date: t.ORMDate
   total: t.ORMReal = orm.mapped_column(Decimal6)
   statement: t.ORMStr
   locked: t.ORMBool = orm.mapped_column(default=False)
 
-  splits: ORMTxnSplitList = orm.relationship(back_populates="parent")
+  splits: ORMTxnSplitList = orm.relationship()
+
+  def __setattr__(self, name: str, value: t.Any) -> None:
+    if name in ["account_id", "account_uuid"]:
+      raise PermissionError("Call Transaction.account = Account. "
+                            "Do not set account properties directly")
+    super().__setattr__(name, value)
 
   @property
-  def account_uuid(self) -> str:
-    """UUID of account
+  def account(self) -> Account:
+    """Account that owns this Transaction
     """
-    return self.account.uuid
+    s = orm.object_session(self)
+    return s.query(Account).where(Account.id == self.account_id).first()
 
-  @property
-  def is_split(self) -> bool:
-    """True if more than one TransactionSplit
-    """
-    return len(self.splits) > 1
+  @account.setter
+  def account(self, acct: Account) -> None:
+    if not isinstance(acct, Account):
+      raise TypeError("Transaction.account must be of type Account")
+    if acct.id is None:
+      raise ValueError("Commit Account before adding Transaction")
+    super().__setattr__("account_id", acct.id)
+    super().__setattr__("account_uuid", acct.uuid)
 
 
 class AccountCategory(BaseEnum):
@@ -285,24 +328,27 @@ class Account(Base):
   institution: t.ORMStr
   category: ORMAcctCat
 
-  transactions: ORMTxnList = orm.relationship(back_populates="account",
-                                              order_by=Transaction.date)
-
   @property
   def opened_on(self) -> t.Date:
     """Date of first Transaction
     """
-    if len(self.transactions) < 1:
+    s = orm.object_session(self)
+    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
+    date = query.order_by(Transaction.date).first()
+    if date is None:
       return None
-    return self.transactions[0].date
+    return date[0]
 
   @property
   def updated_on(self) -> t.Date:
     """Date of latest Transaction
     """
-    if len(self.transactions) < 1:
+    s = orm.object_session(self)
+    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
+    date = query.order_by(Transaction.date.desc()).first()
+    if date is None:
       return None
-    return self.transactions[-1].date
+    return date[0]
 
   def get_value(self, start: t.Date,
                 end: t.Date) -> t.Tuple[t.Dates, t.Reals, t.DictReals]:
@@ -323,29 +369,75 @@ class Account(Base):
     qty_assets: t.DictReals = {}
     assets: DictStrAsset = {}
 
-    current_cash = Decimal(0)
     current_qty_assets: t.DictReal = {}
 
-    for transaction in self.transactions:
-      if transaction.date > end:
+    s = orm.object_session(self)
+
+    # Get Account value on start date
+    # It is callable, sum returns a generator type
+    query_iv = s.query(sqlalchemy.func.sum(TransactionSplit.total))  # pylint: disable=not-callable
+    query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+    query_iv = query_iv.where(TransactionSplit.date < start)
+    iv = query_iv.scalar()
+    if iv is None:
+      current_cash = Decimal(0)
+    else:
+      current_cash = iv
+
+    # Get Asset quantities on start date
+    query_assets = s.query(TransactionSplit.asset_id).distinct()
+    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
+    for asset_id, in query_assets.all():
+      if asset_id is None:
         continue
-      while date < transaction.date:
+      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
+      a_uuid = a.uuid
+      assets[a_uuid] = a
+      qty_assets[a_uuid] = []
+      current_qty_assets[a_uuid] = Decimal(0)
+
+      # Get initial value for each Asset
+      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_int = query_iv.scalar()
+      if iv_int is None:
+        continue
+
+      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
+      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_frac = sum(v for v, in query_iv.all())
+
+      current_qty_assets[a_uuid] = iv_int + iv_frac
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.order_by(TransactionSplit.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
+      while date < t_split.date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         cash.append(current_cash)
         date += datetime.timedelta(days=1)
 
-      for split in transaction.splits:
-        a = split.asset
-        if a is None:
-          continue
-        if a.uuid not in current_qty_assets:
-          current_qty_assets[a.uuid] = 0
-          qty_assets[a.uuid] = [0] * len(dates)
-          assets[a.uuid] = a
-        current_qty_assets[a.uuid] += split.asset_quantity
-      current_cash += transaction.total
+      current_cash += t_split.total
+      a_uuid = t_split.asset_uuid
+      if a_uuid is None:
+        continue
+      current_qty_assets[a_uuid] += t_split.asset_quantity
 
     while date <= end:
       for k, v in current_qty_assets.items():
@@ -358,12 +450,12 @@ class Account(Base):
     value_assets: t.DictReals = {}
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
-      # Value = quantity * price * multiplier
-      values = [p * q for p, q in zip(qty, *a.get_value(start, end)[1:])]
+      # Value = quantity * price
+      values = [p * q for q, p in zip(qty, a.get_value(start, end)[1])]
       value_assets[asset_uuid] = values
 
     # Sum with cash
-    values = [sum(x) for x in zip(cash, *value_assets.values())]
+    values = [round(sum(x), 6) for x in zip(cash, *value_assets.values())]
 
     return dates, values, value_assets
 
@@ -393,10 +485,21 @@ class Account(Base):
     daily_categories["unknown-inflow"] = 0
     daily_categories["unknown-outflow"] = 0
 
-    for transaction in self.transactions:
-      if transaction.date > end:
-        continue
-      while date < transaction.date:
+    s = orm.object_session(self)
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.order_by(TransactionSplit.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
+      while date < t_split.date:
         dates.append(date)
         # Append and clear daily
         for k, v in daily_categories.items():
@@ -404,15 +507,13 @@ class Account(Base):
           daily_categories[k] = 0
         date += datetime.timedelta(days=1)
 
-      if date == transaction.date:
-        for t_split in transaction.splits:
-          if t_split.category is None:
-            if t_split.total > 0:
-              daily_categories["unknown-inflow"] += t_split.total
-            else:
-              daily_categories["unknown-outflow"] += t_split.total
-          else:
-            daily_categories[t_split.category] += t_split.total
+      if t_split.category is None:
+        if t_split.total > 0:
+          daily_categories["unknown-inflow"] += t_split.total
+        else:
+          daily_categories["unknown-outflow"] += t_split.total
+      else:
+        daily_categories[t_split.category] += t_split.total
 
     while date <= end:
       dates.append(date)
@@ -442,23 +543,58 @@ class Account(Base):
 
     current_qty_assets: t.DictReal = {}
 
-    for transaction in self.transactions:
-      if transaction.date > end:
+    s = orm.object_session(self)
+
+    # Get Asset quantities on start date
+    query_assets = s.query(TransactionSplit.asset_id).distinct()
+    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
+    for asset_id, in query_assets.all():
+      if asset_id is None:
         continue
-      while date < transaction.date:
+      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
+      a_uuid = a.uuid
+      qty_assets[a_uuid] = []
+      current_qty_assets[a_uuid] = Decimal(0)
+
+      # Get initial value for each Asset
+      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_int = query_iv.scalar()
+      if iv_int is None:
+        continue
+
+      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
+      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_frac = sum(v for v, in query_iv.all())
+
+      current_qty_assets[a_uuid] = iv_int + iv_frac
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.where(TransactionSplit.asset_id.is_not(None))
+    query = query.order_by(TransactionSplit.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
+      while date < t_split.date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         date += datetime.timedelta(days=1)
 
-      for split in transaction.splits:
-        a = split.asset
-        if a is None:
-          continue
-        if a.uuid not in current_qty_assets:
-          current_qty_assets[a.uuid] = 0
-          qty_assets[a.uuid] = [0] * len(dates)
-        current_qty_assets[a.uuid] += split.asset_quantity
+      a_uuid = t_split.asset_uuid
+      current_qty_assets[a_uuid] += t_split.asset_quantity
 
     while date <= end:
       for k, v in current_qty_assets.items():

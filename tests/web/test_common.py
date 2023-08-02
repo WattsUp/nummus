@@ -92,7 +92,7 @@ class TestCommon(WebTestBase):
       s.add(acct)
       s.commit()
 
-      txn = Transaction(account_id=acct.id,
+      txn = Transaction(account=acct,
                         date=today,
                         total=100,
                         statement=self.random_string())
@@ -219,7 +219,7 @@ class TestCommon(WebTestBase):
       s.commit()
 
       for _ in range(n_transactions):
-        txn = Transaction(account_id=acct.id,
+        txn = Transaction(account=acct,
                           date=today,
                           total=100,
                           statement=self.random_string())
