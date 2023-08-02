@@ -487,10 +487,21 @@ class Account(Base):
     daily_categories["unknown-inflow"] = 0
     daily_categories["unknown-outflow"] = 0
 
-    for transaction in self.transactions:
-      if transaction.date > end:
-        continue
-      while date < transaction.date:
+    s = orm.object_session(self)
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.order_by(TransactionSplit.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
+      while date < t_split.date:
         dates.append(date)
         # Append and clear daily
         for k, v in daily_categories.items():
@@ -498,15 +509,13 @@ class Account(Base):
           daily_categories[k] = 0
         date += datetime.timedelta(days=1)
 
-      if date == transaction.date:
-        for t_split in transaction.splits:
-          if t_split.category is None:
-            if t_split.total > 0:
-              daily_categories["unknown-inflow"] += t_split.total
-            else:
-              daily_categories["unknown-outflow"] += t_split.total
-          else:
-            daily_categories[t_split.category] += t_split.total
+      if t_split.category is None:
+        if t_split.total > 0:
+          daily_categories["unknown-inflow"] += t_split.total
+        else:
+          daily_categories["unknown-outflow"] += t_split.total
+      else:
+        daily_categories[t_split.category] += t_split.total
 
     while date <= end:
       dates.append(date)
