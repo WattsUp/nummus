@@ -357,9 +357,10 @@ def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
     accts: Account IDs to use
   """
   with p.get_session() as s:
+    acct = s.query(Account).where(Account.id == accts["savings"]).first()
     for age in range(8, 18):
       date = birthday("self", age)
-      txn = Transaction(account_id=accts["savings"],
+      txn = Transaction(account=acct,
                         date=date,
                         total=round(rng_uniform(1, 10), 2),
                         statement="Birthday money")
@@ -387,6 +388,13 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
     a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
     _, a_growth_values = a_growth.get_value(a_values_start, a_values_end)
     _, a_value_values = a_value.get_value(a_values_start, a_values_end)
+
+    acct_savings = s.query(Account).where(
+        Account.id == accts["savings"]).first()
+    acct_checking = s.query(Account).where(
+        Account.id == accts["checking"]).first()
+    acct_retirement = s.query(Account).where(
+        Account.id == accts["retirement"]).first()
 
     for age in range(16, min(60, FINAL_AGE) + 1):
       if age <= 22:
@@ -425,7 +433,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         dates.append(adjust_date(date_1))
 
       for date in dates:
-        txn = Transaction(account_id=accts["checking"],
+        txn = Transaction(account=acct_checking,
                           date=date,
                           total=paycheck,
                           statement=job)
@@ -434,7 +442,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                      category=TransactionCategory.INCOME,
                                      subcategory="Paycheck")
         s.add_all((txn, txn_split))
-        txn = Transaction(account_id=accts["savings"],
+        txn = Transaction(account=acct_savings,
                           date=date,
                           total=savings,
                           statement=job)
@@ -444,7 +452,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                      subcategory="Paycheck")
         s.add_all((txn, txn_split))
         if retirement != 0:
-          txn = Transaction(account_id=accts["retirement"],
+          txn = Transaction(account=acct_retirement,
                             date=date,
                             total=retirement,
                             statement=job)
@@ -468,7 +476,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
           qty_growth = round(cost_growth / a_growth_values[a_values_i], 6)
           qty_value = round(cost_value / a_value_values[a_values_i], 6)
 
-          txn = Transaction(account_id=accts["retirement"],
+          txn = Transaction(account=acct_retirement,
                             date=date,
                             total=-retirement,
                             statement=job)
@@ -508,7 +516,15 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
     _, house_2_values = house_2.get_value(a_values_start, a_values_end)
     _, house_3_values = house_3.get_value(a_values_start, a_values_end)
 
-    savings = s.query(Account).where(Account.id == accts["savings"]).first()
+    acct_savings = s.query(Account).where(
+        Account.id == accts["savings"]).first()
+    acct_checking = s.query(Account).where(
+        Account.id == accts["checking"]).first()
+    acct_mortgage = s.query(Account).where(
+        Account.id == accts["mortgage"]).first()
+    acct_real_estate = s.query(Account).where(
+        Account.id == accts["real_estate"]).first()
+    acct_cc_0 = s.query(Account).where(Account.id == accts["cc_0"]).first()
 
     def buy_house(
         date: datetime.date, house: Asset,
@@ -524,7 +540,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         (Mortgage principal, monthly interest rate, monthly payment, pmi,
         pmi threshold)
       """
-      _, values, _ = savings.get_value(date, date)
+      _, values, _ = acct_savings.get_value(date, date)
       closing_costs = round(price * Decimal(0.05), 2)
       max_dp = values[0] - closing_costs
       no_pmi_dp = price * Decimal(0.2)
@@ -540,7 +556,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       pi = round(p * (r * (1 + r)**360) / ((1 + r)**360 - 1), 2)
 
       # Pay down payment and closing costs
-      txn = Transaction(account_id=accts["savings"],
+      txn = Transaction(account=acct_savings,
                         date=date,
                         total=-(down_payment + closing_costs),
                         statement="Home closing")
@@ -554,7 +570,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       s.add_all((txn, txn_dp, txn_cc))
 
       # Open a mortgage
-      txn = Transaction(account_id=accts["mortgage"],
+      txn = Transaction(account=acct_mortgage,
                         date=date,
                         total=-p,
                         statement="Home closing")
@@ -564,7 +580,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       s.add_all((txn, txn_split))
 
       # Buy the house
-      txn = Transaction(account_id=accts["real_estate"],
+      txn = Transaction(account=acct_real_estate,
                         date=date,
                         total=0,
                         statement="Home closing")
@@ -594,7 +610,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       closing_costs = round(price * Decimal(0.08), 2)
 
       # Pay down payment and closing costs
-      txn = Transaction(account_id=accts["savings"],
+      txn = Transaction(account=acct_savings,
                         date=date,
                         total=price - closing_costs,
                         statement="Home closing")
@@ -608,7 +624,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       s.add_all((txn, txn_sell, txn_cc))
 
       # Sell the house
-      txn = Transaction(account_id=accts["real_estate"],
+      txn = Transaction(account=acct_real_estate,
                         date=date,
                         total=0,
                         statement="Home closing")
@@ -621,7 +637,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
       if balance > 0:
         # Close a mortgage
-        txn = Transaction(account_id=accts["mortgage"],
+        txn = Transaction(account=acct_mortgage,
                           date=date,
                           total=balance,
                           statement="Home closing")
@@ -630,7 +646,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                      category=TransactionCategory.INSTRUMENT)
         s.add_all((txn, txn_split))
 
-        txn = Transaction(account_id=accts["savings"],
+        txn = Transaction(account=acct_savings,
                           date=date,
                           total=-balance,
                           statement="Home closing")
@@ -661,7 +677,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       total = i + p + escrow
       if balance > pmi_threshold:
         total += pmi
-      txn = Transaction(account_id=accts["checking"],
+      txn = Transaction(account=acct_checking,
                         date=date,
                         total=-total,
                         statement="House payment")
@@ -692,7 +708,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         s.add_all((txn, txn_ti))
 
       if p > 0:
-        txn = Transaction(account_id=accts["mortgage"],
+        txn = Transaction(account=acct_mortgage,
                           date=date,
                           total=p,
                           statement="Principal")
@@ -705,7 +721,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
       utilities = max(10, round(payment * rng_normal(0.1, 0.01), 2))
 
-      txn = Transaction(account_id=accts["cc_0"],
+      txn = Transaction(account=acct_cc_0,
                         date=date,
                         total=-utilities,
                         statement="Utilities")
@@ -720,11 +736,11 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       target_price = payment * Decimal(0.05)
       repair_cost = round(target_price / np.sqrt(rng_uniform(1e-5, 1)), 2)
       if repair_cost > (2 * target_price):
-        acct_id = accts["cc_0"]
+        acct = acct_cc_0
         if repair_cost > (10 * target_price):
           # Use savings for big repairs
-          acct_id = accts["savings"]
-        txn = Transaction(account_id=acct_id,
+          acct = acct_savings
+        txn = Transaction(account=acct,
                           date=date + datetime.timedelta(days=rng_int(1, 28)),
                           total=-repair_cost,
                           statement="Repairs")
@@ -757,7 +773,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         # Renting until age 30
         rent = Decimal(71 * (1.03)**(age - 18))
         for date in dates:
-          txn = Transaction(account_id=accts["checking"],
+          txn = Transaction(account=acct_checking,
                             date=date,
                             total=-rent,
                             statement="Rent")
@@ -769,7 +785,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
           utilities = round(rent * rng_normal(0.1, 0.01), 2)
 
-          txn = Transaction(account_id=accts["cc_0"],
+          txn = Transaction(account=acct_cc_0,
                             date=date,
                             total=-utilities,
                             statement="Utilities")
@@ -860,6 +876,8 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
     accts: Account IDs to use
   """
   with p.get_session() as s:
+    acct_cc_0 = s.query(Account).where(Account.id == accts["cc_0"]).first()
+    acct_cc_1 = s.query(Account).where(Account.id == accts["cc_1"]).first()
     grocery_stores: t.Strings = [
         "Walmart", "Grocery Outlet", "Safeway", "Fred Meyer", "QFC", "Kroger"
     ]
@@ -912,16 +930,16 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
       grocery_budget = grocery_budget * (1 + r)
       restaurant_cost = restaurant_cost * (1 + r)
 
-      acct_id = accts["cc_0"]
+      acct = acct_cc_0
       if age > 32:
         # Open a new credit card
-        acct_id = accts["cc_1"]
+        acct = acct_cc_1
 
       for date in dates:
         store = rng_choice(grocery_stores)
         total = round(grocery_budget / 2 * rng_normal(1, 0.2), 2)
         if total > 0:
-          txn = Transaction(account_id=acct_id,
+          txn = Transaction(account=acct,
                             date=date,
                             total=-total,
                             statement=store)
@@ -941,7 +959,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
           restaurant = rng_choice(restaurants)
           total_exp = restaurant_cost * restaurant_plates
           total = round(total_exp * rng_normal(1, 0.2), 2)
-          txn = Transaction(account_id=acct_id,
+          txn = Transaction(account=acct,
                             date=date,
                             total=-total,
                             statement=restaurant)
@@ -965,13 +983,16 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
     assets: Asset IDs to use
   """
   with p.get_session() as s:
-    acct = s.query(Account).where(Account.id == accts["retirement"]).first()
+    acct_checking = s.query(Account).where(
+        Account.id == accts["checking"]).first()
+    acct_retirement = s.query(Account).where(
+        Account.id == accts["retirement"]).first()
     a_growth = s.query(Asset).where(Asset.id == assets["growth"]).first()
     a_value = s.query(Asset).where(Asset.id == assets["value"]).first()
-    date_sell = next_month(acct.transactions[-1].date)
+    date_sell = next_month(acct_retirement.transactions[-1].date)
     date_transfer = date_sell + datetime.timedelta(days=7)
 
-    _, asset_qty = acct.get_asset_qty(date_sell, date_sell)
+    _, asset_qty = acct_retirement.get_asset_qty(date_sell, date_sell)
 
     def sell_asset(asset: Asset, qty: t.Real) -> None:
       """Add transactions to sell an Asset
@@ -982,7 +1003,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       """
       _, values = asset.get_value(date_sell, date_sell)
       total = round(qty * values[0], 2)
-      txn = Transaction(account_id=accts["retirement"],
+      txn = Transaction(account=acct_retirement,
                         date=date_sell,
                         total=total,
                         statement="Security Sell")
@@ -993,7 +1014,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    asset_quantity=-qty)
       s.add_all((txn, txn_split))
 
-      txn = Transaction(account_id=accts["retirement"],
+      txn = Transaction(account=acct_retirement,
                         date=date_transfer,
                         total=-total,
                         statement="Account Transfer")
@@ -1002,7 +1023,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    category=TransactionCategory.TRANSFER)
       s.add_all((txn, txn_split))
 
-      txn = Transaction(account_id=accts["checking"],
+      txn = Transaction(account=acct_checking,
                         date=date_transfer,
                         total=total,
                         statement="Account Transfer")
