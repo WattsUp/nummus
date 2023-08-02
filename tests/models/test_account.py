@@ -558,7 +558,9 @@ class TestAccount(TestBase):
     asset_values = [
         p * q for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
     ]
-    target_values = [c + v for c, v in zip(target_values, asset_values)]
+    target_values = [
+        round(c + v, 6) for c, v in zip(target_values, asset_values)
+    ]
     target_assets = {assets[0].uuid: asset_values}
 
     r_dates, r_values, r_assets = acct.get_value(start, end)

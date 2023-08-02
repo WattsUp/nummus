@@ -114,6 +114,7 @@ class TransactionSplit(Base):
   parent_uuid: t.ORMStr
   date: t.ORMDate
   locked: t.ORMBool
+  account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
   account_uuid: t.ORMStr
 
   asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id"))
@@ -122,7 +123,10 @@ class TransactionSplit(Base):
   _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
 
   def __setattr__(self, name: str, value: t.Any) -> None:
-    if name in ["parent_id", "parent_uuid", "date", "locked", "account_uuid"]:
+    if name in [
+        "parent_id", "parent_uuid", "date", "locked", "account_uuid",
+        "account_id"
+    ]:
       raise PermissionError("Call TransactionSplit.parent = Transaction. "
                             "Do not set parent properties directly")
     if name in ["asset_id", "asset_uuid"]:
@@ -195,6 +199,7 @@ class TransactionSplit(Base):
     super().__setattr__("parent_uuid", parent.uuid)
     super().__setattr__("date", parent.date)
     super().__setattr__("locked", parent.locked)
+    super().__setattr__("account_id", parent.account_id)
     super().__setattr__("account_uuid", parent.account_uuid)
 
   @property
@@ -366,18 +371,63 @@ class Account(Base):
     qty_assets: t.DictReals = {}
     assets: DictStrAsset = {}
 
-    current_cash = Decimal(0)
     current_qty_assets: t.DictReal = {}
 
     s = orm.object_session(self)
-    query = s.query(TransactionSplit).join(Transaction)
-    query = query.where(Transaction.account_id == self.id)
-    query = query.order_by(Transaction.date)
+
+    # Get Account value on start date
+    # It is callable, sum returns a generator type
+    query_iv = s.query(sqlalchemy.func.sum(TransactionSplit.total))  # pylint: disable=not-callable
+    query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+    query_iv = query_iv.where(TransactionSplit.date < start)
+    iv = query_iv.scalar()
+    if iv is None:
+      current_cash = Decimal(0)
+    else:
+      current_cash = iv
+
+    # Get Asset quantities on start date
+    query_assets = s.query(TransactionSplit.asset_id).distinct()
+    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
+    for asset_id, in query_assets.all():
+      if asset_id is None:
+        continue
+      a = s.query(Asset).where(Asset.id == asset_id).first()
+      a_uuid = a.uuid
+      assets[a_uuid] = a
+      qty_assets[a_uuid] = []
+      current_qty_assets[a_uuid] = Decimal(0)
+
+      # Get initial value for each Asset
+      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_int = query_iv.scalar()
+      if iv_int is None:
+        continue
+
+      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
+      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_frac = sum(v for v, in query_iv.all())
+
+      current_qty_assets[a_uuid] = iv_int + iv_frac
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.order_by(TransactionSplit.date)
 
     for t_split in query.all():
       t_split: TransactionSplit
-      if t_split.date > end:
-        continue
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
       while date < t_split.date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
@@ -386,14 +436,10 @@ class Account(Base):
         date += datetime.timedelta(days=1)
 
       current_cash += t_split.total
-      a = t_split.asset
-      if a is None:
+      a_uuid = t_split.asset_uuid
+      if a_uuid is None:
         continue
-      if a.uuid not in current_qty_assets:
-        current_qty_assets[a.uuid] = 0
-        qty_assets[a.uuid] = [0] * len(dates)
-        assets[a.uuid] = a
-      current_qty_assets[a.uuid] += t_split.asset_quantity
+      current_qty_assets[a_uuid] += t_split.asset_quantity
 
     while date <= end:
       for k, v in current_qty_assets.items():
@@ -406,12 +452,12 @@ class Account(Base):
     value_assets: t.DictReals = {}
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
-      # Value = quantity * price * multiplier
-      values = [p * q for p, q in zip(qty, *a.get_value(start, end)[1:])]
+      # Value = quantity * price
+      values = [p * q for q, p in zip(qty, a.get_value(start, end)[1])]
       value_assets[asset_uuid] = values
 
     # Sum with cash
-    values = [sum(x) for x in zip(cash, *value_assets.values())]
+    values = [round(sum(x), 6) for x in zip(cash, *value_assets.values())]
 
     return dates, values, value_assets
 

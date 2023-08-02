@@ -353,4 +353,6 @@ class Decimal18(Decimal6):
   """SQL type for fixed point numbers, stores as atto-integer
   """
 
+  cache_ok = True
+
   _FACTOR = Decimal("1e18")
