@@ -392,7 +392,7 @@ class Account(Base):
     for asset_id, in query_assets.all():
       if asset_id is None:
         continue
-      a = s.query(Asset).where(Asset.id == asset_id).first()
+      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
       a_uuid = a.uuid
       assets[a_uuid] = a
       qty_assets[a_uuid] = []
@@ -536,23 +536,58 @@ class Account(Base):
 
     current_qty_assets: t.DictReal = {}
 
-    for transaction in self.transactions:
-      if transaction.date > end:
+    s = orm.object_session(self)
+
+    # Get Asset quantities on start date
+    query_assets = s.query(TransactionSplit.asset_id).distinct()
+    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
+    for asset_id, in query_assets.all():
+      if asset_id is None:
         continue
-      while date < transaction.date:
+      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
+      a_uuid = a.uuid
+      qty_assets[a_uuid] = []
+      current_qty_assets[a_uuid] = Decimal(0)
+
+      # Get initial value for each Asset
+      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_int = query_iv.scalar()
+      if iv_int is None:
+        continue
+
+      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
+      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
+      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
+      query_iv = query_iv.where(TransactionSplit.date < start)
+      iv_frac = sum(v for v, in query_iv.all())
+
+      current_qty_assets[a_uuid] = iv_int + iv_frac
+
+    # Transactions between start and end
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.where(TransactionSplit.date >= start)
+    query = query.where(TransactionSplit.asset_id.is_not(None))
+    query = query.order_by(TransactionSplit.date)
+
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # Don't need thanks SQL filters
+      # if t_split.date > end:
+      #   continue
+      while date < t_split.date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         date += datetime.timedelta(days=1)
 
-      for split in transaction.splits:
-        a = split.asset
-        if a is None:
-          continue
-        if a.uuid not in current_qty_assets:
-          current_qty_assets[a.uuid] = 0
-          qty_assets[a.uuid] = [0] * len(dates)
-        current_qty_assets[a.uuid] += split.asset_quantity
+      a_uuid = t_split.asset_uuid
+      current_qty_assets[a_uuid] += t_split.asset_quantity
 
     while date <= end:
       for k, v in current_qty_assets.items():
