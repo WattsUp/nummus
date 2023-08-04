@@ -93,6 +93,12 @@ class Server:
       print(f"{Fore.RED}No SSL cert found at {p.ssl_cert_path}")
       print(f"{Fore.MAGENTA}Generating self-signed certificate")
       self.generate_ssl_cert(p.ssl_cert_path, p.ssl_key_path)
+      print("Please install certificate in web browser")
+
+    # Check for self-signed SSL cert
+    if self.is_ssl_cert_self_signed(p.ssl_cert_path):
+      print(f"{Fore.YELLOW}SSL certificate appears to be self-signed at "
+            f"{p.ssl_cert_path}")
 
     self._server = gevent.pywsgi.WSGIServer((host, port),
                                             app,
@@ -152,3 +158,18 @@ class Server:
 
     path_cert.chmod(0o600)
     path_key.chmod(0o600)
+
+  @staticmethod
+  def is_ssl_cert_self_signed(path_cert: pathlib.Path) -> bool:
+    """Check if SSL certificate is self-signed
+
+    Args:
+      path_cert: Path to SSL certificate
+    
+    Returns:
+      True if CN=localhost, False otherwise
+    """
+    with open(path_cert, "rb") as file:
+      buf = file.read()
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, buf)
+    return cert.get_subject().CN == "localhost"
