@@ -380,6 +380,10 @@ class Portfolio:
     with tarfile.open(path_backup, "w:gz") as tar:
       files: t.Paths = [self._path_db, self._path_config]
 
+      if self.ssl_cert_path.exists():
+        files.append(self.ssl_cert_path)
+        files.append(self.ssl_key_path)
+
       # Get every image
       with self.get_session() as s:
         query = s.query(Asset).where(Asset.img_suffix.is_not(None))

@@ -99,6 +99,7 @@ class Server:
     if self.is_ssl_cert_self_signed(p.ssl_cert_path):
       print(f"{Fore.YELLOW}SSL certificate appears to be self-signed at "
             f"{p.ssl_cert_path}")
+      print("Replace with real certificate to disable this warning")
 
     self._server = gevent.pywsgi.WSGIServer((host, port),
                                             app,
@@ -109,7 +110,6 @@ class Server:
   def run(self) -> None:
     """Start and run the server
     """
-    # TODO (WattsUp) Get https
     url = f"https://localhost:{self._server.server_port}"
     print(f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)")
     if self._enable_api_ui:
@@ -165,7 +165,7 @@ class Server:
 
     Args:
       path_cert: Path to SSL certificate
-    
+
     Returns:
       True if CN=localhost, False otherwise
     """

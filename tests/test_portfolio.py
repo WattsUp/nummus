@@ -44,6 +44,7 @@ class TestPortfolio(TestBase):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
     path_images = path_db.parent.joinpath("portfolio.images")
+    path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
     # Create unencrypted portfolio
     p = portfolio.Portfolio.create(path_db)
@@ -51,11 +52,16 @@ class TestPortfolio(TestBase):
     self.assertTrue(path_config.exists(), "Config does not exist")
     self.assertTrue(path_images.exists(), "images does not exist")
     self.assertTrue(path_images.is_dir(), "images is not a directory")
+    self.assertTrue(path_ssl.exists(), "ssl does not exist")
+    self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
+    self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
     self.assertEqual(path_images, p.image_path)
     self.assertEqual(path_db, p.path)
+    self.assertEqual(path_ssl.joinpath("cert.pem"), p.ssl_cert_path)
+    self.assertEqual(path_ssl.joinpath("key.pem"), p.ssl_key_path)
     p = None
     sql.drop_session()
 
@@ -112,6 +118,7 @@ class TestPortfolio(TestBase):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     path_config = path_db.with_suffix(".config")
     path_images = path_db.parent.joinpath("portfolio.images")
+    path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
     key = self.random_string()
 
@@ -121,9 +128,12 @@ class TestPortfolio(TestBase):
     self.assertTrue(path_config.exists(), "Config does not exist")
     self.assertTrue(path_images.exists(), "images does not exist")
     self.assertTrue(path_images.is_dir(), "images is not a directory")
+    self.assertTrue(path_ssl.exists(), "ssl does not exist")
+    self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
+    self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
     sql.drop_session()
 
     # Check portfolio is encrypted
@@ -454,7 +464,7 @@ class TestPortfolio(TestBase):
     path_backup_2.unlink()
     self.assertRaises(FileNotFoundError, portfolio.Portfolio.restore, p)
 
-    # Backups should include the images
+    # Backups should include the images and SSL certs
     with p.get_session() as s:
       asset = Asset(name=self.random_string(),
                     category=AssetCategory.CASH,
@@ -469,16 +479,34 @@ class TestPortfolio(TestBase):
       with open(path_a_img, "wb") as file:
         file.write(a_img)
 
+    path_cert = p.ssl_cert_path
+    path_key = p.ssl_key_path
+    path_cert_rel = str(path_cert.relative_to(self._TEST_ROOT))
+    path_key_rel = str(path_key.relative_to(self._TEST_ROOT))
+    ssl_cert = self.random_string().encode()
+    ssl_key = self.random_string().encode()
+
+    with open(path_cert, "wb") as file:
+      file.write(ssl_cert)
+    with open(path_key, "wb") as file:
+      file.write(ssl_key)
+
     p.backup()
     with tarfile.open(path_backup_1, "r:gz") as tar:
       buf_backup = tar.extractfile(path_a_img_rel).read()
       self.assertEqual(a_img, buf_backup)
+      buf_backup = tar.extractfile(path_cert_rel).read()
+      self.assertEqual(ssl_cert, buf_backup)
+      buf_backup = tar.extractfile(path_key_rel).read()
+      self.assertEqual(ssl_key, buf_backup)
     a_img = None
     buf_backup = None
 
     path_db.unlink()
     path_config.unlink()
     path_a_img.unlink()
+    path_cert.unlink()
+    path_key.unlink()
 
     # Restoring brings asset images back too
     portfolio.Portfolio.restore(path_db)
@@ -486,6 +514,8 @@ class TestPortfolio(TestBase):
     self.assertTrue(path_db.exists(), "Portfolio does not exist")
     self.assertTrue(path_config.exists(), "Config does not exist")
     self.assertTrue(path_a_img.exists(), "Asset image does not exist")
+    self.assertTrue(path_cert.exists(), "SSL cert does not exist")
+    self.assertTrue(path_key.exists(), "SSL key does not exist")
     self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
     self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
