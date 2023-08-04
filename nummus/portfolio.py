@@ -51,6 +51,7 @@ class Portfolio:
     name = self._path_db.with_suffix("").name
     self._path_config = self._path_db.with_suffix(".config")
     self._path_images = self._path_db.parent.joinpath(f"{name}.images")
+    self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
     if not self._path_db.exists():
       raise FileNotFoundError(f"Portfolio at {self._path_db} does not exist, "
                               "use Portfolio.create()")
@@ -58,6 +59,7 @@ class Portfolio:
       raise FileNotFoundError("Portfolio configuration does not exist, "
                               "cannot open database")
     self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
+    self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
     self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
 
     if key is None:
@@ -119,6 +121,7 @@ class Portfolio:
     name = path_db.with_suffix("").name
     path_config = path_db.with_suffix(".config")
     path_images = path_db.parent.joinpath(f"{name}.images")
+    path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
     enc = None
     if encryption is not None and key is not None:
@@ -126,6 +129,7 @@ class Portfolio:
 
     path_db.parent.mkdir(parents=True, exist_ok=True)
     path_images.mkdir(exist_ok=True)
+    path_ssl.mkdir(exist_ok=True)
     salt = common.random_string(min_length=50, max_length=100)
     config = autodict.JSONAutoDict(path_config)
     config.clear()
@@ -136,6 +140,7 @@ class Portfolio:
     config.save()
     path_config.chmod(0o600)  # Only owner can read/write
     path_images.chmod(0o700)  # Only owner can read/write
+    path_ssl.chmod(0o700)  # Only owner can read/write
 
     if enc is None:
       password = Portfolio._NUMMUS_PASSWORD
@@ -471,6 +476,18 @@ class Portfolio:
 
   @property
   def image_path(self) -> pathlib.Path:
-    """Get path  path to image folder
+    """Get path to image folder
     """
     return self._path_images
+
+  @property
+  def ssl_cert_path(self) -> pathlib.Path:
+    """Get path to SSL certificate
+    """
+    return self._path_ssl.joinpath("cert.pem")
+
+  @property
+  def ssl_key_path(self) -> pathlib.Path:
+    """Get path to SSL certificate key
+    """
+    return self._path_ssl.joinpath("key.pem")
