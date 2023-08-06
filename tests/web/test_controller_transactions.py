@@ -398,11 +398,12 @@ class TestControllerTransactions(WebTestBase):
       asset_uuid = asset.uuid
 
       transactions: TxnList = []
-      for category in [
+
+      for i, category in enumerate([
           TransactionCategory.HOME, TransactionCategory.FOOD,
           TransactionCategory.SHOPPING, TransactionCategory.HOBBIES,
           TransactionCategory.SERVICES, TransactionCategory.TRAVEL
-      ]:
+      ]):
         txn = Transaction(account=acct_checking,
                           date=today,
                           total=-100,
@@ -414,14 +415,14 @@ class TestControllerTransactions(WebTestBase):
                                    description=self.random_string(),
                                    subcategory=self.random_string(),
                                    tag=self.random_string())
+        if i == 5:
+          txn.account = acct_invest
+          txn.date = yesterday
+          txn.locked = True
+          t_split.asset = asset
         s.add_all((txn, t_split))
         transactions.append(txn)
       s.commit()
-
-      transactions[-1].account = acct_invest
-      transactions[-1].date = yesterday
-      transactions[-1].locked = True
-      transactions[-1].splits[0].asset = asset
 
       # Split t0
       t_split_extra_0 = TransactionSplit(total=-10,
@@ -442,8 +443,9 @@ class TestControllerTransactions(WebTestBase):
 
       s.commit()
       # Sort by date, then parent, then id
-      query = s.query(TransactionSplit).join(Transaction).order_by(
-          Transaction.date, TransactionSplit.parent_id, TransactionSplit.id)
+      query = s.query(TransactionSplit).order_by(TransactionSplit.date,
+                                                 TransactionSplit.parent_id,
+                                                 TransactionSplit.id)
       # Serialize then deserialize
       json_s = simplejson.dumps(query.all(),
                                 cls=NummusJSONEncoder,
@@ -455,6 +457,7 @@ class TestControllerTransactions(WebTestBase):
     # Get all
     result, _ = self.api_get(endpoint)
     target = {"transactions": t_splits, "count": n_splits, "next_offset": None}
+    self.maxDiff = None
     self.assertEqual(target, result)
 
     # Get only HOBBIES
