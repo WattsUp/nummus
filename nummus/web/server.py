@@ -3,6 +3,7 @@
 
 import datetime
 import pathlib
+import sys
 import warnings
 
 from colorama import Fore
@@ -90,16 +91,18 @@ class Server:
       flask_app.json = NummusJSONProvider(flask_app)
 
     if not p.ssl_cert_path.exists():
-      print(f"{Fore.RED}No SSL cert found at {p.ssl_cert_path}")
+      print(f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}",
+            file=sys.stderr)
       print(f"{Fore.MAGENTA}Generating self-signed certificate")
       self.generate_ssl_cert(p.ssl_cert_path, p.ssl_key_path)
       print("Please install certificate in web browser")
 
     # Check for self-signed SSL cert
     if self.is_ssl_cert_self_signed(p.ssl_cert_path):
-      print(f"{Fore.YELLOW}SSL certificate appears to be self-signed at "
-            f"{p.ssl_cert_path}")
-      print("Replace with real certificate to disable this warning")
+      buf = (f"{Fore.YELLOW}SSL certificate appears to be self-signed at "
+             f"{p.ssl_cert_path}\n"
+             "Replace with real certificate to disable this warning")
+      print(buf, file=sys.stderr)
 
     self._server = gevent.pywsgi.WSGIServer((host, port),
                                             app,

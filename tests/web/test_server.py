@@ -2,6 +2,7 @@
 """
 
 import io
+import shutil
 from unittest import mock
 
 from colorama import Fore
@@ -26,7 +27,20 @@ class TestServer(TestBase):
     port = 80
     enable_api_ui = True
 
-    s = server.Server(p, host, port, enable_api_ui)
+    with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+      with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+        s = server.Server(p, host, port, enable_api_ui)
+    fake_stderr = fake_stderr.getvalue()
+    target = (f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}\n"
+              f"{Fore.YELLOW}SSL certificate appears to be self-signed at "
+              f"{p.ssl_cert_path}\n"
+              "Replace with real certificate to disable this warning\n")
+    self.assertEqual(target, fake_stderr)
+    fake_stdout = fake_stdout.getvalue()
+    target = (f"{Fore.MAGENTA}Generating self-signed certificate\n"
+              "Please install certificate in web browser\n")
+    self.assertEqual(target, fake_stdout)
+
     self.assertEqual(p, s._portfolio)  # pylint: disable=protected-access
     self.assertEqual(enable_api_ui, s._enable_api_ui)  # pylint: disable=protected-access
 
@@ -43,8 +57,19 @@ class TestServer(TestBase):
     self.assertEqual(host, s_server.server_host)
     self.assertEqual(port, s_server.server_port)
 
+    # Copy not self-signed cert over
+    path_cert = self._DATA_ROOT.joinpath("cert_not_ss.pem")
+    path_key = self._DATA_ROOT.joinpath("key_not_ss.pem")
+
+    shutil.copyfile(path_cert, p.ssl_cert_path)
+    shutil.copyfile(path_key, p.ssl_key_path)
+
     enable_api_ui = False
-    s = server.Server(p, host, port, enable_api_ui)
+    with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+      with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+        s = server.Server(p, host, port, enable_api_ui)
+    self.assertEqual("", fake_stderr.getvalue())
+    self.assertEqual("", fake_stdout.getvalue())
     self.assertEqual(enable_api_ui, s._enable_api_ui)  # pylint: disable=protected-access
 
     s_server = s._server  # pylint: disable=protected-access
@@ -56,10 +81,18 @@ class TestServer(TestBase):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
     p = portfolio.Portfolio.create(path_db, None)
 
+    path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
+    path_key = self._DATA_ROOT.joinpath("key_ss.pem")
+
+    shutil.copyfile(path_cert, p.ssl_cert_path)
+    shutil.copyfile(path_key, p.ssl_key_path)
+
     host = "127.0.0.1"
     port = 8080
+    url = f"https://localhost:{port}"
     enable_api_ui = True
-    s = server.Server(p, host, port, enable_api_ui)
+    with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      s = server.Server(p, host, port, enable_api_ui)
     s_server = s._server  # pylint: disable=protected-access
 
     s_server.serve_forever = lambda *_: print("serve_forever")
@@ -69,7 +102,6 @@ class TestServer(TestBase):
       s.run()
 
     fake_stdout = fake_stdout.getvalue()
-    url = f"http://{host}:{port}"
     target = (f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
               f"{Fore.CYAN}nummus API UI running on {url}/api/ui\n"
               "serve_forever\n"
@@ -77,7 +109,8 @@ class TestServer(TestBase):
     self.assertEqual(target, fake_stdout[:len(target)])
 
     enable_api_ui = False
-    s = server.Server(p, host, port, enable_api_ui)
+    with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      s = server.Server(p, host, port, enable_api_ui)
     s_server = s._server  # pylint: disable=protected-access
 
     def raise_keyboard_interrupt():
@@ -90,7 +123,6 @@ class TestServer(TestBase):
       s.run()
 
     fake_stdout = fake_stdout.getvalue()
-    url = f"http://{host}:{port}"
     target = (f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
               f"{Fore.YELLOW}Shutting down on interrupt\n"
               f"{Fore.YELLOW}nummus web shutdown at ")  # skip timestamp
@@ -102,12 +134,34 @@ class TestServer(TestBase):
       s.run()
 
     fake_stdout = fake_stdout.getvalue()
-    url = f"http://{host}:{port}"
     target = (f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
               f"{Fore.YELLOW}Shutting down on interrupt\n"
               "stop\n"
               f"{Fore.YELLOW}nummus web shutdown at ")  # skip timestamp
     self.assertEqual(target, fake_stdout[:len(target)])
+
+  def test_generate_ssl_cert(self):
+    path_cert = self._TEST_ROOT.joinpath("cert.pem")
+    path_key = self._TEST_ROOT.joinpath("key.pem")
+
+    server.Server.generate_ssl_cert(path_cert, path_key)
+
+    self.assertTrue(path_cert.exists(), "SSL cert does not exist")
+    self.assertTrue(path_key.exists(), "SSL key does not exist")
+    self.assertEqual(path_cert.stat().st_mode & 0o777, 0o600)
+    self.assertEqual(path_key.stat().st_mode & 0o777, 0o600)
+
+    self.assertTrue(server.Server.is_ssl_cert_self_signed(path_cert),
+                    "SSL cert is not self-signed")
+
+  def test_is_ssl_cert_self_signed(self):
+    path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
+    self.assertTrue(server.Server.is_ssl_cert_self_signed(path_cert),
+                    "SSL cert is not self-signed")
+
+    path_cert = self._DATA_ROOT.joinpath("cert_not_ss.pem")
+    self.assertFalse(server.Server.is_ssl_cert_self_signed(path_cert),
+                     "SSL cert is self-signed")
 
 
 class TestNummusJSONProvider(TestBase):
