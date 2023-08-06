@@ -4,6 +4,7 @@
 import io
 import pathlib
 import re
+import shutil
 import time
 from unittest import mock
 import urllib.parse
@@ -44,7 +45,16 @@ class WebTestBase(TestBase):
     path_db = cls._TEST_ROOT.joinpath("portfolio.db")
     cls._portfolio = portfolio.Portfolio.create(path_db, None)
 
-    s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
+    path_cert = cls._DATA_ROOT.joinpath("cert_ss.pem")
+    path_key = cls._DATA_ROOT.joinpath("key_ss.pem")
+
+    shutil.copyfile(path_cert, cls._portfolio.ssl_cert_path)
+    shutil.copyfile(path_key, cls._portfolio.ssl_key_path)
+
+    with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        # Ignore SSL warnings
+        s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
     s_server = s._server  # pylint: disable=protected-access
     connexion_app: connexion.FlaskApp = s_server.application
     flask_app: flask.Flask = connexion_app.app

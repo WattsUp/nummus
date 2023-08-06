@@ -214,12 +214,12 @@ def get_all(request_args: t.JSONObj = None) -> flask.Response:
   asset_category = common.parse_enum(args.get("asset_category"), AssetCategory)
 
   with p.get_session() as s:
-    query = s.query(TransactionSplit).join(Transaction)
-    query = query.where(Transaction.date <= end)
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.date <= end)
     if start is not None:
       if end <= start:
         raise HTTPError(422, detail="End date must be after Start date")
-      query = query.where(Transaction.date >= start)
+      query = query.where(TransactionSplit.date >= start)
     if category is not None:
       query = query.where(TransactionSplit.category == category)
     if subcategory is not None:
@@ -228,10 +228,10 @@ def get_all(request_args: t.JSONObj = None) -> flask.Response:
       query = query.where(TransactionSplit.tag == tag)
     if locked is not None:
       locked_bool = locked.lower() == "true"
-      query = query.where(Transaction.locked == locked_bool)
+      query = query.where(TransactionSplit.locked == locked_bool)
     if account_uuid is not None:
       acct = common.find_account(s, account_uuid)
-      query = query.where(Transaction.account_id == acct.id)
+      query = query.where(TransactionSplit.account_id == acct.id)
     if account_category is not None:
       query = query.join(Account)
       query = query.where(Account.category == account_category)
@@ -246,10 +246,10 @@ def get_all(request_args: t.JSONObj = None) -> flask.Response:
       # Apply ordering
       # Sort by date, then parent, then id
       if sort == "oldest":
-        query = query.order_by(Transaction.date, TransactionSplit.parent_id,
-                               TransactionSplit.id)
+        query = query.order_by(TransactionSplit.date,
+                               TransactionSplit.parent_id, TransactionSplit.id)
       else:
-        query = query.order_by(Transaction.date.desc(),
+        query = query.order_by(TransactionSplit.date.desc(),
                                TransactionSplit.parent_id, TransactionSplit.id)
     else:
       # Apply search, will order by best match
