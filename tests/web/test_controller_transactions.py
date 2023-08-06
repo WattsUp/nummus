@@ -457,7 +457,6 @@ class TestControllerTransactions(WebTestBase):
     # Get all
     result, _ = self.api_get(endpoint)
     target = {"transactions": t_splits, "count": n_splits, "next_offset": None}
-    self.maxDiff = None
     self.assertEqual(target, result)
 
     # Get only HOBBIES
