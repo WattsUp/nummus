@@ -483,11 +483,12 @@ class Account(Base):
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
       # Value = quantity * price
-      values = [p * q for q, p in zip(qty, a.get_value(start, end)[1])]
+      _, price = a.get_value(start, end)
+      values = [round(p * q, 6) for p, q in zip(price, qty)]
       value_assets[asset_uuid] = values
 
     # Sum with cash
-    values = [round(sum(x), 6) for x in zip(cash, *value_assets.values())]
+    values = [sum(x) for x in zip(cash, *value_assets.values())]
 
     return dates, values, value_assets
 
