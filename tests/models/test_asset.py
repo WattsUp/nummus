@@ -9,6 +9,63 @@ from nummus.models import asset
 from tests.base import TestBase
 
 
+class TestAssetSplit(TestBase):
+  """Test AssetSplit class
+  """
+
+  def test_init_properties(self):
+    session = self.get_session()
+    models.metadata_create_all(session)
+
+    a = asset.Asset(name=self.random_string(),
+                    category=asset.AssetCategory.CASH)
+    session.add(a)
+    session.commit()
+
+    d = {
+        "asset_id": a.id,
+        "multiplier": self.random_decimal(1, 10),
+        "date": datetime.date.today()
+    }
+
+    v = asset.AssetSplit(**d)
+    session.add(v)
+    session.commit()
+
+    self.assertEqual(d["asset_id"], v.asset_id)
+    self.assertEqual(a, v.asset)
+    self.assertEqual(d["multiplier"], v.multiplier)
+    self.assertEqual(d["date"], v.date)
+
+    # Test default and hidden properties
+    d.pop("asset_id")
+    result = v.to_dict()
+    self.assertDictEqual(d, result)
+
+    # Set via asset=a
+    d = {
+        "asset": a,
+        "multiplier": self.random_decimal(1, 10),
+        "date": datetime.date.today()
+    }
+
+    v = asset.AssetSplit(**d)
+    session.add(v)
+    session.commit()
+
+    self.assertEqual(a, v.asset)
+    self.assertEqual(d["multiplier"], v.multiplier)
+    self.assertEqual(d["date"], v.date)
+
+    # Set an uncommitted Asset
+    a = asset.Asset(name=self.random_string(),
+                    category=asset.AssetCategory.SECURITY)
+    self.assertRaises(ValueError, setattr, v, "asset", a)
+
+    # Set an not an Asset
+    self.assertRaises(TypeError, setattr, v, "asset", self.random_string())
+
+
 class TestAssetValuation(TestBase):
   """Test AssetValuation class
   """
