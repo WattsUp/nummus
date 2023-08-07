@@ -101,7 +101,7 @@ class TestControllerTransactions(WebTestBase):
 
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
-      txn = s.query(Transaction).first()
+      txn: Transaction = s.query(Transaction).first()
       self.assertEqual(f"/api/transactions/{txn.uuid}", headers["Location"])
 
       self.assertEqual(acct, txn.account)

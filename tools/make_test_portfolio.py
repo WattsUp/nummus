@@ -487,13 +487,13 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
               total=-cost_growth,
               category=TransactionCategory.INSTRUMENT,
               asset=a_growth,
-              asset_quantity=qty_growth)
+              asset_quantity_unadjusted=qty_growth)
           txn_split_1 = TransactionSplit(
               parent=txn,
               total=-cost_value,
               category=TransactionCategory.INSTRUMENT,
               asset=a_value,
-              asset_quantity=qty_value)
+              asset_quantity_unadjusted=qty_value)
           s.add_all((txn, txn_split_0, txn_split_1))
 
     s.commit()
@@ -594,7 +594,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=house,
-                                   asset_quantity=1)
+                                   asset_quantity_unadjusted=1)
       s.add_all((txn, txn_split))
 
       pmi = round(Decimal(0.01) * pi * 12, 2)
@@ -638,7 +638,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=house,
-                                   asset_quantity=-1)
+                                   asset_quantity_unadjusted=-1)
       s.add_all((txn, txn_split))
 
       if balance > 0:
@@ -1019,7 +1019,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=asset,
-                                   asset_quantity=-qty)
+                                   asset_quantity_unadjusted=-qty)
       s.add_all((txn, txn_split))
 
       txn = Transaction(account=acct_retirement,

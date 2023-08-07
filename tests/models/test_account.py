@@ -66,6 +66,8 @@ class TestTransaction(TestBase):
     self.assertIsNone(t_split_0.asset)
     self.assertIsNone(t_split_0.asset_id)
     self.assertIsNone(t_split_0.asset_uuid)
+    self.assertIsNone(t_split_0.asset_quantity)
+    self.assertIsNone(t_split_0.asset_quantity_unadjusted)
 
     result = t_split_0.to_dict()
     self.assertEqual(t_split_0.uuid, result.pop("uuid"))
@@ -87,7 +89,7 @@ class TestTransaction(TestBase):
         "subcategory": self.random_string(),
         "tag": self.random_string(),
         "asset": asset,
-        "asset_quantity": self.random_decimal(-1, 1, precision=18),
+        "asset_quantity_unadjusted": self.random_decimal(-1, 1, precision=18),
         "parent": txn
     }
 
@@ -103,12 +105,14 @@ class TestTransaction(TestBase):
     d["date"] = txn.date
     d["asset_uuid"] = asset.uuid
     d["parent_uuid"] = txn.uuid
+    d["asset_quantity"] = d.pop("asset_quantity_unadjusted")
     d["locked"] = False
     result = t_split_1.to_dict()
     self.assertDictEqual(d, result)
 
     self.assertEqual([t_split_0, t_split_1], txn.splits)
     self.assertEqual(asset, t_split_1.asset)
+    self.assertEqual(d["asset_quantity"], t_split_1.asset_quantity_unadjusted)
 
     # Remove asset
     t_split_1.asset = None
@@ -246,16 +250,26 @@ class TestTransaction(TestBase):
                       date=today,
                       statement=self.random_string(),
                       total=10)
-    t_split = TransactionSplit(parent=txn, total=10, asset_quantity=qty)
+    t_split = TransactionSplit(parent=txn,
+                               total=10,
+                               asset_quantity_unadjusted=qty)
     session.add_all((txn, t_split))
     session.commit()
 
+    self.assertEqual(qty, t_split.asset_quantity_unadjusted)
     self.assertEqual(qty, t_split.asset_quantity)
 
-    t_split.asset_quantity = None
+    multiplier = self.random_decimal(1, 10)
+    t_split.adjust_asset_quantity(multiplier)
+    self.assertEqual(qty, t_split.asset_quantity_unadjusted)
+    self.assertEqual(qty * multiplier, t_split.asset_quantity)
+
+    t_split.asset_quantity_unadjusted = None
     session.commit()
 
     self.assertIsNone(t_split.asset_quantity)
+
+    self.assertRaises(ValueError, t_split.adjust_asset_quantity, multiplier)
 
 
 class TestAccount(TestBase):
@@ -386,7 +400,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[0],
-                               asset_quantity=q0)
+                               asset_quantity_unadjusted=q0)
     session.add_all((txn, t_split))
     session.commit()
 
@@ -406,7 +420,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[0],
-                               asset_quantity=-q1)
+                               asset_quantity_unadjusted=-q1)
     session.add_all((txn, t_split))
     session.commit()
 
@@ -426,7 +440,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[1],
-                               asset_quantity=q2)
+                               asset_quantity_unadjusted=q2)
     session.add_all((txn, t_split))
     session.commit()
 
@@ -503,7 +517,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[0],
-                               asset_quantity=q0)
+                               asset_quantity_unadjusted=q0)
     session.add_all((txn, t_split))
     session.commit()
 
@@ -528,7 +542,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[0],
-                               asset_quantity=-q1)
+                               asset_quantity_unadjusted=-q1)
     session.add_all((txn, t_split))
     session.commit()
 

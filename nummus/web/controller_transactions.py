@@ -42,7 +42,7 @@ def create() -> flask.Response:
         "subcategory": split.get("subcategory"),
         "tag": split.get("tag"),
         "asset_uuid": split.get("asset_uuid"),
-        "asset_quantity": split.get("asset_quantity")
+        "asset_quantity_unadjusted": split.get("asset_quantity")
     })
 
   if len(req_splits) < 1:
@@ -146,7 +146,7 @@ def update(transaction_uuid: str) -> flask.Response:
 
       asset_uuid = req_split.get("asset_uuid")
       asset = None if asset_uuid is None else common.find_asset(s, asset_uuid)
-      d_split["asset_quantity"] = req_split.get("asset_quantity")
+      d_split["asset_quantity_unadjusted"] = req_split.get("asset_quantity")
 
       t_split.update(d_split)
       t_split.parent = txn  # Update parent properties
