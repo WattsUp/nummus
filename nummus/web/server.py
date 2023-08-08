@@ -15,7 +15,7 @@ import gevent.pywsgi
 from OpenSSL import crypto
 import simplejson
 
-from nummus import models, portfolio
+from nummus import models, portfolio, version
 from nummus import custom_types as t
 from nummus.web import controller_html
 
@@ -41,6 +41,7 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
         delta = f"{Fore.GREEN}{delta:.6f}s{Fore.RESET}"
     else:
       delta = "[delta t]"
+
     if self.client_address is None:
       client_address = "[client address]"
     elif isinstance(self.client_address, tuple):
@@ -162,6 +163,9 @@ class Server:
     # Enable debugger and reloader when enable_api_ui
     flask_app.debug = enable_api_ui
 
+    # Inject common variables into templates
+    flask_app.context_processor(lambda: {"version": version.__version__})
+
     # Setup environment and static file bundles
     env_assets = flask_assets.Environment(flask_app)
 
@@ -170,8 +174,10 @@ class Server:
     env_assets.register("css", bundle_css)
     bundle_css.build()
 
-    # TODO (WattsUp) Add minify
-    bundle_js = flask_assets.Bundle("src/*.js", output="dist/main.js")
+    bundle_js = flask_assets.Bundle(
+        "src/*.js",
+        output="dist/main.js",
+        filters=None if flask_app.debug else "jsmin")
     env_assets.register("js", bundle_js)
     bundle_js.build()
 
