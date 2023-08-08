@@ -12,8 +12,8 @@ class TestCredentials(TestBase):
   """
 
   def test_init_properties(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     d = {
         "site": self.random_string(),
@@ -22,8 +22,8 @@ class TestCredentials(TestBase):
     }
 
     c = credentials.Credentials(**d)
-    session.add(c)
-    session.commit()
+    s.add(c)
+    s.commit()
 
     self.assertEqual(d["site"], c.site)
     self.assertEqual(d["user"], c.user)

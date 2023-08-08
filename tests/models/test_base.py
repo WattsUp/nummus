@@ -132,17 +132,17 @@ class TestORMBase(TestBase):
   """
 
   def test_init_properties(self):
-    session = self.get_session()
+    s = self.get_session()
     base.Base.metadata.create_all(
-        session.get_bind(),
+        s.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
-    session.commit()
+    s.commit()
 
     parent = Parent()
     self.assertIsNone(parent.id)
     self.assertIsNone(parent.uuid)
-    session.add(parent)
-    session.commit()
+    s.add(parent)
+    s.commit()
     self.assertIsNotNone(parent.id)
     self.assertIsNotNone(parent.uuid)
 
@@ -154,8 +154,8 @@ class TestORMBase(TestBase):
     self.assertIsNone(child.parent_hidden)
     self.assertIsNone(child.parent_hidden_id)
     child.parent = parent
-    session.add(child)
-    session.commit()
+    s.add(child)
+    s.commit()
     self.assertIsNotNone(child.id)
     self.assertIsNotNone(child.uuid)
     self.assertIsNotNone(child.parent)
@@ -164,38 +164,38 @@ class TestORMBase(TestBase):
     self.assertIsNone(child.parent_hidden_id)
 
     child.height = None
-    session.commit()
+    s.commit()
     self.assertIsNone(child.height)
 
     height = Decimal("1.2")
     child.height = height
-    session.commit()
+    s.commit()
     self.assertIsInstance(child.height, Decimal)
     self.assertEqual(height, child.height)
 
     # Only 6 decimals
     height = Decimal("1.23456789")
     child.height = height
-    session.commit()
+    s.commit()
     self.assertIsInstance(child.height, Decimal)
     self.assertEqual(Decimal("1.234567"), child.height)
 
   def test_to_dict(self):
-    session = self.get_session()
+    s = self.get_session()
     base.Base.metadata.create_all(
-        session.get_bind(),
+        s.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
-    session.commit()
+    s.commit()
 
     parent = Parent()
     parent_hidden = ParentHidden()
-    session.add_all([parent, parent_hidden])
-    session.commit()
+    s.add_all([parent, parent_hidden])
+    s.commit()
 
     child = Child(parent_id=parent.id)
     child.not_a_class_property = None
-    session.add(child)
-    session.commit()
+    s.add(child)
+    s.commit()
 
     target = {"uuid": child.uuid, "age": child.age}
     d = child.to_dict()
@@ -236,7 +236,7 @@ class TestORMBase(TestBase):
 
     # Add a non-default property
     child.parent_hidden = parent_hidden
-    session.commit()
+    s.commit()
 
     target = {
         "uuid": child.uuid,
@@ -297,16 +297,16 @@ class TestORMBase(TestBase):
     self.assertDictEqual(target, d)
 
   def test_update(self):
-    session = self.get_session()
+    s = self.get_session()
     base.Base.metadata.create_all(
-        session.get_bind(),
+        s.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
-    session.commit()
+    s.commit()
 
     parent_a = Parent()
     parent_b = Parent()
-    session.add_all([parent_a, parent_b])
-    session.commit()
+    s.add_all([parent_a, parent_b])
+    s.commit()
 
     d = {
         "id": int(self._RNG.integers(10, 1000)),
@@ -316,8 +316,8 @@ class TestORMBase(TestBase):
 
     child_a = Child(parent=parent_a)
     child_b = Child(parent=parent_b)
-    session.add_all([child_a, child_b])
-    session.commit()
+    s.add_all([child_a, child_b])
+    s.commit()
 
     self.assertEqual(1, len(parent_a.children))
     self.assertEqual(1, len(parent_b.children))
@@ -326,7 +326,7 @@ class TestORMBase(TestBase):
     uuid_old = child_a.uuid
     age_old = child_a.age
     changes = child_a.update(d, force=False)
-    session.commit()
+    s.commit()
     self.assertEqual(id_old, child_a.id)  # id is readonly
     self.assertEqual(uuid_old, child_a.uuid)  # uuid is readonly
     self.assertEqual(d["age"], child_a.age)
@@ -334,7 +334,7 @@ class TestORMBase(TestBase):
 
     # age is the same, not updated
     changes = child_a.update(d, force=True)
-    session.commit()
+    s.commit()
     self.assertEqual(d["id"], child_a.id)
     self.assertEqual(d["uuid"], child_a.uuid)
     self.assertEqual(d["age"], child_a.age)
@@ -346,7 +346,7 @@ class TestORMBase(TestBase):
 
     # Both are the same, not updated
     changes = child_a.update(d, force=True)
-    session.commit()
+    s.commit()
     self.assertEqual(d["age"], child_a.age)
     self.assertEqual(d["id"], child_a.id)
     self.assertEqual(d["uuid"], child_a.uuid)
@@ -355,7 +355,7 @@ class TestORMBase(TestBase):
     # Update parent via id
     d = {"parent_id": parent_b.id}
     changes = child_a.update(d)
-    session.commit()
+    s.commit()
     self.assertEqual(parent_b, child_a.parent)
     self.assertDictEqual({"parent_id": (parent_a.id, parent_b.id)}, changes)
 
@@ -365,7 +365,7 @@ class TestORMBase(TestBase):
     # Can't update relationships by obj
     d = {"parent": parent_a}
     changes = child_a.update(d)
-    session.commit()
+    s.commit()
     self.assertEqual(parent_b, child_a.parent)
     self.assertEqual(parent_b.id, child_a.parent_id)
     self.assertDictEqual({}, changes)
@@ -375,7 +375,7 @@ class TestORMBase(TestBase):
 
     d = {"children": []}
     changes = parent_a.update(d)
-    session.commit()
+    s.commit()
     self.assertEqual(parent_b, child_a.parent)
     self.assertDictEqual({}, changes)
 
@@ -386,13 +386,13 @@ class TestORMBase(TestBase):
     id_old = parent_b.id
     d = {"id": str(uuid.uuid4())}
     changes = parent_b.update(d, force=True)
-    self.assertRaises(models.exc.IntegrityError, session.commit)
-    session.rollback()
+    self.assertRaises(models.exc.IntegrityError, s.commit)
+    s.rollback()
 
     # Revert
     d = {"id": id_old}
     _ = parent_b.update(d, force=True)
-    session.commit()
+    s.commit()
     self.assertEqual(id_old, parent_b.id)
     self.assertEqual(id_old, child_a.parent_id)
     self.assertEqual(parent_b, child_a.parent)
@@ -403,12 +403,12 @@ class TestORMBase(TestBase):
     age_old = parent_b.age
     d = {"age": self._RNG.integers(50, 100)}
     changes = parent_b.update(d)
-    session.commit()
+    s.commit()
     self.assertEqual(age_old, parent_b.age)
     self.assertDictEqual({}, changes)
 
     changes = parent_b.update(d, force=True)
-    session.commit()
+    s.commit()
     self.assertEqual(d["age"], parent_b.age)
     self.assertDictEqual({"age": (age_old, d["age"])}, changes)
 
@@ -416,27 +416,27 @@ class TestORMBase(TestBase):
     uuid_bytes_old = parent_b.uuid_bytes
     d = {"uuid_bytes": str(uuid.uuid4()).encode()}
     changes = parent_b.update(d)
-    session.commit()
+    s.commit()
     self.assertEqual(uuid_bytes_old, parent_b.uuid_bytes)
     self.assertDictEqual({}, changes)
 
   def test_comparators(self):
-    session = self.get_session()
+    s = self.get_session()
     base.Base.metadata.create_all(
-        session.get_bind(),
+        s.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
-    session.commit()
+    s.commit()
 
     parent_a = Parent()
     parent_b = Parent()
-    session.add_all([parent_a, parent_b])
-    session.commit()
+    s.add_all([parent_a, parent_b])
+    s.commit()
 
     self.assertEqual(parent_a, parent_a)
     self.assertNotEqual(parent_a, parent_b)
 
-    # Make a new session to same DB
-    with orm.create_session(bind=session.get_bind()) as session_2:
+    # Make a new s to same DB
+    with orm.create_session(bind=s.get_bind()) as session_2:
       # Get same parent_a but in a different Python object
       parent_a_queried = session_2.query(Parent).where(
           Parent.id == parent_a.id).first()
@@ -444,15 +444,15 @@ class TestORMBase(TestBase):
       self.assertEqual(parent_a, parent_a_queried)
 
   def test_json_encoder(self):
-    session = self.get_session()
+    s = self.get_session()
     base.Base.metadata.create_all(
-        session.get_bind(),
+        s.get_bind(),
         tables=[Parent.__table__, Child.__table__, ParentHidden.__table__])
-    session.commit()
+    s.commit()
 
     parent = Parent()
-    session.add(parent)
-    session.commit()
+    s.add(parent)
+    s.commit()
 
     result = json.dumps(parent, cls=base.NummusJSONEncoder)
     target = json.dumps(parent.to_dict())

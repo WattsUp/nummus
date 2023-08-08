@@ -16,18 +16,18 @@ class TestTransaction(TestBase):
   """
 
   def test_init_properties(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.CASH)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     asset = Asset(name="bananas", category=AssetCategory.ITEM)
-    session.add(asset)
-    session.commit()
+    s.add(asset)
+    s.commit()
 
     d = {
         "account": acct,
@@ -37,8 +37,8 @@ class TestTransaction(TestBase):
     }
 
     txn = Transaction(**d)
-    session.add(txn)
-    session.commit()
+    s.add(txn)
+    s.commit()
 
     self.assertEqual(acct, txn.account)
     self.assertEqual(acct.id, txn.account_id)
@@ -59,8 +59,8 @@ class TestTransaction(TestBase):
     d = {"total": self.random_decimal(-1, 1), "parent": txn}
 
     t_split_0 = TransactionSplit(**d)
-    session.add(t_split_0)
-    session.commit()
+    s.add(t_split_0)
+    s.commit()
     self.assertEqual(t_split_0.parent, txn)
     self.assertEqual(t_split_0.parent_id, txn.id)
     self.assertIsNone(t_split_0.asset)
@@ -94,8 +94,8 @@ class TestTransaction(TestBase):
     }
 
     t_split_1 = TransactionSplit(**d)
-    session.add(t_split_1)
-    session.commit()
+    s.add(t_split_1)
+    s.commit()
 
     # Test default and hidden properties
     d.pop("asset")
@@ -116,7 +116,7 @@ class TestTransaction(TestBase):
 
     # Remove asset
     t_split_1.asset = None
-    session.commit()
+    s.commit()
     self.assertIsNone(t_split_1.asset)
     self.assertIsNone(t_split_1.asset_id)
     self.assertIsNone(t_split_1.asset_uuid)
@@ -190,14 +190,14 @@ class TestTransaction(TestBase):
                      f"Categories not covered: {not_covered}")
 
   def test_validate_category(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.CASH)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     today = datetime.date.today()
 
@@ -207,8 +207,8 @@ class TestTransaction(TestBase):
                       statement=self.random_string(),
                       total=10)
     t_split = TransactionSplit(parent=txn, total=10, category=None)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     # Positive total is okay for INCOME
     t_split.category = TransactionCategory.INCOME
@@ -223,8 +223,8 @@ class TestTransaction(TestBase):
                       statement=self.random_string(),
                       total=-10)
     t_split = TransactionSplit(parent=txn, total=-10, category=None)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     # Negative total is okay for HOME
     t_split.category = TransactionCategory.HOME
@@ -234,14 +234,14 @@ class TestTransaction(TestBase):
                       TransactionCategory.INCOME)
 
   def test_asset_quantity(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.CASH)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     today = datetime.date.today()
 
@@ -253,8 +253,8 @@ class TestTransaction(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=10,
                                asset_quantity_unadjusted=qty)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     self.assertEqual(qty, t_split.asset_quantity_unadjusted)
     self.assertEqual(qty, t_split.asset_quantity)
@@ -265,7 +265,7 @@ class TestTransaction(TestBase):
     self.assertEqual(qty * multiplier, t_split.asset_quantity)
 
     t_split.asset_quantity_unadjusted = None
-    session.commit()
+    s.commit()
 
     self.assertIsNone(t_split.asset_quantity)
 
@@ -277,8 +277,8 @@ class TestAccount(TestBase):
   """
 
   def test_init_properties(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     d = {
         "name": self.random_string(),
@@ -287,8 +287,8 @@ class TestAccount(TestBase):
     }
 
     acct = Account(**d)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     self.assertEqual(d["name"], acct.name)
     self.assertEqual(d["institution"], acct.institution)
@@ -304,8 +304,8 @@ class TestAccount(TestBase):
     self.assertDictEqual(d, result)
 
   def test_add_transactions(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
@@ -316,8 +316,8 @@ class TestAccount(TestBase):
     }
 
     acct = Account(**d)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
@@ -328,8 +328,8 @@ class TestAccount(TestBase):
                           date=today,
                           total=self.random_decimal(-1, 1),
                           statement=self.random_string())
-    session.add(t_today)
-    session.commit()
+    s.add(t_today)
+    s.commit()
 
     self.assertEqual(today, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
@@ -338,8 +338,8 @@ class TestAccount(TestBase):
                            date=today - datetime.timedelta(days=1),
                            total=self.random_decimal(-1, 1),
                            statement=self.random_string())
-    session.add(t_before)
-    session.commit()
+    s.add(t_before)
+    s.commit()
 
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(today, acct.updated_on)
@@ -348,15 +348,15 @@ class TestAccount(TestBase):
                           date=today + datetime.timedelta(days=1),
                           total=self.random_decimal(-1, 1),
                           statement=self.random_string())
-    session.add(t_after)
-    session.commit()
+    s.add(t_after)
+    s.commit()
 
     self.assertEqual(t_before.date, acct.opened_on)
     self.assertEqual(t_after.date, acct.updated_on)
 
   def test_get_asset_qty(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
@@ -368,9 +368,9 @@ class TestAccount(TestBase):
       new_asset = Asset(name=self.random_string(),
                         category=AssetCategory.SECURITY)
       assets.append(new_asset)
-    session.add(acct)
-    session.add_all(assets)
-    session.commit()
+    s.add(acct)
+    s.add_all(assets)
+    s.commit()
 
     target_dates = [
         (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
@@ -388,8 +388,8 @@ class TestAccount(TestBase):
                       total=self.random_decimal(10, 100),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn, total=txn.total)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     # Buy asset[0] on the second day
     q0 = self.random_decimal(0, 10)
@@ -401,8 +401,8 @@ class TestAccount(TestBase):
                                total=txn.total,
                                asset=assets[0],
                                asset_quantity_unadjusted=q0)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0]}
 
@@ -421,8 +421,8 @@ class TestAccount(TestBase):
                                total=txn.total,
                                asset=assets[0],
                                asset_quantity_unadjusted=-q1)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_qty = {assets[0].uuid: [0, q0, q0, q0, q0, q0, q0 - q1]}
 
@@ -441,8 +441,8 @@ class TestAccount(TestBase):
                                total=txn.total,
                                asset=assets[1],
                                asset_quantity_unadjusted=q2)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_qty = {
         assets[0].uuid: [0, q0, q0, q0],
@@ -460,8 +460,8 @@ class TestAccount(TestBase):
     self.assertEqual(target_qty, result_qty)
 
   def test_get_value(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
@@ -473,9 +473,9 @@ class TestAccount(TestBase):
       new_asset = Asset(name=self.random_string(),
                         category=AssetCategory.SECURITY)
       assets.append(new_asset)
-    session.add(acct)
-    session.add_all(assets)
-    session.commit()
+    s.add(acct)
+    s.add_all(assets)
+    s.commit()
 
     target_dates = [
         (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
@@ -497,8 +497,8 @@ class TestAccount(TestBase):
                       total=t_fund,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn, total=txn.total)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_values = [0, t_fund, t_fund, t_fund, t_fund, t_fund, t_fund]
 
@@ -518,8 +518,8 @@ class TestAccount(TestBase):
                                total=txn.total,
                                asset=assets[0],
                                asset_quantity_unadjusted=q0)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_values = [
         0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0,
@@ -543,8 +543,8 @@ class TestAccount(TestBase):
                                total=txn.total,
                                asset=assets[0],
                                asset_quantity_unadjusted=-q1)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_values = [
         0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0, t_fund + t0,
@@ -561,15 +561,14 @@ class TestAccount(TestBase):
     prices = self.random_decimal(1, 10, size=len(target_dates))
     for date, p in zip(target_dates, prices):
       v = AssetValuation(asset=assets[0], date=date, value=p)
-      session.add(v)
-    session.commit()
+      s.add(v)
+    s.commit()
 
     asset_values = [
-        p * q for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
+        round(p * q, 6)
+        for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
     ]
-    target_values = [
-        round(c + v, 6) for c, v in zip(target_values, asset_values)
-    ]
+    target_values = [c + v for c, v in zip(target_values, asset_values)]
     target_assets = {assets[0].uuid: asset_values}
 
     r_dates, r_values, r_assets = acct.get_value(start, end)
@@ -584,16 +583,16 @@ class TestAccount(TestBase):
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)
 
   def test_get_cash_flow(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
     acct = Account(name=self.random_string(),
                    institution=self.random_string(),
                    category=AccountCategory.INVESTMENT)
-    session.add(acct)
-    session.commit()
+    s.add(acct)
+    s.commit()
 
     target_dates = [
         (today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)
@@ -615,8 +614,8 @@ class TestAccount(TestBase):
                       total=t_fund,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn, total=txn.total)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_categories["unknown-inflow"][1] += t_fund
 
@@ -631,8 +630,8 @@ class TestAccount(TestBase):
                       total=t0,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn, total=txn.total)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_categories["unknown-outflow"][1] += t0
 
@@ -649,8 +648,8 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                category=TransactionCategory.INCOME)
-    session.add_all((txn, t_split))
-    session.commit()
+    s.add_all((txn, t_split))
+    s.commit()
 
     target_categories[TransactionCategory.INCOME][-1] += t1
 

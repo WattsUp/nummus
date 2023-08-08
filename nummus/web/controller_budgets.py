@@ -31,14 +31,14 @@ def create() -> flask.Response:
   services = req_categories["services"]
   travel = req_categories["travel"]
 
-  b = Budget(date=date,
-             home=home,
-             food=food,
-             shopping=shopping,
-             hobbies=hobbies,
-             services=services,
-             travel=travel)
   with p.get_session() as s:
+    b = Budget(date=date,
+               home=home,
+               food=food,
+               shopping=shopping,
+               hobbies=hobbies,
+               services=services,
+               travel=travel)
     s.add(b)
     s.commit()
     return flask.jsonify(b), 201, {"Location": f"/api/budgets/{b.uuid}"}

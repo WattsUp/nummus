@@ -28,12 +28,12 @@ def create() -> flask.Response:
   unit = req.get("unit")
   tag = req.get("tag")
 
-  a = Asset(name=name,
-            description=description,
-            category=category,
-            unit=unit,
-            tag=tag)
   with p.get_session() as s:
+    a = Asset(name=name,
+              description=description,
+              category=category,
+              unit=unit,
+              tag=tag)
     s.add(a)
     s.commit()
     return flask.jsonify(a), 201, {"Location": f"/api/assets/{a.uuid}"}
