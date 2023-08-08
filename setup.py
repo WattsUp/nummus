@@ -17,7 +17,7 @@ with open("README.md", encoding="utf-8") as file:
 required = [
     "sqlalchemy>=2", "AutoDict", "connexion==2.14.2", "gevent", "colorama",
     "thefuzz", "python-Levenshtein", "simplejson", "pyopenssl", "flask-assets",
-    "pytailwindcss", "jsmin"
+    "pytailwindcss", "jsmin", "flask<2.3,>=2"
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
@@ -34,7 +34,8 @@ setuptools.setup(
     long_description=longDescription,
     long_description_content_type="text/markdown",
     license="MIT",
-    packages=setuptools.find_packages(exclude=["tests", "tests.*"]),
+    packages=setuptools.find_packages(
+        include=[module_folder, f"{module_folder}.*"]),
     package_data={module_folder: []},
     install_requires=required,
     extras_require=extras_require,
