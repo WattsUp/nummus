@@ -26,6 +26,7 @@
     "pycryptodome",
     "pyopenssl",
     "pytailwindcss",
+    "requestline",
     "Reswap",
     "Retarget",
     "robo-advising",

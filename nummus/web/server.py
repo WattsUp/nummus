@@ -4,9 +4,10 @@
 import datetime
 import pathlib
 import sys
+import typing as t
 import warnings
 
-from colorama import Fore
+from colorama import Fore, Back
 import connexion
 import flask
 import flask_assets
@@ -17,6 +18,70 @@ import simplejson
 from nummus import models, portfolio
 from nummus import custom_types as t
 from nummus.web import controller_html
+
+
+class NummusWebHandler(gevent.pywsgi.WSGIHandler):
+  """Custom WSGIHandler, mainly for request formatting
+  """
+
+  def format_request(self):
+    now = datetime.datetime.now().replace(microsecond=0)
+    if self.response_length is None:
+      length = "[len]"
+    else:
+      length = f"{self.response_length}B"
+
+    if self.time_finish:
+      delta = self.time_finish - self.time_start
+      if delta > 0.15:
+        delta = f"{Fore.RED}{delta:.6f}s{Fore.RESET}"
+      if delta > 0.075:
+        delta = f"{Fore.YELLOW}{delta:.6f}s{Fore.RESET}"
+      else:
+        delta = f"{Fore.GREEN}{delta:.6f}s{Fore.RESET}"
+    else:
+      delta = "[delta t]"
+    if self.client_address is None:
+      client_address = "[client address]"
+    elif isinstance(self.client_address, tuple):
+      client_address = self.client_address[0]
+    else:
+      client_address = self.client_address
+
+    if self.requestline is None:
+      method = "[method]"
+      endpoint = "[endpoint]"
+      http_ver = "[HTTP ver]"
+    else:
+      method, endpoint, http_ver = self.requestline.split(" ")
+      if method == "GET":
+        method = f"{Fore.CYAN}{method}{Fore.RESET}"
+      elif method == "POST":
+        method = f"{Fore.GREEN}{method}{Fore.RESET}"
+      elif method == "PUT":
+        method = f"{Fore.YELLOW}{method}{Fore.RESET}"
+      elif method == "DELETE":
+        method = f"{Fore.RED}{method}{Fore.RESET}"
+      elif method == "OPTIONS":
+        method = f"{Fore.BLUE}{method}{Fore.RESET}"
+      elif method == "HEAD":
+        method = f"{Fore.MAGENTA}{method}{Fore.RESET}"
+      elif method == "PATCH":
+        method = f"{Fore.BLACK}{Back.GREEN}{method}{Fore.RESET}{Back.RESET}"
+      elif method == "TRACE":
+        method = f"{Fore.BLACK}{Back.WHITE}{method}{Fore.RESET}{Back.RESET}"
+
+      if endpoint.startswith("/api/ui/"):
+        endpoint = f"{Fore.CYAN}{endpoint}{Fore.RESET}"
+      elif endpoint.startswith("/api/"):
+        endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
+      elif endpoint.startswith("/static/"):
+        endpoint = f"{Fore.MAGENTA}{endpoint}{Fore.RESET}"
+      else:
+        endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
+
+    return (f"{client_address} [{now}] {delta} "
+            f"{method} {endpoint} {http_ver} {length}")
 
 
 class NummusJSONProvider(flask.json.provider.JSONProvider):
@@ -127,7 +192,8 @@ class Server:
     self._server = gevent.pywsgi.WSGIServer((host, port),
                                             app,
                                             certfile=p.ssl_cert_path,
-                                            keyfile=p.ssl_key_path)
+                                            keyfile=p.ssl_key_path,
+                                            handler_class=NummusWebHandler)
     self._enable_api_ui = enable_api_ui
 
   def run(self) -> None:
