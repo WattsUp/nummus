@@ -56,6 +56,8 @@ def main() -> None:
             print(f"{Fore.CYAN}{line}", flush=True)
           elif line.startswith("Done"):
             print(f"{Fore.GREEN}{line}", flush=True)
+          elif line.startswith("SyntaxError"):
+            print(f"{Fore.RED}{line}", flush=True)
           else:
             print(line, flush=True)
     except KeyboardInterrupt:

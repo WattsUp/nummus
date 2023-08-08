@@ -7,22 +7,22 @@
   <title>nummus</title>
   <meta name="description" content="A personal financial information aggregator and planning tool." />
 
-  <!-- <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png'">
+  <!-- <link rel="apple-touch-icon" sizes="180x180" href="/static/favicon/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon/favicon-16x16.png">
   <link rel="manifest" href="/static/favicon/site.webmanifest"> -->
 
-  {% assets 'css' %}
+  {% assets "css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}">
   {% endassets %}
 
-  {% assets 'js' %}
+  {% assets "js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
   {% endassets %}
 
 </head>
 
-<body class="bg-slate-900">
+<body class="bg-white">
   {% block header %}
     {% include "/shared/_header.html" %}
   {% endblock %}
