@@ -66,10 +66,11 @@ class TestControllerBudgets(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create budgets
     today = datetime.date.today()
-    b = Budget(date=today)
+
     with p.get_session() as s:
+      # Create budgets
+      b = Budget(date=today)
       s.add(b)
       s.commit()
 
@@ -87,10 +88,11 @@ class TestControllerBudgets(WebTestBase):
   def test_update(self):
     p = self._portfolio
 
-    # Create budget
     today = datetime.date.today()
-    b = Budget(date=today)
+
     with p.get_session() as s:
+      # Create budgets
+      b = Budget(date=today)
       s.add(b)
       s.commit()
 
@@ -129,10 +131,11 @@ class TestControllerBudgets(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create budget
     today = datetime.date.today()
-    b = Budget(date=today)
+
     with p.get_session() as s:
+      # Create budgets
+      b = Budget(date=today)
       s.add(b)
       s.commit()
 
@@ -153,13 +156,14 @@ class TestControllerBudgets(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    # Create budget
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
     tomorrow = today + datetime.timedelta(days=1)
-    b_today = Budget(date=today)
-    b_yesterday = Budget(date=yesterday)
+
     with p.get_session() as s:
+      # Create budget
+      b_today = Budget(date=today)
+      b_yesterday = Budget(date=yesterday)
       s.add_all((b_today, b_yesterday))
       s.commit()
       query = s.query(Budget).order_by(Budget.date)

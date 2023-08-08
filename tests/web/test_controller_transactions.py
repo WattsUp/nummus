@@ -20,13 +20,14 @@ class TestControllerTransactions(WebTestBase):
   def test_create(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
-    asset = Asset(name="bananas", category=AssetCategory.ITEM)
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      asset = Asset(name="bananas", category=AssetCategory.ITEM)
       s.add_all((acct, asset))
       s.commit()
       acct_uuid = acct.uuid
@@ -101,7 +102,7 @@ class TestControllerTransactions(WebTestBase):
 
     result, headers = self.api_post(endpoint, json=req)
     with p.get_session() as s:
-      txn = s.query(Transaction).first()
+      txn: Transaction = s.query(Transaction).first()
       self.assertEqual(f"/api/transactions/{txn.uuid}", headers["Location"])
 
       self.assertEqual(acct, txn.account)
@@ -156,12 +157,13 @@ class TestControllerTransactions(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create accounts and transactions
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts and transactions
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -186,13 +188,14 @@ class TestControllerTransactions(WebTestBase):
   def test_update(self):
     p = self._portfolio
 
-    # Create accounts and transactions
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
-    asset = Asset(name="bananas", category=AssetCategory.ITEM)
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts and transactions
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      asset = Asset(name="bananas", category=AssetCategory.ITEM)
       s.add_all((acct, asset))
       s.commit()
       asset_uuid = asset.uuid
@@ -340,12 +343,13 @@ class TestControllerTransactions(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create accounts and transactions
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts and transactions
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -377,20 +381,21 @@ class TestControllerTransactions(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest = Account(name="Monkey Investments",
-                          institution="Ape Trading",
-                          category=AccountCategory.INVESTMENT)
-    asset = Asset(name="Banana", category=AssetCategory.ITEM)
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
     tomorrow = today + datetime.timedelta(days=1)
     subcategory = self.random_string()
     tag = self.random_string()
+
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Ape Trading",
+                            category=AccountCategory.INVESTMENT)
+      asset = Asset(name="Banana", category=AssetCategory.ITEM)
       s.add_all((acct_checking, acct_invest, asset))
       s.commit()
 

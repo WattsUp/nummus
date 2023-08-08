@@ -20,11 +20,11 @@ class TestCommon(WebTestBase):
   def test_find_account(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -42,9 +42,9 @@ class TestCommon(WebTestBase):
   def test_find_asset(self):
     p = self._portfolio
 
-    # Create asset
-    a = Asset(name="Banana", category=AssetCategory.ITEM)
     with p.get_session() as s:
+      # Create asset
+      a = Asset(name="Banana", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -62,10 +62,10 @@ class TestCommon(WebTestBase):
   def test_find_budget(self):
     p = self._portfolio
 
-    # Create budget
-    today = datetime.date.today()
-    b = Budget(date=today)
     with p.get_session() as s:
+      # Create budget
+      today = datetime.date.today()
+      b = Budget(date=today)
       s.add(b)
       s.commit()
 
@@ -83,12 +83,12 @@ class TestCommon(WebTestBase):
   def test_find_transaction(self):
     p = self._portfolio
 
-    # Create accounts and transactions
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
-    today = datetime.date.today()
     with p.get_session() as s:
+      # Create accounts and transactions
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
+      today = datetime.date.today()
       s.add(acct)
       s.commit()
 
@@ -165,14 +165,14 @@ class TestCommon(WebTestBase):
     # Bulk of search testing happens in the appropriate controller tests
     p = self._portfolio
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest = Account(name="Monkey Investments",
-                          institution="Ape Trading",
-                          category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Ape Trading",
+                            category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
       s.commit()
 
@@ -208,13 +208,14 @@ class TestCommon(WebTestBase):
   def test_paginate(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     n_transactions = 10
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 

@@ -27,8 +27,8 @@ def create() -> flask.Response:
   institution = req["institution"]
   category = common.parse_enum(req["category"], AccountCategory)
 
-  acct = Account(name=name, institution=institution, category=category)
   with p.get_session() as s:
+    acct = Account(name=name, institution=institution, category=category)
     s.add(acct)
     s.commit()
     return flask.jsonify(acct), 201, {"Location": f"/api/accounts/{acct.uuid}"}

@@ -59,11 +59,11 @@ class TestControllerPortfolio(WebTestBase):
                           total=self.random_decimal(1, 10),
                           statement=self.random_string())
         t_split_0 = TransactionSplit(total=txn.total, parent=txn)
-        t_split_1 = TransactionSplit(total=txn.total,
-                                     parent=txn,
-                                     asset=a_apple,
-                                     asset_quantity=self.random_decimal(
-                                         0.001, 0.01))
+        t_split_1 = TransactionSplit(
+            total=txn.total,
+            parent=txn,
+            asset=a_apple,
+            asset_quantity_unadjusted=self.random_decimal(0.001, 0.01))
         s.add_all((txn, t_split_0, t_split_1))
 
       for _ in range(n_transactions):
@@ -71,16 +71,16 @@ class TestControllerPortfolio(WebTestBase):
                           date=today,
                           total=self.random_decimal(-10, -1),
                           statement=self.random_string())
-        t_split_0 = TransactionSplit(total=txn.total,
-                                     parent=txn,
-                                     asset=a_banana,
-                                     asset_quantity=self.random_decimal(
-                                         100, 1000))
-        t_split_1 = TransactionSplit(total=txn.total,
-                                     parent=txn,
-                                     asset=a_apple,
-                                     asset_quantity=self.random_decimal(
-                                         100, 1000))
+        t_split_0 = TransactionSplit(
+            total=txn.total,
+            parent=txn,
+            asset=a_banana,
+            asset_quantity_unadjusted=self.random_decimal(100, 1000))
+        t_split_1 = TransactionSplit(
+            total=txn.total,
+            parent=txn,
+            asset=a_apple,
+            asset_quantity_unadjusted=self.random_decimal(100, 1000))
         s.add_all((txn, t_split_0, t_split_1))
 
       b = Budget(date=today,

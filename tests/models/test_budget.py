@@ -16,14 +16,14 @@ class TestBudget(TestBase):
   """
 
   def test_init_properties(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
     b = budget.Budget(date=today)
-    session.add(b)
-    session.commit()
+    s.add(b)
+    s.commit()
 
     # Default to 0
     self.assertEqual(today, b.date)
@@ -45,8 +45,8 @@ class TestBudget(TestBase):
     }
 
     b = budget.Budget(**d)
-    session.add(b)
-    session.commit()
+    s.add(b)
+    s.commit()
 
     self.assertEqual(d["date"], b.date)
     self.assertEqual(d["home"], b.home)
@@ -76,18 +76,18 @@ class TestBudget(TestBase):
 
     # Duplicate dates are bad
     b.date = today
-    self.assertRaises(sqlalchemy.exc.IntegrityError, session.commit)
-    session.rollback()
+    self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+    s.rollback()
 
   def test_set_categories(self):
-    session = self.get_session()
-    models.metadata_create_all(session)
+    s = self.get_session()
+    models.metadata_create_all(s)
 
     today = datetime.date.today()
 
     b = budget.Budget(date=today)
-    session.add(b)
-    session.commit()
+    s.add(b)
+    s.commit()
 
     self.assertRaises(KeyError, setattr, b, "categories", {})
     self.assertRaises(KeyError, setattr, b, "categories", {"home": 1})

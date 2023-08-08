@@ -221,17 +221,17 @@ class TestPortfolio(TestBase):
     result = p.find_account("Monkey Bank Checking")
     self.assertIsNone(result)
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest_0 = Account(name="Primate Investments",
-                            institution="Monkey Bank",
-                            category=AccountCategory.INVESTMENT)
-    acct_invest_1 = Account(name="Primate Investments",
-                            institution="Gorilla Bank",
-                            category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest_0 = Account(name="Primate Investments",
+                              institution="Monkey Bank",
+                              category=AccountCategory.INVESTMENT)
+      acct_invest_1 = Account(name="Primate Investments",
+                              institution="Gorilla Bank",
+                              category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest_0, acct_invest_1))
       s.commit()
 
@@ -268,11 +268,11 @@ class TestPortfolio(TestBase):
     result = p.find_asset("BANANA")
     self.assertIsNone(result)
 
-    # Create assets
-    a_banana = Asset(name="BANANA", category=AssetCategory.ITEM)
-    a_apple_0 = Asset(name="APPLE", category=AssetCategory.ITEM)
-    a_apple_1 = Asset(name="APPLE", category=AssetCategory.SECURITY)
     with p.get_session() as s:
+      # Create assets
+      a_banana = Asset(name="BANANA", category=AssetCategory.ITEM)
+      a_apple_0 = Asset(name="APPLE", category=AssetCategory.ITEM)
+      a_apple_1 = Asset(name="APPLE", category=AssetCategory.SECURITY)
       s.add_all((a_banana, a_apple_0, a_apple_1))
       s.commit()
 
@@ -310,14 +310,14 @@ class TestPortfolio(TestBase):
     path = self._DATA_ROOT.joinpath("transactions_extras.csv")
     self.assertRaises(KeyError, p.import_file, path)
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest = Account(name="Monkey Investments",
-                          institution="Monkey Bank",
-                          category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Monkey Bank",
+                            category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
       s.commit()
 

@@ -72,9 +72,9 @@ class TestControllerAssets(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -92,9 +92,9 @@ class TestControllerAssets(WebTestBase):
   def test_update(self):
     p = self._portfolio
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -131,11 +131,11 @@ class TestControllerAssets(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     n_valuations = 10
     today = datetime.date.today()
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -166,15 +166,15 @@ class TestControllerAssets(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    # Create assets
-    a_banana = Asset(name="Banana",
-                     category=AssetCategory.ITEM,
-                     unit="bunches",
-                     tag="fruit")
-    a_banana_inc = Asset(name="BANANA inc.",
-                         category=AssetCategory.SECURITY,
-                         description="Big 'ole farm")
     with p.get_session() as s:
+      # Create assets
+      a_banana = Asset(name="Banana",
+                       category=AssetCategory.ITEM,
+                       unit="bunches",
+                       tag="fruit")
+      a_banana_inc = Asset(name="BANANA inc.",
+                           category=AssetCategory.SECURITY,
+                           description="Big 'ole farm")
       s.add_all((a_banana, a_banana_inc))
       s.commit()
       query = s.query(Asset)
@@ -238,9 +238,9 @@ class TestControllerAssets(WebTestBase):
   def test_get_image(self):
     p = self._portfolio
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -272,9 +272,9 @@ class TestControllerAssets(WebTestBase):
     suffix = ".png"
     fake_image = self.random_string().encode()
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 
@@ -320,9 +320,9 @@ class TestControllerAssets(WebTestBase):
     suffix = ".png"
     fake_image = self.random_string().encode()
 
-    # Create assets
-    a = Asset(name="BANANA", category=AssetCategory.ITEM, img_suffix=suffix)
     with p.get_session() as s:
+      # Create assets
+      a = Asset(name="BANANA", category=AssetCategory.ITEM, img_suffix=suffix)
       s.add(a)
       s.commit()
 
@@ -357,10 +357,11 @@ class TestControllerAssets(WebTestBase):
   def test_get_value(self):
     p = self._portfolio
 
-    # Create accounts
-    a = Asset(name="BANANA", category=AssetCategory.ITEM)
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts
+      a = Asset(name="BANANA", category=AssetCategory.ITEM)
       s.add(a)
       s.commit()
 

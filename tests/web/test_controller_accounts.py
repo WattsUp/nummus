@@ -5,9 +5,8 @@ import datetime
 
 import simplejson
 
-from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, NummusJSONEncoder,
-                           Transaction, TransactionSplit)
+                           Transaction, TransactionSplit, TxnSplitList)
 
 from tests.web.base import WebTestBase
 
@@ -49,11 +48,11 @@ class TestControllerAccounts(WebTestBase):
   def test_get(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -71,11 +70,11 @@ class TestControllerAccounts(WebTestBase):
   def test_update(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -114,13 +113,14 @@ class TestControllerAccounts(WebTestBase):
   def test_delete(self):
     p = self._portfolio
 
-    # Create accounts
-    acct = Account(name="Monkey Bank Checking",
-                   institution="Monkey Bank",
-                   category=AccountCategory.CASH)
     n_transactions = 10
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts
+      acct = Account(name="Monkey Bank Checking",
+                     institution="Monkey Bank",
+                     category=AccountCategory.CASH)
       s.add(acct)
       s.commit()
 
@@ -158,14 +158,14 @@ class TestControllerAccounts(WebTestBase):
   def test_get_all(self):
     p = self._portfolio
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest = Account(name="Monkey Investments",
-                          institution="Ape Trading",
-                          category=AccountCategory.INVESTMENT)
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Ape Trading",
+                            category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
       s.commit()
       query = s.query(Account)
@@ -215,16 +215,17 @@ class TestControllerAccounts(WebTestBase):
   def test_get_transactions(self):
     p = self._portfolio
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
-    acct_invest = Account(name="Monkey Investments",
-                          institution="Ape Trading",
-                          category=AccountCategory.INVESTMENT)
     n_transactions = 10
     today = datetime.date.today()
+
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
+      acct_invest = Account(name="Monkey Investments",
+                            institution="Ape Trading",
+                            category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
       s.commit()
 
@@ -248,7 +249,7 @@ class TestControllerAccounts(WebTestBase):
       # Sort by date, then parent, then id
       query = s.query(TransactionSplit).where(
           TransactionSplit.account_id == acct_checking.id)
-      t_splits_obj: t.List[TransactionSplit] = query.all()
+      t_splits_obj: TxnSplitList = query.all()
 
       # Serialize then deserialize
       json_s = simplejson.dumps(t_splits_obj,
@@ -274,14 +275,15 @@ class TestControllerAccounts(WebTestBase):
   def test_get_value(self):
     p = self._portfolio
 
-    # Create accounts
-    acct_checking = Account(name="Monkey Bank Checking",
-                            institution="Monkey Bank",
-                            category=AccountCategory.CASH)
     n_transactions = 10
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
+
     with p.get_session() as s:
+      # Create accounts
+      acct_checking = Account(name="Monkey Bank Checking",
+                              institution="Monkey Bank",
+                              category=AccountCategory.CASH)
       s.add(acct_checking)
       s.commit()
 

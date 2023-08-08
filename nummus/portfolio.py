@@ -232,7 +232,7 @@ class Portfolio:
             "category": d.pop("category", None),
             "subcategory": d.pop("subcategory", None),
             "tag": d.pop("tag", None),
-            "asset_quantity": d.pop("asset_quantity", None)
+            "asset_quantity_unadjusted": d.pop("asset_quantity", None)
         }
 
         account_raw = d.pop("account")

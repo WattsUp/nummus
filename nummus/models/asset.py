@@ -22,7 +22,37 @@ ORMAssetValOpt = orm.Mapped[t.Optional["AssetValuation"]]
 
 DictStrAsset = t.Dict[str, "Asset"]
 
-# TODO (WattsUp) Add AssetSplits
+
+class AssetSplit(Base):
+  """Asset Split model for storing a split of an asset on a specific date
+
+  Attributes:
+    asset_uuid: Asset unique identifier
+    date: Date of split
+    multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
+  """
+
+  _PROPERTIES_DEFAULT = ["value", "date", "multiplier"]
+  _PROPERTIES_HIDDEN = ["id", "uuid"]
+
+  asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
+  multiplier: t.ORMReal = orm.mapped_column(Decimal6)
+  date: t.ORMDate
+
+  @property
+  def asset(self) -> Asset:
+    """Asset for which this AssetSplit is for
+    """
+    s = orm.object_session(self)
+    return s.query(Asset).where(Asset.id == self.asset_id).first()
+
+  @asset.setter
+  def asset(self, asset: Asset) -> None:
+    if not isinstance(asset, Asset):
+      raise TypeError("AssetSplit.asset must be of type Asset")
+    if asset.id is None:
+      raise ValueError("Commit Asset before adding to split")
+    super().__setattr__("asset_id", asset.id)
 
 
 class AssetValuation(Base):
@@ -151,3 +181,38 @@ class Asset(Base):
       dates.append(date)
       date += datetime.timedelta(days=1)
     return dates, values
+
+  def update_splits(self) -> None:
+    """Recalculate adjusted TransactionSplit.asset_quantity based on all asset
+    splits
+    """
+    # This function is best here but need to avoid circular imports
+
+    from nummus.models import TransactionSplit  # pylint: disable=import-outside-toplevel
+
+    s = orm.object_session(self)
+
+    multiplier = Decimal(1)
+    splits: t.List[t.Tuple[t.Date, t.Real]] = []
+
+    query = s.query(AssetSplit)
+    query = query.where(AssetSplit.asset_id == self.id)
+    query = query.order_by(AssetSplit.date.desc())
+
+    for split in query.all():
+      split: AssetSplit
+      # Compound splits as we go
+      multiplier = multiplier * split.multiplier
+      splits.append((split.date, multiplier))
+
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.asset_id == self.id)
+    query = query.order_by(TransactionSplit.date.desc())
+
+    multiplier = Decimal(1)
+    for t_split in query.all():
+      t_split: TransactionSplit
+      # If txn is before the split, update the multiplier
+      if len(splits) >= 1 and t_split.date < splits[0][0]:
+        multiplier = splits.pop(0)[1]
+      t_split.adjust_asset_quantity(multiplier)

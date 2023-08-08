@@ -121,6 +121,8 @@ class TransactionSplit(Base):
   asset_uuid: t.ORMStrOpt
   _asset_qty_int: t.ORMIntOpt
   _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
+  _asset_qty_int_unadjusted: t.ORMIntOpt
+  _asset_qty_frac_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal18)
 
   def __setattr__(self, name: str, value: t.Any) -> None:
     if name in [
@@ -165,20 +167,50 @@ class TransactionSplit(Base):
   @property
   def asset_quantity(self) -> t.Real:
     """Number of units of Asset exchanged, Positive indicates
-    Account gained Assets (inflow)
+    Account gained Assets (inflow), adjusted for splits
     """
     if self._asset_qty_int is None:
       return None
     return self._asset_qty_int + self._asset_qty_frac
 
-  @asset_quantity.setter
-  def asset_quantity(self, qty: t.Real) -> None:
+  @property
+  def asset_quantity_unadjusted(self) -> t.Real:
+    """Number of units of Asset exchanged, Positive indicates
+    Account gained Assets (inflow), unadjusted for splits
+    """
+    if self._asset_qty_int_unadjusted is None:
+      return None
+    return self._asset_qty_int_unadjusted + self._asset_qty_frac_unadjusted
+
+  @asset_quantity_unadjusted.setter
+  def asset_quantity_unadjusted(self, qty: t.Real) -> None:
     if qty is None:
+      self._asset_qty_int_unadjusted = None
+      self._asset_qty_frac_unadjusted = None
       self._asset_qty_int = None
       self._asset_qty_frac = None
       return
     i, f = divmod(qty, 1)
-    self._asset_qty_int = int(i)
+    i = int(i)
+    self._asset_qty_int_unadjusted = i
+    self._asset_qty_frac_unadjusted = f
+
+    # Also set the adjusted with a 1x multiplier
+    self._asset_qty_int = i
+    self._asset_qty_frac = f
+
+  def adjust_asset_quantity(self, multiplier: t.Real) -> None:
+    """Set adjusted asset quantity
+
+    Args:
+      multiplier: Adjusted = unadjusted * multiplier
+    """
+    qty = self.asset_quantity_unadjusted
+    if qty is None:
+      raise ValueError("Cannot adjust non-asset transaction")
+    i, f = divmod(qty * multiplier, 1)
+    i = int(i)
+    self._asset_qty_int = i
     self._asset_qty_frac = f
 
   @property
@@ -451,11 +483,12 @@ class Account(Base):
     for asset_uuid, a in assets.items():
       qty = qty_assets[asset_uuid]
       # Value = quantity * price
-      values = [p * q for q, p in zip(qty, a.get_value(start, end)[1])]
+      _, price = a.get_value(start, end)
+      values = [round(p * q, 6) for p, q in zip(price, qty)]
       value_assets[asset_uuid] = values
 
     # Sum with cash
-    values = [round(sum(x), 6) for x in zip(cash, *value_assets.values())]
+    values = [sum(x) for x in zip(cash, *value_assets.values())]
 
     return dates, values, value_assets
 

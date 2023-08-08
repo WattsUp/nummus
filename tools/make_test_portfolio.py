@@ -12,8 +12,8 @@ import numpy as np
 from nummus import custom_types as t
 from nummus.portfolio import Portfolio
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           AssetValuation, Transaction, TransactionCategory,
-                           TransactionSplit)
+                           AssetSplit, AssetValuation, Transaction,
+                           TransactionCategory, TransactionSplit)
 
 colorama.init(autoreset=True)
 
@@ -236,8 +236,6 @@ def make_assets(p: Portfolio) -> t.DictInt:
     s.add_all(v[0] for v in stocks.values())
     s.add_all(v[0] for v in real_estate.values())
     s.commit()
-
-    # TODO (WattsUp) Add stock splits
 
     start = datetime.date(BIRTH_YEAR, 1, 1)
     date = start
@@ -475,6 +473,40 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
           a_values_i = (date - a_values_start).days
 
+          if a_growth_values[a_values_i] > 500:
+            # Do a 4:1 stock split
+            m = 4
+            print(f"{Fore.YELLOW}{a_growth.name} "
+                  f"{m}:1 split on {date}")
+            split = AssetSplit(asset=a_growth, date=date, multiplier=m)
+            s.add(split)
+
+            # Adjust all prices
+            query = s.query(AssetValuation)
+            query = query.where(AssetValuation.asset_id == a_growth.id)
+            for v in query.all():
+              v: AssetValuation
+              v.value = v.value / m
+
+            a_growth_values = [round(v / m, 6) for v in a_growth_values]
+
+          if a_value_values[a_values_i] > 500:
+            # Do a 4:1 stock split
+            m = 4
+            print(f"{Fore.YELLOW}{a_value.name} "
+                  f"{m}:1 split on {date}")
+            split = AssetSplit(asset=a_value, date=date, multiplier=m)
+            s.add(split)
+
+            # Adjust all prices
+            query = s.query(AssetValuation)
+            query = query.where(AssetValuation.asset_id == a_value.id)
+            for v in query.all():
+              v: AssetValuation
+              v.value = v.value / m
+
+            a_value_values = [round(v / m, 6) for v in a_value_values]
+
           qty_growth = round(cost_growth / a_growth_values[a_values_i], 6)
           qty_value = round(cost_value / a_value_values[a_values_i], 6)
 
@@ -487,16 +519,21 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
               total=-cost_growth,
               category=TransactionCategory.INSTRUMENT,
               asset=a_growth,
-              asset_quantity=qty_growth)
+              asset_quantity_unadjusted=qty_growth)
           txn_split_1 = TransactionSplit(
               parent=txn,
               total=-cost_value,
               category=TransactionCategory.INSTRUMENT,
               asset=a_value,
-              asset_quantity=qty_value)
+              asset_quantity_unadjusted=qty_value)
           s.add_all((txn, txn_split_0, txn_split_1))
 
     s.commit()
+
+    a_growth.update_splits()
+    a_value.update_splits()
+    s.commit()
+
   print(f"{Fore.GREEN}Generated income")
 
 
@@ -556,6 +593,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
       else:
         # Pay 20% unless there is more than 50k of excess cash
         down_payment = round(max(no_pmi_dp, max_dp - Decimal(50e3)), 2)
+      down_payment = min(down_payment, round(price, 2))
 
       p = price - down_payment
       r = round(rng_uniform(0.03, 0.1), 4) / 12
@@ -594,7 +632,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=house,
-                                   asset_quantity=1)
+                                   asset_quantity_unadjusted=1)
       s.add_all((txn, txn_split))
 
       pmi = round(Decimal(0.01) * pi * 12, 2)
@@ -638,7 +676,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=house,
-                                   asset_quantity=-1)
+                                   asset_quantity_unadjusted=-1)
       s.add_all((txn, txn_split))
 
       if balance > 0:
@@ -1019,7 +1057,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                                    total=txn.total,
                                    category=TransactionCategory.INSTRUMENT,
                                    asset=asset,
-                                   asset_quantity=-qty)
+                                   asset_quantity_unadjusted=-qty)
       s.add_all((txn, txn_split))
 
       txn = Transaction(account=acct_retirement,
