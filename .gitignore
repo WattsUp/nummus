@@ -10,6 +10,7 @@ build
 dist
 *.c
 version.py
+.webassets-cache
 
 # Test artifacts
 .test

@@ -9,6 +9,7 @@ import warnings
 from colorama import Fore
 import connexion
 import flask
+import flask_assets
 import gevent.pywsgi
 from OpenSSL import crypto
 import simplejson
@@ -77,7 +78,10 @@ class Server:
                   arguments={"title": "nummus API"},
                   pythonic_params=True,
                   strict_validation=True)
+
+    # HTML pages routing
     app.add_url_rule("/", "", controller_html.get_home)
+    app.add_url_rule("/index", "", controller_html.get_home)
 
     # Add Portfolio to context for controllers
     flask_app: flask.Flask = app.app
@@ -89,6 +93,22 @@ class Server:
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       flask_app.json = NummusJSONProvider(flask_app)
+
+    # Enable debugger and reloader when enable_api_ui
+    flask_app.debug = enable_api_ui
+
+    # Setup environment and static file bundles
+    env_assets = flask_assets.Environment(flask_app)
+
+    # TODO (WattsUp) Figure out including tailwindcss in build/dist/install
+    bundle_css = flask_assets.Bundle("src/main.css", output="dist/main.css")
+    env_assets.register("css", bundle_css)
+    bundle_css.build()
+
+    # TODO (WattsUp) Add minify
+    bundle_js = flask_assets.Bundle("src/*.js", output="dist/main.js")
+    env_assets.register("js", bundle_js)
+    bundle_js.build()
 
     if not p.ssl_cert_path.exists():
       print(f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}",

@@ -10,4 +10,5 @@ def get_home() -> str:
   Returns:
     string HTML page response
   """
-  return flask.render_template("home.html")
+  # TODO (WattsUp) Add env like version info to footer
+  return flask.render_template("index.html")
