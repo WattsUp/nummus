@@ -3,6 +3,33 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@tailwind variants;
+
+@layer components {
+  .nav-header {
+    @apply hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full;
+  }
+
+  .nav-header>ul {
+    @apply invisible absolute bg-green-300 text-black font-serif left-0 top-12 min-w-full transition-transform scale-y-0 origin-top;
+  }
+
+  .nav-header:hover>ul {
+    @apply visible scale-y-100;
+  }
+
+  .nav-header>ul>li {
+    @apply text-xl whitespace-nowrap;
+  }
+
+  .nav-header>ul>li:hover {
+    @apply bg-green-800 text-white;
+  }
+
+  .nav-header>ul>li>a {
+    @apply inset-0  p-2;
+  }
+}
 
 @font-face {
   font-family: "code-new-roman";

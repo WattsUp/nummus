@@ -81,8 +81,8 @@ module.exports = {
       },
     },
     fontFamily: {
-      sans: ["linux-libertine", "sans-serif"],
-      serif: ["fogtwo-no5", "serif"],
+      serif: ["linux-libertine", "serif"],
+      title: ["fogtwo-no5", "serif"],
       mono: ["code-new-roman", "monospace"],
     },
     extend: {},
