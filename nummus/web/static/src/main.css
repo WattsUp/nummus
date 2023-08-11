@@ -6,28 +6,56 @@
 @tailwind variants;
 
 @layer components {
-  .nav-header {
+  .nav-list-text {
     @apply hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full;
   }
 
-  .nav-header>ul {
-    @apply invisible absolute bg-green-300 text-black font-serif left-0 top-12 min-w-full transition-transform scale-y-0 origin-top;
+  .nav-list>ul {
+    @apply invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top;
   }
 
-  .nav-header:hover>ul {
+  .nav-list:hover>ul {
     @apply visible scale-y-100;
   }
 
-  .nav-header>ul>li {
+  .nav-list-l>ul{
+    @apply left-0;
+  }
+
+  .nav-list-r>ul{
+    @apply right-0;
+  }
+
+  .nav-list>ul>li {
     @apply text-xl whitespace-nowrap;
   }
 
-  .nav-header>ul>li:hover {
+  .nav-list-l>ul>li{
+    @apply border-l-green-800 border-l-4;
+  }
+
+  .nav-list-r>ul>li{
+    @apply border-r-green-800 border-r-4;
+  }
+
+  .nav-list>ul>li:hover {
     @apply bg-green-800 text-white;
   }
 
-  .nav-header>ul>li>a {
-    @apply inset-0  p-2;
+  .nav-list>ul>li>a {
+    @apply inset-0 p-2;
+  }
+
+  .nav-list-icon {
+    @apply h-12 w-12 relative p-2;
+  }
+
+  .nav-list-icon>svg {
+    @apply fill-white transition-colors w-[32px] h-[32px];
+  }
+
+  .nav-list-icon:hover>svg {
+    @apply fill-green-900;
   }
 }
 
