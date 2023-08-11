@@ -18,7 +18,13 @@ def main() -> None:
   cwd = pathlib.Path(__file__).parent.parent
 
   # Get a list of files
-  files = list(cwd.rglob("**/*.py"))
+  files = []
+  folders = ["nummus", "tests", "tools"]
+  for folder in folders:
+    path = cwd.joinpath(folder)
+    if not path.is_dir():
+      raise TypeError(f"{path} is not a folder")
+    files.extend(path.rglob("**/*.py"))
 
   # Run yapf first
   args = ([
