@@ -2,6 +2,7 @@
 """
 
 import datetime
+import io
 import pathlib
 import sys
 import typing as t
@@ -12,8 +13,10 @@ import connexion
 import flask
 import flask_assets
 import gevent.pywsgi
+import pytailwindcss
 from OpenSSL import crypto
 import simplejson
+import webassets.filter
 
 from nummus import models, portfolio, version
 from nummus import custom_types as t
@@ -83,6 +86,24 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
 
     return (f"{client_address} [{now}] {delta} "
             f"{method} {endpoint} {http_ver} {length}")
+
+
+class TailwindCSSFilter(webassets.filter.Filter):
+  """webassets Filter for running tailwindcss over
+  """
+
+  def output(
+      self,
+      _in: io.StringIO,  # pylint: disable=unused-argument
+      out: io.StringIO,
+      **_):
+    path_web = pathlib.Path(__file__).parent.resolve()
+    path_config = path_web.joinpath("static", "tailwind.config.js")
+    path_in = path_web.joinpath("static", "src", "main.css")
+
+    args = ["-c", str(path_config), "-i", str(path_in), "--minify"]
+    built_css = pytailwindcss.run(args, auto_install=True)
+    out.write(built_css)
 
 
 class NummusJSONProvider(flask.json.provider.JSONProvider):
@@ -169,8 +190,9 @@ class Server:
     # Setup environment and static file bundles
     env_assets = flask_assets.Environment(flask_app)
 
-    # TODO (WattsUp) Figure out including tailwindcss in build/dist/install
-    bundle_css = flask_assets.Bundle("src/main.css", output="dist/main.css")
+    bundle_css = flask_assets.Bundle("src/main.css",
+                                     output="dist/main.css",
+                                     filters=(TailwindCSSFilter,))
     env_assets.register("css", bundle_css)
     bundle_css.build()
 
