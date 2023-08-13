@@ -19,18 +19,25 @@
 
   </head>
 
-  <body class="antialiased bg-grey-100 min-h-screen flex flex-col">
+  <body class="antialiased bg-grey-100 h-screen relative">
     {% block header %}
       {% include "/shared/_header.html" %}
     {% endblock %}
-
-    <main class="mt-12 p-2">
-      {% block content %}{% endblock %}
-    </main>
-
-    {% block footer %}
-      {% include "/shared/_footer.html" %}
+    {% block sidebar %}
+      {% include "/shared/_sidebar.html" %}
     {% endblock %}
+
+    <div class="pt-12 pl-60 h-full">
+      <div class="flex flex-col h-full overflow-y-auto">
+        <main class="p-2">
+          {% block content %}{% endblock %}
+        </main>
+        {% block footer %}
+          {% include "/shared/_footer.html" %}
+        {% endblock %}
+      </div>
+    </div>
+
   </body>
 
 </html>
