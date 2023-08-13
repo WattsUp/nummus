@@ -1,37 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>nummus</title>
-  <meta name="description" content="A personal financial information aggregator and planning tool." />
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <title>nummus</title>
+    <meta name="description" content="A personal financial information aggregator and planning tool."/>
 
-  <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
 
-  {% assets "css" %}
+    {% assets "css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}">
-  {% endassets %}
+    {% endassets %}
 
-  {% assets "js" %}
+    {% assets "js" %}
     <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-  {% endassets %}
+    {% endassets %}
 
-</head>
+  </head>
 
-<body class="antialiased bg-grey-100 min-h-screen flex flex-col">
-  {% block header %}
-    {% include "/shared/_header.html" %}
-  {% endblock %}
-
-  <main class="mt-12 p-2">
-    {% block content %}
+  <body class="antialiased bg-grey-100 min-h-screen flex flex-col">
+    {% block header %}
+      {% include "/shared/_header.html" %}
     {% endblock %}
-  </main>
 
-  {% block footer %}
-    {% include "/shared/_footer.html" %}
-  {% endblock %}
-</body>
+    <main class="mt-12 p-2">
+      {% block content %}{% endblock %}
+    </main>
+
+    {% block footer %}
+      {% include "/shared/_footer.html" %}
+    {% endblock %}
+  </body>
 
 </html>

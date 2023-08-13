@@ -38,7 +38,7 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
       delta = self.time_finish - self.time_start
       if delta > 0.15:
         delta = f"{Fore.RED}{delta:.6f}s{Fore.RESET}"
-      if delta > 0.075:
+      elif delta > 0.075:
         delta = f"{Fore.YELLOW}{delta:.6f}s{Fore.RESET}"
       else:
         delta = f"{Fore.GREEN}{delta:.6f}s{Fore.RESET}"

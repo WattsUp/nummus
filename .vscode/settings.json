@@ -46,5 +46,15 @@
   ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true
+  "python.linting.pylintEnabled": true,
+  "[jinja-html]": {
+    "editor.defaultFormatter": "Glavin001.unibeautify-vscode"
+  },
+  "[tailwindcss]": {
+    "editor.defaultFormatter": "Glavin001.unibeautify-vscode"
+  },
+  "files.associations": {
+    "*.html": "jinja-html",
+    "*.css": "tailwindcss"
+  }
 }
