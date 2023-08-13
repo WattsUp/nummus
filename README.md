@@ -36,6 +36,13 @@ Install module
 > python -m pip install .
 ```
 
+Install module with encryption
+
+```bash
+> sudo apt install libsqlcipher-dev
+> python -m pip install .[encrypt]
+```
+
 For development, install as a link to repository such that code changes are used.
 
 ```bash

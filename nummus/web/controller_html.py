@@ -10,4 +10,4 @@ def get_home() -> str:
   Returns:
     string HTML page response
   """
-  return flask.render_template("home.html")
+  return flask.render_template("index.html")

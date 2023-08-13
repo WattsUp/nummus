@@ -1,12 +1,24 @@
 {
   "cSpell.words": [
+    "abortable",
     "AppenderQuery",
     "arcname",
+    "clazz",
     "connexion",
+    "Curlies",
+    "elts",
+    "endassets",
+    "fogtwo",
+    "formnovalidate",
     "froms",
     "gevent",
     "gmtime",
+    "hashcode",
+    "htmx",
+    "jsmin",
     "jsonify",
+    "kebabed",
+    "novalidate",
     "nummus",
     "ondelete",
     "openapi",
@@ -14,15 +26,35 @@
     "pubkey",
     "pycryptodome",
     "pyopenssl",
+    "pytailwindcss",
+    "requestline",
+    "Reswap",
+    "Retarget",
     "robo-advising",
     "simplejson",
+    "STRINGISH",
+    "superseeds",
+    "Svgs",
+    "tailwindcss",
     "thefuzz",
     "uselist",
+    "vals",
     "viztracer",
+    "webassets",
     "werkzeug",
     "Woot"
   ],
   "python.formatting.provider": "yapf",
   "python.linting.enabled": true,
-  "python.linting.pylintEnabled": true
+  "python.linting.pylintEnabled": true,
+  "[jinja-html]": {
+    "editor.defaultFormatter": "Glavin001.unibeautify-vscode"
+  },
+  "[tailwindcss]": {
+    "editor.defaultFormatter": "Glavin001.unibeautify-vscode"
+  },
+  "files.associations": {
+    "*.html": "jinja-html",
+    "*.css": "tailwindcss"
+  }
 }

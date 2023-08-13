@@ -2,20 +2,118 @@
 """
 
 import datetime
+import io
 import pathlib
 import sys
+import typing as t
 import warnings
 
-from colorama import Fore
+from colorama import Fore, Back
 import connexion
 import flask
+import flask_assets
 import gevent.pywsgi
+import pytailwindcss
 from OpenSSL import crypto
 import simplejson
+import webassets.filter
 
-from nummus import models, portfolio
+from nummus import models, portfolio, version
 from nummus import custom_types as t
 from nummus.web import controller_html
+
+
+class NummusWebHandler(gevent.pywsgi.WSGIHandler):
+  """Custom WSGIHandler, mainly for request formatting
+  """
+
+  def format_request(self):
+    """Format request as a single line
+
+    Returns:
+      [client address] [now] [delta t] [method] [endpoint] [HTTP ver] [len]
+    """
+    now = datetime.datetime.now().replace(microsecond=0)
+    if self.response_length is None:
+      length = "[len]"
+    else:
+      length = f"{self.response_length}B"
+
+    if self.time_finish:
+      delta = self.time_finish - self.time_start
+      if delta > 0.15:
+        delta = f"{Fore.RED}{delta:.6f}s{Fore.RESET}"
+      elif delta > 0.075:
+        delta = f"{Fore.YELLOW}{delta:.6f}s{Fore.RESET}"
+      else:
+        delta = f"{Fore.GREEN}{delta:.6f}s{Fore.RESET}"
+    else:
+      delta = "[delta t]"
+
+    if self.client_address is None:
+      client_address = "[client address]"
+    elif isinstance(self.client_address, tuple):
+      client_address = self.client_address[0]
+    else:
+      client_address = self.client_address
+
+    if self.requestline is None:
+      method = "[method]"
+      endpoint = "[endpoint]"
+      http_ver = "[HTTP ver]"
+    else:
+      method, endpoint, http_ver = self.requestline.split(" ")
+      if method == "GET":
+        method = f"{Fore.CYAN}{method}{Fore.RESET}"
+      elif method == "POST":
+        method = f"{Fore.GREEN}{method}{Fore.RESET}"
+      elif method == "PUT":
+        method = f"{Fore.YELLOW}{method}{Fore.RESET}"
+      elif method == "DELETE":
+        method = f"{Fore.RED}{method}{Fore.RESET}"
+      elif method == "OPTIONS":
+        method = f"{Fore.BLUE}{method}{Fore.RESET}"
+      elif method == "HEAD":
+        method = f"{Fore.MAGENTA}{method}{Fore.RESET}"
+      elif method == "PATCH":
+        method = f"{Fore.BLACK}{Back.GREEN}{method}{Fore.RESET}{Back.RESET}"
+      elif method == "TRACE":
+        method = f"{Fore.BLACK}{Back.WHITE}{method}{Fore.RESET}{Back.RESET}"
+
+      if endpoint.startswith("/api/ui/"):
+        endpoint = f"{Fore.CYAN}{endpoint}{Fore.RESET}"
+      elif endpoint.startswith("/api/"):
+        endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
+      elif endpoint.startswith("/static/"):
+        endpoint = f"{Fore.MAGENTA}{endpoint}{Fore.RESET}"
+      else:
+        endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
+
+    return (f"{client_address} [{now}] {delta} "
+            f"{method} {endpoint} {http_ver} {length}")
+
+
+class TailwindCSSFilter(webassets.filter.Filter):
+  """webassets Filter for running tailwindcss over
+  """
+
+  def output(
+      self,
+      _in: io.StringIO,  # pylint: disable=unused-argument,invalid-name
+      out: io.StringIO,
+      **_):
+    """Run filter and generate output file
+
+    Args:
+      out: Output buffer
+    """
+    path_web = pathlib.Path(__file__).parent.resolve()
+    path_config = path_web.joinpath("static", "tailwind.config.js")
+    path_in = path_web.joinpath("static", "src", "main.css")
+
+    args = ["-c", str(path_config), "-i", str(path_in), "--minify"]
+    built_css = pytailwindcss.run(args, auto_install=True)
+    out.write(built_css)
 
 
 class NummusJSONProvider(flask.json.provider.JSONProvider):
@@ -77,7 +175,10 @@ class Server:
                   arguments={"title": "nummus API"},
                   pythonic_params=True,
                   strict_validation=True)
+
+    # HTML pages routing
     app.add_url_rule("/", "", controller_html.get_home)
+    app.add_url_rule("/index", "", controller_html.get_home)
 
     # Add Portfolio to context for controllers
     flask_app: flask.Flask = app.app
@@ -89,6 +190,28 @@ class Server:
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       flask_app.json = NummusJSONProvider(flask_app)
+
+    # Enable debugger and reloader when enable_api_ui
+    flask_app.debug = enable_api_ui
+
+    # Inject common variables into templates
+    flask_app.context_processor(lambda: {"version": version.__version__})
+
+    # Setup environment and static file bundles
+    env_assets = flask_assets.Environment(flask_app)
+
+    bundle_css = flask_assets.Bundle("src/main.css",
+                                     output="dist/main.css",
+                                     filters=(TailwindCSSFilter,))
+    env_assets.register("css", bundle_css)
+    bundle_css.build()
+
+    bundle_js = flask_assets.Bundle(
+        "src/*.js",
+        output="dist/main.js",
+        filters=None if flask_app.debug else "jsmin")
+    env_assets.register("js", bundle_js)
+    bundle_js.build()
 
     if not p.ssl_cert_path.exists():
       print(f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}",
@@ -107,7 +230,8 @@ class Server:
     self._server = gevent.pywsgi.WSGIServer((host, port),
                                             app,
                                             certfile=p.ssl_cert_path,
-                                            keyfile=p.ssl_key_path)
+                                            keyfile=p.ssl_key_path,
+                                            handler_class=NummusWebHandler)
     self._enable_api_ui = enable_api_ui
 
   def run(self) -> None:

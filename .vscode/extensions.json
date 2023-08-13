@@ -1,8 +1,11 @@
 {
   "recommendations": [
-    "ms-python.vscode-pylance",
     "streetsidesoftware.code-spell-checker",
+    "ms-python.vscode-pylance",
     "ms-python.isort",
-    "ms-python.python"
+    "ms-python.python",
+    "samuelcolvin.jinjahtml",
+    "bradlc.vscode-tailwindcss",
+    "Glavin001.unibeautify-vscode"
   ]
 }

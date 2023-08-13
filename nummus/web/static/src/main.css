@@ -1,0 +1,182 @@
+/* static/src/main.css */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+@layer components {
+  .nav-list-text {
+    @apply hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full;
+  }
+
+  .nav-list > ul {
+    @apply invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top;
+  }
+
+  .nav-list:hover > ul {
+    @apply visible scale-y-100;
+  }
+
+  .nav-list-l > ul {
+    @apply left-0;
+  }
+
+  .nav-list-r > ul {
+    @apply right-0;
+  }
+
+  .nav-list > ul > li {
+    @apply text-xl whitespace-nowrap;
+  }
+
+  .nav-list-l > ul > li {
+    @apply border-l-green-800 border-l-4;
+  }
+
+  .nav-list-r > ul > li {
+    @apply border-r-green-800 border-r-4;
+  }
+
+  .nav-list > ul > li:hover {
+    @apply bg-green-800 text-white;
+  }
+
+  .nav-list > ul > li > a {
+    @apply inset-0 p-2;
+  }
+
+  .nav-list-icon {
+    @apply h-12 w-12 relative p-2;
+  }
+
+  .nav-list-icon > svg {
+    @apply fill-white transition-colors w-[32px] h-[32px];
+  }
+
+  .nav-list-icon:hover > svg {
+    @apply fill-green-900;
+  }
+}
+
+@font-face {
+  font-family: "code-new-roman";
+  src: url("/static/fonts/code-new-roman/bold.woff2") format("woff2"),
+    url("/static/fonts/code-new-roman/bold.woff") format("woff");
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "code-new-roman";
+  src: url("/static/fonts/code-new-roman/regular.woff2") format("woff2"),
+    url("/static/fonts/code-new-roman/regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "fogtwo-no5";
+  src: url("/static/fonts/fogtwo-no5/regular.woff2") format("woff2"),
+    url("/static/fonts/fogtwo-no5/regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/regular.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/italic.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/italic.woff") format("woff");
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/oblique.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/oblique.woff") format("woff");
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/bold.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/bold.woff") format("woff");
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/bold-italic.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/bold-italic.woff") format("woff");
+  font-style: italic;
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/bold-oblique.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/bold-oblique.woff") format("woff");
+  font-style: oblique;
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/medium.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/medium.woff") format("woff");
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/medium-italic.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/medium-italic.woff") format("woff");
+  font-style: italic;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "linux-libertine";
+  src: url("/static/fonts/linux-libertine/medium-oblique.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/medium-oblique.woff") format("woff");
+  font-style: oblique;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "linux-libertine-capitals";
+  src: url("/static/fonts/linux-libertine/capitals.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/capitals.woff") format("woff");
+}
+
+@font-face {
+  font-family: "linux-libertine-capitals";
+  src: url("/static/fonts/linux-libertine/capitals-italic.woff2")
+      format("woff2"),
+    url("/static/fonts/linux-libertine/capitals-italic.woff") format("woff");
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "linux-libertine-capitals";
+  src: url("/static/fonts/linux-libertine/capitals-bold.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/capitals-bold.woff") format("woff");
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "linux-libertine-capitals";
+  src: url("/static/fonts/linux-libertine/capitals-medium-italic.woff2")
+      format("woff2"),
+    url("/static/fonts/linux-libertine/capitals-medium-italic.woff")
+      format("woff");
+  font-style: italic;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "linux-libertine-display";
+  src: url("/static/fonts/linux-libertine/display.woff2") format("woff2"),
+    url("/static/fonts/linux-libertine/display.woff") format("woff");
+}

@@ -1,5 +1,6 @@
 # IDE files
 *.code-workspace
+.venv
 
 # Build artifacts
 __pycache__
@@ -10,6 +11,7 @@ build
 dist
 *.c
 version.py
+.webassets-cache
 
 # Test artifacts
 .test
