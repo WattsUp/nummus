@@ -28,6 +28,11 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
   """
 
   def format_request(self):
+    """Format request as a single line
+
+    Returns:
+      [client address] [now] [delta t] [method] [endpoint] [HTTP ver] [len]
+    """
     now = datetime.datetime.now().replace(microsecond=0)
     if self.response_length is None:
       length = "[len]"
@@ -94,9 +99,14 @@ class TailwindCSSFilter(webassets.filter.Filter):
 
   def output(
       self,
-      _in: io.StringIO,  # pylint: disable=unused-argument
+      _in: io.StringIO,  # pylint: disable=unused-argument,invalid-name
       out: io.StringIO,
       **_):
+    """Run filter and generate output file
+
+    Args:
+      out: Output buffer
+    """
     path_web = pathlib.Path(__file__).parent.resolve()
     path_config = path_web.joinpath("static", "tailwind.config.js")
     path_in = path_web.joinpath("static", "src", "main.css")
