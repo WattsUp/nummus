@@ -63,11 +63,11 @@
   }
 
   .nav-account > h1 {
-    @apply text-lg flex justify-between leading-tight;
+    @apply text-lg flex gap-4 justify-between leading-tight;
   }
 
   .nav-account > h2 {
-    @apply text-sm flex justify-between italic text-grey-500;
+    @apply text-sm flex gap-4 justify-between italic text-grey-500;
   }
 
   .nav-account::before {

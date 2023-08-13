@@ -23,11 +23,9 @@
     {% block header %}
       {% include "/shared/_header.html" %}
     {% endblock %}
-    {% block sidebar %}
-      {% include "/shared/_sidebar.html" %}
-    {% endblock %}
+    <nav hx-get="/sidebar" hx-trigger="load" class="bg-green-300 pt-12 w-80 font-serif h-full fixed"></nav>
 
-    <div class="pt-12 pl-60 h-full">
+    <div class="pt-12 pl-80 h-full">
       <div class="flex flex-col h-full overflow-y-auto">
         <main class="p-2">
           {% block content %}{% endblock %}

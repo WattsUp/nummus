@@ -115,6 +115,46 @@ def parse_financial(s: str) -> t.Real:
   return t.Real(s)
 
 
+def format_financial(x: t.Real) -> str:
+  """Format a number to financial notation
+
+  Args:
+    x: Number to format
+
+  Returns:
+    $1,000.00 or -$1,000.00
+  """
+  if x < 0:
+    return f"-${-x:,.2f}"
+  return f"${x:,.2f}"
+
+
+def format_days(days: int, labels: t.Strings = None) -> str:
+  """Format number of days to days, weeks, months, or years
+
+  Args:
+    days: Number of days to format
+    labels: Override labels [days, weeks, months, years]
+
+  Returns:
+    x d
+    x wks
+    x mos
+    x yrs
+  """
+  if labels is None:
+    labels = ["days", "wks", "mos", "yrs"]
+  months = days / 28
+  if months > 18:
+    return f"{days / 365.25:.0f} {labels[3]}"
+  weeks = days / 7
+  if weeks > 8:
+    return f"{months:.0f} {labels[2]}"
+  if days > 10:
+    return f"{weeks:.0f} {labels[1]}"
+  return f"{days} {labels[0]}"
+
+
 def round_list(l: t.Reals, precision: int = 6) -> t.Reals:
   """Round a list, carrying over error such that sum(list) == sum(round_list)
 
