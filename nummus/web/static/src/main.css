@@ -57,6 +57,26 @@
   .nav-list-icon:hover > svg {
     @apply fill-green-900;
   }
+
+  .nav-account {
+    @apply relative;
+  }
+
+  .nav-account > h1 {
+    @apply text-lg flex justify-between leading-tight;
+  }
+
+  .nav-account > h2 {
+    @apply text-sm flex justify-between italic text-grey-500;
+  }
+
+  .nav-account::before {
+    @apply absolute left-3 right-3 h-px bottom-0 content-[""] bg-grey-200;
+  }
+
+  .nav-account:last-of-type::before {
+    @apply hidden;
+  }
 }
 
 @font-face {
