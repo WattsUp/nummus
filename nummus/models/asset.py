@@ -148,6 +148,20 @@ class Asset(Base):
 
     s = orm.object_session(self)
 
+    if start == end:
+      # Single value
+      # Get latest Valuation before or including start date
+      query_iv = s.query(AssetValuation.value)
+      query_iv = query_iv.where(AssetValuation.asset_id == self.id)
+      query_iv = query_iv.where(AssetValuation.date <= start)
+      query_iv = query_iv.order_by(AssetValuation.date.desc())
+      iv = query_iv.first()
+      if iv is None:
+        value = Decimal(0)
+      else:
+        value = iv[0]
+      return [start], [value]
+
     # Get latest Valuation before start date
     query_iv = s.query(AssetValuation.value)
     query_iv = query_iv.where(AssetValuation.asset_id == self.id)
@@ -161,21 +175,23 @@ class Asset(Base):
 
     # Valuations between start and end
     query = s.query(AssetValuation)
+    query = query.with_entities(AssetValuation.date, AssetValuation.value)
     query = query.where(AssetValuation.asset_id == self.id)
     query = query.where(AssetValuation.date <= end)
     query = query.where(AssetValuation.date >= start)
     query = query.order_by(AssetValuation.date)
 
-    for valuation in query.all():
-      valuation: AssetValuation
+    for v_date, v_value in query.all():
+      v_date: datetime.date
+      v_value: Decimal
       # Don't need thanks SQL filters
       # if t_split.date > end:
       #   continue
-      while date < valuation.date:
+      while date < v_date:
         values.append(value)
         dates.append(date)
         date += datetime.timedelta(days=1)
-      value = valuation.value
+      value = v_value
     while date <= end:
       values.append(value)
       dates.append(date)
