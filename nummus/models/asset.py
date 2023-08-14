@@ -212,14 +212,16 @@ class Asset(Base):
     splits: t.List[t.Tuple[t.Date, t.Real]] = []
 
     query = s.query(AssetSplit)
+    query = query.with_entities(AssetSplit.date, AssetSplit.multiplier)
     query = query.where(AssetSplit.asset_id == self.id)
     query = query.order_by(AssetSplit.date.desc())
 
-    for split in query.all():
-      split: AssetSplit
+    for s_date, s_multiplier in query.all():
+      s_date: datetime.date
+      s_multiplier: Decimal
       # Compound splits as we go
-      multiplier = multiplier * split.multiplier
-      splits.append((split.date, multiplier))
+      multiplier = multiplier * s_multiplier
+      splits.append((s_date, multiplier))
 
     query = s.query(TransactionSplit)
     query = query.where(TransactionSplit.asset_id == self.id)
@@ -227,6 +229,7 @@ class Asset(Base):
 
     multiplier = Decimal(1)
     for t_split in query.all():
+      # Query whole object okay, need to set things
       t_split: TransactionSplit
       # If txn is before the split, update the multiplier
       if len(splits) >= 1 and t_split.date < splits[0][0]:

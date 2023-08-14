@@ -93,15 +93,16 @@ def delete(account_uuid: str) -> flask.Response:
     acct = common.find_account(s, account_uuid)
 
     # Delete the transactions as well
-    query = s.query(TransactionSplit).where(
-        TransactionSplit.account_id == acct.id)
-    for v in query.all():
-      s.delete(v)
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.account_id == acct.id)
+    query.delete()
     s.commit()
-    query = s.query(Transaction).where(Transaction.account_id == acct.id)
-    for v in query.all():
-      s.delete(v)
+
+    query = s.query(Transaction)
+    query = query.where(Transaction.account_id == acct.id)
+    query.delete()
     s.commit()
+
     s.delete(acct)
     s.commit()
     return None
