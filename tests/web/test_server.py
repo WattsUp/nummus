@@ -198,7 +198,7 @@ class TestNummusWebHandler(TestBase):
       now = datetime.datetime.now().replace(microsecond=0)
 
     target = (f"[client address] [{now}] "
-              "[delta t] [method] [endpoint] [HTTP ver] [len]")
+              "[delta t] [method] [endpoint] [HTTP ver] [len] [status]")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -208,10 +208,12 @@ class TestNummusWebHandler(TestBase):
     h.time_start = 0.1
     h.client_address = ("127.0.0.1",)
     h.requestline = "GET / HTTP/1.1"
+    h.code = 200
     target = (f"127.0.0.1 [{now}] {Fore.RED}0.200000s{Fore.RESET} "
               f"{Fore.CYAN}GET{Fore.RESET} "
               f"{Fore.GREEN}/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.GREEN}200{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -220,10 +222,12 @@ class TestNummusWebHandler(TestBase):
     h.time_start = 0.1
     h.client_address = "127.0.0.1"
     h.requestline = "POST /static/dist/main.css HTTP/1.1"
+    h.code = 300
     target = (f"127.0.0.1 [{now}] {Fore.YELLOW}0.100000s{Fore.RESET} "
               f"{Fore.GREEN}POST{Fore.RESET} "
               f"{Fore.MAGENTA}/static/dist/main.css{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.CYAN}300{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -232,20 +236,24 @@ class TestNummusWebHandler(TestBase):
     h.time_start = 0.1
     h.client_address = "127.0.0.1"
     h.requestline = "PUT /api/transactions HTTP/1.1"
+    h.code = 400
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.YELLOW}PUT{Fore.RESET} "
               f"{Fore.GREEN}/api/transactions{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.YELLOW}400{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
     h.client_address = "127.0.0.1"
     h.requestline = "DELETE /api/ui/ HTTP/1.1"
+    h.code = 500
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.RED}DELETE{Fore.RESET} "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -254,7 +262,8 @@ class TestNummusWebHandler(TestBase):
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLUE}OPTIONS{Fore.RESET} "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -263,7 +272,8 @@ class TestNummusWebHandler(TestBase):
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.MAGENTA}HEAD{Fore.RESET} "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -272,7 +282,8 @@ class TestNummusWebHandler(TestBase):
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLACK}{Back.GREEN}PATCH{Fore.RESET}{Back.RESET} "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -281,7 +292,8 @@ class TestNummusWebHandler(TestBase):
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLACK}{Back.WHITE}TRACE{Fore.RESET}{Back.RESET} "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
@@ -290,7 +302,8 @@ class TestNummusWebHandler(TestBase):
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               "GOT "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B")
+              "HTTP/1.1 1000B "
+              f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
