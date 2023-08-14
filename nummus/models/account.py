@@ -253,6 +253,12 @@ class TransactionSplit(Base):
       raise TypeError("TransactionSplit.asset must be of type Asset")
     if asset.id is None:
       raise ValueError("Commit Asset before adding to split")
+    # Check parent Account can have Assets
+    s = orm.object_session(self)
+    cat = s.query(Account.category).where(Account.id == self.account_id).first()
+    if not AccountCategory.can_have_assets(cat):
+      raise ValueError(f"Account cannot have assets, wrong category: {cat}")
+
     super().__setattr__("asset_id", asset.id)
     super().__setattr__("asset_uuid", asset.uuid)
 
@@ -339,16 +345,21 @@ class AccountCategory(BaseEnum):
   OTHER = 7
 
   @classmethod
-  def can_have_assets(cls, cat: AccountCategory) -> bool:
+  def can_have_assets(cls, category: AccountCategory) -> bool:
     """Test AccountCategory can have assets
 
     Args:
-      cat: Category to test
+      category: Category to test
 
     Returns:
       True if category is INVESTMENT, FIXED, or OTHER, False otherwise
+
+    Raises:
+      ValueError if cat is None
     """
-    return cat in [cls.INVESTMENT, cls.FIXED, cls.OTHER]
+    if category is None:
+      raise ValueError("AccountCategory cannot be None")
+    return category in [cls.INVESTMENT, cls.FIXED, cls.OTHER]
 
 
 class Account(Base):
