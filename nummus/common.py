@@ -144,9 +144,10 @@ def format_days(days: int, labels: t.Strings = None) -> str:
   """
   if labels is None:
     labels = ["days", "wks", "mos", "yrs"]
-  months = days / 28
+  years = days / 365.25
+  months = years * 12
   if months > 18:
-    return f"{days / 365.25:.0f} {labels[3]}"
+    return f"{years:.0f} {labels[3]}"
   weeks = days / 7
   if weeks > 8:
     return f"{months:.0f} {labels[2]}"

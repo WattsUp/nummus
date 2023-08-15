@@ -66,7 +66,7 @@ def post_tests() -> bool:
   if len(api_coverage) != 0:
     n_pad = max(len(k) for k in api_coverage) + 1
 
-    print(f"{'Endpoint':{n_pad}}  Method "
+    print(f"{'Endpoint':{n_pad}} Method  "
           "Codes CMiss "
           "Query QMiss "
           "  Cover  Missing")
