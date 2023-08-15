@@ -2,6 +2,7 @@
 """
 
 import datetime
+from decimal import Decimal
 import io
 import shutil
 from unittest import mock
@@ -11,7 +12,7 @@ import connexion
 import flask
 import time_machine
 
-from nummus import portfolio
+from nummus import portfolio, __version__
 from nummus.web import server
 
 from tests.base import TestBase
@@ -165,6 +166,64 @@ class TestServer(TestBase):
     self.assertFalse(server.Server.is_ssl_cert_self_signed(path_cert),
                      "SSL cert is self-signed")
 
+  def test_flask_context(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+
+    path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
+    path_key = self._DATA_ROOT.joinpath("key_ss.pem")
+
+    shutil.copyfile(path_cert, p.ssl_cert_path)
+    shutil.copyfile(path_key, p.ssl_key_path)
+
+    host = "127.0.0.1"
+    port = 8080
+    enable_api_ui = True
+    with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      s = server.Server(p, host, port, enable_api_ui)
+    flask_app: flask.Flask = s._app.app  # pylint: disable=protected-access
+
+    with flask_app.app_context():
+      target = __version__
+      result = flask.render_template_string("{{ version }}")
+      self.assertEqual(target, result)
+
+  def test_jinja_filters(self):
+    path_db = self._TEST_ROOT.joinpath("portfolio.db")
+    p = portfolio.Portfolio.create(path_db, None)
+
+    path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
+    path_key = self._DATA_ROOT.joinpath("key_ss.pem")
+
+    shutil.copyfile(path_cert, p.ssl_cert_path)
+    shutil.copyfile(path_key, p.ssl_key_path)
+
+    host = "127.0.0.1"
+    port = 8080
+    enable_api_ui = True
+    with mock.patch("sys.stderr", new=io.StringIO()) as _:
+      s = server.Server(p, host, port, enable_api_ui)
+    flask_app: flask.Flask = s._app.app  # pylint: disable=protected-access
+
+    with flask_app.app_context():
+      context = {"number": Decimal("1000.100000")}
+      target = "1000.100000"
+      result = flask.render_template_string("{{ number }}", **context)
+      self.assertEqual(target, result)
+
+      target = "$1,000.10"
+      result = flask.render_template_string("{{ number | money }}", **context)
+      self.assertEqual(target, result)
+
+      target = "1,000.10"
+      result = flask.render_template_string("{{ number | comma }}", **context)
+      self.assertEqual(target, result)
+
+      context = {"duration": 14}
+      target = "2 wks"
+      result = flask.render_template_string("{{ duration | days }}", **context)
+      self.assertEqual(target, result)
+
 
 class TestNummusJSONProvider(TestBase):
   """Test NummusJSONProvider class
@@ -299,11 +358,11 @@ class TestNummusWebHandler(TestBase):
     self.assertEqual(target, result)
 
     h.requestline = "GOT /api/ui/ HTTP/1.1"
+    h.code = 600
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               "GOT "
               f"{Fore.CYAN}/api/ui/{Fore.RESET} "
-              "HTTP/1.1 1000B "
-              f"{Fore.RED}500{Fore.RESET}")
+              "HTTP/1.1 1000B 600")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)

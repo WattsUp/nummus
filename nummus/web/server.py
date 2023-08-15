@@ -182,19 +182,21 @@ class Server:
     options = {"swagger_ui": enable_api_ui}
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      app = connexion.App(__name__, specification_dir=spec_dir, options=options)
-      app.add_api("api.yaml",
-                  arguments={"title": "nummus API"},
-                  pythonic_params=True,
-                  strict_validation=True)
+      self._app = connexion.App(__name__,
+                                specification_dir=spec_dir,
+                                options=options)
+      self._app.add_api("api.yaml",
+                        arguments={"title": "nummus API"},
+                        pythonic_params=True,
+                        strict_validation=True)
 
     # HTML pages routing
-    app.add_url_rule("/", "", controller_html.get_home)
-    app.add_url_rule("/index", "", controller_html.get_home)
-    app.add_url_rule("/sidebar", "sidebar", controller_html.get_sidebar)
+    self._app.add_url_rule("/", "", controller_html.get_home)
+    self._app.add_url_rule("/index", "", controller_html.get_home)
+    self._app.add_url_rule("/sidebar", "sidebar", controller_html.get_sidebar)
 
     # Add Portfolio to context for controllers
-    flask_app: flask.Flask = app.app
+    flask_app: flask.Flask = self._app.app
     with flask_app.app_context():
       flask.current_app.portfolio = p
 
@@ -245,7 +247,7 @@ class Server:
       print(buf, file=sys.stderr)
 
     self._server = gevent.pywsgi.WSGIServer((host, port),
-                                            app,
+                                            self._app,
                                             certfile=p.ssl_cert_path,
                                             keyfile=p.ssl_key_path,
                                             handler_class=NummusWebHandler)

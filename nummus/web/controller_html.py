@@ -62,13 +62,19 @@ def get_sidebar() -> str:
         categories_total[acct.category] += v
         categories[acct.category].append(acct_dict)
 
-  asset_width = round(assets / (assets - liabilities) * 100, 2)
+  bar_total = assets - liabilities
+  if bar_total == 0:
+    asset_width = 0
+    liabilities_width = 0
+  else:
+    asset_width = round(assets / (assets - liabilities) * 100, 2)
+    liabilities_width = 100 - asset_width
   context: t.DictStr = {
       "net-worth": assets + liabilities,
       "assets": assets,
       "liabilities": liabilities,
       "assets-w": asset_width,
-      "liabilities-w": 100 - asset_width,
+      "liabilities-w": liabilities_width,
       "categories": {
           cat: (total, categories[cat])
           for cat, total in categories_total.items()
