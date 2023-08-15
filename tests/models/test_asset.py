@@ -2,6 +2,7 @@
 """
 
 import datetime
+from decimal import Decimal
 
 from nummus import models
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
@@ -248,6 +249,12 @@ class TestAsset(TestBase):
     r_dates, r_values = a.get_value(tomorrow, tomorrow)
     self.assertListEqual([tomorrow], r_dates)
     self.assertListEqual([v_today.value], r_values)
+
+    # Test single value
+    long_ago = today - datetime.timedelta(days=7)
+    r_dates, r_values = a.get_value(long_ago, long_ago)
+    self.assertListEqual([long_ago], r_dates)
+    self.assertListEqual([Decimal(0)], r_values)
 
   def test_update_splits(self):
     s = self.get_session()

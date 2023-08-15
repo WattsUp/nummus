@@ -411,10 +411,7 @@ class Account(Base):
     query_iv = query_iv.where(TransactionSplit.account_id == self.id)
     query_iv = query_iv.where(TransactionSplit.date < start)
     iv = query_iv.scalar()
-    if iv is None:
-      current_cash = Decimal(0)
-    else:
-      current_cash = iv
+    current_cash = iv or Decimal(0)
 
     # Get Asset quantities on start date
     query = s.query(TransactionSplit)

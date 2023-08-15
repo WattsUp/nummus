@@ -459,6 +459,13 @@ class TestAccount(TestBase):
     self.assertListEqual([today], result_dates)
     self.assertEqual(target_qty, result_qty)
 
+    # Test single value
+    future = target_dates[-1] + datetime.timedelta(days=1)
+    target_qty = {assets[0].uuid: [q0 - q1], assets[1].uuid: [q2]}
+    result_dates, result_qty = acct.get_asset_qty(future, future)
+    self.assertListEqual([future], result_dates)
+    self.assertEqual(target_qty, result_qty)
+
   def test_get_value(self):
     s = self.get_session()
     models.metadata_create_all(s)
@@ -581,6 +588,13 @@ class TestAccount(TestBase):
     self.assertEqual([today], r_dates)
     self.assertEqual([target_values[3]], r_values)
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)
+
+    # Test single value
+    future = target_dates[-1] + datetime.timedelta(days=1)
+    r_dates, r_values, r_assets = acct.get_value(future, future)
+    self.assertEqual([future], r_dates)
+    self.assertEqual([target_values[-1]], r_values)
+    self.assertEqual({assets[0].uuid: [asset_values[-1]]}, r_assets)
 
   def test_get_cash_flow(self):
     s = self.get_session()
