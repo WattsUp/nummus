@@ -411,65 +411,68 @@ class Account(Base):
     query_iv = query_iv.where(TransactionSplit.account_id == self.id)
     query_iv = query_iv.where(TransactionSplit.date < start)
     iv = query_iv.scalar()
-    if iv is None:
-      current_cash = Decimal(0)
-    else:
-      current_cash = iv
+    current_cash = iv or Decimal(0)
 
     # Get Asset quantities on start date
-    query_assets = s.query(TransactionSplit.asset_id).distinct()
-    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
-    for asset_id, in query_assets.all():
-      if asset_id is None:
-        continue
-      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
-      a_uuid = a.uuid
-      assets[a_uuid] = a
-      qty_assets[a_uuid] = []
-      current_qty_assets[a_uuid] = Decimal(0)
-
-      # Get initial value for each Asset
-      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
-      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
-      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
-      query_iv = query_iv.where(TransactionSplit.date < start)
-      iv_int = query_iv.scalar()
-      if iv_int is None:
-        continue
-
-      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
-      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
-      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
-      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
-      query_iv = query_iv.where(TransactionSplit.date < start)
-      iv_frac = sum(v for v, in query_iv.all())
-
-      current_qty_assets[a_uuid] = iv_int + iv_frac
+    query = s.query(TransactionSplit)
+    query = query.with_entities(
+        TransactionSplit.asset_id,
+        TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
+        TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.asset_id.is_not(None))
+    query = query.where(TransactionSplit.date < start)
+    for a_id, qty_int, qty_frac in query.all():
+      a_id: int
+      qty_int: int
+      qty_frac: Decimal
+      if a_id not in assets:
+        a: Asset = s.query(Asset).where(Asset.id == a_id).first()
+        assets[a_id] = a
+        qty_assets[a_id] = []
+        current_qty_assets[a_id] = Decimal(0)
+      current_qty_assets[a_id] += qty_int + qty_frac
 
     # Transactions between start and end
     query = s.query(TransactionSplit)
+    query = query.with_entities(
+        TransactionSplit.date,
+        TransactionSplit.total,
+        TransactionSplit.asset_id,
+        TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
+        TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= end)
     query = query.where(TransactionSplit.date >= start)
     query = query.order_by(TransactionSplit.date)
 
-    for t_split in query.all():
-      t_split: TransactionSplit
+    for t_date, total, a_id, qty_int, qty_frac in query.all():
+      t_date: datetime.date
+      total: Decimal
+      a_id: int
+      qty_int: int
+      qty_frac: Decimal
       # Don't need thanks SQL filters
       # if t_split.date > end:
       #   continue
-      while date < t_split.date:
+      while date < t_date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         cash.append(current_cash)
         date += datetime.timedelta(days=1)
 
-      current_cash += t_split.total
-      a_uuid = t_split.asset_uuid
-      if a_uuid is None:
+      current_cash += total
+      if a_id is None:
         continue
-      current_qty_assets[a_uuid] += t_split.asset_quantity
+      if a_id not in current_qty_assets:
+        # Asset not added during initial value
+        a: Asset = s.query(Asset).where(Asset.id == a_id).first()
+        assets[a_id] = a
+        qty_assets[a_id] = [Decimal(0)] * len(dates)
+        current_qty_assets[a_id] = qty_int + qty_frac
+      else:
+        current_qty_assets[a_id] += qty_int + qty_frac
 
     while date <= end:
       for k, v in current_qty_assets.items():
@@ -480,12 +483,12 @@ class Account(Base):
 
     # Assets qty to value
     value_assets: t.DictReals = {}
-    for asset_uuid, a in assets.items():
-      qty = qty_assets[asset_uuid]
+    for asset_id, a in assets.items():
+      qty = qty_assets[asset_id]
       # Value = quantity * price
       _, price = a.get_value(start, end)
       values = [round(p * q, 6) for p, q in zip(price, qty)]
-      value_assets[asset_uuid] = values
+      value_assets[a.uuid] = values
 
     # Sum with cash
     values = [sum(x) for x in zip(cash, *value_assets.values())]
@@ -522,17 +525,21 @@ class Account(Base):
 
     # Transactions between start and end
     query = s.query(TransactionSplit)
+    query = query.with_entities(TransactionSplit.date, TransactionSplit.total,
+                                TransactionSplit.category)
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= end)
     query = query.where(TransactionSplit.date >= start)
     query = query.order_by(TransactionSplit.date)
 
-    for t_split in query.all():
-      t_split: TransactionSplit
+    for t_date, total, category in query.all():
+      t_date: datetime.date
+      total: Decimal
+      category: TransactionCategory
       # Don't need thanks SQL filters
       # if t_split.date > end:
       #   continue
-      while date < t_split.date:
+      while date < t_date:
         dates.append(date)
         # Append and clear daily
         for k, v in daily_categories.items():
@@ -540,13 +547,13 @@ class Account(Base):
           daily_categories[k] = 0
         date += datetime.timedelta(days=1)
 
-      if t_split.category is None:
-        if t_split.total > 0:
-          daily_categories["unknown-inflow"] += t_split.total
+      if category is None:
+        if total > 0:
+          daily_categories["unknown-inflow"] += total
         else:
-          daily_categories["unknown-outflow"] += t_split.total
+          daily_categories["unknown-outflow"] += total
       else:
-        daily_categories[t_split.category] += t_split.total
+        daily_categories[category] += total
 
     while date <= end:
       dates.append(date)
@@ -579,55 +586,56 @@ class Account(Base):
     s = orm.object_session(self)
 
     # Get Asset quantities on start date
-    query_assets = s.query(TransactionSplit.asset_id).distinct()
-    query_assets = query_assets.where(TransactionSplit.account_id == self.id)
-    for asset_id, in query_assets.all():
-      if asset_id is None:
-        continue
-      a: Asset = s.query(Asset).where(Asset.id == asset_id).first()
-      a_uuid = a.uuid
-      qty_assets[a_uuid] = []
-      current_qty_assets[a_uuid] = Decimal(0)
-
-      # Get initial value for each Asset
-      query_iv = s.query(sqlalchemy.func.sum(TransactionSplit._asset_qty_int))  # pylint: disable=not-callable, protected-access
-      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
-      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
-      query_iv = query_iv.where(TransactionSplit.date < start)
-      iv_int = query_iv.scalar()
-      if iv_int is None:
-        continue
-
-      # Can't use SQL SUM on fractional since overflow possible at 8 rows...
-      query_iv = s.query(TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
-      query_iv = query_iv.where(TransactionSplit.account_id == self.id)
-      query_iv = query_iv.where(TransactionSplit.asset_id == asset_id)
-      query_iv = query_iv.where(TransactionSplit.date < start)
-      iv_frac = sum(v for v, in query_iv.all())
-
-      current_qty_assets[a_uuid] = iv_int + iv_frac
+    query = s.query(TransactionSplit)
+    query = query.with_entities(
+        TransactionSplit.asset_uuid,
+        TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
+        TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+    query = query.where(TransactionSplit.account_id == self.id)
+    query = query.where(TransactionSplit.asset_id.is_not(None))
+    query = query.where(TransactionSplit.date < start)
+    for a_uuid, qty_int, qty_frac in query.all():
+      a_uuid: str
+      qty_int: int
+      qty_frac: Decimal
+      if a_uuid not in qty_assets:
+        qty_assets[a_uuid] = []
+        current_qty_assets[a_uuid] = Decimal(0)
+      current_qty_assets[a_uuid] += qty_int + qty_frac
 
     # Transactions between start and end
     query = s.query(TransactionSplit)
+    query = query.with_entities(
+        TransactionSplit.date,
+        TransactionSplit.asset_uuid,
+        TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
+        TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= end)
     query = query.where(TransactionSplit.date >= start)
     query = query.where(TransactionSplit.asset_id.is_not(None))
     query = query.order_by(TransactionSplit.date)
 
-    for t_split in query.all():
-      t_split: TransactionSplit
+    for t_date, a_uuid, qty_int, qty_frac in query.all():
+      t_date: datetime.date
+      a_uuid: str
+      qty_int: int
+      qty_frac: Decimal
       # Don't need thanks SQL filters
       # if t_split.date > end:
       #   continue
-      while date < t_split.date:
+      while date < t_date:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         date += datetime.timedelta(days=1)
 
-      a_uuid = t_split.asset_uuid
-      current_qty_assets[a_uuid] += t_split.asset_quantity
+      if a_uuid not in current_qty_assets:
+        # Asset not added during initial value
+        qty_assets[a_uuid] = [Decimal(0)] * len(dates)
+        current_qty_assets[a_uuid] = qty_int + qty_frac
+      else:
+        current_qty_assets[a_uuid] += qty_int + qty_frac
 
     while date <= end:
       for k, v in current_qty_assets.items():

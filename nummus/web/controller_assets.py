@@ -100,10 +100,12 @@ def delete(asset_uuid: str) -> flask.Response:
     a = common.find_asset(s, asset_uuid)
 
     # Delete the valuations as well
-    query = s.query(AssetValuation).where(AssetValuation.asset_id == a.id)
-    for v in query.all():
-      s.delete(v)
+
+    query = s.query(AssetValuation)
+    query = query.where(AssetValuation.asset_id == a.id)
+    query.delete()
     s.commit()
+
     s.delete(a)
     s.commit()
     return None

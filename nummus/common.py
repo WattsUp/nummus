@@ -55,7 +55,7 @@ def get_input(prompt: str = "",
   """
   try:
     if secure:
-      if print_key or (print_key is None and sys.stdout.encoding and
+      if print_key or (sys.stdout.encoding and
                        sys.stdout.encoding.lower().startswith("utf-")):
         input_ = getpass.getpass("\u26BF  " + prompt)
       else:
@@ -113,6 +113,46 @@ def parse_financial(s: str) -> t.Real:
   if s == "":
     return None
   return t.Real(s)
+
+
+def format_financial(x: t.Real) -> str:
+  """Format a number to financial notation
+
+  Args:
+    x: Number to format
+
+  Returns:
+    $1,000.00 or -$1,000.00
+  """
+  if x < 0:
+    return f"-${-x:,.2f}"
+  return f"${x:,.2f}"
+
+
+def format_days(days: int, labels: t.Strings = None) -> str:
+  """Format number of days to days, weeks, months, or years
+
+  Args:
+    days: Number of days to format
+    labels: Override labels [days, weeks, months, years]
+
+  Returns:
+    x d
+    x wks
+    x mos
+    x yrs
+  """
+  labels = labels or ["days", "wks", "mos", "yrs"]
+  years = days / 365.25
+  months = years * 12
+  if months > 18:
+    return f"{years:.0f} {labels[3]}"
+  weeks = days / 7
+  if weeks > 8:
+    return f"{months:.0f} {labels[2]}"
+  if days > 10:
+    return f"{weeks:.0f} {labels[1]}"
+  return f"{days} {labels[0]}"
 
 
 def round_list(l: t.Reals, precision: int = 6) -> t.Reals:

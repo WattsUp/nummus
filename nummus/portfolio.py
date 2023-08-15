@@ -388,6 +388,7 @@ class Portfolio:
       with self.get_session() as s:
         query = s.query(Asset).where(Asset.img_suffix.is_not(None))
         for asset in query.all():
+          # Query whole object okay, need image_name property
           file = self._path_images.joinpath(asset.image_name)
           files.append(file)
 

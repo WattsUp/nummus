@@ -52,6 +52,7 @@ def get_value() -> flask.Response:
     liabilities: t.Reals = [Decimal(0)] * len(dates)
 
     for acct in query.all():
+      # Query whole object okay, need get_value method
       acct: Account
       _, acct_values, _ = acct.get_value(start, end)
       for i, v in enumerate(acct_values):
@@ -103,6 +104,7 @@ def get_value_by_account() -> flask.Response:
     accounts: t.DictReals = {}
 
     for acct in query.all():
+      # Query whole object okay, need get_value method
       acct: Account
       _, acct_values, _ = acct.get_value(start, end)
       for i, v in enumerate(acct_values):
@@ -128,10 +130,7 @@ def get_value_by_category(request_args: t.JSONObj = None) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  if request_args is None:
-    args = flask.request.args.to_dict()
-  else:
-    args = request_args
+  args = request_args or flask.request.args.to_dict()
 
   start = web_common.parse_date(args.get("start", today))
   end = web_common.parse_date(args.get("end", today))
@@ -154,6 +153,7 @@ def get_value_by_category(request_args: t.JSONObj = None) -> flask.Response:
     }
 
     for acct in query.all():
+      # Query whole object okay, need get_value method
       acct: Account
       _, acct_values, _ = acct.get_value(start, end)
       cat_values = categories[acct.category.name.lower()]
@@ -235,10 +235,7 @@ def get_cash_flow(
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  if request_args is None:
-    args = flask.request.args.to_dict()
-  else:
-    args = request_args
+  args = request_args or flask.request.args.to_dict()
 
   start = web_common.parse_date(args.get("start", today))
   end = web_common.parse_date(args.get("end", today))
@@ -262,12 +259,12 @@ def get_cash_flow(
     categories: t.Dict[TransactionCategory, t.Reals] = {
         cat: [Decimal(0)] * len(dates) for cat in TransactionCategory
     }
-    categories["unknown-inflow"] = [Decimal(0)] * len(
-        dates)  # Category is nullable
-    categories["unknown-outflow"] = [Decimal(0)] * len(
-        dates)  # Category is nullable
+    # Category is nullable
+    categories["unknown-inflow"] = [Decimal(0)] * len(dates)
+    categories["unknown-outflow"] = [Decimal(0)] * len(dates)
 
     for acct in query.all():
+      # Query whole object okay, need get_cash_flow method
       acct: Account
       _, acct_categories = acct.get_cash_flow(start, end)
       for cat, values in acct_categories.items():
@@ -348,6 +345,7 @@ def get_budget() -> flask.Response:
 
     current_categories = {cat: Decimal(0) for cat in target_categorized}
     for b in query.all():
+      # Query whole object okay, need categories property
       if b.date > end:
         continue
       while date < b.date:

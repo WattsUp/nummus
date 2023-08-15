@@ -18,7 +18,7 @@ from OpenSSL import crypto
 import simplejson
 import webassets.filter
 
-from nummus import models, portfolio, version
+from nummus import common, models, portfolio, version
 from nummus import custom_types as t
 from nummus.web import controller_html
 
@@ -89,8 +89,20 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
       else:
         endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
 
+    code = self.code
+    if code is None:
+      code = "[status]"
+    elif 200 <= code < 300:
+      code = f"{Fore.GREEN}{code}{Fore.RESET}"
+    elif 300 <= code < 400:
+      code = f"{Fore.CYAN}{code}{Fore.RESET}"
+    elif 400 <= code < 500:
+      code = f"{Fore.YELLOW}{code}{Fore.RESET}"
+    elif 500 <= code < 600:
+      code = f"{Fore.RED}{code}{Fore.RESET}"
+
     return (f"{client_address} [{now}] {delta} "
-            f"{method} {endpoint} {http_ver} {length}")
+            f"{method} {endpoint} {http_ver} {length} {code}")
 
 
 class TailwindCSSFilter(webassets.filter.Filter):
@@ -170,18 +182,21 @@ class Server:
     options = {"swagger_ui": enable_api_ui}
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      app = connexion.App(__name__, specification_dir=spec_dir, options=options)
-      app.add_api("api.yaml",
-                  arguments={"title": "nummus API"},
-                  pythonic_params=True,
-                  strict_validation=True)
+      self._app = connexion.App(__name__,
+                                specification_dir=spec_dir,
+                                options=options)
+      self._app.add_api("api.yaml",
+                        arguments={"title": "nummus API"},
+                        pythonic_params=True,
+                        strict_validation=True)
 
     # HTML pages routing
-    app.add_url_rule("/", "", controller_html.get_home)
-    app.add_url_rule("/index", "", controller_html.get_home)
+    self._app.add_url_rule("/", "", controller_html.get_home)
+    self._app.add_url_rule("/index", "", controller_html.get_home)
+    self._app.add_url_rule("/sidebar", "sidebar", controller_html.get_sidebar)
 
     # Add Portfolio to context for controllers
-    flask_app: flask.Flask = app.app
+    flask_app: flask.Flask = self._app.app
     with flask_app.app_context():
       flask.current_app.portfolio = p
 
@@ -213,6 +228,10 @@ class Server:
     env_assets.register("js", bundle_js)
     bundle_js.build()
 
+    flask_app.jinja_env.filters["money"] = common.format_financial
+    flask_app.jinja_env.filters["days"] = common.format_days
+    flask_app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
+
     if not p.ssl_cert_path.exists():
       print(f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}",
             file=sys.stderr)
@@ -228,7 +247,7 @@ class Server:
       print(buf, file=sys.stderr)
 
     self._server = gevent.pywsgi.WSGIServer((host, port),
-                                            app,
+                                            self._app,
                                             certfile=p.ssl_cert_path,
                                             keyfile=p.ssl_key_path,
                                             handler_class=NummusWebHandler)

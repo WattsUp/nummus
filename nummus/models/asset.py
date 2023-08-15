@@ -148,6 +148,20 @@ class Asset(Base):
 
     s = orm.object_session(self)
 
+    if start == end:
+      # Single value
+      # Get latest Valuation before or including start date
+      query_iv = s.query(AssetValuation.value)
+      query_iv = query_iv.where(AssetValuation.asset_id == self.id)
+      query_iv = query_iv.where(AssetValuation.date <= start)
+      query_iv = query_iv.order_by(AssetValuation.date.desc())
+      iv = query_iv.first()
+      if iv is None:
+        value = Decimal(0)
+      else:
+        value = iv[0]
+      return [start], [value]
+
     # Get latest Valuation before start date
     query_iv = s.query(AssetValuation.value)
     query_iv = query_iv.where(AssetValuation.asset_id == self.id)
@@ -161,21 +175,23 @@ class Asset(Base):
 
     # Valuations between start and end
     query = s.query(AssetValuation)
+    query = query.with_entities(AssetValuation.date, AssetValuation.value)
     query = query.where(AssetValuation.asset_id == self.id)
     query = query.where(AssetValuation.date <= end)
     query = query.where(AssetValuation.date >= start)
     query = query.order_by(AssetValuation.date)
 
-    for valuation in query.all():
-      valuation: AssetValuation
+    for v_date, v_value in query.all():
+      v_date: datetime.date
+      v_value: Decimal
       # Don't need thanks SQL filters
       # if t_split.date > end:
       #   continue
-      while date < valuation.date:
+      while date < v_date:
         values.append(value)
         dates.append(date)
         date += datetime.timedelta(days=1)
-      value = valuation.value
+      value = v_value
     while date <= end:
       values.append(value)
       dates.append(date)
@@ -196,14 +212,16 @@ class Asset(Base):
     splits: t.List[t.Tuple[t.Date, t.Real]] = []
 
     query = s.query(AssetSplit)
+    query = query.with_entities(AssetSplit.date, AssetSplit.multiplier)
     query = query.where(AssetSplit.asset_id == self.id)
     query = query.order_by(AssetSplit.date.desc())
 
-    for split in query.all():
-      split: AssetSplit
+    for s_date, s_multiplier in query.all():
+      s_date: datetime.date
+      s_multiplier: Decimal
       # Compound splits as we go
-      multiplier = multiplier * split.multiplier
-      splits.append((split.date, multiplier))
+      multiplier = multiplier * s_multiplier
+      splits.append((s_date, multiplier))
 
     query = s.query(TransactionSplit)
     query = query.where(TransactionSplit.asset_id == self.id)
@@ -211,6 +229,7 @@ class Asset(Base):
 
     multiplier = Decimal(1)
     for t_split in query.all():
+      # Query whole object okay, need to set things
       t_split: TransactionSplit
       # If txn is before the split, update the multiplier
       if len(splits) >= 1 and t_split.date < splits[0][0]:

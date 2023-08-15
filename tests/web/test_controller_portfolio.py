@@ -587,7 +587,11 @@ class TestControllerPortfolio(WebTestBase):
         next_month.year, next_month.month,
         calendar.monthrange(next_month.year, next_month.month)[1])
     result, _ = self.api_get(endpoint, {"start": next_month, "end": eom})
-    self.assertEqual(round(budget_future_annual / 12, 6), sum(result["target"]))
+    # Occasionally off by 1e-6, cause of multiple rounding places
+    t = budget_future_annual / 12
+    r = sum(result["target"])
+    self.assertGreaterEqual(r, t - Decimal("1e-6"))
+    self.assertLessEqual(r, t + Decimal("1e-6"))
 
     # Validate sum(year) == annual
     next_year = datetime.date(next_month.year + 1, 1, 1)

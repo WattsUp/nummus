@@ -191,6 +191,53 @@ class TestCommon(TestBase):
     result = common.parse_financial(s)
     self.assertEqual(Decimal("-1000.1"), result)
 
+  def test_format_financial(self):
+    x = Decimal("1000.1")
+    result = common.format_financial(x)
+    self.assertEqual("$1,000.10", result)
+
+    x = Decimal("-1000.1")
+    result = common.format_financial(x)
+    self.assertEqual("-$1,000.10", result)
+
+    x = Decimal("0")
+    result = common.format_financial(x)
+    self.assertEqual("$0.00", result)
+
+  def test_format_days(self):
+    d = 0
+    result = common.format_days(d)
+    self.assertEqual("0 days", result)
+
+    labels = [self.random_string() for _ in range(4)]
+    d = 2
+    result = common.format_days(d, labels=labels)
+    self.assertEqual(f"2 {labels[0]}", result)
+
+    d = 10
+    result = common.format_days(d)
+    self.assertEqual("10 days", result)
+
+    d = 11
+    result = common.format_days(d)
+    self.assertEqual("2 wks", result)
+
+    d = 8 * 7
+    result = common.format_days(d)
+    self.assertEqual("8 wks", result)
+
+    d = 8 * 7 + 1
+    result = common.format_days(d)
+    self.assertEqual("2 mos", result)
+
+    d = 18 * 365.25 / 12
+    result = common.format_days(d)
+    self.assertEqual("18 mos", result)
+
+    d = 18 * 365.25 / 12 + 1
+    result = common.format_days(d)
+    self.assertEqual("2 yrs", result)
+
   def test_round_list(self):
     n = 9
     l = [1 / Decimal(n) for _ in range(n)]
