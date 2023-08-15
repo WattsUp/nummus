@@ -130,10 +130,7 @@ def get_value_by_category(request_args: t.JSONObj = None) -> flask.Response:
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  if request_args is None:
-    args = flask.request.args.to_dict()
-  else:
-    args = request_args
+  args = request_args or flask.request.args.to_dict()
 
   start = web_common.parse_date(args.get("start", today))
   end = web_common.parse_date(args.get("end", today))
@@ -238,10 +235,7 @@ def get_cash_flow(
     p: portfolio.Portfolio = flask.current_app.portfolio
   today = datetime.date.today()
 
-  if request_args is None:
-    args = flask.request.args.to_dict()
-  else:
-    args = request_args
+  args = request_args or flask.request.args.to_dict()
 
   start = web_common.parse_date(args.get("start", today))
   end = web_common.parse_date(args.get("end", today))

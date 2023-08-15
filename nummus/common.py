@@ -55,7 +55,7 @@ def get_input(prompt: str = "",
   """
   try:
     if secure:
-      if print_key or (print_key is None and sys.stdout.encoding and
+      if print_key or (sys.stdout.encoding and
                        sys.stdout.encoding.lower().startswith("utf-")):
         input_ = getpass.getpass("\u26BF  " + prompt)
       else:
@@ -142,8 +142,7 @@ def format_days(days: int, labels: t.Strings = None) -> str:
     x mos
     x yrs
   """
-  if labels is None:
-    labels = ["days", "wks", "mos", "yrs"]
+  labels = labels or ["days", "wks", "mos", "yrs"]
   years = days / 365.25
   months = years * 12
   if months > 18:

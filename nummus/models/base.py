@@ -66,8 +66,8 @@ class Base(orm.DeclarativeBase):
     Return:
       Model as a dictionary with columns as keys
     """
-    show = [] if show is None else show
-    hide = [] if hide is None else hide
+    show = show or []
+    hide = hide or []
 
     def prepend_path(item: str):
       item = item.lower()
