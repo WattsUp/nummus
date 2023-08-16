@@ -485,9 +485,14 @@ class Account(Base):
     value_assets: t.DictReals = {}
     for asset_id, a in assets.items():
       qty = qty_assets[asset_id]
-      # Value = quantity * price
-      _, price = a.get_value(start, end)
-      values = [round(p * q, 6) for p, q in zip(price, qty)]
+      if all(q == 0 for q in qty):
+        # If all quantities are zero, all values will be zero,
+        # regardless of price. Skip asset.get_value for speed
+        values = [Decimal(0)] * len(qty)
+      else:
+        # Value = quantity * price
+        _, price = a.get_value(start, end)
+        values = [round(p * q, 6) for p, q in zip(price, qty)]
       value_assets[a.uuid] = values
 
     # Sum with cash
