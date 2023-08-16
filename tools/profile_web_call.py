@@ -54,6 +54,11 @@ def main(command_line: t.Strings = None) -> int:
                       "-s",
                       metavar="PATH",
                       help="specify output file location to save web response")
+  parser.add_argument("--no-call-twice",
+                      default=False,
+                      action="store_true",
+                      help="default is to profile only the second of two "
+                      "requests, this flag will profile the first request")
   parser.add_argument("url",
                       metavar="URL",
                       help="web URL to call. Use relative to server "
@@ -66,6 +71,7 @@ def main(command_line: t.Strings = None) -> int:
   path_response: str = args.save_response
   output_file: str = args.output_file
   url: str = args.url
+  no_call_twice: bool = args.no_call_twice
 
   p = commands.unlock(path=path_db, pass_file=path_password)
   if p is None:
@@ -82,6 +88,11 @@ def main(command_line: t.Strings = None) -> int:
   print(f"{Fore.CYAN}GET {url}")
   response: werkzeug.test.TestResponse = None
   try:
+    if not no_call_twice:
+      # Send one request, sqlalchemy with cache queries and such
+      # More akin to real usage
+      _ = client.open(url, method="GET")
+
     with viztracer.VizTracer(output_file=output_file) as _:
       start = time.perf_counter()
       response = client.open(url, method="GET")
