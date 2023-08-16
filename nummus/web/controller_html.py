@@ -69,6 +69,9 @@ def get_sidebar() -> str:
   else:
     asset_width = round(assets / (assets - liabilities) * 100, 2)
     liabilities_width = 100 - asset_width
+  # TODO (WattsUp) Sort categories in preferred order
+  # Then sort accounts in alphabetical order
+  # Add account UUIDs for links
   context: t.DictStr = {
       "net-worth": assets + liabilities,
       "assets": assets,
