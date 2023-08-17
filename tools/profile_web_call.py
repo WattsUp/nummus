@@ -2,10 +2,12 @@
 """
 
 import argparse
+import io
 import os
 import pathlib
 import sys
 import time
+from unittest import mock
 import warnings
 
 import colorama
@@ -91,7 +93,14 @@ def main(command_line: t.Strings = None) -> int:
     if not no_call_twice:
       # Send one request, sqlalchemy with cache queries and such
       # More akin to real usage
-      _ = client.open(url, method="GET")
+      # Hide stdout from first call to no duplicate debugging print statements
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+          _ = client.open(url, method="GET")
+      fake_stderr = fake_stderr.getvalue()
+      if fake_stderr != "":
+        print(fake_stderr, file=sys.stderr)
+        return 1
 
     with viztracer.VizTracer(output_file=output_file) as _:
       start = time.perf_counter()
