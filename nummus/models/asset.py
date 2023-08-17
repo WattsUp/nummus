@@ -139,46 +139,30 @@ class Asset(Base):
     Returns:
       List[dates], list[values]
     """
-    date = start
-
-    dates: t.Dates = []
-    values: t.Reals = []
-
-    value = Decimal(0)
-
     s = orm.object_session(self)
 
-    if start == end:
-      # Single value
-      # Get latest Valuation before or including start date
-      query_iv = s.query(AssetValuation.value)
-      query_iv = query_iv.where(AssetValuation.asset_id == self.id)
-      query_iv = query_iv.where(AssetValuation.date <= start)
-      query_iv = query_iv.order_by(AssetValuation.date.desc())
-      iv = query_iv.first()
-      if iv is None:
-        value = Decimal(0)
-      else:
-        value = iv[0]
-      return [start], [value]
+    # Get latest Valuation before or including start date
+    query = s.query(AssetValuation)
+    query = query.with_entities(AssetValuation.value,
+                                sqlalchemy.func.max(AssetValuation.date))  # pylint: disable=not-callable
+    query = query.where(AssetValuation.asset_id == self.id)
+    query = query.where(AssetValuation.date <= start)
+    iv = query.scalar()  # Returns first element of first row (value) or None
+    value = iv or Decimal(0)
 
-    # Get latest Valuation before start date
-    query_iv = s.query(AssetValuation.value)
-    query_iv = query_iv.where(AssetValuation.asset_id == self.id)
-    query_iv = query_iv.where(AssetValuation.date < start)
-    query_iv = query_iv.order_by(AssetValuation.date.desc())
-    iv = query_iv.first()
-    if iv is None:
-      value = Decimal(0)
-    else:
-      value = iv[0]
+    date = start + datetime.timedelta(days=1)
+    dates: t.Dates = [start]
+    values: t.Reals = [value]
+
+    if start == end:
+      return dates, values
 
     # Valuations between start and end
     query = s.query(AssetValuation)
     query = query.with_entities(AssetValuation.date, AssetValuation.value)
     query = query.where(AssetValuation.asset_id == self.id)
     query = query.where(AssetValuation.date <= end)
-    query = query.where(AssetValuation.date >= start)
+    query = query.where(AssetValuation.date > start)
     query = query.order_by(AssetValuation.date)
 
     for v_date, v_value in query.all():

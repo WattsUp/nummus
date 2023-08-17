@@ -11,7 +11,7 @@ from sqlalchemy import ForeignKey, event, orm
 
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum, Decimal6, Decimal18
-from nummus.models.asset import Asset, DictStrAsset
+from nummus.models.asset import Asset
 
 ORMTxn = orm.Mapped["Transaction"]
 ORMTxnList = orm.Mapped[t.List["Transaction"]]
@@ -365,22 +365,20 @@ class Account(Base):
     """Date of first Transaction
     """
     s = orm.object_session(self)
-    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
-    date = query.order_by(Transaction.date).first()
-    if date is None:
-      return None
-    return date[0]
+    query = s.query(Transaction)
+    query = query.with_entities(sqlalchemy.func.min(Transaction.date))  # pylint: disable=not-callable
+    query = query.where(Transaction.account_id == self.id)
+    return query.scalar()
 
   @property
   def updated_on(self) -> t.Date:
     """Date of latest Transaction
     """
     s = orm.object_session(self)
-    query = s.query(Transaction.date).where(Transaction.account_id == self.id)
-    date = query.order_by(Transaction.date.desc()).first()
-    if date is None:
-      return None
-    return date[0]
+    query = s.query(Transaction)
+    query = query.with_entities(sqlalchemy.func.max(Transaction.date))  # pylint: disable=not-callable
+    query = query.where(Transaction.account_id == self.id)
+    return query.scalar()
 
   def get_value(self, start: t.Date,
                 end: t.Date) -> t.Tuple[t.Dates, t.Reals, t.DictReals]:
@@ -394,26 +392,22 @@ class Account(Base):
       Also returns value by Asset (possibly empty for non-investment accounts)
       List[dates], list[values], dict{Asset.uuid: list[values]}
     """
-    date = start
-
-    dates: t.Dates = []
-    cash: t.Reals = []
-    qty_assets: t.DictReals = {}
-    assets: DictStrAsset = {}
-
-    current_qty_assets: t.DictReal = {}
-
     s = orm.object_session(self)
 
     # Get Account value on start date
     # It is callable, sum returns a generator type
     query_iv = s.query(sqlalchemy.func.sum(TransactionSplit.total))  # pylint: disable=not-callable
     query_iv = query_iv.where(TransactionSplit.account_id == self.id)
-    query_iv = query_iv.where(TransactionSplit.date < start)
+    query_iv = query_iv.where(TransactionSplit.date <= start)
     iv = query_iv.scalar()
     current_cash = iv or Decimal(0)
 
+    date = start + datetime.timedelta(days=1)
+    dates: t.Dates = [start]
+    cash: t.Reals = [current_cash]
+
     # Get Asset quantities on start date
+    current_qty_assets: t.DictReal = {}
     query = s.query(TransactionSplit)
     query = query.with_entities(
         TransactionSplit.asset_id,
@@ -421,78 +415,80 @@ class Account(Base):
         TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.asset_id.is_not(None))
-    query = query.where(TransactionSplit.date < start)
+    query = query.where(TransactionSplit.date <= start)
     for a_id, qty_int, qty_frac in query.all():
       a_id: int
       qty_int: int
       qty_frac: Decimal
-      if a_id not in assets:
-        a: Asset = s.query(Asset).where(Asset.id == a_id).first()
-        assets[a_id] = a
-        qty_assets[a_id] = []
+      if a_id not in current_qty_assets:
         current_qty_assets[a_id] = Decimal(0)
       current_qty_assets[a_id] += qty_int + qty_frac
 
-    # Transactions between start and end
-    query = s.query(TransactionSplit)
-    query = query.with_entities(
-        TransactionSplit.date,
-        TransactionSplit.total,
-        TransactionSplit.asset_id,
-        TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-        TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
-    query = query.where(TransactionSplit.account_id == self.id)
-    query = query.where(TransactionSplit.date <= end)
-    query = query.where(TransactionSplit.date >= start)
-    query = query.order_by(TransactionSplit.date)
+    qty_assets: t.DictReals = {}
+    for a_id, qty in current_qty_assets.items():
+      qty_assets[a_id] = [qty]
 
-    for t_date, total, a_id, qty_int, qty_frac in query.all():
-      t_date: datetime.date
-      total: Decimal
-      a_id: int
-      qty_int: int
-      qty_frac: Decimal
-      # Don't need thanks SQL filters
-      # if t_split.date > end:
-      #   continue
-      while date < t_date:
+    if start != end:
+      # Transactions between start and end
+      query = s.query(TransactionSplit)
+      query = query.with_entities(
+          TransactionSplit.date,
+          TransactionSplit.total,
+          TransactionSplit.asset_id,
+          TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
+          TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
+      query = query.where(TransactionSplit.account_id == self.id)
+      query = query.where(TransactionSplit.date <= end)
+      query = query.where(TransactionSplit.date > start)
+      query = query.order_by(TransactionSplit.date)
+
+      for t_date, total, a_id, qty_int, qty_frac in query.all():
+        t_date: datetime.date
+        total: Decimal
+        a_id: int
+        qty_int: int
+        qty_frac: Decimal
+        # Don't need thanks SQL filters
+        # if t_split.date > end:
+        #   continue
+        while date < t_date:
+          for k, v in current_qty_assets.items():
+            qty_assets[k].append(v)
+          dates.append(date)
+          cash.append(current_cash)
+          date += datetime.timedelta(days=1)
+
+        current_cash += total
+        if a_id is None:
+          continue
+        if a_id not in current_qty_assets:
+          # Asset not added during initial value
+          qty_assets[a_id] = [Decimal(0)] * len(dates)
+          current_qty_assets[a_id] = qty_int + qty_frac
+        else:
+          current_qty_assets[a_id] += qty_int + qty_frac
+
+      while date <= end:
         for k, v in current_qty_assets.items():
           qty_assets[k].append(v)
         dates.append(date)
         cash.append(current_cash)
         date += datetime.timedelta(days=1)
 
-      current_cash += total
-      if a_id is None:
-        continue
-      if a_id not in current_qty_assets:
-        # Asset not added during initial value
-        a: Asset = s.query(Asset).where(Asset.id == a_id).first()
-        assets[a_id] = a
-        qty_assets[a_id] = [Decimal(0)] * len(dates)
-        current_qty_assets[a_id] = qty_int + qty_frac
-      else:
-        current_qty_assets[a_id] += qty_int + qty_frac
-
-    while date <= end:
-      for k, v in current_qty_assets.items():
-        qty_assets[k].append(v)
-      dates.append(date)
-      cash.append(current_cash)
-      date += datetime.timedelta(days=1)
-
-    # Assets qty to value
-    value_assets: t.DictReals = {}
-    for asset_id, a in assets.items():
-      qty = qty_assets[asset_id]
+    # Skip assets with zero quantity
+    for a_id, qty in list(qty_assets.items()):
       if all(q == 0 for q in qty):
-        # If all quantities are zero, all values will be zero,
-        # regardless of price. Skip asset.get_value for speed
-        values = [Decimal(0)] * len(qty)
-      else:
-        # Value = quantity * price
-        _, price = a.get_value(start, end)
-        values = [round(p * q, 6) for p, q in zip(price, qty)]
+        qty_assets.pop(a_id)
+
+    # Get Asset objects and convert qty to value
+    value_assets: t.DictReals = {}
+    query = s.query(Asset)
+    query = query.where(Asset.id.in_(qty_assets.keys()))
+    for a in query.all():
+      qty = qty_assets[a.id]
+      # Value = quantity * price
+      _, price = a.get_value(start, end)
+      values = [round(p * q, 6) for p, q in zip(price, qty)]
       value_assets[a.uuid] = values
 
     # Sum with cash
@@ -581,16 +577,13 @@ class Account(Base):
     Returns:
       List[dates], dict{Asset.uuid: list[values]}
     """
-    date = start
-
-    dates: t.Dates = []
-    qty_assets: t.DictReals = {}
-
-    current_qty_assets: t.DictReal = {}
-
     s = orm.object_session(self)
 
+    date = start + datetime.timedelta(days=1)
+    dates: t.Dates = [start]
+
     # Get Asset quantities on start date
+    current_qty_assets: t.DictReal = {}
     query = s.query(TransactionSplit)
     query = query.with_entities(
         TransactionSplit.asset_uuid,
@@ -598,15 +591,21 @@ class Account(Base):
         TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.asset_id.is_not(None))
-    query = query.where(TransactionSplit.date < start)
+    query = query.where(TransactionSplit.date <= start)
     for a_uuid, qty_int, qty_frac in query.all():
       a_uuid: str
       qty_int: int
       qty_frac: Decimal
-      if a_uuid not in qty_assets:
-        qty_assets[a_uuid] = []
+      if a_uuid not in current_qty_assets:
         current_qty_assets[a_uuid] = Decimal(0)
       current_qty_assets[a_uuid] += qty_int + qty_frac
+
+    qty_assets: t.DictReals = {}
+    for a_uuid, qty in current_qty_assets.items():
+      qty_assets[a_uuid] = [qty]
+
+    if start == end:
+      return dates, qty_assets
 
     # Transactions between start and end
     query = s.query(TransactionSplit)
@@ -617,7 +616,7 @@ class Account(Base):
         TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= end)
-    query = query.where(TransactionSplit.date >= start)
+    query = query.where(TransactionSplit.date > start)
     query = query.where(TransactionSplit.asset_id.is_not(None))
     query = query.order_by(TransactionSplit.date)
 

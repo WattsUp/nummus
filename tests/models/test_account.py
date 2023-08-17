@@ -541,7 +541,6 @@ class TestAccount(TestBase):
 
     # Sell asset[0] on the last day
     t1 = self.random_decimal(1, 10)
-    q1 = self.random_decimal(0, 10)
     txn = Transaction(account=acct,
                       date=target_dates[-1],
                       total=t1,
@@ -549,7 +548,7 @@ class TestAccount(TestBase):
     t_split = TransactionSplit(parent=txn,
                                total=txn.total,
                                asset=assets[0],
-                               asset_quantity_unadjusted=-q1)
+                               asset_quantity_unadjusted=-q0)
     s.add_all((txn, t_split))
     s.commit()
 
@@ -572,8 +571,7 @@ class TestAccount(TestBase):
     s.commit()
 
     asset_values = [
-        round(p * q, 6)
-        for p, q in zip(prices, [0, q0, q0, q0, q0, q0, q0 - q1])
+        round(p * q, 6) for p, q in zip(prices, [0, q0, q0, q0, q0, q0, 0])
     ]
     target_values = [c + v for c, v in zip(target_values, asset_values)]
     target_assets = {assets[0].uuid: asset_values}
@@ -594,7 +592,7 @@ class TestAccount(TestBase):
     r_dates, r_values, r_assets = acct.get_value(future, future)
     self.assertEqual([future], r_dates)
     self.assertEqual([target_values[-1]], r_values)
-    self.assertEqual({assets[0].uuid: [asset_values[-1]]}, r_assets)
+    self.assertEqual({}, r_assets)
 
   def test_get_cash_flow(self):
     s = self.get_session()
