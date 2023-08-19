@@ -497,6 +497,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
+    r_dates, r_values = Account.get_value_all(s, start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
     # Fund account on first day
     t_fund = self.random_decimal(10, 100)
     txn = Transaction(account=acct,
@@ -513,6 +517,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
+
+    r_dates, r_values = Account.get_value_all(s, start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
 
     # Buy asset[0] on the second day
     t0 = self.random_decimal(-10, -1)
@@ -539,6 +547,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
+    r_dates, r_values = Account.get_value_all(s, start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
     # Sell asset[0] on the last day
     t1 = self.random_decimal(1, 10)
     txn = Transaction(account=acct,
@@ -563,6 +575,10 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
+    r_dates, r_values = Account.get_value_all(s, start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
     # Add valuations to Asset
     prices = self.random_decimal(1, 10, size=len(target_dates))
     for date, p in zip(target_dates, prices):
@@ -581,11 +597,19 @@ class TestAccount(TestBase):
     self.assertEqual(target_values, r_values)
     self.assertEqual(target_assets, r_assets)
 
+    r_dates, r_values = Account.get_value_all(s, start, end)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
     # Test single value
     r_dates, r_values, r_assets = acct.get_value(today, today)
     self.assertEqual([today], r_dates)
     self.assertEqual([target_values[3]], r_values)
     self.assertEqual({assets[0].uuid: [asset_values[3]]}, r_assets)
+
+    r_dates, r_values = Account.get_value_all(s, today, today)
+    self.assertEqual([today], r_dates)
+    self.assertEqual({acct.uuid: [target_values[3]]}, r_values)
 
     # Test single value
     future = target_dates[-1] + datetime.timedelta(days=1)
@@ -593,6 +617,10 @@ class TestAccount(TestBase):
     self.assertEqual([future], r_dates)
     self.assertEqual([target_values[-1]], r_values)
     self.assertEqual({}, r_assets)
+
+    r_dates, r_values = Account.get_value_all(s, future, future)
+    self.assertEqual([future], r_dates)
+    self.assertEqual({acct.uuid: [target_values[-1]]}, r_values)
 
   def test_get_cash_flow(self):
     s = self.get_session()
