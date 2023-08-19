@@ -298,7 +298,7 @@ class TestNummusWebHandler(TestBase):
     h.code = 400
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.YELLOW}PUT{Fore.RESET} "
-              f"{Fore.GREEN}/api/transactions{Fore.RESET} "
+              f"{Fore.YELLOW}/api/transactions{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.YELLOW}400{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):

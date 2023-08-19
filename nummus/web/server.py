@@ -83,7 +83,7 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
       if endpoint.startswith("/api/ui/"):
         endpoint = f"{Fore.CYAN}{endpoint}{Fore.RESET}"
       elif endpoint.startswith("/api/"):
-        endpoint = f"{Fore.GREEN}{endpoint}{Fore.RESET}"
+        endpoint = f"{Fore.YELLOW}{endpoint}{Fore.RESET}"
       elif endpoint.startswith("/static/"):
         endpoint = f"{Fore.MAGENTA}{endpoint}{Fore.RESET}"
       else:
