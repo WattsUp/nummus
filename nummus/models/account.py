@@ -497,7 +497,7 @@ class Account(Base):
     return dates, values, value_assets
 
   @classmethod
-  def all_get_value(
+  def get_value_all(
       cls, s: orm.Session, start: t.Date,
       end: t.Date) -> t.Tuple[t.Dates, t.DictReals, t.Dict[str, t.DictReals]]:
     """Get the value of all Accounts from start to end date
@@ -603,7 +603,7 @@ class Account(Base):
 
     # Skip assets with zero quantity
     values: t.DictReals = {}
-    # TODO (WattsUp) Replace with Asset.all_get_value
+    # TODO (WattsUp) Replace with Asset.get_value_all
     for acct_uuid, assets in qty_assets.items():
       for a_id, qty in list(assets.items()):
         if all(q == 0 for q in qty):

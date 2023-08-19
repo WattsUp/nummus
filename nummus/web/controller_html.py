@@ -66,7 +66,7 @@ def get_sidebar() -> str:
       accounts[acct_uuid]["updated_days_ago"] = (today - updated_on).days
 
     # Get all Account values
-    _, acct_values, _ = Account.all_get_value(s, today, today)
+    _, acct_values, _ = Account.get_value_all(s, today, today)
     for acct_uuid, values in acct_values.items():
       acct_dict = accounts[acct_uuid]
       v = values[0]
