@@ -263,7 +263,9 @@ class TestAsset(TestBase):
     today = datetime.date.today()
     yesterday = today - datetime.timedelta(days=1)
 
-    multiplier = round(self.random_decimal(1, 10))
+    multiplier_0 = round(self.random_decimal(1, 10))
+    multiplier_1 = round(self.random_decimal(1, 10))
+    multiplier = multiplier_0 * multiplier_1
     value_today = self.random_decimal(1, 10)
     value_yesterday = value_today * multiplier
 
@@ -281,8 +283,10 @@ class TestAsset(TestBase):
     s.add(v)
     s.commit()
 
-    split = AssetSplit(asset=a, date=today, multiplier=multiplier)
-    s.add(split)
+    # Multiple splits that need be included on the first valuation
+    split_0 = AssetSplit(asset=a, date=today, multiplier=multiplier_0)
+    split_1 = AssetSplit(asset=a, date=today, multiplier=multiplier_1)
+    s.add_all((split_0, split_1))
     s.commit()
 
     # Splits are done after hours

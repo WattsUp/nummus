@@ -216,6 +216,6 @@ class Asset(Base):
       # Query whole object okay, need to set things
       t_split: TransactionSplit
       # If txn is before the split, update the multiplier
-      if len(splits) >= 1 and t_split.date < splits[0][0]:
+      while len(splits) >= 1 and t_split.date < splits[0][0]:
         multiplier = splits.pop(0)[1]
       t_split.adjust_asset_quantity(multiplier)
