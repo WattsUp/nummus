@@ -35,8 +35,18 @@ def get_sidebar() -> str:
   assets = Decimal(0)
   liabilities = Decimal(0)
 
-  categories_total: t.Dict[AccountCategory, t.Real] = {}
-  categories: t.Dict[AccountCategory, t.List[t.DictAny]] = {}
+  sorted_categories: t.List[AccountCategory] = [
+      AccountCategory.CASH, AccountCategory.CREDIT, AccountCategory.INVESTMENT,
+      AccountCategory.MORTGAGE, AccountCategory.LOAN, AccountCategory.FIXED,
+      AccountCategory.OTHER
+  ]
+
+  categories_total: t.Dict[AccountCategory, t.Real] = {
+      cat: Decimal(0) for cat in sorted_categories
+  }
+  categories: t.Dict[AccountCategory, t.List[t.DictAny]] = {
+      cat: [] for cat in sorted_categories
+  }
 
   with p.get_session() as s:
     # Get basic info
@@ -77,12 +87,8 @@ def get_sidebar() -> str:
       acct_dict["value"] = v
       category = acct_dict["category"]
 
-      if category not in categories:
-        categories_total[category] = v
-        categories[category] = [acct_dict]
-      else:
-        categories_total[category] += v
-        categories[category].append(acct_dict)
+      categories_total[category] += v
+      categories[category].append(acct_dict)
 
   bar_total = assets - liabilities
   if bar_total == 0:
@@ -91,9 +97,15 @@ def get_sidebar() -> str:
   else:
     asset_width = round(assets / (assets - liabilities) * 100, 2)
     liabilities_width = 100 - asset_width
-  # TODO (WattsUp) Sort categories in preferred order
-  # Then sort accounts in alphabetical order
-  # Add account UUIDs for links
+
+  # Removed empty categories and sort
+  categories = {
+      cat: sorted(accounts, key=lambda acct: acct["name"])
+      for cat, accounts in categories.items()
+      if len(accounts) > 0
+  }
+
+  # TODO (WattsUp) Add account UUIDs for links
   context: t.DictStr = {
       "net-worth": assets + liabilities,
       "assets": assets,
@@ -101,8 +113,8 @@ def get_sidebar() -> str:
       "assets-w": asset_width,
       "liabilities-w": liabilities_width,
       "categories": {
-          cat: (total, categories[cat])
-          for cat, total in categories_total.items()
+          cat: (categories_total[cat], accounts)
+          for cat, accounts in categories.items()
       },
   }
   return flask.render_template("sidebar.html", context=context)
