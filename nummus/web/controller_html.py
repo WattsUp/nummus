@@ -5,10 +5,11 @@ import datetime
 from decimal import Decimal
 
 import flask
+import sqlalchemy
 
 from nummus import portfolio
 from nummus import custom_types as t
-from nummus.models import Account, AccountCategory
+from nummus.models import Account, AccountCategory, Transaction
 
 
 def get_home() -> str:
@@ -34,33 +35,60 @@ def get_sidebar() -> str:
   assets = Decimal(0)
   liabilities = Decimal(0)
 
-  categories_total: t.Dict[AccountCategory, t.Real] = {}
-  categories: t.Dict[AccountCategory, t.List[t.DictAny]] = {}
+  sorted_categories: t.List[AccountCategory] = [
+      AccountCategory.CASH, AccountCategory.CREDIT, AccountCategory.INVESTMENT,
+      AccountCategory.MORTGAGE, AccountCategory.LOAN, AccountCategory.FIXED,
+      AccountCategory.OTHER
+  ]
+
+  categories_total: t.Dict[AccountCategory, t.Real] = {
+      cat: Decimal(0) for cat in sorted_categories
+  }
+  categories: t.Dict[AccountCategory, t.List[t.DictAny]] = {
+      cat: [] for cat in sorted_categories
+  }
 
   with p.get_session() as s:
-    for acct in s.query(Account).all():
-      acct: Account
+    # Get basic info
+    accounts: t.Dict[str, t.DictAny] = {}
+    query = s.query(Account)
+    query = query.with_entities(Account.uuid, Account.name, Account.institution,
+                                Account.category)
+    for acct_uuid, name, institution, category in query.all():
+      acct_uuid: str
+      name: str
+      institution: str
+      category: AccountCategory
+      accounts[acct_uuid] = {
+          "name": name,
+          "institution": institution,
+          "category": category
+      }
 
-      _, values, _ = acct.get_value(today, today)
+    # Get updated_on
+    query = s.query(Transaction)
+    query = query.with_entities(Transaction.account_uuid,
+                                sqlalchemy.func.max(Transaction.date))  # pylint: disable=not-callable
+    query = query.group_by(Transaction.account_id)
+    for acct_uuid, updated_on in query.all():
+      acct_uuid: str
+      updated_on: datetime.date
+      accounts[acct_uuid]["updated_days_ago"] = (today - updated_on).days
+
+    # Get all Account values
+    _, acct_values = Account.get_value_all(s, today, today)
+    for acct_uuid, values in acct_values.items():
+      acct_dict = accounts[acct_uuid]
       v = values[0]
       if v > 0:
         assets += v
       else:
         liabilities += v
+      acct_dict["value"] = v
+      category = acct_dict["category"]
 
-      acct_dict: t.DictAny = {
-          "name": acct.name,
-          "institution": acct.institution,
-          "value": v,
-          "updated_days_ago": (today - acct.updated_on).days
-      }
-
-      if acct.category not in categories:
-        categories_total[acct.category] = v
-        categories[acct.category] = [acct_dict]
-      else:
-        categories_total[acct.category] += v
-        categories[acct.category].append(acct_dict)
+      categories_total[category] += v
+      categories[category].append(acct_dict)
 
   bar_total = assets - liabilities
   if bar_total == 0:
@@ -69,6 +97,15 @@ def get_sidebar() -> str:
   else:
     asset_width = round(assets / (assets - liabilities) * 100, 2)
     liabilities_width = 100 - asset_width
+
+  # Removed empty categories and sort
+  categories = {
+      cat: sorted(accounts, key=lambda acct: acct["name"])
+      for cat, accounts in categories.items()
+      if len(accounts) > 0
+  }
+
+  # TODO (WattsUp) Add account UUIDs for links
   context: t.DictStr = {
       "net-worth": assets + liabilities,
       "assets": assets,
@@ -76,8 +113,8 @@ def get_sidebar() -> str:
       "assets-w": asset_width,
       "liabilities-w": liabilities_width,
       "categories": {
-          cat: (total, categories[cat])
-          for cat, total in categories_total.items()
+          cat: (categories_total[cat], accounts)
+          for cat, accounts in categories.items()
       },
   }
   return flask.render_template("sidebar.html", context=context)

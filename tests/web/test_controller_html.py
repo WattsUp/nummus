@@ -126,12 +126,14 @@ class TestControllerHTML(WebTestBase):
         "institution": "Monkey Bank",
         "name": "Monkey Bank Checking",
         "updated_days_ago": 0,
-        "value": Decimal("-50.000000")
+        "value": Decimal("-50.000000"),
+        "category": AccountCategory.CASH
     }, {
         "institution": "Monkey Bank",
         "name": "Monkey Bank Savings",
         "updated_days_ago": 0,
-        "value": Decimal("100.000000")
+        "value": Decimal("100.000000"),
+        "category": AccountCategory.CASH
     }]
     target = {
         "net-worth": Decimal("50.000000"),

@@ -163,7 +163,7 @@ class TestControllerAccounts(WebTestBase):
       acct_checking = Account(name="Monkey Bank Checking",
                               institution="Monkey Bank",
                               category=AccountCategory.CASH)
-      acct_invest = Account(name="Monkey Investments",
+      acct_invest = Account(name="Gorilla Investments",
                             institution="Ape Trading",
                             category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
@@ -188,7 +188,7 @@ class TestControllerAccounts(WebTestBase):
     self.assertEqual(target, result)
 
     # Search by institution
-    result, _ = self.api_get(endpoint, {"search": "Bank"})
+    result, _ = self.api_get(endpoint, {"search": "Money Bank"})
     target = {"accounts": [accounts[0]], "count": 1}
     self.assertEqual(target, result)
 
@@ -205,7 +205,7 @@ class TestControllerAccounts(WebTestBase):
     target = {"accounts": [accounts[0]], "count": 1}
     self.assertEqual(target, result)
 
-    result, _ = self.api_get(endpoint, {"search": "Monkey"})
+    result, _ = self.api_get(endpoint, {"search": "Monkey Gorilla"})
     target = {"accounts": accounts, "count": 2}
     self.assertEqual(target, result)
 
