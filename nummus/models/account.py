@@ -532,25 +532,25 @@ class Account(Base):
     query = s.query(TransactionSplit)
     query = query.with_entities(
         TransactionSplit.account_uuid,
-        TransactionSplit.asset_id,
+        TransactionSplit.asset_uuid,
         TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
         TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
     query = query.where(TransactionSplit.asset_id.is_not(None))
     query = query.where(TransactionSplit.date <= start)
-    for acct_uuid, a_id, qty_int, qty_frac in query.all():
+    for acct_uuid, a_uuid, qty_int, qty_frac in query.all():
       acct_uuid: str
-      a_id: int
+      a_uuid: str
       qty_int: int
       qty_frac: Decimal
       acct_current_qty_assets = current_qty_assets[acct_uuid]
-      if a_id not in acct_current_qty_assets:
-        acct_current_qty_assets[a_id] = Decimal(0)
-      acct_current_qty_assets[a_id] += qty_int + qty_frac
+      if a_uuid not in acct_current_qty_assets:
+        acct_current_qty_assets[a_uuid] = Decimal(0)
+      acct_current_qty_assets[a_uuid] += qty_int + qty_frac
 
     qty_assets: t.Dict[str, t.DictReals] = {k: {} for k in current_cash}
     for acct_uuid, assets in current_qty_assets.items():
-      for a_id, qty in assets.items():
-        qty_assets[acct_uuid][a_id] = [qty]
+      for a_uuid, qty in assets.items():
+        qty_assets[acct_uuid][a_uuid] = [qty]
 
     if start != end:
 
@@ -558,8 +558,8 @@ class Account(Base):
         """Push currents into the lists
         """
         for acct_uuid, assets in current_qty_assets.items():
-          for a_id, qty in assets.items():
-            qty_assets[acct_uuid][a_id].append(qty)
+          for a_uuid, qty in assets.items():
+            qty_assets[acct_uuid][a_uuid].append(qty)
           cash[acct_uuid].append(current_cash[acct_uuid])
         dates.append(current)
         return current + datetime.timedelta(days=1)
@@ -570,18 +570,18 @@ class Account(Base):
           TransactionSplit.account_uuid,
           TransactionSplit.date,
           TransactionSplit.total,
-          TransactionSplit.asset_id,
+          TransactionSplit.asset_uuid,
           TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
           TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
       query = query.where(TransactionSplit.date <= end)
       query = query.where(TransactionSplit.date > start)
       query = query.order_by(TransactionSplit.date)
 
-      for acct_uuid, t_date, total, a_id, qty_int, qty_frac in query.all():
+      for acct_uuid, t_date, total, a_uuid, qty_int, qty_frac in query.all():
         acct_uuid: str
         t_date: datetime.date
         total: Decimal
-        a_id: int
+        a_uuid: str
         qty_int: int
         qty_frac: Decimal
         # Don't need thanks SQL filters
@@ -591,14 +591,14 @@ class Account(Base):
           date = next_day(date)
 
         current_cash[acct_uuid] += total
-        if a_id is None:
+        if a_uuid is None:
           continue
         acct_current_qty_assets = current_qty_assets[acct_uuid]
-        if a_id not in acct_current_qty_assets:
+        if a_uuid not in acct_current_qty_assets:
           # Asset not added during initial value
-          qty_assets[acct_uuid][a_id] = [Decimal(0)] * len(dates)
-          acct_current_qty_assets[a_id] = Decimal(0)
-        acct_current_qty_assets[a_id] += qty_int + qty_frac
+          qty_assets[acct_uuid][a_uuid] = [Decimal(0)] * len(dates)
+          acct_current_qty_assets[a_uuid] = Decimal(0)
+        acct_current_qty_assets[a_uuid] += qty_int + qty_frac
 
       while date <= end:
         date = next_day(date)
@@ -606,28 +606,27 @@ class Account(Base):
     # Skip assets with zero quantity
     acct_values: t.DictReals = {}
     # TODO (WattsUp) Replace with Asset.get_value_all
+    a_uuids: t.Strings = []
     for acct_uuid, assets in qty_assets.items():
-      for a_id, qty in list(assets.items()):
+      for a_uuid, qty in list(assets.items()):
         if all(q == 0 for q in qty):
-          assets.pop(a_id)
+          assets.pop(a_uuid)
+        else:
+          a_uuids.append(a_uuid)
+    _, assets_values = Asset.get_value_all(s, start, end)
+    for acct_uuid, assets in qty_assets.items():
       if len(assets) == 0:
         acct_values[acct_uuid] = cash[acct_uuid]
       else:
         # Get Asset objects and convert qty to value
-        assets_values: t.DictReals = {}
-        query = s.query(Asset)
-        query = query.where(Asset.id.in_(assets.keys()))
-        for a in query.all():
-          qty = assets[a.id]
-          # Value = quantity * price
-          _, price = a.get_value(start, end)
+        to_sum: t.List[t.Reals] = [cash[acct_uuid]]
+        for a_uuid, qty in assets.items():
+          price = assets_values[a_uuid]
           a_values = [round(p * q, 6) for p, q in zip(price, qty)]
-          assets_values[a.uuid] = a_values
+          to_sum.append(a_values)
 
         # Sum with cash
-        acct_values[acct_uuid] = [
-            sum(x) for x in zip(cash[acct_uuid], *assets_values.values())
-        ]
+        acct_values[acct_uuid] = [sum(x) for x in zip(*to_sum)]
 
     return dates, acct_values
 

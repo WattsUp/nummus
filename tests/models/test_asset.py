@@ -237,24 +237,41 @@ class TestAsset(TestBase):
     ]
 
     r_dates, r_values = a.get_value(target_dates[0], target_dates[-1])
-    self.assertListEqual(target_dates, r_dates)
-    self.assertListEqual(target_values, r_values)
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual(target_values, r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, target_dates[0],
+                                            target_dates[-1])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({a.uuid: target_values}, r_values)
 
     # Test single value
     r_dates, r_values = a.get_value(today, today)
-    self.assertListEqual([today], r_dates)
-    self.assertListEqual([v_today.value], r_values)
+    self.assertEqual([today], r_dates)
+    self.assertEqual([v_today.value], r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, today, today)
+    self.assertEqual([today], r_dates)
+    self.assertEqual({a.uuid: [v_today.value]}, r_values)
 
     # Test single value
     r_dates, r_values = a.get_value(tomorrow, tomorrow)
-    self.assertListEqual([tomorrow], r_dates)
-    self.assertListEqual([v_today.value], r_values)
+    self.assertEqual([tomorrow], r_dates)
+    self.assertEqual([v_today.value], r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, tomorrow, tomorrow)
+    self.assertEqual([tomorrow], r_dates)
+    self.assertEqual({a.uuid: [v_today.value]}, r_values)
 
     # Test single value
     long_ago = today - datetime.timedelta(days=7)
     r_dates, r_values = a.get_value(long_ago, long_ago)
-    self.assertListEqual([long_ago], r_dates)
-    self.assertListEqual([Decimal(0)], r_values)
+    self.assertEqual([long_ago], r_dates)
+    self.assertEqual([Decimal(0)], r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, long_ago, long_ago)
+    self.assertEqual([long_ago], r_dates)
+    self.assertEqual({a.uuid: [Decimal(0)]}, r_values)
 
   def test_update_splits(self):
     s = self.get_session()

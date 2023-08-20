@@ -30,6 +30,7 @@ DictStrings = Dict[str, Strings]
 DictTuple = Dict[str, Tuple[Any, Any]]
 
 DictIntReal = Dict[int, Real]
+DictIntReals = Dict[int, Reals]
 DictIntStr = Dict[int, str]
 
 JSONVal = Union[str, Real, int, bool, "JSONArray", "JSONObj"]

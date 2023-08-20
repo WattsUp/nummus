@@ -182,6 +182,72 @@ class Asset(Base):
       date += datetime.timedelta(days=1)
     return dates, values
 
+  @classmethod
+  def get_value_all(cls, s: orm.Session, start: t.Date,
+                    end: t.Date) -> t.Tuple[t.Dates, t.DictReals]:
+    """Get the value of all Assets from start to end date
+
+    Args:
+      s: SQL session to use
+      start: First date to evaluate
+      end: Last date to evaluate (inclusive)
+
+    Returns:
+      (List[dates], dict{Asset.uuid: list[values]})
+    """
+    query = s.query(Asset)
+    query = query.with_entities(Asset.id, Asset.uuid)
+    assets: t.DictIntStr = dict(query.all())
+    values: t.DictReal = {a_id: Decimal(0) for a_id in assets}
+
+    # Get latest Valuation before or including start date
+    query = s.query(AssetValuation)
+    query = query.with_entities(AssetValuation.asset_id, AssetValuation.value,
+                                sqlalchemy.func.max(AssetValuation.date))  # pylint: disable=not-callable
+    query = query.where(AssetValuation.date <= start)
+    query = query.group_by(AssetValuation.asset_id)
+    for a_id, v, _ in query.all():
+      a_id: int
+      v: Decimal
+      values[a_id] = v
+
+    date = start + datetime.timedelta(days=1)
+    dates: t.Dates = [start]
+    assets_values: t.DictIntReals = {a_id: [v] for a_id, v in values.items()}
+
+    if start == end:
+      return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+
+    def next_day(current: datetime.date) -> datetime.date:
+      """Push currents into the lists
+      """
+      for a_id, v in values.items():
+        assets_values[a_id].append(v)
+      dates.append(current)
+      return current + datetime.timedelta(days=1)
+
+    # Transactions between start and end
+    query = s.query(AssetValuation)
+    query = query.with_entities(AssetValuation.asset_id, AssetValuation.date,
+                                AssetValuation.value)
+    query = query.where(AssetValuation.date <= end)
+    query = query.where(AssetValuation.date > start)
+    query = query.order_by(AssetValuation.date)
+
+    for a_id, v_date, v in query.all():
+      a_id: int
+      v_date: datetime.date
+      v: Decimal
+      while date < v_date:
+        date = next_day(date)
+
+      values[a_id] = v
+
+    while date <= end:
+      date = next_day(date)
+
+    return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+
   def update_splits(self) -> None:
     """Recalculate adjusted TransactionSplit.asset_quantity based on all asset
     splits
