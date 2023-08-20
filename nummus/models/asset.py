@@ -183,14 +183,20 @@ class Asset(Base):
     return dates, values
 
   @classmethod
-  def get_value_all(cls, s: orm.Session, start: t.Date,
-                    end: t.Date) -> t.Tuple[t.Dates, t.DictReals]:
+  def get_value_all(cls,
+                    s: orm.Session,
+                    start: t.Date,
+                    end: t.Date,
+                    uuids: t.Strings = None,
+                    ids: t.Ints = None) -> t.Tuple[t.Dates, t.DictReals]:
     """Get the value of all Assets from start to end date
 
     Args:
       s: SQL session to use
       start: First date to evaluate
       end: Last date to evaluate (inclusive)
+      uuids: Limit results to specific Assets by UUID
+      ids: Limit results to specific Assets by ID
 
     Returns:
       (List[dates], dict{Asset.uuid: list[values]})
@@ -198,18 +204,25 @@ class Asset(Base):
     query = s.query(Asset)
     query = query.with_entities(Asset.id, Asset.uuid)
     assets: t.DictIntStr = dict(query.all())
-    values: t.DictReal = {a_id: Decimal(0) for a_id in assets}
+    values: t.DictIntReal = {a_id: Decimal(0) for a_id in assets}
+
+    if uuids is not None:
+      ids = [a_id for a_id, a_uuid in assets.items() if a_uuid in uuids]
+    if ids is not None:
+      values = {a_id: v for a_id, v in values.items() if a_id in ids}
 
     # Get latest Valuation before or including start date
     query = s.query(AssetValuation)
     query = query.with_entities(AssetValuation.asset_id, AssetValuation.value,
                                 sqlalchemy.func.max(AssetValuation.date))  # pylint: disable=not-callable
     query = query.where(AssetValuation.date <= start)
+    if ids is not None:
+      query = query.where(AssetValuation.asset_id.in_(ids))
     query = query.group_by(AssetValuation.asset_id)
-    for a_id, v, _ in query.all():
+    for a_id, iv, _ in query.all():
       a_id: int
-      v: Decimal
-      values[a_id] = v
+      iv: Decimal
+      values[a_id] = iv
 
     date = start + datetime.timedelta(days=1)
     dates: t.Dates = [start]
@@ -232,6 +245,8 @@ class Asset(Base):
                                 AssetValuation.value)
     query = query.where(AssetValuation.date <= end)
     query = query.where(AssetValuation.date > start)
+    if ids is not None:
+      query = query.where(AssetValuation.asset_id.in_(ids))
     query = query.order_by(AssetValuation.date)
 
     for a_id, v_date, v in query.all():

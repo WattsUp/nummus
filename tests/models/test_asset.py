@@ -235,15 +235,35 @@ class TestAsset(TestBase):
         0, v_before.value, v_before.value, v_today.value, v_today.value,
         v_after.value, v_after.value
     ]
+    start = target_dates[0]
+    end = target_dates[-1]
 
-    r_dates, r_values = a.get_value(target_dates[0], target_dates[-1])
+    r_dates, r_values = a.get_value(start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual(target_values, r_values)
 
-    r_dates, r_values = Asset.get_value_all(s, target_dates[0],
-                                            target_dates[-1])
+    r_dates, r_values = Asset.get_value_all(s, start, end)
     self.assertEqual(target_dates, r_dates)
     self.assertEqual({a.uuid: target_values}, r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, start, end, uuids=[a.uuid])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({a.uuid: target_values}, r_values)
+
+    r_dates, r_values = Asset.get_value_all(s,
+                                            start,
+                                            end,
+                                            uuids=[self.random_string()])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({}, r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, start, end, ids=[a.id])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({a.uuid: target_values}, r_values)
+
+    r_dates, r_values = Asset.get_value_all(s, start, end, ids=[-100])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({}, r_values)
 
     # Test single value
     r_dates, r_values = a.get_value(today, today)

@@ -501,6 +501,25 @@ class TestAccount(TestBase):
     self.assertEqual(target_dates, r_dates)
     self.assertEqual({acct.uuid: target_values}, r_values)
 
+    r_dates, r_values = Account.get_value_all(s, start, end, uuids=[acct.uuid])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
+    r_dates, r_values = Account.get_value_all(s,
+                                              start,
+                                              end,
+                                              uuids=[self.random_string()])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({}, r_values)
+
+    r_dates, r_values = Account.get_value_all(s, start, end, ids=[acct.id])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({acct.uuid: target_values}, r_values)
+
+    r_dates, r_values = Account.get_value_all(s, start, end, ids=[-100])
+    self.assertEqual(target_dates, r_dates)
+    self.assertEqual({}, r_values)
+
     # Fund account on first day
     t_fund = self.random_decimal(10, 100)
     txn = Transaction(account=acct,
