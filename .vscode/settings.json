@@ -27,6 +27,7 @@
     "pycryptodome",
     "pyopenssl",
     "pytailwindcss",
+    "rapidfuzz",
     "requestline",
     "Reswap",
     "Retarget",

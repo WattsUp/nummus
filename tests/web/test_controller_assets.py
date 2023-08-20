@@ -205,12 +205,12 @@ class TestControllerAssets(WebTestBase):
     self.assertEqual(target, result)
 
     # Search by name
-    result, _ = self.api_get(endpoint, {"search": "banana"})
+    result, _ = self.api_get(endpoint, {"search": "Banana BANANA"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 
     # Bad search, neither are over the threshold
-    result, _ = self.api_get(endpoint, {"search": "inc"})
+    result, _ = self.api_get(endpoint, {"search": "abcdef"})
     target = {"assets": assets, "count": 2, "next_offset": None}
     self.assertEqual(target, result)
 

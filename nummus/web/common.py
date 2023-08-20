@@ -7,9 +7,9 @@ import uuid
 
 from connexion.exceptions import ProblemException as HTTPError
 import flask
+from rapidfuzz import process
 import sqlalchemy
 from sqlalchemy import orm
-from thefuzz import process
 
 from nummus import custom_types as t
 from nummus.models import (Account, Asset, Base, BaseEnum, Budget, Transaction,
@@ -199,7 +199,7 @@ def search(query: orm.Query[Base], cls: t.Type[Base],
     strings[instance.id] = i_str
 
   extracted = process.extract(search_str, strings, limit=None)
-  matching_ids: t.Ints = [i for _, score, i in extracted if score > 70]
+  matching_ids: t.Ints = [i for _, score, i in extracted if score > 60]
   if len(matching_ids) == 0:
     # Include poor matches to return something
     matching_ids: t.Ints = [i for _, _, i in extracted[:5]]

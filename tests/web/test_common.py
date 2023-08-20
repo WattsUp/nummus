@@ -170,7 +170,7 @@ class TestCommon(WebTestBase):
       acct_checking = Account(name="Monkey Bank Checking",
                               institution="Monkey Bank",
                               category=AccountCategory.CASH)
-      acct_invest = Account(name="Monkey Investments",
+      acct_invest = Account(name="Gorilla Investments",
                             institution="Ape Trading",
                             category=AccountCategory.INVESTMENT)
       s.add_all((acct_checking, acct_invest))
@@ -196,10 +196,10 @@ class TestCommon(WebTestBase):
       result = common.search(query, Account, "checking").all()
       self.assertEqual([acct_checking], result)
 
-      result = common.search(query, Account, "bank").all()
+      result = common.search(query, Account, "Monkey Bank").all()
       self.assertEqual([acct_checking], result)
 
-      result = common.search(query, Account, "monkey").all()
+      result = common.search(query, Account, "monkey gorilla").all()
       self.assertEqual([acct_checking, acct_invest], result)
 
       result = common.search(query, Account, "trading").all()
