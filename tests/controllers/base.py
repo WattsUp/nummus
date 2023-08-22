@@ -2,17 +2,14 @@
 """
 
 import io
-import pathlib
 import re
 import shutil
 import time
 from unittest import mock
 import urllib.parse
 import warnings
-import yaml
 
 import autodict
-import connexion
 import flask
 import flask.testing
 import werkzeug
@@ -36,6 +33,34 @@ class WebTestBase(TestBase):
   """TestBase with extra functions for web testing
   """
 
+  def assertValidHTML(self, s: str):
+    """Test HTML is valid based on tags
+
+    Args:
+      s: String to test
+    """
+    tags: t.Strings = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
+    DOMTree = t.Dict[str, "DOMTree"]
+    tree: DOMTree = {"__parent__": (None, None)}
+    current_node = tree
+    for tag in tags:
+      if tag[0] == "/":
+        # Close tag
+        current_tag, parent = current_node.pop("__parent__")
+        current_node = parent
+        self.assertEqual(current_tag, tag[1:])
+      elif tag in ["link", "meta", "path"]:
+        # Tags without close tags
+        current_node[tag] = {}
+      else:
+        current_node[tag] = {"__parent__": (tag, current_node)}
+        current_node = current_node[tag]
+
+    # Got back up to the root element
+    tag, parent = current_node.pop("__parent__")
+    self.assertEqual(tag, None)
+    self.assertEqual(parent, None)
+
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
@@ -55,9 +80,7 @@ class WebTestBase(TestBase):
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         # Ignore SSL warnings
         s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
-    s_server = s._server  # pylint: disable=protected-access
-    connexion_app: connexion.FlaskApp = s_server.application
-    flask_app: flask.Flask = connexion_app.app
+    flask_app: flask.Flask = s._app  # pylint: disable=protected-access
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
       cls._client = flask_app.test_client()
@@ -71,9 +94,22 @@ class WebTestBase(TestBase):
     super().tearDownClass()
 
   def setUp(self):
+    self._original_render_template = flask.render_template
+
+    self._called_context: t.DictAny = {}
+
+    def render_template(path: str, **context: t.DictAny) -> str:
+      self._called_context.clear()
+      self._called_context.update(**context)
+      return self._original_render_template(path, **context)
+
+    flask.render_template = render_template
+
     super().setUp(clean=False)
 
   def tearDown(self):
+    flask.render_template = self._original_render_template
+
     # Clean portfolio
     # In order of deletion, so children models first
     models = [
@@ -87,20 +123,6 @@ class WebTestBase(TestBase):
         s.commit()
 
     super().tearDown(clean=False)
-
-  def assertHTTPRaises(self, rc: int, func: t.Callable, *args,
-                       **kwargs) -> None:
-    """Test function raises ProblemException with the matching HTTP return code
-
-    Args:
-      rc: HTTP code to match
-      func: Callable to test
-      All other arguments passed to func()
-    """
-    with self.assertRaises(connexion.exceptions.ProblemException) as cm:
-      func(*args, **kwargs)
-    e: connexion.exceptions.ProblemException = cm.exception
-    self.assertEqual(rc, e.status)
 
   def api_open(self,
                method: str,
@@ -328,54 +350,6 @@ def api_coverage() -> t.Dict[str, t.Dict[str, CovMethods]]:
   # Initialize data from api.yaml with all False
   d: t.Dict[str, t.Dict[str, CovMethods]] = {}
 
-  api_yaml = pathlib.Path(web.__file__).parent.joinpath("spec", "api.yaml")
-  with open(api_yaml, "r", encoding="utf-8") as file:
-    APIYaml = t.Dict[str, t.Dict[str, t.Dict[str, t.Dict[str, object]]]]
-    y: APIYaml = yaml.safe_load(file)
-
-  server: str = y["servers"][0]["url"]
-  prefix = server.split("/")[-1]
-
-  comp_params = y["components"]["parameters"]
-
-  for path, data in y["paths"].items():
-    endpoint = f"/{prefix}{path}"
-    if endpoint not in d:
-      d[endpoint] = {}
-
-    for method, options in data.items():
-      d_method: CovMethods = {}
-
-      for rc in options["responses"]:
-        rc_int = int(rc)
-        if rc_int in [400, 404] and "UUID" in endpoint:
-          # Malformed uuid and missing instance are covered by common tests
-          # which don't touch the endpoint
-          d_method[rc_int] = True
-        else:
-          d_method[rc_int] = False
-
-      parameters = options.get("parameters", [])
-      any_required = False
-      for param in parameters:
-        param: t.DictStr
-        if "$ref" in param:
-          ref = param["$ref"].replace("#/components/parameters/", "")
-          p = comp_params[ref]
-        else:
-          p = param
-        if p["in"] == "path":
-          continue
-
-        if p.get("required", False):
-          any_required = True
-        d_method[p["name"]] = False
-
-      if not any_required:
-        d_method[None] = False
-
-      d[endpoint][method.upper()] = d_method
-
   # Iterate through test log
   with autodict.JSONAutoDict(TEST_LOG) as log:
     LogYaml = t.Dict[str, t.DictStrings]
@@ -389,10 +363,7 @@ def api_coverage() -> t.Dict[str, t.Dict[str, CovMethods]]:
         d[endpoint][method][branch] = True
 
   # List of endpoints and methods to remove from coverage
-  no_cover: t.List[t.Tuple[str, str]] = [
-      # Same as /api/transactions?account=
-      ("/api/accounts/{accountUUID}/transactions", "GET"),
-  ]
+  no_cover: t.List[t.Tuple[str, str]] = []
   for endpoint, method in no_cover:
     # Remove misses
     d[endpoint][method] = {k: v for k, v in d[endpoint][method].items() if v}

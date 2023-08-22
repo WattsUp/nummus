@@ -225,19 +225,19 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 
 # No unit test for wrapper command, too difficult to mock
 def run_web(p: portfolio.Portfolio, host: str, port: int,
-            enable_api_ui: bool) -> int:  # pragma: no cover
+            debug: bool) -> int:  # pragma: no cover
   """Run web server serving the nummus Portfolio
 
   Args:
     p: Working Portfolio
     host: IP to bind to
     port: Network port to bind to
-    enable_api_ui: True will enable Swagger UI for the API
+    debug: True will run Flask in debug mode
 
   Returns:
     0 on success
     non-zero on failure
   """
-  s = web.Server(p, host, port, enable_api_ui)
+  s = web.Server(p, host, port, debug)
   s.run()
   return 0

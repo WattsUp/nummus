@@ -11,7 +11,7 @@ from colorama import Back, Fore
 
 from nummus.version import __version__
 
-from tests import TEST_LOG, web
+from tests import TEST_LOG, controllers
 
 colorama.init(autoreset=True)
 
@@ -61,7 +61,7 @@ def post_tests() -> bool:
       duration_ms = max(durations) * 1000
       print(f"  {method:{n_pad}}: {duration_ms:6.1f}ms")
 
-  api_coverage = web.api_coverage()
+  api_coverage = controllers.api_coverage()
 
   if len(api_coverage) != 0:
     n_pad = max(len(k) for k in api_coverage) + 1

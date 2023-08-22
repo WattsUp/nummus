@@ -12,8 +12,6 @@ import warnings
 
 import colorama
 from colorama import Fore
-import flask
-import flask.testing
 import viztracer
 import werkzeug
 
@@ -79,7 +77,7 @@ def main(command_line: t.Strings = None) -> int:
     return 1
 
   s = web.Server(p, "127.0.0.1", 8080, False)
-  flask_app: flask.Flask = s._app  # pylint: disable=protected-access
+  flask_app = s._app  # pylint: disable=protected-access
   with warnings.catch_warnings():
     warnings.simplefilter("ignore")
     client = flask_app.test_client()

@@ -163,14 +163,14 @@ class Server:
   """
 
   def __init__(self, p: portfolio.Portfolio, host: str, port: int,
-               enable_api_ui: bool) -> None:
+               debug: bool) -> None:
     """Initialize Server
 
     Args:
       p: Portfolio to serve
       host: IP to bind to
       port: Network port to bind to
-      enable_api_ui: True will enable Swagger UI for the API
+      debug: True will run Flask in debug mode
     """
     self._portfolio = p
 
@@ -189,8 +189,8 @@ class Server:
       warnings.simplefilter("ignore")
       self._app.json = JSONProvider(self._app)
 
-    # Enable debugger and reloader when enable_api_ui
-    self._app.debug = enable_api_ui
+    # Enable debugger and reloader when debug
+    self._app.debug = debug
 
     # Inject common variables into templates
     self._app.context_processor(lambda: {"version": version.__version__})
@@ -234,15 +234,12 @@ class Server:
                                             certfile=p.ssl_cert_path,
                                             keyfile=p.ssl_key_path,
                                             handler_class=Handler)
-    self._enable_api_ui = enable_api_ui
 
   def run(self) -> None:
     """Start and run the server
     """
     url = f"https://localhost:{self._server.server_port}"
     print(f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)")
-    if self._enable_api_ui:
-      print(f"{Fore.CYAN}nummus API UI running on {url}/api/ui")
     try:
       self._server.serve_forever()
     except KeyboardInterrupt:

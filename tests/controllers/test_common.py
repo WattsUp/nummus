@@ -1,87 +1,29 @@
-"""Test module nummus.web.controller_html
+"""Test module nummus.controllers.common
 """
 
 import datetime
 from decimal import Decimal
-import re
 
-from nummus import custom_types as t
-from nummus.web import controller_html
 from nummus.models import (Account, AccountCategory, Transaction,
                            TransactionSplit)
 
-from tests.web.base import WebTestBase
+from tests.controllers.base import WebTestBase
 
 
-class TestControllerHTML(WebTestBase):
-  """Test controller_html methods
+class TestCommon(WebTestBase):
+  """Test common components controller
   """
-
-  def _test_valid_html(self, s: str):
-    """Test HTML is valid based on tags
-
-    Args:
-      s: String to test
-    """
-    tags: t.Strings = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
-    DOMTree = t.Dict[str, "DOMTree"]
-    tree: DOMTree = {"__parent__": (None, None)}
-    current_node = tree
-    for tag in tags:
-      if tag[0] == "/":
-        # Close tag
-        current_tag, parent = current_node.pop("__parent__")
-        current_node = parent
-        self.assertEqual(current_tag, tag[1:])
-      elif tag in ["link", "meta", "path"]:
-        # Tags without close tags
-        current_node[tag] = {}
-      else:
-        current_node[tag] = {"__parent__": (tag, current_node)}
-        current_node = current_node[tag]
-
-    # Got back up to the root element
-    tag, parent = current_node.pop("__parent__")
-    self.assertEqual(tag, None)
-    self.assertEqual(parent, None)
-
-  def setUp(self):
-    self._original_render_template = controller_html.flask.render_template
-
-    self._called_context: t.DictAny = {}
-
-    def render_template(path: str, **context: t.DictAny) -> str:
-      self._called_context.clear()
-      self._called_context.update(**context)
-      return self._original_render_template(path, **context)
-
-    controller_html.flask.render_template = render_template
-
-    return super().setUp()
-
-  def tearDown(self):
-    controller_html.flask.render_template = self._original_render_template
-    return super().tearDown()
-
-  def test_get_home(self):
-    endpoint = "/"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    target = '<!DOCTYPE html>\n<html lang="en">'
-    self.assertEqual(target, result[:len(target)])
-    target = "</html>"
-    self.assertEqual(target, result[-len(target):])
-    self._test_valid_html(result)
 
   def test_get_sidebar(self):
     p = self._portfolio
 
     today = datetime.date.today()
 
-    endpoint = "/sidebar"
+    endpoint = "/c/sidebar"
     result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
     # Can't easily test if HTML is actually as desired
     # Just test HTML is valid and context was as expected
-    self._test_valid_html(result)
+    self.assertValidHTML(result)
 
     target = {
         "net-worth": Decimal(0),
@@ -120,7 +62,7 @@ class TestControllerHTML(WebTestBase):
       s.commit()
 
     result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self._test_valid_html(result)
+    self.assertValidHTML(result)
 
     target_accounts = [{
         "institution": "Monkey Bank",

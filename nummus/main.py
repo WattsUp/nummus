@@ -105,15 +105,15 @@ calculates net worth, and predicts future performance."""
                        type=int,
                        help="specify network port for web server")
   sub_web.add_argument(
-      "--api-ui",
+      "--debug",
       # Default to if it detects a dev install
       # Aka at a tag on master branch
       default=(version.version_dict["branch"] != "master" and
                version.version_dict["distance"] != 0),
       action="store_true",
       help=argparse.SUPPRESS)
-  sub_web.add_argument("--no-api-ui",
-                       dest="api_ui",
+  sub_web.add_argument("--no-debug",
+                       dest="debug",
                        action="store_false",
                        help=argparse.SUPPRESS)
 
@@ -146,11 +146,8 @@ calculates net worth, and predicts future performance."""
   if cmd == "web":
     host: str = args.host
     port: int = args.port
-    enable_api_ui: bool = args.api_ui
-    return commands.run_web(p,
-                            host=host,
-                            port=port,
-                            enable_api_ui=enable_api_ui)
+    debug: bool = args.debug
+    return commands.run_web(p, host=host, port=port, debug=debug)
   elif cmd == "unlock":
     # Already unlocked
     return 0

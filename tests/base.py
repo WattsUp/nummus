@@ -12,6 +12,7 @@ import uuid
 import autodict
 import numpy as np
 from sqlalchemy import orm, pool
+from werkzeug import exceptions
 
 from nummus import sql
 from nummus import custom_types as t
@@ -115,6 +116,20 @@ class TestBase(unittest.TestCase):
     else:
       # Decimals included here since their math should be immune from FP error
       self.assertEqual(target, real, msg)
+
+  def assertHTTPRaises(self, rc: int, func: t.Callable, *args,
+                       **kwargs) -> None:
+    """Test function raises ProblemException with the matching HTTP return code
+
+    Args:
+      rc: HTTP code to match
+      func: Callable to test
+      All other arguments passed to func()
+    """
+    with self.assertRaises(exceptions.HTTPException) as cm:
+      func(*args, **kwargs)
+    e: exceptions.HTTPException = cm.exception
+    self.assertEqual(rc, e.code)
 
   def setUp(self, clean: bool = True):
     if clean:
