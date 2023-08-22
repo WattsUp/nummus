@@ -59,7 +59,7 @@ module.exports = {
         950: "#282828",
       },
       white: {
-        DEFAULT: "#f6f6f6",
+        DEFAULT: "#ffffff",
       },
       black: {
         DEFAULT: "#282828",

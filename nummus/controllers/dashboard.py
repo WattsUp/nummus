@@ -4,10 +4,10 @@
 import flask
 
 
-def get_home() -> str:
+def page_home() -> str:
   """GET /
 
   Returns:
-    string HTML page response
+    string HTML response
   """
   return flask.render_template("index.html")

@@ -43,7 +43,7 @@
   }
 
   .nav-list > ul > li > a {
-    @apply inset-0 p-2;
+    @apply inset-0 px-2 py-1 block;
   }
 
   .nav-list-icon {
@@ -76,6 +76,11 @@
 
   .nav-account:last-of-type::before {
     @apply hidden;
+  }
+
+  input,
+  select {
+    @apply h-[1.75rem] border;
   }
 }
 

@@ -1,0 +1,24 @@
+{% extends "shared/_base.html" %}
+
+{% block content %}
+  <section id="body" class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2">
+    <h1 class="text-3xl align-left w-full font-serif">Transactions</h1>
+    <div class="flex justify-end gap-1 w-full font-serif">
+      <select>
+        <option value="this-month">This Month</option>
+        <option value="last-month">Last Month</option>
+        <option value="30-days">30 Days</option>
+        <option value="90-days">90 Days</option>
+        <option value="1-year">1 year</option>
+        <option value="5-years">5 years</option>
+        <option value="this-year">This Year</option>
+        <option value="last-year">Last Year</option>
+        <option value="all">All</option>
+        <option value="custom" hidden="hidden">Custom</option>
+      </select>
+      <input type="date">
+      to
+      <input type="date">
+    </div>
+  </section>
+{% endblock content %}

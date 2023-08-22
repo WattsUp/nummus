@@ -16,7 +16,7 @@ def get_sidebar() -> str:
   """GET /sidebar
 
   Returns:
-    string HTML page response
+    string HTML response
   """
   # Create sidebar context
   with flask.current_app.app_context():
