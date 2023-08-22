@@ -1,6 +1,6 @@
 /** @type {import("tailwindcss").Config} */
 module.exports = {
-  content: ["./nummus/web/templates/**/*.html"],
+  content: ["./nummus/templates/**/*.html"],
   theme: {
     colors: {
       green: {

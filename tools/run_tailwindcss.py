@@ -9,7 +9,7 @@ import sys
 import colorama
 from colorama import Fore
 
-import nummus.web
+import nummus
 
 colorama.init(autoreset=True)
 
@@ -18,11 +18,11 @@ def main() -> None:
   """Main program entry
   """
 
-  path_web = pathlib.Path(nummus.web.__file__).parent.resolve()
+  folder = pathlib.Path(nummus.__file__).parent.resolve().joinpath("static")
 
-  path_config = path_web.joinpath("static", "tailwind.config.js")
-  path_in = path_web.joinpath("static", "src", "main.css")
-  path_out = path_web.joinpath("static", "dist", "main.css")
+  path_config = folder.joinpath("tailwind.config.js")
+  path_in = folder.joinpath("src", "main.css")
+  path_out = folder.joinpath("dist", "main.css")
 
   args = [
       "tailwindcss", "-c",
