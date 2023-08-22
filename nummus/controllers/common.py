@@ -1,4 +1,4 @@
-"""Web controllers for HTML pages
+"""Common component controllers
 """
 
 import datetime
@@ -10,15 +10,6 @@ import sqlalchemy
 from nummus import portfolio
 from nummus import custom_types as t
 from nummus.models import Account, AccountCategory, Transaction
-
-
-def get_home() -> str:
-  """GET /
-
-  Returns:
-    string HTML page response
-  """
-  return flask.render_template("index.html")
 
 
 def get_sidebar() -> str:
@@ -117,4 +108,4 @@ def get_sidebar() -> str:
           for cat, accounts in categories.items()
       },
   }
-  return flask.render_template("sidebar.html", context=context)
+  return flask.render_template("components/sidebar.html", context=context)

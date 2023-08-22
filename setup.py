@@ -15,16 +15,13 @@ with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
 
 required = [
-    "sqlalchemy>=2", "AutoDict", "connexion==2.14.2", "gevent", "colorama",
-    "rapidfuzz", "simplejson", "pyopenssl", "flask-assets", "pytailwindcss",
-    "jsmin", "flask<2.3,>=2"
+    "sqlalchemy>=2", "AutoDict", "gevent", "colorama", "rapidfuzz",
+    "simplejson", "pyopenssl", "flask-assets", "pytailwindcss", "jsmin",
+    "flask<2.3,>=2"
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": [
-        "coverage", "pylint", "numpy", "swagger-ui-bundle>=0.0.2,<0.1",
-        "time-machine"
-    ]
+    "test": ["coverage", "pylint", "numpy", "time-machine"]
 }
 extras_require["dev"] = extras_require["test"] + [
     "toml", "witch-ver", "yapf>=0.40.0", "viztracer"

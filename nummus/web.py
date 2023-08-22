@@ -9,7 +9,6 @@ import typing as t
 import warnings
 
 from colorama import Fore, Back
-import connexion
 import flask
 import flask_assets
 import gevent.pywsgi
@@ -18,12 +17,11 @@ from OpenSSL import crypto
 import simplejson
 import webassets.filter
 
-from nummus import common, models, portfolio, version
+from nummus import common, controllers, models, portfolio, version
 from nummus import custom_types as t
-from nummus.web import controller_html
 
 
-class NummusWebHandler(gevent.pywsgi.WSGIHandler):
+class Handler(gevent.pywsgi.WSGIHandler):
   """Custom WSGIHandler, mainly for request formatting
   """
 
@@ -80,10 +78,8 @@ class NummusWebHandler(gevent.pywsgi.WSGIHandler):
       elif method == "TRACE":
         method = f"{Fore.BLACK}{Back.WHITE}{method}{Fore.RESET}{Back.RESET}"
 
-      if endpoint.startswith("/api/ui/"):
+      if endpoint.startswith("/c/"):
         endpoint = f"{Fore.CYAN}{endpoint}{Fore.RESET}"
-      elif endpoint.startswith("/api/"):
-        endpoint = f"{Fore.YELLOW}{endpoint}{Fore.RESET}"
       elif endpoint.startswith("/static/"):
         endpoint = f"{Fore.MAGENTA}{endpoint}{Fore.RESET}"
       else:
@@ -128,7 +124,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
     out.write(built_css)
 
 
-class NummusJSONProvider(flask.json.provider.JSONProvider):
+class JSONProvider(flask.json.provider.JSONProvider):
   """Custom JSON Provider for nummus models
 
   Loads and dumps real numbers as Decimals
@@ -178,42 +174,29 @@ class Server:
     """
     self._portfolio = p
 
-    spec_dir = pathlib.Path(__file__).parent.absolute().joinpath("spec")
-    options = {"swagger_ui": enable_api_ui}
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      self._app = connexion.App(__name__,
-                                specification_dir=spec_dir,
-                                options=options)
-      self._app.add_api("api.yaml",
-                        arguments={"title": "nummus API"},
-                        pythonic_params=True,
-                        strict_validation=True)
+    self._app = flask.Flask(__name__)
 
     # HTML pages routing
-    self._app.add_url_rule("/", "", controller_html.get_home)
-    self._app.add_url_rule("/index", "", controller_html.get_home)
-    self._app.add_url_rule("/sidebar", "sidebar", controller_html.get_sidebar)
+    controllers.add_routes(self._app)
 
     # Add Portfolio to context for controllers
-    flask_app: flask.Flask = self._app.app
-    with flask_app.app_context():
+    with self._app.app_context():
       flask.current_app.portfolio = p
 
     # Set JSON encoder
     # TODO (WattsUp) Fix deprecation warning once connexion updates
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      flask_app.json = NummusJSONProvider(flask_app)
+      self._app.json = JSONProvider(self._app)
 
     # Enable debugger and reloader when enable_api_ui
-    flask_app.debug = enable_api_ui
+    self._app.debug = enable_api_ui
 
     # Inject common variables into templates
-    flask_app.context_processor(lambda: {"version": version.__version__})
+    self._app.context_processor(lambda: {"version": version.__version__})
 
     # Setup environment and static file bundles
-    env_assets = flask_assets.Environment(flask_app)
+    env_assets = flask_assets.Environment(self._app)
 
     bundle_css = flask_assets.Bundle("src/main.css",
                                      output="dist/main.css",
@@ -224,13 +207,13 @@ class Server:
     bundle_js = flask_assets.Bundle(
         "src/*.js",
         output="dist/main.js",
-        filters=None if flask_app.debug else "jsmin")
+        filters=None if self._app.debug else "jsmin")
     env_assets.register("js", bundle_js)
     bundle_js.build()
 
-    flask_app.jinja_env.filters["money"] = common.format_financial
-    flask_app.jinja_env.filters["days"] = common.format_days
-    flask_app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
+    self._app.jinja_env.filters["money"] = common.format_financial
+    self._app.jinja_env.filters["days"] = common.format_days
+    self._app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
 
     if not p.ssl_cert_path.exists():
       print(f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}",
@@ -250,7 +233,7 @@ class Server:
                                             self._app,
                                             certfile=p.ssl_cert_path,
                                             keyfile=p.ssl_key_path,
-                                            handler_class=NummusWebHandler)
+                                            handler_class=Handler)
     self._enable_api_ui = enable_api_ui
 
   def run(self) -> None:

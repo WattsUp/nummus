@@ -13,6 +13,7 @@ from nummus.models.asset import (Asset, AssetCategory, AssetSplit,
                                  AssetValuation)
 from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
+from nummus.models.utils import search, query_count, paginate
 
 AssetList = t.List[Asset]
 TxnList = t.List[Transaction]
