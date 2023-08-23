@@ -21,17 +21,19 @@
 
   <body class="antialiased bg-grey-100 h-screen w-screen relative">
     {% block header %}
-      {% include "/shared/_header.html" %}
+      {% include "/shared/header.html" %}
     {% endblock %}
     <div class="flex pt-12 h-full">
-      <nav hx-get="/c/sidebar" hx-trigger="load" class="bg-green-300 min-w-[16rem] font-serif h-full"></nav>
+      {% block sidebar %}
+        {% include "/shared/sidebar.html" %}
+      {% endblock %}
 
       <div class="flex flex-col h-full overflow-y-auto grow">
         <main class="p-2">
           {% block content %}{% endblock %}
         </main>
         {% block footer %}
-          {% include "/shared/_footer.html" %}
+          {% include "/shared/footer.html" %}
         {% endblock %}
       </div>
     </div>

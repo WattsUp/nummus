@@ -1,4 +1,4 @@
-<div class="h-full overflow-y-auto">
+<nav class="h-full overflow-y-auto bg-green-300 min-w-[16rem] font-serif h-full">
   <a class="block m-2" href="/#todo">
     <div class="bg-green-800">
       <h1 class="text-white p-1 text-2xl flex justify-between">
@@ -6,22 +6,22 @@
       </h1>
     </div>
     <div class="bg-white p-1">
-      <h1 class="text-3xl ml-auto text-right">{{ context["net-worth"] | money }}</h1>
+      <h1 class="text-3xl ml-auto text-right">{{ sidebar["net-worth"] | money }}</h1>
       <h2 class="flex justify-between pt-2">
-        <span>Assets</span><span>{{ context["assets"] | money }}</span>
+        <span>Assets</span><span>{{ sidebar["assets"] | money }}</span>
       </h2>
       <div class="h-1 bg-grey-400">
-        <div class="bg-green h-full" style="width: {{ context['assets-w'] }}%"></div>
+        <div class="bg-green h-full" style="width: {{ sidebar['assets-w'] }}%"></div>
       </div>
       <h2 class="flex justify-between">
-        <span>Liabilities</span><span>{{ context["liabilities"] | money }}</span>
+        <span>Liabilities</span><span>{{ sidebar["liabilities"] | money }}</span>
       </h2>
       <div class="h-1 bg-grey-400">
-        <div class="bg-blue h-full" style="width: {{ context['liabilities-w'] }}%"></div>
+        <div class="bg-blue h-full" style="width: {{ sidebar['liabilities-w'] }}%"></div>
       </div>
     </div>
   </a>
-  {% for cat, item in context["categories"].items() %}
+  {% for cat, item in sidebar["categories"].items() %}
     <div class="m-2">
       <a class="block bg-green-800" href="/#todo">
         <h1 class="text-white p-1 text-xl flex justify-between">
@@ -45,4 +45,4 @@
         </div>
       </div>
     {% endfor %}
-  </div>
+  </nav>

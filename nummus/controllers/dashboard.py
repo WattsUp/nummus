@@ -3,6 +3,8 @@
 
 import flask
 
+from nummus.controllers import common
+
 
 def page_home() -> str:
   """GET /
@@ -10,4 +12,4 @@ def page_home() -> str:
   Returns:
     string HTML response
   """
-  return flask.render_template("index.html")
+  return flask.render_template("index.html", sidebar=common.sidebar())

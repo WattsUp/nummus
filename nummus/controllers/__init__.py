@@ -4,12 +4,11 @@
 import flask
 
 from nummus import custom_types as t
-from nummus.controllers import common, dashboard, transactions
+from nummus.controllers import dashboard, transactions
 
 ROUTES: t.Dict[str, t.Callable] = {
     "/": dashboard.page_home,
     "/index": dashboard.page_home,
-    "/c/sidebar": common.get_sidebar,
     "/transactions": transactions.page_all
 }
 

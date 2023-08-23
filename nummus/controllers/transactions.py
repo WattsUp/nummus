@@ -3,6 +3,8 @@
 
 import flask
 
+from nummus.controllers import common
+
 
 def page_all() -> str:
   """GET /transactions
@@ -10,4 +12,4 @@ def page_all() -> str:
   Returns:
     string HTML response
   """
-  return flask.render_template("transactions.html")
+  return flask.render_template("transactions.html", sidebar=common.sidebar())

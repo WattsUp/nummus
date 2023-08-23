@@ -12,8 +12,8 @@ from nummus import custom_types as t
 from nummus.models import Account, AccountCategory, Transaction
 
 
-def get_sidebar() -> str:
-  """GET /sidebar
+def sidebar() -> t.DictAny:
+  """Get the context to build the sidebar
 
   Returns:
     string HTML response
@@ -97,7 +97,7 @@ def get_sidebar() -> str:
   }
 
   # TODO (WattsUp) Add account UUIDs for links
-  context: t.DictStr = {
+  return {
       "net-worth": assets + liabilities,
       "assets": assets,
       "liabilities": liabilities,
@@ -108,4 +108,3 @@ def get_sidebar() -> str:
           for cat, accounts in categories.items()
       },
   }
-  return flask.render_template("components/sidebar.html", context=context)
