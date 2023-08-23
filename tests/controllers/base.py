@@ -80,10 +80,10 @@ class WebTestBase(TestBase):
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         # Ignore SSL warnings
         s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
-    flask_app: flask.Flask = s._app  # pylint: disable=protected-access
+    cls._flask_app: flask.Flask = s._app  # pylint: disable=protected-access
     with warnings.catch_warnings():
       warnings.simplefilter("ignore")
-      cls._client = flask_app.test_client()
+      cls._client = cls._flask_app.test_client()
 
   @classmethod
   def tearDownClass(cls):

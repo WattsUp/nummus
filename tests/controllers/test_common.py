@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from nummus.models import (Account, AccountCategory, Transaction,
                            TransactionSplit)
+from nummus.controllers import common
 
 from tests.controllers.base import WebTestBase
 
@@ -14,17 +15,13 @@ class TestCommon(WebTestBase):
   """Test common components controller
   """
 
-  def test_get_sidebar(self):
+  def test_sidebar(self):
     p = self._portfolio
 
     today = datetime.date.today()
 
-    endpoint = "/c/sidebar"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    # Can't easily test if HTML is actually as desired
-    # Just test HTML is valid and context was as expected
-    self.assertValidHTML(result)
-
+    with self._flask_app.app_context():
+      result = common.sidebar()
     target = {
         "net-worth": Decimal(0),
         "assets": Decimal(0),
@@ -33,7 +30,7 @@ class TestCommon(WebTestBase):
         "liabilities-w": 0,
         "categories": {}
     }
-    self.assertDictEqual({"context": target}, self._called_context)
+    self.assertDictEqual(target, result)
 
     with p.get_session() as s:
       acct_checking = Account(name="Monkey Bank Checking",
@@ -61,9 +58,6 @@ class TestCommon(WebTestBase):
 
       s.commit()
 
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
-
     target_accounts = [{
         "institution": "Monkey Bank",
         "name": "Monkey Bank Checking",
@@ -87,4 +81,6 @@ class TestCommon(WebTestBase):
             AccountCategory.CASH: (Decimal("50.000000"), target_accounts)
         }
     }
-    self.assertDictEqual({"context": target}, self._called_context)
+    with self._flask_app.app_context():
+      result = common.sidebar()
+    self.assertDictEqual(target, result)
