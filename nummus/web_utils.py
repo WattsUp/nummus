@@ -32,7 +32,7 @@ def find(s: orm.Session, cls: t.Type[Base], query: str) -> Base:
   u = str(parse_uuid(query))
   obj = s.query(cls).where(cls.uuid == u).first()
   if obj is None:
-    raise exceptions.NotFound(f"{cls} {u} not found in Portfolio")
+    raise exceptions.NotFound(f"{cls.__name__} {u} not found in Portfolio")
   return obj
 
 

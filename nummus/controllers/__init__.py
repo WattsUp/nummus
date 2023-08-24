@@ -9,7 +9,8 @@ from nummus.controllers import dashboard, transactions
 ROUTES: t.Dict[str, t.Callable] = {
     "/": dashboard.page_home,
     "/index": dashboard.page_home,
-    "/transactions": transactions.page_all
+    "/transactions": transactions.page_all,
+    "/transactions/<path:path_uuid>": transactions.page_one
 }
 
 

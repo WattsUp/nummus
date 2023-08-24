@@ -1,0 +1,36 @@
+{% extends "shared/base.html" %}
+
+{% block content %}
+  <section id="body" class="flex flex-col bg-white justify-center max-w-screen-lg m-auto p-2 font-serif">
+    <div class="flex text-3xl w-full">
+      <h1 class="align-left mr-auto">Transaction</h1>
+      <button class="text-green-500 px-2 rounded border border-green-500 hover:bg-green-500 hover:text-white transition-colors">Save</button>
+    </div>
+    <form>
+      <table>
+        <tbody>
+          <tr>
+            <td class="w-32">
+              <label for="txn-date">Date:</label>
+            </td>
+            <td><input type="date" value="{{ transaction['date'] }}" name="date" id="txn-date"></td>
+          </tr>
+          <tr>
+            <td>Account:</td>
+            <td>{{ transaction["account"] }}</td>
+          </tr>
+          <tr>
+            <td>Statement Text:</td>
+            <td>{{ transaction["statement"] }}</td>
+          </tr>
+          <tr>
+            <td>
+              <label for="txn-lock">Locked:</label>
+            </td>
+            <td><input type="checkbox" {{ "checked" if transaction["locked"] else "" }} name="locked" id="txn-lock"></td>
+          </tr>
+        </tbody>
+      </table>
+    </form>
+  </section>
+{% endblock content %}

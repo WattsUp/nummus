@@ -80,7 +80,7 @@
 
   input,
   select {
-    @apply h-[1.75rem] border;
+    @apply h-[1.75rem] border px-1;
   }
 }
 
