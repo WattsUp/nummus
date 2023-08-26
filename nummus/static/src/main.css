@@ -62,12 +62,25 @@
     @apply relative;
   }
 
+  .nav-account > h1,
+  .nav-account > h2 {
+    @apply flex gap-4 justify-between;
+  }
+
   .nav-account > h1 {
-    @apply text-lg flex gap-4 justify-between leading-tight;
+    @apply text-lg leading-tight;
   }
 
   .nav-account > h2 {
-    @apply text-sm flex gap-4 justify-between italic text-grey-500;
+    @apply text-sm italic text-grey-500;
+  }
+
+  .nav-account span {
+    @apply whitespace-nowrap;
+  }
+
+  .nav-account span:first-child {
+    @apply text-ellipsis overflow-hidden pl-6;
   }
 
   .nav-account::before {
@@ -76,6 +89,22 @@
 
   .nav-account:last-of-type::before {
     @apply hidden;
+  }
+
+  .nav-account > object {
+    @apply w-[18px] h-full absolute;
+  }
+
+  .nav-account > object a {
+    @apply h-full block;
+  }
+
+  .nav-account > object svg {
+    @apply fill-white transition-colors;
+  }
+
+  .nav-account > object:hover svg {
+    @apply fill-black;
   }
 
   input,
