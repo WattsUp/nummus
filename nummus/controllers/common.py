@@ -12,11 +12,11 @@ from nummus import custom_types as t
 from nummus.models import Account, AccountCategory, Transaction
 
 
-def sidebar() -> t.DictAny:
+def ctx_sidebar() -> t.DictAny:
   """Get the context to build the sidebar
 
   Returns:
-    string HTML response
+    Dictionary HTML context
   """
   # Create sidebar context
   with flask.current_app.app_context():
@@ -51,6 +51,7 @@ def sidebar() -> t.DictAny:
       institution: str
       category: AccountCategory
       accounts[acct_uuid] = {
+          "uuid": acct_uuid,
           "name": name,
           "institution": institution,
           "category": category
@@ -108,3 +109,12 @@ def sidebar() -> t.DictAny:
           for cat, accounts in categories.items()
       },
   }
+
+
+def overlay_none() -> str:
+  """Get the context to build the sidebar
+
+  Returns:
+    string HTML response
+  """
+  return '<div id="overlay"></div>'

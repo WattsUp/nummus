@@ -111,6 +111,10 @@
   select {
     @apply h-[1.75rem] border px-1;
   }
+
+  a[hx-target] {
+    @apply cursor-pointer;
+  }
 }
 
 @font-face {

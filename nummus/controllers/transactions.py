@@ -15,7 +15,8 @@ def page_all() -> str:
   Returns:
     string HTML response
   """
-  return flask.render_template("transactions.html", sidebar=common.sidebar())
+  return flask.render_template("transactions.html",
+                               sidebar=common.ctx_sidebar())
 
 
 def page_one(path_uuid: str) -> str:
@@ -36,5 +37,5 @@ def page_one(path_uuid: str) -> str:
         "locked": txn.locked
     }
   return flask.render_template("transaction.html",
-                               sidebar=common.sidebar(),
+                               sidebar=common.ctx_sidebar(),
                                transaction=data)

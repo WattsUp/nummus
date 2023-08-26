@@ -4,13 +4,15 @@
 import flask
 
 from nummus import custom_types as t
-from nummus.controllers import dashboard, transactions
+from nummus.controllers import accounts, common, dashboard, transactions
 
 ROUTES: t.Dict[str, t.Callable] = {
     "/": dashboard.page_home,
     "/index": dashboard.page_home,
     "/transactions": transactions.page_all,
-    "/transactions/<path:path_uuid>": transactions.page_one
+    "/transactions/<path:path_uuid>": transactions.page_one,
+    "/h/accounts/<path:path_uuid>/edit": accounts.edit_account,
+    "/h/overlay-none": common.overlay_none
 }
 
 
