@@ -15,8 +15,7 @@ from sqlalchemy import orm
 from nummus import common, importers, models, sql, version
 from nummus import custom_types as t
 from nummus.models import (Account, Asset, Credentials, Transaction,
-                           TransactionCategory, TransactionCategoryType,
-                           TransactionSplit)
+                           TransactionCategory, TransactionSplit)
 
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
@@ -149,18 +148,19 @@ class Portfolio:
       key_salted = enc.key + salt.encode()
       password = enc.encrypt(key_salted)
 
-    with sql.get_session(path_db, config, enc) as session:
-      models.metadata_create_all(session)
+    with sql.get_session(path_db, config, enc) as s:
+      models.metadata_create_all(s)
 
       nummus_user = Credentials(site=Portfolio._NUMMUS_SITE,
                                 user=Portfolio._NUMMUS_USER,
                                 password=password)
-      session.add(nummus_user)
-      session.commit()
+      s.add(nummus_user)
+      s.commit()
     path_db.chmod(0o600)  # Only owner can read/write
 
     p = Portfolio(path_db, key)
-    p._add_default_transaction_categories()  # pylint: disable=protected-access
+    with p.get_session() as s:
+      TransactionCategory.add_default(s)
     return p
 
   def _unlock(self) -> None:
@@ -225,8 +225,8 @@ class Portfolio:
       categories: t.Dict[str, TransactionCategory] = {
           cat.name: cat for cat in s.query(TransactionCategory).all()
       }
-      account_mapping: t.Dict[str, Account] = {}
-      asset_mapping: t.Dict[str, Asset] = {}
+      account_mapping: t.DictInt = {}
+      asset_mapping: t.DictInt = {}
       transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
       for d in i.run():
         # Create a single split for each transaction
@@ -235,30 +235,32 @@ class Portfolio:
             "total": d["total"],  # Both split and parent have total
             "payee": d.pop("payee", None),
             "description": d.pop("description", None),
-            "category": categories[category_s],
+            "category_id": categories[category_s].id,
             "tag": d.pop("tag", None),
             "asset_quantity_unadjusted": d.pop("asset_quantity", None)
         }
 
         account_raw = d.pop("account")
-        account = account_mapping.get(account_raw)
-        if account is None:
+        account_id = account_mapping.get(account_raw)
+        if account_id is None:
           account = self.find_account(account_raw, session=s)
           if account is None:
             raise KeyError(f"Could not find Account by '{account_raw}'")
-          account_mapping[account_raw] = account
-        d["account"] = account
+          account_id = account.id
+          account_mapping[account_raw] = account_id
+        d["account_id"] = account_id
 
         asset_raw = d.pop("asset", None)
         if asset_raw is not None:
           # Find its ID
-          asset = asset_mapping.get(asset_raw)
-          if asset is None:
+          asset_id = asset_mapping.get(asset_raw)
+          if asset_id is None:
             asset = self.find_asset(asset_raw, session=s)
             if asset is None:
               raise KeyError(f"Could not find Asset by '{asset_raw}'")
-            asset_mapping[asset_raw] = asset
-          d_split["asset"] = asset
+            asset_id = asset.id
+            asset_mapping[asset_raw] = asset_id
+          d_split["asset_id"] = asset_id
 
         transactions.append((Transaction(**d), TransactionSplit(**d_split)))
 
@@ -496,49 +498,3 @@ class Portfolio:
     """Get path to SSL certificate key
     """
     return self._path_ssl.joinpath("key.pem")
-
-  def _add_default_transaction_categories(self) -> None:
-    """Create default transaction categories
-    """
-    with self.get_session() as s:
-      income = [
-          "Consulting", "Deposits", "Dividends Received",
-          "Dividends Received (tax-advantaged)", "Interest",
-          "Investment Income", "Other Income", "Paychecks/Salary",
-          "Refunds & Reimbursements", "Retirement Income", "Rewards", "Sales",
-          "Services"
-      ]
-      expense = [
-          "Advertising", "Advisory Fee", "ATM/Cash", "Automotive",
-          "Business Miscellaneous", "Cable/Satellite", "Charitable Giving",
-          "Checks", "Child/Dependent", "Clothing/Shoes", "Dues & Subscriptions",
-          "Education", "Electronics", "Entertainment", "Gasoline/Fuel",
-          "General Merchandise", "Gifts", "Groceries", "Healthcare/Medical",
-          "Hobbies", "Home Improvement", "Home Maintenance", "Insurance",
-          "Loans", "Mortgages", "Office Maintenance", "Office Supplies",
-          "Other Bills", "Other Expenses", "Personal Care", "Pets/Pet Care",
-          "Postage & Shipping", "Printing", "Rent", "Restaurants",
-          "Service Charge/Fees", "Taxes", "Telephone", "Travel", "Utilities",
-          "Wages Paid"
-      ]
-      other = [
-          "Credit Card Payments", "Expense Reimbursement", "General Rebalance",
-          "Portfolio Management", "Retirement Contributions", "Savings",
-          "Securities Traded", "Transfers", "Uncategorized", "Fraud"
-      ]
-      for name in income:
-        cat = TransactionCategory(name=name,
-                                  type_=TransactionCategoryType.INCOME,
-                                  custom=False)
-        s.add(cat)
-      for name in expense:
-        cat = TransactionCategory(name=name,
-                                  type_=TransactionCategoryType.EXPENSE,
-                                  custom=False)
-        s.add(cat)
-      for name in other:
-        cat = TransactionCategory(name=name,
-                                  type_=TransactionCategoryType.OTHER,
-                                  custom=False)
-        s.add(cat)
-      s.commit()

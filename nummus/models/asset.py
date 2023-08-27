@@ -175,7 +175,7 @@ class Asset(Base):
                     start: t.Date,
                     end: t.Date,
                     uuids: t.Strings = None,
-                    ids: t.Ints = None) -> t.Tuple[t.Dates, t.DictReals]:
+                    ids: t.Ints = None) -> t.Tuple[t.Dates, t.DictIntReals]:
     """Get the value of all Assets from start to end date
 
     Args:
@@ -186,7 +186,7 @@ class Asset(Base):
       ids: Limit results to specific Assets by ID
 
     Returns:
-      (List[dates], dict{Asset.uuid: list[values]})
+      (List[dates], dict{Asset.id: list[values]})
     """
     query = s.query(Asset)
     query = query.with_entities(Asset.id, Asset.uuid)
@@ -216,7 +216,7 @@ class Asset(Base):
     assets_values: t.DictIntReals = {a_id: [v] for a_id, v in values.items()}
 
     if start == end:
-      return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+      return dates, assets_values
 
     def next_day(current: datetime.date) -> datetime.date:
       """Push currents into the lists
@@ -248,7 +248,7 @@ class Asset(Base):
     while date <= end:
       date = next_day(date)
 
-    return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+    return dates, assets_values
 
   def update_splits(self) -> None:
     """Recalculate adjusted TransactionSplit.asset_quantity based on all asset

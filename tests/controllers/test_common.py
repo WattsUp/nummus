@@ -53,23 +53,24 @@ class TestCommon(WebTestBase):
       categories: t.Dict[str, TransactionCategory] = {
           cat.name: cat for cat in s.query(TransactionCategory).all()
       }
+      t_cat = categories["Uncategorized"]
 
-      txn = Transaction(account=acct_savings,
+      txn = Transaction(account_id=acct_savings.id,
                         date=today,
                         total=100,
                         statement=self.random_string())
       t_split = TransactionSplit(total=txn.total,
                                  parent=txn,
-                                 category=categories["Uncategorized"])
+                                 category_id=t_cat.id)
       s.add_all((txn, t_split))
 
-      txn = Transaction(account=acct_checking,
+      txn = Transaction(account_id=acct_checking.id,
                         date=today,
                         total=-50,
                         statement=self.random_string())
       t_split = TransactionSplit(total=txn.total,
                                  parent=txn,
-                                 category=categories["Uncategorized"])
+                                 category_id=t_cat.id)
       s.add_all((txn, t_split))
 
       s.commit()

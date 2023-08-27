@@ -21,93 +21,20 @@ class TestBudget(TestBase):
 
     today = datetime.date.today()
 
-    b = budget.Budget(date=today)
-    s.add(b)
-    s.commit()
-
-    # Default to 0
-    self.assertEqual(today, b.date)
-    self.assertEqual(0, b.home)
-    self.assertEqual(0, b.food)
-    self.assertEqual(0, b.shopping)
-    self.assertEqual(0, b.hobbies)
-    self.assertEqual(0, b.services)
-    self.assertEqual(0, b.travel)
-
-    d = {
-        "date": today + datetime.timedelta(days=1),
-        "home": self.random_decimal(-1, 0),
-        "food": self.random_decimal(-1, 0),
-        "shopping": self.random_decimal(-1, 0),
-        "hobbies": self.random_decimal(-1, 0),
-        "services": self.random_decimal(-1, 0),
-        "travel": self.random_decimal(-1, 0)
-    }
+    d = {"date": today, "total": self.random_decimal(-1, 0)}
 
     b = budget.Budget(**d)
     s.add(b)
     s.commit()
 
     self.assertEqual(d["date"], b.date)
-    self.assertEqual(d["home"], b.home)
-    self.assertEqual(d["food"], b.food)
-    self.assertEqual(d["shopping"], b.shopping)
-    self.assertEqual(d["hobbies"], b.hobbies)
-    self.assertEqual(d["services"], b.services)
-    self.assertEqual(d["travel"], b.travel)
-
-    d.pop("date")
-    total = sum(d.values())
-    self.assertEqual(total, b.total)
-
-    self.assertDictEqual(d, b.categories)
-
-    target = {"uuid": b.uuid, "date": b.date, "total": total, "categories": d}
-    result = b.to_dict()
-    self.assertDictEqual(target, result)
-
-    # Zero amounts are okay
-    for cat in d:
-      setattr(b, cat, 0)
+    self.assertEqual(d["total"], b.total)
 
     # Positive amounts are bad
-    for cat in d:
-      self.assertRaises(ValueError, setattr, b, cat, 1)
+    self.assertRaises(ValueError, setattr, b, "total", 1)
 
     # Duplicate dates are bad
-    b.date = today
+    b = budget.Budget(date=today, total=0)
+    s.add(b)
     self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
     s.rollback()
-
-  def test_set_categories(self):
-    s = self.get_session()
-    models.metadata_create_all(s)
-
-    today = datetime.date.today()
-
-    b = budget.Budget(date=today)
-    s.add(b)
-    s.commit()
-
-    self.assertRaises(KeyError, setattr, b, "categories", {})
-    self.assertRaises(KeyError, setattr, b, "categories", {"home": 1})
-
-    d = {
-        "home": self.random_decimal(-1, 0),
-        "food": self.random_decimal(-1, 0),
-        "shopping": self.random_decimal(-1, 0),
-        "hobbies": self.random_decimal(-1, 0),
-        "services": self.random_decimal(-1, 0),
-        "travel": self.random_decimal(-1, 0)
-    }
-    b.categories = d
-
-    self.assertEqual(d["home"], b.home)
-    self.assertEqual(d["food"], b.food)
-    self.assertEqual(d["shopping"], b.shopping)
-    self.assertEqual(d["hobbies"], b.hobbies)
-    self.assertEqual(d["services"], b.services)
-    self.assertEqual(d["travel"], b.travel)
-
-    d["fake"] = 1
-    self.assertRaises(KeyError, setattr, b, "categories", d)

@@ -5,6 +5,7 @@ import datetime
 
 from nummus import models
 from nummus.models import (utils, Account, AccountCategory, Transaction,
+                           TransactionCategory, TransactionCategoryType,
                            TransactionSplit)
 
 from tests.base import TestBase
@@ -21,10 +22,12 @@ class TestUtils(TestBase):
     # Create accounts
     acct_checking = Account(name="Monkey Bank Checking",
                             institution="Monkey Bank",
-                            category=AccountCategory.CASH)
+                            category=AccountCategory.CASH,
+                            closed=False)
     acct_invest = Account(name="Gorilla Investments",
                           institution="Ape Trading",
-                          category=AccountCategory.INVESTMENT)
+                          category=AccountCategory.INVESTMENT,
+                          closed=False)
     s.add_all((acct_checking, acct_invest))
     s.commit()
 
@@ -67,16 +70,23 @@ class TestUtils(TestBase):
     # Create accounts
     acct = Account(name="Monkey Bank Checking",
                    institution="Monkey Bank",
-                   category=AccountCategory.CASH)
+                   category=AccountCategory.CASH,
+                   closed=False)
     s.add(acct)
     s.commit()
 
+    t_cat = TransactionCategory(name="Uncategorized",
+                                type_=TransactionCategoryType.OTHER,
+                                custom=False)
+    s.add(t_cat)
+    s.commit()
+
     for _ in range(n_transactions):
-      txn = Transaction(account=acct,
+      txn = Transaction(account_id=acct.id,
                         date=today,
                         total=100,
                         statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=txn)
+      t_split = TransactionSplit(total=100, parent=txn, category_id=t_cat.id)
       s.add_all((txn, t_split))
     s.commit()
 

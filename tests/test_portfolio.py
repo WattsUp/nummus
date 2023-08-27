@@ -341,7 +341,8 @@ class TestPortfolio(TestBase):
       target = TRANSACTIONS_EXTRAS
       self.assertEqual(len(target), len(transactions))
       split_properties = [
-          "payee", "description", "category", "tag", "asset", "asset_quantity"
+          "payee", "description", "category", "tag", "asset", "asset_quantity",
+          "asset_id"
       ]
       for tgt, res in zip(target, transactions):
         self.assertEqual(1, len(res.splits))
@@ -349,15 +350,19 @@ class TestPortfolio(TestBase):
         for k, t_v in tgt.items():
           # Fix test value for linked properties
           if k == "asset":
-            t_v = asset
+            k = "asset_id"
+            t_v = asset.id
           elif k == "account":
+            k = "account_id"
             if t_v == "Monkey Bank Checking":
-              t_v = acct_checking
+              t_v = acct_checking.id
             else:
-              t_v = acct_invest
+              t_v = acct_invest.id
 
           if k == "category":
-            r_v: TransactionCategory = getattr(r_split, k)
+            cat_id = r_split.category_id
+            r_v = s.query(TransactionCategory).where(
+                TransactionCategory.id == cat_id).first()
             self.assertEqual(t_v, r_v.name)
           elif k in split_properties:
             r_v = getattr(r_split, k)
