@@ -14,7 +14,6 @@ import flask_assets
 import gevent.pywsgi
 import pytailwindcss
 from OpenSSL import crypto
-import simplejson
 import webassets.filter
 
 from nummus import common, controllers, models, portfolio, version
@@ -124,40 +123,6 @@ class TailwindCSSFilter(webassets.filter.Filter):
     out.write(built_css)
 
 
-class JSONProvider(flask.json.provider.JSONProvider):
-  """Custom JSON Provider for nummus models
-
-  Loads and dumps real numbers as Decimals
-  """
-
-  @classmethod
-  def loads(cls, s: str, **kwargs: t.DictAny) -> t.Any:
-    """Deserialize data as JSON
-
-    Args:
-      s: Text to deserialize
-
-    Returns:
-      Deserialized object
-    """
-    return simplejson.loads(s, **kwargs, use_decimal=True)
-
-  @classmethod
-  def dumps(cls, obj: t.Any, **kwargs: t.DictAny) -> str:
-    """Serialize data as JSON
-
-    Args:
-      obj: The data to serialize
-
-    Returns:
-      Serialized object as a string
-    """
-    return simplejson.dumps(obj,
-                            **kwargs,
-                            use_decimal=True,
-                            cls=models.NummusJSONEncoder)
-
-
 class Server:
   """HTTP server that serves a nummus Portfolio
   """
@@ -182,12 +147,6 @@ class Server:
     # Add Portfolio to context for controllers
     with self._app.app_context():
       flask.current_app.portfolio = p
-
-    # Set JSON encoder
-    # TODO (WattsUp) Fix deprecation warning once connexion updates
-    with warnings.catch_warnings():
-      warnings.simplefilter("ignore")
-      self._app.json = JSONProvider(self._app)
 
     # Enable debugger and reloader when debug
     self._app.debug = debug

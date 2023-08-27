@@ -15,9 +15,8 @@ with open("README.md", encoding="utf-8") as file:
   longDescription = file.read()
 
 required = [
-    "sqlalchemy>=2", "AutoDict", "gevent", "colorama", "rapidfuzz",
-    "simplejson", "pyopenssl", "flask-assets", "pytailwindcss", "jsmin",
-    "flask<2.3,>=2"
+    "sqlalchemy>=2", "AutoDict", "gevent", "colorama", "rapidfuzz", "pyopenssl",
+    "flask-assets", "pytailwindcss", "jsmin", "flask<2.3,>=2"
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

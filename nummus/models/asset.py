@@ -31,10 +31,6 @@ class AssetSplit(Base):
     date: Date of split
     multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
   """
-
-  _PROPERTIES_DEFAULT = ["value", "date", "multiplier"]
-  _PROPERTIES_HIDDEN = ["id", "uuid"]
-
   asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
   multiplier: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
@@ -63,10 +59,6 @@ class AssetValuation(Base):
     date: Date of valuation
     value: Value of assert
   """
-
-  _PROPERTIES_DEFAULT = ["value", "date"]
-  _PROPERTIES_HIDDEN = ["id", "uuid"]
-
   asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
   value: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
@@ -108,11 +100,6 @@ class Asset(Base):
     unit: Unit name for an individual Asset (ex: shares)
     tag: Unique tag linked across datasets
   """
-
-  _PROPERTIES_DEFAULT = [
-      "uuid", "name", "description", "category", "unit", "tag"
-  ]
-
   name: t.ORMStr
   description: t.ORMStrOpt
   category: ORMAssetCat

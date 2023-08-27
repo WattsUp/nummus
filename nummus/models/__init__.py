@@ -5,7 +5,7 @@ from sqlalchemy import exc, orm
 
 from nummus import custom_types as t
 
-from nummus.models.base import Base, BaseEnum, NummusJSONEncoder
+from nummus.models.base import Base, BaseEnum
 
 from nummus.models.account import (Account, AccountCategory, Transaction,
                                    TransactionCategory, TransactionCategoryType,

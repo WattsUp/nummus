@@ -13,10 +13,6 @@ class Credentials(Base):
     user: Name of user
     password: Secret password
   """
-
-  _PROPERTIES_DEFAULT = ["id", "site", "user"]
-  _PROPERTIES_HIDDEN = ["password"]
-
   site: t.ORMStr
   user: t.ORMStr
   password: t.ORMStr
