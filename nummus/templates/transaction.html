@@ -27,7 +27,7 @@
             <td>
               <label for="txn-lock">Locked:</label>
             </td>
-            <td><input type="checkbox" {{ "checked" if transaction["locked"] else "" }} name="locked" id="txn-lock"></td>
+            <td><input type="checkbox" {{ "checked" if transaction["locked"] }} name="locked" id="txn-lock"></td>
           </tr>
         </tbody>
       </table>

@@ -14,11 +14,20 @@
       <div class="flex gap-4 justify-between w-full">
         <span class="font-bold">Most recent transaction</span>
         <span>{{ account["updated_days_ago"] | days }}
-          ago</span></div>
+          ago</span>
+      </div>
       <div class="flex gap-4 justify-between w-full">
         <span class="font-bold">Oldest transaction</span>
         <span>{{ account["opened_days_ago"] | days }}
-          ago</span></div>
+          ago</span>
+      </div>
+      <hr class="w-full border-grey-200">
+      <div class="flex gap-4 justify-between w-full">
+        <span class="font-bold">
+          <label for="account-closed">Account closed:</label>
+        </span>
+        <span><input type="checkbox" name="closed" {{ "checked" if account["closed"] }} id="account-closed"></span>
+      </div>
     </div>
     <div class="w-7/12">
       <h1 class="font-bold">Edit details</h1>
@@ -38,7 +47,7 @@
             <td>
               <select name="category">
                 {% for cat in account["category_type"] %}
-                  <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] else "" }}>{{ cat.name | title }}</option>
+                  <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] }}>{{ cat.name | title }}</option>
                 {% endfor %}
               </select>
             </td>
@@ -47,6 +56,11 @@
       </table>
     </div>
   </form>
+  {% if account["error"] %}
+    <div class="w-full bg-red px-6 py-2 text-xl">
+      {{ account["error"] }}
+    </div>
+  {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     <a hx-get="/h/none" hx-target="#overlay" class="transition-colors hover:text-green-600">Cancel</a>
     <a hx-post="/h/accounts/{{ account['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-account" class="button bg-green">Save</a>

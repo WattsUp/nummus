@@ -18,11 +18,16 @@ def sidebar() -> str:
   Returns:
     HTML string response
   """
-  return flask.render_template("shared/sidebar.html", sidebar=ctx_sidebar())
+  include_closed = flask.request.args.get("closed") == "included"
+  return flask.render_template("shared/sidebar.html",
+                               sidebar=ctx_sidebar(include_closed))
 
 
-def ctx_sidebar() -> t.DictAny:
+def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
   """Get the context to build the sidebar
+
+  Args:
+    include_closed: True will include Accounts marked closed, False will exclude
 
   Returns:
     Dictionary HTML context
@@ -48,23 +53,28 @@ def ctx_sidebar() -> t.DictAny:
       cat: [] for cat in sorted_categories
   }
 
+  n_closed = 0
   with p.get_session() as s:
     # Get basic info
     accounts: t.Dict[str, t.DictAny] = {}
     query = s.query(Account)
     query = query.with_entities(Account.uuid, Account.name, Account.institution,
-                                Account.category)
-    for acct_uuid, name, institution, category in query.all():
+                                Account.category, Account.closed)
+    for acct_uuid, name, institution, category, closed in query.all():
       acct_uuid: str
       name: str
       institution: str
       category: AccountCategory
+      closed: bool
       accounts[acct_uuid] = {
           "uuid": acct_uuid,
           "name": name,
           "institution": institution,
-          "category": category
+          "category": category,
+          "closed": closed
       }
+      if closed:
+        n_closed += 1
 
     # Get updated_on
     query = s.query(Transaction)
@@ -99,6 +109,12 @@ def ctx_sidebar() -> t.DictAny:
     asset_width = round(assets / (assets - liabilities) * 100, 2)
     liabilities_width = 100 - asset_width
 
+  if not include_closed:
+    categories = {
+        cat: [acct for acct in accounts if not acct["closed"]]
+        for cat, accounts in categories.items()
+    }
+
   # Removed empty categories and sort
   categories = {
       cat: sorted(accounts, key=lambda acct: acct["name"])
@@ -117,4 +133,6 @@ def ctx_sidebar() -> t.DictAny:
           cat: (categories_total[cat], accounts)
           for cat, accounts in categories.items()
       },
+      "include_closed": include_closed,
+      "n_closed": n_closed
   }

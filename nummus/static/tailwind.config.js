@@ -58,6 +58,9 @@ module.exports = {
         900: "#3d3d3d",
         950: "#282828",
       },
+      transparent: {
+        DEFAULT: "transparent"
+      },
       white: {
         DEFAULT: "#ffffff",
       },

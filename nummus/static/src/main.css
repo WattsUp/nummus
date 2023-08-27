@@ -59,7 +59,11 @@
   }
 
   .nav-account {
-    @apply relative;
+    @apply relative p-px border-2 border-transparent;
+  }
+
+  .nav-account.closed {
+    @apply border-red border-opacity-100;
   }
 
   .nav-account > h1,
@@ -80,11 +84,11 @@
   }
 
   .nav-account span:first-child {
-    @apply text-ellipsis overflow-hidden pl-6;
+    @apply text-ellipsis overflow-hidden pl-6 pr-1;
   }
 
   .nav-account::before {
-    @apply absolute left-3 right-3 h-px bottom-0 content-[""] bg-grey-200;
+    @apply absolute left-3 right-3 h-px bottom-[-3px] content-[""] bg-grey-200;
   }
 
   .nav-account:last-of-type::before {
@@ -121,7 +125,11 @@
   }
 
   .button.bg-green {
-    @apply text-white border-green-500 bg-green-500 hover:border-green-900 hover:bg-green-900;
+    @apply text-white border-green hover:border-green-900 hover:bg-green-900;
+  }
+
+  .button.bg-white {
+    @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
   }
 
   #overlay:empty {

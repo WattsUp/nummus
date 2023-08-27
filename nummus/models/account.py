@@ -359,6 +359,7 @@ class Account(Base):
   name: t.ORMStr
   institution: t.ORMStr
   category: ORMAcctCat
+  closed: t.ORMBool
 
   @property
   def opened_on(self) -> t.Date:
