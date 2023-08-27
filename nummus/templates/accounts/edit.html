@@ -6,7 +6,7 @@
     </svg>
   </a>
   <h1 class="font-serif text-4xl px-6">Edit account</h1>
-  <form class="flex w-full gap-4 px-6 grow">
+  <form class="flex w-full gap-4 px-6 grow" id="form-account">
     <div class="w-5/12 flex flex-col items-center">
       <hr class="w-full border-grey-200">
       <div class="font-serif text-2xl">{{ account["value"] | money }}</div>
@@ -27,16 +27,16 @@
         <tbody>
           <tr>
             <td>Institution</td>
-            <td><input value="{{ account['institution'] }}"></td>
+            <td><input name="institution" value="{{ account['institution'] }}"></td>
           </tr>
           <tr>
             <td>Account Name</td>
-            <td><input value="{{ account['name'] }}"></td>
+            <td><input name="name" value="{{ account['name'] }}"></td>
           </tr>
           <tr>
             <td>Account Category</td>
             <td>
-              <select>
+              <select name="category">
                 {% for cat in account["category_type"] %}
                   <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] else "" }}>{{ cat.name | title }}</option>
                 {% endfor %}
@@ -49,6 +49,6 @@
   </form>
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     <a hx-get="/h/none" hx-target="#overlay" class="transition-colors hover:text-green-600">Cancel</a>
-    <a hx-get="/h/none" hx-target="#overlay" class="button bg-green">Save</a>
+    <a hx-post="/h/accounts/{{ account['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-account" class="button bg-green">Save</a>
   </div>
 </div>

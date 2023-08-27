@@ -7,12 +7,14 @@ from nummus import custom_types as t
 from nummus.controllers import accounts, common, dashboard, transactions
 
 ROUTES: t.Dict[str, t.Callable] = {
-    "/": dashboard.page_home,
-    "/index": dashboard.page_home,
-    "/transactions": transactions.page_all,
-    "/transactions/<path:path_uuid>": transactions.page_one,
-    "/h/accounts/<path:path_uuid>/edit": accounts.edit_account,
-    "/h/none": lambda: ""
+    "/": (dashboard.page_home, ["GET"]),
+    "/index": (dashboard.page_home, ["GET"]),
+    "/h/sidebar": (common.sidebar, ["GET"]),
+    "/transactions": (transactions.page_all, ["GET"]),
+    "/transactions/<path:path_uuid>": (transactions.page_one, ["GET"]),
+    "/h/accounts/<path:path_uuid>/edit":
+        (accounts.edit_account, ["GET", "POST"]),
+    "/h/none": (lambda: "", ["GET"])
 }
 
 
@@ -22,5 +24,6 @@ def add_routes(app: flask.Flask) -> None:
   Args:
     app: Flask app to route under
   """
-  for url, controller in ROUTES.items():
-    app.add_url_rule(url, view_func=controller)
+  for url, item in ROUTES.items():
+    controller, methods = item
+    app.add_url_rule(url, view_func=controller, methods=methods)

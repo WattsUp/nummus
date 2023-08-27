@@ -12,6 +12,15 @@ from nummus import custom_types as t
 from nummus.models import Account, AccountCategory, Transaction
 
 
+def sidebar() -> str:
+  """GET /h/sidebar
+
+  Returns:
+    HTML string response
+  """
+  return flask.render_template("shared/sidebar.html", sidebar=ctx_sidebar())
+
+
 def ctx_sidebar() -> t.DictAny:
   """Get the context to build the sidebar
 

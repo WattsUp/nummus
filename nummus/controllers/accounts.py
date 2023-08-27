@@ -24,12 +24,26 @@ def edit_account(path_uuid: str) -> str:
     acct: Account = web_utils.find(s, Account, path_uuid)
 
     if flask.request.method == "POST":
-      print(flask.request.form)
+      form = flask.request.form
+      institution = form["institution"]
+      name = form["name"]
+      category = web_utils.parse_enum(form["category"], AccountCategory)
+
+      # Make the changes
+      acct.institution = institution
+      acct.name = name
+      acct.category = category
+      s.commit()
+
+      response = flask.make_response("")
+      response.headers["HX-Trigger"] = "accountUpdate"
+      return response
 
     _, values, _ = acct.get_value(today, today)
     v = values[0]
 
     ctx: t.DictAny = {
+        "uuid": acct.uuid,
         "name": acct.name,
         "institution": acct.institution,
         "category": acct.category,
