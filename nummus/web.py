@@ -5,8 +5,6 @@ import datetime
 import io
 import pathlib
 import sys
-import typing as t
-import warnings
 
 from colorama import Fore, Back
 import flask
@@ -16,8 +14,7 @@ import pytailwindcss
 from OpenSSL import crypto
 import webassets.filter
 
-from nummus import common, controllers, models, portfolio, version
-from nummus import custom_types as t
+from nummus import common, controllers, portfolio, version
 
 
 class Handler(gevent.pywsgi.WSGIHandler):

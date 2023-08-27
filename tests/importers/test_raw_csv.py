@@ -4,7 +4,6 @@
 import datetime
 from decimal import Decimal
 
-from nummus import models
 from nummus.importers import raw_csv
 
 from tests import base
@@ -17,8 +16,7 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Employer",
     "description": "Paycheck",
     "statement": "Paycheck",
-    "category": models.TransactionCategory.INCOME,
-    "subcategory": "Paychecks"
+    "category": "Paychecks/Salary"
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
@@ -26,10 +24,8 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Monkey Store",
     "description": "Banana",
     "statement": "Banana",
-    "category": models.TransactionCategory.FOOD,
-    "subcategory": "Groceries",
-    "tag": "Fruit",
-    "sales_tax": Decimal("-1.23")
+    "category": "Groceries",
+    "tag": "Fruit"
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
@@ -37,7 +33,7 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
-    "category": models.TransactionCategory.TRANSFER
+    "category": "Transfers"
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 2),
@@ -45,7 +41,7 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
-    "category": models.TransactionCategory.TRANSFER
+    "category": "Transfers"
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 3),
@@ -53,7 +49,7 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Monkey Investments",
     "description": "Security Exchange",
     "statement": "Security Exchange",
-    "category": models.TransactionCategory.INSTRUMENT,
+    "category": "Securities Traded",
     "asset": "BANANA",
     "asset_quantity": Decimal("32.1234")
 }, {
@@ -63,7 +59,7 @@ TRANSACTIONS_EXTRAS = [{
     "payee": "Monkey Investments",
     "description": "Profit Maker",
     "statement": "Profit Maker",
-    "category": models.TransactionCategory.INSTRUMENT,
+    "category": "Securities Traded",
     "asset": "BANANA",
     "asset_quantity": Decimal("-32.1234")
 }]

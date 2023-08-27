@@ -18,6 +18,5 @@ class Budget(Base):
     date: Date on which Budget is effective
     total: Target limit of expense per month
   """
-  # TODO (WattsUp) Change Budget to simple date, expense pair
   date: t.ORMDate = orm.mapped_column(unique=True)
   total: t.ORMReal

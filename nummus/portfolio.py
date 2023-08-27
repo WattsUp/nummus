@@ -221,19 +221,21 @@ class Portfolio:
       raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
-    with self.get_session() as session:
+    with self.get_session() as s:
+      categories: t.Dict[str, TransactionCategory] = {
+          cat.name: cat for cat in s.query(TransactionCategory).all()
+      }
       account_mapping: t.Dict[str, Account] = {}
       asset_mapping: t.Dict[str, Asset] = {}
       transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
       for d in i.run():
         # Create a single split for each transaction
+        category_s = d.pop("category", "Uncategorized")
         d_split: importers.TxnDict = {
             "total": d["total"],  # Both split and parent have total
-            "sales_tax": d.pop("sales_tax", None),
             "payee": d.pop("payee", None),
             "description": d.pop("description", None),
-            "category": d.pop("category", None),
-            "subcategory": d.pop("subcategory", None),
+            "category": categories[category_s],
             "tag": d.pop("tag", None),
             "asset_quantity_unadjusted": d.pop("asset_quantity", None)
         }
@@ -241,7 +243,7 @@ class Portfolio:
         account_raw = d.pop("account")
         account = account_mapping.get(account_raw)
         if account is None:
-          account = self.find_account(account_raw, session=session)
+          account = self.find_account(account_raw, session=s)
           if account is None:
             raise KeyError(f"Could not find Account by '{account_raw}'")
           account_mapping[account_raw] = account
@@ -252,7 +254,7 @@ class Portfolio:
           # Find its ID
           asset = asset_mapping.get(asset_raw)
           if asset is None:
-            asset = self.find_asset(asset_raw, session=session)
+            asset = self.find_asset(asset_raw, session=s)
             if asset is None:
               raise KeyError(f"Could not find Asset by '{asset_raw}'")
             asset_mapping[asset_raw] = asset
@@ -261,15 +263,10 @@ class Portfolio:
         transactions.append((Transaction(**d), TransactionSplit(**d_split)))
 
       # All good, add transactions and commit
-      # Add just the transactions first
-      session.add_all(txn for txn, _ in transactions)
-      session.commit()
-
-      # Update the parent_ids
       for txn, t_split in transactions:
         t_split.parent = txn
-        session.add(t_split)
-      session.commit()
+        s.add_all((txn, t_split))
+      s.commit()
 
   def find_account(self,
                    query: t.IntOrStr,

@@ -215,25 +215,6 @@ class TestServer(TestBase):
       self.assertEqual(target, result)
 
 
-class TestJSONProvider(TestBase):
-  """Test NummusJSONProvider class
-  """
-
-  def test_dumps(self):
-    d = {"a": self.random_decimal(0, 1, precision=18)}
-
-    target = f'{{"a": {d["a"]}}}'
-    s = web.JSONProvider.dumps(d)
-    self.assertEqual(target, s)
-
-  def test_loads(self):
-    d = {"a": self.random_decimal(0, 1, precision=18)}
-    s = web.JSONProvider.dumps(d)
-    d_loaded = web.JSONProvider.loads(s)
-
-    self.assertDictEqual(d, d_loaded)
-
-
 class TestHandler(TestBase):
   """Test WebHandler class
   """
@@ -284,11 +265,11 @@ class TestHandler(TestBase):
     h.time_finish = 0.15
     h.time_start = 0.1
     h.client_address = "127.0.0.1"
-    h.requestline = "PUT /c/sidebar HTTP/1.1"
+    h.requestline = "PUT /h/sidebar HTTP/1.1"
     h.code = 400
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.YELLOW}PUT{Fore.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.YELLOW}400{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
@@ -296,62 +277,62 @@ class TestHandler(TestBase):
     self.assertEqual(target, result)
 
     h.client_address = "127.0.0.1"
-    h.requestline = "DELETE /c/sidebar HTTP/1.1"
+    h.requestline = "DELETE /h/sidebar HTTP/1.1"
     h.code = 500
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.RED}DELETE{Fore.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
-    h.requestline = "OPTIONS /c/sidebar HTTP/1.1"
+    h.requestline = "OPTIONS /h/sidebar HTTP/1.1"
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLUE}OPTIONS{Fore.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
-    h.requestline = "HEAD /c/sidebar HTTP/1.1"
+    h.requestline = "HEAD /h/sidebar HTTP/1.1"
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.MAGENTA}HEAD{Fore.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
-    h.requestline = "PATCH /c/sidebar HTTP/1.1"
+    h.requestline = "PATCH /h/sidebar HTTP/1.1"
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLACK}{Back.GREEN}PATCH{Fore.RESET}{Back.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
-    h.requestline = "TRACE /c/sidebar HTTP/1.1"
+    h.requestline = "TRACE /h/sidebar HTTP/1.1"
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               f"{Fore.BLACK}{Back.WHITE}TRACE{Fore.RESET}{Back.RESET} "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B "
               f"{Fore.RED}500{Fore.RESET}")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()
     self.assertEqual(target, result)
 
-    h.requestline = "GOT /c/sidebar HTTP/1.1"
+    h.requestline = "GOT /h/sidebar HTTP/1.1"
     h.code = 600
     target = (f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
               "GOT "
-              f"{Fore.CYAN}/c/sidebar{Fore.RESET} "
+              f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
               "HTTP/1.1 1000B 600")
     with time_machine.travel(utc_now, tick=False):
       result = h.format_request()

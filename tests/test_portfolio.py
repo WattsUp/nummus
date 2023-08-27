@@ -8,7 +8,7 @@ import autodict
 
 from nummus import portfolio, sql
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
-                           Credentials, Transaction)
+                           Credentials, Transaction, TransactionCategory)
 
 from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
@@ -225,13 +225,16 @@ class TestPortfolio(TestBase):
       # Create accounts
       acct_checking = Account(name="Monkey Bank Checking",
                               institution="Monkey Bank",
-                              category=AccountCategory.CASH)
+                              category=AccountCategory.CASH,
+                              closed=False)
       acct_invest_0 = Account(name="Primate Investments",
                               institution="Monkey Bank",
-                              category=AccountCategory.INVESTMENT)
+                              category=AccountCategory.INVESTMENT,
+                              closed=False)
       acct_invest_1 = Account(name="Primate Investments",
                               institution="Gorilla Bank",
-                              category=AccountCategory.INVESTMENT)
+                              category=AccountCategory.INVESTMENT,
+                              closed=False)
       s.add_all((acct_checking, acct_invest_0, acct_invest_1))
       s.commit()
 
@@ -314,10 +317,12 @@ class TestPortfolio(TestBase):
       # Create accounts
       acct_checking = Account(name="Monkey Bank Checking",
                               institution="Monkey Bank",
-                              category=AccountCategory.CASH)
+                              category=AccountCategory.CASH,
+                              closed=False)
       acct_invest = Account(name="Monkey Investments",
                             institution="Monkey Bank",
-                            category=AccountCategory.INVESTMENT)
+                            category=AccountCategory.INVESTMENT,
+                            closed=False)
       s.add_all((acct_checking, acct_invest))
       s.commit()
 
@@ -336,8 +341,7 @@ class TestPortfolio(TestBase):
       target = TRANSACTIONS_EXTRAS
       self.assertEqual(len(target), len(transactions))
       split_properties = [
-          "sales_tax", "payee", "description", "category", "subcategory", "tag",
-          "asset", "asset_quantity"
+          "payee", "description", "category", "tag", "asset", "asset_quantity"
       ]
       for tgt, res in zip(target, transactions):
         self.assertEqual(1, len(res.splits))
@@ -352,7 +356,10 @@ class TestPortfolio(TestBase):
             else:
               t_v = acct_invest
 
-          if k in split_properties:
+          if k == "category":
+            r_v: TransactionCategory = getattr(r_split, k)
+            self.assertEqual(t_v, r_v.name)
+          elif k in split_properties:
             r_v = getattr(r_split, k)
             self.assertEqual(t_v, r_v)
           elif k == "total":
@@ -376,7 +383,8 @@ class TestPortfolio(TestBase):
     with p.get_session() as s:
       acct = Account(name="Monkey Bank Checking",
                      institution="Monkey Bank",
-                     category=AccountCategory.CASH)
+                     category=AccountCategory.CASH,
+                     closed=False)
       s.add(acct)
       s.commit()
 
@@ -409,7 +417,8 @@ class TestPortfolio(TestBase):
     with p.get_session() as s:
       acct = Account(name="Monkey Bank Checking Duplicate",
                      institution="Monkey Bank",
-                     category=AccountCategory.CASH)
+                     category=AccountCategory.CASH,
+                     closed=False)
       s.add(acct)
       s.commit()
 
@@ -537,7 +546,8 @@ class TestPortfolio(TestBase):
     with p.get_session() as s:
       acct = Account(name="Monkey Bank Checking",
                      institution="Monkey Bank",
-                     category=AccountCategory.CASH)
+                     category=AccountCategory.CASH,
+                     closed=False)
       s.add(acct)
       s.commit()
 

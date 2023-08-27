@@ -23,7 +23,8 @@ class TestWebUtils(TestBase):
     # Create accounts
     acct = Account(name="Monkey Bank Checking",
                    institution="Monkey Bank",
-                   category=AccountCategory.CASH)
+                   category=AccountCategory.CASH,
+                   closed=False)
     s.add(acct)
     s.commit()
 

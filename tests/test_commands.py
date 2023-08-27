@@ -345,10 +345,12 @@ class TestCommands(TestBase):
     with p.get_session() as s:
       acct_checking = Account(name="Monkey Bank Checking",
                               institution="Monkey Bank",
-                              category=AccountCategory.CASH)
+                              category=AccountCategory.CASH,
+                              closed=False)
       acct_invest = Account(name="Monkey Investments",
                             institution="Monkey Bank",
-                            category=AccountCategory.INVESTMENT)
+                            category=AccountCategory.INVESTMENT,
+                            closed=False)
       asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
       s.add_all((acct_checking, acct_invest, asset))
       s.commit()

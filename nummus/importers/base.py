@@ -48,7 +48,7 @@ class TransactionImporter(ABC):
 
     Returns:
       List of transaction as dictionaries, key mapping to Transaction
-      properties. Accounts and Assets referred to by name since ID is unknown
-      here
+      properties. Accounts, Assets, and TransactionCategories referred to by
+      name since ID is unknown here.
     """
     pass  # pragma: no cover
