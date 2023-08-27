@@ -8,7 +8,8 @@ from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum, NummusJSONEncoder
 
 from nummus.models.account import (Account, AccountCategory, Transaction,
-                                   TransactionCategory, TransactionSplit)
+                                   TransactionCategory, TransactionCategoryType,
+                                   TransactionSplit)
 from nummus.models.asset import (Asset, AssetCategory, AssetSplit,
                                  AssetValuation)
 from nummus.models.budget import Budget
@@ -31,7 +32,8 @@ def metadata_create_all(session: orm.Session) -> None:
   tables = [
       Account.__table__, Asset.__table__, AssetSplit.__table__,
       AssetValuation.__table__, Budget.__table__, Credentials.__table__,
-      Transaction.__table__, TransactionSplit.__table__
+      Transaction.__table__, TransactionCategory.__table__,
+      TransactionSplit.__table__
   ]
   Base.metadata.create_all(session.get_bind(), tables)
   session.commit()

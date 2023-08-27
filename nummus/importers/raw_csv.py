@@ -5,7 +5,7 @@ import csv
 import datetime
 import io
 
-from nummus import common, models
+from nummus import common
 from nummus import custom_types as t
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 
@@ -25,7 +25,7 @@ class CSVTransactionImporter(TransactionImporter):
       "payee": (True, str),
       "description": (True, str),
       "sales_tax": (False, common.parse_financial),
-      "category": (False, models.TransactionCategory.parse),
+      "category": (False, str),
       "subcategory": (False, str),
       "tag": (False, str),
       "asset": (False, str),

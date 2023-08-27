@@ -15,6 +15,7 @@ from sqlalchemy import orm
 from nummus import common, importers, models, sql, version
 from nummus import custom_types as t
 from nummus.models import (Account, Asset, Credentials, Transaction,
+                           TransactionCategory, TransactionCategoryType,
                            TransactionSplit)
 
 try:
@@ -158,7 +159,9 @@ class Portfolio:
       session.commit()
     path_db.chmod(0o600)  # Only owner can read/write
 
-    return Portfolio(path_db, key)
+    p = Portfolio(path_db, key)
+    p._add_default_transaction_categories()  # pylint: disable=protected-access
+    return p
 
   def _unlock(self) -> None:
     """Unlock the database
@@ -496,3 +499,49 @@ class Portfolio:
     """Get path to SSL certificate key
     """
     return self._path_ssl.joinpath("key.pem")
+
+  def _add_default_transaction_categories(self) -> None:
+    """Create default transaction categories
+    """
+    with self.get_session() as s:
+      income = [
+          "Consulting", "Deposits", "Dividends Received",
+          "Dividends Received (tax-advantaged)", "Interest",
+          "Investment Income", "Other Income", "Paychecks/Salary",
+          "Refunds & Reimbursements", "Retirement Income", "Rewards", "Sales",
+          "Services"
+      ]
+      expense = [
+          "Advertising", "Advisory Fee", "ATM/Cash", "Automotive",
+          "Business Miscellaneous", "Cable/Satellite", "Charitable Giving",
+          "Checks", "Child/Dependent", "Clothing/Shoes", "Dues & Subscriptions",
+          "Education", "Electronics", "Entertainment", "Gasoline/Fuel",
+          "General Merchandise", "Gifts", "Groceries", "Healthcare/Medical",
+          "Hobbies", "Home Improvement", "Home Maintenance", "Insurance",
+          "Loans", "Mortgages", "Office Maintenance", "Office Supplies",
+          "Other Bills", "Other Expenses", "Personal Care", "Pets/Pet Care",
+          "Postage & Shipping", "Printing", "Rent", "Restaurants",
+          "Service Charge/Fees", "Taxes", "Telephone", "Travel", "Utilities",
+          "Wages Paid"
+      ]
+      other = [
+          "Credit Card Payments", "Expense Reimbursement", "General Rebalance",
+          "Portfolio Management", "Retirement Contributions", "Savings",
+          "Securities Traded", "Transfers", "Uncategorized", "Fraud"
+      ]
+      for name in income:
+        cat = TransactionCategory(name=name,
+                                  type_=TransactionCategoryType.INCOME,
+                                  custom=False)
+        s.add(cat)
+      for name in expense:
+        cat = TransactionCategory(name=name,
+                                  type_=TransactionCategoryType.EXPENSE,
+                                  custom=False)
+        s.add(cat)
+      for name in other:
+        cat = TransactionCategory(name=name,
+                                  type_=TransactionCategoryType.OTHER,
+                                  custom=False)
+        s.add(cat)
+      s.commit()

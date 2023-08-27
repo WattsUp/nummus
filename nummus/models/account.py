@@ -21,6 +21,7 @@ ORMTxnSplitList = orm.Mapped[t.List["TransactionSplit"]]
 ORMTxnSplitOpt = orm.Mapped[t.Optional["TransactionSplit"]]
 ORMTxnCat = orm.Mapped["TransactionCategory"]
 ORMTxnCatOpt = orm.Mapped[t.Optional["TransactionCategory"]]
+ORMTxnCatType = orm.Mapped["TransactionCategoryType"]
 ORMAcct = orm.Mapped["Account"]
 ORMAcctOpt = orm.Mapped[t.Optional["Account"]]
 ORMAcctCat = orm.Mapped["AccountCategory"]
@@ -32,42 +33,26 @@ DictTxnCatReal = t.Dict["TransactionCategory", t.Real]
 DictTxnCatReals = t.Dict["TransactionCategory", t.Reals]
 
 
-class TransactionCategory(BaseEnum):
-  """Categories of Transactions
+class TransactionCategoryType(BaseEnum):
+  """Types of Transaction Categories
   """
-  # Outflow, checked TransactionSplit.total < 0
-  HOME = 1
-  FOOD = 2
-  SHOPPING = 3
-  HOBBIES = 4
-  SERVICES = 5
-  TRAVEL = 6
+  INCOME = 1
+  EXPENSE = 2
+  OTHER = 3
 
-  # Inflow, checked TransactionSplit.total < 0
-  INCOME = 7
 
-  # Outflow/inflow, no check
-  INSTRUMENT = 8
-  TRANSFER = 9
+class TransactionCategory(Base):
+  """Categories of Transactions
 
-  def is_valid_amount(self, amount: t.Real) -> bool:
-    """Test amount is valid sign for the Category
-
-    Args:
-      amount: Amount of TransactionSplit to test
-
-    Returns:
-      True if sign(amount) matches the proper category, False otherwise
-    """
-    if (self in [
-        self.HOME, self.FOOD, self.SHOPPING, self.HOBBIES, self.SERVICES,
-        self.TRAVEL
-    ]):
-      return amount <= 0
-    elif self == self.INCOME:
-      return amount >= 0
-    # Other categories are bidirectional
-    return True
+  Attributes:
+    uuid: TransactionCategory unique identifier
+    name: Name of category
+    type_: Type of category
+    custom: True if category is user made
+  """
+  name: t.ORMStr
+  type_: ORMTxnCatType
+  custom: t.ORMBool
 
 
 class TransactionSplit(Base):
@@ -82,11 +67,9 @@ class TransactionSplit(Base):
     date: Date on which Transaction occurred
     total: Total amount of cash exchanged. Positive indicated Account
       increases in value (inflow)
-    sales_tax: Amount of sales tax paid on Transaction, always negative
     payee: Name of payee (for outflow)/payer (for inflow)
     description: Description of exchange
     category: Type of Transaction
-    subcategory: Subcategory of Transaction type
     tag: Unique tag linked across datasets
     parent: Parent Transaction
     asset: Asset exchanged for cash, primarily for instrument transactions
@@ -95,20 +78,16 @@ class TransactionSplit(Base):
     locked: True only allows manually editing, False allows automatic changes
       (namely auto labeling field based on similar Transactions)
   """
-
-  _PROPERTIES_DEFAULT = [
-      "uuid", "account_uuid", "date", "total", "sales_tax", "payee",
-      "description", "category", "subcategory", "tag", "parent_uuid",
-      "asset_uuid", "asset_quantity", "locked"
-  ]
-
   total: t.ORMReal = orm.mapped_column(Decimal6)
-  sales_tax: t.ORMRealOpt = orm.mapped_column(Decimal6)
   payee: t.ORMStrOpt
   description: t.ORMStrOpt
-  category: ORMTxnCatOpt
-  subcategory: t.ORMStrOpt
   tag: t.ORMStrOpt
+
+  category_id: t.ORMInt = orm.mapped_column(
+      ForeignKey("transaction_category.id"))
+  category_uuid: t.ORMStr
+  category_name: t.ORMStr
+  category_type: ORMTxnCatType
 
   parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id"))
   parent_uuid: t.ORMStr
@@ -135,34 +114,6 @@ class TransactionSplit(Base):
       raise PermissionError("Call TransactionSplit.asset = Asset. "
                             "Do not set asset properties directly")
     super().__setattr__(name, value)
-
-  @orm.validates("total", "category")
-  def validate_category(self, key: str, field: RealOrTxnCat) -> RealOrTxnCat:
-    """Validate inflow/outflow constraints are met
-
-    Args:
-      key: Field being updated
-      field: Updated value
-
-    Returns:
-      field
-
-    Raises:
-      ValueError if category and sign(total) do not agree
-    """
-    total = self.total
-    category = self.category
-    if key == "total":
-      total: t.Real = field
-    else:
-      category: TransactionCategory = field
-    if category is None:
-      # It's fine
-      return field
-
-    if not category.is_valid_amount(total):
-      raise ValueError(f"{category} does not match sign({total})")
-    return field
 
   @property
   def asset_quantity(self) -> t.Real:
@@ -256,6 +207,26 @@ class TransactionSplit(Base):
     super().__setattr__("asset_id", asset.id)
     super().__setattr__("asset_uuid", asset.uuid)
 
+  @property
+  def category(self) -> TransactionCategory:
+    """Transaction Category
+    """
+    s = orm.object_session(self)
+    return s.query(TransactionCategory).where(
+        TransactionCategory.id == self.category_id).first()
+
+  @category.setter
+  def category(self, category: TransactionCategory) -> None:
+    if not isinstance(category, TransactionCategory):
+      raise TypeError("TransactionSplit.category must be of type "
+                      "TransactionCategory")
+    if category.id is None:
+      raise ValueError("Commit TransactionCategory before adding to split")
+    super().__setattr__("category_id", category.id)
+    super().__setattr__("category_uuid", category.uuid)
+    super().__setattr__("category_name", category.name)
+    super().__setattr__("category_type", category.type_)
+
 
 @event.listens_for(TransactionSplit, "before_insert")
 def before_insert_transaction_split(
@@ -289,11 +260,6 @@ class Transaction(Base):
       (namely auto labeling field based on similar Transactions)
     splits: List of TransactionSplits
   """
-
-  _PROPERTIES_DEFAULT = [
-      "uuid", "account_uuid", "date", "total", "statement", "locked", "splits"
-  ]
-
   account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
   account_uuid: t.ORMStr
 
@@ -351,11 +317,6 @@ class Account(Base):
     updated_on: Date of latest Transaction
     transactions: List of Transactions
   """
-
-  _PROPERTIES_DEFAULT = [
-      "uuid", "name", "institution", "category", "opened_on", "updated_on"
-  ]
-
   name: t.ORMStr
   institution: t.ORMStr
   category: ORMAcctCat
