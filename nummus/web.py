@@ -78,7 +78,7 @@ class Handler(gevent.pywsgi.WSGIHandler):
       elif method == "TRACE":
         method = f"{Fore.BLACK}{Back.WHITE}{method}{Fore.RESET}{Back.RESET}"
 
-      if endpoint.startswith("/c/"):
+      if endpoint.startswith("/h/"):
         endpoint = f"{Fore.CYAN}{endpoint}{Fore.RESET}"
       elif endpoint.startswith("/static/"):
         endpoint = f"{Fore.MAGENTA}{endpoint}{Fore.RESET}"

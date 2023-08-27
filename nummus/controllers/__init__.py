@@ -12,7 +12,7 @@ ROUTES: t.Dict[str, t.Callable] = {
     "/transactions": transactions.page_all,
     "/transactions/<path:path_uuid>": transactions.page_one,
     "/h/accounts/<path:path_uuid>/edit": accounts.edit_account,
-    "/h/overlay-none": common.overlay_none
+    "/h/none": lambda: ""
 }
 
 

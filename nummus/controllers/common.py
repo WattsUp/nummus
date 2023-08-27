@@ -109,12 +109,3 @@ def ctx_sidebar() -> t.DictAny:
           for cat, accounts in categories.items()
       },
   }
-
-
-def overlay_none() -> str:
-  """Get the context to build the sidebar
-
-  Returns:
-    string HTML response
-  """
-  return '<div id="overlay"></div>'
