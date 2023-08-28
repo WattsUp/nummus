@@ -10,10 +10,10 @@ from nummus.models.base import Base, BaseEnum
 
 ORMTxnCat = orm.Mapped["TransactionCategory"]
 ORMTxnCatOpt = orm.Mapped[t.Optional["TransactionCategory"]]
-ORMTxnCatType = orm.Mapped["TransactionCategoryType"]
+ORMTxnCatType = orm.Mapped["TransactionCategoryGroup"]
 
 
-class TransactionCategoryType(BaseEnum):
+class TransactionCategoryGroup(BaseEnum):
   """Types of Transaction Categories
   """
   INCOME = 1
@@ -28,12 +28,14 @@ class TransactionCategory(Base):
     id: TransactionCategory unique identifier
     uuid: TransactionCategory unique identifier
     name: Name of category
-    type_: Type of category
+    group: Type of category
     custom: True if category is user made
+    locked: True will prevent any changes being made
   """
   name: t.ORMStr
-  type_: ORMTxnCatType
+  group: ORMTxnCatType
   custom: t.ORMBool
+  locked: t.ORMBool = orm.mapped_column(default=False)
 
   @staticmethod
   def add_default(s: orm.Session) -> t.Dict[str, TransactionCategory]:
@@ -46,46 +48,95 @@ class TransactionCategory(Base):
       Dictionary {name: category}
     """
     d: t.Dict[str, TransactionCategory] = {}
-    income = [
-        "Consulting", "Deposits", "Dividends Received",
-        "Dividends Received (tax-advantaged)", "Interest", "Investment Income",
-        "Other Income", "Paychecks/Salary", "Refunds & Reimbursements",
-        "Retirement Income", "Rewards", "Sales", "Services"
-    ]
-    expense = [
-        "Advertising", "Advisory Fee", "ATM/Cash", "Automotive",
-        "Business Miscellaneous", "Cable/Satellite", "Charitable Giving",
-        "Checks", "Child/Dependent", "Clothing/Shoes", "Dues & Subscriptions",
-        "Education", "Electronics", "Entertainment", "Gasoline/Fuel",
-        "General Merchandise", "Gifts", "Groceries", "Healthcare/Medical",
-        "Hobbies", "Home Improvement", "Home Maintenance", "Insurance", "Loans",
-        "Mortgages", "Office Maintenance", "Office Supplies", "Other Bills",
-        "Other Expenses", "Personal Care", "Pets/Pet Care",
-        "Postage & Shipping", "Printing", "Rent", "Restaurants",
-        "Service Charge/Fees", "Taxes", "Telephone", "Travel", "Utilities",
-        "Wages Paid"
-    ]
-    other = [
-        "Credit Card Payments", "Expense Reimbursement", "General Rebalance",
-        "Portfolio Management", "Retirement Contributions", "Savings",
-        "Securities Traded", "Transfers", "Uncategorized", "Fraud"
-    ]
-    for name in income:
+    income = {
+        "Consulting": False,
+        "Deposits": False,
+        "Dividends Received": False,
+        "Dividends Received (tax-advantaged)": False,
+        "Interest": False,
+        "Investment Income": False,
+        "Other Income": False,
+        "Paychecks/Salary": False,
+        "Refunds & Reimbursements": False,
+        "Retirement Income": False,
+        "Rewards": False,
+        "Sales": False,
+        "Services": False
+    }
+    expense = {
+        "Advertising": False,
+        "Advisory Fee": False,
+        "ATM/Cash": False,
+        "Automotive": False,
+        "Business Miscellaneous": False,
+        "Cable/Satellite": False,
+        "Charitable Giving": False,
+        "Checks": False,
+        "Child/Dependent": False,
+        "Clothing/Shoes": False,
+        "Dues & Subscriptions": False,
+        "Education": False,
+        "Electronics": False,
+        "Entertainment": False,
+        "Gasoline/Fuel": False,
+        "General Merchandise": False,
+        "Gifts": False,
+        "Groceries": False,
+        "Healthcare/Medical": False,
+        "Hobbies": False,
+        "Home Improvement": False,
+        "Home Maintenance": False,
+        "Insurance": False,
+        "Loans": False,
+        "Mortgages": False,
+        "Office Maintenance": False,
+        "Office Supplies": False,
+        "Other Bills": False,
+        "Other Expenses": False,
+        "Personal Care": False,
+        "Pets/Pet Care": False,
+        "Postage & Shipping": False,
+        "Printing": False,
+        "Rent": False,
+        "Restaurants": False,
+        "Service Charge/Fees": False,
+        "Taxes": False,
+        "Telephone": False,
+        "Travel": False,
+        "Utilities": False,
+        "Wages Paid": False
+    }
+    other = {
+        "Credit Card Payments": True,
+        "Expense Reimbursement": False,
+        "General Rebalance": False,
+        "Portfolio Management": False,
+        "Retirement Contributions": True,
+        "Savings": True,
+        "Securities Traded": True,
+        "Transfers": True,
+        "Uncategorized": True,
+        "Fraud": False
+    }
+    for name, locked in income.items():
       cat = TransactionCategory(name=name,
-                                type_=TransactionCategoryType.INCOME,
-                                custom=False)
+                                group=TransactionCategoryGroup.INCOME,
+                                custom=False,
+                                locked=locked)
       s.add(cat)
       d[name] = cat
-    for name in expense:
+    for name, locked in expense.items():
       cat = TransactionCategory(name=name,
-                                type_=TransactionCategoryType.EXPENSE,
-                                custom=False)
+                                group=TransactionCategoryGroup.EXPENSE,
+                                custom=False,
+                                locked=locked)
       s.add(cat)
       d[name] = cat
-    for name in other:
+    for name, locked in other.items():
       cat = TransactionCategory(name=name,
-                                type_=TransactionCategoryType.OTHER,
-                                custom=False)
+                                group=TransactionCategoryGroup.OTHER,
+                                custom=False,
+                                locked=locked)
       s.add(cat)
       d[name] = cat
     s.commit()

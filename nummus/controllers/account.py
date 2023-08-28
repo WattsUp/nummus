@@ -29,8 +29,8 @@ def edit_account(path_uuid: str) -> str:
     error: str = None
     if flask.request.method == "POST":
       form = flask.request.form
-      institution = form["institution"]
-      name = form["name"]
+      institution = form["institution"].strip()
+      name = form["name"].strip()
       category = web_utils.parse_enum(form["category"], AccountCategory)
       closed = "closed" in form
 

@@ -7,7 +7,7 @@ from nummus import models
 from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            AssetValuation, Transaction, TransactionCategory,
-                           TransactionCategoryType, TransactionSplit)
+                           TransactionCategoryGroup, TransactionSplit)
 
 from tests.base import TestBase
 
@@ -106,7 +106,7 @@ class TestAccount(TestBase):
                         category=AssetCategory.SECURITY)
       assets.append(new_asset)
     t_cat = TransactionCategory(name="Securities Traded",
-                                type_=TransactionCategoryType.OTHER,
+                                group=TransactionCategoryGroup.OTHER,
                                 custom=False)
     s.add(t_cat)
     s.add(acct)

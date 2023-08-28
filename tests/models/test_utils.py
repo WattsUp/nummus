@@ -5,7 +5,7 @@ import datetime
 
 from nummus import models
 from nummus.models import (utils, Account, AccountCategory, Transaction,
-                           TransactionCategory, TransactionCategoryType,
+                           TransactionCategory, TransactionCategoryGroup,
                            TransactionSplit)
 
 from tests.base import TestBase
@@ -76,7 +76,7 @@ class TestUtils(TestBase):
     s.commit()
 
     t_cat = TransactionCategory(name="Uncategorized",
-                                type_=TransactionCategoryType.OTHER,
+                                group=TransactionCategoryGroup.OTHER,
                                 custom=False)
     s.add(t_cat)
     s.commit()

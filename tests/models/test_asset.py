@@ -7,7 +7,7 @@ from decimal import Decimal
 from nummus import models
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            AssetSplit, AssetValuation, Transaction,
-                           TransactionCategory, TransactionCategoryType,
+                           TransactionCategory, TransactionCategoryGroup,
                            TransactionSplit)
 
 from tests.base import TestBase
@@ -270,7 +270,7 @@ class TestAsset(TestBase):
     s.commit()
 
     t_cat = TransactionCategory(name="Securities Traded",
-                                type_=TransactionCategoryType.OTHER,
+                                group=TransactionCategoryGroup.OTHER,
                                 custom=False)
     s.add(t_cat)
     s.commit()

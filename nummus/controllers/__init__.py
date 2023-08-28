@@ -13,6 +13,12 @@ ROUTES: t.Dict[str, t.Callable] = {
     "/h/sidebar": (common.sidebar, ["GET"]),
     "/h/transaction-categories":
         (transaction_category.overlay_categories, ["GET"]),
+    "/h/transaction-categories/new":
+        (transaction_category.new_category, ["GET", "POST"]),
+    "/h/transaction-categories/<path:path_uuid>/edit":
+        (transaction_category.edit_category, ["GET", "POST"]),
+    "/h/transaction-categories/<path:path_uuid>/delete":
+        (transaction_category.delete_category, ["GET", "POST"]),
     "/transactions": (transaction.page_all, ["GET"]),
     "/transactions/<path:path_uuid>": (transaction.page_one, ["GET"]),
     "/h/accounts/<path:path_uuid>/edit": (account.edit_account, ["GET",

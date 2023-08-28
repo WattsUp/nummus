@@ -12,7 +12,7 @@ from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import (TransactionCategory,
-                                                TransactionCategoryType)
+                                                TransactionCategoryGroup)
 from nummus.models.utils import search, query_count, paginate
 
 

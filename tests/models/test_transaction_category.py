@@ -2,7 +2,7 @@
 """
 
 from nummus import models
-from nummus.models import TransactionCategory, TransactionCategoryType
+from nummus.models import TransactionCategory, TransactionCategoryGroup
 
 from tests.base import TestBase
 
@@ -17,7 +17,7 @@ class TestTransactionCategory(TestBase):
 
     d = {
         "name": self.random_string(),
-        "type_": self._RNG.choice(TransactionCategoryType),
+        "group": self._RNG.choice(TransactionCategoryGroup),
         "custom": False
     }
 
@@ -26,7 +26,7 @@ class TestTransactionCategory(TestBase):
     s.commit()
 
     self.assertEqual(d["name"], t_cat.name)
-    self.assertEqual(d["type_"], t_cat.type_)
+    self.assertEqual(d["group"], t_cat.group)
     self.assertEqual(d["custom"], t_cat.custom)
 
   def test_add_default(self):
@@ -40,26 +40,26 @@ class TestTransactionCategory(TestBase):
     n_expense = 0
     n_other = 0
     for cat in result.values():
-      if cat.type_ == TransactionCategoryType.INCOME:
+      if cat.group == TransactionCategoryGroup.INCOME:
         n_income += 1
-      elif cat.type_ == TransactionCategoryType.EXPENSE:
+      elif cat.group == TransactionCategoryGroup.EXPENSE:
         n_expense += 1
-      elif cat.type_ == TransactionCategoryType.OTHER:
+      elif cat.group == TransactionCategoryGroup.OTHER:
         n_other += 1
 
     query = s.query(TransactionCategory)
     query = query.where(
-        TransactionCategory.type_ == TransactionCategoryType.INCOME)
+        TransactionCategory.group == TransactionCategoryGroup.INCOME)
     self.assertEqual(n_income, query.count())
 
     query = s.query(TransactionCategory)
     query = query.where(
-        TransactionCategory.type_ == TransactionCategoryType.EXPENSE)
+        TransactionCategory.group == TransactionCategoryGroup.EXPENSE)
     self.assertEqual(n_expense, query.count())
 
     query = s.query(TransactionCategory)
     query = query.where(
-        TransactionCategory.type_ == TransactionCategoryType.OTHER)
+        TransactionCategory.group == TransactionCategoryGroup.OTHER)
     self.assertEqual(n_other, query.count())
 
     query = s.query(TransactionCategory)
