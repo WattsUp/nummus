@@ -63,21 +63,6 @@ class AssetValuation(Base):
   value: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
 
-  @property
-  def asset(self) -> Asset:
-    """Asset for which this AssetValuation is for
-    """
-    s = orm.object_session(self)
-    return s.query(Asset).where(Asset.id == self.asset_id).first()
-
-  @asset.setter
-  def asset(self, asset: Asset) -> None:
-    if not isinstance(asset, Asset):
-      raise TypeError("AssetValuation.asset must be of type Asset")
-    if asset.id is None:
-      raise ValueError("Commit Asset before adding to split")
-    super().__setattr__("asset_id", asset.id)
-
 
 class AssetCategory(BaseEnum):
   """Categories of Assets

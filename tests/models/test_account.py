@@ -352,7 +352,7 @@ class TestAccount(TestBase):
     # Add valuations to Asset
     prices = self.random_decimal(1, 10, size=len(target_dates))
     for date, p in zip(target_dates, prices):
-      v = AssetValuation(asset=assets[0], date=date, value=p)
+      v = AssetValuation(asset_id=assets[0].id, date=date, value=p)
       s.add(v)
     s.commit()
 

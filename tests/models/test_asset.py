@@ -40,28 +40,6 @@ class TestAssetSplit(TestBase):
     self.assertEqual(d["multiplier"], v.multiplier)
     self.assertEqual(d["date"], v.date)
 
-    # Set via asset=a
-    d = {
-        "asset": a,
-        "multiplier": self.random_decimal(1, 10),
-        "date": datetime.date.today()
-    }
-
-    v = AssetSplit(**d)
-    s.add(v)
-    s.commit()
-
-    self.assertEqual(a, v.asset)
-    self.assertEqual(d["multiplier"], v.multiplier)
-    self.assertEqual(d["date"], v.date)
-
-    # Set an uncommitted Asset
-    a = Asset(name=self.random_string(), category=AssetCategory.SECURITY)
-    self.assertRaises(ValueError, setattr, v, "asset", a)
-
-    # Set an not an Asset
-    self.assertRaises(TypeError, setattr, v, "asset", self.random_string())
-
 
 class TestAssetValuation(TestBase):
   """Test AssetValuation class
@@ -86,16 +64,8 @@ class TestAssetValuation(TestBase):
     s.commit()
 
     self.assertEqual(d["asset_id"], v.asset_id)
-    self.assertEqual(a, v.asset)
     self.assertEqual(d["value"], v.value)
     self.assertEqual(d["date"], v.date)
-
-    # Set an uncommitted Asset
-    a = Asset(name=self.random_string(), category=AssetCategory.SECURITY)
-    self.assertRaises(ValueError, setattr, v, "asset", a)
-
-    # Set an not an Asset
-    self.assertRaises(TypeError, setattr, v, "asset", self.random_string())
 
 
 class TestAsset(TestBase):
@@ -175,7 +145,7 @@ class TestAsset(TestBase):
     s.add(a)
     s.commit()
 
-    v_today = AssetValuation(asset=a,
+    v_today = AssetValuation(asset_id=a.id,
                              date=today,
                              value=self.random_decimal(-1, 1))
     s.add(v_today)
@@ -201,13 +171,13 @@ class TestAsset(TestBase):
     s.add(a)
     s.commit()
 
-    v_today = AssetValuation(asset=a,
+    v_today = AssetValuation(asset_id=a.id,
                              date=today,
                              value=self.random_decimal(-1, 1))
-    v_before = AssetValuation(asset=a,
+    v_before = AssetValuation(asset_id=a.id,
                               date=today - datetime.timedelta(days=2),
                               value=self.random_decimal(-1, 1))
-    v_after = AssetValuation(asset=a,
+    v_after = AssetValuation(asset_id=a.id,
                              date=today + datetime.timedelta(days=2),
                              value=self.random_decimal(-1, 1))
     s.add_all((v_today, v_before, v_after))
@@ -306,15 +276,15 @@ class TestAsset(TestBase):
     s.add(t_cat)
     s.commit()
 
-    v = AssetValuation(asset=a,
+    v = AssetValuation(asset_id=a.id,
                        date=today - datetime.timedelta(days=100),
                        value=value_today)
     s.add(v)
     s.commit()
 
     # Multiple splits that need be included on the first valuation
-    split_0 = AssetSplit(asset=a, date=today, multiplier=multiplier_0)
-    split_1 = AssetSplit(asset=a, date=today, multiplier=multiplier_1)
+    split_0 = AssetSplit(asset_id=a.id, date=today, multiplier=multiplier_0)
+    split_1 = AssetSplit(asset_id=a.id, date=today, multiplier=multiplier_1)
     s.add_all((split_0, split_1))
     s.commit()
 
