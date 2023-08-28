@@ -135,6 +135,17 @@
   #overlay:empty {
     @apply hidden;
   }
+  #form-categories a {
+    @apply flex;
+  }
+
+  #form-categories a:hover > svg {
+    @apply fill-black;
+  }
+
+  #form-categories a > svg {
+    @apply block fill-white transition-colors p-1;
+  }
 }
 
 @font-face {

@@ -147,6 +147,8 @@ class Server:
 
     # Enable debugger and reloader when debug
     self._app.debug = debug
+    if debug:
+      print(f"{Fore.MAGENTA}Running in debug mode")
 
     # Inject common variables into templates
     self._app.context_processor(lambda: {"version": version.__version__})

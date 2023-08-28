@@ -1,11 +1,11 @@
 <a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="/h/none" hx-target="#overlay"></a>
 <div class="w-[800px] h-[580px] bg-white opacity-100 m-auto flex flex-col pt-2">
   <a hx-get="/h/none" hx-target="#overlay" class="ml-auto px-6">
-    <svg viewbox="0 0 24 24" class="w-[32px] h-[32px]">
-      <path d="m16.192 6.344-4.243 4.242-4.242-4.242-1.414 1.414L10.535 12l-4.242 4.242 1.414 1.414 4.242-4.242 4.243 4.242 1.414-1.414L13.364 12l4.242-4.242z"/>
-    </svg>
+    {% with class="w-[32px] h-[32px]" %}
+    {% include "svg/x.svg" %}
+    {% endwith %}
   </a>
-  <h1 class="font-serif text-4xl px-6">Edit account</h1>
+  <h1 class="font-serif text-4xl px-6 text-green-600">Edit account</h1>
   <form class="flex w-full gap-4 px-6 grow" id="form-account">
     <div class="w-5/12 flex flex-col items-center">
       <hr class="w-full border-grey-200">

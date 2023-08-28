@@ -4,16 +4,19 @@
 import flask
 
 from nummus import custom_types as t
-from nummus.controllers import accounts, common, dashboard, transactions
+from nummus.controllers import (account, common, dashboard, transaction,
+                                transaction_category)
 
 ROUTES: t.Dict[str, t.Callable] = {
     "/": (dashboard.page_home, ["GET"]),
     "/index": (dashboard.page_home, ["GET"]),
     "/h/sidebar": (common.sidebar, ["GET"]),
-    "/transactions": (transactions.page_all, ["GET"]),
-    "/transactions/<path:path_uuid>": (transactions.page_one, ["GET"]),
-    "/h/accounts/<path:path_uuid>/edit":
-        (accounts.edit_account, ["GET", "POST"]),
+    "/h/transaction-categories":
+        (transaction_category.overlay_categories, ["GET"]),
+    "/transactions": (transaction.page_all, ["GET"]),
+    "/transactions/<path:path_uuid>": (transaction.page_one, ["GET"]),
+    "/h/accounts/<path:path_uuid>/edit": (account.edit_account, ["GET",
+                                                                 "POST"]),
     "/h/none": (lambda: "", ["GET"])
 }
 
