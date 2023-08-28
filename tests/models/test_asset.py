@@ -36,7 +36,6 @@ class TestAssetSplit(TestBase):
     s.commit()
 
     self.assertEqual(d["asset_id"], v.asset_id)
-    self.assertEqual(a, v.asset)
     self.assertEqual(d["multiplier"], v.multiplier)
     self.assertEqual(d["date"], v.date)
 

@@ -35,21 +35,6 @@ class AssetSplit(Base):
   multiplier: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
 
-  @property
-  def asset(self) -> Asset:
-    """Asset for which this AssetSplit is for
-    """
-    s = orm.object_session(self)
-    return s.query(Asset).where(Asset.id == self.asset_id).first()
-
-  @asset.setter
-  def asset(self, asset: Asset) -> None:
-    if not isinstance(asset, Asset):
-      raise TypeError("AssetSplit.asset must be of type Asset")
-    if asset.id is None:
-      raise ValueError("Commit Asset before adding to split")
-    super().__setattr__("asset_id", asset.id)
-
 
 class AssetValuation(Base):
   """Asset Valuation model for storing a value of an asset on a specific date
