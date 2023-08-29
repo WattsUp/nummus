@@ -86,7 +86,7 @@ class Account(Base):
 
     # Get Account value on start date
     # It is callable, sum returns a generator type
-    query = s.query(sqlalchemy.func.sum(TransactionSplit.total))  # pylint: disable=not-callable
+    query = s.query(sqlalchemy.func.sum(TransactionSplit.amount))  # pylint: disable=not-callable
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= start)
     iv = query.scalar()
@@ -133,7 +133,7 @@ class Account(Base):
       query = s.query(TransactionSplit)
       query = query.with_entities(
           TransactionSplit.date,
-          TransactionSplit.total,
+          TransactionSplit.amount,
           TransactionSplit.asset_id,
           TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
           TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
@@ -142,9 +142,9 @@ class Account(Base):
       query = query.where(TransactionSplit.date > start)
       query = query.order_by(TransactionSplit.date)
 
-      for t_date, total, a_id, qty_int, qty_frac in query.all():
+      for t_date, amount, a_id, qty_int, qty_frac in query.all():
         t_date: datetime.date
-        total: Decimal
+        amount: Decimal
         a_id: int
         qty_int: int
         qty_frac: Decimal
@@ -154,7 +154,7 @@ class Account(Base):
         while date < t_date:
           date = next_day(date)
 
-        current_cash += total
+        current_cash += amount
         if a_id is None:
           continue
         if a_id not in current_qty_assets:
@@ -224,7 +224,7 @@ class Account(Base):
     # Get Account value on start date
     query = s.query(TransactionSplit)
     query = query.with_entities(TransactionSplit.account_id,
-                                sqlalchemy.func.sum(TransactionSplit.total))  # pylint: disable=not-callable
+                                sqlalchemy.func.sum(TransactionSplit.amount))  # pylint: disable=not-callable
     query = query.where(TransactionSplit.date <= start)
     if ids is not None:
       query = query.where(TransactionSplit.account_id.in_(ids))
@@ -285,7 +285,7 @@ class Account(Base):
       query = query.with_entities(
           TransactionSplit.account_id,
           TransactionSplit.date,
-          TransactionSplit.total,
+          TransactionSplit.amount,
           TransactionSplit.asset_id,
           TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
           TransactionSplit._asset_qty_frac)  # pylint: disable=protected-access
@@ -293,10 +293,10 @@ class Account(Base):
       query = query.where(TransactionSplit.date > start)
       query = query.order_by(TransactionSplit.date)
 
-      for acct_id, t_date, total, a_id, qty_int, qty_frac in query.all():
+      for acct_id, t_date, amount, a_id, qty_int, qty_frac in query.all():
         acct_id: int
         t_date: datetime.date
-        total: Decimal
+        amount: Decimal
         a_id: int
         qty_int: int
         qty_frac: Decimal
@@ -306,7 +306,7 @@ class Account(Base):
         while date < t_date:
           date = next_day(date)
 
-        current_cash[acct_id] += total
+        current_cash[acct_id] += amount
         if a_id is None:
           continue
         acct_current_qty_assets = current_qty_assets[acct_id]
@@ -373,16 +373,16 @@ class Account(Base):
 
     # Transactions between start and end
     query = s.query(TransactionSplit)
-    query = query.with_entities(TransactionSplit.date, TransactionSplit.total,
+    query = query.with_entities(TransactionSplit.date, TransactionSplit.amount,
                                 TransactionSplit.category_id)
     query = query.where(TransactionSplit.account_id == self.id)
     query = query.where(TransactionSplit.date <= end)
     query = query.where(TransactionSplit.date >= start)
     query = query.order_by(TransactionSplit.date)
 
-    for t_date, total, category_id in query.all():
+    for t_date, amount, category_id in query.all():
       t_date: datetime.date
-      total: Decimal
+      amount: Decimal
       category_id: int
       # Don't need thanks SQL filters
       # if t_split.date > end:
@@ -395,7 +395,7 @@ class Account(Base):
           daily_categories[k] = 0
         date += datetime.timedelta(days=1)
 
-      daily_categories[category_id] += total
+      daily_categories[category_id] += amount
 
     while date <= end:
       dates.append(date)

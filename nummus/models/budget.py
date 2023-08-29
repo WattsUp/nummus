@@ -16,17 +16,17 @@ class Budget(Base):
   Attributes:
     uuid: Budget unique identifier
     date: Date on which Budget is effective
-    total: Target limit of expense per month, zero or negative
+    amount: Target limit of expense per month, zero or negative
   """
   date: t.ORMDate = orm.mapped_column(unique=True)
-  total: t.ORMReal = orm.mapped_column(Decimal6)
+  amount: t.ORMReal = orm.mapped_column(Decimal6)
 
-  @orm.validates("total")
+  @orm.validates("amount")
   def validate_total(
       self,
       key: str,  # pylint: disable=unused-argument
       field: t.Real) -> t.Real:
-    """Validates total constraints are met
+    """Validates amount constraints are met
 
     Args:
       key: Field being updated
@@ -36,8 +36,8 @@ class Budget(Base):
       field
 
     Raises:
-      ValueError if total is positive
+      ValueError if amount is positive
     """
     if field > 0:
-      raise ValueError("Budget total must be zero or negative")
+      raise ValueError("Budget amount must be zero or negative")
     return field

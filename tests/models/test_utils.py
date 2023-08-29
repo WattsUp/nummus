@@ -84,9 +84,9 @@ class TestUtils(TestBase):
     for _ in range(n_transactions):
       txn = Transaction(account_id=acct.id,
                         date=today,
-                        total=100,
+                        amount=100,
                         statement=self.random_string())
-      t_split = TransactionSplit(total=100, parent=txn, category_id=t_cat.id)
+      t_split = TransactionSplit(amount=100, parent=txn, category_id=t_cat.id)
       s.add_all((txn, t_split))
     s.commit()
 

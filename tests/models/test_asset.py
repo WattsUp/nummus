@@ -291,9 +291,9 @@ class TestAsset(TestBase):
     # A split on today means trading occurs at yesterday / multiplier pricing
     txn_0 = Transaction(account_id=acct.id,
                         date=yesterday,
-                        total=value_yesterday,
+                        amount=value_yesterday,
                         statement=self.random_string())
-    t_split_0 = TransactionSplit(total=txn_0.total,
+    t_split_0 = TransactionSplit(amount=txn_0.amount,
                                  parent=txn_0,
                                  asset_id=a.id,
                                  asset_quantity_unadjusted=1,
@@ -302,9 +302,9 @@ class TestAsset(TestBase):
 
     txn_1 = Transaction(account_id=acct.id,
                         date=today,
-                        total=value_today,
+                        amount=value_today,
                         statement=self.random_string())
-    t_split_1 = TransactionSplit(total=txn_1.total,
+    t_split_1 = TransactionSplit(amount=txn_1.amount,
                                  parent=txn_1,
                                  asset_id=a.id,
                                  asset_quantity_unadjusted=1,

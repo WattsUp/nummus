@@ -13,7 +13,7 @@ from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 class CSVTransactionImporter(TransactionImporter):
   """Import a CSV of transactions
 
-  Required Columns: account,date,total,payee,description
+  Required Columns: account,date,amount,payee,description
 
   Other columns are allowed
   """
@@ -21,7 +21,7 @@ class CSVTransactionImporter(TransactionImporter):
   _COLUMNS: t.Dict[str, t.Tuple[bool, t.StrToObj]] = {
       "account": (True, str),
       "date": (True, datetime.date.fromisoformat),
-      "total": (True, common.parse_financial),
+      "amount": (True, common.parse_financial),
       "payee": (True, str),
       "description": (True, str),
       "sales_tax": (False, common.parse_financial),

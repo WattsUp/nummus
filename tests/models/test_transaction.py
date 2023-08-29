@@ -28,7 +28,7 @@ class TestTransaction(TestBase):
     d = {
         "account_id": acct.id,
         "date": datetime.date.today(),
-        "total": self.random_decimal(-1, 1),
+        "amount": self.random_decimal(-1, 1),
         "statement": self.random_string()
     }
 
@@ -38,7 +38,7 @@ class TestTransaction(TestBase):
 
     self.assertEqual(acct.id, txn.account_id)
     self.assertEqual(d["date"], txn.date)
-    self.assertEqual(d["total"], txn.total)
+    self.assertEqual(d["amount"], txn.amount)
     self.assertEqual(d["statement"], txn.statement)
     self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
 
@@ -68,7 +68,7 @@ class TestTransactionSplit(TestBase):
     d = {
         "account_id": acct.id,
         "date": datetime.date.today(),
-        "total": self.random_decimal(-1, 1),
+        "amount": self.random_decimal(-1, 1),
         "statement": self.random_string()
     }
 
@@ -77,7 +77,7 @@ class TestTransactionSplit(TestBase):
     s.commit()
 
     d = {
-        "total": self.random_decimal(-1, 1),
+        "amount": self.random_decimal(-1, 1),
         "parent": txn,
         "category_id": t_cat.id
     }
@@ -91,13 +91,13 @@ class TestTransactionSplit(TestBase):
     self.assertIsNone(t_split_0.asset_id)
     self.assertIsNone(t_split_0.asset_quantity)
     self.assertIsNone(t_split_0.asset_quantity_unadjusted)
-    self.assertEqual(t_split_0.total, d["total"])
+    self.assertEqual(t_split_0.amount, d["amount"])
     self.assertEqual(t_split_0.date, txn.date)
     self.assertEqual(t_split_0.locked, txn.locked)
     self.assertEqual(t_split_0.account_id, acct.id)
 
     d = {
-        "total": self.random_decimal(-1, 0),
+        "amount": self.random_decimal(-1, 0),
         "payee": self.random_string(),
         "description": self.random_string(),
         "category_id": t_cat.id,
@@ -117,7 +117,7 @@ class TestTransactionSplit(TestBase):
     self.assertEqual(t_split_1.asset_quantity, d["asset_quantity_unadjusted"])
     self.assertEqual(t_split_1.asset_quantity_unadjusted,
                      d["asset_quantity_unadjusted"])
-    self.assertEqual(t_split_1.total, d["total"])
+    self.assertEqual(t_split_1.amount, d["amount"])
     self.assertEqual(t_split_1.payee, d["payee"])
     self.assertEqual(t_split_1.description, d["description"])
     self.assertEqual(t_split_1.tag, d["tag"])
@@ -152,9 +152,9 @@ class TestTransactionSplit(TestBase):
     txn = Transaction(account_id=acct.id,
                       date=today,
                       statement=self.random_string(),
-                      total=10)
+                      amount=10)
     t_split = TransactionSplit(parent=txn,
-                               total=10,
+                               amount=10,
                                asset_quantity_unadjusted=qty,
                                category_id=t_cat.id)
     s.add_all((txn, t_split))

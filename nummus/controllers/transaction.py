@@ -75,7 +75,7 @@ def ctx_transaction_split(t_split: TransactionSplit) -> t.DictAny:
       "description": t_split.description,
       "category_id": t_split.category_id,
       "tag": t_split.tag,
-      "total": t_split.total,
+      "amount": t_split.amount,
       "asset_id": t_split.asset_id,
       "asset_qty": t_split.asset_quantity,
       "asset_qty_unadjusted": t_split.asset_quantity_unadjusted

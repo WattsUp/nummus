@@ -62,7 +62,7 @@ class TestAccount(TestBase):
 
     t_today = Transaction(account_id=acct.id,
                           date=today,
-                          total=self.random_decimal(-1, 1),
+                          amount=self.random_decimal(-1, 1),
                           statement=self.random_string())
     s.add(t_today)
     s.commit()
@@ -72,7 +72,7 @@ class TestAccount(TestBase):
 
     t_before = Transaction(account_id=acct.id,
                            date=today - datetime.timedelta(days=1),
-                           total=self.random_decimal(-1, 1),
+                           amount=self.random_decimal(-1, 1),
                            statement=self.random_string())
     s.add(t_before)
     s.commit()
@@ -82,7 +82,7 @@ class TestAccount(TestBase):
 
     t_after = Transaction(account_id=acct.id,
                           date=today + datetime.timedelta(days=1),
-                          total=self.random_decimal(-1, 1),
+                          amount=self.random_decimal(-1, 1),
                           statement=self.random_string())
     s.add(t_after)
     s.commit()
@@ -126,10 +126,10 @@ class TestAccount(TestBase):
     # Fund account on first day
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=self.random_decimal(10, 100),
+                      amount=self.random_decimal(10, 100),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                category_id=t_cat.id)
     s.add_all((txn, t_split))
     s.commit()
@@ -138,10 +138,10 @@ class TestAccount(TestBase):
     q0 = self.random_decimal(0, 10)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=self.random_decimal(-10, -1),
+                      amount=self.random_decimal(-10, -1),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                asset_id=assets[0].id,
                                asset_quantity_unadjusted=q0,
                                category_id=t_cat.id)
@@ -159,10 +159,10 @@ class TestAccount(TestBase):
     q1 = self.random_decimal(0, 10)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[-1],
-                      total=self.random_decimal(1, 10),
+                      amount=self.random_decimal(1, 10),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                asset_id=assets[0].id,
                                asset_quantity_unadjusted=-q1,
                                category_id=t_cat.id)
@@ -180,10 +180,10 @@ class TestAccount(TestBase):
     q2 = self.random_decimal(0, 10)
     txn = Transaction(account_id=acct.id,
                       date=today,
-                      total=self.random_decimal(-10, -1),
+                      amount=self.random_decimal(-10, -1),
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                asset_id=assets[1].id,
                                asset_quantity_unadjusted=q2,
                                category_id=t_cat.id)
@@ -271,10 +271,10 @@ class TestAccount(TestBase):
     t_fund = self.random_decimal(10, 100)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=t_fund,
+                      amount=t_fund,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                category_id=t_cat.id)
     s.add_all((txn, t_split))
     s.commit()
@@ -295,10 +295,10 @@ class TestAccount(TestBase):
     q0 = self.random_decimal(0, 10)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=t0,
+                      amount=t0,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                asset_id=assets[0].id,
                                asset_quantity_unadjusted=q0,
                                category_id=t_cat.id)
@@ -324,10 +324,10 @@ class TestAccount(TestBase):
     t1 = self.random_decimal(1, 10)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[-1],
-                      total=t1,
+                      amount=t1,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                asset_id=assets[0].id,
                                asset_quantity_unadjusted=-q0,
                                category_id=t_cat.id)
@@ -424,10 +424,10 @@ class TestAccount(TestBase):
     t_fund = self.random_decimal(10, 100)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=t_fund,
+                      amount=t_fund,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                category_id=t_cat_fund.id)
     s.add_all((txn, t_split))
     s.commit()
@@ -442,10 +442,10 @@ class TestAccount(TestBase):
     t0 = self.random_decimal(-10, -1)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[1],
-                      total=t0,
+                      amount=t0,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                category_id=t_cat_trade.id)
     s.add_all((txn, t_split))
     s.commit()
@@ -460,10 +460,10 @@ class TestAccount(TestBase):
     t1 = self.random_decimal(1, 10)
     txn = Transaction(account_id=acct.id,
                       date=target_dates[-1],
-                      total=t1,
+                      amount=t1,
                       statement=self.random_string())
     t_split = TransactionSplit(parent=txn,
-                               total=txn.total,
+                               amount=txn.amount,
                                category_id=t_cat_trade.id)
     s.add_all((txn, t_split))
     s.commit()

@@ -25,7 +25,7 @@ def search(query: orm.Query[Base], cls: t.Type[Base],
     search_str: String to search
 
   Returns:
-    List of results, count of total results
+    List of results, count of amount results
   """
   # TODO (WattsUp) Caching and cache invalidation
   if search_str is None or len(search_str) < 3:
@@ -79,12 +79,12 @@ def paginate(query: orm.Query[Base], limit: int,
     offset: Result offset, advances to subsequent pages
 
   Returns:
-    Page (list of result from query), total count for query, next_offset for
+    Page (list of result from query), amount count for query, next_offset for
     subsequent calls
   """
   offset = max(0, offset)
 
-  # Get total number from filters
+  # Get amount number from filters
   count = query_count(query)
 
   # Apply limiting, and offset

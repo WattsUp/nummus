@@ -232,7 +232,7 @@ class Portfolio:
         # Create a single split for each transaction
         category_s = d.pop("category", "Uncategorized")
         d_split: importers.TxnDict = {
-            "total": d["total"],  # Both split and parent have total
+            "amount": d["amount"],  # Both split and parent have amount
             "payee": d.pop("payee", None),
             "description": d.pop("description", None),
             "category_id": categories[category_s].id,

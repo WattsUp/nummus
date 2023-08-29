@@ -1,4 +1,4 @@
-Account,Date,Total,Payee,Description,Asset,ASSET_QUANTITY,Tag,Category
+Account,Date,Amount,Payee,Description,Asset,ASSET_QUANTITY,Tag,Category
 Monkey Bank Checking,2023-01-01,"$1,000.00 ",Employer,Paycheck,,,,Paychecks/Salary
 Monkey Bank Checking,2023-01-02,-12.34,Monkey Store,Banana,,,Fruit,Groceries
 Monkey Bank Checking,2023-01-02,-900,Monkey Investments,Account Transfer,,,,Transfers

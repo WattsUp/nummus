@@ -12,7 +12,7 @@ from tests import base
 TRANSACTIONS_EXTRAS = [{
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 1),
-    "total": Decimal("1000.0"),
+    "amount": Decimal("1000.0"),
     "payee": "Employer",
     "description": "Paycheck",
     "statement": "Paycheck",
@@ -20,7 +20,7 @@ TRANSACTIONS_EXTRAS = [{
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("-12.34"),
+    "amount": Decimal("-12.34"),
     "payee": "Monkey Store",
     "description": "Banana",
     "statement": "Banana",
@@ -29,7 +29,7 @@ TRANSACTIONS_EXTRAS = [{
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("-900.0"),
+    "amount": Decimal("-900.0"),
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
@@ -37,7 +37,7 @@ TRANSACTIONS_EXTRAS = [{
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("900.0"),
+    "amount": Decimal("900.0"),
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
@@ -45,7 +45,7 @@ TRANSACTIONS_EXTRAS = [{
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 3),
-    "total": Decimal("-900.0"),
+    "amount": Decimal("-900.0"),
     "payee": "Monkey Investments",
     "description": "Security Exchange",
     "statement": "Security Exchange",
@@ -55,7 +55,7 @@ TRANSACTIONS_EXTRAS = [{
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 2, 1),
-    "total": Decimal("1234.56"),
+    "amount": Decimal("1234.56"),
     "payee": "Monkey Investments",
     "description": "Profit Maker",
     "statement": "Profit Maker",
@@ -102,28 +102,28 @@ class TestCSVTransactionImporter(base.TestBase):
     target = [{
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 1),
-        "total": Decimal("1000.0"),
+        "amount": Decimal("1000.0"),
         "payee": "Employer",
         "description": "Paycheck",
         "statement": "Paycheck"
     }, {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("-12.34"),
+        "amount": Decimal("-12.34"),
         "payee": "Monkey Store",
         "description": "Banana",
         "statement": "Banana"
     }, {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("-900.0"),
+        "amount": Decimal("-900.0"),
         "payee": "Monkey Investments",
         "description": "Account Transfer",
         "statement": "Account Transfer"
     }, {
         "account": "Monkey Investments",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("900.0"),
+        "amount": Decimal("900.0"),
         "payee": "Monkey Investments",
         "description": "Account Transfer",
         "statement": "Account Transfer"

@@ -26,7 +26,7 @@ class TransactionSplit(Base):
   Attributes:
     id: TransactionSplit unique identifier
     uuid: TransactionSplit unique identifier
-    total: Total amount of cash exchanged. Positive indicated Account
+    amount: Amount amount of cash exchanged. Positive indicated Account
       increases in value (inflow)
     payee: Name of payee (for outflow)/payer (for inflow)
     description: Description of exchange
@@ -41,7 +41,7 @@ class TransactionSplit(Base):
     asset_quantity: Number of units of Asset exchanged, Positive indicates
       Account gained Assets (inflow)
   """
-  total: t.ORMReal = orm.mapped_column(Decimal6)
+  amount: t.ORMReal = orm.mapped_column(Decimal6)
   payee: t.ORMStrOpt
   description: t.ORMStrOpt
   tag: t.ORMStrOpt
@@ -161,7 +161,7 @@ class Transaction(Base):
     uuid: Transaction unique identifier
     account: Account that owns this Transaction
     date: Date on which Transaction occurred
-    total: Total amount of cash exchanged. Positive indicated Account
+    amount: Amount amount of cash exchanged. Positive indicated Account
       increases in value (inflow)
     statement: Text appearing on Account statement
     locked: True only allows manually editing, False allows automatic changes
@@ -171,7 +171,7 @@ class Transaction(Base):
   account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
 
   date: t.ORMDate
-  total: t.ORMReal = orm.mapped_column(Decimal6)
+  amount: t.ORMReal = orm.mapped_column(Decimal6)
   statement: t.ORMStr
   locked: t.ORMBool = orm.mapped_column(default=False)
 

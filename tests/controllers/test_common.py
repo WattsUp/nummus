@@ -57,18 +57,18 @@ class TestCommon(WebTestBase):
 
       txn = Transaction(account_id=acct_savings.id,
                         date=today,
-                        total=100,
+                        amount=100,
                         statement=self.random_string())
-      t_split = TransactionSplit(total=txn.total,
+      t_split = TransactionSplit(amount=txn.amount,
                                  parent=txn,
                                  category_id=t_cat.id)
       s.add_all((txn, t_split))
 
       txn = Transaction(account_id=acct_checking.id,
                         date=today,
-                        total=-50,
+                        amount=-50,
                         statement=self.random_string())
-      t_split = TransactionSplit(total=txn.total,
+      t_split = TransactionSplit(amount=txn.amount,
                                  parent=txn,
                                  category_id=t_cat.id)
       s.add_all((txn, t_split))

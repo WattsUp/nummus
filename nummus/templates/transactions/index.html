@@ -39,7 +39,7 @@
             <td>{{ txn["description"] }}</td>
             <td>{{ txn["category"] }}</td>
             <td>{{ txn["tag"] or "" }}</td>
-            <td>{{ txn["total"] | money }}</td>
+            <td>{{ txn["amount"] | money }}</td>
           </tr>
         {% endfor %}
       </tbody>

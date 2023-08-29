@@ -367,9 +367,9 @@ class TestPortfolio(TestBase):
           elif k in split_properties:
             r_v = getattr(r_split, k)
             self.assertEqual(t_v, r_v)
-          elif k == "total":
-            self.assertEqual(t_v, res.total)
-            self.assertEqual(t_v, r_split.total)
+          elif k == "amount":
+            self.assertEqual(t_v, res.amount)
+            self.assertEqual(t_v, r_split.amount)
           else:
             r_v = getattr(res, k)
             self.assertEqual(t_v, r_v)

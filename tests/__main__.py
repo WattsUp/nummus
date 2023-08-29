@@ -146,7 +146,7 @@ def post_tests() -> bool:
           f"{cover * 100:6.2f}%")
 
     if cover != 1:
-      print(f"{Fore.RED}API Coverage failure: total of {cover*100:.2f} "
+      print(f"{Fore.RED}API Coverage failure: amount of {cover*100:.2f} "
             "is less than fail-under=100.00")
       return False
   return True
