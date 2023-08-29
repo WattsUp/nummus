@@ -188,3 +188,13 @@ def delete_category(path_uuid: str) -> str:
 
   return flask.render_template("transaction_categories/delete.html",
                                category=ctx)
+
+
+ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+    "/h/transaction-categories": (overlay_categories, ["GET"]),
+    "/h/transaction-categories/new": (new_category, ["GET", "POST"]),
+    "/h/transaction-categories/<path:path_uuid>/edit":
+        (edit_category, ["GET", "POST"]),
+    "/h/transaction-categories/<path:path_uuid>/delete":
+        (delete_category, ["GET", "POST"])
+}

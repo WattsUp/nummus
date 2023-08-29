@@ -66,3 +66,8 @@ def edit_account(path_uuid: str) -> str:
     }
 
   return flask.render_template("accounts/edit.html", account=ctx)
+
+
+ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+    "/h/accounts/<path:path_uuid>/edit": (edit_account, ["GET", "POST"])
+}

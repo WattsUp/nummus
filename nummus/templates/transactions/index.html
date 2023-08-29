@@ -20,5 +20,33 @@
       to
       <input type="date">
     </div>
+    <table class="w-full">
+      <thead class="border-b border-b-grey-200">
+        <th>Date</th>
+        <th>Account</th>
+        <th>Payee</th>
+        <th>Description</th>
+        <th>Category</th>
+        <th>Tag</th>
+        <th>Amount</th>
+      </thead>
+      <tbody>
+        {% for txn in transactions["page"] %}
+          <tr>
+            <td>{{ txn["date"] }}</td>
+            <td>{{ txn["account"] }}</td>
+            <td>{{ txn["payee"] }}</td>
+            <td>{{ txn["description"] }}</td>
+            <td>{{ txn["category"] }}</td>
+            <td>{{ txn["tag"] or "" }}</td>
+            <td>{{ txn["total"] | money }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div>
+    <span>Page Total</span>
+    <span></span>
+    </div>
   </section>
 {% endblock content %}

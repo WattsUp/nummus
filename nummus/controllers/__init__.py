@@ -7,25 +7,6 @@ from nummus import custom_types as t
 from nummus.controllers import (account, common, dashboard, transaction,
                                 transaction_category)
 
-ROUTES: t.Dict[str, t.Callable] = {
-    "/": (dashboard.page_home, ["GET"]),
-    "/index": (dashboard.page_home, ["GET"]),
-    "/h/sidebar": (common.sidebar, ["GET"]),
-    "/h/transaction-categories":
-        (transaction_category.overlay_categories, ["GET"]),
-    "/h/transaction-categories/new":
-        (transaction_category.new_category, ["GET", "POST"]),
-    "/h/transaction-categories/<path:path_uuid>/edit":
-        (transaction_category.edit_category, ["GET", "POST"]),
-    "/h/transaction-categories/<path:path_uuid>/delete":
-        (transaction_category.delete_category, ["GET", "POST"]),
-    "/transactions": (transaction.page_all, ["GET"]),
-    "/transactions/<path:path_uuid>": (transaction.page_one, ["GET"]),
-    "/h/accounts/<path:path_uuid>/edit": (account.edit_account, ["GET",
-                                                                 "POST"]),
-    "/h/none": (lambda: "", ["GET"])
-}
-
 
 def add_routes(app: flask.Flask) -> None:
   """Add routing table for flask app to appropriate controller
@@ -33,6 +14,12 @@ def add_routes(app: flask.Flask) -> None:
   Args:
     app: Flask app to route under
   """
-  for url, item in ROUTES.items():
+  all_routes: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {}
+  all_routes.update(account.ROUTES)
+  all_routes.update(common.ROUTES)
+  all_routes.update(dashboard.ROUTES)
+  all_routes.update(transaction.ROUTES)
+  all_routes.update(transaction_category.ROUTES)
+  for url, item in all_routes.items():
     controller, methods = item
     app.add_url_rule(url, view_func=controller, methods=methods)

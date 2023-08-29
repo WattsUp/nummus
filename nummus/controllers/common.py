@@ -138,3 +138,9 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
       "include_closed": include_closed,
       "n_closed": n_closed
   }
+
+
+ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+    "/h/sidebar": (sidebar, ["GET"]),
+    "/h/none": (lambda: "", ["GET"])
+}
