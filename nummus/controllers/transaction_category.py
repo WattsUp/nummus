@@ -6,7 +6,8 @@ from werkzeug import exceptions
 
 from nummus import portfolio, web_utils
 from nummus import custom_types as t
-from nummus.models import TransactionCategory, TransactionCategoryGroup
+from nummus.models import (TransactionCategory, TransactionCategoryGroup,
+                           TransactionSplit)
 
 
 def overlay_categories() -> str:
@@ -57,6 +58,9 @@ def new_category() -> str:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
+  name = None
+  group = None
+
   error: str = None
   if flask.request.method == "POST":
     form = flask.request.form
@@ -67,18 +71,22 @@ def new_category() -> str:
       error = "Category name must not be empty"
     else:
       with p.get_session() as s:
-        cat = TransactionCategory(name=name, group=group, custom=True)
-        s.add(cat)
-        s.commit()
-      return overlay_categories()
+        query = s.query(TransactionCategory)
+        query = query.where(TransactionCategory.name == name)
+        if query.count() > 0:
+          error = "Category names must be unique"
+        else:
+          cat = TransactionCategory(name=name, group=group, locked=False)
+          s.add(cat)
+          s.commit()
+          return overlay_categories()
 
   ctx: t.DictAny = {
       "uuid": None,
-      "name": None,
-      "group": None,
+      "name": name,
+      "group": group,
       "group_type": TransactionCategoryGroup,
-      "custom": None,
-      "locked": cat.locked,
+      "locked": False,
       "error": error
   }
 
@@ -96,6 +104,8 @@ def edit_category(path_uuid: str) -> str:
 
   with p.get_session() as s:
     cat: TransactionCategory = web_utils.find(s, TransactionCategory, path_uuid)
+    name = cat.name
+    group = cat.group
 
     if cat.locked:
       raise exceptions.Forbidden(f"Locked category {cat.name} cannot be "
@@ -109,22 +119,24 @@ def edit_category(path_uuid: str) -> str:
 
       if name == "":
         error = "Category name must not be empty"
-      elif group is not None and not cat.custom:
-        raise exceptions.Forbidden(f"Non-custom category {cat.name} cannot "
-                                   "have group changed")
       else:
-        cat.name = name
-        if group is not None:
-          cat.group = group
-        s.commit()
-        return overlay_categories()
+        query = s.query(TransactionCategory.id)
+        query = query.where(TransactionCategory.name == name)
+        query = query.where(TransactionCategory.id != cat.id)
+        if query.count() > 0:
+          error = "Category names must be unique"
+        else:
+          cat.name = name
+          if group is not None:
+            cat.group = group
+          s.commit()
+          return overlay_categories()
 
     ctx: t.DictAny = {
         "uuid": cat.uuid,
-        "name": cat.name,
-        "group": cat.group,
+        "name": name,
+        "group": group,
         "group_type": TransactionCategoryGroup,
-        "custom": cat.custom,
         "locked": cat.locked,
         "error": error
     }
@@ -147,20 +159,29 @@ def delete_category(path_uuid: str) -> str:
     if cat.locked:
       raise exceptions.Forbidden(f"Locked category {cat.name} cannot be "
                                  "deleted")
-    if not cat.custom:
-      raise exceptions.Forbidden(f"Non-custom category {cat.name} cannot be "
-                                 "deleted")
 
     error: str = None
     if flask.request.method == "POST":
-      print("TODO Deleting...")
+      # Move all transactions to Uncategorized
+      query = s.query(TransactionCategory)
+      query = query.where(TransactionCategory.name == "Uncategorized")
+      uncategorized = query.first()
+      if uncategorized is None:
+        raise ValueError("Could not find Uncategorized id")
+
+      query = s.query(TransactionSplit)
+      query = query.where(TransactionSplit.category_id == cat.id)
+      for t_split in query.all():
+        t_split.category_id = uncategorized.id
+      s.delete(cat)
+      s.commit()
+      return overlay_categories()
 
     ctx: t.DictAny = {
         "uuid": cat.uuid,
         "name": cat.name,
         "group": cat.group,
         "group_type": TransactionCategoryGroup,
-        "custom": cat.custom,
         "locked": cat.locked,
         "error": error
     }

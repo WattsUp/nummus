@@ -107,7 +107,7 @@ class TestAccount(TestBase):
       assets.append(new_asset)
     t_cat = TransactionCategory(name="Securities Traded",
                                 group=TransactionCategoryGroup.OTHER,
-                                custom=False)
+                                locked=False)
     s.add(t_cat)
     s.add(acct)
     s.add_all(assets)

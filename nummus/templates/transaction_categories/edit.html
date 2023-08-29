@@ -18,15 +18,11 @@
         <tr>
           <td>Group</td>
           <td>
-            {% if category["custom"] == False %}
-              {{ category["group"].name | title }}
-            {% else %}
-              <select name="group">
-                {% for group in category["group_type"] %}
-                  <option value="{{ group.name | lower }}" {{ "selected" if group == category["group"] }}>{{ group.name | title }}</option>
-                {% endfor %}
-              </select>
-            {% endif %}
+            <select name="group">
+              {% for group in category["group_type"] %}
+                <option value="{{ group.name | lower }}" {{ "selected" if group == category["group"] }}>{{ group.name | title }}</option>
+              {% endfor %}
+            </select>
           </td>
         </tr>
       </tbody>
@@ -38,8 +34,8 @@
     </div>
   {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-    {% if category["custom"] %}
-      <a hx-get="/h/transaction-categories/{{ category['uuid'] }}/delete" hx-target="#overlay" hx-include="#form-category" class="transition-colors hover:text-red mr-auto">Delete</a>
+    {% if category["uuid"] %}
+      <a hx-get="/h/transaction-categories/{{ category['uuid'] }}/delete" hx-target="#overlay" class="transition-colors hover:text-red mr-auto">Delete</a>
     {% endif %}
     <a hx-get="/h/transaction-categories" hx-target="#overlay" class="transition-colors hover:text-green-600">Cancel</a>
     {% if category["uuid"] %}

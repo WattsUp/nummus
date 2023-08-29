@@ -271,7 +271,7 @@ class TestAsset(TestBase):
 
     t_cat = TransactionCategory(name="Securities Traded",
                                 group=TransactionCategoryGroup.OTHER,
-                                custom=False)
+                                locked=False)
     s.add(t_cat)
     s.commit()
 

@@ -29,13 +29,11 @@ class TransactionCategory(Base):
     uuid: TransactionCategory unique identifier
     name: Name of category
     group: Type of category
-    custom: True if category is user made
     locked: True will prevent any changes being made
   """
-  name: t.ORMStr
+  name: t.ORMStr = orm.mapped_column(unique=True)
   group: ORMTxnCatType
-  custom: t.ORMBool
-  locked: t.ORMBool = orm.mapped_column(default=False)
+  locked: t.ORMBool
 
   @staticmethod
   def add_default(s: orm.Session) -> t.Dict[str, TransactionCategory]:
@@ -52,7 +50,6 @@ class TransactionCategory(Base):
         "Consulting": False,
         "Deposits": False,
         "Dividends Received": False,
-        "Dividends Received (tax-advantaged)": False,
         "Interest": False,
         "Investment Income": False,
         "Other Income": False,
@@ -121,21 +118,18 @@ class TransactionCategory(Base):
     for name, locked in income.items():
       cat = TransactionCategory(name=name,
                                 group=TransactionCategoryGroup.INCOME,
-                                custom=False,
                                 locked=locked)
       s.add(cat)
       d[name] = cat
     for name, locked in expense.items():
       cat = TransactionCategory(name=name,
                                 group=TransactionCategoryGroup.EXPENSE,
-                                custom=False,
                                 locked=locked)
       s.add(cat)
       d[name] = cat
     for name, locked in other.items():
       cat = TransactionCategory(name=name,
                                 group=TransactionCategoryGroup.OTHER,
-                                custom=False,
                                 locked=locked)
       s.add(cat)
       d[name] = cat

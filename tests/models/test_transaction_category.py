@@ -18,7 +18,7 @@ class TestTransactionCategory(TestBase):
     d = {
         "name": self.random_string(),
         "group": self._RNG.choice(TransactionCategoryGroup),
-        "custom": False
+        "locked": False
     }
 
     t_cat = TransactionCategory(**d)
@@ -27,7 +27,7 @@ class TestTransactionCategory(TestBase):
 
     self.assertEqual(d["name"], t_cat.name)
     self.assertEqual(d["group"], t_cat.group)
-    self.assertEqual(d["custom"], t_cat.custom)
+    self.assertEqual(d["locked"], t_cat.locked)
 
   def test_add_default(self):
     s = self.get_session()
