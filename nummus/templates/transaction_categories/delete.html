@@ -28,11 +28,19 @@
   </form>
   {% if category["error"] %}
     <div class="w-full bg-red px-6 py-2 text-xl">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/error.svg" %}
+      {% endwith %}
       {{ category["error"] }}
     </div>
   {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-    <a hx-get="/h/transaction-categories" hx-target="#overlay" class="transition-colors hover:text-green-600">Cancel</a>
-    <a hx-post="/h/transaction-categories/{{ category['uuid'] }}/delete" hx-target="#overlay" hx-include="#form-category" class="button bg-red">Delete</a>
+    <a hx-get="/h/transaction-categories" hx-target="#overlay" class="button hover:green">Cancel</a>
+    <a hx-post="/h/transaction-categories/{{ category['uuid'] }}/delete" hx-target="#overlay" hx-include="#form-category" class="button bg-red">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/trash.svg" %}
+      {% endwith %}
+      Delete
+    </a>
   </div>
 </div>

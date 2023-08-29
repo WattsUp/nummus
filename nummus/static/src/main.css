@@ -116,6 +116,10 @@
     @apply h-[1.75rem] border px-1;
   }
 
+  svg {
+    @apply fill-black;
+  }
+
   a[hx-target] {
     @apply cursor-pointer;
   }
@@ -124,12 +128,28 @@
     @apply px-2 rounded border transition-colors;
   }
 
+  .button svg {
+    @apply transition-colors;
+  }
+
+  .button:hover svg {
+    @apply fill-white;
+  }
+
   .button.bg-green {
     @apply text-white border-green hover:border-green-900 hover:bg-green-900;
   }
 
+  .button.hover\:green {
+    @apply hover:border-green-900 hover:bg-green-900 hover:text-white;
+  }
+
   .button.bg-red {
     @apply text-black border-red hover:border-red-900 hover:bg-red-900 hover:text-white;
+  }
+
+  .button.hover\:red {
+    @apply hover:border-red-900 hover:bg-red-900 hover:text-white;
   }
 
   .button.bg-white {
@@ -149,6 +169,26 @@
 
   .txn-category > svg {
     @apply block fill-white transition-colors p-1;
+  }
+
+  .checkbox {
+    @apply cursor-pointer;
+  }
+
+  .checkbox input {
+    @apply absolute opacity-0 cursor-pointer h-0 w-0;
+  }
+
+  .checkbox svg {
+    @apply h-5 w-5 bg-grey-200 m-0.5 transition-colors fill-transparent;
+  }
+
+  .checkbox:hover input ~ svg {
+    @apply bg-grey-400;
+  }
+
+  .checkbox input:checked ~ svg {
+    @apply bg-green fill-white;
   }
 }
 

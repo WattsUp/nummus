@@ -64,6 +64,9 @@
   </div>
   {% if categories["error"] %}
     <div class="w-full bg-red px-6 py-2 text-xl">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/error.svg" %}
+      {% endwith %}
       {{ categories["error"] }}
     </div>
   {% endif %}

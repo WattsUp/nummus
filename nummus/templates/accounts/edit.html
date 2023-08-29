@@ -22,12 +22,11 @@
           ago</span>
       </div>
       <hr class="w-full border-grey-200">
-      <div class="flex gap-4 justify-between w-full">
-        <span class="font-bold">
-          <label for="account-closed">Account closed:</label>
-        </span>
-        <span><input type="checkbox" name="closed" {{ "checked" if account["closed"] }} id="account-closed"></span>
-      </div>
+      <label class="flex gap-4 justify-between w-full checkbox">
+        <span class="font-bold">Account closed:</span>
+        <input type="checkbox" name="closed" {{ "checked" if account["closed"] }} id="account-closed">
+        {% include "svg/check.svg" %}
+      </label>
     </div>
     <div class="w-7/12">
       <h1 class="font-bold">Edit details</h1>
@@ -58,11 +57,14 @@
   </form>
   {% if account["error"] %}
     <div class="w-full bg-red px-6 py-2 text-xl">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/error.svg" %}
+      {% endwith %}
       {{ account["error"] }}
     </div>
   {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-    <a hx-get="/h/none" hx-target="#overlay" class="transition-colors hover:text-green-600">Cancel</a>
+    <a hx-get="/h/none" hx-target="#overlay" class="button hover:green">Cancel</a>
     <a hx-post="/h/accounts/{{ account['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-account" class="button bg-green">Save</a>
   </div>
 </div>

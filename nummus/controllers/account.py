@@ -22,6 +22,10 @@ def edit_account(path_uuid: str) -> str:
 
   with p.get_session() as s:
     acct: Account = web_utils.find(s, Account, path_uuid)
+    institution = acct.institution
+    name = acct.name
+    category = acct.category
+    closed = acct.closed
 
     _, values, _ = acct.get_value(today, today)
     v = values[0]
@@ -50,12 +54,12 @@ def edit_account(path_uuid: str) -> str:
 
     ctx: t.DictAny = {
         "uuid": acct.uuid,
-        "name": acct.name,
-        "institution": acct.institution,
-        "category": acct.category,
+        "name": name,
+        "institution": institution,
+        "category": category,
         "category_type": AccountCategory,
         "value": v,
-        "closed": acct.closed,
+        "closed": closed,
         "updated_days_ago": (today - acct.updated_on).days,
         "opened_days_ago": (today - acct.opened_on).days,
         "error": error
