@@ -40,9 +40,17 @@ def page_all() -> str:
 
     transactions: t.List[t.DictAny] = []
     for t_split in page:
-      t_split_ctx = ctx_transaction_split(t_split)
-      t_split_ctx["account"] = accounts[t_split_ctx["account_id"]]
-      t_split_ctx["category"] = categories[t_split_ctx["category_id"]]
+      t_split: TransactionSplit
+      t_split_ctx = {
+          "uuid": t_split.uuid,
+          "date": t_split.date,
+          "account": accounts[t_split.account_id],
+          "payee": t_split.payee,
+          "description": t_split.description,
+          "category": categories[t_split.category_id],
+          "tag": t_split.tag,
+          "amount": t_split.amount
+      }
 
       transactions.append(t_split_ctx)
 
@@ -56,30 +64,6 @@ def page_all() -> str:
   return flask.render_template("transactions/index.html",
                                sidebar=common.ctx_sidebar(),
                                transactions=ctx)
-
-
-def ctx_transaction_split(t_split: TransactionSplit) -> t.DictAny:
-  """Get context for a TransactionSplit
-
-  Args:
-    t_split: Transaction to get context for
-
-  Returns:
-    Dictionary HTML context
-  """
-  return {
-      "uuid": t_split.uuid,
-      "date": t_split.date,
-      "account_id": t_split.account_id,
-      "payee": t_split.payee,
-      "description": t_split.description,
-      "category_id": t_split.category_id,
-      "tag": t_split.tag,
-      "amount": t_split.amount,
-      "asset_id": t_split.asset_id,
-      "asset_qty": t_split.asset_quantity,
-      "asset_qty_unadjusted": t_split.asset_quantity_unadjusted
-  }
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
