@@ -213,6 +213,50 @@
     /* Not collapsable */
     @apply xl:hidden;
   }
+
+  tr:nth-child(even) {
+    @apply bg-grey-50;
+  }
+
+  .transactions-table {
+    @apply w-full flex flex-col;
+  }
+
+  .transactions-table .row {
+    @apply w-full flex justify-between hover:bg-grey-100;
+  }
+
+  .transactions-table .col {
+    @apply p-1 whitespace-nowrap overflow-hidden text-ellipsis;
+  }
+
+  .transactions-table .col-date {
+    @apply w-[6rem] min-w-[6rem];
+  }
+
+  .transactions-table .col-account {
+    @apply w-[8rem] min-w-[8rem];
+  }
+
+  .transactions-table .col-payee {
+    @apply w-[8rem] min-w-[8rem];
+  }
+
+  .transactions-table .col-desc {
+    @apply w-[20%] min-w-[20%] grow;
+  }
+
+  .transactions-table .col-cat {
+    @apply w-[8rem] min-w-[8rem];
+  }
+
+  .transactions-table .col-tag {
+    @apply w-[6rem] min-w-[6rem];
+  }
+
+  .transactions-table .col-amount {
+    @apply w-[7rem] min-w-[7rem] text-right;
+  }
 }
 
 @font-face {
@@ -251,7 +295,7 @@
   font-family: "linux-libertine";
   src: url("/static/fonts/linux-libertine/oblique.woff2") format("woff2"),
     url("/static/fonts/linux-libertine/oblique.woff") format("woff");
-  font-style: italic;
+  font-style: oblique;
 }
 
 @font-face {
@@ -335,4 +379,32 @@
   font-family: "linux-libertine-display";
   src: url("/static/fonts/linux-libertine/display.woff2") format("woff2"),
     url("/static/fonts/linux-libertine/display.woff") format("woff");
+}
+
+@font-face {
+  font-family: "liberation-sans";
+  src: url("/static/fonts/liberation-sans/regular.woff2") format("woff2"),
+    url("/static/fonts/liberation-sans/regular.woff") format("woff");
+}
+
+@font-face {
+  font-family: "liberation-sans";
+  src: url("/static/fonts/liberation-sans/italic.woff2") format("woff2"),
+    url("/static/fonts/liberation-sans/italic.woff") format("woff");
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "liberation-sans";
+  src: url("/static/fonts/liberation-sans/bold.woff2") format("woff2"),
+    url("/static/fonts/liberation-sans/bold.woff") format("woff");
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "liberation-sans";
+  src: url("/static/fonts/liberation-sans/bold-italic.woff2") format("woff2"),
+    url("/static/fonts/liberation-sans/bold-italic.woff") format("woff");
+  font-style: italic;
+  font-weight: bold;
 }

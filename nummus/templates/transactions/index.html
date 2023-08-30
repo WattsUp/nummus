@@ -20,33 +20,42 @@
       to
       <input type="date">
     </div>
-    <table class="w-full">
-      <thead class="border-b border-b-grey-200">
-        <th>Date</th>
-        <th>Account</th>
-        <th>Payee</th>
-        <th>Description</th>
-        <th>Category</th>
-        <th>Tag</th>
-        <th>Amount</th>
-      </thead>
-      <tbody>
-        {% for txn in transactions["page"] %}
-          <tr>
-            <td>{{ txn["date"] }}</td>
-            <td>{{ txn["account"] }}</td>
-            <td>{{ txn["payee"] }}</td>
-            <td>{{ txn["description"] }}</td>
-            <td>{{ txn["category"] }}</td>
-            <td>{{ txn["tag"] or "" }}</td>
-            <td>{{ txn["amount"] | money }}</td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
     <div>
-    <span>Page Total</span>
-    <span></span>
+      {{ transactions["i_first"] }}
+      -
+      {{ transactions["i_last"] }}
+      of
+      {{ transactions["count"] }}
+    </div>
+    <div class="transactions-table">
+      <div class="row font-bold hover:bg-transparent border-b border-b-grey-200">
+        <div class="col col-date">Date</div>
+        <div class="col col-account">Account</div>
+        <div class="col col-payee">Payee</div>
+        <div class="col col-desc">Description</div>
+        <div class="col col-cat">Category</div>
+        <div class="col col-tag">Tag</div>
+        <div class="col col-amount">Amount</div>
+      </div>
+      {% for txn in transactions["page"] %}
+        <div class="row">
+          <div class="col col-date">{{ txn["date"] }}</div>
+          <div class="col col-account">{{ txn["account"] }}</div>
+          <div class="col col-payee">{{ txn["payee"] }}</div>
+          <div class="col col-desc">{{ txn["description"] }}</div>
+          <div class="col col-cat">{{ txn["category"] }}</div>
+          <div class="col col-tag">{{ txn["tag"] or "" }}</div>
+          <div class="col col-amount">{{ txn["amount"] | money }}</div>
+        </div>
+      {% endfor %}
+      <div class="row font-bold hover:bg-transparent border-t border-t-grey-200">
+        <div class="col col-date grow">Page Total</div>
+        <div class="col col-amount">{{ transactions["page_total"] | money }}</div>
+      </div>
+      <div class="row font-bold">
+        <div class="col col-date grow">Query Total</div>
+        <div class="col col-amount">{{ transactions["query_total"] | money }}</div>
+      </div>
     </div>
   </section>
 {% endblock content %}

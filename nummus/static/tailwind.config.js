@@ -59,7 +59,7 @@ module.exports = {
         950: "#282828",
       },
       transparent: {
-        DEFAULT: "transparent"
+        DEFAULT: "transparent",
       },
       white: {
         DEFAULT: "#ffffff",
@@ -85,6 +85,7 @@ module.exports = {
     },
     fontFamily: {
       serif: ["linux-libertine", "serif"],
+      sans: ["liberation-sans", "sans-serif"],
       title: ["fogtwo-no5", "serif"],
       mono: ["code-new-roman", "monospace"],
     },
