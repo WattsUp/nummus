@@ -35,16 +35,16 @@
         <tbody>
           <tr>
             <td>Institution</td>
-            <td><input name="institution" value="{{ account['institution'] }}"></td>
+            <td><input class="w-full" name="institution" value="{{ account['institution'] }}"></td>
           </tr>
           <tr>
             <td>Account Name</td>
-            <td><input name="name" value="{{ account['name'] }}"></td>
+            <td><input class="w-full" name="name" value="{{ account['name'] }}"></td>
           </tr>
           <tr>
             <td>Account Category</td>
             <td>
-              <select name="category">
+              <select class="w-full" name="category">
                 {% for cat in account["category_type"] %}
                   <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] }}>{{ cat.name | title }}</option>
                 {% endfor %}

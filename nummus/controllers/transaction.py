@@ -19,10 +19,34 @@ def page_all() -> str:
   Returns:
     string HTML response
   """
+
+  return flask.render_template("transactions/index.html",
+                               sidebar=common.ctx_sidebar(),
+                               table=ctx_table())
+
+
+def get_body() -> str:
+  """GET /h/transactions/body
+
+  Returns:
+    string HTML response
+  """
+
+  return flask.render_template("transactions/body.html", table=ctx_table())
+
+
+def ctx_table() -> t.DictAny:
+  """Get the context to build the transaction table
+
+  Returns:
+    Dictionary HTML context
+  """
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
+    args = flask.request.args
+
     # Get account names
     query = s.query(Account)
     query = query.with_entities(Account.id, Account.name)
@@ -36,7 +60,7 @@ def page_all() -> str:
 
     # TODO (WattsUp) Add paging buttons
     page_len = 50
-    offset = 0
+    offset = int(args.get("offset", 0))
     page_total = Decimal(0)
 
     query = s.query(TransactionSplit)
@@ -44,7 +68,7 @@ def page_all() -> str:
     # TODO (WattsUp) Add filters, namely date first
     query = query.order_by(TransactionSplit.date)
 
-    page, count, next_offset = paginate(query, page_len, offset)
+    page, count, offset_next = paginate(query, page_len, offset)
 
     query = query.with_entities(sqlalchemy.func.sum(TransactionSplit.amount))  # pylint: disable=not-callable
     query_total = query.scalar()
@@ -66,26 +90,30 @@ def page_all() -> str:
 
       transactions.append(t_split_ctx)
 
-    ctx: t.DictAny = {
-        "page": transactions,
+    base_url = "/h/transactions/body?"
+
+    offset_last = max(0, count - page_len)
+
+    return {
+        "transactions": transactions,
         "count": count,
         "offset": offset,
-        "next_offset": next_offset,
         "i_first": offset + 1,
         "i_last": min(offset + page_len, count),
         "page_len": page_len,
         "page_total": page_total,
-        "query_total": query_total
+        "query_total": query_total,
+        "url_first": f"{base_url}&offset=0",
+        "url_prev": f"{base_url}&offset={max(0, offset - page_len)}",
+        "url_next": f"{base_url}&offset={offset_next or offset_last}",
+        "url_last": f"{base_url}&offset={offset_last}"
     }
-
-  return flask.render_template("transactions/index.html",
-                               sidebar=common.ctx_sidebar(),
-                               transactions=ctx)
 
 
 # TODO (WattsUp) Add inline edit for txn
 # TODO (WattsUp) Add overlay edit for split transactions
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
-    "/transactions": (page_all, ["GET"])
+    "/transactions": (page_all, ["GET"]),
+    "/h/transactions/body": (get_body, ["GET"])
 }

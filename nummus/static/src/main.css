@@ -223,7 +223,11 @@
   }
 
   .transactions-table .row {
-    @apply w-full flex justify-between hover:bg-grey-100;
+    @apply w-full flex justify-between;
+  }
+
+  .transactions-table .row.hoverable {
+    @apply hover:bg-grey-100;
   }
 
   .transactions-table .col {

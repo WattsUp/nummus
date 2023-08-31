@@ -1,0 +1,9 @@
+<div class="row hoverable">
+  <div class="col col-date">{{ txn["date"] }}</div>
+  <div class="col col-account">{{ txn["account"] }}</div>
+  <div class="col col-payee">{{ txn["payee"] }}</div>
+  <div class="col col-desc">{{ txn["description"] }}</div>
+  <div class="col col-cat">{{ txn["category"] }}</div>
+  <div class="col col-tag">{{ txn["tag"] or "" }}</div>
+  <div class="col col-amount">{{ txn["amount"] | money }}</div>
+</div>

@@ -1,0 +1,72 @@
+<section id="body" class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2">
+  <h1 class="text-3xl align-left w-full font-serif">Transactions</h1>
+  <div class="flex justify-end gap-1 w-full font-serif">
+    <select>
+      <option value="this-month">This Month</option>
+      <option value="last-month">Last Month</option>
+      <option value="30-days">30 Days</option>
+      <option value="90-days">90 Days</option>
+      <option value="1-year">1 year</option>
+      <option value="5-years">5 years</option>
+      <option value="this-year">This Year</option>
+      <option value="last-year">Last Year</option>
+      <option value="all">All</option>
+      <option value="custom" hidden="hidden">Custom</option>
+    </select>
+    <input type="date">
+    to
+    <input type="date">
+  </div>
+  <div class="flex w-full">
+    <input placeholder="Search Transactions" class="mr-auto w-1/2">
+    <button hx-get="{{ table['url_first'] }}" hx-target="#body" hx-swap="outerHTML">
+      {% with class="w-[24px] h-[24px] hover:fill-green" %}
+      {% include "svg/arrow-first.svg" %}
+      {% endwith %}
+    </button>
+    <button hx-get="{{ table['url_prev'] }}" hx-target="#body" hx-swap="outerHTML">
+      {% with class="w-[24px] h-[24px] hover:fill-green" %}
+      {% include "svg/arrow-left.svg" %}
+      {% endwith %}
+    </button>
+    <span class="w-40 text-center">
+      {{ table["i_first"] }}
+      -
+      {{ table["i_last"] }}
+      of
+      {{ table["count"] }}
+    </span>
+    <button hx-get="{{ table['url_next'] }}" hx-target="#body" hx-swap="outerHTML">
+      {% with class="w-[24px] h-[24px] hover:fill-green" %}
+      {% include "svg/arrow-right.svg" %}
+      {% endwith %}
+    </button>
+    <button hx-get="{{ table['url_last'] }}" hx-target="#body" hx-swap="outerHTML">
+      {% with class="w-[24px] h-[24px] hover:fill-green" %}
+      {% include "svg/arrow-last.svg" %}
+      {% endwith %}
+    </button>
+  </div>
+  <div class="transactions-table">
+    <div class="row font-bold border-b border-b-grey-200">
+      <div class="col col-date">Date</div>
+      <div class="col col-account">Account</div>
+      <div class="col col-payee">Payee</div>
+      <div class="col col-desc">Description</div>
+      <div class="col col-cat">Category</div>
+      <div class="col col-tag">Tag</div>
+      <div class="col col-amount">Amount</div>
+    </div>
+    {% for txn in table["transactions"] %}
+      {% include "transactions/view.html" %}
+    {% endfor %}
+    <div class="row font-bold border-t border-t-grey-200">
+      <div class="col col-date grow">Page Total</div>
+      <div class="col col-amount">{{ table["page_total"] | money }}</div>
+    </div>
+    <div class="row font-bold">
+      <div class="col col-date grow">Query Total</div>
+      <div class="col col-amount">{{ table["query_total"] | money }}</div>
+    </div>
+  </div>
+</section>
