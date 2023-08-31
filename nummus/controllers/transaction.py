@@ -1,12 +1,13 @@
 """Transaction controllers
 """
 
+import datetime
 from decimal import Decimal
 
 import flask
 import sqlalchemy
 
-from nummus import portfolio
+from nummus import portfolio, web_utils
 from nummus import custom_types as t
 from nummus.controllers import common
 from nummus.models import (Account, TransactionCategory, TransactionSplit,
@@ -31,7 +32,6 @@ def get_body() -> str:
   Returns:
     string HTML response
   """
-
   return flask.render_template("transactions/body.html", table=ctx_table())
 
 
@@ -58,20 +58,31 @@ def ctx_table() -> t.DictAny:
                                 TransactionCategory.name)
     categories: t.DictIntStr = dict(query.all())
 
-    # TODO (WattsUp) Add paging buttons
-    page_len = 50
+    period = args.get("period", "this-month")
+    start, end = web_utils.parse_period(period, args.get("start"),
+                                        args.get("end"))
+
+    page_len = 25
     offset = int(args.get("offset", 0))
     page_total = Decimal(0)
 
     query = s.query(TransactionSplit)
     query = query.where(TransactionSplit.asset_id.is_(None))
-    # TODO (WattsUp) Add filters, namely date first
+    if start is not None:
+      query = query.where(TransactionSplit.date >= start)
+    query = query.where(TransactionSplit.date <= end)
     query = query.order_by(TransactionSplit.date)
 
     page, count, offset_next = paginate(query, page_len, offset)
 
     query = query.with_entities(sqlalchemy.func.sum(TransactionSplit.amount))  # pylint: disable=not-callable
-    query_total = query.scalar()
+    query_total = query.scalar() or Decimal(0)
+
+    if start is None:
+      query = s.query(TransactionSplit)
+      query = query.where(TransactionSplit.asset_id.is_(None))
+      query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))  # pylint: disable=not-callable
+      start = query.scalar() or datetime.date(1970, 1, 1)
 
     transactions: t.List[t.DictAny] = []
     for t_split in page:
@@ -92,7 +103,7 @@ def ctx_table() -> t.DictAny:
 
     base_url = "/h/transactions/body?"
 
-    offset_last = max(0, count - page_len)
+    offset_last = max(0, (count // page_len) * page_len)
 
     return {
         "transactions": transactions,
@@ -106,7 +117,10 @@ def ctx_table() -> t.DictAny:
         "url_first": f"{base_url}&offset=0",
         "url_prev": f"{base_url}&offset={max(0, offset - page_len)}",
         "url_next": f"{base_url}&offset={offset_next or offset_last}",
-        "url_last": f"{base_url}&offset={offset_last}"
+        "url_last": f"{base_url}&offset={offset_last}",
+        "start": start,
+        "end": end,
+        "period": period
     }
 
 

@@ -96,6 +96,57 @@ def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
     raise exceptions.BadRequest(f"Unknown {cls.__name__}: {s}, {e}") from e
 
 
+def parse_period(period: str, start_custom: str,
+                 end_custom: str) -> t.Tuple[datetime.date, datetime.date]:
+  """Parse time period from arguments
+
+  Args:
+    period: Name of period
+    start: Start date for "custom"
+    end: End date from "custom"
+
+  Returns:
+    start, end dates
+    start is None for "all"
+  """
+  today = datetime.date.today()
+  if period == "custom":
+    start = parse_date(start_custom)
+    end = parse_date(end_custom) or today
+    end = max(start, end)
+  elif period == "this-month":
+    start = datetime.date(today.year, today.month, 1)
+    end = today
+  elif period == "last-month":
+    start_this_month = datetime.date(today.year, today.month, 1)
+    end = start_this_month - datetime.timedelta(days=1)
+    start = datetime.date(end.year, end.month, 1)
+  elif period == "30-days":
+    start = today - datetime.timedelta(days=30)
+    end = today
+  elif period == "90-days":
+    start = today - datetime.timedelta(days=90)
+    end = today
+  elif period == "1-year":
+    start = datetime.date(today.year - 1, today.month, 1)
+    end = today
+  elif period == "5-years":
+    start = datetime.date(today.year - 5, today.month, 1)
+    end = today
+  elif period == "this-year":
+    start = datetime.date(today.year, 1, 1)
+    end = today
+  elif period == "last-year":
+    start = datetime.date(today.year - 1, 1, 1)
+    end = datetime.date(today.year - 1, 12, 31)
+  elif period == "all":
+    start = None
+    end = today
+  else:
+    raise exceptions.BadRequest(f"Unknown period: {period}")
+  return start, end
+
+
 def validate_image_upload(req: flask.Request) -> str:
   """Checks image upload meets criteria for accepting
 

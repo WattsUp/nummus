@@ -1,30 +1,30 @@
 <section id="body" class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2">
   <h1 class="text-3xl align-left w-full font-serif">Transactions</h1>
-  <div class="flex justify-end gap-1 w-full font-serif">
-    <select>
-      <option value="this-month">This Month</option>
-      <option value="last-month">Last Month</option>
-      <option value="30-days">30 Days</option>
-      <option value="90-days">90 Days</option>
-      <option value="1-year">1 year</option>
-      <option value="5-years">5 years</option>
-      <option value="this-year">This Year</option>
-      <option value="last-year">Last Year</option>
-      <option value="all">All</option>
-      <option value="custom" hidden="hidden">Custom</option>
+  <form class="flex justify-end gap-1 w-full font-serif" id="txn-filters">
+    <select name="period" hx-get="/h/transactions/body" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters" hx-trigger="change,accountUpdate from:body">
+      <option value="this-month" {{ "selected" if table["period"] == "this-month" }}>This Month</option>
+      <option value="last-month" {{ "selected" if table["period"] == "last-month" }}>Last Month</option>
+      <option value="30-days" {{ "selected" if table["period"] == "30-days" }}>30 Days</option>
+      <option value="90-days" {{ "selected" if table["period"] == "90-days" }}>90 Days</option>
+      <option value="1-year" {{ "selected" if table["period"] == "1-year" }}>1 year</option>
+      <option value="5-years" {{ "selected" if table["period"] == "5-years" }}>5 years</option>
+      <option value="this-year" {{ "selected" if table["period"] == "this-year" }}>This Year</option>
+      <option value="last-year" {{ "selected" if table["period"] == "last-year" }}>Last Year</option>
+      <option value="all" {{ "selected" if table["period"] == "all" }}>All</option>
+      <option value="custom" hidden="hidden" {{ "selected" if table["period"] == "custom" }}>Custom</option>
     </select>
-    <input type="date">
+    <input type="date" value="{{ table['start'] }}" name="start" hx-get="/h/transactions/body?period=custom" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
     to
-    <input type="date">
-  </div>
+    <input type="date" value="{{ table['end'] }}" name="end" hx-get="/h/transactions/body?period=custom" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
+  </form>
   <div class="flex w-full">
     <input placeholder="Search Transactions" class="mr-auto w-1/2">
-    <button hx-get="{{ table['url_first'] }}" hx-target="#body" hx-swap="outerHTML">
+    <button hx-get="{{ table['url_first'] }}" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
       {% with class="w-[24px] h-[24px] hover:fill-green" %}
       {% include "svg/arrow-first.svg" %}
       {% endwith %}
     </button>
-    <button hx-get="{{ table['url_prev'] }}" hx-target="#body" hx-swap="outerHTML">
+    <button hx-get="{{ table['url_prev'] }}" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
       {% with class="w-[24px] h-[24px] hover:fill-green" %}
       {% include "svg/arrow-left.svg" %}
       {% endwith %}
@@ -36,12 +36,12 @@
       of
       {{ table["count"] }}
     </span>
-    <button hx-get="{{ table['url_next'] }}" hx-target="#body" hx-swap="outerHTML">
+    <button hx-get="{{ table['url_next'] }}" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
       {% with class="w-[24px] h-[24px] hover:fill-green" %}
       {% include "svg/arrow-right.svg" %}
       {% endwith %}
     </button>
-    <button hx-get="{{ table['url_last'] }}" hx-target="#body" hx-swap="outerHTML">
+    <button hx-get="{{ table['url_last'] }}" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters">
       {% with class="w-[24px] h-[24px] hover:fill-green" %}
       {% include "svg/arrow-last.svg" %}
       {% endwith %}
