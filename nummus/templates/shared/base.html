@@ -27,8 +27,7 @@
       {% block sidebar %}
         {% include "/shared/sidebar.html" %}
       {% endblock %}
-      {# <div class="w-[2.5rem] min-w-[2.5rem] xl:hidden"></div> #}
-      <div class="flex flex-col h-full overflow-y-auto grow">
+      <div class="flex flex-col h-full overflow-y-scroll grow">
         <main class="py-2 px-12 xl:px-2">
           {% block content %}{% endblock %}
         </main>

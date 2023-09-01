@@ -11,7 +11,7 @@ from nummus import portfolio, web_utils
 from nummus import custom_types as t
 from nummus.controllers import common
 from nummus.models import (Account, TransactionCategory, TransactionSplit,
-                           paginate)
+                           paginate, search)
 
 
 def page_all() -> str:
@@ -61,6 +61,7 @@ def ctx_table() -> t.DictAny:
     period = args.get("period", "this-month")
     start, end = web_utils.parse_period(period, args.get("start"),
                                         args.get("end"))
+    search_str = args.get("search", "").strip()
 
     page_len = 25
     offset = int(args.get("offset", 0))
@@ -72,6 +73,12 @@ def ctx_table() -> t.DictAny:
       query = query.where(TransactionSplit.date >= start)
     query = query.where(TransactionSplit.date <= end)
     query = query.order_by(TransactionSplit.date)
+
+    # TODO (WattsUp) Add Account, Payee, Category, and Tag filters
+    # With search on drop downs
+
+    if search_str != "":
+      query = search(query, TransactionSplit, search_str)
 
     page, count, offset_next = paginate(query, page_len, offset)
 
@@ -120,7 +127,8 @@ def ctx_table() -> t.DictAny:
         "url_last": f"{base_url}&offset={offset_last}",
         "start": start,
         "end": end,
-        "period": period
+        "period": period,
+        "search": search_str
     }
 
 

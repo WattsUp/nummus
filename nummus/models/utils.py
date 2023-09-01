@@ -11,7 +11,7 @@ from nummus.models import Account, Asset, Base, TransactionSplit
 _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
     Account: ["name", "institution"],
     Asset: ["name", "description", "unit", "tag"],
-    TransactionSplit: ["payee", "description", "subcategory", "tag"]
+    TransactionSplit: ["payee", "description", "tag"]
 }
 
 
@@ -31,14 +31,18 @@ def search(query: orm.Query[Base], cls: t.Type[Base],
   if search_str is None or len(search_str) < 3:
     return query
 
-  unfiltered = query.all()
+  # Only fetch the searchable properties to be must faster
+  entities: t.List[orm.InstrumentedAttribute] = [cls.id]
+  for prop in _SEARCH_PROPERTIES[cls]:
+    entities.append(getattr(cls, prop))
+  query_unfiltered = query.with_entities(*entities)
+
+  unfiltered = query_unfiltered.all()
   strings: t.DictIntStr = {}
-  for instance in unfiltered:
-    parameters: t.Strings = []
-    for k in _SEARCH_PROPERTIES[cls]:
-      parameters.append(getattr(instance, k))
-    i_str = " ".join(p for p in parameters if p is not None)
-    strings[instance.id] = i_str
+  for item in unfiltered:
+    item_id = item[0]
+    item_str = " ".join(s for s in item[1:] if s is not None)
+    strings[item_id] = item_str
 
   extracted = process.extract(search_str, strings, limit=None)
   matching_ids: t.Ints = [i for _, score, i in extracted if score > 60]
