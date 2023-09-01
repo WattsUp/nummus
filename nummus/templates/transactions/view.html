@@ -6,4 +6,9 @@
   <div class="col col-cat">{{ txn["category"] }}</div>
   <div class="col col-tag">{{ txn["tag"] or "" }}</div>
   <div class="col col-amount">{{ txn["amount"] | money }}</div>
+  <div class="col col-locked">
+    {% if txn["locked"] %}
+      {% include "svg/lock.svg" %}
+    {% endif %}
+  </div>
 </div>

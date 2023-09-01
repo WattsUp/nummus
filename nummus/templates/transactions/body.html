@@ -56,7 +56,29 @@
       <div class="col col-cat">Category</div>
       <div class="col col-tag">Tag</div>
       <div class="col col-amount">Amount</div>
+      <div class="col col-locked row-header">
+        {% if table["locked"] is none %}
+          <div hx-get="/h/transactions/body?locked=true" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters,#txn-search">
+            {% include "svg/lock.svg" %}
+          </div>
+        {% elif table["locked"] %}
+          <div hx-get="/h/transactions/body?locked=false" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters,#txn-search">
+            {% with class = "checked" %}
+            {% include "svg/lock.svg" %}
+            {% endwith %}
+          </div>
+        {% else %}
+          <div hx-get="/h/transactions/body?locked=" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters,#txn-search">
+            {% with class = "unchecked" %}
+            {% include "svg/lock.svg" %}
+            {% endwith %}
+          </div>
+        {% endif %}
+      </div>
     </div>
+    {% if table["transactions"] | length == 0 %}
+      <div class="text-center">No matching transactions for given query filters</div>
+    {% endif %}
     {% for txn in table["transactions"] %}
       {% include "transactions/view.html" %}
     {% endfor %}

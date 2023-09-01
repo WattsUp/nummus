@@ -62,6 +62,7 @@ def ctx_table() -> t.DictAny:
     start, end = web_utils.parse_period(period, args.get("start"),
                                         args.get("end"))
     search_str = args.get("search", "").strip()
+    locked = web_utils.parse_bool(args.get("locked"))
 
     page_len = 25
     offset = int(args.get("offset", 0))
@@ -71,6 +72,8 @@ def ctx_table() -> t.DictAny:
     query = query.where(TransactionSplit.asset_id.is_(None))
     if start is not None:
       query = query.where(TransactionSplit.date >= start)
+    if locked is not None:
+      query = query.where(TransactionSplit.locked == locked)
     query = query.where(TransactionSplit.date <= end)
     query = query.order_by(TransactionSplit.date)
 
@@ -102,7 +105,8 @@ def ctx_table() -> t.DictAny:
           "description": t_split.description,
           "category": categories[t_split.category_id],
           "tag": t_split.tag,
-          "amount": t_split.amount
+          "amount": t_split.amount,
+          "locked": t_split.locked
       }
       page_total += t_split.amount
 
@@ -128,7 +132,8 @@ def ctx_table() -> t.DictAny:
         "start": start,
         "end": end,
         "period": period,
-        "search": search_str
+        "search": search_str,
+        "locked": locked
     }
 
 

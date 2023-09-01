@@ -180,7 +180,7 @@
   }
 
   .checkbox svg {
-    @apply h-5 w-5 bg-grey-200 m-0.5 transition-colors fill-transparent;
+    @apply bg-grey-200 m-0.5 transition-colors fill-grey-600;
   }
 
   .checkbox:hover input ~ svg {
@@ -247,7 +247,7 @@
   }
 
   .transactions-table .col-desc {
-    @apply w-[20%] min-w-[20%] grow;
+    @apply w-[8rem] min-w-[8rem] grow;
   }
 
   .transactions-table .col-cat {
@@ -260,6 +260,26 @@
 
   .transactions-table .col-amount {
     @apply w-[7rem] min-w-[7rem] text-right;
+  }
+
+  .transactions-table .col-locked {
+    @apply w-[1.5rem] min-w-[1.5rem] p-0 flex items-center;
+  }
+
+  .transactions-table .col-locked svg {
+    @apply m-0 w-[24px] h-[24px];
+  }
+
+  .transactions-table .col-locked.row-header svg {
+    @apply bg-grey-200 transition-colors fill-grey-600 cursor-pointer hover:bg-green-400 hover:fill-white;
+  }
+
+  .transactions-table .col-locked.row-header svg.checked {
+    @apply bg-green fill-white;
+  }
+
+  .transactions-table .col-locked.row-header svg.unchecked {
+    @apply bg-green fill-transparent;
   }
 }
 

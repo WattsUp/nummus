@@ -77,7 +77,7 @@ def parse_date(s: str) -> datetime.date:
 
 
 def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
-  """Parse a string in an enum
+  """Parse a string into an enum
 
   Args:
     s: String to parse
@@ -145,6 +145,22 @@ def parse_period(period: str, start_custom: str,
   else:
     raise exceptions.BadRequest(f"Unknown period: {period}")
   return start, end
+
+
+def parse_bool(s: str) -> bool:
+  """Parse a string into a bool
+
+  Args:
+    s: String to parse
+
+  Returns:
+    Parsed bool
+  """
+  if isinstance(s, bool) or s is None:
+    return s
+  if s == "":
+    return None
+  return s.lower() in ["true", "t", "1", 1]
 
 
 def validate_image_upload(req: flask.Request) -> str:
