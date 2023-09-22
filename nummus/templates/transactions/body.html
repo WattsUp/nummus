@@ -49,13 +49,53 @@
   </div>
   <div class="transactions-table">
     <div class="row font-bold border-b border-b-grey-200">
-      <div class="col col-date">Date</div>
-      <div class="col col-account">Account</div>
-      <div class="col col-payee">Payee</div>
-      <div class="col col-desc">Description</div>
-      <div class="col col-cat">Category</div>
-      <div class="col col-tag">Tag</div>
-      <div class="col col-amount">Amount</div>
+      <div class="col col-date row-header">Date</div>
+      <a class="col col-account row-header">Account
+        {% with class="w-[24px] h-[24px]" %}
+        {% include "svg/filter.svg" %}
+        {% endwith %}
+        <div class="filter-dropdown">
+          <input placeholder="Search...">
+          {% with options=table["options-account"] %}
+          {% include "transactions/options.html" %}
+          {% endwith %}
+        </div>
+      </a>
+      <a class="col col-payee row-header">Payee
+        {% with class="w-[24px] h-[24px]" %}
+        {% include "svg/filter.svg" %}
+        {% endwith %}
+        <div class="filter-dropdown">
+          <input placeholder="Search...">
+          {% with options=table["options-payee"] %}
+          {% include "transactions/options.html" %}
+          {% endwith %}
+        </div>
+      </a>
+      <div class="col col-desc row-header">Description</div>
+      <a class="col col-cat row-header">Category
+        {% with class="w-[24px] h-[24px]" %}
+        {% include "svg/filter.svg" %}
+        {% endwith %}
+        <div class="filter-dropdown">
+          <input placeholder="Search...">
+          {% with options=table["options-category"] %}
+          {% include "transactions/options.html" %}
+          {% endwith %}
+        </div>
+      </a>
+      <a class="col col-tag row-header">Tag
+        {% with class="w-[24px] h-[24px]" %}
+        {% include "svg/filter.svg" %}
+        {% endwith %}
+        <div class="filter-dropdown">
+          <input placeholder="Search...">
+          {% with options=table["options-tag"] %}
+          {% include "transactions/options.html" %}
+          {% endwith %}
+        </div>
+      </a>
+      <div class="col col-amount row-header">Amount</div>
       <div class="col col-locked row-header">
         {% if table["locked"] is none %}
           <div hx-get="/h/transactions/body?locked=true" hx-target="#body" hx-swap="outerHTML" hx-include="#txn-filters,#txn-search">

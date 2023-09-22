@@ -172,7 +172,7 @@
   }
 
   .checkbox {
-    @apply cursor-pointer;
+    @apply cursor-pointer relative;
   }
 
   .checkbox input {
@@ -180,7 +180,7 @@
   }
 
   .checkbox svg {
-    @apply bg-grey-200 m-0.5 transition-colors fill-grey-600;
+    @apply bg-grey-200 m-0.5 transition-colors fill-grey-600 flex-shrink-0;
   }
 
   .checkbox:hover input ~ svg {
@@ -198,7 +198,7 @@
 
   .sidebar-container {
     /* Default styling */
-    @apply h-full w-[18rem];
+    @apply h-full w-[18rem] z-10;
     /* Collapable */
     @apply fixed left-[-18rem] hover:left-0 transition-[left] hover:after:content-["🡄"];
     /* Not collapsable */
@@ -280,6 +280,38 @@
 
   .transactions-table .col-locked.row-header svg.unchecked {
     @apply bg-green fill-transparent;
+  }
+
+  .transactions-table .col.row-header {
+    @apply flex items-center relative overflow-visible;
+  }
+
+  .transactions-table .col.row-header:hover > svg {
+    @apply fill-green;
+  }
+
+  .transactions-table .col.row-header:hover .filter-dropdown {
+    @apply block;
+  }
+
+  .filter-dropdown {
+    @apply absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden;
+  }
+
+  .filter-dropdown > input {
+    @apply w-full;
+  }
+
+  .filter-dropdown .options {
+    @apply overflow-y-scroll overflow-x-hidden h-60 pr-1;
+  }
+
+  .filter-dropdown .options label {
+    @apply flex w-full checkbox;
+  }
+
+  .filter-dropdown .options label span {
+    @apply min-w-0 overflow-hidden overflow-ellipsis;
   }
 }
 

@@ -1,0 +1,11 @@
+<div class="options">
+  {% for option in options %}
+    <label>
+      <input type="checkbox">
+      {% with class = "w-5 h-5" %}
+      {% include "svg/check.svg" %}
+      {% endwith %}
+      <span>{{ option["name"] }}</span>
+    </label>
+  {% endfor %}
+</div>
