@@ -1,0 +1,42 @@
+{% if include_oob %}
+  {% with oob = True %}
+  {% include "transactions/table-config.html" %}
+  {% include "transactions/table-locked.html" %}
+  {% endwith %}
+  <div id="txn-accounts" hx-swap-oob="insideHTML">
+    {% with options = txn_table["options-account"], name="account" %}
+    {% include "transactions/table-options.html" %}
+    {% endwith %}
+  </div>
+  <div id="txn-payees" hx-swap-oob="insideHTML">
+    {% with options = txn_table["options-payee"], name="payee" %}
+    {% include "transactions/table-options.html" %}
+    {% endwith %}
+  </div>
+  <div id="txn-categories" hx-swap-oob="insideHTML">
+    {% with options = txn_table["options-category"], name="category" %}
+    {% include "transactions/table-options.html" %}
+    {% endwith %}
+  </div>
+  <div id="txn-tags" hx-swap-oob="insideHTML">
+    {% with options = txn_table["options-tag"], name="tag" %}
+    {% include "transactions/table-options.html" %}
+    {% endwith %}
+  </div>
+{% endif %}
+<div id="txn-table" class="transactions-table w-full flex flex-col">
+  {% if txn_table["transactions"] | length == 0 %}
+    <div class="text-center">No matching transactions for given query filters</div>
+  {% endif %}
+  {% for txn in txn_table["transactions"] %}
+    {% include "transactions/table-view.html" %}
+  {% endfor %}
+  <div class="row font-bold border-t border-t-grey-200">
+    <div class="col col-date grow">Page Total</div>
+    <div class="col col-amount">{{ txn_table["page_total"] | money }}</div>
+  </div>
+  <div class="row font-bold">
+    <div class="col col-date grow">Query Total</div>
+    <div class="col col-amount">{{ txn_table["query_total"] | money }}</div>
+  </div>
+</div>

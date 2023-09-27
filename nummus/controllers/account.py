@@ -49,7 +49,7 @@ def edit_account(path_uuid: str) -> str:
         s.commit()
 
         response = flask.make_response("")
-        response.headers["HX-Trigger"] = "accountUpdate"
+        response.headers["HX-Trigger"] = "update-account"
         return response
 
     ctx: t.DictAny = {

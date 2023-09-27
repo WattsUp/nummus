@@ -218,11 +218,8 @@
     @apply bg-grey-50;
   }
 
-  .transactions-table {
-    @apply w-full flex flex-col;
-  }
-
-  .transactions-table .row {
+  .transactions-table .row,
+  .transactions-table.header {
     @apply w-full flex justify-between;
   }
 
@@ -270,27 +267,27 @@
     @apply m-0 w-[24px] h-[24px];
   }
 
-  .transactions-table .col-locked.row-header svg {
+  .transactions-table.header .col-locked svg {
     @apply bg-grey-200 transition-colors fill-grey-600 cursor-pointer hover:bg-green-400 hover:fill-white;
   }
 
-  .transactions-table .col-locked.row-header svg.checked {
+  .transactions-table.header .col-locked svg.checked {
     @apply bg-green fill-white;
   }
 
-  .transactions-table .col-locked.row-header svg.unchecked {
+  .transactions-table.header .col-locked svg.unchecked {
     @apply bg-green fill-transparent;
   }
 
-  .transactions-table .col.row-header {
+  .transactions-table.header .col {
     @apply flex items-center relative overflow-visible;
   }
 
-  .transactions-table .col.row-header:hover > svg {
+  .transactions-table.header .col:hover > svg {
     @apply fill-green;
   }
 
-  .transactions-table .col.row-header:hover .filter-dropdown {
+  .transactions-table.header .col:hover .filter-dropdown {
     @apply block;
   }
 

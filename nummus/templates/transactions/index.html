@@ -1,5 +1,10 @@
 {% extends "shared/base.html" %}
 
 {% block content %}
-  {% include "transactions/body.html" %}
+  <section id="body" class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2">
+    <h1 class="text-3xl align-left w-full font-serif">Transactions</h1>
+    {% include "transactions/table-config.html" %}
+    {% include "transactions/table-header.html" %}
+    {% include "transactions/table.html" %}
+  </section>
 {% endblock content %}

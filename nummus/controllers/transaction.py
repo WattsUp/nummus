@@ -21,19 +21,24 @@ def page_all() -> str:
   Returns:
     string HTML response
   """
+  return flask.render_template(
+      "transactions/index.html",
+      sidebar=common.ctx_sidebar(),
+      txn_table=ctx_table(),
+  )
 
-  return flask.render_template("transactions/index.html",
-                               sidebar=common.ctx_sidebar(),
-                               table=ctx_table())
 
-
-def get_body() -> str:
-  """GET /h/transactions/body
+def get_table() -> str:
+  """GET /h/transactions/table
 
   Returns:
     string HTML response
   """
-  return flask.render_template("transactions/body.html", table=ctx_table())
+  return flask.render_template(
+      "transactions/table.html",
+      txn_table=ctx_table(),
+      include_oob=True,
+  )
 
 
 def ctx_options_account(query: orm.Query,
@@ -48,11 +53,12 @@ def ctx_options_account(query: orm.Query,
   Returns:
     List of HTML context
   """
-  # Get options with these filters
+  selected: t.Strings = flask.request.args.getlist("account")
   options: t.List[t.DictStr] = []
   for acct_id, in query.with_entities(TransactionSplit.account_id).distinct():
-    options.append({"name": accounts[acct_id]})
-  return sorted(options, key=lambda item: item["name"])
+    name = accounts[acct_id]
+    options.append({"name": name, "checked": name in selected})
+  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
 def ctx_options_payee(query: orm.Query) -> t.List[t.DictStr]:
@@ -64,11 +70,11 @@ def ctx_options_payee(query: orm.Query) -> t.List[t.DictStr]:
   Returns:
     List of HTML context
   """
-  # Get options with these filters
+  selected: t.Strings = flask.request.args.getlist("payee")
   options: t.List[t.DictStr] = []
   for payee, in query.with_entities(TransactionSplit.payee).distinct():
-    options.append({"name": payee})
-  return sorted(options, key=lambda item: item["name"])
+    options.append({"name": payee, "checked": payee in selected})
+  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
 def ctx_options_category(query: orm.Query,
@@ -82,11 +88,12 @@ def ctx_options_category(query: orm.Query,
   Returns:
     List of HTML context
   """
-  # Get options with these filters
+  selected: t.Strings = flask.request.args.getlist("category")
   options: t.List[t.DictStr] = []
   for cat_id, in query.with_entities(TransactionSplit.category_id).distinct():
-    options.append({"name": categories[cat_id]})
-  return sorted(options, key=lambda item: item["name"])
+    name = categories[cat_id]
+    options.append({"name": name, "checked": name in selected})
+  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
 def ctx_options_tag(query: orm.Query) -> t.List[t.DictStr]:
@@ -98,18 +105,16 @@ def ctx_options_tag(query: orm.Query) -> t.List[t.DictStr]:
   Returns:
     List of HTML context
   """
-  # Get options with these filters
+  selected: t.Strings = flask.request.args.getlist("tag")
   options: t.List[t.DictStr] = []
   for tag, in query.with_entities(TransactionSplit.tag).distinct():
     if tag is None:
       continue
-    options.append({"name": tag})
-  # TODO Add checked or not
-  # TODO Sort by name and checked on top
-  return sorted(options, key=lambda item: item["name"])
+    options.append({"name": tag, "checked": tag in selected})
+  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
-def ctx_table() -> t.DictAny:
+def ctx_table() -> t.DictStr:
   """Get the context to build the transaction table
 
   Returns:
@@ -155,8 +160,32 @@ def ctx_table() -> t.DictAny:
     options_category = ctx_options_category(query, categories)
     options_tag = ctx_options_tag(query)
 
-    # TODO Make options filter transactions
     # TODO Add searching
+
+    selected_accounts = args.getlist("account")
+    selected_payees = args.getlist("payee")
+    selected_categories = args.getlist("category")
+    selected_tags = args.getlist("tag")
+
+    if len(selected_accounts) != 0:
+      ids = [
+          acct_id for acct_id, name in accounts.items()
+          if name in selected_accounts
+      ]
+      query = query.where(TransactionSplit.account_id.in_(ids))
+
+    if len(selected_payees) != 0:
+      query = query.where(TransactionSplit.payee.in_(selected_payees))
+
+    if len(selected_categories) != 0:
+      ids = [
+          cat_id for cat_id, name in categories.items()
+          if name in selected_categories
+      ]
+      query = query.where(TransactionSplit.category_id.in_(ids))
+
+    if len(selected_tags) != 0:
+      query = query.where(TransactionSplit.tag.in_(selected_tags))
 
     if locked is not None:
       query = query.where(TransactionSplit.locked == locked)
@@ -193,23 +222,21 @@ def ctx_table() -> t.DictAny:
 
       transactions.append(t_split_ctx)
 
-    base_url = "/h/transactions/body?"
-
     offset_last = max(0, (count // page_len) * page_len)
 
     return {
         "transactions": transactions,
         "count": count,
         "offset": offset,
-        "i_first": offset + 1,
+        "i_first": 0 if count == 0 else offset + 1,
         "i_last": min(offset + page_len, count),
         "page_len": page_len,
         "page_total": page_total,
         "query_total": query_total,
-        "url_first": f"{base_url}&offset=0",
-        "url_prev": f"{base_url}&offset={max(0, offset - page_len)}",
-        "url_next": f"{base_url}&offset={offset_next or offset_last}",
-        "url_last": f"{base_url}&offset={offset_last}",
+        "offset_first": "offset=0",
+        "offset_prev": f"offset={max(0, offset - page_len)}",
+        "offset_next": f"offset={offset_next or offset_last}",
+        "offset_last": f"offset={offset_last}",
         "start": start,
         "end": end,
         "period": period,
@@ -227,5 +254,5 @@ def ctx_table() -> t.DictAny:
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
-    "/h/transactions/body": (get_body, ["GET"])
+    "/h/transactions/table": (get_table, ["GET"]),
 }

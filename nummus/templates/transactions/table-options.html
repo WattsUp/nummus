@@ -1,0 +1,12 @@
+<input placeholder="Search..." name="search-{{ name }}">
+<div class="options">
+  {% for option in options %}
+    <label>
+      <input type="checkbox" name="{{ name }}" value="{{ option['name'] }}" {{ "checked" if option["checked"] }} hx-get="/h/transactions/table?period=custom" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+      {% with class = "w-5 h-5" %}
+      {% include "svg/check.svg" %}
+      {% endwith %}
+      <span>{{ option["name"] }}</span>
+    </label>
+  {% endfor %}
+</div>
