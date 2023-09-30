@@ -158,9 +158,7 @@ class Asset(Base):
     Returns:
       (List[dates], dict{Asset.id: list[values]})
     """
-    query = s.query(Asset)
-    query = query.with_entities(Asset.id, Asset.uuid)
-    assets: t.DictIntStr = dict(query.all())
+    assets = Asset.map_uuid(s)
     values: t.DictIntReal = {a_id: Decimal(0) for a_id in assets}
 
     if uuids is not None:

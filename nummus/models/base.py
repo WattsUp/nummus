@@ -62,6 +62,40 @@ class Base(orm.DeclarativeBase):
     """
     return other is None or self.uuid != other.uuid
 
+  @classmethod
+  def map_uuid(cls, s: orm.Session) -> t.DictIntStr:
+    """Mapping between id and uuid
+
+    Args:
+      s: SQL session to use
+
+    Returns:
+      Dictionary {id: uuid}
+    """
+    query = s.query(cls)
+    query = query.with_entities(cls.id, cls.uuid)
+    return dict(query.all())
+
+  @classmethod
+  def map_name(cls, s: orm.Session) -> t.DictIntStr:
+    """Mapping between id and names
+
+    Args:
+      s: SQL session to use
+
+    Returns:
+      Dictionary {id: name}
+
+    Raises:
+      KeyError if model does not have name property
+    """
+    if not hasattr(cls, "name"):
+      raise KeyError(f"{cls} does not have name column")
+
+    query = s.query(cls)
+    query = query.with_entities(cls.id, cls.name)
+    return dict(query.all())
+
 
 class BaseEnum(enum.Enum):
   """Enum class with a parser

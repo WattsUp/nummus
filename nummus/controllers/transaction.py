@@ -59,16 +59,9 @@ def get_options(field: str) -> str:
 
     id_mapping = None
     if field == "account":
-      # Get account names
-      query = s.query(Account)
-      query = query.with_entities(Account.id, Account.name)
-      id_mapping: t.DictIntStr = dict(query.all())
+      id_mapping = Account.map_name(s)
     elif field == "category":
-      # Get category names
-      query = s.query(TransactionCategory)
-      query = query.with_entities(TransactionCategory.id,
-                                  TransactionCategory.name)
-      id_mapping: t.DictIntStr = dict(query.all())
+      id_mapping = TransactionCategory.map_name(s)
 
     period = args.get("period", "this-month")
     start, end = web_utils.parse_period(period, args.get("start"),
@@ -153,16 +146,8 @@ def ctx_table() -> t.DictStr:
   with p.get_session() as s:
     args = flask.request.args
 
-    # Get account names
-    query = s.query(Account)
-    query = query.with_entities(Account.id, Account.name)
-    accounts: t.DictIntStr = dict(query.all())
-
-    # Get category names
-    query = s.query(TransactionCategory)
-    query = query.with_entities(TransactionCategory.id,
-                                TransactionCategory.name)
-    categories: t.DictIntStr = dict(query.all())
+    accounts = Account.map_name(s)
+    categories = TransactionCategory.map_name(s)
 
     period = args.get("period", "this-month")
     start, end = web_utils.parse_period(period, args.get("start"),
@@ -186,8 +171,6 @@ def ctx_table() -> t.DictStr:
     options_payee = ctx_options(query, "payee")
     options_category = ctx_options(query, "category", categories)
     options_tag = ctx_options(query, "tag")
-
-    # TODO Add searching
 
     selected_accounts = args.getlist("account")
     selected_payees = args.getlist("payee")

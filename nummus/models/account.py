@@ -206,9 +206,7 @@ class Account(Base):
     Returns:
       (List[dates], dict{Account.id: list[values]})
     """
-    query = s.query(Account)
-    query = query.with_entities(Account.id, Account.uuid)
-    accounts: t.DictIntStr = dict(query.all())
+    accounts = Account.map_uuid(s)
     current_cash: t.DictIntReal = {acct_id: Decimal(0) for acct_id in accounts}
 
     if uuids is not None:
