@@ -1,4 +1,4 @@
-<input id="txn-search-{{ name }}" placeholder="Search..." name="search-{{ name }}" value="{{ search_str }}" hx-get="/h/transactions/options-{{ name }}" hx-target="#txn-{{ name }}" hx-include="#txn-config,#txn-header" hx-trigger="keyup changed throttle:250ms">
+<input id="txn-search-{{ name }}" placeholder="Search..." name="search-{{ name }}" value="{{ search_str }}" hx-get="/h/transactions/options/{{ name }}" hx-target="#txn-{{ name }}" hx-include="#txn-config,#txn-header" hx-trigger="keyup changed throttle:250ms">
 <div class="options">
   {% for option in options %}
     <label style="{{ 'display:none' if option['hidden'] }}">

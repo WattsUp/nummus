@@ -44,7 +44,10 @@ def search(query: orm.Query[Base], cls: t.Type[Base],
     item_str = " ".join(s for s in item[1:] if s is not None)
     strings[item_id] = item_str
 
-  extracted = process.extract(search_str, strings, limit=None)
+  extracted = process.extract(search_str,
+                              strings,
+                              limit=None,
+                              processor=lambda s: s.lower())
   matching_ids: t.Ints = [i for _, score, i in extracted if score > 60]
   if len(matching_ids) == 0:
     # Include poor matches to return something

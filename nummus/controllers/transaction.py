@@ -42,8 +42,11 @@ def get_table() -> str:
   )
 
 
-def get_options_account() -> str:
-  """GET /h/transactions/options-account
+def get_options(field: str) -> str:
+  """GET /h/transactions/options/<field>
+
+  Args:
+    field: Name of field to get options for
 
   Returns:
     string HTML response
@@ -54,10 +57,18 @@ def get_options_account() -> str:
   with p.get_session() as s:
     args = flask.request.args
 
-    # Get account names
-    query = s.query(Account)
-    query = query.with_entities(Account.id, Account.name)
-    accounts: t.DictIntStr = dict(query.all())
+    id_mapping = None
+    if field == "account":
+      # Get account names
+      query = s.query(Account)
+      query = query.with_entities(Account.id, Account.name)
+      id_mapping: t.DictIntStr = dict(query.all())
+    elif field == "category":
+      # Get category names
+      query = s.query(TransactionCategory)
+      query = query.with_entities(TransactionCategory.id,
+                                  TransactionCategory.name)
+      id_mapping: t.DictIntStr = dict(query.all())
 
     period = args.get("period", "this-month")
     start, end = web_utils.parse_period(period, args.get("start"),
@@ -70,104 +81,64 @@ def get_options_account() -> str:
     query = query.where(TransactionSplit.date <= end)
     query = query.order_by(TransactionSplit.date)
 
-    search_str = args.get("search-account")
+    search_str = args.get(f"search-{field}")
 
     return flask.render_template(
         "transactions/table-options.html",
-        options=ctx_options_account(query, accounts, search_str=search_str),
-        name="account",
+        options=ctx_options(query, field, id_mapping, search_str=search_str),
+        name=field,
         search_str=search_str,
     )
 
 
-def ctx_options_account(query: orm.Query,
-                        accounts: t.DictIntStr,
-                        search_str: str = None) -> t.List[t.DictStr]:
-  """Get the context to build the options for account
+def ctx_options(query: orm.Query,
+                field: str,
+                id_mapping: t.DictIntStr = None,
+                search_str: str = None) -> t.List[t.DictStr]:
+  """Get the context to build the options for table
 
   Args:
     s: Session to use
     query: Query to use to get distinct values
-    accounts: Account ID to name mapping
+    id_mapping: Item ID to name mapping
     search_str: Search options and hide non-matches
 
   Returns:
     List of HTML context
   """
-  if search_str not in [None, ""]:
-    extracted = process.extract(search_str, accounts, limit=None)
-    hidden = {acct_id: score < 60 for _, score, acct_id in extracted}
-  else:
-    hidden = {acct_id: False for acct_id in accounts}
   args = flask.request.args
-  selected: t.Strings = args.getlist("account")
+  selected: t.Strings = args.getlist(field)
   options: t.List[t.DictStr] = []
-  for acct_id, in query.with_entities(TransactionSplit.account_id).distinct():
-    name = accounts[acct_id]
+  entities = {
+      "account": TransactionSplit.account_id,
+      "payee": TransactionSplit.payee,
+      "category": TransactionSplit.category_id,
+      "tag": TransactionSplit.tag,
+  }
+  for name, in query.with_entities(entities[field]).distinct():
+    if name is None:
+      continue
+    if id_mapping is not None:
+      name = id_mapping[name]
     options.append({
         "name": name,
         "checked": name in selected,
-        "hidden": hidden[acct_id]
+        "hidden": False,
+        "score": 0,
     })
+  if search_str not in [None, ""]:
+    names = {i: item["name"] for i, item in enumerate(options)}
+    extracted = process.extract(search_str,
+                                names,
+                                limit=None,
+                                processor=lambda s: s.lower())
+    for _, score, i in extracted:
+      options[i]["score"] = score
+      options[i]["hidden"] = score < 60
 
-  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
-
-
-def ctx_options_payee(query: orm.Query) -> t.List[t.DictStr]:
-  """Get the context to build the options for payee
-
-  Args:
-    query: Query to use to get distinct values
-
-  Returns:
-    List of HTML context
-  """
-  selected: t.Strings = flask.request.args.getlist("payee")
-  options: t.List[t.DictStr] = []
-  for payee, in query.with_entities(TransactionSplit.payee).distinct():
-    options.append({
-        "name": payee,
-        "checked": payee in selected,
-        "hidden": False
-    })
-  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
-
-
-def ctx_options_category(query: orm.Query,
-                         categories: t.DictIntStr) -> t.List[t.DictStr]:
-  """Get the context to build the options for category
-
-  Args:
-    query: Query to use to get distinct values
-    categories: Category ID to name mapping
-
-  Returns:
-    List of HTML context
-  """
-  selected: t.Strings = flask.request.args.getlist("category")
-  options: t.List[t.DictStr] = []
-  for cat_id, in query.with_entities(TransactionSplit.category_id).distinct():
-    name = categories[cat_id]
-    options.append({"name": name, "checked": name in selected, "hidden": False})
-  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
-
-
-def ctx_options_tag(query: orm.Query) -> t.List[t.DictStr]:
-  """Get the context to build the options for tag
-
-  Args:
-    query: Query to use to get distinct values
-
-  Returns:
-    List of HTML context
-  """
-  selected: t.Strings = flask.request.args.getlist("tag")
-  options: t.List[t.DictStr] = []
-  for tag, in query.with_entities(TransactionSplit.tag).distinct():
-    if tag is None:
-      continue
-    options.append({"name": tag, "checked": tag in selected, "hidden": False})
-  return sorted(options, key=lambda item: (not item["checked"], item["name"]))
+  return sorted(options,
+                key=lambda item:
+                (-item["score"], not item["checked"], item["name"]))
 
 
 def ctx_table() -> t.DictStr:
@@ -211,10 +182,10 @@ def ctx_table() -> t.DictStr:
     query = query.order_by(TransactionSplit.date)
 
     # Get options with these filters
-    options_account = ctx_options_account(query, accounts)
-    options_payee = ctx_options_payee(query)
-    options_category = ctx_options_category(query, categories)
-    options_tag = ctx_options_tag(query)
+    options_account = ctx_options(query, "account", accounts)
+    options_payee = ctx_options(query, "payee")
+    options_category = ctx_options(query, "category", categories)
+    options_tag = ctx_options(query, "tag")
 
     # TODO Add searching
 
@@ -311,5 +282,5 @@ def ctx_table() -> t.DictStr:
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (get_table, ["GET"]),
-    "/h/transactions/options-account": (get_options_account, ["GET"]),
+    "/h/transactions/options/<path:field>": (get_options, ["GET"]),
 }
