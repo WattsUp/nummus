@@ -4,7 +4,7 @@
     {% with class="w-[24px] h-[24px]" %}
     {% include "svg/filter.svg" %}
     {% endwith %}
-    <div id="txn-accounts" class="filter-dropdown">
+    <div id="txn-account" class="filter-dropdown">
       {% with options = txn_table["options-account"], name="account" %}
       {% include "transactions/table-options.html" %}
       {% endwith %}
@@ -14,7 +14,7 @@
     {% with class="w-[24px] h-[24px]" %}
     {% include "svg/filter.svg" %}
     {% endwith %}
-    <div id="txn-payees" class="filter-dropdown">
+    <div id="txn-payee" class="filter-dropdown">
       {% with options = txn_table["options-payee"], name="payee" %}
       {% include "transactions/table-options.html" %}
       {% endwith %}
@@ -25,7 +25,7 @@
     {% with class="w-[24px] h-[24px]" %}
     {% include "svg/filter.svg" %}
     {% endwith %}
-    <div id="txn-categories" class="filter-dropdown">
+    <div id="txn-category" class="filter-dropdown">
       {% with options = txn_table["options-category"], name="category" %}
       {% include "transactions/table-options.html" %}
       {% endwith %}
@@ -35,7 +35,7 @@
     {% with class="w-[24px] h-[24px]" %}
     {% include "svg/filter.svg" %}
     {% endwith %}
-    <div id="txn-tags" class="filter-dropdown">
+    <div id="txn-tag" class="filter-dropdown">
       {% with options = txn_table["options-tag"], name="tag" %}
       {% include "transactions/table-options.html" %}
       {% endwith %}

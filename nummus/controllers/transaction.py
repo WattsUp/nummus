@@ -5,6 +5,7 @@ import datetime
 from decimal import Decimal
 
 import flask
+from rapidfuzz import process
 import sqlalchemy
 from sqlalchemy import orm
 
@@ -41,23 +42,74 @@ def get_table() -> str:
   )
 
 
+def get_options_account() -> str:
+  """GET /h/transactions/options-account
+
+  Returns:
+    string HTML response
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    args = flask.request.args
+
+    # Get account names
+    query = s.query(Account)
+    query = query.with_entities(Account.id, Account.name)
+    accounts: t.DictIntStr = dict(query.all())
+
+    period = args.get("period", "this-month")
+    start, end = web_utils.parse_period(period, args.get("start"),
+                                        args.get("end"))
+
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.asset_id.is_(None))
+    if start is not None:
+      query = query.where(TransactionSplit.date >= start)
+    query = query.where(TransactionSplit.date <= end)
+    query = query.order_by(TransactionSplit.date)
+
+    search_str = args.get("search-account")
+
+    return flask.render_template(
+        "transactions/table-options.html",
+        options=ctx_options_account(query, accounts, search_str=search_str),
+        name="account",
+        search_str=search_str,
+    )
+
+
 def ctx_options_account(query: orm.Query,
-                        accounts: t.DictIntStr) -> t.List[t.DictStr]:
+                        accounts: t.DictIntStr,
+                        search_str: str = None) -> t.List[t.DictStr]:
   """Get the context to build the options for account
 
   Args:
     s: Session to use
     query: Query to use to get distinct values
     accounts: Account ID to name mapping
+    search_str: Search options and hide non-matches
 
   Returns:
     List of HTML context
   """
-  selected: t.Strings = flask.request.args.getlist("account")
+  if search_str not in [None, ""]:
+    extracted = process.extract(search_str, accounts, limit=None)
+    hidden = {acct_id: score < 60 for _, score, acct_id in extracted}
+  else:
+    hidden = {acct_id: False for acct_id in accounts}
+  args = flask.request.args
+  selected: t.Strings = args.getlist("account")
   options: t.List[t.DictStr] = []
   for acct_id, in query.with_entities(TransactionSplit.account_id).distinct():
     name = accounts[acct_id]
-    options.append({"name": name, "checked": name in selected})
+    options.append({
+        "name": name,
+        "checked": name in selected,
+        "hidden": hidden[acct_id]
+    })
+
   return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
@@ -73,7 +125,11 @@ def ctx_options_payee(query: orm.Query) -> t.List[t.DictStr]:
   selected: t.Strings = flask.request.args.getlist("payee")
   options: t.List[t.DictStr] = []
   for payee, in query.with_entities(TransactionSplit.payee).distinct():
-    options.append({"name": payee, "checked": payee in selected})
+    options.append({
+        "name": payee,
+        "checked": payee in selected,
+        "hidden": False
+    })
   return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
@@ -92,7 +148,7 @@ def ctx_options_category(query: orm.Query,
   options: t.List[t.DictStr] = []
   for cat_id, in query.with_entities(TransactionSplit.category_id).distinct():
     name = categories[cat_id]
-    options.append({"name": name, "checked": name in selected})
+    options.append({"name": name, "checked": name in selected, "hidden": False})
   return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
@@ -110,7 +166,7 @@ def ctx_options_tag(query: orm.Query) -> t.List[t.DictStr]:
   for tag, in query.with_entities(TransactionSplit.tag).distinct():
     if tag is None:
       continue
-    options.append({"name": tag, "checked": tag in selected})
+    options.append({"name": tag, "checked": tag in selected, "hidden": False})
   return sorted(options, key=lambda item: (not item["checked"], item["name"]))
 
 
@@ -255,4 +311,5 @@ def ctx_table() -> t.DictStr:
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (get_table, ["GET"]),
+    "/h/transactions/options-account": (get_options_account, ["GET"]),
 }
