@@ -38,7 +38,7 @@
           {% for acct in item[1] %}
             <a class="block nav-account {{ 'closed' if acct['closed'] }}">
               <object>
-                <a hx-get="/h/accounts/{{ acct['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML">
+                <a hx-get="/h/accounts/a/{{ acct['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML">
                   {% include "svg/pencil.svg" %}
                 </a>
               </object>

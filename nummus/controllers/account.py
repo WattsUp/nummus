@@ -11,7 +11,7 @@ from nummus.models import Account, AccountCategory
 
 
 def edit_account(path_uuid: str) -> str:
-  """GET & POST /h/accounts/<account_uuid>/edit
+  """GET & POST /h/accounts/a/<account_uuid>/edit
 
   Returns:
     string HTML response
@@ -62,12 +62,11 @@ def edit_account(path_uuid: str) -> str:
         "closed": closed,
         "updated_days_ago": (today - acct.updated_on).days,
         "opened_days_ago": (today - acct.opened_on).days,
-        "error": error
     }
 
-  return flask.render_template("accounts/edit.html", account=ctx)
+  return flask.render_template("accounts/edit.html", account=ctx, error=error)
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
-    "/h/accounts/<path:path_uuid>/edit": (edit_account, ["GET", "POST"])
+    "/h/accounts/a/<path:path_uuid>/edit": (edit_account, ["GET", "POST"])
 }

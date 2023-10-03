@@ -1,0 +1,80 @@
+<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="/h/none" hx-target="#overlay"></a>
+<div class="w-[800px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2">
+  <a hx-get="/h/none" hx-target="#overlay" class="ml-auto px-6">
+    {% with class="w-[32px] h-[32px]" %}
+    {% include "svg/x.svg" %}
+    {% endwith %}
+  </a>
+  <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction</h1>
+  <datalist id="payees">
+    {% for item in payees %}
+      <option value="{{ item }}">{{ item }}</option>
+    {% endfor %}
+  </datalist>
+  <datalist id="tags">
+    {% for item in tags %}
+      <option value="{{ item }}">{{ item }}</option>
+    {% endfor %}
+  </datalist>
+  <form class="flex flex-col w-full px-6 grow" id="form-txn">
+    <div></div>
+    <table class="w-full">
+      <tbody>
+        <tr>
+          <td>Date</td>
+          <td><input class="w-full" name="date" type="date" value="{{ parent['date'] }}"></td>
+        </tr>
+        <tr>
+          <td>Account Name</td>
+          <td>{{ parent["account"] }}</td>
+        </tr>
+        <tr>
+          <td>Transaction Locked</td>
+          <td>
+            <label class="checkbox">
+              <input type="checkbox" name="locked" {{ "checked" if parent["locked"] }}>
+              {% with class = "w-6 h-6" %}
+              {% include "svg/lock.svg" %}
+              {% endwith %}
+            </label>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <hr class="w-full border-grey-200">
+    <div id="txn-splits">
+      {% for txn in splits %}
+        <div>
+          <input name="payee" value="{{ txn['payee'] }}" list="payees">
+          <input name="description" value="{{ txn['description'] }}">
+          <select name="category">
+            {% for item in categories %}
+              <option value="{{ item }}" {{ "selected" if item == txn["category"] }}>{{ item }}</option>
+            {% endfor %}
+          </select>
+          <input name="tag" value="{{ txn['tag'] or '' }}" list="tags">
+          <input name="amount" value="{{ txn['amount'] | money }}">
+        </div>
+      {% endfor %}
+      <div>{{ parent["amount"] | money }}</div>
+    </div>
+  </form>
+  {% if error %}
+    <div class="w-full bg-red px-6 py-2 text-xl">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/error.svg" %}
+      {% endwith %}
+      {{ error }}
+    </div>
+  {% endif %}
+  <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+    <a hx-get="/h/transactions/t/{{ parent['uuid'] }}/add-split" hx-target="#txn-splits" hx-include="#form-txn" class="button hover:blue mr-auto">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/plus.svg" %}
+      {% endwith %}
+      Add split
+    </a>
+    <a hx-get="/h/none" hx-target="#overlay" class="button hover:green">Cancel</a>
+    <a hx-post="/h/transactions/t/{{ parent['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-txn" class="button bg-green">Save</a>
+  </div>
+</div>

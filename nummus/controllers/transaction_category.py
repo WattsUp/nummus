@@ -45,8 +45,10 @@ def overlay_categories() -> str:
 
     ctx: t.DictAny = {"income": income, "expense": expense, "other": other}
 
-  return flask.render_template("transaction_categories/table.html",
-                               categories=ctx)
+  return flask.render_template(
+      "transaction_categories/table.html",
+      categories=ctx,
+  )
 
 
 def new_category() -> str:
@@ -87,10 +89,13 @@ def new_category() -> str:
       "group": group,
       "group_type": TransactionCategoryGroup,
       "locked": False,
-      "error": error
   }
 
-  return flask.render_template("transaction_categories/edit.html", category=ctx)
+  return flask.render_template(
+      "transaction_categories/edit.html",
+      category=ctx,
+      error=error,
+  )
 
 
 def edit_category(path_uuid: str) -> str:
@@ -138,10 +143,13 @@ def edit_category(path_uuid: str) -> str:
         "group": group,
         "group_type": TransactionCategoryGroup,
         "locked": cat.locked,
-        "error": error
     }
 
-  return flask.render_template("transaction_categories/edit.html", category=ctx)
+  return flask.render_template(
+      "transaction_categories/edit.html",
+      category=ctx,
+      error=error,
+  )
 
 
 def delete_category(path_uuid: str) -> str:
@@ -183,11 +191,13 @@ def delete_category(path_uuid: str) -> str:
         "group": cat.group,
         "group_type": TransactionCategoryGroup,
         "locked": cat.locked,
-        "error": error
     }
 
-  return flask.render_template("transaction_categories/delete.html",
-                               category=ctx)
+  return flask.render_template(
+      "transaction_categories/delete.html",
+      category=ctx,
+      error=error,
+  )
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {

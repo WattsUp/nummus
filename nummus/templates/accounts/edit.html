@@ -57,16 +57,16 @@
       </table>
     </div>
   </form>
-  {% if account["error"] %}
+  {% if error %}
     <div class="w-full bg-red px-6 py-2 text-xl">
       {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
       {% include "svg/error.svg" %}
       {% endwith %}
-      {{ account["error"] }}
+      {{ error }}
     </div>
   {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     <a hx-get="/h/none" hx-target="#overlay" class="button hover:green">Cancel</a>
-    <a hx-post="/h/accounts/{{ account['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-account" class="button bg-green">Save</a>
+    <a hx-post="/h/accounts/a/{{ account['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-account" class="button bg-green">Save</a>
   </div>
 </div>

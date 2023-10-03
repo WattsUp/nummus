@@ -72,7 +72,6 @@ def get_options(field: str) -> str:
     if start is not None:
       query = query.where(TransactionSplit.date >= start)
     query = query.where(TransactionSplit.date <= end)
-    query = query.order_by(TransactionSplit.date)
 
     search_str = args.get(f"search-{field}")
 
@@ -99,6 +98,7 @@ def ctx_options(query: orm.Query,
   Returns:
     List of HTML context
   """
+  query = query.order_by(None)
   args = flask.request.args
   selected: t.Strings = args.getlist(field)
   options: t.List[t.DictStr] = []
@@ -217,17 +217,7 @@ def ctx_table() -> t.DictStr:
     transactions: t.List[t.DictAny] = []
     for t_split in page:
       t_split: TransactionSplit
-      t_split_ctx = {
-          "uuid": t_split.uuid,
-          "date": t_split.date,
-          "account": accounts[t_split.account_id],
-          "payee": t_split.payee,
-          "description": t_split.description,
-          "category": categories[t_split.category_id],
-          "tag": t_split.tag,
-          "amount": t_split.amount,
-          "locked": t_split.locked
-      }
+      t_split_ctx = ctx_split(t_split, accounts, categories)
       page_total += t_split.amount
 
       transactions.append(t_split_ctx)
@@ -259,11 +249,109 @@ def ctx_table() -> t.DictStr:
     }
 
 
-# TODO (WattsUp) Add inline edit for txn
-# TODO (WattsUp) Add overlay edit for split transactions
+def ctx_split(t_split: TransactionSplit, accounts: t.DictIntStr,
+              categories: t.DictIntStr) -> t.DictStr:
+  """Get the context to build the transaction edit dialog
+
+  Returns:
+    Dictionary HTML context
+  """
+  return {
+      "uuid": t_split.uuid,
+      "date": t_split.date,
+      "account": accounts[t_split.account_id],
+      "payee": t_split.payee,
+      "description": t_split.description,
+      "category": categories[t_split.category_id],
+      "tag": t_split.tag,
+      "amount": t_split.amount,
+      "locked": t_split.locked
+  }
+
+
+def get_edit(txn_uuid: str) -> str:
+  """GET /h/transactions/t/<txn_uuid>/edit
+
+  Args:
+    txn_uuid: UUID of TransactionSplit
+
+  Returns:
+    string HTML response
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    accounts = Account.map_name(s)
+    categories = TransactionCategory.map_name(s)
+
+    child: TransactionSplit = web_utils.find(s, TransactionSplit, txn_uuid)
+    parent = child.parent
+
+    parent_ctx = {
+        "uuid": parent.uuid,
+        "account": accounts[parent.account_id],
+        "locked": parent.locked,
+        "date": parent.date,
+        "amount": parent.amount,
+    }
+
+    splits = parent.splits
+
+    splits_ctx: t.List[t.DictStr] = [
+        ctx_split(t_split, accounts, categories) for t_split in splits
+    ]
+
+    query = s.query(TransactionSplit.payee)
+    query = query.where(TransactionSplit.asset_id.is_(None))
+    payees = sorted(item for item, in query.distinct())
+
+    query = s.query(TransactionSplit.tag)
+    query = query.where(TransactionSplit.asset_id.is_(None))
+    tags = sorted(item for item, in query.distinct() if item is not None)
+
+    return flask.render_template(
+        "transactions/edit.html",
+        splits=splits_ctx,
+        parent=parent_ctx,
+        payees=payees,
+        categories=categories.values(),
+        tags=tags,
+    )
+
+
+def get_view(txn_uuid: str) -> str:
+  """GET /h/transactions/t/<txn_uuid>
+
+  Args:
+    txn_uuid: UUID of TransactionSplit
+
+  Returns:
+    string HTML response
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    accounts = Account.map_name(s)
+    categories = TransactionCategory.map_name(s)
+
+    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, txn_uuid)
+
+    return flask.render_template(
+        "transactions/table-view.html",
+        txn=ctx_split(t_split, accounts, categories),
+    )
+
+
+# TODO (WattsUp) Add POST endpoint for transaction edits
+# TODO (WattsUp) Add GET endpoint for transaction add split
+# TODO (WattsUp) CSS edit overlay, table header too
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (get_table, ["GET"]),
     "/h/transactions/options/<path:field>": (get_options, ["GET"]),
+    "/h/transactions/t/<path:txn_uuid>": (get_view, ["GET"]),
+    "/h/transactions/t/<path:txn_uuid>/edit": (get_edit, ["GET"]),
 }

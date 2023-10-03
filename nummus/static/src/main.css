@@ -152,6 +152,14 @@
     @apply hover:border-red-900 hover:bg-red-900 hover:text-white;
   }
 
+  .button.bg-blue {
+    @apply text-black border-blue hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+  }
+
+  .button.hover\:blue {
+    @apply hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+  }
+
   .button.bg-white {
     @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
   }
