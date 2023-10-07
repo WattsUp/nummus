@@ -35,6 +35,10 @@ class TransactionCategory(Base):
   group: ORMTxnCatType
   locked: t.ORMBool
 
+  @orm.validates("name")
+  def validate_strings(self, key: str, field: str) -> str:
+    return super().validate_strings(key, field)
+
   @staticmethod
   def add_default(s: orm.Session) -> t.Dict[str, TransactionCategory]:
     """Create default transaction categories

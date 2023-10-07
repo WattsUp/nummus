@@ -3,9 +3,11 @@
 
 import datetime
 from decimal import Decimal
+import re
 
 import flask
 import sqlalchemy
+import sqlalchemy.exc
 
 from nummus import portfolio
 from nummus import custom_types as t
@@ -147,6 +149,57 @@ def empty() -> str:
     HTML string response
   """
   return ""
+
+
+def overlay_swap(content: str = None,
+                 events: t.Strings = None) -> flask.Response:
+  """Create a response to close the overlay and trigger listeners
+
+  Args:
+    content: Content of overlay to swap to, None will close overlay
+    events: List of events to trigger
+
+  Returns:
+    Response that updates overlay OOB and triggers events
+  """
+  html = flask.render_template("shared/overlay.html",
+                               oob=True,
+                               content=content or "")
+  response = flask.make_response(html)
+  if events:
+    response.headers["HX-Trigger"] = ",".join(events)
+  return response
+
+
+def error(e: t.Union[str, Exception]) -> str:
+  """Convert exception into an readable error string
+
+  Args:
+    e: Exception to parse
+
+  Returns:
+    HTML string response
+  """
+  if isinstance(e, sqlalchemy.exc.IntegrityError):
+    # Get the line that starts with (...IntegrityError)
+    m = re.search(r"^\(.+\.IntegrityError\)(.*)$", str(e), re.M)
+    if m is None:
+      return flask.render_template("shared/error.html", error=str(e))
+
+    msg = m.group(1).strip()
+    m = re.match(r"([\w ]+) constraint failed: \w+.(\w+)", msg)
+    if m is not None:
+      constraint = m.group(1)
+      field = m.group(2).capitalize()
+      constraints = {
+          "UNIQUE": "be unique",
+          "NOT NULL": "not be empty",
+      }
+      msg = f"{field} must {constraints.get(constraint, 'be ' +constraint)}"
+    return flask.render_template("shared/error.html", error=msg)
+
+  # Default return exception's string
+  return flask.render_template("shared/error.html", error=str(e))
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {

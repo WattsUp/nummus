@@ -26,17 +26,10 @@
       </tbody>
     </table>
   </form>
-  {% if error %}
-    <div class="w-full bg-red px-6 py-2 text-xl">
-      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
-      {% include "svg/error.svg" %}
-      {% endwith %}
-      {{ error }}
-    </div>
-  {% endif %}
+  <div id="overlay-error" class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     <a hx-get="{{ url_for('transaction_category.overlay') }}" hx-target="#overlay" class="button hover:green">Cancel</a>
-    <a hx-post="{{ url_for('transaction_category.delete', path_uuid=category['uuid']) }}" hx-target="#overlay" hx-include="#form-category" class="button bg-red">
+    <a hx-post="{{ url_for('transaction_category.delete', path_uuid=category['uuid']) }}" hx-target="#overlay-error" hx-include="#form-category" class="button bg-red">
       {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
       {% include "svg/trash.svg" %}
       {% endwith %}

@@ -7,6 +7,7 @@ from decimal import Decimal
 import flask
 from rapidfuzz import process
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy import orm
 
 from nummus import portfolio, web_utils
@@ -128,10 +129,18 @@ def ctx_options(query: orm.Query,
     for _, score, i in extracted:
       options_[i]["score"] = score
       options_[i]["hidden"] = score < 60
+  if field in ["payee", "tag"]:
+    name = "[blank]"
+    options_.append({
+        "name": name,
+        "checked": name in selected,
+        "hidden": search_str not in [None, ""],
+        "score": 100,
+    })
 
   return sorted(options_,
                 key=lambda item:
-                (-item["score"], not item["checked"], item["name"]))
+                (-item["score"], not item["checked"], item["name"].lower()))
 
 
 def ctx_table() -> t.DictStr:
@@ -185,7 +194,13 @@ def ctx_table() -> t.DictStr:
       query = query.where(TransactionSplit.account_id.in_(ids))
 
     if len(selected_payees) != 0:
-      query = query.where(TransactionSplit.payee.in_(selected_payees))
+      try:
+        selected_payees.remove("[blank]")
+        query = query.where(
+            TransactionSplit.payee.in_(selected_payees) |
+            TransactionSplit.payee.is_(None))
+      except ValueError:
+        query = query.where(TransactionSplit.payee.in_(selected_payees))
 
     if len(selected_categories) != 0:
       ids = [
@@ -195,7 +210,13 @@ def ctx_table() -> t.DictStr:
       query = query.where(TransactionSplit.category_id.in_(ids))
 
     if len(selected_tags) != 0:
-      query = query.where(TransactionSplit.tag.in_(selected_tags))
+      try:
+        selected_tags.remove("[blank]")
+        query = query.where(
+            TransactionSplit.tag.in_(selected_tags) |
+            TransactionSplit.tag.is_(None))
+      except ValueError:
+        query = query.where(TransactionSplit.tag.in_(selected_tags))
 
     if locked is not None:
       query = query.where(TransactionSplit.locked == locked)
@@ -273,7 +294,7 @@ def edit(path_uuid: str) -> str:
   """GET & POST /h/transactions/t/<path_uuid>/edit
 
   Args:
-    path_uuid: UUID of TransactionSplit
+    path_uuid: UUID of Transaction or TransactionSplit
 
   Returns:
     string HTML response
@@ -281,14 +302,7 @@ def edit(path_uuid: str) -> str:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
-  if flask.request.method == "POST":
-    form = flask.request.form
-    print(form)
-
   with p.get_session() as s:
-    accounts = Account.map_name(s)
-    categories = TransactionCategory.map_name(s)
-
     parent: Transaction = web_utils.find(s,
                                          Transaction,
                                          path_uuid,
@@ -296,68 +310,99 @@ def edit(path_uuid: str) -> str:
     if parent is None:
       child: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
       parent = child.parent
-
-    parent_ctx = {
-        "uuid": parent.uuid,
-        "account": accounts[parent.account_id],
-        "locked": parent.locked,
-        "date": parent.date,
-        "amount": parent.amount,
-    }
-
-    splits = parent.splits
-
-    splits_ctx: t.List[t.DictStr] = [
-        ctx_split(t_split, accounts, categories) for t_split in splits
-    ]
-
-    query = s.query(TransactionSplit.payee)
-    query = query.where(TransactionSplit.asset_id.is_(None))
-    payees = sorted(item for item, in query.distinct())
-
-    query = s.query(TransactionSplit.tag)
-    query = query.where(TransactionSplit.asset_id.is_(None))
-    tags = sorted(item for item, in query.distinct() if item is not None)
-
-    return flask.render_template(
-        "transactions/edit.html",
-        splits=splits_ctx,
-        parent=parent_ctx,
-        payees=payees,
-        categories=categories.values(),
-        tags=tags,
-    )
-
-
-def view(path_uuid: str) -> str:
-  """GET /h/transactions/t/<path_uuid>
-
-  Args:
-    path_uuid: UUID of TransactionSplit
-
-  Returns:
-    string HTML response
-  """
-  with flask.current_app.app_context():
-    p: portfolio.Portfolio = flask.current_app.portfolio
-
-  with p.get_session() as s:
-    accounts = Account.map_name(s)
     categories = TransactionCategory.map_name(s)
 
-    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
+    if flask.request.method == "GET":
+      accounts = Account.map_name(s)
 
-    return flask.render_template(
-        "transactions/table-view.html",
-        txn=ctx_split(t_split, accounts, categories),
-    )
+      ctx_parent = {
+          "uuid": parent.uuid,
+          "account": accounts[parent.account_id],
+          "locked": parent.locked,
+          "date": parent.date,
+          "amount": parent.amount,
+      }
+
+      splits = parent.splits
+
+      ctx_splits: t.List[t.DictStr] = [
+          ctx_split(t_split, accounts, categories) for t_split in splits
+      ]
+
+      query = s.query(TransactionSplit.payee)
+      query = query.where(TransactionSplit.asset_id.is_(None))
+      payees = sorted((item for item, in query.distinct() if item is not None),
+                      key=lambda item: item.lower())
+
+      query = s.query(TransactionSplit.tag)
+      query = query.where(TransactionSplit.asset_id.is_(None))
+      tags = sorted((item for item, in query.distinct() if item is not None),
+                    key=lambda item: item.lower())
+
+      return flask.render_template(
+          "transactions/edit.html",
+          splits=ctx_splits,
+          parent=ctx_parent,
+          payees=payees,
+          categories=categories.values(),
+          tags=tags,
+      )
+
+    try:
+      form = flask.request.form
+
+      parent.date = web_utils.parse_date(form["date"])
+      parent.locked = "locked" in form
+
+      payee = form.getlist("payee")
+      description = form.getlist("description")
+      category = form.getlist("category")
+      tag = form.getlist("tag")
+      amount = [Decimal(v) for v in form.getlist("amount")]
+
+      if sum(amount) != parent.amount:
+        return common.error("Non-zero remaining amount to be assigned")
+
+      if len(payee) < 1:
+        raise ValueError("Transaction must have at least one split")
+
+      splits = parent.splits
+
+      # Add or remove splits to match desired
+      n_add = len(payee) - len(splits)
+      while n_add > 0:
+        splits.append(TransactionSplit())
+        n_add -= 1
+      if n_add < 0:
+        for t_split in splits[n_add:]:
+          s.delete(t_split)
+        splits = splits[n_add:]
+
+      # Reverse categories for LUT
+      categories_rev = {v: k for k, v in categories.items()}
+
+      # Update parent properties
+      for i, t_split in enumerate(splits):
+        t_split.parent = parent
+
+        t_split.payee = payee[i]
+        t_split.description = description[i]
+        t_split.category_id = categories_rev[category[i]]
+        t_split.tag = tag[i]
+        t_split.amount = amount[i]
+
+      s.commit()
+    except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+      return common.error(e)
+
+    return common.overlay_swap(events=["update-transaction"])
 
 
 def split(path_uuid: str) -> str:
   """PUT & DELETE /h/transactions/t/<path_uuid>/split
 
   Args:
-    path_uuid: UUID of TransactionSplit
+    path_uuid: UUID of Transaction
 
   Returns:
     string HTML response
@@ -366,15 +411,9 @@ def split(path_uuid: str) -> str:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    accounts = Account.map_name(s)
-    categories = TransactionCategory.map_name(s)
+    parent: Transaction = web_utils.find(s, Transaction, path_uuid)
 
-    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
-
-    return flask.render_template(
-        "transactions/table-view.html",
-        txn=ctx_split(t_split, accounts, categories),
-    )
+    raise NotImplementedError
 
 
 # TODO (WattsUp) Add POST endpoint for transaction edits
@@ -385,7 +424,6 @@ ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),
-    "/h/transactions/t/<path:path_uuid>": (view, ["GET"]),
     "/h/transactions/t/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
     "/h/transactions/t/<path:path_uuid>/split": (split, ["PUT", "DELETE"]),
 }

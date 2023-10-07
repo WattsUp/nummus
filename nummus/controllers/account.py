@@ -4,9 +4,11 @@
 import datetime
 
 import flask
+import sqlalchemy.exc
 
 from nummus import portfolio, web_utils
 from nummus import custom_types as t
+from nummus.controllers import common
 from nummus.models import Account, AccountCategory
 
 
@@ -22,49 +24,45 @@ def edit(path_uuid: str) -> str:
 
   with p.get_session() as s:
     acct: Account = web_utils.find(s, Account, path_uuid)
-    institution = acct.institution
-    name = acct.name
-    category = acct.category
-    closed = acct.closed
 
     _, values, _ = acct.get_value(today, today)
     v = values[0]
 
-    error: str = None
-    if flask.request.method == "POST":
-      form = flask.request.form
-      institution = form["institution"].strip()
-      name = form["name"].strip()
-      category = web_utils.parse_enum(form["category"], AccountCategory)
-      closed = "closed" in form
+    if flask.request.method == "GET":
+      ctx: t.DictAny = {
+          "uuid": acct.uuid,
+          "name": acct.name,
+          "institution": acct.institution,
+          "category": acct.category,
+          "category_type": AccountCategory,
+          "value": v,
+          "closed": acct.closed,
+          "updated_days_ago": (today - acct.updated_on).days,
+          "opened_days_ago": (today - acct.opened_on).days,
+      }
 
+      return flask.render_template("accounts/edit.html", account=ctx)
+
+    form = flask.request.form
+    institution = form["institution"].strip()
+    name = form["name"].strip()
+    category = web_utils.parse_enum(form["category"], AccountCategory)
+    closed = "closed" in form
+
+    try:
       if closed and v != 0:
-        error = "Cannot close Account with non-zero balance"
-      else:
-        # Make the changes
-        acct.institution = institution
-        acct.name = name
-        acct.category = category
-        acct.closed = closed
-        s.commit()
+        raise ValueError("Cannot close Account with non-zero balance")
 
-        response = flask.make_response("")
-        response.headers["HX-Trigger"] = "update-account"
-        return response
+      # Make the changes
+      acct.institution = institution
+      acct.name = name
+      acct.category = category
+      acct.closed = closed
+      s.commit()
+    except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+      return common.error(e)
 
-    ctx: t.DictAny = {
-        "uuid": acct.uuid,
-        "name": name,
-        "institution": institution,
-        "category": category,
-        "category_type": AccountCategory,
-        "value": v,
-        "closed": closed,
-        "updated_days_ago": (today - acct.updated_on).days,
-        "opened_days_ago": (today - acct.opened_on).days,
-    }
-
-  return flask.render_template("accounts/edit.html", account=ctx, error=error)
+    return common.overlay_swap(events=["update-account"])
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {

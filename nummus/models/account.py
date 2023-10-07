@@ -45,10 +45,14 @@ class Account(Base):
     opened_on: Date of first Transaction
     updated_on: Date of latest Transaction
   """
-  name: t.ORMStr
+  name: t.ORMStr = orm.mapped_column()
   institution: t.ORMStr
   category: ORMAcctCat
   closed: t.ORMBool
+
+  @orm.validates("name", "institution")
+  def validate_strings(self, key: str, field: str) -> str:
+    return super().validate_strings(key, field)
 
   @property
   def opened_on(self) -> t.Date:

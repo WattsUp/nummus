@@ -67,17 +67,13 @@ def parse_date(s: str) -> datetime.date:
     s: String to parse
 
   Returns:
-    Parsed date
-
-  Raises:
-    HTTPError(400) if date is malformed
+    Parsed date or None
   """
-  if isinstance(s, datetime.date) or s is None:
+  if isinstance(s, datetime.date):
     return s
-  try:
-    return datetime.date.fromisoformat(s)
-  except ValueError as e:
-    raise exceptions.BadRequest(f"Badly formed date: {s}, {e}") from e
+  if s in [None, ""]:
+    return None
+  return datetime.date.fromisoformat(s)
 
 
 def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
@@ -92,7 +88,7 @@ def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
   Raises:
     HTTPError(400) if enum is unknown
   """
-  if isinstance(s, cls) or s is None:
+  if isinstance(s, cls) or s in [None, ""]:
     return s
   try:
     return cls.parse(s)

@@ -46,8 +46,8 @@
     <div id="txn-splits" class="grow overflow-y-scroll">
       {% for txn in splits %}
         <div class="split-row">
-          <input name="payee" value="{{ txn['payee'] }}" placeholder="Payee" list="payees" class="col col-payee">
-          <input name="description" value="{{ txn['description'] }}" placeholder="Description" class="col col-desc">
+          <input name="payee" value="{{ txn['payee'] or '' }}" placeholder="Payee" list="payees" class="col col-payee">
+          <input name="description" value="{{ txn['description'] or '' }}" placeholder="Description" class="col col-desc">
           <select name="category" class="col col-cat">
             {% for item in categories %}
               <option value="{{ item }}" {{ "selected" if item == txn["category"] }}>{{ item }}</option>
@@ -68,14 +68,7 @@
       <div>{{ parent["amount"] | money }}</div>
     </div>
   </form>
-  {% if error %}
-    <div class="w-full bg-red px-6 py-2 text-xl">
-      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
-      {% include "svg/error.svg" %}
-      {% endwith %}
-      {{ error }}
-    </div>
-  {% endif %}
+  <div id="overlay-error" class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     <a hx-put="{{ url_for('transaction.split', path_uuid=parent['uuid']) }}" hx-target="#txn-splits" hx-include="#form-txn" class="button hover:blue mr-auto">
       {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -84,6 +77,6 @@
       Add split
     </a>
     <a hx-get="{{ url_for('common.empty') }}" hx-target="#overlay" class="button hover:green">Cancel</a>
-    <a hx-post="{{ url_for('transaction.edit', path_uuid=parent['uuid']) }}" hx-target="#overlay" hx-include="#form-txn" class="button bg-green">Save</a>
+    <a hx-post="{{ url_for('transaction.edit', path_uuid=parent['uuid']) }}" hx-target="#overlay-error" hx-include="#form-txn" class="button bg-green">Save</a>
   </div>
 </div>

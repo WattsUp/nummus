@@ -2,10 +2,12 @@
 """
 
 import flask
+import sqlalchemy.exc
 from werkzeug import exceptions
 
 from nummus import portfolio, web_utils
 from nummus import custom_types as t
+from nummus.controllers import common
 from nummus.models import (TransactionCategory, TransactionCategoryGroup,
                            TransactionSplit)
 
@@ -57,45 +59,33 @@ def new() -> str:
   Returns:
     string HTML response
   """
-  with flask.current_app.app_context():
-    p: portfolio.Portfolio = flask.current_app.portfolio
+  if flask.request.method == "GET":
+    ctx: t.DictAny = {
+        "uuid": None,
+        "name": None,
+        "group": None,
+        "group_type": TransactionCategoryGroup,
+        "locked": False,
+    }
 
-  name = None
-  group = None
+    return flask.render_template("transaction_categories/edit.html",
+                                 category=ctx)
 
-  error: str = None
-  if flask.request.method == "POST":
-    form = flask.request.form
-    name = form["name"].strip()
-    group = web_utils.parse_enum(form["group"], TransactionCategoryGroup)
+  form = flask.request.form
+  name = form["name"].strip()
+  group = web_utils.parse_enum(form["group"], TransactionCategoryGroup)
 
-    if name == "":
-      error = "Category name must not be empty"
-    else:
-      with p.get_session() as s:
-        query = s.query(TransactionCategory)
-        query = query.where(TransactionCategory.name == name)
-        if query.count() > 0:
-          error = "Category names must be unique"
-        else:
-          cat = TransactionCategory(name=name, group=group, locked=False)
-          s.add(cat)
-          s.commit()
-          return overlay()
+  try:
+    with flask.current_app.app_context():
+      p: portfolio.Portfolio = flask.current_app.portfolio
+    with p.get_session() as s:
+      cat = TransactionCategory(name=name, group=group, locked=False)
+      s.add(cat)
+      s.commit()
+  except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+    return common.error(e)
 
-  ctx: t.DictAny = {
-      "uuid": None,
-      "name": name,
-      "group": group,
-      "group_type": TransactionCategoryGroup,
-      "locked": False,
-  }
-
-  return flask.render_template(
-      "transaction_categories/edit.html",
-      category=ctx,
-      error=error,
-  )
+  return common.overlay_swap(overlay())
 
 
 def edit(path_uuid: str) -> str:
@@ -109,47 +99,35 @@ def edit(path_uuid: str) -> str:
 
   with p.get_session() as s:
     cat: TransactionCategory = web_utils.find(s, TransactionCategory, path_uuid)
-    name = cat.name
-    group = cat.group
+
+    if flask.request.method == "GET":
+      ctx: t.DictAny = {
+          "uuid": cat.uuid,
+          "name": cat.name,
+          "group": cat.group,
+          "group_type": TransactionCategoryGroup,
+          "locked": cat.locked,
+      }
+
+      return flask.render_template("transaction_categories/edit.html",
+                                   category=ctx)
 
     if cat.locked:
       raise exceptions.Forbidden(f"Locked category {cat.name} cannot be "
                                  "modified")
 
-    error: str = None
-    if flask.request.method == "POST":
-      form = flask.request.form
-      name = form["name"].strip()
-      group = web_utils.parse_enum(form.get("group"), TransactionCategoryGroup)
+    form = flask.request.form
+    name = form["name"].strip()
+    group = web_utils.parse_enum(form.get("group"), TransactionCategoryGroup)
 
-      if name == "":
-        error = "Category name must not be empty"
-      else:
-        query = s.query(TransactionCategory.id)
-        query = query.where(TransactionCategory.name == name)
-        query = query.where(TransactionCategory.id != cat.id)
-        if query.count() > 0:
-          error = "Category names must be unique"
-        else:
-          cat.name = name
-          if group is not None:
-            cat.group = group
-          s.commit()
-          return overlay()
+    try:
+      cat.name = name
+      cat.group = group
+      s.commit()
+    except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+      return common.error(e)
 
-    ctx: t.DictAny = {
-        "uuid": cat.uuid,
-        "name": name,
-        "group": group,
-        "group_type": TransactionCategoryGroup,
-        "locked": cat.locked,
-    }
-
-  return flask.render_template(
-      "transaction_categories/edit.html",
-      category=ctx,
-      error=error,
-  )
+    return common.overlay_swap(overlay())
 
 
 def delete(path_uuid: str) -> str:
@@ -164,40 +142,37 @@ def delete(path_uuid: str) -> str:
   with p.get_session() as s:
     cat: TransactionCategory = web_utils.find(s, TransactionCategory, path_uuid)
 
+    if flask.request.method == "GET":
+      ctx: t.DictAny = {
+          "uuid": cat.uuid,
+          "name": cat.name,
+          "group": cat.group,
+          "group_type": TransactionCategoryGroup,
+          "locked": cat.locked,
+      }
+
+      return flask.render_template("transaction_categories/delete.html",
+                                   category=ctx)
+
     if cat.locked:
       raise exceptions.Forbidden(f"Locked category {cat.name} cannot be "
                                  "deleted")
 
-    error: str = None
-    if flask.request.method == "POST":
-      # Move all transactions to Uncategorized
-      query = s.query(TransactionCategory)
-      query = query.where(TransactionCategory.name == "Uncategorized")
-      uncategorized = query.first()
-      if uncategorized is None:
-        raise ValueError("Could not find Uncategorized id")
+    # Move all transactions to Uncategorized
+    query = s.query(TransactionCategory)
+    query = query.where(TransactionCategory.name == "Uncategorized")
+    uncategorized = query.first()
+    if uncategorized is None:
+      raise ValueError("Could not find Uncategorized id")
 
-      query = s.query(TransactionSplit)
-      query = query.where(TransactionSplit.category_id == cat.id)
-      for t_split in query.all():
-        t_split.category_id = uncategorized.id
-      s.delete(cat)
-      s.commit()
-      return overlay()
+    query = s.query(TransactionSplit)
+    query = query.where(TransactionSplit.category_id == cat.id)
+    for t_split in query.all():
+      t_split.category_id = uncategorized.id
+    s.delete(cat)
+    s.commit()
 
-    ctx: t.DictAny = {
-        "uuid": cat.uuid,
-        "name": cat.name,
-        "group": cat.group,
-        "group_type": TransactionCategoryGroup,
-        "locked": cat.locked,
-    }
-
-  return flask.render_template(
-      "transaction_categories/delete.html",
-      category=ctx,
-      error=error,
-  )
+    return common.overlay_swap(overlay())
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {

@@ -164,9 +164,10 @@
     @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
   }
 
-  #overlay:empty {
+  .empty-hidden:empty {
     @apply hidden;
   }
+
   .txn-category {
     @apply flex;
   }

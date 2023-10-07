@@ -60,6 +60,10 @@ class TransactionSplit(Base):
   _asset_qty_int_unadjusted: t.ORMIntOpt
   _asset_qty_frac_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal18)
 
+  @orm.validates("payee", "description", "tag")
+  def validate_strings(self, key: str, field: str) -> str:
+    return super().validate_strings(key, field)
+
   def __setattr__(self, name: str, value: t.Any) -> None:
     if name in ["parent_id", "date", "locked", "account_uuid", "account_id"]:
       raise PermissionError("Call TransactionSplit.parent = Transaction. "
@@ -176,3 +180,7 @@ class Transaction(Base):
   locked: t.ORMBool = orm.mapped_column(default=False)
 
   splits: ORMTxnSplitList = orm.relationship()
+
+  @orm.validates("statement")
+  def validate_strings(self, key: str, field: str) -> str:
+    return super().validate_strings(key, field)

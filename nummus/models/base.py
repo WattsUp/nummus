@@ -96,6 +96,25 @@ class Base(orm.DeclarativeBase):
     query = query.with_entities(cls.id, cls.name)
     return dict(query.all())
 
+  def validate_strings(self, key: str, field: str) -> str:
+    """Validates string fields are not empty
+
+    Args:
+      key: Field being updated
+      field: Updated value
+
+    Returns:
+      field
+
+    Raises:
+      ValueError if field is empty
+    """
+    if field in [None, "", "[blank]"]:
+      return None
+    if len(field) < 3:
+      raise ValueError(f"{key.capitalize()} must be at least 3 characters long")
+    return field
+
 
 class BaseEnum(enum.Enum):
   """Enum class with a parser

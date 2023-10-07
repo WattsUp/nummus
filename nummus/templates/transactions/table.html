@@ -24,7 +24,7 @@
     {% endwith %}
   </div>
 {% endif %}
-<div id="txn-table" class="transactions-table w-full flex flex-col">
+<div id="txn-table" class="transactions-table w-full flex flex-col" hx-get="{{ url_for('transaction.table') }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header" hx-trigger="update-transaction from:body">
   {% if txn_table["transactions"] | length == 0 %}
     <div class="text-center">No matching transactions for given query filters</div>
   {% endif %}
