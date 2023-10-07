@@ -12,8 +12,8 @@ from sqlalchemy import orm
 from nummus import portfolio, web_utils
 from nummus import custom_types as t
 from nummus.controllers import common
-from nummus.models import (Account, TransactionCategory, TransactionSplit,
-                           paginate, search)
+from nummus.models import (Account, Transaction, TransactionCategory,
+                           TransactionSplit, paginate, search)
 
 
 def page_all() -> str:
@@ -29,7 +29,7 @@ def page_all() -> str:
   )
 
 
-def get_table() -> str:
+def table() -> str:
   """GET /h/transactions/table
 
   Returns:
@@ -42,7 +42,7 @@ def get_table() -> str:
   )
 
 
-def get_options(field: str) -> str:
+def options(field: str) -> str:
   """GET /h/transactions/options/<field>
 
   Args:
@@ -101,7 +101,7 @@ def ctx_options(query: orm.Query,
   query = query.order_by(None)
   args = flask.request.args
   selected: t.Strings = args.getlist(field)
-  options: t.List[t.DictStr] = []
+  options_: t.List[t.DictStr] = []
   entities = {
       "account": TransactionSplit.account_id,
       "payee": TransactionSplit.payee,
@@ -113,23 +113,23 @@ def ctx_options(query: orm.Query,
       continue
     if id_mapping is not None:
       name = id_mapping[name]
-    options.append({
+    options_.append({
         "name": name,
         "checked": name in selected,
         "hidden": False,
         "score": 0,
     })
   if search_str not in [None, ""]:
-    names = {i: item["name"] for i, item in enumerate(options)}
+    names = {i: item["name"] for i, item in enumerate(options_)}
     extracted = process.extract(search_str,
                                 names,
                                 limit=None,
                                 processor=lambda s: s.lower())
     for _, score, i in extracted:
-      options[i]["score"] = score
-      options[i]["hidden"] = score < 60
+      options_[i]["score"] = score
+      options_[i]["hidden"] = score < 60
 
-  return sorted(options,
+  return sorted(options_,
                 key=lambda item:
                 (-item["score"], not item["checked"], item["name"]))
 
@@ -269,11 +269,11 @@ def ctx_split(t_split: TransactionSplit, accounts: t.DictIntStr,
   }
 
 
-def get_edit(txn_uuid: str) -> str:
-  """GET /h/transactions/t/<txn_uuid>/edit
+def edit(path_uuid: str) -> str:
+  """GET & POST /h/transactions/t/<path_uuid>/edit
 
   Args:
-    txn_uuid: UUID of TransactionSplit
+    path_uuid: UUID of TransactionSplit
 
   Returns:
     string HTML response
@@ -281,12 +281,21 @@ def get_edit(txn_uuid: str) -> str:
   with flask.current_app.app_context():
     p: portfolio.Portfolio = flask.current_app.portfolio
 
+  if flask.request.method == "POST":
+    form = flask.request.form
+    print(form)
+
   with p.get_session() as s:
     accounts = Account.map_name(s)
     categories = TransactionCategory.map_name(s)
 
-    child: TransactionSplit = web_utils.find(s, TransactionSplit, txn_uuid)
-    parent = child.parent
+    parent: Transaction = web_utils.find(s,
+                                         Transaction,
+                                         path_uuid,
+                                         do_raise=False)
+    if parent is None:
+      child: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
+      parent = child.parent
 
     parent_ctx = {
         "uuid": parent.uuid,
@@ -320,11 +329,11 @@ def get_edit(txn_uuid: str) -> str:
     )
 
 
-def get_view(txn_uuid: str) -> str:
-  """GET /h/transactions/t/<txn_uuid>
+def view(path_uuid: str) -> str:
+  """GET /h/transactions/t/<path_uuid>
 
   Args:
-    txn_uuid: UUID of TransactionSplit
+    path_uuid: UUID of TransactionSplit
 
   Returns:
     string HTML response
@@ -336,7 +345,31 @@ def get_view(txn_uuid: str) -> str:
     accounts = Account.map_name(s)
     categories = TransactionCategory.map_name(s)
 
-    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, txn_uuid)
+    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
+
+    return flask.render_template(
+        "transactions/table-view.html",
+        txn=ctx_split(t_split, accounts, categories),
+    )
+
+
+def split(path_uuid: str) -> str:
+  """PUT & DELETE /h/transactions/t/<path_uuid>/split
+
+  Args:
+    path_uuid: UUID of TransactionSplit
+
+  Returns:
+    string HTML response
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    accounts = Account.map_name(s)
+    categories = TransactionCategory.map_name(s)
+
+    t_split: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
 
     return flask.render_template(
         "transactions/table-view.html",
@@ -350,8 +383,9 @@ def get_view(txn_uuid: str) -> str:
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
-    "/h/transactions/table": (get_table, ["GET"]),
-    "/h/transactions/options/<path:field>": (get_options, ["GET"]),
-    "/h/transactions/t/<path:txn_uuid>": (get_view, ["GET"]),
-    "/h/transactions/t/<path:txn_uuid>/edit": (get_edit, ["GET"]),
+    "/h/transactions/table": (table, ["GET"]),
+    "/h/transactions/options/<path:field>": (options, ["GET"]),
+    "/h/transactions/t/<path:path_uuid>": (view, ["GET"]),
+    "/h/transactions/t/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
+    "/h/transactions/t/<path:path_uuid>/split": (split, ["PUT", "DELETE"]),
 }

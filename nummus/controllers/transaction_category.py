@@ -10,7 +10,7 @@ from nummus.models import (TransactionCategory, TransactionCategoryGroup,
                            TransactionSplit)
 
 
-def overlay_categories() -> str:
+def overlay() -> str:
   """GET /h/transaction_categories
 
   Returns:
@@ -51,7 +51,7 @@ def overlay_categories() -> str:
   )
 
 
-def new_category() -> str:
+def new() -> str:
   """GET & POST /h/transaction_categories/new
 
   Returns:
@@ -81,7 +81,7 @@ def new_category() -> str:
           cat = TransactionCategory(name=name, group=group, locked=False)
           s.add(cat)
           s.commit()
-          return overlay_categories()
+          return overlay()
 
   ctx: t.DictAny = {
       "uuid": None,
@@ -98,7 +98,7 @@ def new_category() -> str:
   )
 
 
-def edit_category(path_uuid: str) -> str:
+def edit(path_uuid: str) -> str:
   """GET & POST /h/transaction_categories/<category_uuid>/edit
 
   Returns:
@@ -135,7 +135,7 @@ def edit_category(path_uuid: str) -> str:
           if group is not None:
             cat.group = group
           s.commit()
-          return overlay_categories()
+          return overlay()
 
     ctx: t.DictAny = {
         "uuid": cat.uuid,
@@ -152,7 +152,7 @@ def edit_category(path_uuid: str) -> str:
   )
 
 
-def delete_category(path_uuid: str) -> str:
+def delete(path_uuid: str) -> str:
   """GET & POST /h/transaction_categories/<category_uuid>/delete
 
   Returns:
@@ -183,7 +183,7 @@ def delete_category(path_uuid: str) -> str:
         t_split.category_id = uncategorized.id
       s.delete(cat)
       s.commit()
-      return overlay_categories()
+      return overlay()
 
     ctx: t.DictAny = {
         "uuid": cat.uuid,
@@ -201,10 +201,8 @@ def delete_category(path_uuid: str) -> str:
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
-    "/h/transaction-categories": (overlay_categories, ["GET"]),
-    "/h/transaction-categories/new": (new_category, ["GET", "POST"]),
-    "/h/transaction-categories/<path:path_uuid>/edit":
-        (edit_category, ["GET", "POST"]),
-    "/h/transaction-categories/<path:path_uuid>/delete":
-        (delete_category, ["GET", "POST"])
+    "/h/txn-categories": (overlay, ["GET"]),
+    "/h/txn-categories/new": (new, ["GET", "POST"]),
+    "/h/txn-categories/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
+    "/h/txn-categories/<path:path_uuid>/delete": (delete, ["GET", "POST"])
 }

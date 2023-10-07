@@ -1,6 +1,6 @@
 <div id="txn-config" class="w-full flex justify-end gap-1 font-serif" hx-swap-oob="{{ oob }}">
-  <input name="search" value="{{ txn_table['search'] }}" placeholder="Search Transactions" class="mr-8 grow" hx-get="/h/transactions/table" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
-  <select name="period" hx-get="/h/transactions/table" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <input name="search" value="{{ txn_table['search'] }}" placeholder="Search Transactions" class="mr-8 grow" hx-get="{{ url_for('transaction.table') }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <select name="period" hx-get="{{ url_for('transaction.table') }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
     <option value="this-month" {{ "selected" if txn_table["period"] == "this-month" }}>This Month</option>
     <option value="last-month" {{ "selected" if txn_table["period"] == "last-month" }}>Last Month</option>
     <option value="30-days" {{ "selected" if txn_table["period"] == "30-days" }}>30 Days</option>
@@ -12,20 +12,20 @@
     <option value="all" {{ "selected" if txn_table["period"] == "all" }}>All</option>
     <option value="custom" hidden="hidden" {{ "selected" if txn_table["period"] == "custom" }}>Custom</option>
   </select>
-  <input type="date" name="start" value="{{ txn_table['start'] }}" hx-get="/h/transactions/table?period=custom" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <input type="date" name="start" value="{{ txn_table['start'] }}" hx-get="{{ url_for('transaction.table') }}?period=custom" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
   to
-  <input type="date" name="end" value="{{ txn_table['end'] }}" hx-get="/h/transactions/table?period=custom" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <input type="date" name="end" value="{{ txn_table['end'] }}" hx-get="{{ url_for('transaction.table') }}?period=custom" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
 </div>
 <div id="txn-paging" class="flex w-full justify-end my-1" hx-swap-oob="{{ oob }}">
-  <button class="button hover:green mr-auto" hx-get="/h/transactions/table?search=" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config">
+  <button class="button hover:green mr-auto" hx-get="{{ url_for('transaction.table') }}?search=" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config">
     Clear Filters
   </button>
-  <button hx-get="/h/transactions/table?{{ txn_table['offset_first'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <button hx-get="{{ url_for('transaction.table') }}?{{ txn_table['offset_first'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
     {% with class="w-[24px] h-[24px] hover:fill-green" %}
     {% include "svg/arrow-first.svg" %}
     {% endwith %}
   </button>
-  <button hx-get="/h/transactions/table?{{ txn_table['offset_prev'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <button hx-get="{{ url_for('transaction.table') }}?{{ txn_table['offset_prev'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
     {% with class="w-[24px] h-[24px] hover:fill-green" %}
     {% include "svg/arrow-left.svg" %}
     {% endwith %}
@@ -37,12 +37,12 @@
     of
     {{ txn_table["count"] }}
   </span>
-  <button hx-get="/h/transactions/table?{{ txn_table['offset_next'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <button hx-get="{{ url_for('transaction.table') }}?{{ txn_table['offset_next'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
     {% with class="w-[24px] h-[24px] hover:fill-green" %}
     {% include "svg/arrow-right.svg" %}
     {% endwith %}
   </button>
-  <button hx-get="/h/transactions/table?{{ txn_table['offset_last'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
+  <button hx-get="{{ url_for('transaction.table') }}?{{ txn_table['offset_last'] }}" hx-target="#txn-table" hx-swap="outerHTML" hx-include="#txn-config,#txn-header">
     {% with class="w-[24px] h-[24px] hover:fill-green" %}
     {% include "svg/arrow-last.svg" %}
     {% endwith %}

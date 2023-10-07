@@ -1,4 +1,4 @@
-<a id="txn-{{ txn['uuid'] }}" class="row hoverable" hx-get="/h/transactions/t/{{ txn['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML">
+<a id="txn-{{ txn['uuid'] }}" class="row hoverable" hx-get="{{ url_for('transaction.edit', path_uuid=txn['uuid']) }}" hx-target="#overlay" hx-swap="innerHTML">
   <div class="col col-date">{{ txn["date"] }}</div>
   <div class="col col-account">{{ txn["account"] }}</div>
   <div class="col col-payee">{{ txn["payee"] }}</div>

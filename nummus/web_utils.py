@@ -13,13 +13,17 @@ from nummus import custom_types as t
 from nummus.models import Base, BaseEnum
 
 
-def find(s: orm.Session, cls: t.Type[Base], query: str) -> Base:
+def find(s: orm.Session,
+         cls: t.Type[Base],
+         query: str,
+         do_raise: bool = True) -> Base:
   """Find the matching object by UUID
 
   Args:
     s: SQL session to search
     cls: Type of object to find
     query: UUID to find, will clean first
+    do_raise: True will raise 404 if not found, False will return None instead
 
   Returns:
     Object
@@ -31,7 +35,7 @@ def find(s: orm.Session, cls: t.Type[Base], query: str) -> Base:
   # Clean
   u = str(parse_uuid(query))
   obj = s.query(cls).where(cls.uuid == u).first()
-  if obj is None:
+  if obj is None and do_raise:
     raise exceptions.NotFound(f"{cls.__name__} {u} not found in Portfolio")
   return obj
 

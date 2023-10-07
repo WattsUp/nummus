@@ -1,6 +1,6 @@
-<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="/h/none" hx-target="#overlay"></a>
+<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="{{ url_for('common.empty') }}" hx-target="#overlay"></a>
 <div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2">
-  <a hx-get="/h/none" hx-target="#overlay" class="ml-auto px-6">
+  <a hx-get="{{ url_for('common.empty') }}" hx-target="#overlay" class="ml-auto px-6">
     {% with class="w-[32px] h-[32px]" %}
     {% include "svg/x.svg" %}
     {% endwith %}
@@ -38,18 +38,18 @@
   {% endif %}
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
     {% if category["uuid"] %}
-      <a hx-get="/h/transaction-categories/{{ category['uuid'] }}/delete" hx-target="#overlay" class="button hover:red mr-auto">
+      <a hx-get="{{ url_for('transaction_category.delete', path_uuid=category['uuid']) }}" hx-target="#overlay" class="button hover:red mr-auto">
         {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
         {% include "svg/trash.svg" %}
         {% endwith %}
         Delete
       </a>
     {% endif %}
-    <a hx-get="/h/transaction-categories" hx-target="#overlay" class="button hover:green">Cancel</a>
+    <a hx-get="{{ url_for('transaction_category.overlay') }}" hx-target="#overlay" class="button hover:green">Cancel</a>
     {% if category["uuid"] %}
-      <a hx-post="/h/transaction-categories/{{ category['uuid'] }}/edit" hx-target="#overlay" hx-include="#form-category" class="button bg-green">Save</a>
+      <a hx-post="{{ url_for('transaction_category.edit', path_uuid=category['uuid']) }}" hx-target="#overlay" hx-include="#form-category" class="button bg-green">Save</a>
     {% else %}
-      <a hx-post="/h/transaction-categories/new" hx-target="#overlay" hx-include="#form-category" class="button bg-green">Save</a>
+      <a hx-post="{{ url_for('transaction_category.new') }}" hx-target="#overlay" hx-include="#form-category" class="button bg-green">Save</a>
     {% endif %}
   </div>
 </div>

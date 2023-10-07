@@ -10,7 +10,7 @@ from nummus import custom_types as t
 from nummus.models import Account, AccountCategory
 
 
-def edit_account(path_uuid: str) -> str:
+def edit(path_uuid: str) -> str:
   """GET & POST /h/accounts/a/<account_uuid>/edit
 
   Returns:
@@ -68,5 +68,5 @@ def edit_account(path_uuid: str) -> str:
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
-    "/h/accounts/a/<path:path_uuid>/edit": (edit_account, ["GET", "POST"])
+    "/h/accounts/a/<path:path_uuid>/edit": (edit, ["GET", "POST"])
 }

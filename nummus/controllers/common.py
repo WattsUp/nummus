@@ -140,7 +140,16 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
   }
 
 
+def empty() -> str:
+  """GET /h/empty
+
+  Returns:
+    HTML string response
+  """
+  return ""
+
+
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/h/sidebar": (sidebar, ["GET"]),
-    "/h/none": (lambda: "", ["GET"])
+    "/h/empty": (empty, ["GET"])
 }

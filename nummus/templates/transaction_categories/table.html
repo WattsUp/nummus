@@ -1,12 +1,12 @@
-<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="/h/none" hx-target="#overlay"></a>
+<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="{{ url_for('common.empty') }}" hx-target="#overlay"></a>
 <div class="w-[800px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2">
-  <a hx-get="/h/none" hx-target="#overlay" class="ml-auto px-6">
+  <a hx-get="{{ url_for('common.empty') }}" hx-target="#overlay" class="ml-auto px-6">
     {% with class="w-[32px] h-[32px]" %}
     {% include "svg/x.svg" %}
     {% endwith %}
   </a>
   <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction categories</h1>
-  <a hx-get="/h/transaction-categories/new" hx-target="#overlay" hx-swap="innerHTML" class="button bg-green ml-auto mx-6">
+  <a hx-get="{{ url_for('transaction_category.new') }}" hx-target="#overlay" hx-swap="innerHTML" class="button bg-green ml-auto mx-6">
     Create category
   </a>
   <div class="flex w-full gap-4 px-6 grow min-h-0 pb-4">
@@ -17,7 +17,7 @@
           {% if item["locked"] %}
             <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
           {% else %}
-            <a hx-get="/h/transaction-categories/{{ item['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
+            <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
               {% with class="w-[24px] h-[24px]" %}
               {% include "svg/pencil.svg" %}
               {% endwith %}
@@ -34,7 +34,7 @@
           {% if item["locked"] %}
             <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
           {% else %}
-            <a hx-get="/h/transaction-categories/{{ item['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
+            <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
               {% with class="w-[24px] h-[24px]" %}
               {% include "svg/pencil.svg" %}
               {% endwith %}
@@ -51,7 +51,7 @@
           {% if item["locked"] %}
             <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
           {% else %}
-            <a hx-get="/h/transaction-categories/{{ item['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
+            <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}" hx-target="#overlay" hx-swap="innerHTML" class="txn-category">
               {% with class="w-[24px] h-[24px]" %}
               {% include "svg/pencil.svg" %}
               {% endwith %}

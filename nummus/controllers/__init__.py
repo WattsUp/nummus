@@ -1,6 +1,8 @@
 """Web request controllers
 """
 
+import types
+
 import flask
 
 from nummus import custom_types as t
@@ -14,12 +16,16 @@ def add_routes(app: flask.Flask) -> None:
   Args:
     app: Flask app to route under
   """
-  all_routes: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {}
-  all_routes.update(account.ROUTES)
-  all_routes.update(common.ROUTES)
-  all_routes.update(dashboard.ROUTES)
-  all_routes.update(transaction.ROUTES)
-  all_routes.update(transaction_category.ROUTES)
-  for url, item in all_routes.items():
-    controller, methods = item
-    app.add_url_rule(url, view_func=controller, methods=methods)
+  n_trim = len(__name__) + 1
+  for v in globals().values():
+    if not isinstance(v, types.ModuleType):
+      continue
+    if not v.__name__.startswith(__name__):
+      continue
+    routes: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = getattr(v, "ROUTES")
+    if routes is None:
+      continue
+    for url, item in routes.items():
+      controller, methods = item
+      endpoint = f"{v.__name__[n_trim:]}.{controller.__name__}"
+      app.add_url_rule(url, endpoint, controller, methods=methods)

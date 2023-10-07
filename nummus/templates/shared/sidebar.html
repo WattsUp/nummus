@@ -1,4 +1,4 @@
-<div id="sidebar" class="sidebar-container" hx-get="/h/sidebar" hx-trigger="update-account from:body" hx-swap="outerHTML">
+<div id="sidebar" class="sidebar-container" hx-get="{{ url_for('common.sidebar') }}" hx-trigger="update-account from:body" hx-swap="outerHTML">
   <nav class="sidebar">
     <a class="block m-2" href="/#todo">
       <div class="bg-green-800">
@@ -23,7 +23,7 @@
       </div>
     </a>
     {% if sidebar["include_closed"] %}
-      <a class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900" hx-get="/h/sidebar?closed=excluded" hx-target="#sidebar" hx-swap="outerHTML">
+      <a class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900" hx-get="{{ url_for('common.sidebar') }}?closed=excluded" hx-target="#sidebar" hx-swap="outerHTML">
         Closed accounts marked with red borders. Click to hide.
       </a>
     {% endif %}
@@ -38,7 +38,7 @@
           {% for acct in item[1] %}
             <a class="block nav-account {{ 'closed' if acct['closed'] }}">
               <object>
-                <a hx-get="/h/accounts/a/{{ acct['uuid'] }}/edit" hx-target="#overlay" hx-swap="innerHTML">
+                <a hx-get="{{ url_for('account.edit', path_uuid=acct['uuid']) }}" hx-target="#overlay" hx-swap="innerHTML">
                   {% include "svg/pencil.svg" %}
                 </a>
               </object>
@@ -62,13 +62,13 @@
           {{ sidebar["n_closed"] }}
           closed accounts
         </span>
-        <a class="button bg-white" hx-get="/h/sidebar?closed=excluded" hx-target="#sidebar" hx-swap="outerHTML">Click to hide</a>
+        <a class="button bg-white" hx-get="{{ url_for('common.sidebar') }}?closed=excluded" hx-target="#sidebar" hx-swap="outerHTML">Click to hide</a>
       {% else %}
         <span>Excluded
           {{ sidebar["n_closed"] }}
           closed accounts
         </span>
-        <a class="button bg-white" hx-get="/h/sidebar?closed=included" hx-target="#sidebar" hx-swap="outerHTML">Click to show</a>
+        <a class="button bg-white" hx-get="{{ url_for('common.sidebar') }}?closed=included" hx-target="#sidebar" hx-swap="outerHTML">Click to show</a>
       {% endif %}
     </div>
   </nav>
