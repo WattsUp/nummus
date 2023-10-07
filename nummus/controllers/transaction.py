@@ -361,7 +361,7 @@ def edit(path_uuid: str) -> str:
       amount = [Decimal(v) for v in form.getlist("amount")]
 
       if sum(amount) != parent.amount:
-        return common.error("Non-zero remaining amount to be assigned")
+        raise ValueError("Non-zero remaining amount to be assigned")
 
       if len(payee) < 1:
         raise ValueError("Transaction must have at least one split")
@@ -376,7 +376,7 @@ def edit(path_uuid: str) -> str:
       if n_add < 0:
         for t_split in splits[n_add:]:
           s.delete(t_split)
-        splits = splits[n_add:]
+        splits = splits[:n_add]
 
       # Reverse categories for LUT
       categories_rev = {v: k for k, v in categories.items()}
@@ -398,11 +398,8 @@ def edit(path_uuid: str) -> str:
     return common.overlay_swap(events=["update-transaction"])
 
 
-def split(path_uuid: str) -> str:
-  """PUT & DELETE /h/transactions/t/<path_uuid>/split
-
-  Args:
-    path_uuid: UUID of Transaction
+def split() -> str:
+  """PUT & DELETE /h/transactions/split
 
   Returns:
     string HTML response
@@ -411,9 +408,48 @@ def split(path_uuid: str) -> str:
     p: portfolio.Portfolio = flask.current_app.portfolio
 
   with p.get_session() as s:
-    parent: Transaction = web_utils.find(s, Transaction, path_uuid)
+    categories = TransactionCategory.map_name(s)
 
-    raise NotImplementedError
+  form = flask.request.form
+
+  payee = form.getlist("payee")
+  description = form.getlist("description")
+  category = form.getlist("category")
+  tag = form.getlist("tag")
+  amount = [Decimal(v) for v in form.getlist("amount")]
+
+  if flask.request.method == "PUT":
+    payee.append(None)
+    description.append(None)
+    category.append("Uncategorized")
+    tag.append(None)
+    amount.append(Decimal(0))
+  elif len(payee) == 1:
+    raise ValueError("Transaction must have at least one split")
+  else:
+    i = int(flask.request.args["index"]) - 1
+
+    payee.pop(i)
+    description.pop(i)
+    category.pop(i)
+    tag.pop(i)
+    amount.pop(i)
+
+  ctx_splits: t.List[t.DictAny] = []
+  for i in range(len(payee)):
+    ctx_splits.append({
+        "payee": payee[i],
+        "description": description[i],
+        "category": category[i],
+        "tag": tag[i],
+        "amount": amount[i],
+    })
+
+  return flask.render_template(
+      "transactions/edit-splits.html",
+      splits=ctx_splits,
+      categories=categories.values(),
+  )
 
 
 # TODO (WattsUp) Add POST endpoint for transaction edits
@@ -425,5 +461,5 @@ ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),
     "/h/transactions/t/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
-    "/h/transactions/t/<path:path_uuid>/split": (split, ["PUT", "DELETE"]),
+    "/h/transactions/split": (split, ["PUT", "DELETE"]),
 }

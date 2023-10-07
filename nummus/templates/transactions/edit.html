@@ -43,26 +43,7 @@
       </tbody>
     </table>
     <hr class="w-full border-grey-200">
-    <div id="txn-splits" class="grow overflow-y-scroll">
-      {% for txn in splits %}
-        <div class="split-row">
-          <input name="payee" value="{{ txn['payee'] or '' }}" placeholder="Payee" list="payees" class="col col-payee">
-          <input name="description" value="{{ txn['description'] or '' }}" placeholder="Description" class="col col-desc">
-          <select name="category" class="col col-cat">
-            {% for item in categories %}
-              <option value="{{ item }}" {{ "selected" if item == txn["category"] }}>{{ item }}</option>
-            {% endfor %}
-          </select>
-          <input name="tag" value="{{ txn['tag'] or '' }}" placeholder="Tag" list="tags" class="col col-tag">
-          <input name="amount" value="{{ '%.2f' % txn['amount'] }}" placeholder="Amount" class="col-amount">
-          <a>
-            {% with class="w-[24px] h-[24px] my-0.5" %}
-            {% include "svg/trash.svg" %}
-            {% endwith %}
-          </a>
-        </div>
-      {% endfor %}
-    </div>
+    {% include "transactions/edit-splits.html" %}
     <div class="split-row">
       <h1 class="font-bold">Amount yet to be assigned</h1>
       <div>{{ parent["amount"] | money }}</div>
@@ -70,7 +51,7 @@
   </form>
   <div id="overlay-error" class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
   <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-    <a hx-put="{{ url_for('transaction.split', path_uuid=parent['uuid']) }}" hx-target="#txn-splits" hx-include="#form-txn" class="button hover:blue mr-auto">
+    <a hx-put="{{ url_for('transaction.split') }}" hx-target="#txn-splits" hx-include="#form-txn" hx-swap="outerHTML" class="button hover:blue mr-auto">
       {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
       {% include "svg/plus.svg" %}
       {% endwith %}
