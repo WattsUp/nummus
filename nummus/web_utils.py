@@ -2,6 +2,7 @@
 """
 
 import datetime
+from decimal import Decimal
 import mimetypes
 import uuid
 
@@ -161,6 +162,28 @@ def parse_bool(s: str) -> bool:
   if s == "":
     return None
   return s.lower() in ["true", "t", "1", 1]
+
+
+def parse_real(s: t.Union[str, t.Strings]) -> t.Union[t.Real, t.Reals]:
+  """Parse a string into a real number
+
+  Args:
+    s: String to parse, or strings
+
+  Returns:
+    Parsed number, or numbers
+  """
+  if isinstance(s, list):
+    return [parse_real(e) for e in s]
+  if isinstance(s, Decimal):
+    return s
+  try:
+    # Be okay parsing ###- and -###
+    if "-" in s:
+      return Decimal(s.replace("-", "")) * -1
+    return Decimal(s)
+  except (ArithmeticError, TypeError):
+    return None
 
 
 def validate_image_upload(req: flask.Request) -> str:

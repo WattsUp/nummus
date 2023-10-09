@@ -358,9 +358,9 @@ def edit(path_uuid: str) -> str:
       description = form.getlist("description")
       category = form.getlist("category")
       tag = form.getlist("tag")
-      amount = [Decimal(v) for v in form.getlist("amount")]
+      amount = web_utils.parse_real(form.getlist("amount"))
 
-      if sum(amount) != parent.amount:
+      if sum(filter(None, amount)) != parent.amount:
         raise ValueError("Non-zero remaining amount to be assigned")
 
       if len(payee) < 1:
@@ -398,8 +398,8 @@ def edit(path_uuid: str) -> str:
     return common.overlay_swap(events=["update-transaction"])
 
 
-def split() -> str:
-  """PUT & DELETE /h/transactions/split
+def split(path_uuid: str) -> str:
+  """PUT & DELETE /h/transactions/<path_uuid>/split
 
   Returns:
     string HTML response
@@ -416,14 +416,14 @@ def split() -> str:
   description = form.getlist("description")
   category = form.getlist("category")
   tag = form.getlist("tag")
-  amount = [Decimal(v) for v in form.getlist("amount")]
+  amount = web_utils.parse_real(form.getlist("amount"))
 
   if flask.request.method == "PUT":
     payee.append(None)
     description.append(None)
     category.append("Uncategorized")
     tag.append(None)
-    amount.append(Decimal(0))
+    amount.append(None)
   elif len(payee) == 1:
     raise ValueError("Transaction must have at least one split")
   else:
@@ -445,21 +445,51 @@ def split() -> str:
         "amount": amount[i],
     })
 
-  return flask.render_template(
+  html = flask.render_template(
       "transactions/edit-splits.html",
       splits=ctx_splits,
       categories=categories.values(),
+      parent={"uuid": path_uuid},
   )
+  if flask.request.method == "DELETE":
+    with p.get_session() as s:
+      parent: Transaction = web_utils.find(s, Transaction, path_uuid)
+      current = sum(filter(None, amount))
+      html += flask.render_template(
+          "transactions/edit-remaining.html",
+          remaining=parent.amount - current,
+          oob=True,
+      )
+  return html
 
 
-# TODO (WattsUp) Add POST endpoint for transaction edits
-# TODO (WattsUp) Add GET endpoint for transaction add split
-# TODO (WattsUp) CSS edit overlay, table header too
+def remaining(path_uuid: str) -> str:
+  """POST /h/transactions/<path_uuid>/remaining
+
+  Returns:
+    string HTML response
+  """
+  with flask.current_app.app_context():
+    p: portfolio.Portfolio = flask.current_app.portfolio
+
+  with p.get_session() as s:
+    parent: Transaction = web_utils.find(s, Transaction, path_uuid)
+    form = flask.request.form
+
+    amount = web_utils.parse_real(form.getlist("amount"))
+    current = sum(filter(None, amount))
+
+    return flask.render_template(
+        "transactions/edit-remaining.html",
+        remaining=parent.amount - current,
+    )
+
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),
     "/h/transactions/t/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
-    "/h/transactions/split": (split, ["PUT", "DELETE"]),
+    "/h/transactions/t/<path:path_uuid>/split": (split, ["PUT", "DELETE"]),
+    "/h/transactions/t/<path:path_uuid>/remaining": (remaining, ["POST"]),
 }
