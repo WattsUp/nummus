@@ -2,7 +2,6 @@
 """
 
 import datetime
-from decimal import Decimal
 import mimetypes
 import uuid
 
@@ -11,7 +10,7 @@ from sqlalchemy import orm
 from werkzeug import exceptions
 
 from nummus import custom_types as t
-from nummus.models import Base, BaseEnum
+from nummus.models import Base
 
 
 def find(s: orm.Session,
@@ -34,71 +33,16 @@ def find(s: orm.Session,
     HTTPError(404) if object is not found
   """
   # Clean
-  u = str(parse_uuid(query))
+  u = str(uuid.UUID(query))
   obj = s.query(cls).where(cls.uuid == u).first()
   if obj is None and do_raise:
     raise exceptions.NotFound(f"{cls.__name__} {u} not found in Portfolio")
   return obj
 
 
-def parse_uuid(s: str) -> uuid.UUID:
-  """Parse a string to UUID
-
-  Args:
-    s: String to parse
-
-  Returns:
-    Parsed UUID
-
-  Raises:
-    HTTPError(400) if UUID is malformed
-  """
-  if isinstance(s, uuid.UUID) or s is None:
-    return s
-  try:
-    return uuid.UUID(s)
-  except ValueError as e:
-    raise exceptions.BadRequest(f"Badly formed UUID: {s}, {e}") from e
-
-
-def parse_date(s: str) -> datetime.date:
-  """Parse a string in ISO format to date
-
-  Args:
-    s: String to parse
-
-  Returns:
-    Parsed date or None
-  """
-  if isinstance(s, datetime.date):
-    return s
-  if s in [None, ""]:
-    return None
-  return datetime.date.fromisoformat(s)
-
-
-def parse_enum(s: str, cls: t.Type[BaseEnum]) -> BaseEnum:
-  """Parse a string into an enum
-
-  Args:
-    s: String to parse
-
-  Returns:
-    Parsed enum
-
-  Raises:
-    HTTPError(400) if enum is unknown
-  """
-  if isinstance(s, cls) or s in [None, ""]:
-    return s
-  try:
-    return cls.parse(s)
-  except ValueError as e:
-    raise exceptions.BadRequest(f"Unknown {cls.__name__}: {s}, {e}") from e
-
-
-def parse_period(period: str, start_custom: str,
-                 end_custom: str) -> t.Tuple[datetime.date, datetime.date]:
+def parse_period(
+    period: str, start_custom: datetime.date,
+    end_custom: datetime.date) -> t.Tuple[datetime.date, datetime.date]:
   """Parse time period from arguments
 
   Args:
@@ -112,8 +56,8 @@ def parse_period(period: str, start_custom: str,
   """
   today = datetime.date.today()
   if period == "custom":
-    start = parse_date(start_custom)
-    end = parse_date(end_custom) or today
+    start = start_custom or today
+    end = end_custom or today
     end = max(start, end)
   elif period == "this-month":
     start = datetime.date(today.year, today.month, 1)
@@ -146,44 +90,6 @@ def parse_period(period: str, start_custom: str,
   else:
     raise exceptions.BadRequest(f"Unknown period: {period}")
   return start, end
-
-
-def parse_bool(s: str) -> bool:
-  """Parse a string into a bool
-
-  Args:
-    s: String to parse
-
-  Returns:
-    Parsed bool
-  """
-  if isinstance(s, bool) or s is None:
-    return s
-  if s == "":
-    return None
-  return s.lower() in ["true", "t", "1", 1]
-
-
-def parse_real(s: t.Union[str, t.Strings]) -> t.Union[t.Real, t.Reals]:
-  """Parse a string into a real number
-
-  Args:
-    s: String to parse, or strings
-
-  Returns:
-    Parsed number, or numbers
-  """
-  if isinstance(s, list):
-    return [parse_real(e) for e in s]
-  if isinstance(s, Decimal):
-    return s
-  try:
-    # Be okay parsing ###- and -###
-    if "-" in s:
-      return Decimal(s.replace("-", "")) * -1
-    return Decimal(s)
-  except (ArithmeticError, TypeError):
-    return None
 
 
 def validate_image_upload(req: flask.Request) -> str:

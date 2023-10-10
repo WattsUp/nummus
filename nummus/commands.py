@@ -6,7 +6,7 @@ import pathlib
 import colorama
 from colorama import Fore
 
-from nummus import common, portfolio, web
+from nummus import portfolio, utils, web
 from nummus import custom_types as t
 
 colorama.init(autoreset=True)
@@ -46,7 +46,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
 
     # Prompt user
     while key is None:
-      key = common.get_input("Please enter password: ", secure=True)
+      key = utils.get_input("Please enter password: ", secure=True)
       if key is None:
         return 1
 
@@ -55,7 +55,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         key = None
         continue
 
-      repeat = common.get_input("Please confirm password: ", secure=True)
+      repeat = utils.get_input("Please confirm password: ", secure=True)
       if repeat is None:
         return 1
 
@@ -109,7 +109,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
 
   # 3 attempts
   for _ in range(3):
-    key = common.get_input("Please enter password: ", secure=True)
+    key = utils.get_input("Please enter password: ", secure=True)
     if key is None:
       return None
     try:

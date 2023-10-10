@@ -13,7 +13,7 @@ from nummus import custom_types as t
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
-_REGEX_FINANCIAL_CLEAN = re.compile(r"[^0-9\-\.]")
+_REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 
 
 def camel_to_snake(s: str) -> str:
@@ -98,8 +98,8 @@ def confirm(prompt: str = None, default: bool = False) -> bool:
     print()
 
 
-def parse_financial(s: str) -> t.Real:
-  """Parse a string number written in financial notation
+def parse_real(s: str) -> t.Real:
+  """Parse a string into a real number
 
   Args:
     s: String to parse
@@ -109,10 +109,12 @@ def parse_financial(s: str) -> t.Real:
   """
   if s is None:
     return None
-  s = _REGEX_FINANCIAL_CLEAN.sub("", s)
-  if s == "":
+  clean = _REGEX_REAL_CLEAN.sub("", s)
+  if clean == "":
     return None
-  return t.Real(s)
+  if "-" in s:
+    return Decimal(clean) * -1
+  return Decimal(clean)
 
 
 def format_financial(x: t.Real) -> str:
@@ -127,6 +129,22 @@ def format_financial(x: t.Real) -> str:
   if x < 0:
     return f"-${-x:,.2f}"
   return f"${x:,.2f}"
+
+
+def parse_bool(s: str) -> bool:
+  """Parse a string into a bool
+
+  Args:
+    s: String to parse
+
+  Returns:
+    Parsed bool
+  """
+  if not isinstance(s, str):
+    raise TypeError("parse_bool: argument must be string")
+  if s == "":
+    return None
+  return s.lower() in ["true", "t", "1"]
 
 
 def format_days(days: int, labels: t.Strings = None) -> str:

@@ -73,7 +73,7 @@ def new() -> str:
 
   form = flask.request.form
   name = form["name"].strip()
-  group = web_utils.parse_enum(form["group"], TransactionCategoryGroup)
+  group = form.get("group", type=TransactionCategoryGroup.parse)
 
   try:
     with flask.current_app.app_context():
@@ -118,7 +118,7 @@ def edit(path_uuid: str) -> str:
 
     form = flask.request.form
     name = form["name"].strip()
-    group = web_utils.parse_enum(form.get("group"), TransactionCategoryGroup)
+    group = form.get("group", type=TransactionCategoryGroup.parse)
 
     try:
       cat.name = name

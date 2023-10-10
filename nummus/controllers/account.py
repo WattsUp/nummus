@@ -46,7 +46,7 @@ def edit(path_uuid: str) -> str:
     form = flask.request.form
     institution = form["institution"].strip()
     name = form["name"].strip()
-    category = web_utils.parse_enum(form["category"], AccountCategory)
+    category = form.get("category", type=AccountCategory.parse)
     closed = "closed" in form
 
     try:

@@ -14,7 +14,7 @@ import pytailwindcss
 from OpenSSL import crypto
 import webassets.filter
 
-from nummus import common, controllers, portfolio, version
+from nummus import controllers, portfolio, utils, version
 
 
 class Handler(gevent.pywsgi.WSGIHandler):
@@ -169,8 +169,8 @@ class Server:
     env_assets.register("js", bundle_js)
     bundle_js.build()
 
-    self._app.jinja_env.filters["money"] = common.format_financial
-    self._app.jinja_env.filters["days"] = common.format_days
+    self._app.jinja_env.filters["money"] = utils.format_financial
+    self._app.jinja_env.filters["days"] = utils.format_days
     self._app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
 
     if not p.ssl_cert_path.exists():

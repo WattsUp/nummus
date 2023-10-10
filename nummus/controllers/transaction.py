@@ -10,7 +10,7 @@ import sqlalchemy
 import sqlalchemy.exc
 from sqlalchemy import orm
 
-from nummus import portfolio, web_utils
+from nummus import portfolio, utils, web_utils
 from nummus import custom_types as t
 from nummus.controllers import common
 from nummus.models import (Account, Transaction, TransactionCategory,
@@ -65,8 +65,9 @@ def options(field: str) -> str:
       id_mapping = TransactionCategory.map_name(s)
 
     period = args.get("period", "this-month")
-    start, end = web_utils.parse_period(period, args.get("start"),
-                                        args.get("end"))
+    start, end = web_utils.parse_period(
+        period, args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat))
 
     query = s.query(TransactionSplit)
     query = query.where(TransactionSplit.asset_id.is_(None))
@@ -159,10 +160,12 @@ def ctx_table() -> t.DictStr:
     categories = TransactionCategory.map_name(s)
 
     period = args.get("period", "this-month")
-    start, end = web_utils.parse_period(period, args.get("start"),
-                                        args.get("end"))
+    start, end = web_utils.parse_period(
+        period, args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat))
     search_str = args.get("search", "").strip()
-    locked = web_utils.parse_bool(args.get("locked"))
+    locked = args.get("locked", type=utils.parse_bool)
+    print(locked)
 
     page_len = 25
     offset = int(args.get("offset", 0))
@@ -351,14 +354,14 @@ def edit(path_uuid: str) -> str:
     try:
       form = flask.request.form
 
-      parent.date = web_utils.parse_date(form["date"])
+      parent.date = form.get("date", type=datetime.date.fromisoformat)
       parent.locked = "locked" in form
 
       payee = form.getlist("payee")
       description = form.getlist("description")
       category = form.getlist("category")
       tag = form.getlist("tag")
-      amount = web_utils.parse_real(form.getlist("amount"))
+      amount = form.getlist("amount", utils.parse_real)
 
       if sum(filter(None, amount)) != parent.amount:
         raise ValueError("Non-zero remaining amount to be assigned")
@@ -416,7 +419,7 @@ def split(path_uuid: str) -> str:
   description = form.getlist("description")
   category = form.getlist("category")
   tag = form.getlist("tag")
-  amount = web_utils.parse_real(form.getlist("amount"))
+  amount = form.getlist("amount", utils.parse_real)
 
   if flask.request.method == "PUT":
     payee.append(None)
@@ -476,7 +479,7 @@ def remaining(path_uuid: str) -> str:
     parent: Transaction = web_utils.find(s, Transaction, path_uuid)
     form = flask.request.form
 
-    amount = web_utils.parse_real(form.getlist("amount"))
+    amount = form.getlist("amount", utils.parse_real)
     current = sum(filter(None, amount))
 
     return flask.render_template(

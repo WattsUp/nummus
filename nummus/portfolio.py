@@ -12,7 +12,7 @@ import autodict
 import sqlalchemy
 from sqlalchemy import orm
 
-from nummus import common, importers, models, sql, version
+from nummus import importers, models, sql, utils, version
 from nummus import custom_types as t
 from nummus.models import (Account, Asset, Credentials, Transaction,
                            TransactionCategory, TransactionSplit)
@@ -130,7 +130,7 @@ class Portfolio:
     path_db.parent.mkdir(parents=True, exist_ok=True)
     path_images.mkdir(exist_ok=True)
     path_ssl.mkdir(exist_ok=True)
-    salt = common.random_string(min_length=50, max_length=100)
+    salt = utils.random_string(min_length=50, max_length=100)
     config = autodict.JSONAutoDict(path_config)
     config.clear()
     config["version"] = str(version.__version__)

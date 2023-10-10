@@ -10,7 +10,7 @@ import uuid
 import sqlalchemy
 from sqlalchemy import orm, schema, types
 
-from nummus import common
+from nummus import utils
 from nummus import custom_types as t
 
 
@@ -25,7 +25,7 @@ class Base(orm.DeclarativeBase):
 
   @orm.declared_attr
   def __tablename__(self) -> str:
-    return common.camel_to_snake(self.__name__)
+    return utils.camel_to_snake(self.__name__)
 
   id: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
