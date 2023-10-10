@@ -120,7 +120,10 @@
     @apply fill-black;
   }
 
-  a[hx-target] {
+  a[hx-get],
+  a[hx-post],
+  a[hx-delete],
+  a[hx-put] {
     @apply cursor-pointer;
   }
 
