@@ -31,7 +31,9 @@ class TestBudget(TestBase):
     self.assertEqual(d["amount"], b.amount)
 
     # Positive amounts are bad
-    self.assertRaises(ValueError, setattr, b, "amount", 1)
+    b.amount = 1
+    self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+    s.rollback()
 
     # Duplicate dates are bad
     b = budget.Budget(date=today, amount=0)

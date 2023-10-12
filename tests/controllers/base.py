@@ -49,7 +49,7 @@ class WebTestBase(TestBase):
         current_tag, parent = current_node.pop("__parent__")
         current_node = parent
         self.assertEqual(current_tag, tag[1:])
-      elif tag in ["link", "meta", "path"]:
+      elif tag in ["link", "meta", "path", "input", "hr"]:
         # Tags without close tags
         current_node[tag] = {}
       else:
@@ -288,7 +288,7 @@ class WebTestBase(TestBase):
                endpoint: str,
                queries: t.DictStr = None,
                content_type: str = "application/json",
-               rc: int = 201,
+               rc: int = 200,
                **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API POST
 
@@ -316,7 +316,7 @@ class WebTestBase(TestBase):
                  endpoint: str,
                  queries: t.DictStr = None,
                  content_type: str = None,
-                 rc: int = 204,
+                 rc: int = 200,
                  **kwargs) -> t.Tuple[ResultType, t.DictStr]:
     """Run a test API DELETE
 

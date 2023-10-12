@@ -41,7 +41,10 @@ class TransactionSplit(Base):
     asset_quantity: Number of units of Asset exchanged, Positive indicates
       Account gained Assets (inflow)
   """
-  amount: t.ORMReal = orm.mapped_column(Decimal6)
+  amount: t.ORMReal = orm.mapped_column(
+      Decimal6,
+      sqlalchemy.CheckConstraint("amount != 0",
+                                 "transaction_split.amount must be non-zero"))
   payee: t.ORMStrOpt
   description: t.ORMStrOpt
   tag: t.ORMStrOpt
@@ -63,27 +66,6 @@ class TransactionSplit(Base):
   @orm.validates("payee", "description", "tag")
   def validate_strings(self, key: str, field: str) -> str:
     return super().validate_strings(key, field)
-
-  @orm.validates("amount")
-  def validate_total(
-      self,
-      key: str,  # pylint: disable=unused-argument
-      field: t.Real) -> t.Real:
-    """Validates amount constraints are met
-
-    Args:
-      key: Field being updated
-      field: Updated value
-
-    Returns:
-      field
-
-    Raises:
-      ValueError if amount is positive
-    """
-    if field == 0:
-      raise ValueError("Split amount must be non-zero")
-    return field
 
   def __setattr__(self, name: str, value: t.Any) -> None:
     if name in ["parent_id", "date", "locked", "account_uuid", "account_id"]:

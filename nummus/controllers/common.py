@@ -182,20 +182,25 @@ def error(e: t.Union[str, Exception]) -> str:
   """
   if isinstance(e, sqlalchemy.exc.IntegrityError):
     # Get the line that starts with (...IntegrityError)
-    m = re.search(r"^\(.+\.IntegrityError\)(.*)$", str(e), re.M)
-    if m is None:
-      return flask.render_template("shared/error.html", error=str(e))
-
-    msg = m.group(1).strip()
-    m = re.match(r"([\w ]+) constraint failed: \w+.(\w+)", msg)
+    orig = str(e.orig)
+    m = re.match(r"([\w ]+) constraint failed: (\w+).(\w+)(.*)", orig)
     if m is not None:
       constraint = m.group(1)
-      field = m.group(2).capitalize()
+      table = m.group(2).replace("_", " ").capitalize()
+      field = m.group(3)
+      additional = m.group(4)
       constraints = {
           "UNIQUE": "be unique",
           "NOT NULL": "not be empty",
       }
-      msg = f"{field} must {constraints.get(constraint, 'be ' +constraint)}"
+      if constraint == "CHECK":
+        msg = f"{table} {field}{additional}"
+      else:
+        msg = (f"{table} {field} must "
+               f"{constraints.get(constraint, 'be ' + constraint)}")
+    else:  # pragma: no cover
+      # Don't need to test fallback
+      msg = orig
     return flask.render_template("shared/error.html", error=msg)
 
   # Default return exception's string

@@ -1,6 +1,7 @@
 """Budget model for storing an allocation of expenses per month
 """
 
+import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import custom_types as t
@@ -19,25 +20,7 @@ class Budget(Base):
     amount: Target limit of expense per month, zero or negative
   """
   date: t.ORMDate = orm.mapped_column(unique=True)
-  amount: t.ORMReal = orm.mapped_column(Decimal6)
-
-  @orm.validates("amount")
-  def validate_total(
-      self,
-      key: str,  # pylint: disable=unused-argument
-      field: t.Real) -> t.Real:
-    """Validates amount constraints are met
-
-    Args:
-      key: Field being updated
-      field: Updated value
-
-    Returns:
-      field
-
-    Raises:
-      ValueError if amount is positive
-    """
-    if field > 0:
-      raise ValueError("Budget amount must be zero or negative")
-    return field
+  amount: t.ORMReal = orm.mapped_column(
+      Decimal6,
+      sqlalchemy.CheckConstraint("amount <= 0",
+                                 "budget.amount must be zero or negative"))

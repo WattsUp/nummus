@@ -4,9 +4,13 @@
 import datetime
 from decimal import Decimal
 
+import sqlalchemy.exc
+
 from nummus import custom_types as t
-from nummus.models import (Account, AccountCategory, Transaction,
-                           TransactionCategory, TransactionSplit)
+from nummus import controllers
+from nummus.models import (Account, AccountCategory, Budget, Transaction,
+                           TransactionCategory, TransactionCategoryGroup,
+                           TransactionSplit)
 from nummus.controllers import common
 
 from tests.controllers.base import WebTestBase
@@ -15,6 +19,18 @@ from tests.controllers.base import WebTestBase
 class TestCommon(WebTestBase):
   """Test common components controller
   """
+
+  def test_sidebar(self):
+    endpoint = "/h/sidebar"
+    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
+    self.assertIn("Click to show", result)
+    self.assertValidHTML(result)
+
+    result, _ = self.api_get(endpoint,
+                             content_type="text/html; charset=utf-8",
+                             queries={"closed": "included"})
+    self.assertIn("Click to hide", result)
+    self.assertValidHTML(result)
 
   def test_ctx_sidebar(self):
     p = self._portfolio
@@ -124,3 +140,100 @@ class TestCommon(WebTestBase):
     with self._flask_app.app_context():
       result = common.ctx_sidebar(include_closed=False)
     self.assertDictEqual(target, result)
+
+  def test_empty(self):
+    self.assertEqual("", common.empty())
+
+  def test_overlay_swap(self):
+    with self._flask_app.app_context():
+      content = self.random_string()
+      event_0 = self.random_string()
+      event_1 = self.random_string()
+
+      response = common.overlay_swap()
+      data: bytes = response.data
+      html = data.decode()
+      self.assertValidHTML(html)
+      self.assertNotIn(content, html)
+      self.assertNotIn("HX-Trigger", response.headers)
+
+      response = common.overlay_swap(content, [event_0])
+      data: bytes = response.data
+      html = data.decode()
+      self.assertValidHTML(html)
+      self.assertIn(content, html)
+      self.assertEqual(event_0, response.headers["HX-Trigger"])
+
+      response = common.overlay_swap(content, [event_0, event_1])
+      data: bytes = response.data
+      html = data.decode()
+      self.assertValidHTML(html)
+      self.assertIn(content, html)
+      self.assertEqual(f"{event_0},{event_1}", response.headers["HX-Trigger"])
+
+  def test_error(self):
+    p = self._portfolio
+
+    today = datetime.date.today()
+
+    with self._flask_app.app_context():
+      e_str = self.random_string()
+      html = common.error(e_str)
+      self.assertValidHTML(html)
+      self.assertIn(e_str, html)
+
+      with p.get_session() as s:
+        t_cat = TransactionCategory()
+        t_cat.group = TransactionCategoryGroup.OTHER
+        t_cat.locked = False
+
+        with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+          s.add(t_cat)
+          s.commit()
+        e: sqlalchemy.exc.IntegrityError = cm.exception
+        e_str = "Transaction category name must not be empty"
+        html = common.error(e)
+        self.assertValidHTML(html)
+        self.assertIn(e_str, html)
+        s.rollback()
+
+        name = self.random_string()
+        t_cat.name = name
+        s.add(t_cat)
+        s.commit()
+
+        t_cat = TransactionCategory()
+        t_cat.name = name
+        t_cat.group = TransactionCategoryGroup.OTHER
+        t_cat.locked = False
+        with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+          s.add(t_cat)
+          s.commit()
+        e: sqlalchemy.exc.IntegrityError = cm.exception
+        e_str = "Transaction category name must be unique"
+        html = common.error(e)
+        self.assertValidHTML(html)
+        self.assertIn(e_str, html)
+        s.rollback()
+
+        b = Budget()
+        b.date = today
+        b.amount = 1
+        with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+          s.add(b)
+          s.commit()
+        e: sqlalchemy.exc.IntegrityError = cm.exception
+        e_str = "Budget amount must be zero or negative"
+        html = common.error(e)
+        self.assertValidHTML(html)
+        self.assertIn(e_str, html)
+        s.rollback()
+
+  def test_add_routes(self):
+    controllers.add_routes(self._flask_app)
+    routes = self._flask_app.url_map
+    for rule in routes.iter_rules():
+      self.assertFalse(rule.endpoint.startswith("nummus.controllers."))
+      self.assertFalse(rule.endpoint.startswith("."))
+      self.assertTrue(rule.rule.startswith("/"))
+      self.assertFalse(rule.rule != "/" and rule.rule.endswith("/"))

@@ -23,8 +23,6 @@ def add_routes(app: flask.Flask) -> None:
     if not v.__name__.startswith(__name__):
       continue
     routes: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = getattr(v, "ROUTES")
-    if routes is None:
-      continue
     for url, item in routes.items():
       controller, methods = item
       endpoint = f"{v.__name__[n_trim:]}.{controller.__name__}"

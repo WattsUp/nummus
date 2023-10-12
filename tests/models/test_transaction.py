@@ -3,6 +3,8 @@
 
 import datetime
 
+import sqlalchemy.exc
+
 from nummus import models
 from nummus.models import (Account, AccountCategory, Asset, AssetCategory,
                            Transaction, TransactionCategory, TransactionSplit)
@@ -126,7 +128,9 @@ class TestTransactionSplit(TestBase):
     self.assertEqual(t_split_1.account_id, acct.id)
 
     # Zero amounts are bad
-    self.assertRaises(ValueError, setattr, t_split_0, "amount", 0)
+    t_split_0.amount = 0
+    self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+    s.rollback()
 
     # Short strings are bad
     self.assertRaises(ValueError, setattr, t_split_0, "payee", "ab")
