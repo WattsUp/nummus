@@ -18,6 +18,7 @@ class Parent(base.Base):
   """
 
   generic_column: t.ORMIntOpt
+  name: t.ORMStrOpt
   children: orm.Mapped[t.List[Child]] = orm.relationship(
       back_populates="parent")
 
@@ -126,6 +127,45 @@ class TestORMBase(TestBase):
           Parent.id == parent_a.id).first()
       self.assertNotEqual(id(parent_a), id(parent_a_queried))
       self.assertEqual(parent_a, parent_a_queried)
+
+  def test_map_name(self):
+    s = self.get_session()
+    base.Base.metadata.create_all(s.get_bind(),
+                                  tables=[Parent.__table__, Child.__table__])
+    s.commit()
+
+    self.assertRaises(KeyError, base.Base.map_name, s)
+
+    parent_a = Parent(name=self.random_string())
+    parent_b = Parent(name=self.random_string())
+    s.add_all([parent_a, parent_b])
+    s.commit()
+
+    result = Parent.map_name(s)
+    target = {
+        parent_a.id: parent_a.name,
+        parent_b.id: parent_b.name,
+    }
+    self.assertEqual(target, result)
+
+  def test_validate_strings(self):
+    parent = Parent()
+    key = self.random_string()
+
+    result = parent.validate_strings(key, None)
+    self.assertIsNone(result)
+
+    result = parent.validate_strings(key, "")
+    self.assertIsNone(result)
+
+    result = parent.validate_strings(key, "[blank]")
+    self.assertIsNone(result)
+
+    field = self.random_string(3)
+    result = parent.validate_strings(key, field)
+    self.assertEqual(field, result)
+
+    self.assertRaises(ValueError, parent.validate_strings, key, "ab")
 
 
 class Derived(base.BaseEnum):

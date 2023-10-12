@@ -125,6 +125,12 @@ class TestTransactionSplit(TestBase):
     self.assertEqual(t_split_1.locked, txn.locked)
     self.assertEqual(t_split_1.account_id, acct.id)
 
+    # Zero amounts are bad
+    self.assertRaises(ValueError, setattr, t_split_0, "amount", 0)
+
+    # Short strings are bad
+    self.assertRaises(ValueError, setattr, t_split_0, "payee", "ab")
+
     # Set an not an Transaction
     self.assertRaises(TypeError, setattr, t_split_0, "parent",
                       self.random_string())

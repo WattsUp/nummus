@@ -39,55 +39,65 @@ class TestWebUtils(TestBase):
     # Account does not exist
     self.assertHTTPRaises(404, web_utils.find, s, Account, str(uuid.uuid4()))
 
-  def test_parse_uuid(self):
-    target = uuid.uuid4()
-    s = str(target)
-    result = web_utils.parse_uuid(s)
-    self.assertEqual(target, result)
+  def test_parse_period(self):
+    today = datetime.date.today()
 
-    s = str(target).replace("-", "")
-    result = web_utils.parse_uuid(s)
-    self.assertEqual(target, result)
+    result = web_utils.parse_period("custom", None, None)
+    self.assertEqual(result, (today, today))
 
-    result = web_utils.parse_uuid(target)
-    self.assertEqual(target, result)
+    start = datetime.date(today.year, today.month, 4)
+    end = datetime.date(today.year, today.month, 10)
+    result = web_utils.parse_period("custom", start, end)
+    self.assertEqual(result, (start, end))
+    result = web_utils.parse_period("custom", end, start)
+    self.assertEqual(result, (end, end))
 
-    result = web_utils.parse_uuid(None)
-    self.assertIsNone(result)
+    start = datetime.date(today.year, today.month, 1)
+    end = today
+    result = web_utils.parse_period("this-month", None, None)
+    self.assertEqual(result, (start, end))
 
-    # Bad UUID
-    self.assertHTTPRaises(400, web_utils.parse_uuid, self.random_string())
+    end = (datetime.date(today.year, today.month, 1) -
+           datetime.timedelta(days=1))
+    start = datetime.date(end.year, end.month, 1)
+    result = web_utils.parse_period("last-month", None, None)
+    self.assertEqual(result, (start, end))
 
-  def test_parse_date(self):
-    target = datetime.date.today()
-    s = target.isoformat()
-    result = web_utils.parse_date(s)
-    self.assertEqual(target, result)
+    start = today - datetime.timedelta(days=30)
+    end = today
+    result = web_utils.parse_period("30-days", None, None)
+    self.assertEqual(result, (start, end))
 
-    result = web_utils.parse_date(target)
-    self.assertEqual(target, result)
+    start = today - datetime.timedelta(days=90)
+    end = today
+    result = web_utils.parse_period("90-days", None, None)
+    self.assertEqual(result, (start, end))
 
-    result = web_utils.parse_date(None)
-    self.assertIsNone(result)
+    start = datetime.date(today.year - 1, today.month, 1)
+    end = today
+    result = web_utils.parse_period("1-year", None, None)
+    self.assertEqual(result, (start, end))
 
-    # Bad Date
-    self.assertHTTPRaises(400, web_utils.parse_date, self.random_string())
+    start = datetime.date(today.year - 5, today.month, 1)
+    end = today
+    result = web_utils.parse_period("5-years", None, None)
+    self.assertEqual(result, (start, end))
 
-  def test_parse_enum(self):
-    target: AccountCategory = self._RNG.choice(AccountCategory)
-    s = target.name.lower()
-    result = web_utils.parse_enum(s, AccountCategory)
-    self.assertEqual(target, result)
+    start = datetime.date(today.year, 1, 1)
+    end = today
+    result = web_utils.parse_period("this-year", None, None)
+    self.assertEqual(result, (start, end))
 
-    result = web_utils.parse_enum(target, AccountCategory)
-    self.assertEqual(target, result)
+    start = datetime.date(today.year - 1, 1, 1)
+    end = datetime.date(today.year - 1, 12, 31)
+    result = web_utils.parse_period("last-year", None, None)
+    self.assertEqual(result, (start, end))
 
-    result = web_utils.parse_enum(None, AccountCategory)
-    self.assertIsNone(result)
+    result = web_utils.parse_period("all", None, None)
+    self.assertEqual(result, (None, today))
 
-    # Bad Enum
-    self.assertHTTPRaises(400, web_utils.parse_enum, self.random_string(),
-                          AccountCategory)
+    self.assertHTTPRaises(400, web_utils.parse_period, self.random_string(),
+                          None, None)
 
   def test_validate_image_upload(self):
     # Missing length

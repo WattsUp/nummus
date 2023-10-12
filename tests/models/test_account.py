@@ -38,6 +38,9 @@ class TestAccount(TestBase):
     self.assertIsNone(acct.opened_on)
     self.assertIsNone(acct.updated_on)
 
+    # Short strings are bad
+    self.assertRaises(ValueError, setattr, acct, "name", "ab")
+
   def test_add_transactions(self):
     s = self.get_session()
     models.metadata_create_all(s)

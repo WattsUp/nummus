@@ -38,7 +38,8 @@ class TestServer(TestBase):
               "Replace with real certificate to disable this warning\n")
     self.assertEqual(target, fake_stderr)
     fake_stdout = fake_stdout.getvalue()
-    target = (f"{Fore.MAGENTA}Generating self-signed certificate\n"
+    target = (f"{Fore.MAGENTA}Running in debug mode\n"
+              f"{Fore.MAGENTA}Generating self-signed certificate\n"
               "Please install certificate in web browser\n")
     self.assertEqual(target, fake_stdout)
 
@@ -86,7 +87,8 @@ class TestServer(TestBase):
     url = f"https://localhost:{port}"
     debug = True
     with mock.patch("sys.stderr", new=io.StringIO()) as _:
-      s = web.Server(p, host, port, debug)
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        s = web.Server(p, host, port, debug)
     s_server = s._server  # pylint: disable=protected-access
 
     s_server.serve_forever = lambda *_: print("serve_forever")
@@ -103,7 +105,8 @@ class TestServer(TestBase):
 
     debug = False
     with mock.patch("sys.stderr", new=io.StringIO()) as _:
-      s = web.Server(p, host, port, debug)
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        s = web.Server(p, host, port, debug)
     s_server = s._server  # pylint: disable=protected-access
 
     def raise_keyboard_interrupt():
@@ -170,7 +173,8 @@ class TestServer(TestBase):
     port = 8080
     debug = True
     with mock.patch("sys.stderr", new=io.StringIO()) as _:
-      s = web.Server(p, host, port, debug)
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        s = web.Server(p, host, port, debug)
     flask_app = s._app  # pylint: disable=protected-access
 
     with flask_app.app_context():
@@ -192,7 +196,8 @@ class TestServer(TestBase):
     port = 8080
     debug = True
     with mock.patch("sys.stderr", new=io.StringIO()) as _:
-      s = web.Server(p, host, port, debug)
+      with mock.patch("sys.stdout", new=io.StringIO()) as _:
+        s = web.Server(p, host, port, debug)
     flask_app = s._app  # pylint: disable=protected-access
 
     with flask_app.app_context():

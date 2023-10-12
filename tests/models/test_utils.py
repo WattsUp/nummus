@@ -33,9 +33,6 @@ class TestUtils(TestBase):
 
     query = s.query(Account)
 
-    # Unknown Model
-    self.assertRaises(KeyError, utils.search, query, None, "abc")
-
     # No results return all
     result = utils.search(query, Account, None).all()
     self.assertEqual([acct_checking, acct_invest], result)

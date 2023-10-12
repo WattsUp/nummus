@@ -29,6 +29,9 @@ class TestTransactionCategory(TestBase):
     self.assertEqual(d["group"], t_cat.group)
     self.assertEqual(d["locked"], t_cat.locked)
 
+    # Short strings are bad
+    self.assertRaises(ValueError, setattr, t_cat, "name", "ab")
+
   def test_add_default(self):
     s = self.get_session()
     models.metadata_create_all(s)
@@ -64,4 +67,4 @@ class TestTransactionCategory(TestBase):
 
     query = s.query(TransactionCategory)
     self.assertEqual(n_income + n_expense + n_other, query.count())
-    self.assertEqual(64, query.count())
+    self.assertEqual(63, query.count())

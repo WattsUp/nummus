@@ -21,7 +21,7 @@ class TestCommands(TestBase):
 
   def test_create_unencrypted(self):
     original_input = mock.builtins.input
-    original_get_pass = commands.common.getpass.getpass
+    original_get_pass = commands.utils.getpass.getpass
 
     queue: t.Strings = []
 
@@ -33,7 +33,7 @@ class TestCommands(TestBase):
 
     try:
       mock.builtins.input = mock_input
-      commands.common.getpass.getpass = mock_input
+      commands.utils.getpass.getpass = mock_input
 
       path_db = self._TEST_ROOT.joinpath("portfolio.db")
       path_config = path_db.with_suffix(".config")
@@ -81,14 +81,14 @@ class TestCommands(TestBase):
 
     finally:
       mock.builtins.input = original_input
-      commands.common.getpass.getpass = original_get_pass
+      commands.utils.getpass.getpass = original_get_pass
 
   def test_create_encrypted(self):
     if portfolio.encryption is None:
       self.skipTest("Encryption is not installed")
 
     original_input = mock.builtins.input
-    original_get_pass = commands.common.getpass.getpass
+    original_get_pass = commands.utils.getpass.getpass
 
     queue: t.Strings = []
 
@@ -100,7 +100,7 @@ class TestCommands(TestBase):
 
     try:
       mock.builtins.input = mock_input
-      commands.common.getpass.getpass = mock_input
+      commands.utils.getpass.getpass = mock_input
 
       path_db = self._TEST_ROOT.joinpath("portfolio.db")
       path_config = path_db.with_suffix(".config")
@@ -182,11 +182,11 @@ class TestCommands(TestBase):
 
     finally:
       mock.builtins.input = original_input
-      commands.common.getpass.getpass = original_get_pass
+      commands.utils.getpass.getpass = original_get_pass
 
   def test_unlock_unencrypted(self):
     original_input = mock.builtins.input
-    original_get_pass = commands.common.getpass.getpass
+    original_get_pass = commands.utils.getpass.getpass
 
     queue: t.Strings = []
 
@@ -198,7 +198,7 @@ class TestCommands(TestBase):
 
     try:
       mock.builtins.input = mock_input
-      commands.common.getpass.getpass = mock_input
+      commands.utils.getpass.getpass = mock_input
 
       path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -225,14 +225,14 @@ class TestCommands(TestBase):
 
     finally:
       mock.builtins.input = original_input
-      commands.common.getpass.getpass = original_get_pass
+      commands.utils.getpass.getpass = original_get_pass
 
   def test_unlock_encrypted(self):
     if portfolio.encryption is None:
       self.skipTest("Encryption is not installed")
 
     original_input = mock.builtins.input
-    original_get_pass = commands.common.getpass.getpass
+    original_get_pass = commands.utils.getpass.getpass
 
     queue: t.Strings = []
 
@@ -244,7 +244,7 @@ class TestCommands(TestBase):
 
     try:
       mock.builtins.input = mock_input
-      commands.common.getpass.getpass = mock_input
+      commands.utils.getpass.getpass = mock_input
 
       path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -333,7 +333,7 @@ class TestCommands(TestBase):
 
     finally:
       mock.builtins.input = original_input
-      commands.common.getpass.getpass = original_get_pass
+      commands.utils.getpass.getpass = original_get_pass
 
   def test_import_files(self):
     path_db = self._TEST_ROOT.joinpath("portfolio.db")
