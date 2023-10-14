@@ -6,7 +6,10 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import custom_types as t
-from nummus.models import Account, Asset, Base, TransactionSplit
+from nummus.models.base import Base
+from nummus.models.account import Account
+from nummus.models.asset import Asset
+from nummus.models.transaction import TransactionSplit
 
 _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
     Account: ["name", "institution"],
