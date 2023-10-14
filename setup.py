@@ -12,18 +12,30 @@ module_folder = "nummus"
 module_name = "nummus"
 
 with open("README.md", encoding="utf-8") as file:
-  longDescription = file.read()
+    longDescription = file.read()
 
 required = [
-    "sqlalchemy>=2", "AutoDict", "gevent", "colorama", "rapidfuzz", "pyopenssl",
-    "flask-assets", "pytailwindcss", "jsmin", "flask<2.3,>=2"
+    "sqlalchemy>=2",
+    "AutoDict",
+    "gevent",
+    "colorama",
+    "rapidfuzz",
+    "pyopenssl",
+    "flask-assets",
+    "pytailwindcss",
+    "jsmin",
+    "flask<2.3,>=2",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "pylint", "numpy", "time-machine"]
+    "test": ["coverage", "pylint", "numpy", "time-machine"],
 }
 extras_require["dev"] = extras_require["test"] + [
-    "toml", "witch-ver", "yapf>=0.40.0", "viztracer"
+    "toml",
+    "witch-ver",
+    "black",
+    "isort",
+    "viztracer",
 ]
 
 setuptools.setup(
@@ -33,8 +45,7 @@ setuptools.setup(
     long_description=longDescription,
     long_description_content_type="text/markdown",
     license="MIT",
-    packages=setuptools.find_packages(
-        include=[module_folder, f"{module_folder}.*"]),
+    packages=setuptools.find_packages(include=[module_folder, f"{module_folder}.*"]),
     package_data={module_folder: []},
     install_requires=required,
     extras_require=extras_require,
@@ -59,4 +70,5 @@ setuptools.setup(
     python_requires=">=3.8",
     # include_package_data=True, # Leave out cause wacky
     zip_safe=False,
-    entry_points={"console_scripts": ["nummus=nummus:main"]})
+    entry_points={"console_scripts": ["nummus=nummus:main"]},
+)
