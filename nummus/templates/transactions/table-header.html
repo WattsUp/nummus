@@ -1,0 +1,46 @@
+<div id="txn-header" class="transactions-table header font-bold border-b border-b-grey-200">
+  <div class="col col-date">Date</div>
+  <a class="col col-account">Account
+    {% with class="w-[24px] h-[24px]" %}
+    {% include "svg/filter.svg" %}
+    {% endwith %}
+    <div id="txn-account" class="filter-dropdown">
+      {% with options = txn_table["options-account"], name="account" %}
+      {% include "transactions/table-options.html" %}
+      {% endwith %}
+    </div>
+  </a>
+  <a class="col col-payee ">Payee
+    {% with class="w-[24px] h-[24px]" %}
+    {% include "svg/filter.svg" %}
+    {% endwith %}
+    <div id="txn-payee" class="filter-dropdown">
+      {% with options = txn_table["options-payee"], name="payee" %}
+      {% include "transactions/table-options.html" %}
+      {% endwith %}
+    </div>
+  </a>
+  <div class="col col-desc">Description</div>
+  <a class="col col-cat">Category
+    {% with class="w-[24px] h-[24px]" %}
+    {% include "svg/filter.svg" %}
+    {% endwith %}
+    <div id="txn-category" class="filter-dropdown">
+      {% with options = txn_table["options-category"], name="category" %}
+      {% include "transactions/table-options.html" %}
+      {% endwith %}
+    </div>
+  </a>
+  <a class="col col-tag">Tag
+    {% with class="w-[24px] h-[24px]" %}
+    {% include "svg/filter.svg" %}
+    {% endwith %}
+    <div id="txn-tag" class="filter-dropdown">
+      {% with options = txn_table["options-tag"], name="tag" %}
+      {% include "transactions/table-options.html" %}
+      {% endwith %}
+    </div>
+  </a>
+  <div class="col col-amount">Amount</div>
+  {% include "transactions/table-locked.html" %}
+</div>

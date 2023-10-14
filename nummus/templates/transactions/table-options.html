@@ -1,0 +1,14 @@
+<input id="txn-search-{{ name }}" placeholder="Search..." name="search-{{ name }}" value="{{ search_str }}" hx-get="{{ url_for('transaction.options', field=name) }}" hx-target="#txn-{{ name }}" hx-trigger="keyup changed throttle:250ms">
+<div class="options">
+  {% for option in options %}
+    {% if not option["hidden"] %}
+      <label>
+        <input type="checkbox" name="{{ name }}" value="{{ option['name'] }}" {{ "checked" if option["checked"] }} hx-get="{{ url_for('transaction.table') }}?period=custom">
+        {% with class = "w-5 h-5" %}
+        {% include "svg/check.svg" %}
+        {% endwith %}
+        <span>{{ option["name"] }}</span>
+      </label>
+    {% endif %}
+  {% endfor %}
+</div>

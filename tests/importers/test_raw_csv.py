@@ -4,7 +4,6 @@
 import datetime
 from decimal import Decimal
 
-from nummus import models
 from nummus.importers import raw_csv
 
 from tests import base
@@ -13,57 +12,54 @@ from tests import base
 TRANSACTIONS_EXTRAS = [{
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 1),
-    "total": Decimal("1000.0"),
+    "amount": Decimal("1000.0"),
     "payee": "Employer",
     "description": "Paycheck",
     "statement": "Paycheck",
-    "category": models.TransactionCategory.INCOME,
-    "subcategory": "Paychecks"
+    "category": "Paychecks/Salary"
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("-12.34"),
+    "amount": Decimal("-12.34"),
     "payee": "Monkey Store",
     "description": "Banana",
     "statement": "Banana",
-    "category": models.TransactionCategory.FOOD,
-    "subcategory": "Groceries",
-    "tag": "Fruit",
-    "sales_tax": Decimal("-1.23")
+    "category": "Groceries",
+    "tag": "Fruit"
 }, {
     "account": "Monkey Bank Checking",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("-900.0"),
+    "amount": Decimal("-900.0"),
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
-    "category": models.TransactionCategory.TRANSFER
+    "category": "Transfers"
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 2),
-    "total": Decimal("900.0"),
+    "amount": Decimal("900.0"),
     "payee": "Monkey Investments",
     "description": "Account Transfer",
     "statement": "Account Transfer",
-    "category": models.TransactionCategory.TRANSFER
+    "category": "Transfers"
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 1, 3),
-    "total": Decimal("-900.0"),
+    "amount": Decimal("-900.0"),
     "payee": "Monkey Investments",
     "description": "Security Exchange",
     "statement": "Security Exchange",
-    "category": models.TransactionCategory.INSTRUMENT,
+    "category": "Securities Traded",
     "asset": "BANANA",
     "asset_quantity": Decimal("32.1234")
 }, {
     "account": "Monkey Investments",
     "date": datetime.date(2023, 2, 1),
-    "total": Decimal("1234.56"),
+    "amount": Decimal("1234.56"),
     "payee": "Monkey Investments",
     "description": "Profit Maker",
     "statement": "Profit Maker",
-    "category": models.TransactionCategory.INSTRUMENT,
+    "category": "Securities Traded",
     "asset": "BANANA",
     "asset_quantity": Decimal("-32.1234")
 }]
@@ -106,28 +102,28 @@ class TestCSVTransactionImporter(base.TestBase):
     target = [{
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 1),
-        "total": Decimal("1000.0"),
+        "amount": Decimal("1000.0"),
         "payee": "Employer",
         "description": "Paycheck",
         "statement": "Paycheck"
     }, {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("-12.34"),
+        "amount": Decimal("-12.34"),
         "payee": "Monkey Store",
         "description": "Banana",
         "statement": "Banana"
     }, {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("-900.0"),
+        "amount": Decimal("-900.0"),
         "payee": "Monkey Investments",
         "description": "Account Transfer",
         "statement": "Account Transfer"
     }, {
         "account": "Monkey Investments",
         "date": datetime.date(2023, 1, 2),
-        "total": Decimal("900.0"),
+        "amount": Decimal("900.0"),
         "payee": "Monkey Investments",
         "description": "Account Transfer",
         "statement": "Account Transfer"

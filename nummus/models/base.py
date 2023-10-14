@@ -3,16 +3,14 @@
 
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
 import enum
 import uuid
 
-import simplejson
 import sqlalchemy
 from sqlalchemy import orm, schema, types
 
-from nummus import common
+from nummus import utils
 from nummus import custom_types as t
 
 
@@ -25,205 +23,22 @@ class Base(orm.DeclarativeBase):
   """
   metadata: schema.MetaData
 
-  _PROPERTIES_DEFAULT: t.Strings = ["uuid"]
-  _PROPERTIES_HIDDEN: t.Strings = ["id"]
-  _PROPERTIES_READONLY: t.Strings = ["id", "uuid"]
-
   @orm.declared_attr
   def __tablename__(self) -> str:
-    return common.camel_to_snake(self.__name__)
+    return utils.camel_to_snake(self.__name__)
 
   id: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
+
   # Could be better with storing a uuid as a 16B int but SQLite doesn't have
   # that large of integers
   uuid: t.ORMStr = orm.mapped_column(sqlalchemy.String(36),
                                      default=lambda: str(uuid.uuid4()))
-
-  def __str__(self) -> str:
-    return str(self.to_dict())
 
   def __repr__(self) -> str:
     try:
       return f"<{self.__class__.__name__} id={self.id} uuid={self.uuid}>"
     except orm.exc.DetachedInstanceError:
       return f"<{self.__class__.__name__} id=Detached Instance>"
-
-  def to_dict(self,
-              show: t.Strings = None,
-              hide: t.Strings = None,
-              path: str = None) -> t.JSONObj:
-    """Return a dictionary representation of this model
-
-    Adds all columns that are not hidden (in hide or in _hidden_properties) and
-    shown (in show or in _default_properties)
-
-    Args:
-      show: specific properties to add
-      hide: specific properties to omit (hide is stronger than show)
-      path: path of Model, None uses __tablename__, used for recursion to show
-        or hide children properties
-
-    Return:
-      Model as a dictionary with columns as keys
-    """
-    show = show or []
-    hide = hide or []
-
-    def prepend_path(item: str):
-      item = item.lower()
-      if item.split(".", 1)[0] == path:
-        return item
-      if len(item) == 0:
-        return item
-      if item[0] != ".":
-        item = "." + item
-      return path + item
-
-    if path is None:
-      path = self.__tablename__
-
-      hide = [prepend_path(s) for s in hide]
-      show = [prepend_path(s) for s in show]
-
-    attr_show = [prepend_path(s) for s in self._PROPERTIES_DEFAULT]
-    attr_hide = [prepend_path(s) for s in self._PROPERTIES_HIDDEN]
-
-    for s in show:
-      # Command line is stronger than class
-      # Remove shown properties from class hidden
-      attr_hide = [a for a in attr_hide if a != s]
-      attr_show.append(s)
-
-    for s in hide:
-      # Command line is stronger than class
-      # Remove shown properties from class hidden
-      attr_show = [a for a in attr_show if a != s]
-      attr_hide.append(s)
-
-    columns = self.__table__.columns.keys()
-    relationships = self.__mapper__.relationships.keys()
-    properties = dir(self)
-
-    d: t.JSONObj = {}
-
-    # Add columns
-    for key in columns:
-      if key[0] == "_":
-        # Private properties are always hidden
-        continue
-      check = f"{path}.{key}"
-      if check in attr_hide or check not in attr_show:
-        continue
-      d[key] = getattr(self, key)
-
-    # Add relationships recursively
-    for key in relationships:
-      if key[0] == "_":
-        # Private properties are always hidden
-        continue
-      check = f"{path}.{key}"
-      if check in attr_hide or check not in attr_show:
-        continue
-      hide.append(check)
-      is_list = self.__mapper__.relationships[key].uselist
-      if is_list:
-        items: t.List[Base] = getattr(self, key)
-        l = []
-        for item in items:
-          item_d = item.to_dict(show=list(show),
-                                hide=list(hide),
-                                path=f"{path}.{key.lower()}")
-          l.append(item_d)
-        d[key] = l
-      else:
-        item = getattr(self, key)
-        if item is None:
-          d[key] = None
-        else:
-          item: Base
-          d[key] = item.to_dict(show=list(show),
-                                hide=list(hide),
-                                path=f"{path}.{key.lower()}")
-
-    # Get any stragglers (@property and QueryableAttribute)
-    for key in list(set(properties) - set(columns) - set(relationships)):
-      if key[0] == "_":
-        # Private properties are always hidden
-        continue
-      if not hasattr(self.__class__, key):
-        continue
-      attr = getattr(self.__class__, key)
-      if not isinstance(attr, (property, orm.QueryableAttribute)):
-        continue
-      check = f"{path}.{key}"
-      if check in attr_hide or check not in attr_show:
-        continue
-      item = getattr(self, key)
-      if hasattr(item, "to_dict"):
-        item: Base
-        d[key] = item.to_dict(show=list(show),
-                              hide=list(hide),
-                              path=f"{path}.{key.lower()}")
-      else:
-        s = simplejson.dumps(item, cls=NummusJSONEncoder, use_decimal=True)
-        d[key] = simplejson.loads(s, use_decimal=True)
-
-    return d
-
-  def update(self, data: t.JSONObj, force: bool = False) -> t.DictTuple:
-    """Update model from dictionary
-
-    Only updates columns
-
-    Args:
-      data: Dictionary to update properties from
-      force: True will overwrite readonly properties
-
-    Returns:
-      Dictionary of changes {attribute: (old, new)}
-    """
-    attr_readonly = self._PROPERTIES_READONLY + self._PROPERTIES_HIDDEN
-
-    columns = self.__table__.columns.keys()
-    relationships = self.__mapper__.relationships.keys()
-    properties = dir(self)
-
-    changes: t.DictTuple = {}
-
-    # Update columns
-    for key in columns:
-      if key[0] == "_":
-        # Private properties are always readonly
-        continue
-      if (key not in data) or (not force and key in attr_readonly):
-        continue
-      val_old = getattr(self, key)
-      val_new = data[key]
-      if val_old != val_new:
-        changes[key] = (val_old, val_new)
-        setattr(self, key, val_new)
-
-    # Don't update relationships
-    # Force the user to update via the governing id columns
-    # Aka parent_id = new_parent.id not parent = new_parent
-
-    # Update properties
-    for key in list(set(properties) - set(columns) - set(relationships)):
-      if key[0] == "_":
-        # Private properties are always readonly
-        continue
-      if (key not in data) or (not force and key in attr_readonly):
-        continue
-      if getattr(self.__class__, key).fset is None:
-        # No setter, skip
-        continue
-      val_old = getattr(self, key)
-      val_new = data[key]
-      if val_old != val_new:
-        changes[key] = (val_old, val_new)
-        setattr(self, key, val_new)
-
-    return changes
 
   def __eq__(self, other: Base) -> bool:
     """Test equality by UUID
@@ -247,28 +62,60 @@ class Base(orm.DeclarativeBase):
     """
     return other is None or self.uuid != other.uuid
 
-
-class NummusJSONEncoder(simplejson.JSONEncoder):
-  """Custom JSON Encoder for nummus models
-  """
-
   @classmethod
-  def default(cls, o: t.Any) -> t.JSONVal:
-    """Serialize an object with non-standard type
+  def map_uuid(cls, s: orm.Session) -> t.DictIntStr:
+    """Mapping between id and uuid
 
     Args:
-      o: Object to serialize
+      s: SQL session to use
 
     Returns:
-      Serialized object as a JSON friendly value
+      Dictionary {id: uuid}
     """
-    if isinstance(o, Base):
-      return o.to_dict()
-    if isinstance(o, enum.Enum):
-      return o.name.lower()
-    if isinstance(o, datetime.date):
-      return o.isoformat()
-    return super().default(o)
+    query = s.query(cls)
+    query = query.with_entities(cls.id, cls.uuid)
+    return dict(query.all())
+
+  @classmethod
+  def map_name(cls, s: orm.Session) -> t.DictIntStr:
+    """Mapping between id and names
+
+    Args:
+      s: SQL session to use
+
+    Returns:
+      Dictionary {id: name}
+
+    Raises:
+      KeyError if model does not have name property
+    """
+    if not hasattr(cls, "name"):
+      raise KeyError(f"{cls} does not have name column")
+
+    query = s.query(cls)
+    query = query.with_entities(cls.id, cls.name)
+    return dict(query.all())
+
+  def validate_strings(self, key: str, field: str) -> str:
+    """Validates string fields are not empty
+
+    Args:
+      key: Field being updated
+      field: Updated value
+
+    Returns:
+      field
+
+    Raises:
+      ValueError if field is empty
+    """
+    if field in [None, "", "[blank]"]:
+      return None
+    if len(field) < 3:
+      table: str = self.__tablename__
+      table = table.replace("_", " ").capitalize()
+      raise ValueError(f"{table} {key} must be at least 3 characters long")
+    return field
 
 
 class BaseEnum(enum.Enum):

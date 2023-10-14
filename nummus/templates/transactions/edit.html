@@ -1,0 +1,63 @@
+<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]" hx-get="{{ url_for('common.empty') }}" hx-swap="innerHTML"></a>
+<div class="w-[900px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2" hx-include="#form-txn">
+  <a hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6" hx-swap="innerHTML" hx-include="this">
+    {% with class="w-[32px] h-[32px]" %}
+    {% include "svg/x.svg" %}
+    {% endwith %}
+  </a>
+  <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction</h1>
+  <datalist id="payees">
+    {% for item in payees %}
+      <option value="{{ item }}">{{ item }}</option>
+    {% endfor %}
+  </datalist>
+  <datalist id="tags">
+    {% for item in tags %}
+      <option value="{{ item }}">{{ item }}</option>
+    {% endfor %}
+  </datalist>
+  <form class="flex flex-col w-full px-6 grow" id="form-txn">
+    <table class="w-full">
+      <tbody>
+        <tr>
+          <td>Date</td>
+          <td><input class="w-full" name="date" type="date" value="{{ parent['date'] }}"></td>
+          <td class="w-8"></td>
+          <td>Total Amount</td>
+          <td>{{ parent["amount"] | money }}</td>
+        </tr>
+        <tr>
+          <td>Account Name</td>
+          <td>{{ parent["account"] }}</td>
+          <td class="w-8"></td>
+          <td>Transaction Locked</td>
+          <td>
+            <label class="checkbox">
+              <input type="checkbox" name="locked" {{ "checked" if parent["locked"] }}>
+              {% with class = "w-6 h-6" %}
+              {% include "svg/lock.svg" %}
+              {% endwith %}
+            </label>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <hr class="w-full border-grey-200">
+    {% include "transactions/edit-splits.html" %}
+    <div class="split-row">
+      <h1 class="font-bold">Amount yet to be assigned</h1>
+      {% include "transactions/edit-remaining.html" %}
+    </div>
+  </form>
+  <div id="overlay-error" class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
+  <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+    <a hx-put="{{ url_for('transaction.split', path_uuid=parent['uuid']) }}" hx-target="#txn-splits" class="button hover:blue mr-auto">
+      {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+      {% include "svg/plus.svg" %}
+      {% endwith %}
+      Add split
+    </a>
+    <a hx-get="{{ url_for('common.empty') }}" class="button hover:green" hx-swap="innerHTML" hx-include="this">Cancel</a>
+    <a hx-post="{{ url_for('transaction.edit', path_uuid=parent['uuid']) }}" hx-target="#overlay-error" hx-swap="innerHTML" class="button bg-green">Save</a>
+  </div>
+</div>

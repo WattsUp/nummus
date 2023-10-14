@@ -6,7 +6,7 @@ import pathlib
 import colorama
 from colorama import Fore
 
-from nummus import common, portfolio, web
+from nummus import portfolio, utils, web
 from nummus import custom_types as t
 
 colorama.init(autoreset=True)
@@ -46,7 +46,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
 
     # Prompt user
     while key is None:
-      key = common.get_input("Please enter password: ", secure=True)
+      key = utils.get_input("Please enter password: ", secure=True)
       if key is None:
         return 1
 
@@ -55,7 +55,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         key = None
         continue
 
-      repeat = common.get_input("Please confirm password: ", secure=True)
+      repeat = utils.get_input("Please confirm password: ", secure=True)
       if repeat is None:
         return 1
 
@@ -109,7 +109,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
 
   # 3 attempts
   for _ in range(3):
-    key = common.get_input("Please enter password: ", secure=True)
+    key = utils.get_input("Please enter password: ", secure=True)
     if key is None:
       return None
     try:
@@ -225,19 +225,19 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 
 # No unit test for wrapper command, too difficult to mock
 def run_web(p: portfolio.Portfolio, host: str, port: int,
-            enable_api_ui: bool) -> int:  # pragma: no cover
+            debug: bool) -> int:  # pragma: no cover
   """Run web server serving the nummus Portfolio
 
   Args:
     p: Working Portfolio
     host: IP to bind to
     port: Network port to bind to
-    enable_api_ui: True will enable Swagger UI for the API
+    debug: True will run Flask in debug mode
 
   Returns:
     0 on success
     non-zero on failure
   """
-  s = web.Server(p, host, port, enable_api_ui)
+  s = web.Server(p, host, port, debug)
   s.run()
   return 0

@@ -212,10 +212,10 @@ class TestMain(TestBase):
               "_func": "run_web",
               "host": "127.0.0.1",
               "port": 8080,
-              "enable_api_ui": is_dev
+              "debug": is_dev
           }, self._called_kwargs)
 
-      args = ["--portfolio", path, "web", "--api-ui"]
+      args = ["--portfolio", path, "web", "--debug"]
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
       self.assertEqual(1, len(self._called_args))
@@ -225,14 +225,14 @@ class TestMain(TestBase):
               "_func": "run_web",
               "host": "127.0.0.1",
               "port": 8080,
-              "enable_api_ui": True
+              "debug": True
           }, self._called_kwargs)
 
       host = "0.0.0.0"
       port = 80
       args = [
           "--portfolio", path, "web", "-H", host, "-P",
-          str(port), "--no-api-ui"
+          str(port), "--no-debug"
       ]
       with mock.patch("sys.stdout", new=io.StringIO()) as _:
         main(args)
@@ -243,7 +243,7 @@ class TestMain(TestBase):
               "_func": "run_web",
               "host": host,
               "port": port,
-              "enable_api_ui": False
+              "debug": False
           }, self._called_kwargs)
     finally:
       self._tear_down_commands()

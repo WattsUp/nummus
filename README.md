@@ -14,7 +14,6 @@ List of dependencies for package to run.
 
 - nummus python modules
   - sqlalchemy
-  - connexion
   - gevent
   - AutoDict
 

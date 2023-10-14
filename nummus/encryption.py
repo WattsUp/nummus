@@ -9,7 +9,7 @@ from Crypto.Cipher import AES
 from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Hash import SHA256
 
-from nummus import common
+from nummus import utils
 
 
 class Encryption:
@@ -64,7 +64,7 @@ class Encryption:
     Returns:
       bytes Generated salt
     """
-    salt = common.random_string().encode()
+    salt = utils.random_string().encode()
 
     if set_salt:
       self.set_salt(salt)

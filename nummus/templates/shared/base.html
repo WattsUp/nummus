@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+    <title>nummus</title>
+    <meta name="description" content="A personal financial information aggregator and planning tool."/>
+
+    <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+
+    {% assets "css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}">
+    {% endassets %}
+
+    {% assets "js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+
+  </head>
+
+  <body class="antialiased bg-grey-100 h-screen w-screen relative" hx-boost="true" hx-swap="outerHTML">
+    {% block header %}
+      {% include "/shared/header.html" %}
+    {% endblock %}
+    <div class="flex pt-12 h-full">
+      {% block sidebar %}
+        {% include "/shared/sidebar.html" %}
+      {% endblock %}
+      <div class="flex flex-col h-full overflow-y-scroll grow">
+        <main class="py-2 px-12 xl:px-2">
+          {% block content %}{% endblock %}
+        </main>
+        {% block footer %}
+          {% include "/shared/footer.html" %}
+        {% endblock %}
+      </div>
+    </div>
+    {% include "/shared/overlay.html" %}
+  </body>
+
+</html>

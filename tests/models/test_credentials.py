@@ -28,8 +28,3 @@ class TestCredentials(TestBase):
     self.assertEqual(d["site"], c.site)
     self.assertEqual(d["user"], c.user)
     self.assertEqual(d["password"], c.password)
-
-    d.pop("password")
-    d["id"] = c.id
-    result = c.to_dict()
-    self.assertDictEqual(d, result)

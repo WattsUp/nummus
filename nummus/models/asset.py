@@ -31,28 +31,9 @@ class AssetSplit(Base):
     date: Date of split
     multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
   """
-
-  _PROPERTIES_DEFAULT = ["value", "date", "multiplier"]
-  _PROPERTIES_HIDDEN = ["id", "uuid"]
-
   asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
   multiplier: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
-
-  @property
-  def asset(self) -> Asset:
-    """Asset for which this AssetSplit is for
-    """
-    s = orm.object_session(self)
-    return s.query(Asset).where(Asset.id == self.asset_id).first()
-
-  @asset.setter
-  def asset(self, asset: Asset) -> None:
-    if not isinstance(asset, Asset):
-      raise TypeError("AssetSplit.asset must be of type Asset")
-    if asset.id is None:
-      raise ValueError("Commit Asset before adding to split")
-    super().__setattr__("asset_id", asset.id)
 
 
 class AssetValuation(Base):
@@ -63,28 +44,9 @@ class AssetValuation(Base):
     date: Date of valuation
     value: Value of assert
   """
-
-  _PROPERTIES_DEFAULT = ["value", "date"]
-  _PROPERTIES_HIDDEN = ["id", "uuid"]
-
   asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
   value: t.ORMReal = orm.mapped_column(Decimal6)
   date: t.ORMDate
-
-  @property
-  def asset(self) -> Asset:
-    """Asset for which this AssetValuation is for
-    """
-    s = orm.object_session(self)
-    return s.query(Asset).where(Asset.id == self.asset_id).first()
-
-  @asset.setter
-  def asset(self, asset: Asset) -> None:
-    if not isinstance(asset, Asset):
-      raise TypeError("AssetValuation.asset must be of type Asset")
-    if asset.id is None:
-      raise ValueError("Commit Asset before adding to split")
-    super().__setattr__("asset_id", asset.id)
 
 
 class AssetCategory(BaseEnum):
@@ -108,11 +70,6 @@ class Asset(Base):
     unit: Unit name for an individual Asset (ex: shares)
     tag: Unique tag linked across datasets
   """
-
-  _PROPERTIES_DEFAULT = [
-      "uuid", "name", "description", "category", "unit", "tag"
-  ]
-
   name: t.ORMStr
   description: t.ORMStrOpt
   category: ORMAssetCat
@@ -188,7 +145,7 @@ class Asset(Base):
                     start: t.Date,
                     end: t.Date,
                     uuids: t.Strings = None,
-                    ids: t.Ints = None) -> t.Tuple[t.Dates, t.DictReals]:
+                    ids: t.Ints = None) -> t.Tuple[t.Dates, t.DictIntReals]:
     """Get the value of all Assets from start to end date
 
     Args:
@@ -199,11 +156,9 @@ class Asset(Base):
       ids: Limit results to specific Assets by ID
 
     Returns:
-      (List[dates], dict{Asset.uuid: list[values]})
+      (List[dates], dict{Asset.id: list[values]})
     """
-    query = s.query(Asset)
-    query = query.with_entities(Asset.id, Asset.uuid)
-    assets: t.DictIntStr = dict(query.all())
+    assets = Asset.map_uuid(s)
     values: t.DictIntReal = {a_id: Decimal(0) for a_id in assets}
 
     if uuids is not None:
@@ -229,7 +184,7 @@ class Asset(Base):
     assets_values: t.DictIntReals = {a_id: [v] for a_id, v in values.items()}
 
     if start == end:
-      return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+      return dates, assets_values
 
     def next_day(current: datetime.date) -> datetime.date:
       """Push currents into the lists
@@ -261,7 +216,7 @@ class Asset(Base):
     while date <= end:
       date = next_day(date)
 
-    return dates, {assets[a_id]: v for a_id, v in assets_values.items()}
+    return dates, assets_values
 
   def update_splits(self) -> None:
     """Recalculate adjusted TransactionSplit.asset_quantity based on all asset

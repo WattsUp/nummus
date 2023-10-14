@@ -5,7 +5,7 @@ import csv
 import datetime
 import io
 
-from nummus import common, models
+from nummus import utils
 from nummus import custom_types as t
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 
@@ -13,7 +13,7 @@ from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 class CSVTransactionImporter(TransactionImporter):
   """Import a CSV of transactions
 
-  Required Columns: account,date,total,payee,description
+  Required Columns: account,date,amount,payee,description
 
   Other columns are allowed
   """
@@ -21,15 +21,15 @@ class CSVTransactionImporter(TransactionImporter):
   _COLUMNS: t.Dict[str, t.Tuple[bool, t.StrToObj]] = {
       "account": (True, str),
       "date": (True, datetime.date.fromisoformat),
-      "total": (True, common.parse_financial),
+      "amount": (True, utils.parse_real),
       "payee": (True, str),
       "description": (True, str),
-      "sales_tax": (False, common.parse_financial),
-      "category": (False, models.TransactionCategory.parse),
+      "sales_tax": (False, utils.parse_real),
+      "category": (False, str),
       "subcategory": (False, str),
       "tag": (False, str),
       "asset": (False, str),
-      "asset_quantity": (False, common.parse_financial)
+      "asset_quantity": (False, utils.parse_real)
   }
 
   @classmethod

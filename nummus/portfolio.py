@@ -12,10 +12,10 @@ import autodict
 import sqlalchemy
 from sqlalchemy import orm
 
-from nummus import common, importers, models, sql, version
+from nummus import importers, models, sql, utils, version
 from nummus import custom_types as t
 from nummus.models import (Account, Asset, Credentials, Transaction,
-                           TransactionSplit)
+                           TransactionCategory, TransactionSplit)
 
 try:
   from nummus import encryption  # pylint: disable=import-outside-toplevel
@@ -130,7 +130,7 @@ class Portfolio:
     path_db.parent.mkdir(parents=True, exist_ok=True)
     path_images.mkdir(exist_ok=True)
     path_ssl.mkdir(exist_ok=True)
-    salt = common.random_string(min_length=50, max_length=100)
+    salt = utils.random_string(min_length=50, max_length=100)
     config = autodict.JSONAutoDict(path_config)
     config.clear()
     config["version"] = str(version.__version__)
@@ -148,17 +148,20 @@ class Portfolio:
       key_salted = enc.key + salt.encode()
       password = enc.encrypt(key_salted)
 
-    with sql.get_session(path_db, config, enc) as session:
-      models.metadata_create_all(session)
+    with sql.get_session(path_db, config, enc) as s:
+      models.metadata_create_all(s)
 
       nummus_user = Credentials(site=Portfolio._NUMMUS_SITE,
                                 user=Portfolio._NUMMUS_USER,
                                 password=password)
-      session.add(nummus_user)
-      session.commit()
+      s.add(nummus_user)
+      s.commit()
     path_db.chmod(0o600)  # Only owner can read/write
 
-    return Portfolio(path_db, key)
+    p = Portfolio(path_db, key)
+    with p.get_session() as s:
+      TransactionCategory.add_default(s)
+    return p
 
   def _unlock(self) -> None:
     """Unlock the database
@@ -218,55 +221,54 @@ class Portfolio:
       raise TypeError(f"File is an unknown type: {path}")
 
     # Cache a mapping from account/asset name to the ID
-    with self.get_session() as session:
-      account_mapping: t.Dict[str, Account] = {}
-      asset_mapping: t.Dict[str, Asset] = {}
+    with self.get_session() as s:
+      categories: t.Dict[str, TransactionCategory] = {
+          cat.name: cat for cat in s.query(TransactionCategory).all()
+      }
+      account_mapping: t.DictInt = {}
+      asset_mapping: t.DictInt = {}
       transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
       for d in i.run():
         # Create a single split for each transaction
+        category_s = d.pop("category", "Uncategorized")
         d_split: importers.TxnDict = {
-            "total": d["total"],  # Both split and parent have total
-            "sales_tax": d.pop("sales_tax", None),
+            "amount": d["amount"],  # Both split and parent have amount
             "payee": d.pop("payee", None),
             "description": d.pop("description", None),
-            "category": d.pop("category", None),
-            "subcategory": d.pop("subcategory", None),
+            "category_id": categories[category_s].id,
             "tag": d.pop("tag", None),
             "asset_quantity_unadjusted": d.pop("asset_quantity", None)
         }
 
         account_raw = d.pop("account")
-        account = account_mapping.get(account_raw)
-        if account is None:
-          account = self.find_account(account_raw, session=session)
+        account_id = account_mapping.get(account_raw)
+        if account_id is None:
+          account = self.find_account(account_raw, session=s)
           if account is None:
             raise KeyError(f"Could not find Account by '{account_raw}'")
-          account_mapping[account_raw] = account
-        d["account"] = account
+          account_id = account.id
+          account_mapping[account_raw] = account_id
+        d["account_id"] = account_id
 
         asset_raw = d.pop("asset", None)
         if asset_raw is not None:
           # Find its ID
-          asset = asset_mapping.get(asset_raw)
-          if asset is None:
-            asset = self.find_asset(asset_raw, session=session)
+          asset_id = asset_mapping.get(asset_raw)
+          if asset_id is None:
+            asset = self.find_asset(asset_raw, session=s)
             if asset is None:
               raise KeyError(f"Could not find Asset by '{asset_raw}'")
-            asset_mapping[asset_raw] = asset
-          d_split["asset"] = asset
+            asset_id = asset.id
+            asset_mapping[asset_raw] = asset_id
+          d_split["asset_id"] = asset_id
 
         transactions.append((Transaction(**d), TransactionSplit(**d_split)))
 
       # All good, add transactions and commit
-      # Add just the transactions first
-      session.add_all(txn for txn, _ in transactions)
-      session.commit()
-
-      # Update the parent_ids
       for txn, t_split in transactions:
         t_split.parent = txn
-        session.add(t_split)
-      session.commit()
+        s.add_all((txn, t_split))
+      s.commit()
 
   def find_account(self,
                    query: t.IntOrStr,
