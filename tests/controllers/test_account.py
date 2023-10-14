@@ -46,16 +46,13 @@ class TestAccount(WebTestBase):
       s.commit()
 
     endpoint = f"/h/accounts/a/{acct_uuid}/edit"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
+    self.assertIn("Edit account", result)
 
     name = self.random_string()
     institution = self.random_string()
     form = {"institution": institution, "name": name, "category": "credit"}
-    result, headers = self.api_post(endpoint,
-                                    content_type="text/html; charset=utf-8",
-                                    data=form)
-    self.assertValidHTML(result)
+    result, headers = self.web_post(endpoint, data=form)
     self.assertEqual("update-account", headers["HX-Trigger"])
     with p.get_session() as s:
       acct = s.query(Account).first()
@@ -70,11 +67,8 @@ class TestAccount(WebTestBase):
         "category": "credit",
         "closed": ""
     }
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
+    result, _ = self.web_post(endpoint, data=form)
     e_str = "Cannot close Account with non-zero balance"
-    self.assertValidHTML(result)
     self.assertIn(e_str, result)
     with p.get_session() as s:
       self.assertFalse(acct.closed)

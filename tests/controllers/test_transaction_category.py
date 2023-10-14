@@ -21,9 +21,9 @@ class TestTransactionCategory(WebTestBase):
       n = s.query(TransactionCategory).count()
 
     endpoint = "/h/txn-categories"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(n, result.count("txn-category"))
+    self.assertIn("Edit transaction categories", result)
 
   def test_new(self):
     p = self._portfolio
@@ -32,26 +32,20 @@ class TestTransactionCategory(WebTestBase):
       n_before = s.query(TransactionCategory).count()
 
     endpoint = "/h/txn-categories/new"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertNotIn("Delete", result)
 
     name = self.random_string()
     form = {"name": name, "group": "other"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
+    self.assertIn("Edit transaction categories", result)
 
     with p.get_session() as s:
       n_after = s.query(TransactionCategory).count()
       self.assertEqual(n_before + 1, n_after)
 
     e_str = "Transaction category name must be unique"
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn(e_str, result)
 
     with p.get_session() as s:
@@ -67,16 +61,13 @@ class TestTransactionCategory(WebTestBase):
       t_cat_uuid, = query.first()
 
     endpoint = f"/h/txn-categories/{t_cat_uuid}/edit"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertIn("Delete", result)
 
     name = self.random_string()
     form = {"name": name, "group": "other"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
+    self.assertIn("Edit transaction categories", result)
 
     with p.get_session() as s:
       t_cat = s.query(TransactionCategory).where(
@@ -86,10 +77,7 @@ class TestTransactionCategory(WebTestBase):
 
     e_str = "Transaction category name must be at least 3 characters long"
     form = {"name": "ab", "group": "other"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn(e_str, result)
 
     with p.get_session() as s:
@@ -99,10 +87,7 @@ class TestTransactionCategory(WebTestBase):
 
     endpoint = f"/h/txn-categories/{t_cat_uuid}/edit"
     form = {"name": "abc", "group": "other"}
-    self.api_post(endpoint,
-                  content_type="text/html; charset=utf-8",
-                  rc=403,
-                  data=form)
+    self.web_post(endpoint, rc=403, data=form)
 
   def test_delete(self):
     p = self._portfolio
@@ -135,12 +120,11 @@ class TestTransactionCategory(WebTestBase):
       t_split_uuid = t_split.uuid
 
     endpoint = f"/h/txn-categories/{t_cat_uuid}/delete"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertIn("Are you sure you want to delete this category?", result)
 
-    result, _ = self.api_post(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint)
+    self.assertIn("Edit transaction categories", result)
 
     with p.get_session() as s:
       query = s.query(TransactionSplit)
@@ -159,4 +143,4 @@ class TestTransactionCategory(WebTestBase):
       t_cat_uuid, = query.first()
 
     endpoint = f"/h/txn-categories/{t_cat_uuid}/delete"
-    self.api_post(endpoint, content_type="text/html; charset=utf-8", rc=403)
+    self.web_post(endpoint, rc=403)

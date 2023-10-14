@@ -101,8 +101,7 @@ class TestTransaction(WebTestBase):
 
   def test_page_all(self):
     endpoint = "/transactions"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertIn('id="txn-config"', result)
     self.assertIn('id="txn-paging"', result)
     self.assertIn('id="txn-header"', result)
@@ -118,90 +117,59 @@ class TestTransaction(WebTestBase):
     tag_1 = d["tag_1"]
 
     endpoint = "/h/transactions/table"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(2, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_0}</div>', result)
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
     queries = {"account": "Non selected", "period": "all"}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(0, result.count('<div class="col col-payee">'))
     self.assertIn("No matching transactions for given query filters", result)
 
     queries = {"payee": payee_0}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_0}</div>', result)
 
     queries = {"payee": "[blank]"}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(0, result.count('<div class="col col-payee">'))
     self.assertIn("No matching transactions for given query filters", result)
 
     queries = {"payee": ["[blank]", payee_1]}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
     queries = {"category": cat_0}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_0}</div>', result)
 
     queries = {"tag": tag_1}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
     queries = {"tag": "[blank]"}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_0}</div>', result)
 
     queries = {"tag": ["[blank]", tag_1]}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(2, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_0}</div>', result)
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
     queries = {"locked": "true"}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
     queries = {"search": payee_1}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(1, result.count('<div class="col col-payee">'))
     self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
@@ -216,16 +184,12 @@ class TestTransaction(WebTestBase):
     tag_1 = d["tag_1"]
 
     endpoint = "/h/transactions/options/account"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(2, result.count("span"))
     self.assertIn(f"<span>{acct}</span>", result)
 
     endpoint = "/h/transactions/options/category"
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries={"period": "all"})
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries={"period": "all"})
     self.assertEqual(4, result.count("span"))
     self.assertIn(f"<span>{cat_0}</span>", result)
     self.assertIn(f"<span>{cat_1}</span>", result)
@@ -235,8 +199,7 @@ class TestTransaction(WebTestBase):
     self.assertLess(i_0, i_1)
 
     endpoint = "/h/transactions/options/tag"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(4, result.count("span"))
     self.assertIn("<span>[blank]</span>", result)
     self.assertIn(f"<span>{tag_1}</span>", result)
@@ -246,8 +209,7 @@ class TestTransaction(WebTestBase):
     self.assertLess(i_blank, i_1)
 
     endpoint = "/h/transactions/options/payee"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(6, result.count("span"))
     self.assertIn("<span>[blank]</span>", result)
     self.assertIn(f'value="{payee_0}"  hx-get', result)
@@ -260,10 +222,7 @@ class TestTransaction(WebTestBase):
     self.assertLess(i_0, i_1)
 
     queries = {"payee": payee_1}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(6, result.count("span"))
     self.assertIn("<span>[blank]</span>", result)
     self.assertIn(f'value="{payee_0}"  hx-get', result)
@@ -276,10 +235,7 @@ class TestTransaction(WebTestBase):
     self.assertLess(i_1, i_0)
 
     queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries=queries)
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint, queries=queries)
     self.assertEqual(2, result.count("span"))
     self.assertIn(f'value="{payee_0}" checked hx-get', result)
 
@@ -295,37 +251,24 @@ class TestTransaction(WebTestBase):
     cat_1 = d["cat_1"]
 
     endpoint = f"/h/transactions/t/{t_split_0}/edit"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
-    self.assertValidHTML(result)
+    result, _ = self.web_get(endpoint)
     self.assertEqual(1, result.count('name="payee"'))
 
     endpoint = f"/h/transactions/t/{t_0}/edit"
     form = {"amount": ""}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn("Non-zero remaining amount to be assigned", result)
 
     form = {"amount": "100"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn("Transaction must have at least one split", result)
 
     form = {"payee": "", "amount": "100"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn("Transaction date must not be empty", result)
 
     form = {"date": today, "payee": "ab", "amount": "100"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn("Transaction split payee must be at least 3 characters long",
                   result)
 
@@ -341,10 +284,7 @@ class TestTransaction(WebTestBase):
         "tag": ["", ""],
         "amount": ["20", "80"],
     }
-    result, headers = self.api_post(endpoint,
-                                    content_type="text/html; charset=utf-8",
-                                    data=form)
-    self.assertValidHTML(result)
+    result, headers = self.web_post(endpoint, data=form)
     self.assertEqual("update-transaction", headers["HX-Trigger"])
 
     with p.get_session() as s:
@@ -388,10 +328,7 @@ class TestTransaction(WebTestBase):
         "tag": "",
         "amount": "100",
     }
-    result, headers = self.api_post(endpoint,
-                                    content_type="text/html; charset=utf-8",
-                                    data=form)
-    self.assertValidHTML(result)
+    result, headers = self.web_post(endpoint, data=form)
     self.assertEqual("update-transaction", headers["HX-Trigger"])
 
     with p.get_session() as s:
@@ -433,10 +370,7 @@ class TestTransaction(WebTestBase):
         "tag": tag,
         "amount": "100",
     }
-    result, _ = self.api_put(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_put(endpoint, data=form)
     self.assertEqual(2, result.count('name="payee"'))
     self.assertIn(f'name="payee" value="{payee_0}"', result)
     self.assertIn('name="payee" value=""', result)
@@ -457,10 +391,7 @@ class TestTransaction(WebTestBase):
         "tag": [tag, ""],
         "amount": ["100", ""],
     }
-    result, _ = self.api_delete(endpoint + "?index=2",
-                                content_type="text/html; charset=utf-8",
-                                data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_delete(endpoint + "?index=2", data=form)
     self.assertEqual(1, result.count('name="payee"'))
     self.assertIn(f'name="payee" value="{payee_0}"', result)
     self.assertIn(f'name="description" value="{desc}"', result)
@@ -477,15 +408,9 @@ class TestTransaction(WebTestBase):
 
     endpoint = f"/h/transactions/t/{t_0}/remaining"
     form = {"amount": "100"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn(">$0.00</div>", result)
 
     form = {"amount": ["20", "20.001"]}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
-    self.assertValidHTML(result)
+    result, _ = self.web_post(endpoint, data=form)
     self.assertIn(">$60.00</div>", result)

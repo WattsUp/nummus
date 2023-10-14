@@ -22,15 +22,11 @@ class TestCommon(WebTestBase):
 
   def test_sidebar(self):
     endpoint = "/h/sidebar"
-    result, _ = self.api_get(endpoint, content_type="text/html; charset=utf-8")
+    result, _ = self.web_get(endpoint)
     self.assertIn("Click to show", result)
-    self.assertValidHTML(result)
 
-    result, _ = self.api_get(endpoint,
-                             content_type="text/html; charset=utf-8",
-                             queries={"closed": "included"})
+    result, _ = self.web_get(endpoint, queries={"closed": "included"})
     self.assertIn("Click to hide", result)
-    self.assertValidHTML(result)
 
   def test_ctx_sidebar(self):
     p = self._portfolio

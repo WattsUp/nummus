@@ -58,8 +58,9 @@ class WebTestBase(TestBase):
 
     # Got back up to the root element
     tag, parent = current_node.pop("__parent__")
-    self.assertEqual(tag, None)
-    self.assertEqual(parent, None)
+    self.assertIn(tag, [None, "html"])  # <html> might not be closed
+    if parent is not None:
+      self.assertEqual({"__parent__", "html"}, parent.keys())
 
   @classmethod
   def setUpClass(cls):
@@ -124,32 +125,28 @@ class WebTestBase(TestBase):
 
     super().tearDown(clean=False)
 
-  def api_open(self,
+  def web_open(self,
                method: str,
                endpoint: str,
-               queries: t.DictStr,
-               content_type: str = "application/json",
+               queries: t.DictStr = None,
+               content_type: str = "text/html; charset=utf-8",
                rc: int = 200,
                **kwargs) -> t.Tuple[ResultType, t.DictStr]:
-    """Run a test API GET
+    """Run a test HTTP request
 
     Args:
-      client: Test client from get_api_client
       method: HTTP method to use
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc in [200, 201]
+      content_type: Expected content type
       rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      (response.json, headers) if content_type == application/json
       (response.text, headers) if content_type == text/html
       (response.get_data(), headers) otherwise
     """
-    if rc == 204:
-      content_type = None
     if queries is None or len(queries) < 1:
       url = endpoint
     else:
@@ -167,19 +164,14 @@ class WebTestBase(TestBase):
       with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         start = time.perf_counter()
-        if rc in [200, 201]:
+        if rc == 200:
           response = self._client.open(url, **kwargs)
         else:
           with mock.patch("sys.stderr", new=io.StringIO()) as _:
             response = self._client.open(url, **kwargs)
       duration = time.perf_counter() - start
       self.assertEqual(rc, response.status_code, msg=response.text)
-      if rc in [200, 201]:
-        self.assertEqual(content_type, response.content_type)
-      if rc == 201:
-        self.assertIn("Location", response.headers)
-      if rc == 204:
-        self.assertEqual(b"", response.get_data())
+      self.assertEqual(content_type, response.content_type)
 
       with autodict.JSONAutoDict(TEST_LOG) as d:
         # Replace uuid with {accountUUID, assetUUID, ...}
@@ -203,172 +195,127 @@ class WebTestBase(TestBase):
         if queries is not None and len(queries) >= 1:
           queries_flat = [f"{k}=<value>" for k in queries]
           k += f"?{'&'.join(queries_flat)}"
-        if k not in d["api_latency"]:
-          d["api_latency"][k] = []
-        d["api_latency"][k].append(duration)
-
-        # Add to api_coverage
-        if endpoint.startswith("/api"):
-          if method not in d["api_coverage"][endpoint]:
-            d["api_coverage"][endpoint][method] = []
-          d["api_coverage"][endpoint][method].append(response.status_code)
-          if queries is not None and len(queries) >= 1:
-            for k in queries:
-              d["api_coverage"][endpoint][method].append(k)
-          else:
-            d["api_coverage"][endpoint][method].append(None)
+        if k not in d["web_latency"]:
+          d["web_latency"][k] = []
+        d["web_latency"][k].append(duration)
 
       self.assertLessEqual(duration, 0.2)  # All responses faster than 200ms
 
       if content_type is None:
         return response.get_data(), response.headers
-      if content_type == "application/json":
-        return response.json, response.headers
       if content_type.startswith("text/html"):
-        return response.text, response.headers
+        html = response.text
+        self.assertValidHTML(html)
+        return html, response.headers
       return response.get_data(), response.headers
     finally:
       if response is not None:
         response.close()
 
-  def api_get(self,
+  def web_get(self,
               endpoint: str,
               queries: t.DictStr = None,
-              content_type: str = "application/json",
+              content_type: str = "text/html; charset=utf-8",
               rc: int = 200,
               **kwargs) -> t.Tuple[ResultType, t.DictStr]:
-    """Run a test API GET
+    """Run a test HTTP GET request
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc in [200, 201]
-      rc: Expected return code, default for GET is 200 OK
+      content_type: Expected content type
+      rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      (response.json, headers) if content_type == application/json
       (response.text, headers) if content_type == text/html
       (response.get_data(), headers) otherwise
     """
-    return self.api_open("GET",
+    return self.web_open("GET",
                          endpoint,
                          queries,
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
 
-  def api_put(self,
+  def web_put(self,
               endpoint: str,
               queries: t.DictStr = None,
-              content_type: str = "application/json",
+              content_type: str = "text/html; charset=utf-8",
               rc: int = 200,
               **kwargs) -> t.Tuple[ResultType, t.DictStr]:
-    """Run a test API PUT
+    """Run a test HTTP PUT request
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc in [200, 201]
-      rc: Expected return code, default for PUT is 200 OK
+      content_type: Expected content type
+      rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      (response.json, headers) if content_type == application/json
       (response.text, headers) if content_type == text/html
       (response.get_data(), headers) otherwise
     """
-    return self.api_open("PUT",
+    return self.web_open("PUT",
                          endpoint,
                          queries,
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
 
-  def api_post(self,
+  def web_post(self,
                endpoint: str,
                queries: t.DictStr = None,
-               content_type: str = "application/json",
+               content_type: str = "text/html; charset=utf-8",
                rc: int = 200,
                **kwargs) -> t.Tuple[ResultType, t.DictStr]:
-    """Run a test API POST
+    """Run a test HTTP POST request
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc in [200, 201]
-      rc: Expected return code, default for POST is 201 Created
+      content_type: Expected content type
+      rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      (response.json, headers) if content_type == application/json
       (response.text, headers) if content_type == text/html
       (response.get_data(), headers) otherwise
     """
-    return self.api_open("POST",
+    return self.web_open("POST",
                          endpoint,
                          queries,
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
 
-  def api_delete(self,
+  def web_delete(self,
                  endpoint: str,
                  queries: t.DictStr = None,
-                 content_type: str = None,
+                 content_type: str = "text/html; charset=utf-8",
                  rc: int = 200,
                  **kwargs) -> t.Tuple[ResultType, t.DictStr]:
-    """Run a test API DELETE
+    """Run a test HTTP DELETE request
 
     Args:
       endpoint: URL endpoint to test
       queries: Dictionary of queries to append, will run through
         urllib.parse.quote
-      content_type: Expected content type if rc in [200, 201]
-      rc: Expected return code, default for DELETE is 204 No Content
+      content_type: Expected content type
+      rc: Expected HTTP return code
       All other arguments passed to client.get
 
     Returns:
-      (response.json, headers) if content_type == application/json
       (response.text, headers) if content_type == text/html
       (response.get_data(), headers) otherwise
     """
-    return self.api_open("DELETE",
+    return self.web_open("DELETE",
                          endpoint,
                          queries,
                          content_type=content_type,
                          rc=rc,
                          **kwargs)
-
-
-def api_coverage() -> t.Dict[str, t.Dict[str, CovMethods]]:
-  """Get API Coverage results
-
-  Returns:
-    {endpoint: {method: {permutations: covered bool}}}
-  """
-  # Initialize data from api.yaml with all False
-  d: t.Dict[str, t.Dict[str, CovMethods]] = {}
-
-  # Iterate through test log
-  with autodict.JSONAutoDict(TEST_LOG) as log:
-    LogYaml = t.Dict[str, t.DictStrings]
-    d_log: LogYaml = log["api_coverage"]
-
-  for endpoint, data in d_log.items():
-    for method, branches in data.items():
-      for branch in branches:
-        if branch not in d[endpoint][method]:
-          raise KeyError(f"API call not in spec: {method} {endpoint} {branch}")
-        d[endpoint][method][branch] = True
-
-  # List of endpoints and methods to remove from coverage
-  no_cover: t.List[t.Tuple[str, str]] = []
-  for endpoint, method in no_cover:
-    # Remove misses
-    d[endpoint][method] = {k: v for k, v in d[endpoint][method].items() if v}
-
-  return d
