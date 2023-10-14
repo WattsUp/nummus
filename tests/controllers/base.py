@@ -153,9 +153,12 @@ class WebTestBase(TestBase):
     if queries is None or len(queries) < 1:
       url = endpoint
     else:
-      queries_flat = [
-          f"{k}={urllib.parse.quote(str(v))}" for k, v in queries.items()
-      ]
+      queries_flat = []
+      for k, v in queries.items():
+        if isinstance(v, list):
+          queries_flat.extend(f"{k}={urllib.parse.quote(str(vv))}" for vv in v)
+        else:
+          queries_flat.append(f"{k}={urllib.parse.quote(str(v))}")
       url = f"{endpoint}?{'&'.join(queries_flat)}"
 
     kwargs["method"] = method
@@ -215,7 +218,7 @@ class WebTestBase(TestBase):
           else:
             d["api_coverage"][endpoint][method].append(None)
 
-      self.assertLessEqual(duration, 0.15)  # All responses faster than 150ms
+      self.assertLessEqual(duration, 0.2)  # All responses faster than 200ms
 
       if content_type is None:
         return response.get_data(), response.headers

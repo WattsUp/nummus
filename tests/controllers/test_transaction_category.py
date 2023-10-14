@@ -3,7 +3,6 @@
 
 import datetime
 
-from nummus import custom_types as t
 from nummus.models import (Account, AccountCategory, Transaction,
                            TransactionCategory, TransactionCategoryGroup,
                            TransactionSplit)

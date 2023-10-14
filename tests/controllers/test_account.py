@@ -52,10 +52,11 @@ class TestAccount(WebTestBase):
     name = self.random_string()
     institution = self.random_string()
     form = {"institution": institution, "name": name, "category": "credit"}
-    result, _ = self.api_post(endpoint,
-                              content_type="text/html; charset=utf-8",
-                              data=form)
+    result, headers = self.api_post(endpoint,
+                                    content_type="text/html; charset=utf-8",
+                                    data=form)
     self.assertValidHTML(result)
+    self.assertEqual("update-account", headers["HX-Trigger"])
     with p.get_session() as s:
       acct = s.query(Account).first()
       self.assertEqual(acct.name, name)

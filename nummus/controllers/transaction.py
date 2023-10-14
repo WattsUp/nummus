@@ -165,7 +165,6 @@ def ctx_table() -> t.DictStr:
         args.get("end", type=datetime.date.fromisoformat))
     search_str = args.get("search", "").strip()
     locked = args.get("locked", type=utils.parse_bool)
-    print(locked)
 
     page_len = 25
     offset = int(args.get("offset", 0))
@@ -427,7 +426,8 @@ def split(path_uuid: str) -> str:
     category.append("Uncategorized")
     tag.append(None)
     amount.append(None)
-  elif len(payee) == 1:
+  elif len(payee) == 1:  # pragma: no cover
+    # Delete button not available when only one split
     raise ValueError("Transaction must have at least one split")
   else:
     i = int(flask.request.args["index"]) - 1
