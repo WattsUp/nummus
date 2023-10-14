@@ -112,7 +112,9 @@ class Base(orm.DeclarativeBase):
     if field in [None, "", "[blank]"]:
       return None
     if len(field) < 3:
-      raise ValueError(f"{key.capitalize()} must be at least 3 characters long")
+      table: str = self.__tablename__
+      table = table.replace("_", " ").capitalize()
+      raise ValueError(f"{table} {key} must be at least 3 characters long")
     return field
 
 

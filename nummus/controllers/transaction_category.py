@@ -13,7 +13,7 @@ from nummus.models import (TransactionCategory, TransactionCategoryGroup,
 
 
 def overlay() -> str:
-  """GET /h/transaction_categories
+  """GET /h/txn-categories
 
   Returns:
     string HTML response
@@ -38,7 +38,7 @@ def overlay() -> str:
         expense.append(cat_d)
       elif cat.group == TransactionCategoryGroup.OTHER:
         other.append(cat_d)
-      else:
+      else:  # pragma: no cover
         raise ValueError(f"Unknown category type: {cat.group}")
 
     income = sorted(income, key=lambda cat: cat["name"])
@@ -54,7 +54,7 @@ def overlay() -> str:
 
 
 def new() -> str:
-  """GET & POST /h/transaction_categories/new
+  """GET & POST /h/txn-categories/new
 
   Returns:
     string HTML response
@@ -89,7 +89,7 @@ def new() -> str:
 
 
 def edit(path_uuid: str) -> str:
-  """GET & POST /h/transaction_categories/<category_uuid>/edit
+  """GET & POST /h/txn-categories/<category_uuid>/edit
 
   Returns:
     string HTML response
@@ -131,7 +131,7 @@ def edit(path_uuid: str) -> str:
 
 
 def delete(path_uuid: str) -> str:
-  """GET & POST /h/transaction_categories/<category_uuid>/delete
+  """GET & POST /h/txn-categories/<category_uuid>/delete
 
   Returns:
     string HTML response
@@ -161,8 +161,9 @@ def delete(path_uuid: str) -> str:
     # Move all transactions to Uncategorized
     query = s.query(TransactionCategory)
     query = query.where(TransactionCategory.name == "Uncategorized")
-    uncategorized = query.first()
-    if uncategorized is None:
+    uncategorized = query.scalar()
+    if uncategorized is None:  # pragma: no cover
+      # Uncategorized is locked and cannot be deleted
       raise ValueError("Could not find Uncategorized id")
 
     query = s.query(TransactionSplit)

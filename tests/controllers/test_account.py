@@ -73,6 +73,7 @@ class TestAccount(WebTestBase):
                               content_type="text/html; charset=utf-8",
                               data=form)
     e_str = "Cannot close Account with non-zero balance"
+    self.assertValidHTML(result)
     self.assertIn(e_str, result)
     with p.get_session() as s:
       self.assertFalse(acct.closed)
