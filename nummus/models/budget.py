@@ -1,5 +1,4 @@
-"""Budget model for storing an allocation of expenses per month
-"""
+"""Budget model for storing an allocation of expenses per month."""
 
 import sqlalchemy
 from sqlalchemy import orm
@@ -12,7 +11,7 @@ ORMBudgetOpt = orm.Mapped[t.Optional["Budget"]]
 
 
 class Budget(Base):
-    """Budget model for storing an allocation of expenses per month
+    """Budget model for storing an allocation of expenses per month.
 
     Attributes:
         uuid: Budget unique identifier

@@ -1,13 +1,8 @@
-"""Test module nummus.controllers.dashboard
-"""
-
 from tests.controllers.base import WebTestBase
 
 
 class TestDashboard(WebTestBase):
-    """Test dashboard controller"""
-
-    def test_page_home(self):
+    def test_page_home(self) -> None:
         endpoint = "/"
         result, _ = self.web_get(endpoint)
         target = '<!DOCTYPE html>\n<html lang="en">'

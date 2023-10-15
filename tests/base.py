@@ -1,6 +1,3 @@
-"""Test base class
-"""
-
 import pathlib
 import shutil
 import string
@@ -20,8 +17,6 @@ from tests import TEST_LOG
 
 
 class TestBase(unittest.TestCase):
-    """Test base class"""
-
     _TEST_ROOT = pathlib.Path.cwd().joinpath(".test").resolve()
     _DATA_ROOT = pathlib.Path(__file__).resolve().parent.joinpath("data")
     _P_FAIL = 1e-4
@@ -29,7 +24,7 @@ class TestBase(unittest.TestCase):
 
     @classmethod
     def random_string(cls, length: int = 20) -> str:
-        """Generate a random string a-zA-Z
+        """Generate a random string a-zA-Z.
 
         Args:
             length: Length of string to generate
@@ -47,7 +42,7 @@ class TestBase(unittest.TestCase):
         precision: int = 6,
         size: int = 1,
     ) -> t.Union[t.Real, t.Reals]:
-        """Generate a random decimal from a uniform distribution
+        """Generate a random decimal from a uniform distribution.
 
         Args:
             low: lower bound
@@ -70,19 +65,23 @@ class TestBase(unittest.TestCase):
         return result
 
     def get_session(self) -> orm.Session:
-        """Obtain a test sql session"""
         config = autodict.AutoDict(encrypt=False)
         path = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         return sql.get_session(path, config)
 
     @classmethod
-    def _clean_test_root(cls):
-        """Clean root test folder"""
+    def _clean_test_root(cls) -> None:
         if cls._TEST_ROOT.exists():
             shutil.rmtree(cls._TEST_ROOT)
 
-    def assertEqualWithinError(self, target, real, threshold, msg=None):
-        """Assert if target != real within threshold
+    def assertEqualWithinError(  # noqa: N802
+        self,
+        target: t.Any,
+        real: t.Any,
+        threshold: float,
+        msg: t.Optional[str] = None,
+    ) -> None:
+        """Assert if target != real within threshold.
 
         Args:
             target: Target value
@@ -115,20 +114,23 @@ class TestBase(unittest.TestCase):
             # Decimals included here since their math should be immune from FP error
             self.assertEqual(target, real, msg)
 
-    def assertHTTPRaises(self, rc: int, func: t.Callable, *args, **kwargs) -> None:
-        """Test function raises ProblemException with the matching HTTP return code
+    def assertHTTPRaises(  # noqa: N802
+        self, rc: int, func: t.Callable, *args: t.Any, **kwargs: t.Any
+    ) -> None:
+        """Test function raises ProblemException with the matching HTTP return code.
 
         Args:
             rc: HTTP code to match
             func: Callable to test
-            All other arguments passed to func()
+            args: Passed to func()
+            kwargs: Passed to func()
         """
         with self.assertRaises(exceptions.HTTPException) as cm:
             func(*args, **kwargs)
         e: exceptions.HTTPException = cm.exception
         self.assertEqual(rc, e.code)
 
-    def setUp(self, clean: bool = True):
+    def setUp(self, clean: bool = True) -> None:
         if clean:
             sql.drop_session()
             self._clean_test_root()
@@ -140,7 +142,7 @@ class TestBase(unittest.TestCase):
 
         self._test_start = time.perf_counter()
 
-    def tearDown(self, clean: bool = True):
+    def tearDown(self, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start
         with autodict.JSONAutoDict(TEST_LOG) as d:
             d["methods"][self.id()] = duration
@@ -151,8 +153,8 @@ class TestBase(unittest.TestCase):
         # Restore sleeping
         time.sleep = self._original_sleep
 
-    def log_speed(self, slow_duration: float, fast_duration: float):
-        """Log the duration of a slow/fast A/B comparison test
+    def log_speed(self, slow_duration: float, fast_duration: float) -> None:
+        """Log the duration of a slow/fast A/B comparison test.
 
         Args:
             slow_duration: Duration of slow test
@@ -166,7 +168,7 @@ class TestBase(unittest.TestCase):
             }
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         print(f"{cls.__module__}.{cls.__qualname__}[", end="", flush=True)
         cls._CLASS_START = time.perf_counter()
 
@@ -176,7 +178,7 @@ class TestBase(unittest.TestCase):
         ] = pool.NullPool  # pylint: disable=protected-access
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         print("]done", flush=True)
         # time.sleep(10)
         duration = time.perf_counter() - cls._CLASS_START

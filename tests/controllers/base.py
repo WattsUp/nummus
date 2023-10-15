@@ -1,6 +1,3 @@
-"""TestBase with extra functions for web testing
-"""
-
 import io
 import re
 import shutil
@@ -38,17 +35,14 @@ CovMethods = t.Dict[t.Union[int, str], bool]
 
 
 class WebTestBase(TestBase):
-    """TestBase with extra functions for web testing"""
-
-    def assertValidHTML(self, s: str):
-        """Test HTML is valid based on tags
+    def assertValidHTML(self, s: str) -> None:  # noqa: N802
+        """Test HTML is valid based on tags.
 
         Args:
             s: String to test
         """
         tags: t.Strings = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
-        DOMTree = t.Dict[str, "DOMTree"]
-        tree: DOMTree = {"__parent__": (None, None)}
+        tree: t.DictAny = {"__parent__": (None, None)}
         current_node = tree
         for tag in tags:
             if tag[0] == "/":
@@ -67,10 +61,11 @@ class WebTestBase(TestBase):
         tag, parent = current_node.pop("__parent__")
         self.assertIn(tag, [None, "html"])  # <html> might not be closed
         if parent is not None:
+            parent: t.DictAny
             self.assertEqual({"__parent__", "html"}, parent.keys())
 
     @classmethod
-    def setUpClass(cls):
+    def setUpClass(cls) -> None:
         super().setUpClass()
         cls._clean_test_root()
 
@@ -94,14 +89,14 @@ class WebTestBase(TestBase):
             cls._client = cls._flask_app.test_client()
 
     @classmethod
-    def tearDownClass(cls):
+    def tearDownClass(cls) -> None:
         cls._client = None
         cls._portfolio = None
         sql.drop_session()
         cls._clean_test_root()
         super().tearDownClass()
 
-    def setUp(self):
+    def setUp(self) -> None:
         self._original_render_template = flask.render_template
 
         self._called_context: t.DictAny = {}
@@ -115,7 +110,7 @@ class WebTestBase(TestBase):
 
         super().setUp(clean=False)
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         flask.render_template = self._original_render_template
 
         # Clean portfolio
@@ -144,17 +139,18 @@ class WebTestBase(TestBase):
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
         rc: int = 200,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
-        """Run a test HTTP request
+        """Run a test HTTP request.
 
         Args:
             method: HTTP method to use
             endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through urllib.parse.quote
+            queries: Dictionary of queries to append, will run through
+            urllib.parse.quote
             content_type: Expected content type
             rc: Expected HTTP return code
-            All other arguments passed to client.get
+            kwargs: Passed to client.get
 
         Returns:
             (response.text, headers) if content_type == text/html
@@ -230,16 +226,17 @@ class WebTestBase(TestBase):
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
         rc: int = 200,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
-        """Run a test HTTP GET request
+        """Run a test HTTP GET request.
 
         Args:
             endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through urllib.parse.quote
+            queries: Dictionary of queries to append, will run through
+            urllib.parse.quote
             content_type: Expected content type
             rc: Expected HTTP return code
-            All other arguments passed to client.get
+            kwargs: Passed to client.get
 
         Returns:
             (response.text, headers) if content_type == text/html
@@ -260,16 +257,17 @@ class WebTestBase(TestBase):
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
         rc: int = 200,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
-        """Run a test HTTP PUT request
+        """Run a test HTTP PUT request.
 
         Args:
             endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through urllib.parse.quote
+            queries: Dictionary of queries to append, will run through
+            urllib.parse.quote
             content_type: Expected content type
             rc: Expected HTTP return code
-            All other arguments passed to client.get
+            kwargs: Passed to client.get
 
         Returns:
             (response.text, headers) if content_type == text/html
@@ -290,16 +288,17 @@ class WebTestBase(TestBase):
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
         rc: int = 200,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
-        """Run a test HTTP POST request
+        """Run a test HTTP POST request.
 
         Args:
             endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through urllib.parse.quote
+            queries: Dictionary of queries to append, will run through
+            urllib.parse.quote
             content_type: Expected content type
             rc: Expected HTTP return code
-            All other arguments passed to client.get
+            kwargs: Passed to client.get
 
         Returns:
             (response.text, headers) if content_type == text/html
@@ -320,16 +319,17 @@ class WebTestBase(TestBase):
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
         rc: int = 200,
-        **kwargs,
+        **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
-        """Run a test HTTP DELETE request
+        """Run a test HTTP DELETE request.
 
         Args:
             endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through urllib.parse.quote
+            queries: Dictionary of queries to append, will run through
+            urllib.parse.quote
             content_type: Expected content type
             rc: Expected HTTP return code
-            All other arguments passed to client.get
+            kwargs: Passed to client.get
 
         Returns:
             (response.text, headers) if content_type == text/html

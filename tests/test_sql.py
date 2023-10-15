@@ -1,6 +1,3 @@
-"""Test module nummus.sql
-"""
-
 import pathlib
 import uuid
 
@@ -13,16 +10,10 @@ from tests.base import TestBase
 
 
 class ORMBase(orm.DeclarativeBase):
-    """Test ORM Base
-
-    Attributes:
-      id: Unique identifier
-    """
-
     metadata: schema.MetaData
 
     @orm.declared_attr
-    def __tablename__(self):
+    def __tablename__(self) -> None:
         return self.__name__.lower()
 
     id: orm.Mapped[str] = orm.mapped_column(
@@ -37,15 +28,11 @@ class ORMBase(orm.DeclarativeBase):
 
 
 class Child(ORMBase):
-    """Test derived class of ORMBase"""
-
     pass
 
 
 class TestSQL(TestBase):
-    """Test SQL methods"""
-
-    def test_get_session_unencrypted(self):
+    def test_get_session_unencrypted(self) -> None:
         config = autodict.AutoDict(encrypt=False)
 
         path = None
@@ -84,7 +71,7 @@ class TestSQL(TestBase):
 
         with open(path, "rb") as file:
             data = file.read()
-            self.assertIn("SQLite".encode(), data)
+            self.assertIn(b"SQLite", data)
 
         self._clean_test_root()
 
@@ -107,11 +94,11 @@ class TestSQL(TestBase):
 
         with open(path, "rb") as file:
             data = file.read()
-            self.assertIn("SQLite".encode(), data)
+            self.assertIn(b"SQLite", data)
 
         self._clean_test_root()
 
-    def test_get_session_encrypted(self):
+    def test_get_session_encrypted(self) -> None:
         if sql.Encryption is None:
             self.skipTest("Encryption is not installed")
         salt = self.random_string()
@@ -142,7 +129,7 @@ class TestSQL(TestBase):
 
         with open(path, "rb") as file:
             data = file.read()
-            self.assertNotIn("SQLite".encode(), data)
+            self.assertNotIn(b"SQLite", data)
 
         self._clean_test_root()
 
@@ -165,6 +152,6 @@ class TestSQL(TestBase):
 
         with open(path, "rb") as file:
             data = file.read()
-            self.assertNotIn("SQLite".encode(), data)
+            self.assertNotIn(b"SQLite", data)
 
         self._clean_test_root()

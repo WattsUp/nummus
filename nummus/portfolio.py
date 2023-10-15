@@ -1,19 +1,20 @@
-"""Portfolio of financial records
-"""
+"""Portfolio of financial records."""
 
 from __future__ import annotations
 
 import pathlib
 import re
+import secrets
 import shutil
 import tarfile
 
 import autodict
 import sqlalchemy
+import sqlalchemy.exc
 from sqlalchemy import orm
 
 from nummus import custom_types as t
-from nummus import importers, models, sql, utils, version
+from nummus import importers, models, sql, version
 from nummus.models import (
     Account,
     Asset,
@@ -33,7 +34,7 @@ except ImportError:
 
 
 class Portfolio:
-    """A collection of financial records
+    """A collection of financial records.
 
     Records include: transactions, accounts, and assets
     """
@@ -41,10 +42,10 @@ class Portfolio:
     # Have a root user so that unlock can test decryption
     _NUMMUS_SITE = "nummus"
     _NUMMUS_USER = "root"
-    _NUMMUS_PASSWORD = "unencrypted database"
+    _NUMMUS_PASSWORD = "unencrypted database"  # noqa: S105
 
     def __init__(self, path: str, key: str) -> None:
-        """Initialize Portfolio
+        """Initialize Portfolio.
 
         Args:
             path: Path to database file
@@ -79,12 +80,12 @@ class Portfolio:
 
     @property
     def path(self) -> pathlib.Path:
-        """Path to Portfolio database"""
+        """Path to Portfolio database."""
         return self._path_db
 
     @staticmethod
     def is_encrypted(path: str) -> bool:
-        """Check Portfolio's config for encryption status
+        """Check Portfolio's config for encryption status.
 
         Args:
             path: Path to database file
@@ -107,8 +108,8 @@ class Portfolio:
             return config["encrypt"]
 
     @staticmethod
-    def create(path: str, key: str = None) -> Portfolio:
-        """Create a new Portfolio
+    def create(path: str, key: t.Optional[str] = None) -> Portfolio:
+        """Create a new Portfolio.
 
         Saves database and configuration file
 
@@ -139,7 +140,7 @@ class Portfolio:
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_images.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
-        salt = utils.random_string(min_length=50, max_length=100)
+        salt = secrets.token_urlsafe()
         config = autodict.JSONAutoDict(path_config)
         config.clear()
         config["version"] = str(version.__version__)
@@ -175,7 +176,7 @@ class Portfolio:
         return p
 
     def _unlock(self) -> None:
-        """Unlock the database
+        """Unlock the database.
 
         Raises:
             TypeError if database file fails to open
@@ -195,7 +196,7 @@ class Portfolio:
                     )
                     .first()
                 )
-        except models.exc.DatabaseError as e:
+        except sqlalchemy.exc.DatabaseError as e:
             raise TypeError(f"Failed to open database {self._path_db}") from e
 
         if user is None:
@@ -216,7 +217,7 @@ class Portfolio:
         # All good :)
 
     def get_session(self) -> orm.Session:
-        """Get SQL Session to the database
+        """Get SQL Session to the database.
 
         Returns:
             Open Session
@@ -224,7 +225,7 @@ class Portfolio:
         return sql.get_session(self._path_db, self._config, self._enc)
 
     def import_file(self, path: str) -> None:
-        """Import a file into the Portfolio
+        """Import a file into the Portfolio.
 
         Args:
             path: Path to file to import
@@ -289,7 +290,7 @@ class Portfolio:
     def find_account(
         self, query: t.IntOrStr, session: orm.Session = None
     ) -> t.Union[int, Account]:
-        """Find a matching Account by name, UUID, institution, or ID
+        """Find a matching Account by name, UUID, institution, or ID.
 
         Args:
             query: Search query
@@ -337,7 +338,7 @@ class Portfolio:
     def find_asset(
         self, query: t.IntOrStr, session: orm.Session = None
     ) -> t.Union[int, Asset]:
-        """Find a matching Asset by name, UUID, or ID
+        """Find a matching Asset by name, UUID, or ID.
 
         Args:
             query: Search query
@@ -377,7 +378,7 @@ class Portfolio:
             return _find(session)
 
     def backup(self) -> t.Tuple[pathlib.Path, int]:
-        """Back up database, duplicates files
+        """Back up database, duplicates files.
 
         Returns:
             (Path to newly created backup tar.gz, backup version)
@@ -417,7 +418,7 @@ class Portfolio:
         return path_backup, tar_ver
 
     def clean(self) -> None:
-        """Delete any unused files, creates a new backup"""
+        """Delete any unused files, creates a new backup."""
         # Create a backup
         path_backup, _ = self.backup()
 
@@ -451,8 +452,8 @@ class Portfolio:
         Portfolio.restore(self, tar_ver=1)
 
     @staticmethod
-    def restore(p: t.Union[str, Portfolio], tar_ver: int = None) -> None:
-        """Restore Portfolio from backup
+    def restore(p: t.Union[str, Portfolio], tar_ver: t.Optional[int] = None) -> None:
+        """Restore Portfolio from backup.
 
         Args:
             p: Path to database file, or Portfolio which will get its path
@@ -502,15 +503,15 @@ class Portfolio:
 
     @property
     def image_path(self) -> pathlib.Path:
-        """Get path to image folder"""
+        """Get path to image folder."""
         return self._path_images
 
     @property
     def ssl_cert_path(self) -> pathlib.Path:
-        """Get path to SSL certificate"""
+        """Get path to SSL certificate."""
         return self._path_ssl.joinpath("cert.pem")
 
     @property
     def ssl_key_path(self) -> pathlib.Path:
-        """Get path to SSL certificate key"""
+        """Get path to SSL certificate key."""
         return self._path_ssl.joinpath("key.pem")

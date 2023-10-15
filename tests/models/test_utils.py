@@ -1,6 +1,3 @@
-"""Test module nummus.models.utils
-"""
-
 import datetime
 
 from nummus import models
@@ -17,9 +14,7 @@ from tests.base import TestBase
 
 
 class TestUtils(TestBase):
-    """Test utility methods"""
-
-    def test_search(self):
+    def test_search(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -65,7 +60,7 @@ class TestUtils(TestBase):
         result = utils.search(query, Account, "trading").all()
         self.assertEqual([acct_invest], result)
 
-    def test_paginate(self):
+    def test_paginate(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

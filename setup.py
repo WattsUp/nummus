@@ -1,4 +1,4 @@
-"""Setup and install nummus
+"""Setup and install nummus.
 
 Typical usage:
   python setup.py develop
@@ -12,7 +12,7 @@ module_folder = "nummus"
 module_name = "nummus"
 
 with open("README.md", encoding="utf-8") as file:
-    longDescription = file.read()
+    long_description = file.read()
 
 required = [
     "sqlalchemy>=2",
@@ -25,10 +25,11 @@ required = [
     "pytailwindcss",
     "jsmin",
     "flask<2.3,>=2",
+    "typing_extensions",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "pylint", "numpy", "time-machine"],
+    "test": ["coverage", "ruff", "numpy", "time-machine"],
 }
 extras_require["dev"] = extras_require["test"] + [
     "toml",
@@ -42,7 +43,7 @@ setuptools.setup(
     name=module_name,
     use_witch_ver=True,
     description="A personal financial information aggregator and planning tool",
-    long_description=longDescription,
+    long_description=long_description,
     long_description_content_type="text/markdown",
     license="MIT",
     packages=setuptools.find_packages(include=[module_folder, f"{module_folder}.*"]),
@@ -70,5 +71,5 @@ setuptools.setup(
     python_requires=">=3.8",
     # include_package_data=True, # Leave out cause wacky
     zip_safe=False,
-    entry_points={"console_scripts": ["nummus=nummus:main"]},
+    entry_points={"console_scripts": ["nummus=nummus.main:main"]},
 )

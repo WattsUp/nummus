@@ -1,5 +1,4 @@
-"""Base ORM model
-"""
+"""Base ORM model."""
 
 from __future__ import annotations
 
@@ -9,13 +8,14 @@ from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import orm, schema, types
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import utils
 
 
 class Base(orm.DeclarativeBase):
-    """Base ORM model
+    """Base ORM model.
 
     Attributes:
         id: Primary key identifier
@@ -25,6 +25,7 @@ class Base(orm.DeclarativeBase):
     metadata: schema.MetaData
 
     @orm.declared_attr
+    @override
     def __tablename__(self) -> str:
         return utils.camel_to_snake(self.__name__)
 
@@ -36,6 +37,7 @@ class Base(orm.DeclarativeBase):
         sqlalchemy.String(36), default=lambda: str(uuid.uuid4())
     )
 
+    @override
     def __repr__(self) -> str:
         try:
             return f"<{self.__class__.__name__} id={self.id} uuid={self.uuid}>"
@@ -43,7 +45,7 @@ class Base(orm.DeclarativeBase):
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
     def __eq__(self, other: Base) -> bool:
-        """Test equality by UUID
+        """Test equality by UUID.
 
         Args:
             other: Other object to test
@@ -54,7 +56,7 @@ class Base(orm.DeclarativeBase):
         return other is not None and self.uuid == other.uuid
 
     def __ne__(self, other: Base) -> bool:
-        """Test inequality by UUID
+        """Test inequality by UUID.
 
         Args:
             other: Other object to test
@@ -66,7 +68,7 @@ class Base(orm.DeclarativeBase):
 
     @classmethod
     def map_uuid(cls, s: orm.Session) -> t.DictIntStr:
-        """Mapping between id and uuid
+        """Mapping between id and uuid.
 
         Args:
             s: SQL session to use
@@ -80,7 +82,7 @@ class Base(orm.DeclarativeBase):
 
     @classmethod
     def map_name(cls, s: orm.Session) -> t.DictIntStr:
-        """Mapping between id and names
+        """Mapping between id and names.
 
         Args:
             s: SQL session to use
@@ -99,7 +101,7 @@ class Base(orm.DeclarativeBase):
         return dict(query.all())
 
     def validate_strings(self, key: str, field: str) -> str:
-        """Validates string fields are not empty
+        """Validates string fields are not empty.
 
         Args:
             key: Field being updated
@@ -121,11 +123,11 @@ class Base(orm.DeclarativeBase):
 
 
 class BaseEnum(enum.Enum):
-    """Enum class with a parser"""
+    """Enum class with a parser."""
 
     @classmethod
     def parse(cls, s: str) -> BaseEnum:
-        """Parse a string and return matching enum
+        """Parse a string and return matching enum.
 
         Args:
             s: String to parse
@@ -152,7 +154,7 @@ class BaseEnum(enum.Enum):
 
     @classmethod
     def _lut(cls) -> t.Dict[str, BaseEnum]:
-        """Look up table, mapping of strings to matching Enums
+        """Look up table, mapping of strings to matching Enums.
 
         Returns:
             Dictionary {alternate names for enums: Enum}
@@ -161,7 +163,7 @@ class BaseEnum(enum.Enum):
 
 
 class Decimal6(types.TypeDecorator):
-    """SQL type for fixed point numbers, stores as micro-integer"""
+    """SQL type for fixed point numbers, stores as micro-integer."""
 
     impl = types.BigInteger
 
@@ -170,7 +172,7 @@ class Decimal6(types.TypeDecorator):
     _FACTOR = Decimal("1e6")
 
     def process_bind_param(self, value: t.Real, _) -> int:
-        """Receive a bound parameter value to be converted
+        """Receive a bound parameter value to be converted.
 
         Args:
             value: Python side value to convert
@@ -183,7 +185,7 @@ class Decimal6(types.TypeDecorator):
         return int(value * self._FACTOR)
 
     def process_result_value(self, value: int, _) -> t.Real:
-        """Receive a result-row column value to be converted
+        """Receive a result-row column value to be converted.
 
         Args:
             value: SQL side value to convert
@@ -197,7 +199,7 @@ class Decimal6(types.TypeDecorator):
 
 
 class Decimal18(Decimal6):
-    """SQL type for fixed point numbers, stores as atto-integer"""
+    """SQL type for fixed point numbers, stores as atto-integer."""
 
     cache_ok = True
 

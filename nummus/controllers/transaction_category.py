@@ -1,5 +1,4 @@
-"""TransactionCategory controllers
-"""
+"""TransactionCategory controllers."""
 
 import flask
 import sqlalchemy.exc
@@ -16,7 +15,7 @@ from nummus.models import (
 
 
 def overlay() -> str:
-    """GET /h/txn-categories
+    """GET /h/txn-categories.
 
     Returns:
         string HTML response
@@ -57,7 +56,7 @@ def overlay() -> str:
 
 
 def new() -> str:
-    """GET & POST /h/txn-categories/new
+    """GET & POST /h/txn-categories/new.
 
     Returns:
         string HTML response
@@ -91,7 +90,7 @@ def new() -> str:
 
 
 def edit(path_uuid: str) -> str:
-    """GET & POST /h/txn-categories/<category_uuid>/edit
+    """GET & POST /h/txn-categories/<category_uuid>/edit.
 
     Returns:
         string HTML response
@@ -134,7 +133,7 @@ def edit(path_uuid: str) -> str:
 
 
 def delete(path_uuid: str) -> str:
-    """GET & POST /h/txn-categories/<category_uuid>/delete
+    """GET & POST /h/txn-categories/<category_uuid>/delete.
 
     Returns:
         string HTML response

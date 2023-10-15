@@ -1,51 +1,56 @@
-"""Raw CSV importers
-"""
+"""Raw CSV importers."""
 
 import csv
 import datetime
 import io
+import types
 
-from nummus import custom_types as t
+from typing_extensions import override
+
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 
 
 class CSVTransactionImporter(TransactionImporter):
-    """Import a CSV of transactions
+    """Import a CSV of transactions.
 
     Required Columns: account,date,amount,payee,description
 
     Other columns are allowed
     """
 
-    _COLUMNS: t.Dict[str, t.Tuple[bool, t.StrToObj]] = {
-        "account": (True, str),
-        "date": (True, datetime.date.fromisoformat),
-        "amount": (True, utils.parse_real),
-        "payee": (True, str),
-        "description": (True, str),
-        "sales_tax": (False, utils.parse_real),
-        "category": (False, str),
-        "subcategory": (False, str),
-        "tag": (False, str),
-        "asset": (False, str),
-        "asset_quantity": (False, utils.parse_real),
-    }
+    _COLUMNS = types.MappingProxyType(
+        {
+            "account": (True, str),
+            "date": (True, datetime.date.fromisoformat),
+            "amount": (True, utils.parse_real),
+            "payee": (True, str),
+            "description": (True, str),
+            "sales_tax": (False, utils.parse_real),
+            "category": (False, str),
+            "subcategory": (False, str),
+            "tag": (False, str),
+            "asset": (False, str),
+            "asset_quantity": (False, utils.parse_real),
+        }
+    )
 
     @classmethod
+    @override
     def is_importable(cls, name: str, buf: bytes) -> bool:
         if not name.endswith(".csv"):
             return False
 
         # Check if the columns start with the expected ones
         first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")
-        header = list(csv.reader(io.StringIO(first_line)))[0]
+        header = next(csv.reader(io.StringIO(first_line)))
         for k, item in cls._COLUMNS.items():
             required, _ = item
             if required and k not in header:
                 return False
         return True
 
+    @override
     def run(self) -> TxnDicts:
         first_line, remaining = self._buf.decode().split("\n", 1)
         first_line = first_line.lower().replace(" ", "_")

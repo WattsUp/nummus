@@ -1,5 +1,4 @@
-"""Dashboard controllers
-"""
+"""Dashboard controllers."""
 
 import flask
 
@@ -8,7 +7,7 @@ from nummus.controllers import common
 
 
 def page_home() -> str:
-    """GET /
+    """GET /.
 
     Returns:
         string HTML response

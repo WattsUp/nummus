@@ -1,7 +1,7 @@
-"""Encryption provider
-"""
+"""Encryption provider."""
 
 import base64
+import secrets
 
 import Crypto
 import Crypto.Random
@@ -9,11 +9,11 @@ from Crypto.Cipher import AES
 from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Hash import SHA256
 
-from nummus import utils
+from nummus import custom_types as t
 
 
 class Encryption:
-    """Encryption provider
+    """Encryption provider.
 
     Uses AES encryption for encryption and decryption
 
@@ -23,7 +23,7 @@ class Encryption:
     """
 
     def __init__(self, key: bytes) -> None:
-        """Initialize Encryption
+        """Initialize Encryption.
 
         Args:
             key: encryption key
@@ -32,7 +32,7 @@ class Encryption:
         self.salted_key = None
 
     def _digest_key(self) -> bytes:
-        """Get digest key
+        """Get digest key.
 
         Hashes the key (with optional salt) to get a fixed length key
 
@@ -44,8 +44,8 @@ class Encryption:
             key = self.salted_key
         return SHA256.new(key).digest()
 
-    def _get_aes(self, iv) -> CbcMode:
-        """Get AES cipher from digest key and initialization vector
+    def _get_aes(self, iv: bytes) -> CbcMode:
+        """Get AES cipher from digest key and initialization vector.
 
         Args:
             iv: Initialization vector
@@ -56,7 +56,7 @@ class Encryption:
         return AES.new(self._digest_key(), AES.MODE_CBC, iv)
 
     def gen_salt(self, set_salt: bool = True) -> bytes:
-        """Generate salt to be added to key
+        """Generate salt to be added to key.
 
         Args:
             set_salt: True will set_salt after generation
@@ -64,15 +64,15 @@ class Encryption:
         Returns:
             bytes Generated salt
         """
-        salt = utils.random_string().encode()
+        salt = secrets.token_bytes()
 
         if set_salt:
             self.set_salt(salt)
 
         return salt
 
-    def set_salt(self, salt: bytes = None) -> None:
-        """Set salt to be added to key
+    def set_salt(self, salt: t.Optional[bytes] = None) -> None:
+        """Set salt to be added to key.
 
         Args:
             salt: Salt to add
@@ -83,7 +83,7 @@ class Encryption:
             self.salted_key = None
 
     def encrypt(self, secret: bytes) -> bytes:
-        """Encrypt a secret using the key
+        """Encrypt a secret using the key.
 
         Args:
             secret: Object to encrypt
@@ -110,7 +110,7 @@ class Encryption:
         return base64.b64encode(data)
 
     def decrypt(self, enc_secret: bytes) -> bytes:
-        """Decrypt an encoded secret using the key
+        """Decrypt an encoded secret using the key.
 
         Args:
             enc_secret: Encoded secret

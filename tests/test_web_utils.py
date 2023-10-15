@@ -1,6 +1,3 @@
-"""Test module nummus.web_utils
-"""
-
 import datetime
 import uuid
 
@@ -12,9 +9,7 @@ from tests.base import TestBase
 
 
 class TestWebUtils(TestBase):
-    """Test web utility methods"""
-
-    def test_find(self):
+    def test_find(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -39,7 +34,7 @@ class TestWebUtils(TestBase):
         # Account does not exist
         self.assertHTTPRaises(404, web_utils.find, s, Account, str(uuid.uuid4()))
 
-    def test_parse_period(self):
+    def test_parse_period(self) -> None:
         today = datetime.date.today()
 
         result = web_utils.parse_period("custom", None, None)
@@ -99,7 +94,7 @@ class TestWebUtils(TestBase):
             400, web_utils.parse_period, self.random_string(), None, None
         )
 
-    def test_validate_image_upload(self):
+    def test_validate_image_upload(self) -> None:
         # Missing length
         req = flask.Request({})
         self.assertHTTPRaises(411, web_utils.validate_image_upload, req)

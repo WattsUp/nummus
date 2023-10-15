@@ -1,6 +1,3 @@
-"""Test module nummus.models.budget
-"""
-
 import datetime
 
 import sqlalchemy.exc
@@ -11,9 +8,7 @@ from tests.base import TestBase
 
 
 class TestBudget(TestBase):
-    """Test Budget class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

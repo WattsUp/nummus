@@ -1,6 +1,3 @@
-"""Test module nummus.controllers.common
-"""
-
 import datetime
 from decimal import Decimal
 
@@ -22,9 +19,7 @@ from tests.controllers.base import WebTestBase
 
 
 class TestCommon(WebTestBase):
-    """Test common components controller"""
-
-    def test_sidebar(self):
+    def test_sidebar(self) -> None:
         endpoint = "/h/sidebar"
         result, _ = self.web_get(endpoint)
         self.assertIn("Click to show", result)
@@ -32,7 +27,7 @@ class TestCommon(WebTestBase):
         result, _ = self.web_get(endpoint, queries={"closed": "included"})
         self.assertIn("Click to hide", result)
 
-    def test_ctx_sidebar(self):
+    def test_ctx_sidebar(self) -> None:
         p = self._portfolio
 
         today = datetime.date.today()
@@ -156,10 +151,10 @@ class TestCommon(WebTestBase):
             result = common.ctx_sidebar(include_closed=False)
         self.assertDictEqual(target, result)
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         self.assertEqual("", common.empty())
 
-    def test_overlay_swap(self):
+    def test_overlay_swap(self) -> None:
         with self._flask_app.app_context():
             content = self.random_string()
             event_0 = self.random_string()
@@ -186,7 +181,7 @@ class TestCommon(WebTestBase):
             self.assertIn(content, html)
             self.assertEqual(f"{event_0},{event_1}", response.headers["HX-Trigger"])
 
-    def test_error(self):
+    def test_error(self) -> None:
         p = self._portfolio
 
         today = datetime.date.today()
@@ -244,7 +239,7 @@ class TestCommon(WebTestBase):
                 self.assertIn(e_str, html)
                 s.rollback()
 
-    def test_add_routes(self):
+    def test_add_routes(self) -> None:
         controllers.add_routes(self._flask_app)
         routes = self._flask_app.url_map
         for rule in routes.iter_rules():

@@ -1,5 +1,4 @@
-"""Transaction controllers
-"""
+"""Transaction controllers."""
 
 import datetime
 from decimal import Decimal
@@ -24,7 +23,7 @@ from nummus.models import (
 
 
 def page_all() -> str:
-    """GET /transactions
+    """GET /transactions.
 
     Returns:
         string HTML response
@@ -37,7 +36,7 @@ def page_all() -> str:
 
 
 def table() -> str:
-    """GET /h/transactions/table
+    """GET /h/transactions/table.
 
     Returns:
         string HTML response
@@ -50,7 +49,7 @@ def table() -> str:
 
 
 def options(field: str) -> str:
-    """GET /h/transactions/options/<field>
+    """GET /h/transactions/options/<field>.
 
     Args:
         field: Name of field to get options for
@@ -97,13 +96,13 @@ def ctx_options(
     query: orm.Query,
     field: str,
     id_mapping: t.DictIntStr = None,
-    search_str: str = None,
+    search_str: t.Optional[str] = None,
 ) -> t.List[t.DictStr]:
-    """Get the context to build the options for table
+    """Get the context to build the options for table.
 
     Args:
-        s: Session to use
         query: Query to use to get distinct values
+        field: TransactionSplit field to get options for
         id_mapping: Item ID to name mapping
         search_str: Search options and hide non-matches
 
@@ -157,7 +156,7 @@ def ctx_options(
 
 
 def ctx_table() -> t.DictStr:
-    """Get the context to build the transaction table
+    """Get the context to build the transaction table.
 
     Returns:
         Dictionary HTML context
@@ -297,7 +296,7 @@ def ctx_table() -> t.DictStr:
 def ctx_split(
     t_split: TransactionSplit, accounts: t.DictIntStr, categories: t.DictIntStr
 ) -> t.DictStr:
-    """Get the context to build the transaction edit dialog
+    """Get the context to build the transaction edit dialog.
 
     Returns:
         Dictionary HTML context
@@ -316,7 +315,7 @@ def ctx_split(
 
 
 def edit(path_uuid: str) -> str:
-    """GET & POST /h/transactions/t/<path_uuid>/edit
+    """GET & POST /h/transactions/t/<path_uuid>/edit.
 
     Args:
         path_uuid: UUID of Transaction or TransactionSplit
@@ -425,7 +424,7 @@ def edit(path_uuid: str) -> str:
 
 
 def split(path_uuid: str) -> str:
-    """PUT & DELETE /h/transactions/<path_uuid>/split
+    """PUT & DELETE /h/transactions/<path_uuid>/split.
 
     Returns:
         string HTML response
@@ -492,7 +491,7 @@ def split(path_uuid: str) -> str:
 
 
 def remaining(path_uuid: str) -> str:
-    """POST /h/transactions/<path_uuid>/remaining
+    """POST /h/transactions/<path_uuid>/remaining.
 
     Returns:
       string HTML response

@@ -1,5 +1,4 @@
-"""Web server for nummus
-"""
+"""Web server for nummus."""
 
 import datetime
 import io
@@ -18,10 +17,10 @@ from nummus import controllers, portfolio, utils, version
 
 
 class Handler(gevent.pywsgi.WSGIHandler):
-    """Custom WSGIHandler, mainly for request formatting"""
+    """Custom WSGIHandler, mainly for request formatting."""
 
-    def format_request(self):
-        """Format request as a single line
+    def format_request(self) -> str:
+        """Format request as a single line.
 
         Returns:
             [client address] [now] [delta t] [method] [endpoint] [HTTP ver] [len]
@@ -99,15 +98,15 @@ class Handler(gevent.pywsgi.WSGIHandler):
 
 
 class TailwindCSSFilter(webassets.filter.Filter):
-    """webassets Filter for running tailwindcss over"""
+    """webassets Filter for running tailwindcss over."""
 
     def output(
         self,
         _in: io.StringIO,  # pylint: disable=unused-argument,invalid-name
         out: io.StringIO,
         **_,
-    ):
-        """Run filter and generate output file
+    ) -> None:
+        """Run filter and generate output file.
 
         Args:
             out: Output buffer
@@ -122,12 +121,12 @@ class TailwindCSSFilter(webassets.filter.Filter):
 
 
 class Server:
-    """HTTP server that serves a nummus Portfolio"""
+    """HTTP server that serves a nummus Portfolio."""
 
     def __init__(
         self, p: portfolio.Portfolio, host: str, port: int, debug: bool
     ) -> None:
-        """Initialize Server
+        """Initialize Server.
 
         Args:
             p: Portfolio to serve
@@ -202,7 +201,7 @@ class Server:
         )
 
     def run(self) -> None:
-        """Start and run the server"""
+        """Start and run the server."""
         url = f"https://localhost:{self._server.server_port}"
         print(f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)")
         try:
@@ -217,7 +216,7 @@ class Server:
 
     @staticmethod
     def generate_ssl_cert(path_cert: pathlib.Path, path_key: pathlib.Path) -> None:
-        """Generate a self-signed SSL certificate
+        """Generate a self-signed SSL certificate.
 
         Args:
             path_cert: Path to SSL certificate
@@ -254,7 +253,7 @@ class Server:
 
     @staticmethod
     def is_ssl_cert_self_signed(path_cert: pathlib.Path) -> bool:
-        """Check if SSL certificate is self-signed
+        """Check if SSL certificate is self-signed.
 
         Args:
             path_cert: Path to SSL certificate

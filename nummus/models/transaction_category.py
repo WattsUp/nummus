@@ -1,9 +1,9 @@
-"""Transaction Category model for storing a type of Transaction
-"""
+"""Transaction Category model for storing a type of Transaction."""
 
 from __future__ import annotations
 
 from sqlalchemy import orm
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum
@@ -14,7 +14,7 @@ ORMTxnCatType = orm.Mapped["TransactionCategoryGroup"]
 
 
 class TransactionCategoryGroup(BaseEnum):
-    """Types of Transaction Categories"""
+    """Types of Transaction Categories."""
 
     INCOME = 1
     EXPENSE = 2
@@ -22,7 +22,7 @@ class TransactionCategoryGroup(BaseEnum):
 
 
 class TransactionCategory(Base):
-    """Categories of Transactions
+    """Categories of Transactions.
 
     Attributes:
         id: TransactionCategory unique identifier
@@ -37,12 +37,13 @@ class TransactionCategory(Base):
     locked: t.ORMBool
 
     @orm.validates("name")
+    @override
     def validate_strings(self, key: str, field: str) -> str:
         return super().validate_strings(key, field)
 
     @staticmethod
     def add_default(s: orm.Session) -> t.Dict[str, TransactionCategory]:
-        """Create default transaction categories
+        """Create default transaction categories.
 
         Args:
             s: SQL session to use

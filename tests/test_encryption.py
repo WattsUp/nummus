@@ -1,6 +1,3 @@
-"""Test module nummus.encryption
-"""
-
 import base64
 
 from tests.base import TestBase
@@ -13,14 +10,12 @@ except ImportError:
 
 
 class TestEncryption(TestBase):
-    """Test Encryption"""
-
-    def setUp(self):
+    def setUp(self) -> None:
         super().setUp()
         if encryption is None:
             self.skipTest("Encryption is not installed")
 
-    def test_good_key(self):
+    def test_good_key(self) -> None:
         key = self.random_string().encode()
         secret = self.random_string().encode()
 
@@ -32,7 +27,7 @@ class TestEncryption(TestBase):
         decrypted = enc.decrypt(encrypted)
         self.assertEqual(secret, decrypted)
 
-    def test_bad_key(self):
+    def test_bad_key(self) -> None:
         key = self.random_string().encode()
         secret = self.random_string().encode()
 
@@ -52,7 +47,7 @@ class TestEncryption(TestBase):
         except ValueError:
             pass  # Expected mismatch of padding
 
-    def test_salt(self):
+    def test_salt(self) -> None:
         key = self.random_string().encode()
         secret = self.random_string().encode()
 

@@ -1,5 +1,4 @@
-"""Common API Controller
-"""
+"""Common API Controller."""
 
 import datetime
 import mimetypes
@@ -14,7 +13,7 @@ from nummus.models import Base
 
 
 def find(s: orm.Session, cls: t.Type[Base], query: str, do_raise: bool = True) -> Base:
-    """Find the matching object by UUID
+    """Find the matching object by UUID.
 
     Args:
         s: SQL session to search
@@ -40,12 +39,12 @@ def find(s: orm.Session, cls: t.Type[Base], query: str, do_raise: bool = True) -
 def parse_period(
     period: str, start_custom: datetime.date, end_custom: datetime.date
 ) -> t.Tuple[datetime.date, datetime.date]:
-    """Parse time period from arguments
+    """Parse time period from arguments.
 
     Args:
         period: Name of period
-        start: Start date for "custom"
-        end: End date from "custom"
+        start_custom: Start date for "custom"
+        end_custom: End date from "custom"
 
     Returns:
         start, end dates
@@ -90,7 +89,7 @@ def parse_period(
 
 
 def validate_image_upload(req: flask.Request) -> str:
-    """Checks image upload meets criteria for accepting
+    """Checks image upload meets criteria for accepting.
 
     Args:
         req: Request to validate

@@ -1,6 +1,3 @@
-"""Test module nummus.commands
-"""
-
 import io
 import shutil
 from unittest import mock
@@ -15,15 +12,13 @@ from tests.base import TestBase
 
 
 class TestCommands(TestBase):
-    """Test CLI commands"""
-
-    def test_create_unencrypted(self):
+    def test_create_unencrypted(self) -> None:
         original_input = mock.builtins.input
         original_get_pass = commands.utils.getpass.getpass
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str):
+        def mock_input(to_print: str) -> None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
@@ -81,7 +76,7 @@ class TestCommands(TestBase):
             mock.builtins.input = original_input
             commands.utils.getpass.getpass = original_get_pass
 
-    def test_create_encrypted(self):
+    def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
@@ -90,7 +85,7 @@ class TestCommands(TestBase):
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str):
+        def mock_input(to_print: str) -> None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
@@ -189,13 +184,13 @@ class TestCommands(TestBase):
             mock.builtins.input = original_input
             commands.utils.getpass.getpass = original_get_pass
 
-    def test_unlock_unencrypted(self):
+    def test_unlock_unencrypted(self) -> None:
         original_input = mock.builtins.input
         original_get_pass = commands.utils.getpass.getpass
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str):
+        def mock_input(to_print: str) -> None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
@@ -234,7 +229,7 @@ class TestCommands(TestBase):
             mock.builtins.input = original_input
             commands.utils.getpass.getpass = original_get_pass
 
-    def test_unlock_encrypted(self):
+    def test_unlock_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
@@ -243,7 +238,7 @@ class TestCommands(TestBase):
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str):
+        def mock_input(to_print: str) -> None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
@@ -343,7 +338,7 @@ class TestCommands(TestBase):
             mock.builtins.input = original_input
             commands.utils.getpass.getpass = original_get_pass
 
-    def test_import_files(self):
+    def test_import_files(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path_db, None, False, True)
@@ -435,7 +430,7 @@ class TestCommands(TestBase):
             transactions = s.query(Transaction).all()
             self.assertEqual(6 + 4, len(transactions))
 
-    def test_backup_restore(self):
+    def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup = path_db.with_suffix(".backup1.tar.gz")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
@@ -479,7 +474,7 @@ class TestCommands(TestBase):
         target = f"{Fore.RED}Backup does not exist {path_backup}\n"
         self.assertEqual(target, fake_stdout)
 
-    def test_clean(self):
+    def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
         path_backup_2 = path_db.with_suffix(".backup2.tar.gz")

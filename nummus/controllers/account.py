@@ -1,5 +1,4 @@
-"""Account controllers
-"""
+"""Account controllers."""
 
 import datetime
 
@@ -13,7 +12,7 @@ from nummus.models import Account, AccountCategory
 
 
 def edit(path_uuid: str) -> str:
-    """GET & POST /h/accounts/a/<account_uuid>/edit
+    """GET & POST /h/accounts/a/<account_uuid>/edit.
 
     Returns:
         string HTML response

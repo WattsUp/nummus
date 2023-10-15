@@ -1,6 +1,3 @@
-"""Test module nummus.models.account
-"""
-
 import datetime
 
 from nummus import custom_types as t
@@ -20,9 +17,7 @@ from tests.base import TestBase
 
 
 class TestAccount(TestBase):
-    """Test Account class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -47,7 +42,7 @@ class TestAccount(TestBase):
         # Short strings are bad
         self.assertRaises(ValueError, setattr, acct, "name", "ab")
 
-    def test_add_transactions(self):
+    def test_add_transactions(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -105,7 +100,7 @@ class TestAccount(TestBase):
         self.assertEqual(t_before.date, acct.opened_on)
         self.assertEqual(t_after.date, acct.updated_on)
 
-    def test_get_asset_qty(self):
+    def test_get_asset_qty(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -237,7 +232,7 @@ class TestAccount(TestBase):
         self.assertListEqual([future], result_dates)
         self.assertEqual(target_qty, result_qty)
 
-    def test_get_value(self):
+    def test_get_value(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -439,7 +434,7 @@ class TestAccount(TestBase):
         self.assertEqual([future], r_dates)
         self.assertEqual({acct.id: [target_values[-1]]}, r_values)
 
-    def test_get_cash_flow(self):
+    def test_get_cash_flow(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

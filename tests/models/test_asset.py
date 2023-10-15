@@ -1,8 +1,7 @@
-"""Test module nummus.models.asset
-"""
-
 import datetime
 from decimal import Decimal
+
+import sqlalchemy.exc
 
 from nummus import models
 from nummus.models import (
@@ -21,9 +20,7 @@ from tests.base import TestBase
 
 
 class TestAssetSplit(TestBase):
-    """Test AssetSplit class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -47,9 +44,7 @@ class TestAssetSplit(TestBase):
 
 
 class TestAssetValuation(TestBase):
-    """Test AssetValuation class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -73,9 +68,7 @@ class TestAssetValuation(TestBase):
 
 
 class TestAsset(TestBase):
-    """Test Asset class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -116,7 +109,7 @@ class TestAsset(TestBase):
         s.delete(a)
 
         # Cannot delete Parent before all children
-        self.assertRaises(models.exc.IntegrityError, s.commit)
+        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
         s.rollback()  # Undo the attempt
 
         s.delete(v)
@@ -129,7 +122,7 @@ class TestAsset(TestBase):
         result = s.query(AssetValuation).all()
         self.assertEqual([], result)
 
-    def test_add_valuations(self):
+    def test_add_valuations(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -156,7 +149,7 @@ class TestAsset(TestBase):
         s.add(v_today)
         s.commit()
 
-    def test_get_value(self):
+    def test_get_value(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -261,7 +254,7 @@ class TestAsset(TestBase):
         self.assertEqual([long_ago], r_dates)
         self.assertEqual({a.id: [Decimal(0)]}, r_values)
 
-    def test_update_splits(self):
+    def test_update_splits(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

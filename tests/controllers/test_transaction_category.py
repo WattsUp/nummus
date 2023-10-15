@@ -1,6 +1,3 @@
-"""Test module nummus.controllers.transaction_category
-"""
-
 import datetime
 
 from nummus.models import (
@@ -15,9 +12,7 @@ from tests.controllers.base import WebTestBase
 
 
 class TestTransactionCategory(WebTestBase):
-    """Test transaction category controller"""
-
-    def test_overlay(self):
+    def test_overlay(self) -> None:
         p = self._portfolio
 
         with p.get_session() as s:
@@ -28,7 +23,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertEqual(n, result.count("txn-category"))
         self.assertIn("Edit transaction categories", result)
 
-    def test_new(self):
+    def test_new(self) -> None:
         p = self._portfolio
 
         with p.get_session() as s:
@@ -55,7 +50,7 @@ class TestTransactionCategory(WebTestBase):
             n_after = s.query(TransactionCategory).count()
             self.assertEqual(n_before + 1, n_after)
 
-    def test_edit(self):
+    def test_edit(self) -> None:
         p = self._portfolio
 
         with p.get_session() as s:
@@ -95,7 +90,7 @@ class TestTransactionCategory(WebTestBase):
         form = {"name": "abc", "group": "other"}
         self.web_post(endpoint, rc=403, data=form)
 
-    def test_delete(self):
+    def test_delete(self) -> None:
         p = self._portfolio
 
         today = datetime.date.today()

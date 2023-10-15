@@ -1,6 +1,3 @@
-"""Test main
-"""
-
 import os
 import sys
 import unittest
@@ -14,8 +11,8 @@ from tests import TEST_LOG
 colorama.init(autoreset=True)
 
 
-def pre_tests():
-    """Things to run before all tests"""
+def pre_tests() -> None:
+    """Things to run before all tests."""
     print(f"Testing version {__version__}")
     if TEST_LOG.exists():
         os.remove(TEST_LOG)
@@ -25,7 +22,7 @@ def pre_tests():
 
 
 def post_tests() -> bool:
-    """Things to run after all tests
+    """Things to run after all tests.
 
     Returns:
         True if post tests were successful, False otherwise

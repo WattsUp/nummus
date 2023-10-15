@@ -1,15 +1,10 @@
-"""Test module nummus.models.transaction_category
-"""
-
 from nummus import models
 from nummus.models import TransactionCategory, TransactionCategoryGroup
 from tests.base import TestBase
 
 
 class TestTransactionCategory(TestBase):
-    """Test TransactionCategory class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -30,7 +25,7 @@ class TestTransactionCategory(TestBase):
         # Short strings are bad
         self.assertRaises(ValueError, setattr, t_cat, "name", "ab")
 
-    def test_add_default(self):
+    def test_add_default(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

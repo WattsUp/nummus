@@ -1,5 +1,4 @@
-"""SQL interface
-"""
+"""SQL interface."""
 
 import hashlib
 import os
@@ -30,7 +29,7 @@ _ENGINE_ARGS: t.DictAny = {}
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
 def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
-    """Hook to set PRAGMA upon opening SQLite connection
+    """Hook to set PRAGMA upon opening SQLite connection.
 
     Args:
         db_connection: Connection to SQLite DB
@@ -43,7 +42,7 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
 def get_session(
     path: str, config: autodict.AutoDict, enc: Encryption = None
 ) -> orm.Session:
-    """Get database session
+    """Get database session.
 
     Args:
         path: Path to database file
@@ -61,8 +60,8 @@ def get_session(
     return orm.Session(bind=_ENGINES[path])
 
 
-def drop_session(path: str = None) -> None:
-    """Close database session
+def drop_session(path: t.Optional[str] = None) -> None:
+    """Close database session.
 
     Args:
         path: Path to database file, None will drop all sessions
@@ -77,7 +76,7 @@ def drop_session(path: str = None) -> None:
 def _get_engine(
     path: str, config: autodict.AutoDict, enc: Encryption = None
 ) -> sqlalchemy.engine.Engine:
-    """Get sqlalchemy Engine to the database
+    """Get sqlalchemy Engine to the database.
 
     Args:
         path: Path to database file

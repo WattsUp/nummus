@@ -1,5 +1,4 @@
-"""Common component controllers
-"""
+"""Common component controllers."""
 
 import datetime
 import re
@@ -15,7 +14,7 @@ from nummus.models import Account, AccountCategory, Transaction
 
 
 def sidebar() -> str:
-    """GET /h/sidebar
+    """GET /h/sidebar.
 
     Returns:
         HTML string response
@@ -28,7 +27,7 @@ def sidebar() -> str:
 
 
 def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
-    """Get the context to build the sidebar
+    """Get the context to build the sidebar.
 
     Args:
         include_closed: True will include Accounts marked closed, False will exclude
@@ -156,7 +155,7 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
 
 
 def empty() -> str:
-    """GET /h/empty
+    """GET /h/empty.
 
     Returns:
         HTML string response
@@ -165,9 +164,10 @@ def empty() -> str:
 
 
 def overlay_swap(
-    content: str = None, event: t.Union[str, t.Strings] = None
+    content: t.Optional[str] = None,
+    event: t.Optional[t.Union[str, t.Strings]] = None,
 ) -> flask.Response:
-    """Create a response to close the overlay and trigger listeners
+    """Create a response to close the overlay and trigger listeners.
 
     Args:
         content: Content of overlay to swap to, None will close overlay
@@ -179,7 +179,7 @@ def overlay_swap(
     html = flask.render_template("shared/overlay.html", oob=True, content=content or "")
     response = flask.make_response(html)
     if event:
-        if isinstance(str, event):
+        if isinstance(event, str):
             response.headers["HX-Trigger"] = event
         else:
             response.headers["HX-Trigger"] = ",".join(event)
@@ -187,7 +187,7 @@ def overlay_swap(
 
 
 def error(e: t.Union[str, Exception]) -> str:
-    """Convert exception into an readable error string
+    """Convert exception into an readable error string.
 
     Args:
         e: Exception to parse

@@ -1,5 +1,4 @@
-"""Run formatters and trim whitespace on all files
-"""
+"""Run formatters and trim whitespace on all files."""
 
 import pathlib
 import subprocess
@@ -12,8 +11,7 @@ colorama.init(autoreset=True)
 
 
 def main() -> None:
-    """Main program entry"""
-
+    """Main program entry."""
     check = "--check" in sys.argv
 
     cwd = pathlib.Path(__file__).parent.parent
@@ -31,28 +29,25 @@ def main() -> None:
     # Sort imports with isort
     args = [
         "isort",
-        "--profile",
-        "black",
-        "--force-alphabetical-sort-within-sections",
-        "--float-to-top",
+        # "--profile",
+        # "black",
+        # "--force-alphabetical-sort-within-sections",
+        # "--float-to-top",
         "-j",
         "-1",
-    ] + files
+        *files,
+    ]
     if check:
         args.append("--check")
-    stdout = subprocess.check_output(args, cwd=cwd).decode()
+    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
     for line in stdout.splitlines():
         print(line)
 
     # Format with black
-    args = [
-        "black",
-        "-W",
-        "4",
-    ] + files
+    args = ["black", "-W", "4", *files]
     if check:
         args.append("--check")
-    stdout = subprocess.check_output(args, cwd=cwd).decode()
+    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
     for line in stdout.splitlines():
         print(line)
 

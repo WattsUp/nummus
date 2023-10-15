@@ -1,10 +1,10 @@
-"""Account model for storing a financial account
-"""
+"""Account model for storing a financial account."""
 
 from __future__ import annotations
 
 import sqlalchemy
 from sqlalchemy import event, ForeignKey, orm
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus.models.base import Base, Decimal6, Decimal18
@@ -18,8 +18,7 @@ ORMTxnSplitOpt = orm.Mapped[t.Optional["TransactionSplit"]]
 
 
 class TransactionSplit(Base):
-    """TransactionSplit model for storing an exchange of cash for an asset
-    (or none)
+    """TransactionSplit model for storing an exchange of cash for an asset (or none).
 
     Every Transaction has at least one TransactionSplit.
 
@@ -66,9 +65,11 @@ class TransactionSplit(Base):
     _asset_qty_frac_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal18)
 
     @orm.validates("payee", "description", "tag")
+    @override
     def validate_strings(self, key: str, field: str) -> str:
         return super().validate_strings(key, field)
 
+    @override
     def __setattr__(self, name: str, value: t.Any) -> None:
         if name in ["parent_id", "date", "locked", "account_uuid", "account_id"]:
             raise PermissionError(
@@ -79,8 +80,9 @@ class TransactionSplit(Base):
 
     @property
     def asset_quantity(self) -> t.Real:
-        """Number of units of Asset exchanged, Positive indicates
-        Account gained Assets (inflow), adjusted for splits
+        """Number of units of Asset exchanged.
+
+        Positive indicates Account gained Assets (inflow), adjusted for splits.
         """
         if self._asset_qty_int is None:
             return None
@@ -88,8 +90,9 @@ class TransactionSplit(Base):
 
     @property
     def asset_quantity_unadjusted(self) -> t.Real:
-        """Number of units of Asset exchanged, Positive indicates
-        Account gained Assets (inflow), unadjusted for splits
+        """Number of units of Asset exchanged.
+
+        Positive indicates Account gained Assets (inflow), unadjusted for splits.
         """
         if self._asset_qty_int_unadjusted is None:
             return None
@@ -113,7 +116,7 @@ class TransactionSplit(Base):
         self._asset_qty_frac = f
 
     def adjust_asset_quantity(self, multiplier: t.Real) -> None:
-        """Set adjusted asset quantity
+        """Set adjusted asset quantity.
 
         Args:
             multiplier: Adjusted = unadjusted * multiplier
@@ -128,7 +131,7 @@ class TransactionSplit(Base):
 
     @property
     def parent(self) -> Transaction:
-        """Parent Transaction"""
+        """Parent Transaction."""
         s = orm.object_session(self)
         return s.query(Transaction).where(Transaction.id == self.parent_id).first()
 
@@ -151,9 +154,11 @@ def before_insert_transaction_split(
     connection: sqlalchemy.Connection,  # pylint: disable=unused-argument
     target: TransactionSplit,
 ) -> None:
-    """Handle event before insert of TransactionSplit
+    """Handle event before insert of TransactionSplit.
 
     Args:
+        mapper: Unused
+        connection: Unused
         target: TransactionSplit being inserted
     """
     # If TransactionSplit has parent_tmp set, move it to real parent
@@ -163,7 +168,7 @@ def before_insert_transaction_split(
 
 
 class Transaction(Base):
-    """Transaction model for storing an exchange of cash for an asset (or none)
+    """Transaction model for storing an exchange of cash for an asset (or none).
 
     Every Transaction has at least one TransactionSplit.
 
@@ -190,5 +195,6 @@ class Transaction(Base):
     splits: ORMTxnSplitList = orm.relationship()
 
     @orm.validates("statement")
+    @override
     def validate_strings(self, key: str, field: str) -> str:
         return super().validate_strings(key, field)

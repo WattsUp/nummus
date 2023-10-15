@@ -1,5 +1,4 @@
-"""Account model for storing a financial account
-"""
+"""Account model for storing a financial account."""
 
 from __future__ import annotations
 
@@ -8,6 +7,7 @@ from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import orm
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus.models.asset import Asset
@@ -22,7 +22,7 @@ ORMAcctCatOpt = orm.Mapped[t.Optional["AccountCategory"]]
 
 
 class AccountCategory(BaseEnum):
-    """Categories of Accounts"""
+    """Categories of Accounts."""
 
     CASH = 1
     CREDIT = 2
@@ -34,7 +34,7 @@ class AccountCategory(BaseEnum):
 
 
 class Account(Base):
-    """Account model for storing a financial account
+    """Account model for storing a financial account.
 
     Attributes:
         uuid: Account unique identifier
@@ -52,12 +52,13 @@ class Account(Base):
     closed: t.ORMBool
 
     @orm.validates("name", "institution")
+    @override
     def validate_strings(self, key: str, field: str) -> str:
         return super().validate_strings(key, field)
 
     @property
     def opened_on(self) -> t.Date:
-        """Date of first Transaction"""
+        """Date of first Transaction."""
         s = orm.object_session(self)
         query = s.query(Transaction)
         query = query.with_entities(
@@ -68,7 +69,7 @@ class Account(Base):
 
     @property
     def updated_on(self) -> t.Date:
-        """Date of latest Transaction"""
+        """Date of latest Transaction."""
         s = orm.object_session(self)
         query = s.query(Transaction)
         query = query.with_entities(
@@ -80,7 +81,7 @@ class Account(Base):
     def get_value(
         self, start: t.Date, end: t.Date
     ) -> t.Tuple[t.Dates, t.Reals, t.DictIntReals]:
-        """Get the value of Account from start to end date
+        """Get the value of Account from start to end date.
 
         Args:
             start: First date to evaluate
@@ -132,7 +133,7 @@ class Account(Base):
         if start != end:
 
             def next_day(current: datetime.date) -> datetime.date:
-                """Push currents into the lists"""
+                """Push currents into the lists."""
                 for k, v in current_qty_assets.items():
                     qty_assets[k].append(v)
                 cash.append(current_cash)
@@ -207,7 +208,7 @@ class Account(Base):
         uuids: t.Strings = None,
         ids: t.Ints = None,
     ) -> t.Tuple[t.Dates, t.DictReals]:
-        """Get the value of all Accounts from start to end date
+        """Get the value of all Accounts from start to end date.
 
         Args:
             s: SQL session to use
@@ -281,7 +282,7 @@ class Account(Base):
         if start != end:
 
             def next_day(current: datetime.date) -> datetime.date:
-                """Push currents into the lists"""
+                """Push currents into the lists."""
                 for acct_id, assets in current_qty_assets.items():
                     for a_id, qty in assets.items():
                         qty_assets[acct_id][a_id].append(qty)
@@ -358,7 +359,7 @@ class Account(Base):
     def get_cash_flow(
         self, start: t.Date, end: t.Date
     ) -> t.Tuple[t.Dates, t.DictIntReal]:
-        """Get the cash_flow of Account from start to end date
+        """Get the cash_flow of Account from start to end date.
 
         Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
         third day; inflow[4] may be zero
@@ -422,7 +423,7 @@ class Account(Base):
     def get_asset_qty(
         self, start: t.Date, end: t.Date
     ) -> t.Tuple[t.Dates, t.DictIntReals]:
-        """Get the quantity of Assets held from start to end date
+        """Get the quantity of Assets held from start to end date.
 
         Args:
             start: First date to evaluate

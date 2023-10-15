@@ -1,5 +1,4 @@
-"""Run viztracer profiler on a web call
-"""
+"""Run viztracer profiler on a web call."""
 
 import argparse
 import io
@@ -23,7 +22,7 @@ colorama.init(autoreset=True)
 
 
 def main(command_line: t.Strings = None) -> int:
-    """Main program entry
+    """Main program entry.
 
     Args:
         command_line: command line arguments, None for sys.argv

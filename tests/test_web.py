@@ -1,6 +1,3 @@
-"""Test module nummus.web
-"""
-
 import datetime
 import io
 import shutil
@@ -16,9 +13,7 @@ from tests.base import TestBase
 
 
 class TestServer(TestBase):
-    """Test Server class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         p = portfolio.Portfolio.create(path_db, None)
 
@@ -74,7 +69,7 @@ class TestServer(TestBase):
         flask_app = s._app  # pylint: disable=protected-access
         self.assertEqual(debug, flask_app.debug)
 
-    def test_run(self):
+    def test_run(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         p = portfolio.Portfolio.create(path_db, None)
 
@@ -113,7 +108,7 @@ class TestServer(TestBase):
                 s = web.Server(p, host, port, debug)
         s_server = s._server  # pylint: disable=protected-access
 
-        def raise_keyboard_interrupt():
+        def raise_keyboard_interrupt() -> None:
             raise KeyboardInterrupt
 
         s_server.serve_forever = raise_keyboard_interrupt
@@ -144,7 +139,7 @@ class TestServer(TestBase):
         )  # skip timestamp
         self.assertEqual(target, fake_stdout[: len(target)])
 
-    def test_generate_ssl_cert(self):
+    def test_generate_ssl_cert(self) -> None:
         path_cert = self._TEST_ROOT.joinpath("cert.pem")
         path_key = self._TEST_ROOT.joinpath("key.pem")
 
@@ -159,7 +154,7 @@ class TestServer(TestBase):
             web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is not self-signed"
         )
 
-    def test_is_ssl_cert_self_signed(self):
+    def test_is_ssl_cert_self_signed(self) -> None:
         path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
         self.assertTrue(
             web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is not self-signed"
@@ -170,7 +165,7 @@ class TestServer(TestBase):
             web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is self-signed"
         )
 
-    def test_flask_context(self):
+    def test_flask_context(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         p = portfolio.Portfolio.create(path_db, None)
 
@@ -193,7 +188,7 @@ class TestServer(TestBase):
             result = flask.render_template_string("{{ version }}")
             self.assertEqual(target, result)
 
-    def test_jinja_filters(self):
+    def test_jinja_filters(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         p = portfolio.Portfolio.create(path_db, None)
 
@@ -232,9 +227,7 @@ class TestServer(TestBase):
 
 
 class TestHandler(TestBase):
-    """Test WebHandler class"""
-
-    def test_format_request(self):
+    def test_format_request(self) -> None:
         h = web.Handler(None, None, None, "Not None")
 
         h.response_length = None
@@ -375,9 +368,7 @@ class TestHandler(TestBase):
 
 
 class TestTailwindCSSFilter(TestBase):
-    """Test TailwindCSSFilter class"""
-
-    def test_format_request(self):
+    def test_format_request(self) -> None:
         f = web.TailwindCSSFilter()
 
         out = io.StringIO()

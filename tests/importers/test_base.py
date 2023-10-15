@@ -1,14 +1,9 @@
-"""Test module nummus.importers.raw_csv
-"""
-
 from nummus import importers
 from nummus.importers import base
 from tests import base as test_base
 
 
 class Derived(base.TransactionImporter):
-    """Test class implementing abstract methods"""
-
     @classmethod
     def is_importable(cls, name: str, buf: bytes) -> bool:
         return False
@@ -18,9 +13,7 @@ class Derived(base.TransactionImporter):
 
 
 class TestCSVTransactionImporter(test_base.TestBase):
-    """Test CSVTransactionImporter class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         self.assertRaises(ValueError, Derived)
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
@@ -33,7 +26,7 @@ class TestCSVTransactionImporter(test_base.TestBase):
         i = Derived(path=path)
         self.assertEqual(buf, i._buf)  # pylint: disable=protected-access
 
-    def test_get_importer(self):
+    def test_get_importer(self) -> None:
         files = {
             "transactions_required.csv": importers.CSVTransactionImporter,
             "transactions_extras.csv": importers.CSVTransactionImporter,

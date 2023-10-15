@@ -1,6 +1,3 @@
-"""Test module nummus.models.transaction
-"""
-
 import datetime
 
 import sqlalchemy.exc
@@ -19,9 +16,7 @@ from tests.base import TestBase
 
 
 class TestTransaction(TestBase):
-    """Test Transaction class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -53,9 +48,7 @@ class TestTransaction(TestBase):
 
 
 class TestTransactionSplit(TestBase):
-    """Test TransactionSplit class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
@@ -150,7 +143,7 @@ class TestTransactionSplit(TestBase):
         # Set parent_id directly
         self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id)
 
-    def test_asset_quantity(self):
+    def test_asset_quantity(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 

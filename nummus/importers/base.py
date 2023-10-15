@@ -1,5 +1,4 @@
-"""Base importer interfaces
-"""
+"""Base importer interfaces."""
 
 from abc import ABC, abstractmethod
 
@@ -10,10 +9,12 @@ TxnDicts = t.List[TxnDict]
 
 
 class TransactionImporter(ABC):
-    """Importer that imports transactions"""
+    """Importer that imports transactions."""
 
-    def __init__(self, path: str = None, buf: bytes = None) -> None:
-        """Initialize Transaction Importer
+    def __init__(
+        self, path: t.Optional[str] = None, buf: t.Optional[bytes] = None
+    ) -> None:
+        """Initialize Transaction Importer.
 
         Args:
             Provide one or the other
@@ -33,17 +34,20 @@ class TransactionImporter(ABC):
     @classmethod
     @abstractmethod
     def is_importable(cls, name: str, buf: bytes) -> bool:
-        """Test if file is importable for this Importer
+        """Test if file is importable for this Importer.
 
         Args:
             name: Name of file to import
             buf: Contents of file
+
+        Returns:
+            True if file is importable
         """
         pass  # pragma: no cover
 
     @abstractmethod
     def run(self) -> TxnDicts:
-        """Run importer
+        """Run importer.
 
         Returns:
             List of transaction as dictionaries, key mapping to Transaction

@@ -1,6 +1,3 @@
-"""Test module nummus.importers.raw_csv
-"""
-
 import datetime
 from decimal import Decimal
 
@@ -72,9 +69,7 @@ TRANSACTIONS_EXTRAS = [
 
 
 class TestCSVTransactionImporter(base.TestBase):
-    """Test CSVTransactionImporter class"""
-
-    def test_is_importable(self):
+    def test_is_importable(self) -> None:
         path = "Not a CSV"
         result = raw_csv.CSVTransactionImporter.is_importable(path, None)
         self.assertFalse(result, "File is unexpectedly importable")
@@ -97,7 +92,7 @@ class TestCSVTransactionImporter(base.TestBase):
         result = raw_csv.CSVTransactionImporter.is_importable(path.name, buf)
         self.assertFalse(result, "File is unexpectedly importable")
 
-    def test_run(self):
+    def test_run(self) -> None:
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
         i = raw_csv.CSVTransactionImporter(path=path)
         self.assertRaises(KeyError, i.run)

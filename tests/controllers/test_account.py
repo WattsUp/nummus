@@ -1,6 +1,3 @@
-"""Test module nummus.controllers.account
-"""
-
 import datetime
 
 from nummus import custom_types as t
@@ -15,9 +12,7 @@ from tests.controllers.base import WebTestBase
 
 
 class TestAccount(WebTestBase):
-    """Test account controller"""
-
-    def test_edit(self):
+    def test_edit(self) -> None:
         p = self._portfolio
 
         today = datetime.date.today()

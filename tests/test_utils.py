@@ -1,6 +1,3 @@
-"""Test module nummus.utils
-"""
-
 import io
 from decimal import Decimal
 from unittest import mock
@@ -10,9 +7,7 @@ from tests.base import TestBase
 
 
 class TestUtils(TestBase):
-    """Test utils methods"""
-
-    def test_camel_to_snake(self):
+    def test_camel_to_snake(self) -> None:
         s = "CamelCase"
         target = "camel_case"
         result = utils.camel_to_snake(s)
@@ -38,42 +33,26 @@ class TestUtils(TestBase):
         result = utils.camel_to_snake(s)
         self.assertEqual(target, result)
 
-    def test_random_string(self):
-        string1 = utils.random_string(min_length=40, max_length=50)
-        string2 = utils.random_string(min_length=40, max_length=50)
-
-        # Has a 2e-99 chance of failing (actually worse cause pseudo-random)
-        self.assertNotEqual(string1, string2)
-
-        self.assertGreaterEqual(len(string1), 40)
-        self.assertLessEqual(len(string1), 50)
-        self.assertGreaterEqual(len(string2), 40)
-        self.assertLessEqual(len(string2), 50)
-
-    def test_get_input(self):
+    def test_get_input(self) -> None:
         prompt = self.random_string()
         prompt_input = self.random_string(length=50)
 
         original_input = mock.builtins.input
         original_get_pass = utils.getpass.getpass
 
-        def mock_input(to_print):
-            """Mock user input with echo"""
+        def mock_input(to_print: str) -> None:
             print(to_print + prompt_input)
             return prompt_input
 
-        def mock_get_pass(to_print):
-            """Mock user input without echo"""
+        def mock_get_pass(to_print: str) -> None:
             print(to_print)
             return prompt_input
 
-        def mock_input_interrupt(to_print):
-            """Mock user input with echo"""
+        def mock_input_interrupt(to_print: str) -> None:
             print(to_print + prompt_input)
             raise KeyboardInterrupt()
 
-        def mock_get_pass_eof(to_print):
-            """Mock user input without echo"""
+        def mock_get_pass_eof(to_print: str) -> None:
             print(to_print)
             raise EOFError()
 
@@ -118,7 +97,7 @@ class TestUtils(TestBase):
             mock.builtins.input = original_input
             utils.getpass.getpass = original_get_pass
 
-    def test_confirm(self):
+    def test_confirm(self) -> None:
         prompt = self.random_string()
         prompt_input = self.random_string(length=50)
 
@@ -145,7 +124,7 @@ class TestUtils(TestBase):
 
             queue = [prompt_input, "y"]
 
-            def _mock_input(_):
+            def _mock_input(_) -> None:
                 if len(queue) == 1:
                     return queue[0]
                 return queue.pop(0)
@@ -159,7 +138,7 @@ class TestUtils(TestBase):
         finally:
             mock.builtins.input = original_input
 
-    def test_parse_financial(self):
+    def test_parse_financial(self) -> None:
         result = utils.parse_real(None)
         self.assertIsNone(result)
 
@@ -185,7 +164,7 @@ class TestUtils(TestBase):
         result = utils.parse_real(s)
         self.assertEqual(Decimal("-1000.1"), result)
 
-    def test_format_financial(self):
+    def test_format_financial(self) -> None:
         x = Decimal("1000.1")
         result = utils.format_financial(x)
         self.assertEqual("$1,000.10", result)
@@ -198,7 +177,7 @@ class TestUtils(TestBase):
         result = utils.format_financial(x)
         self.assertEqual("$0.00", result)
 
-    def test_parse_bool(self):
+    def test_parse_bool(self) -> None:
         result = utils.parse_bool("")
         self.assertIsNone(result)
 
@@ -224,7 +203,7 @@ class TestUtils(TestBase):
 
         self.assertRaises(TypeError, utils.parse_bool, False)
 
-    def test_format_days(self):
+    def test_format_days(self) -> None:
         d = 0
         result = utils.format_days(d)
         self.assertEqual("0 days", result)
@@ -258,12 +237,12 @@ class TestUtils(TestBase):
         result = utils.format_days(d)
         self.assertEqual("2 yrs", result)
 
-    def test_round_list(self):
+    def test_round_list(self) -> None:
         n = 9
-        l = [1 / Decimal(n) for _ in range(n)]
-        self.assertNotEqual(1, sum(l))
+        list_ = [1 / Decimal(n) for _ in range(n)]
+        self.assertNotEqual(1, sum(list_))
 
-        l_round = utils.round_list(l)
+        l_round = utils.round_list(list_)
         self.assertEqual(1, sum(l_round))
-        self.assertNotEqual(l[0], l_round[0])
-        self.assertEqual(round(l[0], 6), l_round[0])
+        self.assertNotEqual(list_[0], l_round[0])
+        self.assertEqual(round(list_[0], 6), l_round[0])

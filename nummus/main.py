@@ -1,4 +1,4 @@
-"""nummus main entry
+"""nummus main entry.
 
 A personal financial information aggregator and planning tool. Collects and
 categorizes transactions, manages budgets, tracks investments, calculates net
@@ -15,7 +15,7 @@ from nummus import version
 
 
 def main(command_line: t.Strings = None) -> int:
-    """Main program entry
+    """Main program entry.
 
     Args:
         command_line: command line arguments, None for sys.argv

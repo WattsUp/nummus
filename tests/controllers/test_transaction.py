@@ -1,6 +1,3 @@
-"""Test module nummus.controllers.transaction
-"""
-
 import datetime
 
 from nummus import custom_types as t
@@ -15,10 +12,8 @@ from tests.controllers.base import WebTestBase
 
 
 class TestTransaction(WebTestBase):
-    """Test transaction controller"""
-
     def _setup_portfolio(self) -> t.DictStr:
-        """Create accounts and transactions to test with
+        """Create accounts and transactions to test with.
 
         Returns:
             {
@@ -112,7 +107,7 @@ class TestTransaction(WebTestBase):
             "tag_1": tag_1,
         }
 
-    def test_page_all(self):
+    def test_page_all(self) -> None:
         endpoint = "/transactions"
         result, _ = self.web_get(endpoint)
         self.assertIn('id="txn-config"', result)
@@ -121,7 +116,7 @@ class TestTransaction(WebTestBase):
         self.assertIn('id="txn-table"', result)
         self.assertIn("No matching transactions for given query filters", result)
 
-    def test_table(self):
+    def test_table(self) -> None:
         d = self._setup_portfolio()
 
         payee_0 = d["payee_0"]
@@ -186,7 +181,7 @@ class TestTransaction(WebTestBase):
         self.assertEqual(1, result.count('<div class="col col-payee">'))
         self.assertIn(f'<div class="col col-payee">{payee_1}</div>', result)
 
-    def test_options(self):
+    def test_options(self) -> None:
         d = self._setup_portfolio()
 
         acct = d["acct"]
@@ -252,7 +247,7 @@ class TestTransaction(WebTestBase):
         self.assertEqual(2, result.count("span"))
         self.assertIn(f'value="{payee_0}" checked hx-get', result)
 
-    def test_edit(self):
+    def test_edit(self) -> None:
         p = self._portfolio
         today = datetime.date.today()
         d = self._setup_portfolio()
@@ -366,7 +361,7 @@ class TestTransaction(WebTestBase):
             self.assertIsNone(t_split.tag)
             self.assertEqual(100, t_split.amount)
 
-    def test_split(self):
+    def test_split(self) -> None:
         d = self._setup_portfolio()
 
         t_0 = d["t_0"]
@@ -415,7 +410,7 @@ class TestTransaction(WebTestBase):
         self.assertIn('name="amount" value="100.00"', result)
         self.assertIn('id="txn-remaining" hx-swap-oob="True"', result)
 
-    def test_remaining(self):
+    def test_remaining(self) -> None:
         d = self._setup_portfolio()
 
         t_0 = d["t_0"]

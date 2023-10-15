@@ -1,10 +1,7 @@
-"""Miscellaneous functions and classes
-"""
+"""Miscellaneous functions and classes."""
 
 import getpass
-import random
 import re
-import string
 import sys
 from decimal import Decimal
 
@@ -17,29 +14,15 @@ _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 
 
 def camel_to_snake(s: str) -> str:
-    """Transform CamelCase to snake_case"""
+    """Transform CamelCase to snake_case."""
     s = _REGEX_CC_SC_0.sub(r"\1_\2", s)  # _ at the start of Words
     return _REGEX_CC_SC_1.sub(r"\1_\2", s).lower()  # _ at then end of Words
 
 
-def random_string(min_length: int = 8, max_length: int = 12) -> str:
-    """Generate a random string with letter, numbers, and symbols
-
-    Args:
-        min_length: minimum length of string
-        max_length: maximum length of string
-
-    Returns:
-        str Random length string with random characters
-    """
-    all_char = string.ascii_letters + string.punctuation + string.digits
-    return "".join(
-        random.choice(all_char) for _ in range(random.randint(min_length, max_length))
-    )
-
-
-def get_input(prompt: str = "", secure: bool = False, print_key: bool = None) -> str:
-    """Get input from the user, optionally secure
+def get_input(
+    prompt: str = "", secure: bool = False, print_key: t.Optional[bool] = None
+) -> str:
+    """Get input from the user, optionally secure.
 
     Args:
         prompt: string to print to user
@@ -65,8 +48,8 @@ def get_input(prompt: str = "", secure: bool = False, print_key: bool = None) ->
     return input_
 
 
-def confirm(prompt: str = None, default: bool = False) -> bool:
-    """Prompt user for yes/no confirmation
+def confirm(prompt: t.Optional[str] = None, default: t.Optional[bool] = False) -> bool:
+    """Prompt user for yes/no confirmation.
 
     Args:
         prompt: string to print to user
@@ -97,7 +80,7 @@ def confirm(prompt: str = None, default: bool = False) -> bool:
 
 
 def parse_real(s: str) -> t.Real:
-    """Parse a string into a real number
+    """Parse a string into a real number.
 
     Args:
         s: String to parse
@@ -116,7 +99,7 @@ def parse_real(s: str) -> t.Real:
 
 
 def format_financial(x: t.Real) -> str:
-    """Format a number to financial notation
+    """Format a number to financial notation.
 
     Args:
         x: Number to format
@@ -130,7 +113,7 @@ def format_financial(x: t.Real) -> str:
 
 
 def parse_bool(s: str) -> bool:
-    """Parse a string into a bool
+    """Parse a string into a bool.
 
     Args:
         s: String to parse
@@ -146,7 +129,7 @@ def parse_bool(s: str) -> bool:
 
 
 def format_days(days: int, labels: t.Strings = None) -> str:
-    """Format number of days to days, weeks, months, or years
+    """Format number of days to days, weeks, months, or years.
 
     Args:
         days: Number of days to format
@@ -171,11 +154,11 @@ def format_days(days: int, labels: t.Strings = None) -> str:
     return f"{days} {labels[0]}"
 
 
-def round_list(l: t.Reals, precision: int = 6) -> t.Reals:
-    """Round a list, carrying over error such that sum(list) == sum(round_list)
+def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
+    """Round a list, carrying over error such that sum(list) == sum(round_list).
 
     Args:
-        l: List to round
+        list_: List to round
         precision: Precision to round list to
 
     Returns:
@@ -183,7 +166,7 @@ def round_list(l: t.Reals, precision: int = 6) -> t.Reals:
     """
     residual = Decimal(0)
     l_rounded: t.Reals = []
-    for v in l:
+    for v in list_:
         v = v + residual
         v_round = round(v, precision)
         residual = v - v_round

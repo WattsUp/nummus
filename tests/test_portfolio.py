@@ -1,6 +1,3 @@
-"""Test module nummus.portfolio
-"""
-
 import tarfile
 import uuid
 
@@ -21,9 +18,7 @@ from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 
 
 class TestPortfolio(TestBase):
-    """Test Portfolio class"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
 
@@ -45,7 +40,7 @@ class TestPortfolio(TestBase):
         # Failed to unlock
         self.assertRaises(TypeError, portfolio.Portfolio, path_db, None)
 
-    def test_create_unencrypted(self):
+    def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
         path_images = path_db.parent.joinpath("portfolio.images")
@@ -130,7 +125,7 @@ class TestPortfolio(TestBase):
         # Missing root password
         self.assertRaises(KeyError, portfolio.Portfolio, path_db, None)
 
-    def test_create_encrypted(self):
+    def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
@@ -220,7 +215,7 @@ class TestPortfolio(TestBase):
         # Invalid unencrypted password
         self.assertRaises(PermissionError, portfolio.Portfolio, path_db, key)
 
-    def test_is_encrypted(self):
+    def test_is_encrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
 
@@ -250,7 +245,7 @@ class TestPortfolio(TestBase):
 
         path_db.unlink()
 
-    def test_find_account(self):
+    def test_find_account(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         p = portfolio.Portfolio.create(path_db)
 
@@ -306,7 +301,7 @@ class TestPortfolio(TestBase):
             result = p.find_account("Gorilla Bank")
             self.assertEqual(acct_invest_1.id, result)
 
-    def test_find_asset(self):
+    def test_find_asset(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         p = portfolio.Portfolio.create(path_db)
 
@@ -343,7 +338,7 @@ class TestPortfolio(TestBase):
             result = p.find_asset("APPLE")
             self.assertIsNone(result)
 
-    def test_import_file(self):
+    def test_import_file(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         p = portfolio.Portfolio.create(path_db)
 
@@ -428,7 +423,7 @@ class TestPortfolio(TestBase):
                         r_v = getattr(res, k)
                         self.assertEqual(t_v, r_v)
 
-    def test_backup_restore(self):
+    def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
@@ -590,7 +585,7 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
-    def test_clean(self):
+    def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         path_other_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
         path_config = path_db.with_suffix(".config")

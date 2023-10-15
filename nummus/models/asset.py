@@ -1,5 +1,4 @@
-"""Asset model for storing an individual item with dynamic worth
-"""
+"""Asset model for storing an individual item with dynamic worth."""
 
 from __future__ import annotations
 
@@ -24,7 +23,7 @@ DictStrAsset = t.Dict[str, "Asset"]
 
 
 class AssetSplit(Base):
-    """Asset Split model for storing a split of an asset on a specific date
+    """Asset Split model for storing a split of an asset on a specific date.
 
     Attributes:
         asset_uuid: Asset unique identifier
@@ -38,7 +37,7 @@ class AssetSplit(Base):
 
 
 class AssetValuation(Base):
-    """Asset Valuation model for storing a value of an asset on a specific date
+    """Asset Valuation model for storing a value of an asset on a specific date.
 
     Attributes:
         asset_uuid: Asset unique identifier
@@ -52,7 +51,7 @@ class AssetValuation(Base):
 
 
 class AssetCategory(BaseEnum):
-    """Categories of Assets"""
+    """Categories of Assets."""
 
     CASH = 1
     SECURITY = 2
@@ -62,7 +61,7 @@ class AssetCategory(BaseEnum):
 
 
 class Asset(Base):
-    """Asset model for storing an individual item with dynamic worth
+    """Asset model for storing an individual item with dynamic worth.
 
     Attributes:
         uuid: Asset unique identifier
@@ -82,14 +81,14 @@ class Asset(Base):
 
     @property
     def image_name(self) -> str:
-        """Get name of Asset's image, None if it doesn't exist"""
+        """Get name of Asset's image, None if it doesn't exist."""
         s = self.img_suffix
         if s is None:
             return None
         return f"{self.uuid}{s}"
 
     def get_value(self, start: t.Date, end: t.Date) -> t.Tuple[t.Dates, t.Reals]:
-        """Get the value of Asset from start to end date
+        """Get the value of Asset from start to end date.
 
         Args:
             start: First date to evaluate
@@ -151,7 +150,7 @@ class Asset(Base):
         uuids: t.Strings = None,
         ids: t.Ints = None,
     ) -> t.Tuple[t.Dates, t.DictIntReals]:
-        """Get the value of all Assets from start to end date
+        """Get the value of all Assets from start to end date.
 
         Args:
             s: SQL session to use
@@ -195,7 +194,7 @@ class Asset(Base):
             return dates, assets_values
 
         def next_day(current: datetime.date) -> datetime.date:
-            """Push currents into the lists"""
+            """Push currents into the lists."""
             for a_id, v in values.items():
                 assets_values[a_id].append(v)
             dates.append(current)
@@ -227,9 +226,7 @@ class Asset(Base):
         return dates, assets_values
 
     def update_splits(self) -> None:
-        """Recalculate adjusted TransactionSplit.asset_quantity based on all asset
-        splits
-        """
+        """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
         # This function is best here but need to avoid circular imports
 
         from nummus.models import (

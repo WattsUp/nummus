@@ -1,5 +1,4 @@
-"""Common API Controller
-"""
+"""Common API Controller."""
 
 import sqlalchemy
 from rapidfuzz import process
@@ -21,7 +20,7 @@ _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
 def search(
     query: orm.Query[Base], cls: t.Type[Base], search_str: str
 ) -> orm.Query[Base]:
-    """Perform a fuzzy search and return matches
+    """Perform a fuzzy search and return matches.
 
     Args:
         query: Session query to execute before fuzzy searching
@@ -60,7 +59,7 @@ def search(
 
 
 def query_count(query: orm.Query[Base]) -> int:
-    """Count the number of result a query will return
+    """Count the number of result a query will return.
 
     Args:
         query: Session query to execute
@@ -83,7 +82,7 @@ def query_count(query: orm.Query[Base]) -> int:
 def paginate(
     query: orm.Query[Base], limit: int, offset: int
 ) -> t.Tuple[t.List[Base], int, int]:
-    """Paginate query response for smaller results
+    """Paginate query response for smaller results.
 
     Args:
         query: Session query to execute to get results

@@ -1,5 +1,4 @@
-"""Create a test Portfolio
-"""
+"""Create a test Portfolio."""
 
 import datetime
 import time
@@ -30,7 +29,7 @@ NO_RNG = False
 
 
 def rng_uniform(low: t.Real, high: t.Real, precision: int = 6) -> t.Real:
-    """Return a number from a uniform distribution
+    """Return a number from a uniform distribution.
 
     Args:
         low: Lower bounds
@@ -46,7 +45,7 @@ def rng_uniform(low: t.Real, high: t.Real, precision: int = 6) -> t.Real:
 
 
 def rng_int(low: int, high: int) -> int:
-    """Return an integer from a uniform distribution
+    """Return an integer from a uniform distribution.
 
     Args:
         low: Lower bounds
@@ -61,7 +60,7 @@ def rng_int(low: int, high: int) -> int:
 
 
 def rng_normal(loc: t.Real, scale: t.Real, precision: int = 6) -> t.Real:
-    """Return a number from a normal distribution
+    """Return a number from a normal distribution.
 
     Args:
         loc: Center of distribution
@@ -77,7 +76,7 @@ def rng_normal(loc: t.Real, scale: t.Real, precision: int = 6) -> t.Real:
 
 
 def rng_choice(choices: t.List[t.Any]) -> t.Any:
-    """Return an random selection from a list of choices
+    """Return an random selection from a list of choices.
 
     Args:
         choices: List of choices to choose from
@@ -107,7 +106,7 @@ INFLATION_RATES: t.DictIntReal = {
 
 
 def birthday(name: str, age: int) -> datetime.date:
-    """Get the birthday of an individual at an age
+    """Get the birthday of an individual at an age.
 
     Args:
         name: Name of person, found in BIRTHDAYS
@@ -121,7 +120,7 @@ def birthday(name: str, age: int) -> datetime.date:
 
 
 def next_month(date: datetime.date) -> datetime.date:
-    """Get the first day of the next month of a date
+    """Get the first day of the next month of a date.
 
     Args:
         date: Reference date
@@ -135,7 +134,7 @@ def next_month(date: datetime.date) -> datetime.date:
 
 
 def make_accounts(p: Portfolio) -> t.DictInt:
-    """Create accounts
+    """Create accounts.
 
     Args:
         p: Portfolio to edit
@@ -206,7 +205,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
 
 
 def make_assets(p: Portfolio) -> t.DictInt:
-    """Create assets to buy and sell
+    """Create assets to buy and sell.
 
     Args:
         p: Portfolio to edit
@@ -315,7 +314,7 @@ def make_assets(p: Portfolio) -> t.DictInt:
 
 
 def print_stats(p: Portfolio) -> None:
-    """Print statistics on Portfolio
+    """Print statistics on Portfolio.
 
     Args:
         p: Portfolio to report
@@ -368,7 +367,7 @@ def print_stats(p: Portfolio) -> None:
 
 
 def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
-    """Generate early savings transactions, namely birthday money
+    """Generate early savings transactions, namely birthday money.
 
     Args:
         p: Portfolio to edit
@@ -397,7 +396,7 @@ def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
 
 
 def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
-    """Generate income from working, stopping at retirement
+    """Generate income from working, stopping at retirement.
 
     Args:
         p: Portfolio to edit
@@ -581,7 +580,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
 
 def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
-    """Generate housing payments
+    """Generate housing payments.
 
     Args:
         p: Portfolio to edit
@@ -619,7 +618,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         def buy_house(
             date: datetime.date, house: Asset, price: t.Real
         ) -> t.Tuple[t.Real, t.Real, t.Real, t.Real, t.Real]:
-            """Add transactions to buy a house
+            """Add transactions to buy a house.
 
             Args:
                 date: Transaction date
@@ -705,12 +704,13 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         def sell_house(
             date: datetime.date, house: Asset, price: t.Real, balance: t.Real
         ) -> None:
-            """Add transactions to sell a house
+            """Add transactions to sell a house.
 
             Args:
                 date: Transaction date
                 house: Asset to sell
                 price: Price to sell it at
+                balance: Remaining mortgage balance
             """
             closing_costs = round(price * Decimal(0.08), 2)
 
@@ -789,7 +789,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             pmi: t.Real,
             pmi_threshold: t.Real,
         ) -> t.Real:
-            """Add monthly payment transactions
+            """Add monthly payment transactions.
 
             Args:
                 date: Transaction date
@@ -1030,7 +1030,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
 
 def generate_food(p: Portfolio, accts: t.DictInt) -> None:
-    """Generate food payments
+    """Generate food payments.
 
     Args:
         p: Portfolio to edit
@@ -1155,7 +1155,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
 
 
 def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
-    """Perform retirement changeover
+    """Perform retirement changeover.
 
     Args:
         p: Portfolio to edit
@@ -1179,7 +1179,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         _, asset_qty = acct_retirement.get_asset_qty(date_sell, date_sell)
 
         def sell_asset(asset: Asset, qty: t.Real) -> None:
-            """Add transactions to sell an Asset
+            """Add transactions to sell an Asset.
 
             Args:
                 asset: Asset to sell
@@ -1234,9 +1234,10 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
 
 def add_interest(p: Portfolio, acct_id: int) -> None:
-    """Adds dividend/interest to Account
+    """Adds dividend/interest to Account.
 
     Args:
+        p: Portfolio to edit
         acct_id: Account to generate for
     """
     with p.get_session() as s:
@@ -1293,9 +1294,10 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
 
 
 def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
-    """Adds credit card payments to Account
+    """Adds credit card payments to Account.
 
     Args:
+        p: Portfolio to edit
         acct_id: Account to generate for
         acct_id_fund: Account to withdraw funds from
     """
@@ -1361,7 +1363,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
 
 
 def main() -> None:
-    """Main program entry"""
+    """Main program entry."""
     start = time.perf_counter()
     p = Portfolio.create("portfolio.db")
 

@@ -1,6 +1,3 @@
-"""Test module nummus.models.base
-"""
-
 from __future__ import annotations
 
 from decimal import Decimal
@@ -13,26 +10,19 @@ from tests.base import TestBase
 
 
 class Parent(base.Base):
-    """Test Parent class for Base.to_dict, Base.from_dict"""
-
     generic_column: t.ORMIntOpt
     name: t.ORMStrOpt
     children: orm.Mapped[t.List[Child]] = orm.relationship(back_populates="parent")
 
     @property
     def favorite_child(self) -> Child:
-        """Get the favorite child"""
         if len(self.children) < 1:
             return None
         return self.children[0]
 
     @property
     def uuid_bytes(self) -> bytes:
-        """Get ID as bytes"""
-
         class Bytes:
-            """Unserializable class"""
-
             def __init__(self, s: str) -> None:
                 self._data = s.encode(encoding="utf-8")
 
@@ -43,8 +33,6 @@ class Parent(base.Base):
 
 
 class Child(base.Base):
-    """Test Child class for Base.to_dict, Base.from_dict"""
-
     parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id"))
     parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
 
@@ -52,9 +40,7 @@ class Child(base.Base):
 
 
 class TestORMBase(TestBase):
-    """Test ORM Base"""
-
-    def test_init_properties(self):
+    def test_init_properties(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(), tables=[Parent.__table__, Child.__table__]
@@ -99,7 +85,7 @@ class TestORMBase(TestBase):
         self.assertIsInstance(child.height, Decimal)
         self.assertEqual(Decimal("1.234567"), child.height)
 
-    def test_comparators(self):
+    def test_comparators(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(), tables=[Parent.__table__, Child.__table__]
@@ -123,7 +109,7 @@ class TestORMBase(TestBase):
             self.assertNotEqual(id(parent_a), id(parent_a_queried))
             self.assertEqual(parent_a, parent_a_queried)
 
-    def test_map_name(self):
+    def test_map_name(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(), tables=[Parent.__table__, Child.__table__]
@@ -144,7 +130,7 @@ class TestORMBase(TestBase):
         }
         self.assertEqual(target, result)
 
-    def test_validate_strings(self):
+    def test_validate_strings(self) -> None:
         parent = Parent()
         key = self.random_string()
 
@@ -165,8 +151,6 @@ class TestORMBase(TestBase):
 
 
 class Derived(base.BaseEnum):
-    """Derived test class for BaseEnum"""
-
     RED = 1
     BLUE = 2
 
@@ -176,9 +160,7 @@ class Derived(base.BaseEnum):
 
 
 class TestBaseEnum(TestBase):
-    """Test BaseEnum class"""
-
-    def test_parse(self):
+    def test_parse(self) -> None:
         self.assertEqual(None, Derived.parse(None))
         self.assertEqual(None, Derived.parse(""))
 

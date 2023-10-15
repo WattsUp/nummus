@@ -1,5 +1,4 @@
-"""Command line interface commands
-"""
+"""Command line interface commands."""
 
 import pathlib
 
@@ -13,7 +12,7 @@ colorama.init(autoreset=True)
 
 
 def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
-    """Create a new Portfolio
+    """Create a new Portfolio.
 
     Args:
         path: Path to Portfolio DB to create
@@ -41,7 +40,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         if pass_file is not None:
             path_password = pathlib.Path(pass_file)
             if path_password.exists():
-                with open(pass_file, "r", encoding="utf-8") as file:
+                with open(pass_file, encoding="utf-8") as file:
                     key = file.read().strip()
 
         # Get key from user is password file empty
@@ -72,7 +71,7 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
 
 
 def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
-    """Unlock an existing Portfolio
+    """Unlock an existing Portfolio.
 
     Args:
         path: Path to Portfolio DB to create
@@ -96,7 +95,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
     if pass_file is not None:
         path_password = pathlib.Path(pass_file)
         if path_password.exists():
-            with open(pass_file, "r", encoding="utf-8") as file:
+            with open(pass_file, encoding="utf-8") as file:
                 key = file.read().strip()
 
     if key is not None:
@@ -127,7 +126,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
 
 
 def backup(p: portfolio.Portfolio) -> int:
-    """Backup portfolio to tar.gz
+    """Backup portfolio to tar.gz.
 
     Args:
         p: Working Portfolio
@@ -141,8 +140,8 @@ def backup(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def restore(path: str, pass_file: str, tar_ver: int = None) -> int:
-    """Backup portfolio to tar.gz
+def restore(path: str, pass_file: str, tar_ver: t.Optional[int] = None) -> int:
+    """Backup portfolio to tar.gz.
 
     Args:
         path: Path to Portfolio DB to restore
@@ -165,7 +164,7 @@ def restore(path: str, pass_file: str, tar_ver: int = None) -> int:
 
 
 def clean(p: portfolio.Portfolio) -> int:
-    """Clean portfolio and delete unused files
+    """Clean portfolio and delete unused files.
 
     Args:
         p: Working Portfolio
@@ -180,7 +179,7 @@ def clean(p: portfolio.Portfolio) -> int:
 
 
 def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
-    """Import a list of files or directories into a portfolio
+    """Import a list of files or directories into a portfolio.
 
     Args:
         p: Working Portfolio
@@ -229,7 +228,7 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 def run_web(
     p: portfolio.Portfolio, host: str, port: int, debug: bool
 ) -> int:  # pragma: no cover
-    """Run web server serving the nummus Portfolio
+    """Run web server serving the nummus Portfolio.
 
     Args:
         p: Working Portfolio

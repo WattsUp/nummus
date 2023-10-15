@@ -1,5 +1,4 @@
-"""Run tailwindcss to generate distribution CSS file
-"""
+"""Run tailwindcss to generate distribution CSS file."""
 
 import io
 import pathlib
@@ -15,8 +14,7 @@ colorama.init(autoreset=True)
 
 
 def main() -> None:
-    """Main program entry"""
-
+    """Main program entry."""
     folder = pathlib.Path(nummus.__file__).parent.resolve().joinpath("static")
 
     path_config = folder.joinpath("tailwind.config.js")
@@ -34,7 +32,9 @@ def main() -> None:
         "--minify",
     ]
     args.extend(sys.argv[1:])
-    with subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT) as p:
+    with subprocess.Popen(
+        args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT  # noqa: S603
+    ) as p:
         stdout: io.BytesIO = p.stdout
         try:
             buf = ""
