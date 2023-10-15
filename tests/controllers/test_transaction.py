@@ -1,6 +1,8 @@
-import datetime
+from __future__ import annotations
 
-from nummus import custom_types as t
+import datetime
+from typing import TYPE_CHECKING
+
 from nummus.models import (
     Account,
     AccountCategory,
@@ -9,6 +11,9 @@ from nummus.models import (
     TransactionSplit,
 )
 from tests.controllers.base import WebTestBase
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
 
 
 class TestTransaction(WebTestBase):
@@ -57,7 +62,7 @@ class TestTransaction(WebTestBase):
             categories = {v: k for k, v in categories.items()}
 
             txn = Transaction(
-                account_id=acct.id,
+                account_id=acct.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
@@ -75,7 +80,7 @@ class TestTransaction(WebTestBase):
             t_split_0_uuid = t_split.uuid
 
             txn = Transaction(
-                account_id=acct.id,
+                account_id=acct.id_,
                 date=today,
                 amount=-100,
                 statement=self.random_string(),
@@ -278,7 +283,8 @@ class TestTransaction(WebTestBase):
         form = {"date": today, "payee": "ab", "amount": "100"}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn(
-            "Transaction split payee must be at least 3 characters long", result
+            "Transaction split payee must be at least 3 characters long",
+            result,
         )
 
         # Add split

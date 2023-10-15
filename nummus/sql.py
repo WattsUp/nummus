@@ -1,22 +1,27 @@
 """SQL interface."""
+from __future__ import annotations
 
 import hashlib
-import os
-import sqlite3
 import sys
+from typing import TYPE_CHECKING
 
-import autodict
 import sqlalchemy
 import sqlalchemy.event
 from sqlalchemy import orm
 
-from nummus import custom_types as t
+if TYPE_CHECKING:
+    import sqlite3
+    from pathlib import Path
+
+    import autodict
+
+    from nummus import custom_types as t
 
 try:
-    # TODO (WattsUp) figure out Windows sqlcipher installation
-    import sqlcipher3  # pylint: disable=import-outside-toplevel
+    # TODO(WattsUp): figure out Windows sqlcipher installation
+    import sqlcipher3
 
-    from nummus.encryption import Encryption  # pylint: disable=import-outside-toplevel
+    from nummus.encryption import Encryption
 except ImportError:
     # Helpful information printed in nummus.portfolio
     Encryption = None
@@ -40,7 +45,9 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
 
 
 def get_session(
-    path: str, config: autodict.AutoDict, enc: Encryption = None
+    path: str,
+    config: autodict.AutoDict,
+    enc: Encryption = None,
 ) -> orm.Session:
     """Get database session.
 
@@ -53,7 +60,8 @@ def get_session(
         Session to database
     """
     if path is None:
-        raise ValueError("Path must not be None")
+        msg = "Path must not be None"
+        raise ValueError(msg)
     if path not in _ENGINES:
         _ENGINES[path] = _get_engine(path, config, enc)
 
@@ -74,7 +82,9 @@ def drop_session(path: t.Optional[str] = None) -> None:
 
 
 def _get_engine(
-    path: str, config: autodict.AutoDict, enc: Encryption = None
+    path: Path,
+    config: autodict.AutoDict,
+    enc: Encryption = None,
 ) -> sqlalchemy.engine.Engine:
     """Get sqlalchemy Engine to the database.
 
@@ -89,21 +99,16 @@ def _get_engine(
     # Cannot support in-memory DB cause every transaction closes it
     if config["encrypt"]:
         if enc is None:
-            raise ValueError("Encryption object must be provided to encrypt engine")
+            msg = "Encryption object must be provided to encrypt engine"
+            raise ValueError(msg)
         db_key = hashlib.sha256(enc.key + config["salt"].encode()).hexdigest()
-        if not os.path.isabs(path):
-            sep = "/"
-        else:
-            sep = "//"
+        sep = "//" if path.is_absolute() else "/"
         db_path = f"sqlite+pysqlcipher://:{db_key}@{sep}{path}"
         engine = sqlalchemy.create_engine(db_path, module=sqlcipher3, **_ENGINE_ARGS)
     else:
-        if sys.platform == "win32":
+        if sys.platform == "win32" or not path.is_absolute():
             db_path = f"sqlite:///{path}"
         else:
-            if os.path.isabs(path):
-                db_path = f"sqlite:////{path}"
-            else:
-                db_path = f"sqlite:///{path}"
+            db_path = f"sqlite:////{path}"
         engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
     return engine

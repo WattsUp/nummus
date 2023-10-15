@@ -1,5 +1,7 @@
 """Credential model for storing a user/password set for a site."""
 
+from __future__ import annotations
+
 from nummus import custom_types as t
 from nummus.models.base import Base
 

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+import secrets
 import tarfile
 import uuid
 
@@ -28,7 +31,7 @@ class TestPortfolio(TestBase):
         self.assertRaises(FileNotFoundError, portfolio.Portfolio, path_db, None)
 
         # Create database file
-        with open(path_db, "w", encoding="utf-8") as file:
+        with path_db.open("w", encoding="utf-8") as file:
             file.write("Not a db")
 
         # Still missing config
@@ -66,7 +69,7 @@ class TestPortfolio(TestBase):
         sql.drop_session()
 
         # Check portfolio is unencrypted
-        with open(path_db, "rb") as file:
+        with path_db.open("rb") as file:
             buf = file.read()
             target = b"SQLite format 3"
             self.assertEqual(target, buf[: len(target)])
@@ -85,13 +88,10 @@ class TestPortfolio(TestBase):
             # Good, now change root password
             user: Credentials = (
                 s.query(Credentials)
-                .where(
-                    Credentials.site
-                    == p._NUMMUS_SITE,  # pylint: disable=protected-access
-                    Credentials.user == p._NUMMUS_USER,
-                )
+                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
+                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
-            )  # pylint: disable=protected-access
+            )
             user.password = self.random_string()
             s.commit()
 
@@ -112,13 +112,10 @@ class TestPortfolio(TestBase):
         with p.get_session() as s:
             user: Credentials = (
                 s.query(Credentials)
-                .where(
-                    Credentials.site
-                    == p._NUMMUS_SITE,  # pylint: disable=protected-access
-                    Credentials.user == p._NUMMUS_USER,
-                )
+                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
+                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
-            )  # pylint: disable=protected-access
+            )
             s.delete(user)
             s.commit()
 
@@ -151,7 +148,7 @@ class TestPortfolio(TestBase):
         sql.drop_session()
 
         # Check portfolio is encrypted
-        with open(path_db, "rb") as file:
+        with path_db.open("rb") as file:
             buf = file.read()
             target = b"SQLite format 3"
             self.assertNotEqual(target, buf[: len(target)])
@@ -173,16 +170,11 @@ class TestPortfolio(TestBase):
             # Good, now change root password
             user: Credentials = (
                 s.query(Credentials)
-                .where(
-                    Credentials.site
-                    == p._NUMMUS_SITE,  # pylint: disable=protected-access
-                    Credentials.user == p._NUMMUS_USER,
-                )
+                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
+                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
-            )  # pylint: disable=protected-access
-            user.password = p._enc.encrypt(
-                self.random_string().encode()
-            )  # pylint: disable=protected-access
+            )
+            user.password = p._enc.encrypt(secrets.token_bytes())  # noqa: SLF001
             s.commit()
 
         # Invalid root password
@@ -202,13 +194,10 @@ class TestPortfolio(TestBase):
             # Good, now change root password
             user: Credentials = (
                 s.query(Credentials)
-                .where(
-                    Credentials.site
-                    == p._NUMMUS_SITE,  # pylint: disable=protected-access
-                    Credentials.user == p._NUMMUS_USER,
-                )
+                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
+                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
-            )  # pylint: disable=protected-access
+            )
             user.password = key
             s.commit()
 
@@ -221,7 +210,7 @@ class TestPortfolio(TestBase):
 
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
 
-        with open(path_db, "w", encoding="utf-8") as file:
+        with path_db.open("w", encoding="utf-8") as file:
             file.write("I'm a database")
 
         # Still missing config
@@ -276,22 +265,22 @@ class TestPortfolio(TestBase):
             s.commit()
 
             # Find by ID, kinda redundant but lol: id = find(id)
-            result = p.find_account(acct_checking.id)
-            self.assertEqual(acct_checking.id, result)
-            result = p.find_account(acct_invest_0.id)
-            self.assertEqual(acct_invest_0.id, result)
-            result = p.find_account(acct_invest_1.id)
-            self.assertEqual(acct_invest_1.id, result)
+            result = p.find_account(acct_checking.id_)
+            self.assertEqual(acct_checking.id_, result)
+            result = p.find_account(acct_invest_0.id_)
+            self.assertEqual(acct_invest_0.id_, result)
+            result = p.find_account(acct_invest_1.id_)
+            self.assertEqual(acct_invest_1.id_, result)
             result = p.find_account(10)
             self.assertIsNone(result)
 
             # Find by UUID
             result = p.find_account(acct_checking.uuid)
-            self.assertEqual(acct_checking.id, result)
+            self.assertEqual(acct_checking.id_, result)
 
             # Find by name
             result = p.find_account("Monkey Bank Checking")
-            self.assertEqual(acct_checking.id, result)
+            self.assertEqual(acct_checking.id_, result)
 
             # More than 1 match by name
             result = p.find_account("Primate Investments")
@@ -299,7 +288,7 @@ class TestPortfolio(TestBase):
 
             # Find by institution
             result = p.find_account("Gorilla Bank")
-            self.assertEqual(acct_invest_1.id, result)
+            self.assertEqual(acct_invest_1.id_, result)
 
     def test_find_asset(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
@@ -317,22 +306,22 @@ class TestPortfolio(TestBase):
             s.commit()
 
             # Find by ID, kinda redundant but lol: id = find(id)
-            result = p.find_asset(a_banana.id)
-            self.assertEqual(a_banana.id, result)
-            result = p.find_asset(a_apple_0.id)
-            self.assertEqual(a_apple_0.id, result)
-            result = p.find_asset(a_apple_1.id)
-            self.assertEqual(a_apple_1.id, result)
+            result = p.find_asset(a_banana.id_)
+            self.assertEqual(a_banana.id_, result)
+            result = p.find_asset(a_apple_0.id_)
+            self.assertEqual(a_apple_0.id_, result)
+            result = p.find_asset(a_apple_1.id_)
+            self.assertEqual(a_apple_1.id_, result)
             result = p.find_asset(10)
             self.assertIsNone(result)
 
             # Find by UUID
             result = p.find_asset(a_banana.uuid)
-            self.assertEqual(a_banana.id, result)
+            self.assertEqual(a_banana.id_, result)
 
             # Find by name
             result = p.find_asset("BANANA")
-            self.assertEqual(a_banana.id, result)
+            self.assertEqual(a_banana.id_, result)
 
             # More than 1 match by name
             result = p.find_asset("APPLE")
@@ -394,34 +383,36 @@ class TestPortfolio(TestBase):
                 self.assertEqual(1, len(res.splits))
                 r_split = res.splits[0]
                 for k, t_v in tgt.items():
+                    prop = k
+                    test_value = t_v
                     # Fix test value for linked properties
                     if k == "asset":
-                        k = "asset_id"
-                        t_v = asset.id
+                        prop = "asset_id"
+                        test_value = asset.id_
                     elif k == "account":
-                        k = "account_id"
+                        prop = "account_id"
                         if t_v == "Monkey Bank Checking":
-                            t_v = acct_checking.id
+                            test_value = acct_checking.id_
                         else:
-                            t_v = acct_invest.id
+                            test_value = acct_invest.id_
 
-                    if k == "category":
+                    if prop == "category":
                         cat_id = r_split.category_id
                         r_v = (
                             s.query(TransactionCategory)
-                            .where(TransactionCategory.id == cat_id)
+                            .where(TransactionCategory.id_ == cat_id)
                             .first()
                         )
-                        self.assertEqual(t_v, r_v.name)
-                    elif k in split_properties:
-                        r_v = getattr(r_split, k)
-                        self.assertEqual(t_v, r_v)
-                    elif k == "amount":
-                        self.assertEqual(t_v, res.amount)
-                        self.assertEqual(t_v, r_split.amount)
+                        self.assertEqual(test_value, r_v.name)
+                    elif prop in split_properties:
+                        r_v = getattr(r_split, prop)
+                        self.assertEqual(test_value, r_v)
+                    elif prop == "amount":
+                        self.assertEqual(test_value, res.amount)
+                        self.assertEqual(test_value, r_split.amount)
                     else:
-                        r_v = getattr(res, k)
-                        self.assertEqual(t_v, r_v)
+                        r_v = getattr(res, prop)
+                        self.assertEqual(test_value, r_v)
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
@@ -458,12 +449,12 @@ class TestPortfolio(TestBase):
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
             buf_backup = tar.extractfile(path_db.name).read()
-            with open(path_db, "rb") as file:
+            with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf, buf_backup)
 
             buf_backup = tar.extractfile(path_config.name).read()
-            with open(path_config, "rb") as file:
+            with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf, buf_backup)
         buf = None
@@ -485,7 +476,7 @@ class TestPortfolio(TestBase):
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
             buf_backup = tar.extractfile(path_db.name).read()
-            with open(path_db, "rb") as file:
+            with path_db.open("rb") as file:
                 buf = file.read()
             self.assertNotEqual(buf, buf_backup)
         buf = None
@@ -496,12 +487,12 @@ class TestPortfolio(TestBase):
         # Files should match again
         with tarfile.open(path_backup_1, "r:gz") as tar:
             buf_backup = tar.extractfile(path_db.name).read()
-            with open(path_db, "rb") as file:
+            with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf, buf_backup)
 
             buf_backup = tar.extractfile(path_config.name).read()
-            with open(path_config, "rb") as file:
+            with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf, buf_backup)
         buf = None
@@ -542,7 +533,7 @@ class TestPortfolio(TestBase):
             path_a_img_rel = str(path_a_img.relative_to(self._TEST_ROOT))
             a_img = self.random_string().encode()
 
-            with open(path_a_img, "wb") as file:
+            with path_a_img.open("wb") as file:
                 file.write(a_img)
 
         path_cert = p.ssl_cert_path
@@ -552,9 +543,9 @@ class TestPortfolio(TestBase):
         ssl_cert = self.random_string().encode()
         ssl_key = self.random_string().encode()
 
-        with open(path_cert, "wb") as file:
+        with path_cert.open("wb") as file:
             file.write(ssl_cert)
-        with open(path_key, "wb") as file:
+        with path_key.open("wb") as file:
             file.write(ssl_key)
 
         p.backup()
@@ -632,7 +623,7 @@ class TestPortfolio(TestBase):
 
         # Make an asset image
         path_a_img = p.image_path.joinpath(f"{uuid.uuid4()}.png")
-        with open(path_a_img, "wb") as file:
+        with path_a_img.open("wb") as file:
             file.write(self.random_string().encode())
 
         # Clean, expect old backups and old images to be purged

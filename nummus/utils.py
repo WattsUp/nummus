@@ -1,16 +1,30 @@
 """Miscellaneous functions and classes."""
+from __future__ import annotations
 
 import getpass
 import re
 import sys
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from nummus import custom_types as t
+if TYPE_CHECKING:
+    from nummus import custom_types as t
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
 _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
+
+MIN_STR_LEN = 3
+SEARCH_THRESHOLD = 60
+
+THRESHOLD_YEARS = 12 * 1.5
+THRESHOLD_WEEKS = 4 * 2
+THRESHOLD_DAYS = 7 * 1.5
+
+MONTHS_IN_YEAR = 12
+DAYS_IN_YEAR = 365.25
+DAYS_IN_WEEK = 7
 
 
 def camel_to_snake(s: str) -> str:
@@ -20,7 +34,10 @@ def camel_to_snake(s: str) -> str:
 
 
 def get_input(
-    prompt: str = "", secure: bool = False, print_key: t.Optional[bool] = None
+    prompt: str = "",
+    *,
+    secure: bool = False,
+    print_key: t.Optional[bool] = None,
 ) -> str:
     """Get input from the user, optionally secure.
 
@@ -48,7 +65,11 @@ def get_input(
     return input_
 
 
-def confirm(prompt: t.Optional[str] = None, default: t.Optional[bool] = False) -> bool:
+def confirm(
+    prompt: t.Optional[str] = None,
+    *,
+    default: t.Optional[bool] = False,
+) -> bool:
     """Prompt user for yes/no confirmation.
 
     Args:
@@ -122,7 +143,8 @@ def parse_bool(s: str) -> bool:
         Parsed bool
     """
     if not isinstance(s, str):
-        raise TypeError("parse_bool: argument must be string")
+        msg = "parse_bool: argument must be string"
+        raise TypeError(msg)
     if s == "":
         return None
     return s.lower() in ["true", "t", "1"]
@@ -142,14 +164,14 @@ def format_days(days: int, labels: t.Strings = None) -> str:
         x yrs
     """
     labels = labels or ["days", "wks", "mos", "yrs"]
-    years = days / 365.25
-    months = years * 12
-    if months > 18:
+    years = days / DAYS_IN_YEAR
+    months = years * MONTHS_IN_YEAR
+    if months > THRESHOLD_YEARS:
         return f"{years:.0f} {labels[3]}"
-    weeks = days / 7
-    if weeks > 8:
+    weeks = days / DAYS_IN_WEEK
+    if weeks > THRESHOLD_WEEKS:
         return f"{months:.0f} {labels[2]}"
-    if days > 10:
+    if days > THRESHOLD_DAYS:
         return f"{weeks:.0f} {labels[1]}"
     return f"{days} {labels[0]}"
 
@@ -166,8 +188,8 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     """
     residual = Decimal(0)
     l_rounded: t.Reals = []
-    for v in list_:
-        v = v + residual
+    for item in list_:
+        v = item + residual
         v_round = round(v, precision)
         residual = v - v_round
         l_rounded.append(v_round)

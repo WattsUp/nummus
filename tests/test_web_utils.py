@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import uuid
 
@@ -91,7 +93,11 @@ class TestWebUtils(TestBase):
         self.assertEqual(result, (None, today))
 
         self.assertHTTPRaises(
-            400, web_utils.parse_period, self.random_string(), None, None
+            400,
+            web_utils.parse_period,
+            self.random_string(),
+            None,
+            None,
         )
 
     def test_validate_image_upload(self) -> None:
@@ -105,7 +111,7 @@ class TestWebUtils(TestBase):
 
         # Still bad type
         req = flask.Request(
-            {"CONTENT_TYPE": "application/pdf", "CONTENT_LENGTH": "1000001"}
+            {"CONTENT_TYPE": "application/pdf", "CONTENT_LENGTH": "1000001"},
         )
         self.assertHTTPRaises(415, web_utils.validate_image_upload, req)
 

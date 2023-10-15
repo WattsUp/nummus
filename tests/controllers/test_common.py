@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 from decimal import Decimal
 
@@ -71,7 +73,7 @@ class TestCommon(WebTestBase):
             t_cat = categories["Uncategorized"]
 
             txn = Transaction(
-                account_id=acct_savings.id,
+                account_id=acct_savings.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
@@ -79,12 +81,12 @@ class TestCommon(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat.id,
+                category_id=t_cat.id_,
             )
             s.add_all((txn, t_split))
 
             txn = Transaction(
-                account_id=acct_checking.id,
+                account_id=acct_checking.id_,
                 date=today,
                 amount=-50,
                 statement=self.random_string(),
@@ -92,7 +94,7 @@ class TestCommon(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat.id,
+                category_id=t_cat.id_,
             )
             s.add_all((txn, t_split))
 
@@ -127,7 +129,7 @@ class TestCommon(WebTestBase):
             "include_closed": True,
             "n_closed": 1,
             "categories": {
-                AccountCategory.CASH: (Decimal("50.000000"), target_accounts)
+                AccountCategory.CASH: (Decimal("50.000000"), target_accounts),
             },
         }
         with self._flask_app.app_context():
@@ -144,7 +146,7 @@ class TestCommon(WebTestBase):
             "include_closed": False,
             "n_closed": 1,
             "categories": {
-                AccountCategory.CASH: (Decimal("50.000000"), target_accounts)
+                AccountCategory.CASH: (Decimal("50.000000"), target_accounts),
             },
         }
         with self._flask_app.app_context():

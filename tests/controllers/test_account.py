@@ -1,6 +1,8 @@
-import datetime
+from __future__ import annotations
 
-from nummus import custom_types as t
+import datetime
+from typing import TYPE_CHECKING
+
 from nummus.models import (
     Account,
     AccountCategory,
@@ -9,6 +11,9 @@ from nummus.models import (
     TransactionSplit,
 )
 from tests.controllers.base import WebTestBase
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
 
 
 class TestAccount(WebTestBase):
@@ -35,7 +40,7 @@ class TestAccount(WebTestBase):
             t_cat = categories["Uncategorized"]
 
             txn = Transaction(
-                account_id=acct.id,
+                account_id=acct.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
@@ -43,7 +48,7 @@ class TestAccount(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat.id,
+                category_id=t_cat.id_,
             )
             s.add_all((txn, t_split))
 

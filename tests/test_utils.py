@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 from decimal import Decimal
 from unittest import mock
@@ -50,11 +52,11 @@ class TestUtils(TestBase):
 
         def mock_input_interrupt(to_print: str) -> None:
             print(to_print + prompt_input)
-            raise KeyboardInterrupt()
+            raise KeyboardInterrupt
 
         def mock_get_pass_eof(to_print: str) -> None:
             print(to_print)
-            raise EOFError()
+            raise EOFError
 
         try:
             mock.builtins.input = mock_input
@@ -201,7 +203,7 @@ class TestUtils(TestBase):
 
         self.assertRaises(TypeError, utils.parse_bool, None)
 
-        self.assertRaises(TypeError, utils.parse_bool, False)
+        self.assertRaises(TypeError, utils.parse_bool, False)  # noqa: FBT003
 
     def test_format_days(self) -> None:
         d = 0

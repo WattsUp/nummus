@@ -1,14 +1,21 @@
 """Common API Controller."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 import sqlalchemy
 from rapidfuzz import process
 from sqlalchemy import orm
 
-from nummus import custom_types as t
+from nummus import utils
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import Base
 from nummus.models.transaction import TransactionSplit
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
+    from nummus.models.base import Base
 
 _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
     Account: ["name", "institution"],
@@ -18,7 +25,9 @@ _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
 
 
 def search(
-    query: orm.Query[Base], cls: t.Type[Base], search_str: str
+    query: orm.Query[Base],
+    cls: t.Type[Base],
+    search_str: str,
 ) -> orm.Query[Base]:
     """Perform a fuzzy search and return matches.
 
@@ -30,12 +39,12 @@ def search(
     Returns:
         List of results, count of amount results
     """
-    # TODO (WattsUp) Caching and cache invalidation
-    if search_str is None or len(search_str) < 3:
+    # TODO(WattsUp): Caching and cache invalidation
+    if search_str is None or len(search_str) < utils.MIN_STR_LEN:
         return query
 
     # Only fetch the searchable properties to be must faster
-    entities: t.List[orm.InstrumentedAttribute] = [cls.id]
+    entities: t.List[orm.InstrumentedAttribute] = [cls.id_]
     for prop in _SEARCH_PROPERTIES[cls]:
         entities.append(getattr(cls, prop))
     query_unfiltered = query.with_entities(*entities)
@@ -48,14 +57,19 @@ def search(
         strings[item_id] = item_str
 
     extracted = process.extract(
-        search_str, strings, limit=None, processor=lambda s: s.lower()
+        search_str,
+        strings,
+        limit=None,
+        processor=lambda s: s.lower(),
     )
-    matching_ids: t.Ints = [i for _, score, i in extracted if score > 60]
+    matching_ids: t.Ints = [
+        i for _, score, i in extracted if score > utils.SEARCH_THRESHOLD
+    ]
     if len(matching_ids) == 0:
         # Include poor matches to return something
         matching_ids: t.Ints = [i for _, _, i in extracted[:5]]
 
-    return query.session.query(cls).where(cls.id.in_(matching_ids))
+    return query.session.query(cls).where(cls.id_.in_(matching_ids))
 
 
 def query_count(query: orm.Query[Base]) -> int:
@@ -71,8 +85,7 @@ def query_count(query: orm.Query[Base]) -> int:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
     col_one = sqlalchemy.literal_column("1")
     counter = query.statement.with_only_columns(
-        # It is callable, count returns a generator type
-        sqlalchemy.func.count(col_one),  # pylint: disable=not-callable
+        sqlalchemy.func.count(col_one),
         maintain_column_froms=True,
     )
     counter = counter.order_by(None)
@@ -80,7 +93,9 @@ def query_count(query: orm.Query[Base]) -> int:
 
 
 def paginate(
-    query: orm.Query[Base], limit: int, offset: int
+    query: orm.Query[Base],
+    limit: int,
+    offset: int,
 ) -> t.Tuple[t.List[Base], int, int]:
     """Paginate query response for smaller results.
 
@@ -106,9 +121,6 @@ def paginate(
     # Compute next_offset
     n_current = len(results)
     remaining = count - n_current - offset
-    if remaining > 0:
-        next_offset = offset + n_current
-    else:
-        next_offset = None
+    next_offset = offset + n_current if remaining > 0 else None
 
     return results, count, next_offset

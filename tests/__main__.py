@@ -1,4 +1,5 @@
-import os
+from __future__ import annotations
+
 import sys
 import unittest
 
@@ -14,8 +15,7 @@ colorama.init(autoreset=True)
 def pre_tests() -> None:
     """Things to run before all tests."""
     print(f"Testing version {__version__}")
-    if TEST_LOG.exists():
-        os.remove(TEST_LOG)
+    TEST_LOG.unlink(missing_ok=True)
     with autodict.JSONAutoDict(TEST_LOG) as d:
         d["classes"] = {}
         d["methods"] = {}

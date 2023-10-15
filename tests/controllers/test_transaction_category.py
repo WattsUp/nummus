@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 
 from nummus.models import (
@@ -111,13 +113,15 @@ class TestTransactionCategory(WebTestBase):
             s.commit()
 
             txn = Transaction(
-                account_id=acct.id,
+                account_id=acct.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
-                amount=txn.amount, parent=txn, category_id=t_cat.id
+                amount=txn.amount,
+                parent=txn,
+                category_id=t_cat.id_,
             )
             s.add_all((txn, t_split))
             s.commit()
@@ -137,7 +141,7 @@ class TestTransactionCategory(WebTestBase):
             t_split: TransactionSplit = query.scalar()
 
             query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.id == t_split.category_id)
+            query = query.where(TransactionCategory.id_ == t_split.category_id)
             t_cat: TransactionCategory = query.scalar()
 
             self.assertEqual("Uncategorized", t_cat.name)

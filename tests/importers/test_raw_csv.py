@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 import datetime
 from decimal import Decimal
+from pathlib import Path
 
 from nummus.importers import raw_csv
 from tests import base
@@ -70,26 +73,26 @@ TRANSACTIONS_EXTRAS = [
 
 class TestCSVTransactionImporter(base.TestBase):
     def test_is_importable(self) -> None:
-        path = "Not a CSV"
+        path = Path("Not a CSV")
         result = raw_csv.CSVTransactionImporter.is_importable(path, None)
         self.assertFalse(result, "File is unexpectedly importable")
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             buf = file.read()
-        result = raw_csv.CSVTransactionImporter.is_importable(path.name, buf)
+        result = raw_csv.CSVTransactionImporter.is_importable(path, buf)
         self.assertTrue(result, "File is unexpectedly un-importable")
 
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             buf = file.read()
-        result = raw_csv.CSVTransactionImporter.is_importable(path.name, buf)
+        result = raw_csv.CSVTransactionImporter.is_importable(path, buf)
         self.assertTrue(result, "File is unexpectedly un-importable")
 
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             buf = file.read()
-        result = raw_csv.CSVTransactionImporter.is_importable(path.name, buf)
+        result = raw_csv.CSVTransactionImporter.is_importable(path, buf)
         self.assertFalse(result, "File is unexpectedly importable")
 
     def test_run(self) -> None:

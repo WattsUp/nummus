@@ -1,15 +1,17 @@
+from __future__ import annotations
+
 import io
 import re
 import shutil
 import time
 import urllib.parse
 import warnings
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import autodict
 import flask
 import flask.testing
-import werkzeug
 
 from nummus import custom_types as t
 from nummus import portfolio, sql, web
@@ -25,13 +27,19 @@ from nummus.models import (
 from tests import TEST_LOG
 from tests.base import TestBase
 
+if TYPE_CHECKING:
+    import werkzeug
+
+
 _RE_UUID = re.compile(
     r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
-    r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}"
+    r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}",
 )
 
 ResultType = t.Union[t.DictAny, str, bytes]
 CovMethods = t.Dict[t.Union[int, str], bool]
+
+HTTP_CODE_OK = 200
 
 
 class WebTestBase(TestBase):
@@ -82,8 +90,8 @@ class WebTestBase(TestBase):
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 # Ignore SSL warnings
-                s = web.Server(cls._portfolio, "127.0.0.1", 8080, False)
-        cls._flask_app: flask.Flask = s._app  # pylint: disable=protected-access
+                s = web.Server(cls._portfolio, "127.0.0.1", 8080, debug=False)
+        cls._flask_app: flask.Flask = s._app  # noqa: SLF001
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             cls._client = cls._flask_app.test_client()
@@ -138,7 +146,7 @@ class WebTestBase(TestBase):
         endpoint: str,
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
-        rc: int = 200,
+        rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
         """Run a test HTTP request.
@@ -161,9 +169,10 @@ class WebTestBase(TestBase):
         else:
             queries_flat = []
             for k, v in queries.items():
-                if isinstance(v, str):
-                    v = [v]
-                queries_flat.extend(f"{k}={urllib.parse.quote(str(vv))}" for vv in v)
+                v_list = [v] if isinstance(v, str) else v
+                queries_flat.extend(
+                    f"{k}={urllib.parse.quote(str(vv))}" for vv in v_list
+                )
             url = f"{endpoint}?{'&'.join(queries_flat)}"
 
         kwargs["method"] = method
@@ -172,7 +181,7 @@ class WebTestBase(TestBase):
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
                 start = time.perf_counter()
-                if rc == 200:
+                if rc == HTTP_CODE_OK:
                     response = self._client.open(url, **kwargs)
                 else:
                     with mock.patch("sys.stderr", new=io.StringIO()) as _:
@@ -225,7 +234,7 @@ class WebTestBase(TestBase):
         endpoint: str,
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
-        rc: int = 200,
+        rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
         """Run a test HTTP GET request.
@@ -256,7 +265,7 @@ class WebTestBase(TestBase):
         endpoint: str,
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
-        rc: int = 200,
+        rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
         """Run a test HTTP PUT request.
@@ -287,7 +296,7 @@ class WebTestBase(TestBase):
         endpoint: str,
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
-        rc: int = 200,
+        rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
         """Run a test HTTP POST request.
@@ -318,7 +327,7 @@ class WebTestBase(TestBase):
         endpoint: str,
         queries: t.DictStr = None,
         content_type: str = "text/html; charset=utf-8",
-        rc: int = 200,
+        rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
     ) -> t.Tuple[ResultType, t.DictStr]:
         """Run a test HTTP DELETE request.

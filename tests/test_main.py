@@ -1,8 +1,9 @@
+from __future__ import annotations
+
 import functools
 import io
-import os
-import pathlib
 import subprocess
+from pathlib import Path
 from unittest import mock
 
 from nummus import commands
@@ -32,7 +33,7 @@ class TestMain(TestBase):
             self._called_kwargs.clear()
             self._called_kwargs.update(kwargs)
 
-        for name, value in self._original_commands.items():
+        for name in self._original_commands:
             setattr(commands, name, functools.partial(check_call, _func=name))
 
     def _tear_down_commands(self) -> None:
@@ -68,7 +69,7 @@ class TestMain(TestBase):
             self.assertEqual(stdout, version.__version__)
 
     def test_create(self) -> None:
-        home = pathlib.Path(os.path.expanduser("~"))
+        home = Path("~").expanduser()
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         path_password = str(self._TEST_ROOT.joinpath(".password"))
         try:
@@ -135,7 +136,7 @@ class TestMain(TestBase):
         self.assertNotEqual(rc, 0)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path, None, False, True)
+            commands.create(path, None, force=False, no_encrypt=True)
 
         args = ["--portfolio", path, "unlock"]
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -148,7 +149,7 @@ class TestMain(TestBase):
     def test_import(self) -> None:
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path, None, False, True)
+            commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
@@ -166,7 +167,8 @@ class TestMain(TestBase):
             self.assertEqual(1, len(self._called_args))
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": paths}, self._called_kwargs
+                {"_func": "import_files", "paths": paths},
+                self._called_kwargs,
             )
 
             paths = ["transactions.csv", "statement-dir"]
@@ -176,7 +178,8 @@ class TestMain(TestBase):
             self.assertEqual(1, len(self._called_args))
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": paths}, self._called_kwargs
+                {"_func": "import_files", "paths": paths},
+                self._called_kwargs,
             )
 
         finally:
@@ -185,7 +188,7 @@ class TestMain(TestBase):
     def test_web(self) -> None:
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path, None, False, True)
+            commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
@@ -243,7 +246,7 @@ class TestMain(TestBase):
             self._tear_down_commands()
 
     def test_restore(self) -> None:
-        home = pathlib.Path(os.path.expanduser("~"))
+        home = Path("~").expanduser()
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         path_password = str(self._TEST_ROOT.joinpath(".password"))
         try:
@@ -294,7 +297,7 @@ class TestMain(TestBase):
     def test_backup(self) -> None:
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path, None, False, True)
+            commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
@@ -311,7 +314,7 @@ class TestMain(TestBase):
     def test_clean(self) -> None:
         path = str(self._TEST_ROOT.joinpath("portfolio.db"))
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path, None, False, True)
+            commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()

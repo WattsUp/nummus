@@ -4,11 +4,11 @@ A personal financial information aggregator and planning tool. Collects and
 categorizes transactions, manages budgets, tracks investments, calculates net
 worth, and predicts future performance.
 """
+from __future__ import annotations
 
 import argparse
-import os
-import pathlib
 import sys
+from pathlib import Path
 
 from nummus import custom_types as t
 from nummus import version
@@ -27,7 +27,7 @@ def main(command_line: t.Strings = None) -> int:
     desc = """A personal financial information aggregator and planning tool.
 Collects and categorizes transactions, manages budgets, tracks investments,
 calculates net worth, and predicts future performance."""
-    home = pathlib.Path(os.path.expanduser("~")).resolve()
+    home = Path("~").expanduser()
     default_path = str(home.joinpath(".nummus", "portfolio.db"))
     parser = argparse.ArgumentParser(prog="nummus", description=desc)
     parser.add_argument("--version", action="version", version=version.__version__)
@@ -41,7 +41,7 @@ calculates net worth, and predicts future performance."""
     parser.add_argument(
         "--pass-file",
         metavar="PATH",
-        help="specify password file location, " "omit will prompt when necessary",
+        help="specify password file location, omit will prompt when necessary",
     )
 
     subparsers = parser.add_subparsers(dest="cmd", metavar="<command>", required=True)
@@ -55,7 +55,7 @@ calculates net worth, and predicts future performance."""
         "--force",
         default=False,
         action="store_true",
-        help="Force create a new portfolio, " "will overwrite existing",
+        help="Force create a new portfolio, will overwrite existing",
     )
     sub_create.add_argument(
         "--no-encrypt",
@@ -85,7 +85,7 @@ calculates net worth, and predicts future performance."""
         "-v",
         metavar="VERSION",
         type=int,
-        help="number of backup to use for restore, " "omit for latest",
+        help="number of backup to use for restore, omit for latest",
     )
 
     _ = subparsers.add_parser(
@@ -149,15 +149,18 @@ calculates net worth, and predicts future performance."""
     cmd: str = args.cmd
 
     # Defer import to make main loading faster
-    from nummus import commands  # pylint: disable=import-outside-toplevel
+    from nummus import commands
 
     if cmd == "create":
         force: bool = args.force
         no_encrypt: bool = args.no_encrypt
         return commands.create(
-            path=path_db, pass_file=path_password, force=force, no_encrypt=no_encrypt
+            path=path_db,
+            pass_file=path_password,
+            force=force,
+            no_encrypt=no_encrypt,
         )
-    elif cmd == "restore":
+    if cmd == "restore":
         tar_ver: int = args.v
         return commands.restore(path=path_db, pass_file=path_password, tar_ver=tar_ver)
 
@@ -170,18 +173,19 @@ calculates net worth, and predicts future performance."""
         port: int = args.port
         debug: bool = args.debug
         return commands.run_web(p, host=host, port=port, debug=debug)
-    elif cmd == "unlock":
+    if cmd == "unlock":
         # Already unlocked
         return 0
-    elif cmd == "backup":
+    if cmd == "backup":
         return commands.backup(p)
-    elif cmd == "clean":
+    if cmd == "clean":
         return commands.clean(p)
-    elif cmd == "import":
+    if cmd == "import":
         paths: t.Strings = args.paths
         return commands.import_files(p, paths=paths)
-    else:
-        raise ValueError(f"Unknown command '{cmd}'")  # pragma: no cover
+    else:  # noqa: RET505, pragma: no cover
+        msg = f"Unknown command '{cmd}'"
+        raise ValueError(msg)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,7 @@
 """TransactionCategory controllers."""
 
+from __future__ import annotations
+
 import flask
 import sqlalchemy.exc
 from werkzeug import exceptions
@@ -41,7 +43,8 @@ def overlay() -> str:
             elif cat.group == TransactionCategoryGroup.OTHER:
                 other.append(cat_d)
             else:  # pragma: no cover
-                raise ValueError(f"Unknown category type: {cat.group}")
+                msg = f"Unknown category type: {cat.group}"
+                raise ValueError(msg)
 
         income = sorted(income, key=lambda cat: cat["name"])
         expense = sorted(expense, key=lambda cat: cat["name"])
@@ -116,7 +119,8 @@ def edit(path_uuid: str) -> str:
             )
 
         if cat.locked:
-            raise exceptions.Forbidden(f"Locked category {cat.name} cannot be modified")
+            msg = f"Locked category {cat.name} cannot be modified"
+            raise exceptions.Forbidden(msg)
 
         form = flask.request.form
         name = form["name"].strip()
@@ -159,7 +163,8 @@ def delete(path_uuid: str) -> str:
             )
 
         if cat.locked:
-            raise exceptions.Forbidden(f"Locked category {cat.name} cannot be deleted")
+            msg = f"Locked category {cat.name} cannot be deleted"
+            raise exceptions.Forbidden(msg)
 
         # Move all transactions to Uncategorized
         query = s.query(TransactionCategory)
@@ -167,12 +172,13 @@ def delete(path_uuid: str) -> str:
         uncategorized = query.scalar()
         if uncategorized is None:  # pragma: no cover
             # Uncategorized is locked and cannot be deleted
-            raise ValueError("Could not find Uncategorized id")
+            msg = "Could not find Uncategorized id"
+            raise ValueError(msg)
 
         query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.category_id == cat.id)
+        query = query.where(TransactionSplit.category_id == cat.id_)
         for t_split in query.all():
-            t_split.category_id = uncategorized.id
+            t_split.category_id = uncategorized.id_
         s.delete(cat)
         s.commit()
 

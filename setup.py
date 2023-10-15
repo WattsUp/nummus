@@ -5,13 +5,16 @@ Typical usage:
   python setup.py install
   python setup.py test
 """
+from __future__ import annotations
+
+from pathlib import Path
 
 import setuptools
 
 module_folder = "nummus"
 module_name = "nummus"
 
-with open("README.md", encoding="utf-8") as file:
+with Path("README.md").open(encoding="utf-8") as file:
     long_description = file.read()
 
 required = [
@@ -69,7 +72,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
     ],
     python_requires=">=3.8",
-    # include_package_data=True, # Leave out cause wacky
     zip_safe=False,
     entry_points={"console_scripts": ["nummus=nummus.main:main"]},
 )

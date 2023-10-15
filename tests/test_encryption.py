@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import base64
 
 from tests.base import TestBase
 
 try:
-    from nummus import encryption  # pylint: disable=import-outside-toplevel
+    from nummus import encryption
 except ImportError:
     # Helpful information printed in nummus.portfolio
     encryption = None

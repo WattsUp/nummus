@@ -1,16 +1,21 @@
 """Common component controllers."""
 
+from __future__ import annotations
+
 import datetime
 import re
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import flask
 import sqlalchemy
 import sqlalchemy.exc
 
-from nummus import custom_types as t
-from nummus import portfolio
 from nummus.models import Account, AccountCategory, Transaction
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
+    from nummus import portfolio
 
 
 def sidebar() -> str:
@@ -22,11 +27,11 @@ def sidebar() -> str:
     include_closed = flask.request.args.get("closed") == "included"
     return flask.render_template(
         "shared/sidebar.html",
-        sidebar=ctx_sidebar(include_closed),
+        sidebar=ctx_sidebar(include_closed=include_closed),
     )
 
 
-def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
+def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     """Get the context to build the sidebar.
 
     Args:
@@ -66,7 +71,7 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
         accounts: t.Dict[int, t.DictAny] = {}
         query = s.query(Account)
         query = query.with_entities(
-            Account.id,
+            Account.id_,
             Account.uuid,
             Account.name,
             Account.institution,
@@ -94,7 +99,7 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
         query = s.query(Transaction)
         query = query.with_entities(
             Transaction.account_id,
-            sqlalchemy.func.max(Transaction.date),  # pylint: disable=not-callable
+            sqlalchemy.func.max(Transaction.date),
         )
         query = query.group_by(Transaction.account_id)
         for acct_id, updated_on in query.all():
@@ -138,7 +143,7 @@ def ctx_sidebar(include_closed: bool = False) -> t.DictAny:
         if len(accounts) > 0
     }
 
-    # TODO (WattsUp) Add account UUIDs for links
+    # TODO(WattsUp): Add account UUIDs for links
     return {
         "net-worth": assets + liabilities,
         "assets": assets,
@@ -211,10 +216,8 @@ def error(e: t.Union[str, Exception]) -> str:
             if constraint == "CHECK":
                 msg = f"{table} {field}{additional}"
             else:
-                msg = (
-                    f"{table} {field} must "
-                    f"{constraints.get(constraint, 'be ' + constraint)}"
-                )
+                s = constraints.get(constraint, "be " + constraint)
+                msg = f"{table} {field} must {s}"
         else:  # pragma: no cover
             # Don't need to test fallback
             msg = orig

@@ -2,11 +2,12 @@
 
 Adds custom types to typing
 """
+from __future__ import annotations
 
 import datetime
 import decimal
-import pathlib
 import typing as t
+from pathlib import Path
 from typing import *  # noqa: F403
 
 from sqlalchemy import orm
@@ -15,7 +16,7 @@ Date = datetime.date
 Dates = t.List[Date]
 Ints = t.List[int]
 IntOrStr = t.Union[int, str]
-Paths = t.List[pathlib.Path]
+Paths = t.List[Path]
 Real = decimal.Decimal
 Reals = t.List[Real]
 Strings = t.List[str]

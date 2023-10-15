@@ -1,21 +1,25 @@
 """Run tailwindcss to generate distribution CSS file."""
+from __future__ import annotations
 
-import io
-import pathlib
 import subprocess
 import sys
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colorama
 from colorama import Fore
 
 import nummus
 
+if TYPE_CHECKING:
+    import io
+
 colorama.init(autoreset=True)
 
 
 def main() -> None:
     """Main program entry."""
-    folder = pathlib.Path(nummus.__file__).parent.resolve().joinpath("static")
+    folder = Path(nummus.__file__).parent.resolve().joinpath("static")
 
     path_config = folder.joinpath("tailwind.config.js")
     path_in = folder.joinpath("src", "main.css")
@@ -33,7 +37,9 @@ def main() -> None:
     ]
     args.extend(sys.argv[1:])
     with subprocess.Popen(
-        args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT  # noqa: S603
+        args,  # noqa: S603
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
     ) as p:
         stdout: io.BytesIO = p.stdout
         try:
@@ -45,12 +51,7 @@ def main() -> None:
                 lines = buf.split("\n")
                 if len(lines) == 0:
                     continue
-                if lines[-1] == "":
-                    # Finishing with a \n will have an empty string in the end
-                    buf = ""
-                else:
-                    # Last line is not finished
-                    buf = lines[-1]
+                buf = lines[-1]
                 lines.pop(-1)
 
                 for line in lines:

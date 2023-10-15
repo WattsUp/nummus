@@ -1,15 +1,19 @@
 """Encryption provider."""
+from __future__ import annotations
 
 import base64
 import secrets
+from typing import TYPE_CHECKING
 
 import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
-from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Hash import SHA256
 
-from nummus import custom_types as t
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_cbc import CbcMode
+
+    from nummus import custom_types as t
 
 
 class Encryption:
@@ -55,7 +59,7 @@ class Encryption:
         """
         return AES.new(self._digest_key(), AES.MODE_CBC, iv)
 
-    def gen_salt(self, set_salt: bool = True) -> bytes:
+    def gen_salt(self, *, set_salt: bool = True) -> bytes:
         """Generate salt to be added to key.
 
         Args:
@@ -130,10 +134,11 @@ class Encryption:
         padding = data[-1]
 
         # Validate padding is unchanged
-        if data[-padding:] != bytes([padding]) * padding:
+        if data[-padding:] != bytes([padding]) * padding:  # pragma: no cover
             # Cannot guarantee this gets covered by a bad key test
             # Some bad keys decrypt with valid padding but the decoded secret is wrong
-            raise ValueError("Invalid padding")  # pragma: no cover
+            msg = "Invalid padding"
+            raise ValueError(msg)
 
         # Reset salt if present
         self.set_salt()

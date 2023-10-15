@@ -1,14 +1,20 @@
 """Raw CSV importers."""
 
+from __future__ import annotations
+
 import csv
 import datetime
 import io
 import types
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 class CSVTransactionImporter(TransactionImporter):
@@ -32,13 +38,13 @@ class CSVTransactionImporter(TransactionImporter):
             "tag": (False, str),
             "asset": (False, str),
             "asset_quantity": (False, utils.parse_real),
-        }
+        },
     )
 
     @classmethod
     @override
-    def is_importable(cls, name: str, buf: bytes) -> bool:
-        if not name.endswith(".csv"):
+    def is_importable(cls, name: Path, buf: bytes) -> bool:
+        if name.suffix != ".csv":
             return False
 
         # Check if the columns start with the expected ones
@@ -63,7 +69,8 @@ class CSVTransactionImporter(TransactionImporter):
                 value = row.get(key)
                 if value in [None, ""]:
                     if required:
-                        raise KeyError(f"CSV is missing column: {key}")
+                        msg = f"CSV is missing column: {key}"
+                        raise KeyError(msg)
                 else:
                     txn[key] = cleaner(value)
             txn["statement"] = txn["description"]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import io
 import shutil
@@ -23,7 +25,7 @@ class TestServer(TestBase):
 
         with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                s = web.Server(p, host, port, debug)
+                s = web.Server(p, host, port, debug=debug)
         fake_stderr = fake_stderr.getvalue()
         target = (
             f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}\n"
@@ -40,10 +42,10 @@ class TestServer(TestBase):
         )
         self.assertEqual(target, fake_stdout)
 
-        self.assertEqual(p, s._portfolio)  # pylint: disable=protected-access
+        self.assertEqual(p, s._portfolio)  # noqa: SLF001
 
-        s_server = s._server  # pylint: disable=protected-access
-        flask_app = s._app  # pylint: disable=protected-access
+        s_server = s._server  # noqa: SLF001
+        flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
             flask_p: portfolio.Portfolio = flask.current_app.portfolio
@@ -63,10 +65,10 @@ class TestServer(TestBase):
         debug = False
         with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                s = web.Server(p, host, port, debug)
+                s = web.Server(p, host, port, debug=debug)
         self.assertEqual("", fake_stderr.getvalue())
         self.assertEqual("", fake_stdout.getvalue())
-        flask_app = s._app  # pylint: disable=protected-access
+        flask_app = s._app  # noqa: SLF001
         self.assertEqual(debug, flask_app.debug)
 
     def test_run(self) -> None:
@@ -85,8 +87,8 @@ class TestServer(TestBase):
         debug = True
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug)
-        s_server = s._server  # pylint: disable=protected-access
+                s = web.Server(p, host, port, debug=debug)
+        s_server = s._server  # noqa: SLF001
 
         s_server.serve_forever = lambda *_: print("serve_forever")
         s_server.stop = lambda *_: print("stop")
@@ -105,8 +107,8 @@ class TestServer(TestBase):
         debug = False
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug)
-        s_server = s._server  # pylint: disable=protected-access
+                s = web.Server(p, host, port, debug=debug)
+        s_server = s._server  # noqa: SLF001
 
         def raise_keyboard_interrupt() -> None:
             raise KeyboardInterrupt
@@ -126,7 +128,7 @@ class TestServer(TestBase):
         self.assertEqual(target, fake_stdout[: len(target)])
 
         # Artificially set started=True
-        s_server._stop_event.clear()  # pylint: disable=protected-access
+        s_server._stop_event.clear()  # noqa: SLF001
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
 
@@ -151,18 +153,21 @@ class TestServer(TestBase):
         self.assertEqual(path_key.stat().st_mode & 0o777, 0o600)
 
         self.assertTrue(
-            web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is not self-signed"
+            web.Server.is_ssl_cert_self_signed(path_cert),
+            "SSL cert is not self-signed",
         )
 
     def test_is_ssl_cert_self_signed(self) -> None:
         path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
         self.assertTrue(
-            web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is not self-signed"
+            web.Server.is_ssl_cert_self_signed(path_cert),
+            "SSL cert is not self-signed",
         )
 
         path_cert = self._DATA_ROOT.joinpath("cert_not_ss.pem")
         self.assertFalse(
-            web.Server.is_ssl_cert_self_signed(path_cert), "SSL cert is self-signed"
+            web.Server.is_ssl_cert_self_signed(path_cert),
+            "SSL cert is self-signed",
         )
 
     def test_flask_context(self) -> None:
@@ -180,8 +185,8 @@ class TestServer(TestBase):
         debug = True
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug)
-        flask_app = s._app  # pylint: disable=protected-access
+                s = web.Server(p, host, port, debug=debug)
+        flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
             target = __version__
@@ -203,8 +208,8 @@ class TestServer(TestBase):
         debug = True
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug)
-        flask_app = s._app  # pylint: disable=protected-access
+                s = web.Server(p, host, port, debug=debug)
+        flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
             context = {"number": Decimal("1000.100000")}
@@ -360,7 +365,8 @@ class TestHandler(TestBase):
             f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
             "GOT "
             f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
-            "HTTP/1.1 1000B 600"
+            "HTTP/1.1 1000B "
+            f"{Fore.MAGENTA}600{Fore.RESET}"
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()

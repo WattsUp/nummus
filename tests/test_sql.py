@@ -1,5 +1,7 @@
-import pathlib
+from __future__ import annotations
+
 import uuid
+from pathlib import Path
 
 import autodict
 import sqlalchemy
@@ -16,13 +18,15 @@ class ORMBase(orm.DeclarativeBase):
     def __tablename__(self) -> None:
         return self.__name__.lower()
 
-    id: orm.Mapped[str] = orm.mapped_column(
-        sqlalchemy.String(36), primary_key=True, default=lambda: str(uuid.uuid4())
+    id_: orm.Mapped[str] = orm.mapped_column(
+        sqlalchemy.String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
     )
 
     def __repr__(self) -> str:
         try:
-            return f"<{self.__class__.__name__} id={self.id}>"
+            return f"<{self.__class__.__name__} id={self.id_}>"
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
@@ -40,12 +44,12 @@ class TestSQL(TestBase):
 
         # Relative file
         path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
-            pathlib.Path.cwd()
+            Path.cwd(),
         )
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
         s = sql.get_session(path, config)
         self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         s2 = sql.get_session(path, config)
         self.assertNotEqual(s, s2)  # Different sessions
@@ -61,15 +65,15 @@ class TestSQL(TestBase):
 
         s = None
         s2 = None
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
         # Able to call drop after it has been dropped
         sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             data = file.read()
             self.assertIn(b"SQLite", data)
 
@@ -80,19 +84,19 @@ class TestSQL(TestBase):
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
         s = sql.get_session(path, config)
         self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
 
         s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         sql.drop_session()
-        self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             data = file.read()
             self.assertIn(b"SQLite", data)
 
@@ -107,27 +111,30 @@ class TestSQL(TestBase):
         enc = sql.Encryption(key)
 
         # Relative file
-        path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(pathlib.Path.cwd())
+        path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(Path.cwd())
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
         self.assertRaises(
-            ValueError, sql.get_session, path, config
+            ValueError,
+            sql.get_session,
+            path,
+            config,
         )  # No Encryption object
 
         s = sql.get_session(path, config, enc)
         self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
 
         s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             data = file.read()
             self.assertNotIn(b"SQLite", data)
 
@@ -138,19 +145,19 @@ class TestSQL(TestBase):
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
         s = sql.get_session(path, config, enc)
         self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
 
         s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             data = file.read()
             self.assertNotIn(b"SQLite", data)
 

@@ -1,18 +1,30 @@
 """Common API Controller."""
+from __future__ import annotations
 
 import datetime
 import mimetypes
 import uuid
+from typing import TYPE_CHECKING
 
-import flask
-from sqlalchemy import orm
 from werkzeug import exceptions
 
-from nummus import custom_types as t
-from nummus.models import Base
+if TYPE_CHECKING:
+    import flask
+    from sqlalchemy import orm
+
+    from nummus import custom_types as t
+    from nummus.models import Base
+
+MAX_IMAGE_SIZE = int(1e6)
 
 
-def find(s: orm.Session, cls: t.Type[Base], query: str, do_raise: bool = True) -> Base:
+def find(
+    s: orm.Session,
+    cls: t.Type[Base],
+    query: str,
+    *,
+    do_raise: bool = True,
+) -> Base:
     """Find the matching object by UUID.
 
     Args:
@@ -32,12 +44,15 @@ def find(s: orm.Session, cls: t.Type[Base], query: str, do_raise: bool = True) -
     u = str(uuid.UUID(query))
     obj = s.query(cls).where(cls.uuid == u).first()
     if obj is None and do_raise:
-        raise exceptions.NotFound(f"{cls.__name__} {u} not found in Portfolio")
+        msg = f"{cls.__name__} {u} not found in Portfolio"
+        raise exceptions.NotFound(msg)
     return obj
 
 
 def parse_period(
-    period: str, start_custom: datetime.date, end_custom: datetime.date
+    period: str,
+    start_custom: datetime.date,
+    end_custom: datetime.date,
 ) -> t.Tuple[datetime.date, datetime.date]:
     """Parse time period from arguments.
 
@@ -84,7 +99,8 @@ def parse_period(
         start = None
         end = today
     else:
-        raise exceptions.BadRequest(f"Unknown period: {period}")
+        msg = f"Unknown period: {period}"
+        raise exceptions.BadRequest(msg)
     return start, end
 
 
@@ -104,25 +120,23 @@ def validate_image_upload(req: flask.Request) -> str:
         HTTPError(422): Missing Content-Type
     """
     if req.content_length is None:
-        raise exceptions.LengthRequired()
+        raise exceptions.LengthRequired
 
     if req.content_type is None:
-        raise exceptions.UnprocessableEntity("Request missing Content-Type")
+        msg = "Request missing Content-Type"
+        raise exceptions.UnprocessableEntity(msg)
 
     if not req.content_type.startswith("image/"):
-        raise exceptions.UnsupportedMediaType(
-            f"Content-type must be image/*: {req.content_type}"
-        )
+        msg = f"Content-type must be image/*: {req.content_type}"
+        raise exceptions.UnsupportedMediaType(msg)
 
     suffix = mimetypes.guess_extension(req.content_type)
     if suffix is None:
-        raise exceptions.UnsupportedMediaType(
-            f"Unsupported image type: {req.content_type}"
-        )
+        msg = f"Unsupported image type: {req.content_type}"
+        raise exceptions.UnsupportedMediaType(msg)
 
-    if req.content_length > 1e6:
-        raise exceptions.RequestEntityTooLarge(
-            f"Payload length > 1MB: {req.content_length}B"
-        )
+    if req.content_length > MAX_IMAGE_SIZE:
+        msg = f"Payload length > {MAX_IMAGE_SIZE}B: {req.content_length}B"
+        raise exceptions.RequestEntityTooLarge(msg)
 
     return suffix

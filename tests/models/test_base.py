@@ -33,7 +33,7 @@ class Parent(base.Base):
 
 
 class Child(base.Base):
-    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id"))
+    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id_"))
     parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
 
     height: t.ORMRealOpt = orm.mapped_column(base.Decimal6)
@@ -43,27 +43,28 @@ class TestORMBase(TestBase):
     def test_init_properties(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
-            s.get_bind(), tables=[Parent.__table__, Child.__table__]
+            s.get_bind(),
+            tables=[Parent.__table__, Child.__table__],
         )
         s.commit()
 
         parent = Parent()
-        self.assertIsNone(parent.id)
+        self.assertIsNone(parent.id_)
         self.assertIsNone(parent.uuid)
         s.add(parent)
         s.commit()
-        self.assertIsNotNone(parent.id)
+        self.assertIsNotNone(parent.id_)
         self.assertIsNotNone(parent.uuid)
 
         child = Child()
-        self.assertIsNone(child.id)
+        self.assertIsNone(child.id_)
         self.assertIsNone(child.uuid)
         self.assertIsNone(child.parent)
         self.assertIsNone(child.parent_id)
         child.parent = parent
         s.add(child)
         s.commit()
-        self.assertIsNotNone(child.id)
+        self.assertIsNotNone(child.id_)
         self.assertIsNotNone(child.uuid)
         self.assertIsNotNone(child.parent)
         self.assertIsNotNone(child.parent_id)
@@ -88,7 +89,8 @@ class TestORMBase(TestBase):
     def test_comparators(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
-            s.get_bind(), tables=[Parent.__table__, Child.__table__]
+            s.get_bind(),
+            tables=[Parent.__table__, Child.__table__],
         )
         s.commit()
 
@@ -104,7 +106,7 @@ class TestORMBase(TestBase):
         with orm.create_session(bind=s.get_bind()) as session_2:
             # Get same parent_a but in a different Python object
             parent_a_queried = (
-                session_2.query(Parent).where(Parent.id == parent_a.id).first()
+                session_2.query(Parent).where(Parent.id_ == parent_a.id_).first()
             )
             self.assertNotEqual(id(parent_a), id(parent_a_queried))
             self.assertEqual(parent_a, parent_a_queried)
@@ -112,7 +114,8 @@ class TestORMBase(TestBase):
     def test_map_name(self) -> None:
         s = self.get_session()
         base.Base.metadata.create_all(
-            s.get_bind(), tables=[Parent.__table__, Child.__table__]
+            s.get_bind(),
+            tables=[Parent.__table__, Child.__table__],
         )
         s.commit()
 
@@ -125,8 +128,8 @@ class TestORMBase(TestBase):
 
         result = Parent.map_name(s)
         target = {
-            parent_a.id: parent_a.name,
-            parent_b.id: parent_b.name,
+            parent_a.id_: parent_a.name,
+            parent_b.id_: parent_b.name,
         }
         self.assertEqual(target, result)
 
@@ -169,7 +172,7 @@ class TestBaseEnum(TestBase):
             self.assertEqual(e, Derived.parse(e.name))
             self.assertEqual(e, Derived.parse(e.value))
 
-        for s, e in Derived._lut().items():  # pylint: disable=protected-access
+        for s, e in Derived._lut().items():  # noqa: SLF001
             self.assertEqual(e, Derived.parse(s.upper()))
 
         self.assertRaises(ValueError, Derived.parse, "FAKE")

@@ -1,6 +1,7 @@
 """Command line interface commands."""
+from __future__ import annotations
 
-import pathlib
+from pathlib import Path
 
 import colorama
 from colorama import Fore
@@ -10,8 +11,10 @@ from nummus import portfolio, utils, web
 
 colorama.init(autoreset=True)
 
+MIN_PASS_LEN = 8
 
-def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
+
+def create(path: str, pass_file: str, *, force: bool, no_encrypt: bool) -> int:
     """Create a new Portfolio.
 
     Args:
@@ -24,23 +27,22 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
         0 on success
         non-zero on failure
     """
-    path_db = pathlib.Path(path)
+    path_db = Path(path)
     if path_db.exists():
         if force:
             path_db.unlink()
         else:
             print(
-                f"{Fore.RED}Cannot overwrite portfolio at {path_db}. "
-                "Try with --force"
+                f"{Fore.RED}Cannot overwrite portfolio at {path_db}. Try with --force",
             )
             return 1
 
     key: str = None
     if not no_encrypt:
         if pass_file is not None:
-            path_password = pathlib.Path(pass_file)
+            path_password = Path(pass_file)
             if path_password.exists():
-                with open(pass_file, encoding="utf-8") as file:
+                with path_password.open(encoding="utf-8") as file:
                     key = file.read().strip()
 
         # Get key from user is password file empty
@@ -51,8 +53,8 @@ def create(path: str, pass_file: str, force: bool, no_encrypt: bool) -> int:
             if key is None:
                 return 1
 
-            if len(key) < 8:
-                print(f"{Fore.RED}Password must be at least 8 characters")
+            if len(key) < MIN_PASS_LEN:
+                print(f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters")
                 key = None
                 continue
 
@@ -80,7 +82,7 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
     Returns:
         Unlocked Portfolio or None if unlocking failed
     """
-    path_db = pathlib.Path(path)
+    path_db = Path(path)
     if not path_db.exists():
         print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
         return None
@@ -93,20 +95,21 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
     key: str = None
 
     if pass_file is not None:
-        path_password = pathlib.Path(pass_file)
+        path_password = Path(pass_file)
         if path_password.exists():
-            with open(pass_file, encoding="utf-8") as file:
+            with path_password.open(encoding="utf-8") as file:
                 key = file.read().strip()
 
     if key is not None:
         # Try once with password file
         try:
             p = portfolio.Portfolio(path_db, key)
-            print(f"{Fore.GREEN}Portfolio is unlocked")
-            return p
         except TypeError:
             print(f"{Fore.RED}Could not decrypt with password file")
             return None
+        else:
+            print(f"{Fore.GREEN}Portfolio is unlocked")
+            return p
 
     # 3 attempts
     for _ in range(3):
@@ -115,11 +118,12 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
             return None
         try:
             p = portfolio.Portfolio(path_db, key)
-            print(f"{Fore.GREEN}Portfolio is unlocked")
-            return p
         except TypeError:
             print(f"{Fore.RED}Incorrect password")
             # Try again
+        else:
+            print(f"{Fore.GREEN}Portfolio is unlocked")
+            return p
 
     print(f"{Fore.RED}Too many incorrect attempts")
     return None
@@ -197,7 +201,7 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 
     try:
         for path in paths:
-            file = pathlib.Path(path)
+            file = Path(path)
             if not file.exists():
                 print(f"{Fore.RED}File does not exist: {file}")
                 return 1
@@ -226,7 +230,11 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 
 # No unit test for wrapper command, too difficult to mock
 def run_web(
-    p: portfolio.Portfolio, host: str, port: int, debug: bool
+    p: portfolio.Portfolio,
+    host: str,
+    port: int,
+    *,
+    debug: bool,
 ) -> int:  # pragma: no cover
     """Run web server serving the nummus Portfolio.
 
@@ -240,6 +248,6 @@ def run_web(
         0 on success
         non-zero on failure
     """
-    s = web.Server(p, host, port, debug)
+    s = web.Server(p, host, port, debug=debug)
     s.run()
     return 0

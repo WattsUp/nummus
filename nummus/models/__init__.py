@@ -1,6 +1,7 @@
 """Database models."""
+from __future__ import annotations
 
-from sqlalchemy import orm
+from typing import TYPE_CHECKING
 
 from nummus.models.account import Account, AccountCategory
 from nummus.models.asset import Asset, AssetCategory, AssetSplit, AssetValuation
@@ -13,6 +14,9 @@ from nummus.models.transaction_category import (
     TransactionCategoryGroup,
 )
 from nummus.models.utils import paginate, query_count, search
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 __all__ = [
     "Account",

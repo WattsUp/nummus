@@ -1,3 +1,5 @@
-import pathlib
+from __future__ import annotations
 
-TEST_LOG = pathlib.Path("test_log.json").resolve()
+from pathlib import Path
+
+TEST_LOG = Path("test_log.json").resolve()

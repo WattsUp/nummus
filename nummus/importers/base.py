@@ -1,8 +1,14 @@
 """Base importer interfaces."""
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import TYPE_CHECKING
 
 from nummus import custom_types as t
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 TxnDict = t.Dict[str, t.Union[str, t.Real, t.Date, t.Any]]
 TxnDicts = t.List[TxnDict]
@@ -12,7 +18,9 @@ class TransactionImporter(ABC):
     """Importer that imports transactions."""
 
     def __init__(
-        self, path: t.Optional[str] = None, buf: t.Optional[bytes] = None
+        self,
+        path: t.Optional[Path] = None,
+        buf: t.Optional[bytes] = None,
     ) -> None:
         """Initialize Transaction Importer.
 
@@ -26,14 +34,15 @@ class TransactionImporter(ABC):
         if buf is not None:
             self._buf = buf
         elif path is not None:
-            with open(path, "rb") as file:
+            with path.open("rb") as file:
                 self._buf = file.read()
         else:
-            raise ValueError("Must provide path or buffer")
+            msg = "Must provide path or buffer"
+            raise ValueError(msg)
 
     @classmethod
     @abstractmethod
-    def is_importable(cls, name: str, buf: bytes) -> bool:
+    def is_importable(cls, name: Path, buf: bytes) -> bool:
         """Test if file is importable for this Importer.
 
         Args:
@@ -43,7 +52,6 @@ class TransactionImporter(ABC):
         Returns:
             True if file is importable
         """
-        pass  # pragma: no cover
 
     @abstractmethod
     def run(self) -> TxnDicts:
@@ -54,4 +62,3 @@ class TransactionImporter(ABC):
             properties. Accounts, Assets, and TransactionCategories referred to by
             name since ID is unknown here.
         """
-        pass  # pragma: no cover

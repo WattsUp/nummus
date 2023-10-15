@@ -31,7 +31,7 @@ class AssetSplit(Base):
         multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
     """
 
-    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
+    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     multiplier: t.ORMReal = orm.mapped_column(Decimal6)
     date: t.ORMDate
 
@@ -45,7 +45,7 @@ class AssetValuation(Base):
         value: Value of assert
     """
 
-    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id"))
+    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: t.ORMReal = orm.mapped_column(Decimal6)
     date: t.ORMDate
 
@@ -102,9 +102,10 @@ class Asset(Base):
         # Get latest Valuation before or including start date
         query = s.query(AssetValuation)
         query = query.with_entities(
-            AssetValuation.value, sqlalchemy.func.max(AssetValuation.date)
-        )  # pylint: disable=not-callable
-        query = query.where(AssetValuation.asset_id == self.id)
+            AssetValuation.value,
+            sqlalchemy.func.max(AssetValuation.date),
+        )
+        query = query.where(AssetValuation.asset_id == self.id_)
         query = query.where(AssetValuation.date <= start)
         iv = query.scalar()
         value = iv or Decimal(0)
@@ -119,7 +120,7 @@ class Asset(Base):
         # Valuations between start and end
         query = s.query(AssetValuation)
         query = query.with_entities(AssetValuation.date, AssetValuation.value)
-        query = query.where(AssetValuation.asset_id == self.id)
+        query = query.where(AssetValuation.asset_id == self.id_)
         query = query.where(AssetValuation.date <= end)
         query = query.where(AssetValuation.date > start)
         query = query.order_by(AssetValuation.date)
@@ -127,9 +128,7 @@ class Asset(Base):
         for v_date, v_value in query.all():
             v_date: datetime.date
             v_value: Decimal
-            # Don't need thanks SQL filters
-            # if t_split.date > end:
-            #   continue
+
             while date < v_date:
                 values.append(value)
                 dates.append(date)
@@ -160,7 +159,7 @@ class Asset(Base):
             ids: Limit results to specific Assets by ID
 
         Returns:
-            (List[dates], dict{Asset.id: list[values]})
+            (List[dates], dict{Asset.id_: list[values]})
         """
         assets = Asset.map_uuid(s)
         values: t.DictIntReal = {a_id: Decimal(0) for a_id in assets}
@@ -176,7 +175,7 @@ class Asset(Base):
             AssetValuation.asset_id,
             AssetValuation.value,
             sqlalchemy.func.max(AssetValuation.date),
-        )  # pylint: disable=not-callable
+        )
         query = query.where(AssetValuation.date <= start)
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
@@ -203,7 +202,9 @@ class Asset(Base):
         # Transactions between start and end
         query = s.query(AssetValuation)
         query = query.with_entities(
-            AssetValuation.asset_id, AssetValuation.date, AssetValuation.value
+            AssetValuation.asset_id,
+            AssetValuation.date,
+            AssetValuation.value,
         )
         query = query.where(AssetValuation.date <= end)
         query = query.where(AssetValuation.date > start)
@@ -229,9 +230,7 @@ class Asset(Base):
         """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
         # This function is best here but need to avoid circular imports
 
-        from nummus.models import (
-            TransactionSplit,  # pylint: disable=import-outside-toplevel
-        )
+        from nummus.models import TransactionSplit
 
         s = orm.object_session(self)
 
@@ -240,7 +239,7 @@ class Asset(Base):
 
         query = s.query(AssetSplit)
         query = query.with_entities(AssetSplit.date, AssetSplit.multiplier)
-        query = query.where(AssetSplit.asset_id == self.id)
+        query = query.where(AssetSplit.asset_id == self.id_)
         query = query.order_by(AssetSplit.date.desc())
 
         for s_date, s_multiplier in query.all():
@@ -251,7 +250,7 @@ class Asset(Base):
             splits.append((s_date, multiplier))
 
         query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.asset_id == self.id)
+        query = query.where(TransactionSplit.asset_id == self.id_)
         query = query.order_by(TransactionSplit.date.desc())
 
         multiplier = Decimal(1)

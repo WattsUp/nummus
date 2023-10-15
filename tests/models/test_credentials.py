@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from nummus import models
 from nummus.models import credentials
 from tests.base import TestBase

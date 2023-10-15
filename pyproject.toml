@@ -13,6 +13,7 @@ select = [
     "F",     # pyflakes
     "W",     # pycodestyle warnings
     "E",     # pycodestyle errors
+    "I",     # isort
     "N",     # pep8-naming
     "D",     # pydocstyle
     "UP",    # pyupgrade
@@ -20,48 +21,52 @@ select = [
     "ANN",   # flake8-annotations
     "ASYNC", # flask8-async
     "S",     # flake8-bandit
-    #"BLE",  # flake8-blind-except
-    #"FBT",  # flake8-boolean-trap
-    #"B",    # flake8-bugbear
-    #"A",    # flake8-builtins
-    #"COM",  # flake8-commas
-    #"C4",   # flake8-comprehensions
-    #"DTZ",  # flake8-datetimez
-    #"T10",  # flake8-debugger
-    #"EM",   # flake8-errmsg
-    #"EXE",  # flake8-executable
-    #"FA",   # flake8-future-annotations
-    #"ISC",  # flake8-implicit-str-concat
-    #"ICN",  # flake8-import-conventions
-    #"LOG",  # flake8-logging
-    #"INP",  # flake8-no-pep420
-    #"PIE",  # flake8-pie
-    #"T20",  # flake8-print
-    #"PYI",  # flake8-pyi
-    #"Q",    # flake8-quotes
-    #"RSE",  # flake8-raise
-    #"RET",  # flake8-return
-    #"SLF",  # flake8-self
-    #"SIM",  # flake8-simplify
-    #"TID",  # flake8-tidy-imports
-    #"TCH",  # flake8-type-checking
-    #"INT",  # flake8-gettext
-    #"ARG",  # flake8-unused-argument
-    #"PTH",  # flake8-use-pathlib
-    #"TD",   # flake8-todos
-    #"FIX",  # flake8-fixme
-    #"ERA",  # eradicate
-    #"PGH",  # pygrep-hooks
-    #"PL",   # pylint
-    #"TRY",  # tryceratops
-    #"FLY",  # flynt
-    #"PERF", # perflint
-    #"FURB", # refurb
+    "BLE",   # flake8-blind-except
+    "FBT",   # flake8-boolean-trap
+    "B",     # flake8-bugbear
+    "A",     # flake8-builtins
+    "COM",   # flake8-commas
+    "C4",    # flake8-comprehensions
+    "T10",   # flake8-debugger
+    "EM",    # flake8-errmsg
+    "EXE",   # flake8-executable
+    "FA",    # flake8-future-annotations
+    "ISC",   # flake8-implicit-str-concat
+    "ICN",   # flake8-import-conventions
+    "G",     # flake8-logging-format
+    "INP",   # flake8-no-pep420
+    "PIE",   # flake8-pie
+    #"T20",  # flake8-print TODO (WattsUp) Remove prints
+    "PYI",  # flake8-pyi
+    "Q",    # flake8-quotes
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SLF",  # flake8-self
+    "SLOT", # flake8-slots
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "INT",  # flake8-gettext
+    "ARG",  # flake8-unused-argument
+    "PTH",  # flake8-use-pathlib
+    "TD",   # flake8-todos
+    "ERA",  # eradicate
+    "PGH",  # pygrep-hooks
+    "PL",   # pylint
+    "TRY",  # tryceratops
+    "FLY",  # flynt
+    "PERF", # perflint
 ]
 
 ignore = [
-    "ANN101", # missing type annotation for self
-    "ANN102", # missing type annotation for cls
+    "ANN101",  # missing type annotation for self
+    "ANN102",  # missing type annotation for cls
+    "I001",    # mismatch between ruff and isort
+    "TD003",   # issue links not required for TODOs
+    "PLR0911", # Too many return statements
+    "PLR0912", # Too many branches
+    "PLR0913", # Too many arguments
+    "PLR0915", # Too many statements
 ]
 
 exclude = [
@@ -81,7 +86,7 @@ convention = "google"
 
 [tool.ruff.per-file-ignores]
 "tests/*.py" = [
-    "D100", # Disable missing docstrings in tests
+    "D100",   # Disable missing docstrings in tests
     "D101",
     "D102",
     "D103",
@@ -89,7 +94,22 @@ convention = "google"
     "D105",
     "D106",
     "D107",
+    "SIM117", # Allow nested with statements TODO (WattsUp) fix with 3.9+
+]
+"tools/*.py" = [
+    "INP001",  # Outside of a package
+    "SIM117",  # Allow nested with statements TODO (WattsUp) fix with 3.9+
+    "PLR2004", # Allow magic values
 ]
 
 [tool.ruff.flake8-annotations]
 suppress-dummy-args = true
+
+[tool.ruff.flake8-type-checking]
+runtime-evaluated-base-classes = [
+    "sqlalchemy.orm.DeclarativeBase",
+    "nummus.models.base.Base",
+]
+
+[tool.ruff.isort]
+required-imports = ["from __future__ import annotations"]

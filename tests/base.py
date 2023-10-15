@@ -1,10 +1,12 @@
-import pathlib
+from __future__ import annotations
+
 import shutil
 import string
 import time
 import unittest
 import uuid
 from decimal import Decimal
+from pathlib import Path
 
 import autodict
 import numpy as np
@@ -17,8 +19,8 @@ from tests import TEST_LOG
 
 
 class TestBase(unittest.TestCase):
-    _TEST_ROOT = pathlib.Path.cwd().joinpath(".test").resolve()
-    _DATA_ROOT = pathlib.Path(__file__).resolve().parent.joinpath("data")
+    _TEST_ROOT = Path.cwd().joinpath(".test").resolve()
+    _DATA_ROOT = Path(__file__).resolve().parent.joinpath("data")
     _P_FAIL = 1e-4
     _RNG = np.random.default_rng()
 
@@ -97,25 +99,26 @@ class TestBase(unittest.TestCase):
                 r_v = real[k]
                 self.assertEqualWithinError(t_v, r_v, threshold, msg=f"Key: {k}")
             return
-        elif isinstance(target, list):
+        if isinstance(target, list):
             self.assertIsInstance(real, list, msg)
             self.assertEqual(len(target), len(real), msg)
             for t_v, r_v in zip(target, real):
                 self.assertEqualWithinError(t_v, r_v, threshold, msg)
             return
-        elif isinstance(target, (int, float)):
+        if isinstance(target, (int, float)):
             self.assertIsInstance(real, (int, float), msg)
-            if target == 0.0:
-                error = np.abs(real - target)
-            else:
-                error = np.abs(real / target - 1)
+            error = np.abs(real if target == 0 else (real / target - 1))
             self.assertLessEqual(error, threshold, msg)
         else:
             # Decimals included here since their math should be immune from FP error
             self.assertEqual(target, real, msg)
 
     def assertHTTPRaises(  # noqa: N802
-        self, rc: int, func: t.Callable, *args: t.Any, **kwargs: t.Any
+        self,
+        rc: int,
+        func: t.Callable,
+        *args: t.Any,
+        **kwargs: t.Any,
     ) -> None:
         """Test function raises ProblemException with the matching HTTP return code.
 
@@ -130,7 +133,7 @@ class TestBase(unittest.TestCase):
         e: exceptions.HTTPException = cm.exception
         self.assertEqual(rc, e.code)
 
-    def setUp(self, clean: bool = True) -> None:
+    def setUp(self, *, clean: bool = True) -> None:
         if clean:
             sql.drop_session()
             self._clean_test_root()
@@ -142,7 +145,7 @@ class TestBase(unittest.TestCase):
 
         self._test_start = time.perf_counter()
 
-    def tearDown(self, clean: bool = True) -> None:
+    def tearDown(self, *, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start
         with autodict.JSONAutoDict(TEST_LOG) as d:
             d["methods"][self.id()] = duration
@@ -161,7 +164,7 @@ class TestBase(unittest.TestCase):
             fast_duration: Duration of fast test
         """
         with autodict.JSONAutoDict(TEST_LOG) as d:
-            d["speed"][self.id()] = {
+            d["speed"][self.id_()] = {
                 "slow": slow_duration,
                 "fast": fast_duration,
                 "increase": slow_duration / fast_duration,
@@ -173,14 +176,11 @@ class TestBase(unittest.TestCase):
         cls._CLASS_START = time.perf_counter()
 
         # Change all engines to NullPool so timing isn't an issue
-        sql._ENGINE_ARGS[
-            "poolclass"
-        ] = pool.NullPool  # pylint: disable=protected-access
+        sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # noqa: SLF001
 
     @classmethod
     def tearDownClass(cls) -> None:
         print("]done", flush=True)
-        # time.sleep(10)
         duration = time.perf_counter() - cls._CLASS_START
         with autodict.JSONAutoDict(TEST_LOG) as d:
             d["classes"][f"{cls.__module__}.{cls.__qualname__}"] = duration

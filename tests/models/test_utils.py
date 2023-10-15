@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 
 from nummus import models
@@ -87,12 +89,12 @@ class TestUtils(TestBase):
 
         for _ in range(n_transactions):
             txn = Transaction(
-                account_id=acct.id,
+                account_id=acct.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
             )
-            t_split = TransactionSplit(amount=100, parent=txn, category_id=t_cat.id)
+            t_split = TransactionSplit(amount=100, parent=txn, category_id=t_cat.id_)
             s.add_all((txn, t_split))
         s.commit()
 

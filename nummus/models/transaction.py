@@ -44,21 +44,22 @@ class TransactionSplit(Base):
     amount: t.ORMReal = orm.mapped_column(
         Decimal6,
         sqlalchemy.CheckConstraint(
-            "amount != 0", "transaction_split.amount must be non-zero"
+            "amount != 0",
+            "transaction_split.amount must be non-zero",
         ),
     )
     payee: t.ORMStrOpt
     description: t.ORMStrOpt
     tag: t.ORMStrOpt
 
-    category_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction_category.id"))
+    category_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
-    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id"))
+    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date: t.ORMDate
     locked: t.ORMBool
-    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
+    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
-    asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id"))
+    asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
     _asset_qty_int: t.ORMIntOpt
     _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
     _asset_qty_int_unadjusted: t.ORMIntOpt
@@ -72,10 +73,11 @@ class TransactionSplit(Base):
     @override
     def __setattr__(self, name: str, value: t.Any) -> None:
         if name in ["parent_id", "date", "locked", "account_uuid", "account_id"]:
-            raise PermissionError(
+            msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
             )
+            raise PermissionError(msg)
         super().__setattr__(name, value)
 
     @property
@@ -123,7 +125,8 @@ class TransactionSplit(Base):
         """
         qty = self.asset_quantity_unadjusted
         if qty is None:
-            raise ValueError("Cannot adjust non-asset transaction")
+            msg = "Cannot adjust non-asset transaction"
+            raise ValueError(msg)
         i, f = divmod(qty * multiplier, 1)
         i = int(i)
         self._asset_qty_int = i
@@ -133,16 +136,17 @@ class TransactionSplit(Base):
     def parent(self) -> Transaction:
         """Parent Transaction."""
         s = orm.object_session(self)
-        return s.query(Transaction).where(Transaction.id == self.parent_id).first()
+        return s.query(Transaction).where(Transaction.id_ == self.parent_id).first()
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:
         if not isinstance(parent, Transaction):
-            raise TypeError("TransactionSplit.parent must be of type Transaction")
-        if parent.id is None:
+            msg = "TransactionSplit.parent must be of type Transaction"
+            raise TypeError(msg)
+        if parent.id_ is None:
             self._parent_tmp = parent
             return
-        super().__setattr__("parent_id", parent.id)
+        super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date", parent.date)
         super().__setattr__("locked", parent.locked)
         super().__setattr__("account_id", parent.account_id)
@@ -150,8 +154,8 @@ class TransactionSplit(Base):
 
 @event.listens_for(TransactionSplit, "before_insert")
 def before_insert_transaction_split(
-    mapper: orm.Mapper,  # pylint: disable=unused-argument
-    connection: sqlalchemy.Connection,  # pylint: disable=unused-argument
+    mapper: orm.Mapper,  # noqa: ARG001
+    connection: sqlalchemy.Connection,  # noqa: ARG001
     target: TransactionSplit,
 ) -> None:
     """Handle event before insert of TransactionSplit.
@@ -163,7 +167,7 @@ def before_insert_transaction_split(
     """
     # If TransactionSplit has parent_tmp set, move it to real parent
     if hasattr(target, "_parent_tmp"):
-        target.parent = target._parent_tmp  # pylint: disable=protected-access
+        target.parent = target._parent_tmp  # noqa: SLF001
         delattr(target, "_parent_tmp")
 
 
@@ -185,7 +189,7 @@ class Transaction(Base):
         splits: List of TransactionSplits
     """
 
-    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id"))
+    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     date: t.ORMDate
     amount: t.ORMReal = orm.mapped_column(Decimal6)

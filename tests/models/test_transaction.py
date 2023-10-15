@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 
 import sqlalchemy.exc
@@ -30,7 +32,7 @@ class TestTransaction(TestBase):
         s.commit()
 
         d = {
-            "account_id": acct.id,
+            "account_id": acct.id_,
             "date": datetime.date.today(),
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
@@ -40,7 +42,7 @@ class TestTransaction(TestBase):
         s.add(txn)
         s.commit()
 
-        self.assertEqual(acct.id, txn.account_id)
+        self.assertEqual(acct.id_, txn.account_id)
         self.assertEqual(d["date"], txn.date)
         self.assertEqual(d["amount"], txn.amount)
         self.assertEqual(d["statement"], txn.statement)
@@ -69,7 +71,7 @@ class TestTransactionSplit(TestBase):
         t_cat = categories["Uncategorized"]
 
         d = {
-            "account_id": acct.id,
+            "account_id": acct.id_,
             "date": datetime.date.today(),
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
@@ -82,30 +84,30 @@ class TestTransactionSplit(TestBase):
         d = {
             "amount": self.random_decimal(-1, 1),
             "parent": txn,
-            "category_id": t_cat.id,
+            "category_id": t_cat.id_,
         }
 
         t_split_0 = TransactionSplit(**d)
         s.add(t_split_0)
         s.commit()
         self.assertEqual(t_split_0.parent, txn)
-        self.assertEqual(t_split_0.parent_id, txn.id)
-        self.assertEqual(t_split_0.category_id, t_cat.id)
+        self.assertEqual(t_split_0.parent_id, txn.id_)
+        self.assertEqual(t_split_0.category_id, t_cat.id_)
         self.assertIsNone(t_split_0.asset_id)
         self.assertIsNone(t_split_0.asset_quantity)
         self.assertIsNone(t_split_0.asset_quantity_unadjusted)
         self.assertEqual(t_split_0.amount, d["amount"])
         self.assertEqual(t_split_0.date, txn.date)
         self.assertEqual(t_split_0.locked, txn.locked)
-        self.assertEqual(t_split_0.account_id, acct.id)
+        self.assertEqual(t_split_0.account_id, acct.id_)
 
         d = {
             "amount": self.random_decimal(-1, 0),
             "payee": self.random_string(),
             "description": self.random_string(),
-            "category_id": t_cat.id,
+            "category_id": t_cat.id_,
             "tag": self.random_string(),
-            "asset_id": asset.id,
+            "asset_id": asset.id_,
             "asset_quantity_unadjusted": self.random_decimal(-1, 1, precision=18),
             "parent": txn,
         }
@@ -114,12 +116,13 @@ class TestTransactionSplit(TestBase):
         s.add(t_split_1)
         s.commit()
         self.assertEqual(t_split_1.parent, txn)
-        self.assertEqual(t_split_1.parent_id, txn.id)
-        self.assertEqual(t_split_1.category_id, t_cat.id)
-        self.assertEqual(t_split_1.asset_id, asset.id)
+        self.assertEqual(t_split_1.parent_id, txn.id_)
+        self.assertEqual(t_split_1.category_id, t_cat.id_)
+        self.assertEqual(t_split_1.asset_id, asset.id_)
         self.assertEqual(t_split_1.asset_quantity, d["asset_quantity_unadjusted"])
         self.assertEqual(
-            t_split_1.asset_quantity_unadjusted, d["asset_quantity_unadjusted"]
+            t_split_1.asset_quantity_unadjusted,
+            d["asset_quantity_unadjusted"],
         )
         self.assertEqual(t_split_1.amount, d["amount"])
         self.assertEqual(t_split_1.payee, d["payee"])
@@ -127,7 +130,7 @@ class TestTransactionSplit(TestBase):
         self.assertEqual(t_split_1.tag, d["tag"])
         self.assertEqual(t_split_1.date, txn.date)
         self.assertEqual(t_split_1.locked, txn.locked)
-        self.assertEqual(t_split_1.account_id, acct.id)
+        self.assertEqual(t_split_1.account_id, acct.id_)
 
         # Zero amounts are bad
         t_split_0.amount = 0
@@ -141,7 +144,7 @@ class TestTransactionSplit(TestBase):
         self.assertRaises(TypeError, setattr, t_split_0, "parent", self.random_string())
 
         # Set parent_id directly
-        self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id)
+        self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id_)
 
     def test_asset_quantity(self) -> None:
         s = self.get_session()
@@ -163,7 +166,7 @@ class TestTransactionSplit(TestBase):
 
         qty = self.random_decimal(10, 100, precision=18)
         txn = Transaction(
-            account_id=acct.id,
+            account_id=acct.id_,
             date=today,
             statement=self.random_string(),
             amount=10,
@@ -172,7 +175,7 @@ class TestTransactionSplit(TestBase):
             parent=txn,
             amount=10,
             asset_quantity_unadjusted=qty,
-            category_id=t_cat.id,
+            category_id=t_cat.id_,
         )
         s.add_all((txn, t_split))
         s.commit()

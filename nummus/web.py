@@ -1,9 +1,11 @@
 """Web server for nummus."""
+from __future__ import annotations
 
 import datetime
-import io
-import pathlib
 import sys
+import types
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import flask
 import flask_assets
@@ -15,9 +17,24 @@ from OpenSSL import crypto
 
 from nummus import controllers, portfolio, utils, version
 
+if TYPE_CHECKING:
+    import io
+
 
 class Handler(gevent.pywsgi.WSGIHandler):
     """Custom WSGIHandler, mainly for request formatting."""
+
+    REQ_TIME_BAD = 0.15
+    REQ_TIME_WARN = 0.075
+
+    _HTTP_CODE_COLORS = types.MappingProxyType(
+        {
+            2: Fore.GREEN,
+            3: Fore.CYAN,
+            4: Fore.YELLOW,
+            5: Fore.RED,
+        },
+    )
 
     def format_request(self) -> str:
         """Format request as a single line.
@@ -26,16 +43,13 @@ class Handler(gevent.pywsgi.WSGIHandler):
             [client address] [now] [delta t] [method] [endpoint] [HTTP ver] [len]
         """
         now = datetime.datetime.now().replace(microsecond=0)
-        if self.response_length is None:
-            length = "[len]"
-        else:
-            length = f"{self.response_length}B"
+        length = "[len]" if self.response_length is None else f"{self.response_length}B"
 
         if self.time_finish:
             delta = self.time_finish - self.time_start
-            if delta > 0.15:
+            if delta > self.REQ_TIME_BAD:
                 delta = f"{Fore.RED}{delta:.6f}s{Fore.RESET}"
-            elif delta > 0.075:
+            elif delta > self.REQ_TIME_WARN:
                 delta = f"{Fore.YELLOW}{delta:.6f}s{Fore.RESET}"
             else:
                 delta = f"{Fore.GREEN}{delta:.6f}s{Fore.RESET}"
@@ -82,14 +96,9 @@ class Handler(gevent.pywsgi.WSGIHandler):
         code = self.code
         if code is None:
             code = "[status]"
-        elif 200 <= code < 300:
-            code = f"{Fore.GREEN}{code}{Fore.RESET}"
-        elif 300 <= code < 400:
-            code = f"{Fore.CYAN}{code}{Fore.RESET}"
-        elif 400 <= code < 500:
-            code = f"{Fore.YELLOW}{code}{Fore.RESET}"
-        elif 500 <= code < 600:
-            code = f"{Fore.RED}{code}{Fore.RESET}"
+        else:
+            c = self._HTTP_CODE_COLORS.get(code // 100, Fore.MAGENTA)
+            code = f"{c}{code}{Fore.RESET}"
 
         return (
             f"{client_address} [{now}] {delta} "
@@ -100,18 +109,13 @@ class Handler(gevent.pywsgi.WSGIHandler):
 class TailwindCSSFilter(webassets.filter.Filter):
     """webassets Filter for running tailwindcss over."""
 
-    def output(
-        self,
-        _in: io.StringIO,  # pylint: disable=unused-argument,invalid-name
-        out: io.StringIO,
-        **_,
-    ) -> None:
+    def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
         """Run filter and generate output file.
 
         Args:
             out: Output buffer
         """
-        path_web = pathlib.Path(__file__).parent.resolve()
+        path_web = Path(__file__).parent.resolve()
         path_config = path_web.joinpath("static", "tailwind.config.js")
         path_in = path_web.joinpath("static", "src", "main.css")
 
@@ -124,7 +128,12 @@ class Server:
     """HTTP server that serves a nummus Portfolio."""
 
     def __init__(
-        self, p: portfolio.Portfolio, host: str, port: int, debug: bool
+        self,
+        p: portfolio.Portfolio,
+        host: str,
+        port: int,
+        *,
+        debug: bool = False,
     ) -> None:
         """Initialize Server.
 
@@ -157,7 +166,9 @@ class Server:
         env_assets = flask_assets.Environment(self._app)
 
         bundle_css = flask_assets.Bundle(
-            "src/main.css", output="dist/main.css", filters=(TailwindCSSFilter,)
+            "src/main.css",
+            output="dist/main.css",
+            filters=(TailwindCSSFilter,),
         )
         env_assets.register("css", bundle_css)
         bundle_css.build()
@@ -211,11 +222,11 @@ class Server:
             if self._server.started:
                 self._server.stop()
         finally:
-            now = datetime.datetime.utcnow().isoformat(timespec="seconds")
-            print(f"{Fore.YELLOW}nummus web shutdown at {now}Z")
+            now = datetime.datetime.now().isoformat(timespec="seconds")
+            print(f"{Fore.YELLOW}nummus web shutdown at {now}")
 
     @staticmethod
-    def generate_ssl_cert(path_cert: pathlib.Path, path_key: pathlib.Path) -> None:
+    def generate_ssl_cert(path_cert: Path, path_key: Path) -> None:
         """Generate a self-signed SSL certificate.
 
         Args:
@@ -229,13 +240,12 @@ class Server:
         cert.set_version(2)  # Version x509v3 for SAN
         cert.get_subject().CN = "localhost"
         san_list = ["DNS:localhost"]
-        cert.add_extensions(
-            [
-                crypto.X509Extension(
-                    b"subjectAltName", False, ", ".join(san_list).encode()
-                )
-            ]
+        ext = crypto.X509Extension(
+            type_name=b"subjectAltName",
+            critical=False,
+            value=", ".join(san_list).encode(),
         )
+        cert.add_extensions([ext])
         cert.set_serial_number(0)
         cert.gmtime_adj_notBefore(0)
         cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)  # 10 yrs in seconds
@@ -243,16 +253,16 @@ class Server:
         cert.set_pubkey(key)
         cert.sign(key, "sha512")
 
-        with open(path_cert, "wb") as file:
+        with path_cert.open("wb") as file:
             file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
-        with open(path_key, "wb") as file:
+        with path_key.open("wb") as file:
             file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
 
         path_cert.chmod(0o600)
         path_key.chmod(0o600)
 
     @staticmethod
-    def is_ssl_cert_self_signed(path_cert: pathlib.Path) -> bool:
+    def is_ssl_cert_self_signed(path_cert: Path) -> bool:
         """Check if SSL certificate is self-signed.
 
         Args:
@@ -261,7 +271,7 @@ class Server:
         Returns:
             True if CN=localhost, False otherwise
         """
-        with open(path_cert, "rb") as file:
+        with path_cert.open("rb") as file:
             buf = file.read()
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, buf)
         return cert.get_subject().CN == "localhost"

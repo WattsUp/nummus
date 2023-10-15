@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from nummus import importers
 from nummus.importers import base
 from tests import base as test_base
@@ -5,7 +7,7 @@ from tests import base as test_base
 
 class Derived(base.TransactionImporter):
     @classmethod
-    def is_importable(cls, name: str, buf: bytes) -> bool:
+    def is_importable(cls, name: str, buf: bytes) -> bool:  # noqa: ARG003
         return False
 
     def run(self) -> base.TxnDicts:
@@ -17,14 +19,14 @@ class TestCSVTransactionImporter(test_base.TestBase):
         self.assertRaises(ValueError, Derived)
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
-        with open(path, "rb") as file:
+        with path.open("rb") as file:
             buf = file.read()
 
         i = Derived(buf=buf)
-        self.assertEqual(buf, i._buf)  # pylint: disable=protected-access
+        self.assertEqual(buf, i._buf)  # noqa: SLF001
 
         i = Derived(path=path)
-        self.assertEqual(buf, i._buf)  # pylint: disable=protected-access
+        self.assertEqual(buf, i._buf)  # noqa: SLF001
 
     def test_get_importer(self) -> None:
         files = {

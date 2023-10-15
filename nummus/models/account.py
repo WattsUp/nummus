@@ -61,10 +61,8 @@ class Account(Base):
         """Date of first Transaction."""
         s = orm.object_session(self)
         query = s.query(Transaction)
-        query = query.with_entities(
-            sqlalchemy.func.min(Transaction.date)
-        )  # pylint: disable=not-callable
-        query = query.where(Transaction.account_id == self.id)
+        query = query.with_entities(sqlalchemy.func.min(Transaction.date))
+        query = query.where(Transaction.account_id == self.id_)
         return query.scalar()
 
     @property
@@ -72,14 +70,14 @@ class Account(Base):
         """Date of latest Transaction."""
         s = orm.object_session(self)
         query = s.query(Transaction)
-        query = query.with_entities(
-            sqlalchemy.func.max(Transaction.date)
-        )  # pylint: disable=not-callable
-        query = query.where(Transaction.account_id == self.id)
+        query = query.with_entities(sqlalchemy.func.max(Transaction.date))
+        query = query.where(Transaction.account_id == self.id_)
         return query.scalar()
 
     def get_value(
-        self, start: t.Date, end: t.Date
+        self,
+        start: t.Date,
+        end: t.Date,
     ) -> t.Tuple[t.Dates, t.Reals, t.DictIntReals]:
         """Get the value of Account from start to end date.
 
@@ -89,16 +87,14 @@ class Account(Base):
 
         Returns:
             Also returns value by Asset (possibly empty for non-investment accounts)
-            List[dates], list[values], dict{Asset.id: list[values]}
+            List[dates], list[values], dict{Asset.id_: list[values]}
         """
         s = orm.object_session(self)
 
         # Get Account value on start date
         # It is callable, sum returns a generator type
-        query = s.query(
-            sqlalchemy.func.sum(TransactionSplit.amount)
-        )  # pylint: disable=not-callable
-        query = query.where(TransactionSplit.account_id == self.id)
+        query = s.query(sqlalchemy.func.sum(TransactionSplit.amount))
+        query = query.where(TransactionSplit.account_id == self.id_)
         query = query.where(TransactionSplit.date <= start)
         iv = query.scalar()
         current_cash = iv or Decimal(0)
@@ -112,10 +108,10 @@ class Account(Base):
         query = s.query(TransactionSplit)
         query = query.with_entities(
             TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-            TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
         )
-        query = query.where(TransactionSplit.account_id == self.id)
+        query = query.where(TransactionSplit.account_id == self.id_)
         query = query.where(TransactionSplit.asset_id.is_not(None))
         query = query.where(TransactionSplit.date <= start)
         for a_id, qty_int, qty_frac in query.all():
@@ -146,10 +142,10 @@ class Account(Base):
                 TransactionSplit.date,
                 TransactionSplit.amount,
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-                TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
             )
-            query = query.where(TransactionSplit.account_id == self.id)
+            query = query.where(TransactionSplit.account_id == self.id_)
             query = query.where(TransactionSplit.date <= end)
             query = query.where(TransactionSplit.date > start)
             query = query.order_by(TransactionSplit.date)
@@ -160,9 +156,7 @@ class Account(Base):
                 a_id: int
                 qty_int: int
                 qty_frac: Decimal
-                # Don't need thanks SQL filters
-                # if t_split.date > end:
-                #   continue
+
                 while date < t_date:
                     date = next_day(date)
 
@@ -186,13 +180,12 @@ class Account(Base):
         # Get Asset objects and convert qty to value
         value_assets: t.DictIntReals = {}
         query = s.query(Asset)
-        query = query.where(Asset.id.in_(qty_assets.keys()))
+        query = query.where(Asset.id_.in_(qty_assets.keys()))
         for a in query.all():
-            qty = qty_assets[a.id]
-            # Value = quantity * price
+            qty = qty_assets[a.id_]
             _, price = a.get_value(start, end)
             a_values = [round(p * q, 6) for p, q in zip(price, qty)]
-            value_assets[a.id] = a_values
+            value_assets[a.id_] = a_values
 
         # Sum with cash
         values = [sum(x) for x in zip(cash, *value_assets.values())]
@@ -218,7 +211,7 @@ class Account(Base):
             ids: Limit results to specific Assets by ID
 
         Returns:
-            (List[dates], dict{Account.id: list[values]})
+            (List[dates], dict{Account.id_: list[values]})
         """
         accounts = Account.map_uuid(s)
         current_cash: t.DictIntReal = {acct_id: Decimal(0) for acct_id in accounts}
@@ -235,8 +228,9 @@ class Account(Base):
         # Get Account value on start date
         query = s.query(TransactionSplit)
         query = query.with_entities(
-            TransactionSplit.account_id, sqlalchemy.func.sum(TransactionSplit.amount)
-        )  # pylint: disable=not-callable
+            TransactionSplit.account_id,
+            sqlalchemy.func.sum(TransactionSplit.amount),
+        )
         query = query.where(TransactionSplit.date <= start)
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
@@ -259,8 +253,8 @@ class Account(Base):
         query = query.with_entities(
             TransactionSplit.account_id,
             TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-            TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
         )
         query = query.where(TransactionSplit.asset_id.is_not(None))
         query = query.where(TransactionSplit.date <= start)
@@ -297,8 +291,8 @@ class Account(Base):
                 TransactionSplit.date,
                 TransactionSplit.amount,
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-                TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
             )
             query = query.where(TransactionSplit.date <= end)
             query = query.where(TransactionSplit.date > start)
@@ -311,9 +305,7 @@ class Account(Base):
                 a_id: int
                 qty_int: int
                 qty_frac: Decimal
-                # Don't need thanks SQL filters
-                # if t_split.date > end:
-                #   continue
+
                 while date < t_date:
                     date = next_day(date)
 
@@ -357,7 +349,9 @@ class Account(Base):
         return dates, acct_values
 
     def get_cash_flow(
-        self, start: t.Date, end: t.Date
+        self,
+        start: t.Date,
+        end: t.Date,
     ) -> t.Tuple[t.Dates, t.DictIntReal]:
         """Get the cash_flow of Account from start to end date.
 
@@ -378,7 +372,7 @@ class Account(Base):
 
         dates: t.Dates = []
         categories: t.DictIntReals = {
-            cat_id: [] for cat_id, in s.query(TransactionCategory.id).all()
+            cat_id: [] for cat_id, in s.query(TransactionCategory.id_).all()
         }
 
         daily_categories: t.DictIntReal = {cat_id: 0 for cat_id in categories}
@@ -386,9 +380,11 @@ class Account(Base):
         # Transactions between start and end
         query = s.query(TransactionSplit)
         query = query.with_entities(
-            TransactionSplit.date, TransactionSplit.amount, TransactionSplit.category_id
+            TransactionSplit.date,
+            TransactionSplit.amount,
+            TransactionSplit.category_id,
         )
-        query = query.where(TransactionSplit.account_id == self.id)
+        query = query.where(TransactionSplit.account_id == self.id_)
         query = query.where(TransactionSplit.date <= end)
         query = query.where(TransactionSplit.date >= start)
         query = query.order_by(TransactionSplit.date)
@@ -397,9 +393,7 @@ class Account(Base):
             t_date: datetime.date
             amount: Decimal
             category_id: int
-            # Don't need thanks SQL filters
-            # if t_split.date > end:
-            #   continue
+
             while date < t_date:
                 dates.append(date)
                 # Append and clear daily
@@ -421,7 +415,9 @@ class Account(Base):
         return dates, categories
 
     def get_asset_qty(
-        self, start: t.Date, end: t.Date
+        self,
+        start: t.Date,
+        end: t.Date,
     ) -> t.Tuple[t.Dates, t.DictIntReals]:
         """Get the quantity of Assets held from start to end date.
 
@@ -430,7 +426,7 @@ class Account(Base):
             end: Last date to evaluate (inclusive)
 
         Returns:
-            List[dates], dict{Asset.id: list[values]}
+            List[dates], dict{Asset.id_: list[values]}
         """
         s = orm.object_session(self)
 
@@ -442,10 +438,10 @@ class Account(Base):
         query = s.query(TransactionSplit)
         query = query.with_entities(
             TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-            TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
         )
-        query = query.where(TransactionSplit.account_id == self.id)
+        query = query.where(TransactionSplit.account_id == self.id_)
         query = query.where(TransactionSplit.asset_id.is_not(None))
         query = query.where(TransactionSplit.date <= start)
         for a_id, qty_int, qty_frac in query.all():
@@ -468,10 +464,10 @@ class Account(Base):
         query = query.with_entities(
             TransactionSplit.date,
             TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # pylint: disable=protected-access
-            TransactionSplit._asset_qty_frac,  # pylint: disable=protected-access
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
         )
-        query = query.where(TransactionSplit.account_id == self.id)
+        query = query.where(TransactionSplit.account_id == self.id_)
         query = query.where(TransactionSplit.date <= end)
         query = query.where(TransactionSplit.date > start)
         query = query.where(TransactionSplit.asset_id.is_not(None))
@@ -482,9 +478,7 @@ class Account(Base):
             a_id: int
             qty_int: int
             qty_frac: Decimal
-            # Don't need thanks SQL filters
-            # if t_split.date > end:
-            #   continue
+
             while date < t_date:
                 for k, v in current_qty_assets.items():
                     qty_assets[k].append(v)

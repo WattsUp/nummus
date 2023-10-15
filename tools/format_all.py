@@ -1,8 +1,9 @@
 """Run formatters and trim whitespace on all files."""
+from __future__ import annotations
 
-import pathlib
 import subprocess
 import sys
+from pathlib import Path
 
 import colorama
 from colorama import Fore
@@ -14,15 +15,16 @@ def main() -> None:
     """Main program entry."""
     check = "--check" in sys.argv
 
-    cwd = pathlib.Path(__file__).parent.parent
+    cwd = Path(__file__).parent.parent
 
     # Get a list of files
-    files = []
+    files: list[Path] = []
     folders = ["nummus", "tests", "tools"]
     for folder in folders:
         path = cwd.joinpath(folder)
         if not path.is_dir():
-            raise TypeError(f"{path} is not a folder")
+            msg = f"{path} is not a folder"
+            raise TypeError(msg)
         files.extend(path.rglob("**/*.py"))
     files = [f for f in files if "data" not in str(f)]
 
@@ -54,7 +56,7 @@ def main() -> None:
     # Normalize line endings
     for f in files:
         # Do binary to normalize line endings to LF
-        with open(f, "rb") as file:
+        with f.open("rb") as file:
             buf = file.read()
 
         lines = buf.splitlines()
@@ -67,7 +69,7 @@ def main() -> None:
         if check:
             print(f"ERROR: {f} has improper line endings")
             continue
-        with open(f, "wb") as file:
+        with f.open("wb") as file:
             file.write(buf_trimmed)
         print(f"{Fore.GREEN}Normalized {f} line endings")
 

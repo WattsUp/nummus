@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from nummus import models
 from nummus.models import TransactionCategory, TransactionCategoryGroup
 from tests.base import TestBase
@@ -45,13 +47,13 @@ class TestTransactionCategory(TestBase):
 
         query = s.query(TransactionCategory)
         query = query.where(
-            TransactionCategory.group == TransactionCategoryGroup.INCOME
+            TransactionCategory.group == TransactionCategoryGroup.INCOME,
         )
         self.assertEqual(n_income, query.count())
 
         query = s.query(TransactionCategory)
         query = query.where(
-            TransactionCategory.group == TransactionCategoryGroup.EXPENSE
+            TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
         )
         self.assertEqual(n_expense, query.count())
 

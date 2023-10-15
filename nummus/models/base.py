@@ -29,18 +29,19 @@ class Base(orm.DeclarativeBase):
     def __tablename__(self) -> str:
         return utils.camel_to_snake(self.__name__)
 
-    id: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
+    id_: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
     # Could be better with storing a uuid as a 16B int but SQLite doesn't have
     # that large of integers
     uuid: t.ORMStr = orm.mapped_column(
-        sqlalchemy.String(36), default=lambda: str(uuid.uuid4())
+        sqlalchemy.String(36),
+        default=lambda: str(uuid.uuid4()),
     )
 
     @override
     def __repr__(self) -> str:
         try:
-            return f"<{self.__class__.__name__} id={self.id} uuid={self.uuid}>"
+            return f"<{self.__class__.__name__} id={self.id_} uuid={self.uuid}>"
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
@@ -77,7 +78,7 @@ class Base(orm.DeclarativeBase):
             Dictionary {id: uuid}
         """
         query = s.query(cls)
-        query = query.with_entities(cls.id, cls.uuid)
+        query = query.with_entities(cls.id_, cls.uuid)
         return dict(query.all())
 
     @classmethod
@@ -94,10 +95,11 @@ class Base(orm.DeclarativeBase):
             KeyError if model does not have name property
         """
         if not hasattr(cls, "name"):
-            raise KeyError(f"{cls} does not have name column")
+            msg = f"{cls} does not have name column"
+            raise KeyError(msg)
 
         query = s.query(cls)
-        query = query.with_entities(cls.id, cls.name)
+        query = query.with_entities(cls.id_, cls.name)
         return dict(query.all())
 
     def validate_strings(self, key: str, field: str) -> str:
@@ -115,10 +117,11 @@ class Base(orm.DeclarativeBase):
         """
         if field in [None, "", "[blank]"]:
             return None
-        if len(field) < 3:
+        if len(field) < utils.MIN_STR_LEN:
             table: str = self.__tablename__
             table = table.replace("_", " ").capitalize()
-            raise ValueError(f"{table} {key} must be at least 3 characters long")
+            msg = f"{table} {key} must be at least {utils.MIN_STR_LEN} characters long"
+            raise ValueError(msg)
         return field
 
 
@@ -149,7 +152,8 @@ class BaseEnum(enum.Enum):
         # LUT of common strings to the matching enum
         res = cls._lut().get(s)
         if res is None:
-            raise ValueError(f"String not found in {cls.__name__}: {s}")
+            msg = f"String not found in {cls.__name__}: {s}"
+            raise ValueError(msg)
         return res
 
     @classmethod

@@ -1,5 +1,7 @@
 """Budget model for storing an allocation of expenses per month."""
 
+from __future__ import annotations
+
 import sqlalchemy
 from sqlalchemy import orm
 
@@ -23,6 +25,7 @@ class Budget(Base):
     amount: t.ORMReal = orm.mapped_column(
         Decimal6,
         sqlalchemy.CheckConstraint(
-            "amount <= 0", "budget.amount must be zero or negative"
+            "amount <= 0",
+            "budget.amount must be zero or negative",
         ),
     )

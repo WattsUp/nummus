@@ -1,5 +1,7 @@
 """Transaction controllers."""
 
+from __future__ import annotations
+
 import datetime
 from decimal import Decimal
 
@@ -122,10 +124,8 @@ def ctx_options(
     for (name,) in query.with_entities(entities[field]).distinct():
         if name is None:
             continue
-        if id_mapping is not None:
-            name = id_mapping[name]
         item = {
-            "name": name,
+            "name": id_mapping[name] if id_mapping else name,
             "checked": name in selected,
             "hidden": False,
             "score": 0,
@@ -134,11 +134,14 @@ def ctx_options(
     if search_str not in [None, ""]:
         names = {i: item["name"] for i, item in enumerate(options_)}
         extracted = process.extract(
-            search_str, names, limit=None, processor=lambda s: s.lower()
+            search_str,
+            names,
+            limit=None,
+            processor=lambda s: s.lower(),
         )
         for _, score, i in extracted:
             options_[i]["score"] = score
-            options_[i]["hidden"] = score < 60
+            options_[i]["hidden"] = score < utils.SEARCH_THRESHOLD
     if field in ["payee", "tag"]:
         name = "[blank]"
         item = {
@@ -214,7 +217,7 @@ def ctx_table() -> t.DictStr:
                 selected_payees.remove("[blank]")
                 query = query.where(
                     TransactionSplit.payee.in_(selected_payees)
-                    | TransactionSplit.payee.is_(None)
+                    | TransactionSplit.payee.is_(None),
                 )
             except ValueError:
                 query = query.where(TransactionSplit.payee.in_(selected_payees))
@@ -232,7 +235,7 @@ def ctx_table() -> t.DictStr:
                 selected_tags.remove("[blank]")
                 query = query.where(
                     TransactionSplit.tag.in_(selected_tags)
-                    | TransactionSplit.tag.is_(None)
+                    | TransactionSplit.tag.is_(None),
                 )
             except ValueError:
                 query = query.where(TransactionSplit.tag.in_(selected_tags))
@@ -245,17 +248,13 @@ def ctx_table() -> t.DictStr:
 
         page, count, offset_next = paginate(query, page_len, offset)
 
-        query = query.with_entities(
-            sqlalchemy.func.sum(TransactionSplit.amount)
-        )  # pylint: disable=not-callable
+        query = query.with_entities(sqlalchemy.func.sum(TransactionSplit.amount))
         query_total = query.scalar() or Decimal(0)
 
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(
-                sqlalchemy.func.min(TransactionSplit.date)
-            )  # pylint: disable=not-callable
+            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
             start = query.scalar() or datetime.date(1970, 1, 1)
 
         transactions: t.List[t.DictAny] = []
@@ -294,7 +293,9 @@ def ctx_table() -> t.DictStr:
 
 
 def ctx_split(
-    t_split: TransactionSplit, accounts: t.DictIntStr, categories: t.DictIntStr
+    t_split: TransactionSplit,
+    accounts: t.DictIntStr,
+    categories: t.DictIntStr,
 ) -> t.DictStr:
     """Get the context to build the transaction edit dialog.
 
@@ -386,10 +387,12 @@ def edit(path_uuid: str) -> str:
             amount = form.getlist("amount", utils.parse_real)
 
             if sum(filter(None, amount)) != parent.amount:
-                raise ValueError("Non-zero remaining amount to be assigned")
+                msg = "Non-zero remaining amount to be assigned"
+                return common.error(msg)
 
             if len(payee) < 1:
-                raise ValueError("Transaction must have at least one split")
+                msg = "Transaction must have at least one split"
+                return common.error(msg)
 
             splits = parent.splits
 
@@ -451,7 +454,8 @@ def split(path_uuid: str) -> str:
         amount.append(None)
     elif len(payee) == 1:  # pragma: no cover
         # Delete button not available when only one split
-        raise ValueError("Transaction must have at least one split")
+        msg = "Transaction must have at least one split"
+        raise ValueError(msg)
     else:
         i = int(flask.request.args["index"]) - 1
 

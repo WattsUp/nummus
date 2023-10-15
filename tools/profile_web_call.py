@@ -1,22 +1,25 @@
 """Run viztracer profiler on a web call."""
+from __future__ import annotations
 
 import argparse
 import io
-import os
-import pathlib
 import sys
 import time
 import warnings
+from pathlib import Path
+from typing import TYPE_CHECKING
 from unittest import mock
 
 import colorama
 import viztracer
-import werkzeug
 from colorama import Fore
 
 from nummus import commands
 from nummus import custom_types as t
 from nummus import web
+
+if TYPE_CHECKING:
+    import werkzeug
 
 colorama.init(autoreset=True)
 
@@ -32,7 +35,7 @@ def main(command_line: t.Strings = None) -> int:
         non-zero on failure
     """
     desc = "Run viztracer profiler on a web call, only supports GET"
-    home = pathlib.Path(os.path.expanduser("~")).resolve()
+    home = Path("~").expanduser()
     default_path = str(home.joinpath(".nummus", "portfolio.db"))
     parser = argparse.ArgumentParser(prog="nummus", description=desc)
     parser.add_argument(
@@ -41,11 +44,13 @@ def main(command_line: t.Strings = None) -> int:
         metavar="PATH",
         default=default_path,
         help="specify portfolio.db location",
+        type=Path,
     )
     parser.add_argument(
         "--pass-file",
         metavar="PATH",
-        help="specify password file location, " "omit will prompt when necessary",
+        help="specify password file location, omit will prompt when necessary",
+        type=Path,
     )
     parser.add_argument(
         "--output-file",
@@ -53,12 +58,14 @@ def main(command_line: t.Strings = None) -> int:
         metavar="PATH",
         default="result.json",
         help="output file path. End with .json or .html or .gz",
+        type=Path,
     )
     parser.add_argument(
         "--save-response",
         "-s",
         metavar="PATH",
         help="specify output file location to save web response",
+        type=Path,
     )
     parser.add_argument(
         "--no-call-twice",
@@ -76,10 +83,10 @@ def main(command_line: t.Strings = None) -> int:
 
     args = parser.parse_args(args=command_line)
 
-    path_db: str = args.portfolio
-    path_password: str = args.pass_file
-    path_response: str = args.save_response
-    output_file: str = args.output_file
+    path_db: Path = args.portfolio
+    path_password: Path = args.pass_file
+    path_response: Path = args.save_response
+    output_file: Path = args.output_file
     url: str = args.url
     no_call_twice: bool = args.no_call_twice
 
@@ -87,8 +94,8 @@ def main(command_line: t.Strings = None) -> int:
     if p is None:
         return 1
 
-    s = web.Server(p, "127.0.0.1", 8080, False)
-    flask_app = s._app  # pylint: disable=protected-access
+    s = web.Server(p, "127.0.0.1", 8080, debug=False)
+    flask_app = s._app  # noqa: SLF001
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         client = flask_app.test_client()
@@ -115,7 +122,7 @@ def main(command_line: t.Strings = None) -> int:
         print(f"{Fore.CYAN}Reply took {duration:.6}s")
 
         if path_response is not None:
-            with open(path_response, "wb") as file:
+            with path_response.open("wb") as file:
                 file.write(response.get_data())
 
         if response.status_code == 200:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import shutil
 from unittest import mock
@@ -32,13 +34,13 @@ class TestCommands(TestBase):
             path_config = path_db.with_suffix(".config")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
-            with open(path_password, "w", encoding="utf-8") as file:
+            with path_password.open("w", encoding="utf-8") as file:
                 file.write(f"  {key}  \n\n")
 
             # Create unencrypted
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, False, True)
+                rc = commands.create(path_db, None, force=False, no_encrypt=True)
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
             self.assertEqual(fake_stdout, target)
@@ -47,7 +49,7 @@ class TestCommands(TestBase):
             self.assertTrue(path_config.exists(), "Config does not exist")
 
             # Check portfolio is unencrypted
-            with open(path_db, "rb") as file:
+            with path_db.open("rb") as file:
                 buf = file.read()
                 target = b"SQLite format 3"
                 self.assertEqual(target, buf[: len(target)])
@@ -56,7 +58,7 @@ class TestCommands(TestBase):
             # Fail to overwrite
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, False, True)
+                rc = commands.create(path_db, None, force=False, no_encrypt=True)
             fake_stdout = fake_stdout.getvalue()
             self.assertIn(f"Cannot overwrite portfolio at {path_db}", fake_stdout)
             self.assertNotEqual(rc, 0)
@@ -64,7 +66,7 @@ class TestCommands(TestBase):
             # Overwrite
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, True, True)
+                rc = commands.create(path_db, None, force=True, no_encrypt=True)
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
             self.assertEqual(fake_stdout, target)
@@ -99,13 +101,18 @@ class TestCommands(TestBase):
             path_config = path_db.with_suffix(".config")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
-            with open(path_password, "w", encoding="utf-8") as file:
+            with path_password.open("w", encoding="utf-8") as file:
                 file.write(f"  {key}  \n\n")
 
             # Create encrypted
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, path_password, False, False)
+                rc = commands.create(
+                    path_db,
+                    path_password,
+                    force=False,
+                    no_encrypt=False,
+                )
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Portfolio created at {path_db}\n"
             self.assertEqual(fake_stdout, target)
@@ -122,8 +129,8 @@ class TestCommands(TestBase):
                 rc = commands.create(
                     path_db,
                     path_password.with_suffix(".nonexistent"),
-                    True,
-                    False,
+                    force=True,
+                    no_encrypt=False,
                 )
             fake_stdout = fake_stdout.getvalue()
             target = (
@@ -142,7 +149,7 @@ class TestCommands(TestBase):
             # Create encrypted
             queue = [self.random_string(7), key, key + "typo", key, key]
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, True, False)
+                rc = commands.create(path_db, None, force=True, no_encrypt=False)
             fake_stdout = fake_stdout.getvalue()
             target = (
                 "Please enter password: \n"
@@ -165,7 +172,7 @@ class TestCommands(TestBase):
             # Cancel on first prompt
             queue = [None]
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, True, False)
+                rc = commands.create(path_db, None, force=True, no_encrypt=False)
             fake_stdout = fake_stdout.getvalue()
             target = "Please enter password: \n"
             self.assertEqual(fake_stdout, target)
@@ -174,9 +181,9 @@ class TestCommands(TestBase):
             # Cancel on second prompt
             queue = [key, None]
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = commands.create(path_db, None, True, False)
+                rc = commands.create(path_db, None, force=True, no_encrypt=False)
             fake_stdout = fake_stdout.getvalue()
-            target = "Please enter password: \n" "Please confirm password: \n"
+            target = "Please enter password: \nPlease confirm password: \n"
             self.assertEqual(fake_stdout, target)
             self.assertNotEqual(rc, 0)
 
@@ -216,7 +223,7 @@ class TestCommands(TestBase):
 
             # Create and unlock unencrypted Portfolio
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                commands.create(path_db, None, False, True)
+                commands.create(path_db, None, force=False, no_encrypt=True)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 p = commands.unlock(path_db, None)
             self.assertIsNotNone(p)
@@ -254,10 +261,11 @@ class TestCommands(TestBase):
             key = self.random_string()
             queue = [key, key]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                commands.create(path_db, None, True, False)
+                commands.create(path_db, None, force=True, no_encrypt=False)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
             self.assertTrue(
-                portfolio.Portfolio.is_encrypted(path_db), "Portfolio is not encrypted"
+                portfolio.Portfolio.is_encrypted(path_db),
+                "Portfolio is not encrypted",
             )
 
             # Password file does not exist
@@ -269,11 +277,11 @@ class TestCommands(TestBase):
             self.assertIsNotNone(p)
 
             fake_stdout = fake_stdout.getvalue()
-            target = "Please enter password: \n" f"{Fore.GREEN}Portfolio is unlocked\n"
+            target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
             self.assertEqual(target, fake_stdout)
 
             # Password file does exist
-            with open(path_password, "w", encoding="utf-8") as file:
+            with path_password.open("w", encoding="utf-8") as file:
                 file.write(f"{key}\n")
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -285,7 +293,7 @@ class TestCommands(TestBase):
             self.assertEqual(target, fake_stdout)
 
             # Password file does exist but incorrect
-            with open(path_password, "w", encoding="utf-8") as file:
+            with path_password.open("w", encoding="utf-8") as file:
                 file.write(f"not the {key}\n")
             queue = []
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -303,7 +311,7 @@ class TestCommands(TestBase):
             self.assertIsNotNone(p)
 
             fake_stdout = fake_stdout.getvalue()
-            target = "Please enter password: \n" f"{Fore.GREEN}Portfolio is unlocked\n"
+            target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
             self.assertEqual(target, fake_stdout)
 
             # Cancel entry
@@ -341,7 +349,7 @@ class TestCommands(TestBase):
     def test_import_files(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path_db, None, False, True)
+            commands.create(path_db, None, force=False, no_encrypt=True)
         p = portfolio.Portfolio(path_db, None)
 
         # Create Accounts and Assets
@@ -434,7 +442,7 @@ class TestCommands(TestBase):
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup = path_db.with_suffix(".backup1.tar.gz")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path_db, None, False, True)
+            commands.create(path_db, None, force=False, no_encrypt=True)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
@@ -479,7 +487,7 @@ class TestCommands(TestBase):
         path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
         path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.create(path_db, None, False, True)
+            commands.create(path_db, None, force=False, no_encrypt=True)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 

@@ -1,14 +1,19 @@
 """Account controllers."""
 
+from __future__ import annotations
+
 import datetime
+from typing import TYPE_CHECKING
 
 import flask
 import sqlalchemy.exc
 
-from nummus import custom_types as t
 from nummus import portfolio, web_utils
 from nummus.controllers import common
 from nummus.models import Account, AccountCategory
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
 
 
 def edit(path_uuid: str) -> str:
@@ -50,7 +55,8 @@ def edit(path_uuid: str) -> str:
 
         try:
             if closed and v != 0:
-                raise ValueError("Cannot close Account with non-zero balance")
+                msg = "Cannot close Account with non-zero balance"
+                return common.error(msg)
 
             # Make the changes
             acct.institution = institution
@@ -65,5 +71,5 @@ def edit(path_uuid: str) -> str:
 
 
 ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
-    "/h/accounts/a/<path:path_uuid>/edit": (edit, ["GET", "POST"])
+    "/h/accounts/a/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
 }
