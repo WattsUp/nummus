@@ -17,6 +17,22 @@ def main() -> None:
 
     cwd = Path(__file__).parent.parent
 
+    # Sort imports with isort
+    args = ["isort", "-j", "-1", "."]
+    if check:
+        args.append("--check")
+    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
+    for line in stdout.splitlines():
+        print(line)
+
+    # Format with black
+    args = ["black", "-W", "4", "."]
+    if check:
+        args.append("--check")
+    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
+    for line in stdout.splitlines():
+        print(line)
+
     # Get a list of files
     files: list[Path] = []
     folders = ["nummus", "tests", "tools"]
@@ -27,31 +43,6 @@ def main() -> None:
             raise TypeError(msg)
         files.extend(path.rglob("**/*.py"))
     files = [f for f in files if "data" not in str(f)]
-
-    # Sort imports with isort
-    args = [
-        "isort",
-        # "--profile",
-        # "black",
-        # "--force-alphabetical-sort-within-sections",
-        # "--float-to-top",
-        "-j",
-        "-1",
-        *files,
-    ]
-    if check:
-        args.append("--check")
-    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
-    for line in stdout.splitlines():
-        print(line)
-
-    # Format with black
-    args = ["black", "-W", "4", *files]
-    if check:
-        args.append("--check")
-    stdout = subprocess.check_output(args, cwd=cwd).decode()  # noqa: S603
-    for line in stdout.splitlines():
-        print(line)
 
     # Normalize line endings
     for f in files:
