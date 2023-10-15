@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from nummus import custom_types as t
     from nummus.models.base import Base
 
-_SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
+_SEARCH_PROPERTIES: dict[type[Base], t.Strings] = {
     Account: ["name", "institution"],
     Asset: ["name", "description", "unit", "tag"],
     TransactionSplit: ["payee", "description", "tag"],
@@ -26,7 +26,7 @@ _SEARCH_PROPERTIES: t.Dict[t.Type[Base], t.Strings] = {
 
 def search(
     query: orm.Query[Base],
-    cls: t.Type[Base],
+    cls: type[Base],
     search_str: str,
 ) -> orm.Query[Base]:
     """Perform a fuzzy search and return matches.
@@ -44,9 +44,8 @@ def search(
         return query
 
     # Only fetch the searchable properties to be must faster
-    entities: t.List[orm.InstrumentedAttribute] = [cls.id_]
-    for prop in _SEARCH_PROPERTIES[cls]:
-        entities.append(getattr(cls, prop))
+    entities: list[orm.InstrumentedAttribute] = [cls.id_]
+    entities.extend(getattr(cls, prop) for prop in _SEARCH_PROPERTIES[cls])
     query_unfiltered = query.with_entities(*entities)
 
     unfiltered = query_unfiltered.all()
@@ -96,7 +95,7 @@ def paginate(
     query: orm.Query[Base],
     limit: int,
     offset: int,
-) -> t.Tuple[t.List[Base], int, int]:
+) -> tuple[list[Base], int, int]:
     """Paginate query response for smaller results.
 
     Args:

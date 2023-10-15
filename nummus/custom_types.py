@@ -6,47 +6,48 @@ from __future__ import annotations
 
 import datetime
 import decimal
-import typing as t
+from collections.abc import Callable
 from pathlib import Path
-from typing import *  # noqa: F403
+from typing import Any, Union
 
 from sqlalchemy import orm
 
 Date = datetime.date
-Dates = t.List[Date]
-Ints = t.List[int]
-IntOrStr = t.Union[int, str]
-Paths = t.List[Path]
+Dates = list[Date]
+Ints = list[int]
+IntOrStr = int | str
+Paths = list[Path]
 Real = decimal.Decimal
-Reals = t.List[Real]
-Strings = t.List[str]
+Reals = list[Real]
+Strings = list[str]
+Routes = dict[str, tuple[Callable, Strings]]
 
-DictAny = t.Dict[str, t.Any]
-DictDate = t.Dict[str, Date]
-DictInt = t.Dict[str, int]
-DictReal = t.Dict[str, Real]
-DictReals = t.Dict[str, Reals]
-DictStr = t.Dict[str, str]
-DictStrings = t.Dict[str, Strings]
-DictTuple = t.Dict[str, t.Tuple[t.Any, t.Any]]
+DictAny = dict[str, Any]
+DictDate = dict[str, Date]
+DictInt = dict[str, int]
+DictReal = dict[str, Real]
+DictReals = dict[str, Reals]
+DictStr = dict[str, str]
+DictStrings = dict[str, Strings]
+DictTuple = dict[str, tuple[Any, Any]]
 
-DictIntReal = t.Dict[int, Real]
-DictIntReals = t.Dict[int, Reals]
-DictIntStr = t.Dict[int, str]
+DictIntReal = dict[int, Real]
+DictIntReals = dict[int, Reals]
+DictIntStr = dict[int, str]
 
-JSONVal = t.Union[str, Real, int, bool, "JSONArray", "JSONObj"]
-JSONArray = t.List[JSONVal]
-JSONObj = t.Dict[str, JSONVal]
+JSONVal = Union[str, Real, int, bool, "JSONArray", "JSONObj"]
+JSONArray = list[JSONVal]
+JSONObj = dict[str, JSONVal]
 
-StrToObj = t.Callable[[str], object]
+StrToObj = Callable[[str], object]
 
 ORMBool = orm.Mapped[bool]
-ORMBoolOpt = orm.Mapped[t.Optional[bool]]
+ORMBoolOpt = orm.Mapped[bool | None]
 ORMDate = orm.Mapped[datetime.date]
-ORMDateOpt = orm.Mapped[t.Optional[datetime.date]]
+ORMDateOpt = orm.Mapped[datetime.date | None]
 ORMInt = orm.Mapped[int]
-ORMIntOpt = orm.Mapped[t.Optional[int]]
+ORMIntOpt = orm.Mapped[int | None]
 ORMStr = orm.Mapped[str]
-ORMStrOpt = orm.Mapped[t.Optional[str]]
+ORMStrOpt = orm.Mapped[str | None]
 ORMReal = orm.Mapped[Real]
-ORMRealOpt = orm.Mapped[t.Optional[Real]]
+ORMRealOpt = orm.Mapped[Real | None]

@@ -79,7 +79,7 @@ def rng_normal(loc: t.Real, scale: t.Real, precision: int = 6) -> t.Real:
     return round(Decimal(RNG.normal(loc, scale)), precision)
 
 
-def rng_choice(choices: t.List[t.Any]) -> t.Any:
+def rng_choice(choices: list[t.Any]) -> t.Any:
     """Return an random selection from a list of choices.
 
     Args:
@@ -246,11 +246,11 @@ def make_assets(p: Portfolio) -> t.DictInt:
         )
 
         # Name: [Asset, current price, growth mean, growth stddev]
-        stocks: t.Dict[str, t.List[t.Union[Asset, t.Real]]] = {
+        stocks: dict[str, list[Asset | t.Real]] = {
             "growth": [growth, Decimal(100), Decimal(0.07), Decimal(0.2)],
             "value": [value, Decimal(100), Decimal(0.05), Decimal(0.05)],
         }
-        real_estate: t.Dict[str, t.List[t.Union[Asset, t.Real]]] = {
+        real_estate: dict[str, list[Asset | t.Real]] = {
             "house_main": [house_main, Decimal(1.5e3), Decimal(0.05), Decimal(0.02)],
             "house_second": [house_second, Decimal(3e3), Decimal(0.06), Decimal(0.02)],
             "house_third": [house_third, Decimal(5e3), Decimal(0.07), Decimal(0.02)],
@@ -622,7 +622,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             date: datetime.date,
             house: Asset,
             price: t.Real,
-        ) -> t.Tuple[t.Real, t.Real, t.Real, t.Real, t.Real]:
+        ) -> tuple[t.Real, t.Real, t.Real, t.Real, t.Real]:
             """Add transactions to buy a house.
 
             Args:

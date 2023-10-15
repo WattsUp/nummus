@@ -6,7 +6,6 @@ from decimal import Decimal
 import sqlalchemy.exc
 
 from nummus import controllers
-from nummus import custom_types as t
 from nummus.controllers import common
 from nummus.models import (
     Account,
@@ -67,7 +66,7 @@ class TestCommon(WebTestBase):
             acct_uuid_checking = acct_checking.uuid
             acct_uuid_savings = acct_savings.uuid
 
-            categories: t.Dict[str, TransactionCategory] = {
+            categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
             t_cat = categories["Uncategorized"]

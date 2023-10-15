@@ -48,7 +48,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     assets = Decimal(0)
     liabilities = Decimal(0)
 
-    sorted_categories: t.List[AccountCategory] = [
+    sorted_categories: list[AccountCategory] = [
         AccountCategory.CASH,
         AccountCategory.CREDIT,
         AccountCategory.INVESTMENT,
@@ -58,17 +58,17 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         AccountCategory.OTHER,
     ]
 
-    categories_total: t.Dict[AccountCategory, t.Real] = {
+    categories_total: dict[AccountCategory, t.Real] = {
         cat: Decimal(0) for cat in sorted_categories
     }
-    categories: t.Dict[AccountCategory, t.List[t.DictAny]] = {
+    categories: dict[AccountCategory, list[t.DictAny]] = {
         cat: [] for cat in sorted_categories
     }
 
     n_closed = 0
     with p.get_session() as s:
         # Get basic info
-        accounts: t.Dict[int, t.DictAny] = {}
+        accounts: dict[int, t.DictAny] = {}
         query = s.query(Account)
         query = query.with_entities(
             Account.id_,
@@ -169,8 +169,8 @@ def empty() -> str:
 
 
 def overlay_swap(
-    content: t.Optional[str] = None,
-    event: t.Optional[t.Union[str, t.Strings]] = None,
+    content: str | None = None,
+    event: str | t.Strings | None = None,
 ) -> flask.Response:
     """Create a response to close the overlay and trigger listeners.
 
@@ -191,7 +191,7 @@ def overlay_swap(
     return response
 
 
-def error(e: t.Union[str, Exception]) -> str:
+def error(e: str | Exception) -> str:
     """Convert exception into an readable error string.
 
     Args:
@@ -227,7 +227,7 @@ def error(e: t.Union[str, Exception]) -> str:
     return flask.render_template("shared/error.html", error=str(e))
 
 
-ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+ROUTES: t.Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
     "/h/empty": (empty, ["GET"]),
 }

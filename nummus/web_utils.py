@@ -12,7 +12,6 @@ if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
-    from nummus import custom_types as t
     from nummus.models import Base
 
 MAX_IMAGE_SIZE = int(1e6)
@@ -20,7 +19,7 @@ MAX_IMAGE_SIZE = int(1e6)
 
 def find(
     s: orm.Session,
-    cls: t.Type[Base],
+    cls: type[Base],
     query: str,
     *,
     do_raise: bool = True,
@@ -53,7 +52,7 @@ def parse_period(
     period: str,
     start_custom: datetime.date,
     end_custom: datetime.date,
-) -> t.Tuple[datetime.date, datetime.date]:
+) -> tuple[datetime.date, datetime.date]:
     """Parse time period from arguments.
 
     Args:

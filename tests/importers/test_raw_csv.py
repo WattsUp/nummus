@@ -138,7 +138,7 @@ class TestCSVTransactionImporter(base.TestBase):
         ]
         result = i.run()
         self.assertEqual(len(target), len(result))
-        for tgt, res in zip(target, result):
+        for tgt, res in zip(target, result, strict=True):
             for k, t_v in tgt.items():
                 r_v = res.pop(k)
                 self.assertEqual(t_v, r_v)
@@ -151,7 +151,7 @@ class TestCSVTransactionImporter(base.TestBase):
 
         result = i.run()
         self.assertEqual(len(target), len(result))
-        for tgt, res in zip(target, result):
+        for tgt, res in zip(target, result, strict=True):
             for k, t_v in tgt.items():
                 r_v = res.pop(k)
                 self.assertEqual(t_v, r_v)

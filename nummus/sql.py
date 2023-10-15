@@ -27,7 +27,7 @@ except ImportError:
     Encryption = None
 
 # Cache engines so recomputing db_key is avoided
-_ENGINES: t.Dict[str, sqlalchemy.engine.Engine] = {}
+_ENGINES: dict[str, sqlalchemy.engine.Engine] = {}
 
 _ENGINE_ARGS: t.DictAny = {}
 
@@ -68,7 +68,7 @@ def get_session(
     return orm.Session(bind=_ENGINES[path])
 
 
-def drop_session(path: t.Optional[str] = None) -> None:
+def drop_session(path: str | None = None) -> None:
     """Close database session.
 
     Args:

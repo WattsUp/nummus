@@ -105,7 +105,7 @@ class Portfolio:
             return config["encrypt"]
 
     @staticmethod
-    def create(path: str, key: t.Optional[str] = None) -> Portfolio:
+    def create(path: str, key: str | None = None) -> Portfolio:
         """Create a new Portfolio.
 
         Saves database and configuration file
@@ -243,12 +243,12 @@ class Portfolio:
 
         # Cache a mapping from account/asset name to the ID
         with self.get_session() as s:
-            categories: t.Dict[str, TransactionCategory] = {
+            categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
             account_mapping: t.DictInt = {}
             asset_mapping: t.DictInt = {}
-            transactions: t.List[t.Tuple[Transaction, TransactionSplit]] = []
+            transactions: list[tuple[Transaction, TransactionSplit]] = []
             for d in i.run():
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
@@ -297,7 +297,7 @@ class Portfolio:
         self,
         query: t.IntOrStr,
         session: orm.Session = None,
-    ) -> t.Union[int, Account]:
+    ) -> int | Account:
         """Find a matching Account by name, UUID, institution, or ID.
 
         Args:
@@ -347,7 +347,7 @@ class Portfolio:
         self,
         query: t.IntOrStr,
         session: orm.Session = None,
-    ) -> t.Union[int, Asset]:
+    ) -> int | Asset:
         """Find a matching Asset by name, UUID, or ID.
 
         Args:
@@ -388,7 +388,7 @@ class Portfolio:
         else:
             return _find(session)
 
-    def backup(self) -> t.Tuple[Path, int]:
+    def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.
 
         Returns:
@@ -462,7 +462,7 @@ class Portfolio:
         Portfolio.restore(self, tar_ver=1)
 
     @staticmethod
-    def restore(p: t.Union[str, Portfolio], tar_ver: t.Optional[int] = None) -> None:
+    def restore(p: str | Portfolio, tar_ver: int | None = None) -> None:
         """Restore Portfolio from backup.
 
         Args:

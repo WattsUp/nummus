@@ -10,8 +10,8 @@ from nummus import custom_types as t
 if TYPE_CHECKING:
     from pathlib import Path
 
-TxnDict = t.Dict[str, t.Union[str, t.Real, t.Date, t.Any]]
-TxnDicts = t.List[TxnDict]
+TxnDict = dict[str, str | t.Real | t.Date | t.Any]
+TxnDicts = list[TxnDict]
 
 
 class TransactionImporter(ABC):
@@ -19,8 +19,8 @@ class TransactionImporter(ABC):
 
     def __init__(
         self,
-        path: t.Optional[Path] = None,
-        buf: t.Optional[bytes] = None,
+        path: Path | None = None,
+        buf: bytes | None = None,
     ) -> None:
         """Initialize Transaction Importer.
 

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import datetime
 
-from nummus import custom_types as t
 from nummus import models
 from nummus.models import (
     Account,
@@ -114,7 +113,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
         )
-        assets: t.List[Asset] = []
+        assets: list[Asset] = []
         for _ in range(3):
             new_asset = Asset(
                 name=self.random_string(),
@@ -246,7 +245,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
         )
-        assets: t.List[Asset] = []
+        assets: list[Asset] = []
         for _ in range(3):
             new_asset = Asset(
                 name=self.random_string(),
@@ -398,15 +397,18 @@ class TestAccount(TestBase):
 
         # Add valuations to Asset
         prices = self.random_decimal(1, 10, size=len(target_dates))
-        for date, p in zip(target_dates, prices):
+        for date, p in zip(target_dates, prices, strict=True):
             v = AssetValuation(asset_id=assets[0].id_, date=date, value=p)
             s.add(v)
         s.commit()
 
         asset_values = [
-            round(p * q, 6) for p, q in zip(prices, [0, q0, q0, q0, q0, q0, 0])
+            round(p * q, 6)
+            for p, q in zip(prices, [0, q0, q0, q0, q0, q0, 0], strict=True)
         ]
-        target_values = [c + v for c, v in zip(target_values, asset_values)]
+        target_values = [
+            c + v for c, v in zip(target_values, asset_values, strict=True)
+        ]
         target_assets = {assets[0].id_: asset_values}
 
         r_dates, r_values, r_assets = acct.get_value(start, end)

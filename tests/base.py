@@ -39,11 +39,11 @@ class TestBase(unittest.TestCase):
     @classmethod
     def random_decimal(
         cls,
-        low: t.Union[str, float, t.Real],
-        high: t.Union[str, float, t.Real],
+        low: str | float | t.Real,
+        high: str | float | t.Real,
         precision: int = 6,
         size: int = 1,
-    ) -> t.Union[t.Real, t.Reals]:
+    ) -> t.Real | t.Reals:
         """Generate a random decimal from a uniform distribution.
 
         Args:
@@ -81,7 +81,7 @@ class TestBase(unittest.TestCase):
         target: t.Any,
         real: t.Any,
         threshold: float,
-        msg: t.Optional[str] = None,
+        msg: str | None = None,
     ) -> None:
         """Assert if target != real within threshold.
 
@@ -102,11 +102,11 @@ class TestBase(unittest.TestCase):
         if isinstance(target, list):
             self.assertIsInstance(real, list, msg)
             self.assertEqual(len(target), len(real), msg)
-            for t_v, r_v in zip(target, real):
+            for t_v, r_v in zip(target, real, strict=True):
                 self.assertEqualWithinError(t_v, r_v, threshold, msg)
             return
-        if isinstance(target, (int, float)):
-            self.assertIsInstance(real, (int, float), msg)
+        if isinstance(target, int | float):
+            self.assertIsInstance(real, int | float, msg)
             error = np.abs(real if target == 0 else (real / target - 1))
             self.assertLessEqual(error, threshold, msg)
         else:

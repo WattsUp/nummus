@@ -26,9 +26,9 @@ def overlay() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio
 
     with p.get_session() as s:
-        income: t.List[t.DictAny] = []
-        expense: t.List[t.DictAny] = []
-        other: t.List[t.DictAny] = []
+        income: list[t.DictAny] = []
+        expense: list[t.DictAny] = []
+        other: list[t.DictAny] = []
 
         for cat in s.query(TransactionCategory).all():
             cat_d: t.DictAny = {
@@ -185,7 +185,7 @@ def delete(path_uuid: str) -> str:
         return common.overlay_swap(overlay())
 
 
-ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+ROUTES: t.Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
     "/h/txn-categories/<path:path_uuid>/edit": (edit, ["GET", "POST"]),

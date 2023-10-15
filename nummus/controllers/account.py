@@ -70,6 +70,6 @@ def edit(path_uuid: str) -> str:
         return common.overlay_swap(event="update-account")
 
 
-ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+ROUTES: t.Routes = {
     "/h/accounts/a/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
 }

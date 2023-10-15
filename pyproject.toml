@@ -47,7 +47,7 @@ float_to_top = true
 force_alphabetical_sort_within_sections = true
 
 [tool.ruff]
-target-version = "py38"
+target-version = "py310"
 select = [
     "RUF",   # ruff
     "F",     # pyflakes
@@ -134,11 +134,9 @@ convention = "google"
     "D105",
     "D106",
     "D107",
-    "SIM117", # Allow nested with statements TODO (WattsUp) fix with 3.9+
 ]
 "tools/*.py" = [
     "INP001",  # Outside of a package
-    "SIM117",  # Allow nested with statements TODO (WattsUp) fix with 3.9+
     "PLR2004", # Allow magic values
 ]
 

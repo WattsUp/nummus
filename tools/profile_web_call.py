@@ -107,9 +107,11 @@ def main(command_line: t.Strings = None) -> int:
             # Send one request, sqlalchemy with cache queries and such
             # More akin to real usage
             # Hide stdout from first call to no duplicate debugging print statements
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
-                    _ = client.open(url, method="GET")
+            with (
+                mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr,
+                mock.patch("sys.stdout", new=io.StringIO()) as _,
+            ):
+                _ = client.open(url, method="GET")
             fake_stderr = fake_stderr.getvalue()
             if fake_stderr != "":
                 print(fake_stderr, file=sys.stderr)

@@ -36,8 +36,7 @@ _RE_UUID = re.compile(
     r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}",
 )
 
-ResultType = t.Union[t.DictAny, str, bytes]
-CovMethods = t.Dict[t.Union[int, str], bool]
+ResultType = t.DictAny | str | bytes
 
 HTTP_CODE_OK = 200
 
@@ -87,10 +86,12 @@ class WebTestBase(TestBase):
         shutil.copyfile(path_cert, cls._portfolio.ssl_cert_path)
         shutil.copyfile(path_key, cls._portfolio.ssl_key_path)
 
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                # Ignore SSL warnings
-                s = web.Server(cls._portfolio, "127.0.0.1", 8080, debug=False)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            # Ignore SSL warnings
+            s = web.Server(cls._portfolio, "127.0.0.1", 8080, debug=False)
         cls._flask_app: flask.Flask = s._app  # noqa: SLF001
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -148,7 +149,7 @@ class WebTestBase(TestBase):
         content_type: str = "text/html; charset=utf-8",
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> t.Tuple[ResultType, t.DictStr]:
+    ) -> tuple[ResultType, t.DictStr]:
         """Run a test HTTP request.
 
         Args:
@@ -236,7 +237,7 @@ class WebTestBase(TestBase):
         content_type: str = "text/html; charset=utf-8",
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> t.Tuple[ResultType, t.DictStr]:
+    ) -> tuple[ResultType, t.DictStr]:
         """Run a test HTTP GET request.
 
         Args:
@@ -267,7 +268,7 @@ class WebTestBase(TestBase):
         content_type: str = "text/html; charset=utf-8",
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> t.Tuple[ResultType, t.DictStr]:
+    ) -> tuple[ResultType, t.DictStr]:
         """Run a test HTTP PUT request.
 
         Args:
@@ -298,7 +299,7 @@ class WebTestBase(TestBase):
         content_type: str = "text/html; charset=utf-8",
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> t.Tuple[ResultType, t.DictStr]:
+    ) -> tuple[ResultType, t.DictStr]:
         """Run a test HTTP POST request.
 
         Args:
@@ -329,7 +330,7 @@ class WebTestBase(TestBase):
         content_type: str = "text/html; charset=utf-8",
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> t.Tuple[ResultType, t.DictStr]:
+    ) -> tuple[ResultType, t.DictStr]:
         """Run a test HTTP DELETE request.
 
         Args:

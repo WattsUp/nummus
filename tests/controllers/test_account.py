@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
 
 from nummus.models import (
     Account,
@@ -11,9 +10,6 @@ from nummus.models import (
     TransactionSplit,
 )
 from tests.controllers.base import WebTestBase
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class TestAccount(WebTestBase):
@@ -34,7 +30,7 @@ class TestAccount(WebTestBase):
 
             acct_uuid = acct.uuid
 
-            categories: t.Dict[str, TransactionCategory] = {
+            categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
             t_cat = categories["Uncategorized"]

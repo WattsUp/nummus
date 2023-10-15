@@ -379,7 +379,7 @@ class TestPortfolio(TestBase):
                 "asset_quantity",
                 "asset_id",
             ]
-            for tgt, res in zip(target, transactions):
+            for tgt, res in zip(target, transactions, strict=True):
                 self.assertEqual(1, len(res.splits))
                 r_split = res.splits[0]
                 for k, t_v in tgt.items():

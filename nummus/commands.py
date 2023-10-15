@@ -144,7 +144,7 @@ def backup(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def restore(path: str, pass_file: str, tar_ver: t.Optional[int] = None) -> int:
+def restore(path: str, pass_file: str, tar_ver: int | None = None) -> int:
     """Backup portfolio to tar.gz.
 
     Args:

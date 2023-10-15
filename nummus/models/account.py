@@ -15,11 +15,6 @@ from nummus.models.base import Base, BaseEnum
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 
-ORMAcct = orm.Mapped["Account"]
-ORMAcctOpt = orm.Mapped[t.Optional["Account"]]
-ORMAcctCat = orm.Mapped["AccountCategory"]
-ORMAcctCatOpt = orm.Mapped[t.Optional["AccountCategory"]]
-
 
 class AccountCategory(BaseEnum):
     """Categories of Accounts."""
@@ -48,7 +43,7 @@ class Account(Base):
 
     name: t.ORMStr = orm.mapped_column()
     institution: t.ORMStr
-    category: ORMAcctCat
+    category: orm.Mapped[AccountCategory]
     closed: t.ORMBool
 
     @orm.validates("name", "institution")
@@ -78,7 +73,7 @@ class Account(Base):
         self,
         start: t.Date,
         end: t.Date,
-    ) -> t.Tuple[t.Dates, t.Reals, t.DictIntReals]:
+    ) -> tuple[t.Dates, t.Reals, t.DictIntReals]:
         """Get the value of Account from start to end date.
 
         Args:
@@ -184,11 +179,11 @@ class Account(Base):
         for a in query.all():
             qty = qty_assets[a.id_]
             _, price = a.get_value(start, end)
-            a_values = [round(p * q, 6) for p, q in zip(price, qty)]
+            a_values = [round(p * q, 6) for p, q in zip(price, qty, strict=True)]
             value_assets[a.id_] = a_values
 
         # Sum with cash
-        values = [sum(x) for x in zip(cash, *value_assets.values())]
+        values = [sum(x) for x in zip(cash, *value_assets.values(), strict=True)]
 
         return dates, values, value_assets
 
@@ -200,7 +195,7 @@ class Account(Base):
         end: t.Date,
         uuids: t.Strings = None,
         ids: t.Ints = None,
-    ) -> t.Tuple[t.Dates, t.DictReals]:
+    ) -> tuple[t.Dates, t.DictReals]:
         """Get the value of all Accounts from start to end date.
 
         Args:
@@ -246,7 +241,7 @@ class Account(Base):
         cash: t.DictReals = {acct_id: [v] for acct_id, v in current_cash.items()}
 
         # Get Asset quantities on start date
-        current_qty_assets: t.Dict[int, t.DictIntReal] = {
+        current_qty_assets: dict[int, t.DictIntReal] = {
             acct_id: {} for acct_id in current_cash
         }
         query = s.query(TransactionSplit)
@@ -268,7 +263,7 @@ class Account(Base):
                 acct_current_qty_assets[a_id] = Decimal(0)
             acct_current_qty_assets[a_id] += qty_int + qty_frac
 
-        qty_assets: t.Dict[int, t.DictReals] = {acct_id: {} for acct_id in current_cash}
+        qty_assets: dict[int, t.DictReals] = {acct_id: {} for acct_id in current_cash}
         for acct_id, assets in current_qty_assets.items():
             for a_id, qty in assets.items():
                 qty_assets[acct_id][a_id] = [qty]
@@ -337,14 +332,16 @@ class Account(Base):
                 acct_values[acct_id] = cash[acct_id]
             else:
                 # Get Asset objects and convert qty to value
-                to_sum: t.List[t.Reals] = [cash[acct_id]]
+                to_sum: list[t.Reals] = [cash[acct_id]]
                 for a_id, qty in assets.items():
                     price = assets_values[a_id]
-                    a_values = [round(p * q, 6) for p, q in zip(price, qty)]
+                    a_values = [
+                        round(p * q, 6) for p, q in zip(price, qty, strict=True)
+                    ]
                     to_sum.append(a_values)
 
                 # Sum with cash
-                acct_values[acct_id] = [sum(x) for x in zip(*to_sum)]
+                acct_values[acct_id] = [sum(x) for x in zip(*to_sum, strict=True)]
 
         return dates, acct_values
 
@@ -352,7 +349,7 @@ class Account(Base):
         self,
         start: t.Date,
         end: t.Date,
-    ) -> t.Tuple[t.Dates, t.DictIntReal]:
+    ) -> tuple[t.Dates, t.DictIntReal]:
         """Get the cash_flow of Account from start to end date.
 
         Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
@@ -418,7 +415,7 @@ class Account(Base):
         self,
         start: t.Date,
         end: t.Date,
-    ) -> t.Tuple[t.Dates, t.DictIntReals]:
+    ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the quantity of Assets held from start to end date.
 
         Args:

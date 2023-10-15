@@ -98,8 +98,8 @@ def ctx_options(
     query: orm.Query,
     field: str,
     id_mapping: t.DictIntStr = None,
-    search_str: t.Optional[str] = None,
-) -> t.List[t.DictStr]:
+    search_str: str | None = None,
+) -> list[t.DictStr]:
     """Get the context to build the options for table.
 
     Args:
@@ -114,7 +114,7 @@ def ctx_options(
     query = query.order_by(None)
     args = flask.request.args
     selected: t.Strings = args.getlist(field)
-    options_: t.List[t.DictStr] = []
+    options_: list[t.DictStr] = []
     entities = {
         "account": TransactionSplit.account_id,
         "payee": TransactionSplit.payee,
@@ -257,7 +257,7 @@ def ctx_table() -> t.DictStr:
             query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
             start = query.scalar() or datetime.date(1970, 1, 1)
 
-        transactions: t.List[t.DictAny] = []
+        transactions: list[t.DictAny] = []
         for t_split in page:
             t_split: TransactionSplit
             t_split_ctx = ctx_split(t_split, accounts, categories)
@@ -347,7 +347,7 @@ def edit(path_uuid: str) -> str:
 
             splits = parent.splits
 
-            ctx_splits: t.List[t.DictStr] = [
+            ctx_splits: list[t.DictStr] = [
                 ctx_split(t_split, accounts, categories) for t_split in splits
             ]
 
@@ -465,7 +465,7 @@ def split(path_uuid: str) -> str:
         tag.pop(i)
         amount.pop(i)
 
-    ctx_splits: t.List[t.DictAny] = []
+    ctx_splits: list[t.DictAny] = []
     for i in range(len(payee)):
         item = {
             "payee": payee[i],
@@ -516,7 +516,7 @@ def remaining(path_uuid: str) -> str:
         )
 
 
-ROUTES: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = {
+ROUTES: t.Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),

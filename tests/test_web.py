@@ -23,9 +23,11 @@ class TestServer(TestBase):
         port = 80
         debug = True
 
-        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr,
+            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         fake_stderr = fake_stderr.getvalue()
         target = (
             f"{Fore.RED}No SSL certificate found at {p.ssl_cert_path}\n"
@@ -63,9 +65,11 @@ class TestServer(TestBase):
         shutil.copyfile(path_key, p.ssl_key_path)
 
         debug = False
-        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr,
+            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         self.assertEqual("", fake_stderr.getvalue())
         self.assertEqual("", fake_stdout.getvalue())
         flask_app = s._app  # noqa: SLF001
@@ -85,9 +89,11 @@ class TestServer(TestBase):
         port = 8080
         url = f"https://localhost:{port}"
         debug = True
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         s_server = s._server  # noqa: SLF001
 
         s_server.serve_forever = lambda *_: print("serve_forever")
@@ -105,9 +111,11 @@ class TestServer(TestBase):
         self.assertEqual(target, fake_stdout[: len(target)])
 
         debug = False
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         s_server = s._server  # noqa: SLF001
 
         def raise_keyboard_interrupt() -> None:
@@ -183,9 +191,11 @@ class TestServer(TestBase):
         host = "127.0.0.1"
         port = 8080
         debug = True
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
@@ -206,9 +216,11 @@ class TestServer(TestBase):
         host = "127.0.0.1"
         port = 8080
         debug = True
-        with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                s = web.Server(p, host, port, debug=debug)
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            s = web.Server(p, host, port, debug=debug)
         flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():

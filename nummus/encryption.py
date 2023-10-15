@@ -13,8 +13,6 @@ from Crypto.Hash import SHA256
 if TYPE_CHECKING:
     from Crypto.Cipher._mode_cbc import CbcMode
 
-    from nummus import custom_types as t
-
 
 class Encryption:
     """Encryption provider.
@@ -75,7 +73,7 @@ class Encryption:
 
         return salt
 
-    def set_salt(self, salt: t.Optional[bytes] = None) -> None:
+    def set_salt(self, salt: bytes | None = None) -> None:
         """Set salt to be added to key.
 
         Args:

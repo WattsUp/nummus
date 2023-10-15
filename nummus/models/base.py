@@ -157,7 +157,7 @@ class BaseEnum(enum.Enum):
         return res
 
     @classmethod
-    def _lut(cls) -> t.Dict[str, BaseEnum]:
+    def _lut(cls) -> dict[str, BaseEnum]:
         """Look up table, mapping of strings to matching Enums.
 
         Returns:

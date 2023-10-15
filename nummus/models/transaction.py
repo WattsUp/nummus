@@ -9,13 +9,6 @@ from typing_extensions import override
 from nummus import custom_types as t
 from nummus.models.base import Base, Decimal6, Decimal18
 
-ORMTxn = orm.Mapped["Transaction"]
-ORMTxnList = orm.Mapped[t.List["Transaction"]]
-ORMTxnOpt = orm.Mapped[t.Optional["Transaction"]]
-ORMTxnSplit = orm.Mapped["TransactionSplit"]
-ORMTxnSplitList = orm.Mapped[t.List["TransactionSplit"]]
-ORMTxnSplitOpt = orm.Mapped[t.Optional["TransactionSplit"]]
-
 
 class TransactionSplit(Base):
     """TransactionSplit model for storing an exchange of cash for an asset (or none).
@@ -196,7 +189,7 @@ class Transaction(Base):
     statement: t.ORMStr
     locked: t.ORMBool = orm.mapped_column(default=False)
 
-    splits: ORMTxnSplitList = orm.relationship()
+    splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 
     @orm.validates("statement")
     @override

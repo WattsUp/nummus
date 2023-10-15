@@ -8,9 +8,6 @@ from sqlalchemy import orm
 from nummus import custom_types as t
 from nummus.models.base import Base, Decimal6
 
-ORMBudget = orm.Mapped["Budget"]
-ORMBudgetOpt = orm.Mapped[t.Optional["Budget"]]
-
 
 class Budget(Base):
     """Budget model for storing an allocation of expenses per month.

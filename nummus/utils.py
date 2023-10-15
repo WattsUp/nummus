@@ -37,7 +37,7 @@ def get_input(
     prompt: str = "",
     *,
     secure: bool = False,
-    print_key: t.Optional[bool] = None,
+    print_key: bool | None = None,
 ) -> str:
     """Get input from the user, optionally secure.
 
@@ -66,9 +66,9 @@ def get_input(
 
 
 def confirm(
-    prompt: t.Optional[str] = None,
+    prompt: str | None = None,
     *,
-    default: t.Optional[bool] = False,
+    default: bool | None = False,
 ) -> bool:
     """Prompt user for yes/no confirmation.
 

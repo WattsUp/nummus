@@ -8,10 +8,6 @@ from typing_extensions import override
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum
 
-ORMTxnCat = orm.Mapped["TransactionCategory"]
-ORMTxnCatOpt = orm.Mapped[t.Optional["TransactionCategory"]]
-ORMTxnCatType = orm.Mapped["TransactionCategoryGroup"]
-
 
 class TransactionCategoryGroup(BaseEnum):
     """Types of Transaction Categories."""
@@ -33,7 +29,7 @@ class TransactionCategory(Base):
     """
 
     name: t.ORMStr = orm.mapped_column(unique=True)
-    group: ORMTxnCatType
+    group: orm.Mapped[TransactionCategoryGroup]
     locked: t.ORMBool
 
     @orm.validates("name")
@@ -42,7 +38,7 @@ class TransactionCategory(Base):
         return super().validate_strings(key, field)
 
     @staticmethod
-    def add_default(s: orm.Session) -> t.Dict[str, TransactionCategory]:
+    def add_default(s: orm.Session) -> dict[str, TransactionCategory]:
         """Create default transaction categories.
 
         Args:
@@ -51,7 +47,7 @@ class TransactionCategory(Base):
         Returns:
             Dictionary {name: category}
         """
-        d: t.Dict[str, TransactionCategory] = {}
+        d: dict[str, TransactionCategory] = {}
         groups = {
             TransactionCategoryGroup.INCOME: {
                 "Consulting": False,

@@ -33,7 +33,7 @@ def add_routes(app: flask.Flask) -> None:
     ]
     n_trim = len(__name__) + 1
     for m in module:
-        routes: t.Dict[str, t.Tuple[t.Callable, t.Strings]] = m.ROUTES
+        routes: t.Routes = m.ROUTES
         for url, item in routes.items():
             controller, methods = item
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"

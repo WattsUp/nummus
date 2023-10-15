@@ -12,7 +12,7 @@ from tests.base import TestBase
 class Parent(base.Base):
     generic_column: t.ORMIntOpt
     name: t.ORMStrOpt
-    children: orm.Mapped[t.List[Child]] = orm.relationship(back_populates="parent")
+    children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
 
     @property
     def favorite_child(self) -> Child:
@@ -158,7 +158,7 @@ class Derived(base.BaseEnum):
     BLUE = 2
 
     @classmethod
-    def _lut(cls) -> t.Dict[str, Derived]:
+    def _lut(cls) -> dict[str, Derived]:
         return {"r": cls.RED, "b": cls.BLUE}
 
 

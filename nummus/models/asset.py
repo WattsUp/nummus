@@ -11,16 +11,6 @@ from sqlalchemy import orm
 from nummus import custom_types as t
 from nummus.models.base import Base, BaseEnum, Decimal6
 
-ORMAsset = orm.Mapped["Asset"]
-ORMAssetOpt = orm.Mapped[t.Optional["Asset"]]
-ORMAssetCat = orm.Mapped["AssetCategory"]
-ORMAssetCatOpt = orm.Mapped[t.Optional["AssetCategory"]]
-ORMAssetVal = orm.Mapped["AssetValuation"]
-ORMAssetValList = orm.Mapped[t.List["AssetValuation"]]
-ORMAssetValOpt = orm.Mapped[t.Optional["AssetValuation"]]
-
-DictStrAsset = t.Dict[str, "Asset"]
-
 
 class AssetSplit(Base):
     """Asset Split model for storing a split of an asset on a specific date.
@@ -74,7 +64,7 @@ class Asset(Base):
 
     name: t.ORMStr
     description: t.ORMStrOpt
-    category: ORMAssetCat
+    category: orm.Mapped[AssetCategory]
     unit: t.ORMStrOpt
     tag: t.ORMStrOpt
     img_suffix: t.ORMStrOpt
@@ -87,7 +77,7 @@ class Asset(Base):
             return None
         return f"{self.uuid}{s}"
 
-    def get_value(self, start: t.Date, end: t.Date) -> t.Tuple[t.Dates, t.Reals]:
+    def get_value(self, start: t.Date, end: t.Date) -> tuple[t.Dates, t.Reals]:
         """Get the value of Asset from start to end date.
 
         Args:
@@ -148,7 +138,7 @@ class Asset(Base):
         end: t.Date,
         uuids: t.Strings = None,
         ids: t.Ints = None,
-    ) -> t.Tuple[t.Dates, t.DictIntReals]:
+    ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Assets from start to end date.
 
         Args:
@@ -235,7 +225,7 @@ class Asset(Base):
         s = orm.object_session(self)
 
         multiplier = Decimal(1)
-        splits: t.List[t.Tuple[t.Date, t.Real]] = []
+        splits: list[tuple[t.Date, t.Real]] = []
 
         query = s.query(AssetSplit)
         query = query.with_entities(AssetSplit.date, AssetSplit.multiplier)
