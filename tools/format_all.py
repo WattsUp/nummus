@@ -56,13 +56,13 @@ def main() -> None:
     for line in stdout.splitlines():
         print(line)
 
-    # Trim trailing whitespace
+    # Normalize line endings
     for f in files:
         # Do binary to normalize line endings to LF
         with open(f, "rb") as file:
             buf = file.read()
 
-        lines = [l.rstrip(b" ") for l in buf.splitlines()]
+        lines = buf.splitlines()
         buf_trimmed = b"\n".join(lines)
         # Add trailing newline to non-blank files
         if buf_trimmed != b"":
@@ -70,11 +70,11 @@ def main() -> None:
         if buf == buf_trimmed:
             continue
         if check:
-            print(f"ERROR: {f} has trailing whitespace or improper line endings")
+            print(f"ERROR: {f} has improper line endings")
             continue
         with open(f, "wb") as file:
             file.write(buf_trimmed)
-        print(f"{Fore.GREEN}Trimmed {f}")
+        print(f"{Fore.GREEN}Normalized {f} line endings")
 
 
 if __name__ == "__main__":

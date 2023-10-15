@@ -3,11 +3,10 @@
 Adds custom types to typing
 """
 
-from typing import *  # pylint: disable=wildcard-import, unused-wildcard-import
-
 import datetime
 import decimal
 import pathlib
+from typing import *  # pylint: disable=wildcard-import, unused-wildcard-import
 
 from sqlalchemy import orm
 
