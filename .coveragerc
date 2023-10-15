@@ -31,6 +31,9 @@ exclude_lines =
 
     # Don't complain about ImportErrors, unit tests mocks them
     except ImportError
+
+    # Don't complain about missing typing
+    if TYPE_CHECKING:
 ignore_errors = True
 precision = 2
 show_missing = True
