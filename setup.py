@@ -32,14 +32,17 @@ required = [
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "ruff", "numpy", "time-machine"],
+    "test": ["coverage", "numpy", "time-machine"],
 }
 extras_require["dev"] = extras_require["test"] + [
+    "ruff",
+    "codespell",
     "toml",
     "witch-ver",
     "black",
     "isort",
     "viztracer",
+    "pre-commit",
 ]
 
 setuptools.setup(
