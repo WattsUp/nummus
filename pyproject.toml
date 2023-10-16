@@ -50,6 +50,7 @@ profile = "jinja"
 
 [tool.isort]
 profile = "black"
+skip_gitignore = true
 float_to_top = true
 force_alphabetical_sort_within_sections = true
 

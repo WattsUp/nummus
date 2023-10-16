@@ -92,7 +92,7 @@ jobs:
           python -m pip install codespell toml
       - name: Run codespell
         run: |
-          codespell .
+          codespell . --toml pyproject.toml
   jinja:
     runs-on: ubuntu-latest
     strategy:
