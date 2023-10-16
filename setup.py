@@ -32,12 +32,11 @@ required = [
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "numpy", "time-machine"],
+    "test": ["coverage", "numpy", "time-machine", "toml"],
 }
 extras_require["dev"] = extras_require["test"] + [
     "ruff",
     "codespell",
-    "toml",
     "witch-ver",
     "black",
     "isort",
