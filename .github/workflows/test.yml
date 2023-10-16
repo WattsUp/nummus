@@ -32,12 +32,11 @@ jobs:
           python -m pip install -e .[test]
       - name: Test
         run: |
-          python -m coverage run &> testing.log
+          python -m coverage run
       - name: Upload test configuration
         uses: actions/upload-artifact@v3
         if: always()
         with:
           name: testing.${{ matrix.python-version }}
           path: |
-            testing.log
             test_log.json
