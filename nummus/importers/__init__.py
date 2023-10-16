@@ -1,29 +1,38 @@
-"""Financial source importers
-"""
+"""Financial source importers."""
 
-import pathlib
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 from nummus.importers.raw_csv import CSVTransactionImporter
 
+if TYPE_CHECKING:
+    from pathlib import Path
 
-def get_importer(path: str) -> TransactionImporter:
-  """Get the best importer for a file
+__all__ = [
+    "TransactionImporter",
+    "TxnDict",
+    "TxnDicts",
+    "get_importer",
+]
 
-  Args:
-    path: Path to file
 
-  Returns:
-    Initialized Importer
-  """
-  p = pathlib.Path(path)
+def get_importer(path: Path) -> TransactionImporter:
+    """Get the best importer for a file.
 
-  with open(p, "rb") as file:
-    buf = file.read()
+    Args:
+        path: Path to file
 
-  available = [CSVTransactionImporter]
+    Returns:
+        Initialized Importer
+    """
+    with path.open("rb") as file:
+        buf = file.read()
 
-  for i in available:
-    if i.is_importable(p.name, buf):
-      return i(buf=buf)
-  return None
+    available = [CSVTransactionImporter]
+
+    for i in available:
+        if i.is_importable(path, buf):
+            return i(buf=buf)
+    return None

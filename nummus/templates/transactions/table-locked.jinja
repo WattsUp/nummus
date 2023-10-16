@@ -1,0 +1,20 @@
+<div id="txn-locked" class="col col-locked" hx-swap-oob="{{ oob }}">
+    {% if txn_table["locked"] is none %}
+        <input name="locked" value="" class="hidden">
+        <div hx-get="{{ url_for("transaction.table") }}?locked=true">{% include "svg/lock.svg" %}</div>
+    {% elif txn_table["locked"] %}
+        <input name="locked" value="true" class="hidden">
+        <div hx-get="{{ url_for("transaction.table") }}?locked=false">
+            {% with class = "checked" %}
+                {% include "svg/lock.svg" %}
+            {% endwith %}
+        </div>
+    {% else %}
+        <input name="locked" value="false" class="hidden">
+        <div hx-get="{{ url_for("transaction.table") }}?locked=">
+            {% with class = "unchecked" %}
+                {% include "svg/lock.svg" %}
+            {% endwith %}
+        </div>
+    {% endif %}
+</div>

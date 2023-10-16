@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <head>
+        <title>
+            {% block title %}
+                nummus
+            {% endblock title %}
+        </title>
+        <meta charset="utf-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+        <meta name="description"
+              content="A personal financial information aggregator and planning tool." />
+        <meta name="keywords" content="">
+        <link rel="icon"
+              type="image/x-icon"
+              href="{{ url_for('static', filename='img/favicon.ico') }}">
+        {% assets "css" %}
+            <link rel="stylesheet" href="{{ ASSET_URL }}">
+        {% endassets %}
+        {% assets "js" %}
+            <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+        {% endassets %}
+    </head>
+    <body class="antialiased bg-grey-100 h-screen w-screen relative"
+          hx-boost="true"
+          hx-swap="outerHTML">
+        {% block header %}
+            {% include "/shared/header.jinja" %}
+        {% endblock header %}
+        <div class="flex pt-12 h-full">
+            {% block sidebar %}
+                {% include "/shared/sidebar.jinja" %}
+            {% endblock sidebar %}
+            <div class="flex flex-col h-full overflow-y-scroll grow">
+                <main class="py-2 px-12 xl:px-2">
+                    {% block content %}
+                    {% endblock content %}
+                </main>
+                {% block footer %}
+                    {% include "/shared/footer.jinja" %}
+                {% endblock footer %}
+            </div>
+        </div>
+        {% include "/shared/overlay.jinja" %}
+    </body>
+</html>

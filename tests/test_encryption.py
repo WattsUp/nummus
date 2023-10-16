@@ -1,79 +1,74 @@
-"""Test module nummus.encryption
-"""
+from __future__ import annotations
 
 import base64
 
-try:
-  from nummus import encryption  # pylint: disable=import-outside-toplevel
-except ImportError:
-  # Helpful information printed in nummus.portfolio
-  encryption = None
-
 from tests.base import TestBase
+
+try:
+    from nummus import encryption
+except ImportError:
+    # Helpful information printed in nummus.portfolio
+    encryption = None
 
 
 class TestEncryption(TestBase):
-  """Test Encryption
-  """
+    def setUp(self) -> None:
+        super().setUp()
+        if encryption is None:
+            self.skipTest("Encryption is not installed")
 
-  def setUp(self):
-    super().setUp()
-    if encryption is None:
-      self.skipTest("Encryption is not installed")
+    def test_good_key(self) -> None:
+        key = self.random_string().encode()
+        secret = self.random_string().encode()
 
-  def test_good_key(self):
-    key = self.random_string().encode()
-    secret = self.random_string().encode()
+        enc = encryption.Encryption(key)
 
-    enc = encryption.Encryption(key)
+        encrypted = enc.encrypt(secret)
+        self.assertNotEqual(secret, encrypted)
+        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        decrypted = enc.decrypt(encrypted)
+        self.assertEqual(secret, decrypted)
 
-    encrypted = enc.encrypt(secret)
-    self.assertNotEqual(secret, encrypted)
-    self.assertNotEqual(secret, base64.b64decode(encrypted))
-    decrypted = enc.decrypt(encrypted)
-    self.assertEqual(secret, decrypted)
+    def test_bad_key(self) -> None:
+        key = self.random_string().encode()
+        secret = self.random_string().encode()
 
-  def test_bad_key(self):
+        enc = encryption.Encryption(key)
 
-    key = self.random_string().encode()
-    secret = self.random_string().encode()
+        encrypted = enc.encrypt(secret)
+        self.assertNotEqual(secret, encrypted)
+        self.assertNotEqual(secret, base64.b64decode(encrypted))
 
-    enc = encryption.Encryption(key)
+        bad_key = key + self.random_string().encode()
+        enc_bad = encryption.Encryption(bad_key)
 
-    encrypted = enc.encrypt(secret)
-    self.assertNotEqual(secret, encrypted)
-    self.assertNotEqual(secret, base64.b64decode(encrypted))
+        try:
+            secret_bad = enc_bad.decrypt(encrypted)
+            # Sometimes decrypting is valid but yields wrong secret
+            self.assertNotEqual(secret, secret_bad)
+        except ValueError:
+            pass  # Expected mismatch of padding
 
-    bad_key = key + self.random_string().encode()
-    enc_bad = encryption.Encryption(bad_key)
+    def test_salt(self) -> None:
+        key = self.random_string().encode()
+        secret = self.random_string().encode()
 
-    try:
-      secret_bad = enc_bad.decrypt(encrypted)
-      # Sometimes decrypting is valid but yields wrong secret
-      self.assertNotEqual(secret, secret_bad)
-    except ValueError:
-      pass  # Expected mismatch of padding
+        enc = encryption.Encryption(key)
 
-  def test_salt(self):
-    key = self.random_string().encode()
-    secret = self.random_string().encode()
+        salt = enc.gen_salt(set_salt=True)
 
-    enc = encryption.Encryption(key)
+        encrypted = enc.encrypt(secret)
+        self.assertNotEqual(secret, encrypted)
+        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        enc.set_salt(salt)
+        decrypted = enc.decrypt(encrypted)
+        self.assertEqual(secret, decrypted)
 
-    salt = enc.gen_salt(set_salt=True)
-
-    encrypted = enc.encrypt(secret)
-    self.assertNotEqual(secret, encrypted)
-    self.assertNotEqual(secret, base64.b64decode(encrypted))
-    enc.set_salt(salt)
-    decrypted = enc.decrypt(encrypted)
-    self.assertEqual(secret, decrypted)
-
-    salt = enc.gen_salt(set_salt=False)
-    enc.set_salt(salt)
-    encrypted = enc.encrypt(secret)
-    self.assertNotEqual(secret, encrypted)
-    self.assertNotEqual(secret, base64.b64decode(encrypted))
-    enc.set_salt(salt)
-    decrypted = enc.decrypt(encrypted)
-    self.assertEqual(secret, decrypted)
+        salt = enc.gen_salt(set_salt=False)
+        enc.set_salt(salt)
+        encrypted = enc.encrypt(secret)
+        self.assertNotEqual(secret, encrypted)
+        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        enc.set_salt(salt)
+        decrypted = enc.decrypt(encrypted)
+        self.assertEqual(secret, decrypted)

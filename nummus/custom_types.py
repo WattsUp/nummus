@@ -1,51 +1,53 @@
-"""Defines for custom types
+"""Defines for custom types.
 
 Adds custom types to typing
 """
-
-from typing import *  # pylint: disable=wildcard-import, unused-wildcard-import
+from __future__ import annotations
 
 import datetime
 import decimal
-import pathlib
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, Union
 
 from sqlalchemy import orm
 
 Date = datetime.date
-Dates = List[Date]
-Ints = List[int]
-IntOrStr = Union[int, str]
-Paths = List[pathlib.Path]
+Dates = list[Date]
+Ints = list[int]
+IntOrStr = int | str
+Paths = list[Path]
 Real = decimal.Decimal
-Reals = List[Real]
-Strings = List[str]
+Reals = list[Real]
+Strings = list[str]
+Routes = dict[str, tuple[Callable, Strings]]
 
-DictAny = Dict[str, Any]
-DictDate = Dict[str, Date]
-DictInt = Dict[str, int]
-DictReal = Dict[str, Real]
-DictReals = Dict[str, Reals]
-DictStr = Dict[str, str]
-DictStrings = Dict[str, Strings]
-DictTuple = Dict[str, Tuple[Any, Any]]
+DictAny = dict[str, Any]
+DictDate = dict[str, Date]
+DictInt = dict[str, int]
+DictReal = dict[str, Real]
+DictReals = dict[str, Reals]
+DictStr = dict[str, str]
+DictStrings = dict[str, Strings]
+DictTuple = dict[str, tuple[Any, Any]]
 
-DictIntReal = Dict[int, Real]
-DictIntReals = Dict[int, Reals]
-DictIntStr = Dict[int, str]
+DictIntReal = dict[int, Real]
+DictIntReals = dict[int, Reals]
+DictIntStr = dict[int, str]
 
 JSONVal = Union[str, Real, int, bool, "JSONArray", "JSONObj"]
-JSONArray = List[JSONVal]
-JSONObj = Dict[str, JSONVal]
+JSONArray = list[JSONVal]
+JSONObj = dict[str, JSONVal]
 
 StrToObj = Callable[[str], object]
 
 ORMBool = orm.Mapped[bool]
-ORMBoolOpt = orm.Mapped[Optional[bool]]
+ORMBoolOpt = orm.Mapped[bool | None]
 ORMDate = orm.Mapped[datetime.date]
-ORMDateOpt = orm.Mapped[Optional[datetime.date]]
+ORMDateOpt = orm.Mapped[datetime.date | None]
 ORMInt = orm.Mapped[int]
-ORMIntOpt = orm.Mapped[Optional[int]]
+ORMIntOpt = orm.Mapped[int | None]
 ORMStr = orm.Mapped[str]
-ORMStrOpt = orm.Mapped[Optional[str]]
+ORMStrOpt = orm.Mapped[str | None]
 ORMReal = orm.Mapped[Real]
-ORMRealOpt = orm.Mapped[Optional[Real]]
+ORMRealOpt = orm.Mapped[Real | None]

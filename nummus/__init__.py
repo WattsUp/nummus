@@ -1,6 +1,7 @@
-"""nummus
-"""
+"""nummus."""
+
+from __future__ import annotations
 
 from nummus.version import __version__
 
-from nummus.main import main
+__all__ = ["__version__"]

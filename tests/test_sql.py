@@ -1,170 +1,164 @@
-"""Test module nummus.sql
-"""
+from __future__ import annotations
 
-import pathlib
 import uuid
+from pathlib import Path
 
 import autodict
 import sqlalchemy
 from sqlalchemy import orm, schema
 
 from nummus import sql
-
 from tests.base import TestBase
 
 
 class ORMBase(orm.DeclarativeBase):
-  """Test ORM Base
+    metadata: schema.MetaData
 
-  Attributes:
-    id: Unique identifier
-  """
-  metadata: schema.MetaData
+    @orm.declared_attr
+    def __tablename__(self) -> None:
+        return self.__name__.lower()
 
-  @orm.declared_attr
-  def __tablename__(self):
-    return self.__name__.lower()
+    id_: orm.Mapped[str] = orm.mapped_column(
+        sqlalchemy.String(36),
+        primary_key=True,
+        default=lambda: str(uuid.uuid4()),
+    )
 
-  id: orm.Mapped[str] = orm.mapped_column(sqlalchemy.String(36),
-                                          primary_key=True,
-                                          default=lambda: str(uuid.uuid4()))
-
-  def __repr__(self) -> str:
-    try:
-      return f"<{self.__class__.__name__} id={self.id}>"
-    except orm.exc.DetachedInstanceError:
-      return f"<{self.__class__.__name__} id=Detached Instance>"
+    def __repr__(self) -> str:
+        try:
+            return f"<{self.__class__.__name__} id={self.id_}>"
+        except orm.exc.DetachedInstanceError:
+            return f"<{self.__class__.__name__} id=Detached Instance>"
 
 
 class Child(ORMBase):
-  """Test derived class of ORMBase
-  """
-  pass
+    pass
 
 
 class TestSQL(TestBase):
-  """Test SQL methods
-  """
+    def test_get_session_unencrypted(self) -> None:
+        config = autodict.AutoDict(encrypt=False)
 
-  def test_get_session_unencrypted(self):
-    config = autodict.AutoDict(encrypt=False)
+        path = None
+        self.assertRaises(ValueError, sql.get_session, path, config)
 
-    path = None
-    self.assertRaises(ValueError, sql.get_session, path, config)
+        # Relative file
+        path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
+            Path.cwd(),
+        )
+        self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
+        s = sql.get_session(path, config)
+        self.assertIsNotNone(s)
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    # Relative file
-    path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
-        pathlib.Path.cwd())
-    self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-    s = sql.get_session(path, config)
-    self.assertIsNotNone(s)
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        s2 = sql.get_session(path, config)
+        self.assertNotEqual(s, s2)  # Different sessions
+        self.assertEqual(s.get_bind(), s2.get_bind())  # But same engine
 
-    s2 = sql.get_session(path, config)
-    self.assertNotEqual(s, s2)  # Different sessions
-    self.assertEqual(s.get_bind(), s2.get_bind())  # But same engine
+        self.assertIn("child", ORMBase.metadata.tables)
+        ORMBase.metadata.create_all(s.get_bind())
+        s.commit()
 
-    self.assertIn("child", ORMBase.metadata.tables)
-    ORMBase.metadata.create_all(s.get_bind())
-    s.commit()
+        c = Child()
+        s.add(c)
+        s.commit()
 
-    c = Child()
-    s.add(c)
-    s.commit()
+        s = None
+        s2 = None
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    s = None
-    s2 = None
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        sql.drop_session(path)
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
+        # Able to call drop after it has been dropped
+        sql.drop_session(path)
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-    sql.drop_session(path)
-    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
-    # Able to call drop after it has been dropped
-    sql.drop_session(path)
-    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        with path.open("rb") as file:
+            data = file.read()
+            self.assertIn(b"SQLite", data)
 
-    with open(path, "rb") as file:
-      data = file.read()
-      self.assertIn("SQLite".encode(), data)
+        self._clean_test_root()
 
-    self._clean_test_root()
+        # Absolute file
+        path = self._TEST_ROOT.joinpath("unencrypted.db").absolute()
+        self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
+        s = sql.get_session(path, config)
+        self.assertIsNotNone(s)
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    # Absolute file
-    path = self._TEST_ROOT.joinpath("unencrypted.db").absolute()
-    self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-    s = sql.get_session(path, config)
-    self.assertIsNotNone(s)
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertIn("child", ORMBase.metadata.tables)
+        ORMBase.metadata.create_all(s.get_bind())
+        s.commit()
 
-    self.assertIn("child", ORMBase.metadata.tables)
-    ORMBase.metadata.create_all(s.get_bind())
-    s.commit()
+        s = None
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    s = None
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        sql.drop_session()
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-    sql.drop_session()
-    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        with path.open("rb") as file:
+            data = file.read()
+            self.assertIn(b"SQLite", data)
 
-    with open(path, "rb") as file:
-      data = file.read()
-      self.assertIn("SQLite".encode(), data)
+        self._clean_test_root()
 
-    self._clean_test_root()
+    def test_get_session_encrypted(self) -> None:
+        if sql.Encryption is None:
+            self.skipTest("Encryption is not installed")
+        salt = self.random_string()
+        key = self.random_string().encode()
+        config = autodict.AutoDict(encrypt=True, salt=salt)
+        enc = sql.Encryption(key)
 
-  def test_get_session_encrypted(self):
-    if sql.Encryption is None:
-      self.skipTest("Encryption is not installed")
-    salt = self.random_string()
-    key = self.random_string().encode()
-    config = autodict.AutoDict(encrypt=True, salt=salt)
-    enc = sql.Encryption(key)
+        # Relative file
+        path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(Path.cwd())
+        self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
+        self.assertRaises(
+            ValueError,
+            sql.get_session,
+            path,
+            config,
+        )  # No Encryption object
 
-    # Relative file
-    path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(
-        pathlib.Path.cwd())
-    self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-    self.assertRaises(ValueError, sql.get_session, path,
-                      config)  # No Encryption object
+        s = sql.get_session(path, config, enc)
+        self.assertIsNotNone(s)
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    s = sql.get_session(path, config, enc)
-    self.assertIsNotNone(s)
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertIn("child", ORMBase.metadata.tables)
+        ORMBase.metadata.create_all(s.get_bind())
+        s.commit()
 
-    self.assertIn("child", ORMBase.metadata.tables)
-    ORMBase.metadata.create_all(s.get_bind())
-    s.commit()
+        s = None
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    s = None
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        sql.drop_session(path)
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-    sql.drop_session(path)
-    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        with path.open("rb") as file:
+            data = file.read()
+            self.assertNotIn(b"SQLite", data)
 
-    with open(path, "rb") as file:
-      data = file.read()
-      self.assertNotIn("SQLite".encode(), data)
+        self._clean_test_root()
 
-    self._clean_test_root()
+        # Absolute file
+        path = self._TEST_ROOT.joinpath("encrypted.db").absolute()
+        self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
+        s = sql.get_session(path, config, enc)
+        self.assertIsNotNone(s)
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    # Absolute file
-    path = self._TEST_ROOT.joinpath("encrypted.db").absolute()
-    self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-    s = sql.get_session(path, config, enc)
-    self.assertIsNotNone(s)
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        self.assertIn("child", ORMBase.metadata.tables)
+        ORMBase.metadata.create_all(s.get_bind())
+        s.commit()
 
-    self.assertIn("child", ORMBase.metadata.tables)
-    ORMBase.metadata.create_all(s.get_bind())
-    s.commit()
+        s = None
+        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-    s = None
-    self.assertEqual(len(sql._ENGINES), 1)  # pylint: disable=protected-access
+        sql.drop_session(path)
+        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
-    sql.drop_session(path)
-    self.assertEqual(len(sql._ENGINES), 0)  # pylint: disable=protected-access
+        with path.open("rb") as file:
+            data = file.read()
+            self.assertNotIn(b"SQLite", data)
 
-    with open(path, "rb") as file:
-      data = file.read()
-      self.assertNotIn("SQLite".encode(), data)
-
-    self._clean_test_root()
+        self._clean_test_root()

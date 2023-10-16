@@ -1,141 +1,144 @@
-"""Encryption provider
-"""
+"""Encryption provider."""
+from __future__ import annotations
 
 import base64
+import secrets
+from typing import TYPE_CHECKING
 
 import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
-from Crypto.Cipher._mode_cbc import CbcMode
 from Crypto.Hash import SHA256
 
-from nummus import utils
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_cbc import CbcMode
 
 
 class Encryption:
-  """Encryption provider
+    """Encryption provider.
 
-  Uses AES encryption for encryption and decryption
+    Uses AES encryption for encryption and decryption
 
-  Attributes:
-    key: encryption key
-    salted_key: encryption key with salt
-  """
-
-  def __init__(self, key: bytes) -> None:
-    """Initialize Encryption
-
-    Args:
-      key: encryption key
+    Attributes:
+        key: encryption key
+        salted_key: encryption key with salt
     """
-    self.key = key
-    self.salted_key = None
 
-  def _digest_key(self) -> bytes:
-    """Get digest key
+    def __init__(self, key: bytes) -> None:
+        """Initialize Encryption.
 
-    Hashes the key (with optional salt) to get a fixed length key
+        Args:
+            key: encryption key
+        """
+        self.key = key
+        self.salted_key = None
 
-    Returns:
-      bytes hashed key
-    """
-    key = self.key
-    if self.salted_key:
-      key = self.salted_key
-    return SHA256.new(key).digest()
+    def _digest_key(self) -> bytes:
+        """Get digest key.
 
-  def _get_aes(self, iv) -> CbcMode:
-    """Get AES cipher from digest key and initialization vector
+        Hashes the key (with optional salt) to get a fixed length key
 
-    Args:
-      iv: Initialization vector
+        Returns:
+            bytes hashed key
+        """
+        key = self.key
+        if self.salted_key:
+            key = self.salted_key
+        return SHA256.new(key).digest()
 
-    Returns:
-      AES cipher object
-    """
-    return AES.new(self._digest_key(), AES.MODE_CBC, iv)
+    def _get_aes(self, iv: bytes) -> CbcMode:
+        """Get AES cipher from digest key and initialization vector.
 
-  def gen_salt(self, set_salt: bool = True) -> bytes:
-    """Generate salt to be added to key
+        Args:
+            iv: Initialization vector
 
-    Args:
-      set_salt: True will set_salt after generation
+        Returns:
+            AES cipher object
+        """
+        return AES.new(self._digest_key(), AES.MODE_CBC, iv)
 
-    Returns:
-      bytes Generated salt
-    """
-    salt = utils.random_string().encode()
+    def gen_salt(self, *, set_salt: bool = True) -> bytes:
+        """Generate salt to be added to key.
 
-    if set_salt:
-      self.set_salt(salt)
+        Args:
+            set_salt: True will set_salt after generation
 
-    return salt
+        Returns:
+            bytes Generated salt
+        """
+        salt = secrets.token_bytes()
 
-  def set_salt(self, salt: bytes = None) -> None:
-    """Set salt to be added to key
+        if set_salt:
+            self.set_salt(salt)
 
-    Args:
-      salt: Salt to add
-    """
-    if salt:
-      self.salted_key = salt + self.key
-    else:
-      self.salted_key = None
+        return salt
 
-  def encrypt(self, secret: bytes) -> bytes:
-    """Encrypt a secret using the key
+    def set_salt(self, salt: bytes | None = None) -> None:
+        """Set salt to be added to key.
 
-    Args:
-      secret: Object to encrypt
+        Args:
+            salt: Salt to add
+        """
+        if salt:
+            self.salted_key = salt + self.key
+        else:
+            self.salted_key = None
 
-    Returns:
-      bytes encrypted object
-    """
-    # Generate a random initialization vector
-    iv = Crypto.Random.new().read(AES.block_size)
-    aes = self._get_aes(iv)
+    def encrypt(self, secret: bytes) -> bytes:
+        """Encrypt a secret using the key.
 
-    # Add padding the secret to fit in whole blocks
-    # Always adds at least 1 byte of padding
-    padding = AES.block_size - len(secret) % AES.block_size
-    secret += bytes([padding]) * padding
+        Args:
+            secret: Object to encrypt
 
-    # Prepend initialization vector to encrypted secret
-    data = iv + aes.encrypt(secret)
+        Returns:
+            bytes encrypted object
+        """
+        # Generate a random initialization vector
+        iv = Crypto.Random.new().read(AES.block_size)
+        aes = self._get_aes(iv)
 
-    # Reset salt if present
-    self.set_salt()
+        # Add padding the secret to fit in whole blocks
+        # Always adds at least 1 byte of padding
+        padding = AES.block_size - len(secret) % AES.block_size
+        secret += bytes([padding]) * padding
 
-    # Stringify bytes with base64
-    return base64.b64encode(data)
+        # Prepend initialization vector to encrypted secret
+        data = iv + aes.encrypt(secret)
 
-  def decrypt(self, enc_secret: bytes) -> bytes:
-    """Decrypt an encoded secret using the key
+        # Reset salt if present
+        self.set_salt()
 
-    Args:
-      enc_secret: Encoded secret
+        # Stringify bytes with base64
+        return base64.b64encode(data)
 
-    Returns:
-      bytes decoded secret
-    """
-    # Un-stringify bytes
-    enc_secret = base64.b64decode(enc_secret)
+    def decrypt(self, enc_secret: bytes) -> bytes:
+        """Decrypt an encoded secret using the key.
 
-    # Get the AES cipher from the included initialization vector
-    iv = enc_secret[:AES.block_size]
-    aes = self._get_aes(iv)
+        Args:
+            enc_secret: Encoded secret
 
-    # Decrypt secret and get length of padding
-    data = aes.decrypt(enc_secret[AES.block_size:])
-    padding = data[-1]
+        Returns:
+            bytes decoded secret
+        """
+        # Un-stringify bytes
+        enc_secret = base64.b64decode(enc_secret)
 
-    # Validate padding is unchanged
-    if data[-padding:] != bytes([padding]) * padding:
-      # Cannot guarantee this gets covered by a bad key test
-      # Some bad keys decrypt with valid padding but the decoded secret is wrong
-      raise ValueError("Invalid padding")  # pragma: no cover
+        # Get the AES cipher from the included initialization vector
+        iv = enc_secret[: AES.block_size]
+        aes = self._get_aes(iv)
 
-    # Reset salt if present
-    self.set_salt()
+        # Decrypt secret and get length of padding
+        data = aes.decrypt(enc_secret[AES.block_size :])
+        padding = data[-1]
 
-    return data[:-padding]
+        # Validate padding is unchanged
+        if data[-padding:] != bytes([padding]) * padding:  # pragma: no cover
+            # Cannot guarantee this gets covered by a bad key test
+            # Some bad keys decrypt with valid padding but the decoded secret is wrong
+            msg = "Invalid padding"
+            raise ValueError(msg)
+
+        # Reset salt if present
+        self.set_salt()
+
+        return data[:-padding]
