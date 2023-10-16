@@ -26,7 +26,7 @@ def sidebar() -> str:
     """
     include_closed = flask.request.args.get("closed") == "included"
     return flask.render_template(
-        "shared/sidebar.html",
+        "shared/sidebar.jinja",
         sidebar=ctx_sidebar(include_closed=include_closed),
     )
 
@@ -181,7 +181,11 @@ def overlay_swap(
     Returns:
         Response that updates overlay OOB and triggers events
     """
-    html = flask.render_template("shared/overlay.html", oob=True, content=content or "")
+    html = flask.render_template(
+        "shared/overlay.jinja",
+        oob=True,
+        content=content or "",
+    )
     response = flask.make_response(html)
     if event:
         if isinstance(event, str):
@@ -221,10 +225,10 @@ def error(e: str | Exception) -> str:
         else:  # pragma: no cover
             # Don't need to test fallback
             msg = orig
-        return flask.render_template("shared/error.html", error=msg)
+        return flask.render_template("shared/error.jinja", error=msg)
 
     # Default return exception's string
-    return flask.render_template("shared/error.html", error=str(e))
+    return flask.render_template("shared/error.jinja", error=str(e))
 
 
 ROUTES: t.Routes = {

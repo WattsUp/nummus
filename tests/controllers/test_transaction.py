@@ -387,17 +387,17 @@ class TestTransaction(WebTestBase):
         }
         result, _ = self.web_put(endpoint, data=form)
         self.assertEqual(2, result.count('name="payee"'))
-        self.assertIn(f'name="payee" value="{payee_0}"', result)
-        self.assertIn('name="payee" value=""', result)
-        self.assertIn(f'name="description" value="{desc}"', result)
-        self.assertIn('name="description" value=""', result)
+        self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
+        self.assertRegex(result, r'name="payee"[ \n]+value=""')
+        self.assertRegex(result, rf'name="description"[ \n]+value="{desc}"')
+        self.assertRegex(result, r'name="description"[ \n]+value=""')
         self.assertEqual(2, result.count("selected"))
-        self.assertIn(f'value="{cat_0}" selected', result)
-        self.assertIn('value="Uncategorized" selected', result)
-        self.assertIn(f'name="tag" value="{tag}"', result)
-        self.assertIn('name="tag" value=""', result)
-        self.assertIn('name="amount" value="100.00"', result)
-        self.assertIn('name="amount" value=""', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+selected')
+        self.assertRegex(result, r'value="Uncategorized"[ \n]+selected')
+        self.assertRegex(result, rf'name="tag"[ \n]+value="{tag}"')
+        self.assertRegex(result, r'name="tag"[ \n]+value=""')
+        self.assertRegex(result, r'name="amount"[ \n]+value="100\.00"')
+        self.assertRegex(result, r'name="amount"[ \n]+value=""')
 
         form = {
             "payee": [payee_0, ""],
@@ -408,13 +408,13 @@ class TestTransaction(WebTestBase):
         }
         result, _ = self.web_delete(endpoint + "?index=2", data=form)
         self.assertEqual(1, result.count('name="payee"'))
-        self.assertIn(f'name="payee" value="{payee_0}"', result)
-        self.assertIn(f'name="description" value="{desc}"', result)
+        self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
+        self.assertRegex(result, rf'name="description"[ \n]+value="{desc}"')
         self.assertEqual(1, result.count("selected"))
-        self.assertIn(f'value="{cat_0}" selected', result)
-        self.assertIn(f'name="tag" value="{tag}"', result)
-        self.assertIn('name="amount" value="100.00"', result)
-        self.assertIn('id="txn-remaining" hx-swap-oob="True"', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+selected')
+        self.assertRegex(result, rf'name="tag"[ \n]+value="{tag}"')
+        self.assertRegex(result, r'name="amount"[ \n]+value="100\.00"')
+        self.assertRegex(result, r'id="txn-remaining"[ \n]+hx-swap-oob="True"')
 
     def test_remaining(self) -> None:
         d = self._setup_portfolio()

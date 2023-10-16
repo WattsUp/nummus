@@ -7,7 +7,7 @@ class TestDashboard(WebTestBase):
     def test_page_home(self) -> None:
         endpoint = "/"
         result, _ = self.web_get(endpoint)
-        target = '<!DOCTYPE html>\n<html lang="en">'
+        target = '<!DOCTYPE html>\n<html lang="en-US">'
         self.assertEqual(target, result[: len(target)])
         target = "</html>"
         self.assertEqual(target, result[-len(target) :])

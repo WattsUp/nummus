@@ -53,7 +53,7 @@ def overlay() -> str:
         ctx: t.DictAny = {"income": income, "expense": expense, "other": other}
 
     return flask.render_template(
-        "transaction_categories/table.html",
+        "transaction_categories/table.jinja",
         categories=ctx,
     )
 
@@ -73,7 +73,7 @@ def new() -> str:
             "locked": False,
         }
 
-        return flask.render_template("transaction_categories/edit.html", category=ctx)
+        return flask.render_template("transaction_categories/edit.jinja", category=ctx)
 
     form = flask.request.form
     name = form["name"].strip()
@@ -114,7 +114,7 @@ def edit(path_uuid: str) -> str:
             }
 
             return flask.render_template(
-                "transaction_categories/edit.html",
+                "transaction_categories/edit.jinja",
                 category=ctx,
             )
 
@@ -158,7 +158,7 @@ def delete(path_uuid: str) -> str:
             }
 
             return flask.render_template(
-                "transaction_categories/delete.html",
+                "transaction_categories/delete.jinja",
                 category=ctx,
             )
 

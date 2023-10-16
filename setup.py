@@ -43,6 +43,7 @@ extras_require["dev"] = extras_require["test"] + [
     "isort",
     "viztracer",
     "pre-commit",
+    "djlint",
 ]
 
 setuptools.setup(

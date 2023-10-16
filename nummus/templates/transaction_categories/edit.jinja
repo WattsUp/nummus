@@ -1,0 +1,63 @@
+<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]"
+   hx-get="{{ url_for("common.empty") }}"
+   hx-swap="innerHTML"></a>
+<div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+     hx-swap="innerHTML">
+    <a hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
+        {% with class="w-[32px] h-[32px]" %}
+            {% include "svg/x.svg" %}
+        {% endwith %}
+    </a>
+    <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction category</h1>
+    <form class="flex flex-col w-full gap-1 px-6 grow" id="form-category">
+        <h1 class="font-bold">Edit details</h1>
+        <hr class="w-full border-grey-200">
+        <table class="w-full">
+            <tbody>
+                <tr>
+                    <td>Category Name</td>
+                    <td>
+                        <input name="name" value="{{ category['name'] or '' }}" class="w-full">
+                    </td>
+                </tr>
+                <tr>
+                    <td>Group</td>
+                    <td>
+                        <select name="group">
+                            {% for group in category["group_type"] %}
+                                <option value="{{ group.name | lower }}" {{ "selected" if group == category["group"] }}>{{ group.name | title }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+    <div id="overlay-error"
+         class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
+    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+        {% if category["uuid"] %}
+            <a hx-get="{{ url_for('transaction_category.delete', path_uuid=category['uuid']) }}"
+               class="button hover:red mr-auto">
+                {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+                    {% include "svg/trash.svg" %}
+                {% endwith %}
+                Delete
+            </a>
+        {% endif %}
+        <a hx-get="{{ url_for("transaction_category.overlay") }}"
+           class="button hover:green">Cancel</a>
+        {% if category["uuid"] %}
+            <a hx-post="{{ url_for('transaction_category.edit', path_uuid=category['uuid']) }}"
+               hx-target="#overlay-error"
+               hx-include="#form-category"
+               class="button bg-green">Save</a>
+        {% else %}
+            <a hx-post="{{ url_for("transaction_category.new") }}"
+               hx-target="#overlay-error"
+               hx-include="#form-category"
+               class="button bg-green">Save</a>
+        {% endif %}
+    </div>
+</div>

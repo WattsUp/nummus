@@ -1,0 +1,12 @@
+{% extends "shared/base.jinja" %}
+{% block content %}
+    <section id="body"
+             class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2"
+             hx-target="#txn-table"
+             hx-include="#txn-config,#txn-header">
+        <h1 class="text-3xl align-left w-full font-serif">Transactions</h1>
+        {% include "transactions/table-config.jinja" %}
+        {% include "transactions/table-header.jinja" %}
+        {% include "transactions/table.jinja" %}
+    </section>
+{% endblock content %}

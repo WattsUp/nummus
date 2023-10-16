@@ -1,0 +1,19 @@
+<a id="txn-{{ txn['uuid'] }}"
+   class="row hoverable"
+   hx-get="{{ url_for('transaction.edit', path_uuid=txn['uuid']) }}"
+   hx-target="#overlay"
+   hx-swap="innerHTML"
+   hx-include="this">
+    <div class="col col-date">{{ txn["date"] }}</div>
+    <div class="col col-account">{{ txn["account"] or "" }}</div>
+    <div class="col col-payee">{{ txn["payee"] or "" }}</div>
+    <div class="col col-desc">{{ txn["description"] or "" }}</div>
+    <div class="col col-cat">{{ txn["category"] }}</div>
+    <div class="col col-tag">{{ txn["tag"] or "" }}</div>
+    <div class="col col-amount">{{ txn["amount"] | money }}</div>
+    <div class="col col-locked">
+        {% if txn["locked"] %}
+            {% include "svg/lock.svg" %}
+        {% endif %}
+    </div>
+</a>

@@ -44,6 +44,10 @@ exclude_lines = [
     "if TYPE_CHECKING:",
 ]
 
+[tool.djlint]
+extension = "jinja"
+profile = "jinja"
+
 [tool.isort]
 profile = "black"
 float_to_top = true

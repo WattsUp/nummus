@@ -48,3 +48,9 @@ repos:
       - id: codespell
         additional_dependencies:
           - tomli
+
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.33.0
+    hooks:
+      - id: djlint-reformat-jinja
+      - id: djlint-jinja

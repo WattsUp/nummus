@@ -45,7 +45,7 @@ def edit(path_uuid: str) -> str:
                 "opened_days_ago": (today - acct.opened_on).days,
             }
 
-            return flask.render_template("accounts/edit.html", account=ctx)
+            return flask.render_template("accounts/edit.jinja", account=ctx)
 
         form = flask.request.form
         institution = form["institution"].strip()

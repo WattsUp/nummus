@@ -31,7 +31,7 @@ def page_all() -> str:
         string HTML response
     """
     return flask.render_template(
-        "transactions/index.html",
+        "transactions/index.jinja",
         sidebar=common.ctx_sidebar(),
         txn_table=ctx_table(),
     )
@@ -44,7 +44,7 @@ def table() -> str:
         string HTML response
     """
     return flask.render_template(
-        "transactions/table.html",
+        "transactions/table.jinja",
         txn_table=ctx_table(),
         include_oob=True,
     )
@@ -87,7 +87,7 @@ def options(field: str) -> str:
         search_str = args.get(f"search-{field}")
 
         return flask.render_template(
-            "transactions/table-options.html",
+            "transactions/table-options.jinja",
             options=ctx_options(query, field, id_mapping, search_str=search_str),
             name=field,
             search_str=search_str,
@@ -366,7 +366,7 @@ def edit(path_uuid: str) -> str:
             )
 
             return flask.render_template(
-                "transactions/edit.html",
+                "transactions/edit.jinja",
                 splits=ctx_splits,
                 parent=ctx_parent,
                 payees=payees,
@@ -477,7 +477,7 @@ def split(path_uuid: str) -> str:
         ctx_splits.append(item)
 
     html = flask.render_template(
-        "transactions/edit-splits.html",
+        "transactions/edit-splits.jinja",
         splits=ctx_splits,
         categories=categories.values(),
         parent={"uuid": path_uuid},
@@ -487,7 +487,7 @@ def split(path_uuid: str) -> str:
             parent: Transaction = web_utils.find(s, Transaction, path_uuid)
             current = sum(filter(None, amount))
             html += flask.render_template(
-                "transactions/edit-remaining.html",
+                "transactions/edit-remaining.jinja",
                 remaining=parent.amount - current,
                 oob=True,
             )
@@ -511,7 +511,7 @@ def remaining(path_uuid: str) -> str:
         current = sum(filter(None, amount))
 
         return flask.render_template(
-            "transactions/edit-remaining.html",
+            "transactions/edit-remaining.jinja",
             remaining=parent.amount - current,
         )
 

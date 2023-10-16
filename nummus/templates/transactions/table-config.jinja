@@ -1,0 +1,74 @@
+<div id="txn-config"
+     class="w-full flex justify-end gap-1 font-serif"
+     hx-swap-oob="{{ oob }}">
+    <input name="search"
+           value="{{ txn_table['search'] }}"
+           placeholder="Search Transactions"
+           class="mr-8 grow"
+           hx-get="{{ url_for("transaction.table") }}">
+    <select name="period" hx-get="{{ url_for("transaction.table") }}">
+        <option value="this-month" {{ "selected" if txn_table["period"] == "this-month" }}>This Month
+        </option>
+        <option value="last-month" {{ "selected" if txn_table["period"] == "last-month" }}>Last Month
+        </option>
+        <option value="30-days" {{ "selected" if txn_table["period"] == "30-days" }}>30 Days
+        </option>
+        <option value="90-days" {{ "selected" if txn_table["period"] == "90-days" }}>90 Days
+        </option>
+        <option value="1-year" {{ "selected" if txn_table["period"] == "1-year" }}>1 year
+        </option>
+        <option value="5-years" {{ "selected" if txn_table["period"] == "5-years" }}>5 years
+        </option>
+        <option value="this-year" {{ "selected" if txn_table["period"] == "this-year" }}>This Year
+        </option>
+        <option value="last-year" {{ "selected" if txn_table["period"] == "last-year" }}>Last Year
+        </option>
+        <option value="all" {{ "selected" if txn_table["period"] == "all" }}>All
+        </option>
+        <option value="custom" hidden="hidden" {{ "selected" if txn_table["period"] == "custom" }}>Custom
+        </option>
+    </select>
+    <input type="date"
+           name="start"
+           value="{{ txn_table['start'] }}"
+           hx-get="{{ url_for("transaction.table") }}?period=custom">
+    to
+    <input type="date"
+           name="end"
+           value="{{ txn_table['end'] }}"
+           hx-get="{{ url_for("transaction.table") }}?period=custom">
+</div>
+<div id="txn-paging"
+     class="flex w-full justify-end my-1"
+     hx-swap-oob="{{ oob }}">
+    <button class="button hover:green mr-auto"
+            hx-get="{{ url_for("transaction.table") }}?search="
+            hx-include="#txn-config">Clear Filters</button>
+    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_first'] }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-first.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_prev'] }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-left.svg" %}
+        {% endwith %}
+    </button>
+    <span class="w-40 text-center">
+        {{ txn_table["i_first"] }}
+        -
+        {{ txn_table["i_last"] }}
+        of
+        {{ txn_table["count"] }}
+    </span>
+    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_next'] }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-right.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_last'] }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-last.svg" %}
+        {% endwith %}
+    </button>
+</div>
