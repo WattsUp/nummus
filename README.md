@@ -1,6 +1,6 @@
 # nummus
 
-[![Unit Test][unittest-image]][unittest-url] [![Pylint][pylint-image]][pylint-url] [![Coverage][coverage-image]][coverage-url]
+[![Unit Test][unittest-image]][unittest-url] [![Static Analysis][static-analysis-image]][static-analysis-url] [![Coverage][coverage-image]][coverage-url]
 
 A personal financial information aggregator and planning tool. Collects and categorizes transactions, manages budgets, tracks investments, calculates net worth, and predicts future performance.
 
@@ -14,8 +14,16 @@ List of dependencies for package to run.
 
 - nummus python modules
   - sqlalchemy
-  - gevent
   - AutoDict
+  - gevent
+  - colorama
+  - rapidfuzz
+  - pyopenssl
+  - flask-assets
+  - pytailwindcss
+  - jsmin
+  - flask
+  - typing-extensions
 
 ### Optional
 
@@ -42,29 +50,28 @@ Install module with encryption
 > python -m pip install .[encrypt]
 ```
 
-For development, install as a link to repository such that code changes are used.
+For development, install as a link to repository such that code changes are used. It is recommended to install pre-commit hooks
 
 ```bash
 > python -m pip install -e .[dev]
-```
-
-Execute module
-
-```bash
-> nummus
+> pre-commit install
 ```
 
 ---
 
 ## Usage
 
-By default a website will open to interact with the module. A REST API is available after authentication to fetch data.
+Run `web` command to launch a website to interact with the module.
+
+```bash
+> nummus web
+```
 
 ---
 
 ## Running Tests
 
-Explain how to run the automated tests.
+Unit tests
 
 ```bash
 > python -m tests
@@ -73,7 +80,7 @@ Explain how to run the automated tests.
 Coverage report
 
 ```bash
-> python -m coverage run && python -m coverage report -m
+> python -m coverage run && python -m coverage report
 ```
 
 ---
@@ -82,9 +89,26 @@ Coverage report
 
 Code development of this project adheres to [Google Python Guide](https://google.github.io/styleguide/pyguide.html)
 
-### Styling
+Linters
+```bash
+> ruff .
+> djlint .
+> codespell .
+```
 
-Use `yapf` to format files, based on Google's guide with the exception of indents being 2 spaces.
+Formatters
+```bash
+> isort .
+> black .
+> djlint . --reformat
+```
+
+### Tools
+- `formatters.sh` will run every formatter
+- `linters.sh` will run every linter
+- `make_test_portfolio.py` will create a portfolio with pseudorandom data
+- `profile_web_call.py` will send a request to an endpoint with vizviewer
+- `run_tailwindcss.py` will run tailwindcss with proper arguments, add `-w` to watch and rerun on save
 
 ---
 
@@ -94,7 +118,7 @@ Versioning of this projects adheres to [Semantic Versioning](https://semver.org/
 
 [unittest-image]: https://github.com/WattsUp/nummus/actions/workflows/test.yml/badge.svg
 [unittest-url]: https://github.com/WattsUp/nummus/actions/workflows/test.yml
-[pylint-image]: https://github.com/WattsUp/nummus/actions/workflows/lint.yml/badge.svg
-[pylint-url]: https://github.com/WattsUp/nummus/actions/workflows/lint.yml
+[static-analysis-image]: https://github.com/WattsUp/nummus/actions/workflows/static-analysis.yml/badge.svg
+[static-analysis-url]: https://github.com/WattsUp/nummus/actions/workflows/static-analysis.yml
 [coverage-image]: https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/WattsUp/36d9705addcd44fb0fccec1d23dc1338/raw/nummus__heads_master.json
 [coverage-url]: https://github.com/WattsUp/nummus/actions/workflows/coverage.yml

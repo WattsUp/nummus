@@ -28,7 +28,7 @@ required = [
     "pytailwindcss",
     "jsmin",
     "flask<2.3,>=2",
-    "typing_extensions",
+    "typing-extensions",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
