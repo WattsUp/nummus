@@ -117,7 +117,7 @@ def main(command_line: t.Strings = None) -> int:
                 print(fake_stderr, file=sys.stderr)
                 return 1
 
-        with viztracer.VizTracer(output_file=output_file) as _:
+        with viztracer.VizTracer(output_file=str(output_file)) as _:
             start = time.perf_counter()
             response = client.open(url, method="GET")
             duration = time.perf_counter() - start

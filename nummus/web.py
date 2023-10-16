@@ -174,7 +174,7 @@ class Server:
         bundle_css.build()
 
         bundle_js = flask_assets.Bundle(
-            "src/*.js",
+            "src/**/*.js",
             output="dist/main.js",
             filters=None if self._app.debug else "jsmin",
         )

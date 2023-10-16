@@ -1,5 +1,6 @@
 # IDE files
 *.code-workspace
+.vscode
 .venv
 
 # Build artifacts

@@ -1,6 +1,9 @@
 [build-system]
 requires = ["setuptools", "wheel", "witch-ver"]
 
+[tool.codespell]
+skip = "./nummus/static/src/3rd-party,./nummus/static/dist,*.pem,*.json"
+
 [tool.coverage.run]
 command_line = "tests discover -s tests -t . --locals"
 branch = true
