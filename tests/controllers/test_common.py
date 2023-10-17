@@ -63,8 +63,8 @@ class TestCommon(WebTestBase):
             s.add_all((acct_checking, acct_savings))
             s.commit()
 
-            acct_uuid_checking = acct_checking.uuid
-            acct_uuid_savings = acct_savings.uuid
+            acct_uri_checking = acct_checking.uri
+            acct_uri_savings = acct_savings.uri
 
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
@@ -107,7 +107,7 @@ class TestCommon(WebTestBase):
                 "value": Decimal("-50.000000"),
                 "category": AccountCategory.CASH,
                 "closed": False,
-                "uuid": acct_uuid_checking,
+                "uri": acct_uri_checking,
             },
             {
                 "institution": "Monkey Bank",
@@ -116,7 +116,7 @@ class TestCommon(WebTestBase):
                 "value": Decimal("100.000000"),
                 "category": AccountCategory.CASH,
                 "closed": True,
-                "uuid": acct_uuid_savings,
+                "uri": acct_uri_savings,
             },
         ]
         target = {

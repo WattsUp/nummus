@@ -16,10 +16,12 @@ class AssetSplit(Base):
     """Asset Split model for storing a split of an asset on a specific date.
 
     Attributes:
-        asset_uuid: Asset unique identifier
+        asset_uri: Asset unique identifier
         date: Date of split
         multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
     """
+
+    __table_id__ = 0x20000000
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     multiplier: t.ORMReal = orm.mapped_column(Decimal6)
@@ -30,10 +32,12 @@ class AssetValuation(Base):
     """Asset Valuation model for storing a value of an asset on a specific date.
 
     Attributes:
-        asset_uuid: Asset unique identifier
+        asset_uri: Asset unique identifier
         date: Date of valuation
         value: Value of assert
     """
+
+    __table_id__ = 0x30000000
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: t.ORMReal = orm.mapped_column(Decimal6)
@@ -54,13 +58,15 @@ class Asset(Base):
     """Asset model for storing an individual item with dynamic worth.
 
     Attributes:
-        uuid: Asset unique identifier
+        uri: Asset unique identifier
         name: Name of Asset
         description: Description of Asset
         category: Type of Asset
         unit: Unit name for an individual Asset (ex: shares)
         tag: Unique tag linked across datasets
     """
+
+    __table_id__ = 0x40000000
 
     name: t.ORMStr
     description: t.ORMStrOpt
@@ -75,7 +81,7 @@ class Asset(Base):
         s = self.img_suffix
         if s is None:
             return None
-        return f"{self.uuid}{s}"
+        return f"{self.uri}{s}"
 
     def get_value(self, start: t.Date, end: t.Date) -> tuple[t.Dates, t.Reals]:
         """Get the value of Asset from start to end date.
@@ -136,7 +142,6 @@ class Asset(Base):
         s: orm.Session,
         start: t.Date,
         end: t.Date,
-        uuids: t.Strings = None,
         ids: t.Ints = None,
     ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Assets from start to end date.
@@ -145,17 +150,13 @@ class Asset(Base):
             s: SQL session to use
             start: First date to evaluate
             end: Last date to evaluate (inclusive)
-            uuids: Limit results to specific Assets by UUID
             ids: Limit results to specific Assets by ID
 
         Returns:
             (List[dates], dict{Asset.id_: list[values]})
         """
-        assets = Asset.map_uuid(s)
-        values: t.DictIntReal = {a_id: Decimal(0) for a_id in assets}
+        values: t.DictIntReal = {a_id: Decimal(0) for a_id, in s.query(Asset.id_).all()}
 
-        if uuids is not None:
-            ids = [a_id for a_id, a_uuid in assets.items() if a_uuid in uuids]
         if ids is not None:
             values = {a_id: v for a_id, v in values.items() if a_id in ids}
 

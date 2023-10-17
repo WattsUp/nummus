@@ -274,19 +274,6 @@ class TestAccount(TestBase):
         self.assertEqual(target_dates, r_dates)
         self.assertEqual({acct.id_: target_values}, r_values)
 
-        r_dates, r_values = Account.get_value_all(s, start, end, uuids=[acct.uuid])
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({acct.id_: target_values}, r_values)
-
-        r_dates, r_values = Account.get_value_all(
-            s,
-            start,
-            end,
-            uuids=[self.random_string()],
-        )
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({}, r_values)
-
         r_dates, r_values = Account.get_value_all(s, start, end, ids=[acct.id_])
         self.assertEqual(target_dates, r_dates)
         self.assertEqual({acct.id_: target_values}, r_values)

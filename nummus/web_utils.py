@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import datetime
 import mimetypes
-import uuid
 from typing import TYPE_CHECKING
 
 from werkzeug import exceptions
@@ -17,33 +16,28 @@ if TYPE_CHECKING:
 MAX_IMAGE_SIZE = int(1e6)
 
 
-def find(
-    s: orm.Session,
-    cls: type[Base],
-    query: str,
-    *,
-    do_raise: bool = True,
-) -> Base:
-    """Find the matching object by UUID.
+def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
+    """Find the matching object by URI.
 
     Args:
         s: SQL session to search
         cls: Type of object to find
-        query: UUID to find, will clean first
-        do_raise: True will raise 404 if not found, False will return None instead
+        uri: URI to find
 
     Returns:
         Object
 
     Raises:
-        HTTPError(400) if UUID is malformed
+        HTTPError(400) if URI is malformed
         HTTPError(404) if object is not found
     """
-    # Clean
-    u = str(uuid.UUID(query))
-    obj = s.query(cls).where(cls.uuid == u).first()
-    if obj is None and do_raise:
-        msg = f"{cls.__name__} {u} not found in Portfolio"
+    try:
+        id_ = cls.uri_to_id(uri)
+    except TypeError as e:
+        raise exceptions.BadRequest(str(e)) from e
+    obj = s.query(cls).where(cls.id_ == id_).scalar()
+    if obj is None:
+        msg = f"{cls.__name__} {uri} not found in Portfolio"
         raise exceptions.NotFound(msg)
     return obj
 

@@ -43,7 +43,7 @@
                     {% for acct in item[1] %}
                         <a class="block nav-account {{ 'closed' if acct['closed'] }}">
                             <object>
-                                <a hx-get="{{ url_for('account.edit', path_uuid=acct['uuid']) }}"
+                                <a hx-get="{{ url_for('account.edit', uri=acct['uri']) }}"
                                    hx-target="#overlay"
                                    hx-swap="innerHTML">{% include "svg/pencil.svg" %}</a>
                             </object>

@@ -37,8 +37,8 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        {% if category["uuid"] %}
-            <a hx-get="{{ url_for('transaction_category.delete', path_uuid=category['uuid']) }}"
+        {% if category["uri"] %}
+            <a hx-get="{{ url_for('transaction_category.delete', uri=category['uri']) }}"
                class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
@@ -48,8 +48,8 @@
         {% endif %}
         <a hx-get="{{ url_for("transaction_category.overlay") }}"
            class="button hover:green">Cancel</a>
-        {% if category["uuid"] %}
-            <a hx-post="{{ url_for('transaction_category.edit', path_uuid=category['uuid']) }}"
+        {% if category["uri"] %}
+            <a hx-post="{{ url_for('transaction_category.edit', uri=category['uri']) }}"
                hx-target="#overlay-error"
                hx-include="#form-category"
                class="button bg-green">Save</a>

@@ -72,21 +72,19 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         query = s.query(Account)
         query = query.with_entities(
             Account.id_,
-            Account.uuid,
             Account.name,
             Account.institution,
             Account.category,
             Account.closed,
         )
-        for acct_id, acct_uuid, name, institution, category, closed in query.all():
+        for acct_id, name, institution, category, closed in query.all():
             acct_id: int
-            acct_uuid: str
             name: str
             institution: str
             category: AccountCategory
             closed: bool
             accounts[acct_id] = {
-                "uuid": acct_uuid,
+                "uri": Account.id_to_uri(acct_id),
                 "name": name,
                 "institution": institution,
                 "category": category,
@@ -143,7 +141,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         if len(accounts) > 0
     }
 
-    # TODO(WattsUp): Add account UUIDs for links
+    # TODO(WattsUp): Add account URIs for links
     return {
         "net-worth": assets + liabilities,
         "assets": assets,

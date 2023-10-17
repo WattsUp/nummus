@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import secrets
 import shutil
 import string
 import time
 import unittest
-import uuid
 from decimal import Decimal
 from pathlib import Path
 
@@ -68,7 +68,7 @@ class TestBase(unittest.TestCase):
 
     def get_session(self) -> orm.Session:
         config = autodict.AutoDict(encrypt=False)
-        path = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         return sql.get_session(path, config)
 
     @classmethod

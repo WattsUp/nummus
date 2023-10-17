@@ -93,7 +93,7 @@ class TestAsset(TestBase):
         self.assertEqual(d["unit"], a.unit)
         self.assertEqual(d["tag"], a.tag)
         self.assertEqual(d["img_suffix"], a.img_suffix)
-        self.assertEqual(f"{a.uuid}{d['img_suffix']}", a.image_name)
+        self.assertEqual(f"{a.uri}{d['img_suffix']}", a.image_name)
 
         a.img_suffix = None
         self.assertIsNone(a.image_name)
@@ -209,19 +209,6 @@ class TestAsset(TestBase):
         r_dates, r_values = Asset.get_value_all(s, start, end)
         self.assertEqual(target_dates, r_dates)
         self.assertEqual({a.id_: target_values}, r_values)
-
-        r_dates, r_values = Asset.get_value_all(s, start, end, uuids=[a.uuid])
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({a.id_: target_values}, r_values)
-
-        r_dates, r_values = Asset.get_value_all(
-            s,
-            start,
-            end,
-            uuids=[self.random_string()],
-        )
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({}, r_values)
 
         r_dates, r_values = Asset.get_value_all(s, start, end, ids=[a.id_])
         self.assertEqual(target_dates, r_dates)

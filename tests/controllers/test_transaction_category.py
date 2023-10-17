@@ -56,11 +56,13 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
 
         with p.get_session() as s:
-            query = s.query(TransactionCategory.uuid)
+            query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(False))
-            (t_cat_uuid,) = query.first()
+            t_cat = query.first()
+            t_cat_id = t_cat.id_
+            t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uuid}/edit"
+        endpoint = f"/h/txn-categories/{t_cat_uri}/edit"
         result, _ = self.web_get(endpoint)
         self.assertIn("Delete", result)
 
@@ -72,7 +74,7 @@ class TestTransactionCategory(WebTestBase):
         with p.get_session() as s:
             t_cat = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.uuid == t_cat_uuid)
+                .where(TransactionCategory.id_ == t_cat_id)
                 .first()
             )
             self.assertEqual(t_cat.name, name)
@@ -84,11 +86,12 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn(e_str, result)
 
         with p.get_session() as s:
-            query = s.query(TransactionCategory.uuid)
+            query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(True))
-            (t_cat_uuid,) = query.first()
+            t_cat = query.first()
+            t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uuid}/edit"
+        endpoint = f"/h/txn-categories/{t_cat_uri}/edit"
         form = {"name": "abc", "group": "other"}
         self.web_post(endpoint, rc=403, data=form)
 
@@ -101,7 +104,7 @@ class TestTransactionCategory(WebTestBase):
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(False))
             t_cat = query.first()
-            t_cat_uuid = t_cat.uuid
+            t_cat_uri = t_cat.uri
 
             acct = Account(
                 name="Monkey Bank Checking",
@@ -126,9 +129,9 @@ class TestTransactionCategory(WebTestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-            t_split_uuid = t_split.uuid
+            t_split_id = t_split.id_
 
-        endpoint = f"/h/txn-categories/{t_cat_uuid}/delete"
+        endpoint = f"/h/txn-categories/{t_cat_uri}/delete"
         result, _ = self.web_get(endpoint)
         self.assertIn("Are you sure you want to delete this category?", result)
 
@@ -137,7 +140,7 @@ class TestTransactionCategory(WebTestBase):
 
         with p.get_session() as s:
             query = s.query(TransactionSplit)
-            query = query.where(TransactionSplit.uuid == t_split_uuid)
+            query = query.where(TransactionSplit.id_ == t_split_id)
             t_split: TransactionSplit = query.scalar()
 
             query = s.query(TransactionCategory)
@@ -147,9 +150,10 @@ class TestTransactionCategory(WebTestBase):
             self.assertEqual("Uncategorized", t_cat.name)
 
         with p.get_session() as s:
-            query = s.query(TransactionCategory.uuid)
+            query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(True))
-            (t_cat_uuid,) = query.first()
+            t_cat = query.first()
+            t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uuid}/delete"
+        endpoint = f"/h/txn-categories/{t_cat_uri}/delete"
         self.web_post(endpoint, rc=403)

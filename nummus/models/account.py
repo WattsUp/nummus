@@ -32,7 +32,7 @@ class Account(Base):
     """Account model for storing a financial account.
 
     Attributes:
-        uuid: Account unique identifier
+        uri: Account unique identifier
         name: Account name
         institution: Account holding institution
         category: Type of Account
@@ -40,6 +40,8 @@ class Account(Base):
         opened_on: Date of first Transaction
         updated_on: Date of latest Transaction
     """
+
+    __table_id__ = 0x10000000
 
     name: t.ORMStr = orm.mapped_column()
     institution: t.ORMStr
@@ -193,7 +195,6 @@ class Account(Base):
         s: orm.Session,
         start: t.Date,
         end: t.Date,
-        uuids: t.Strings = None,
         ids: t.Ints = None,
     ) -> tuple[t.Dates, t.DictReals]:
         """Get the value of all Accounts from start to end date.
@@ -202,19 +203,15 @@ class Account(Base):
             s: SQL session to use
             start: First date to evaluate
             end: Last date to evaluate (inclusive)
-            uuids: Limit results to specific Assets by UUID
             ids: Limit results to specific Assets by ID
 
         Returns:
             (List[dates], dict{Account.id_: list[values]})
         """
-        accounts = Account.map_uuid(s)
-        current_cash: t.DictIntReal = {acct_id: Decimal(0) for acct_id in accounts}
+        current_cash: t.DictIntReal = {
+            acct_id: Decimal(0) for acct_id, in s.query(Account.id_).all()
+        }
 
-        if uuids is not None:
-            ids = [
-                acct_id for acct_id, acct_uuid in accounts.items() if acct_uuid in uuids
-            ]
         if ids is not None:
             current_cash = {
                 acct_id: v for acct_id, v in current_cash.items() if acct_id in ids

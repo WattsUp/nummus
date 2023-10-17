@@ -17,7 +17,7 @@ class TransactionSplit(Base):
 
     Attributes:
         id: TransactionSplit unique identifier
-        uuid: TransactionSplit unique identifier
+        uri: TransactionSplit unique identifier
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
         payee: Name of payee (for outflow)/payer (for inflow)
@@ -33,6 +33,8 @@ class TransactionSplit(Base):
         asset_quantity: Number of units of Asset exchanged, Positive indicates
             Account gained Assets (inflow)
     """
+
+    __table_id__ = 0x80000000
 
     amount: t.ORMReal = orm.mapped_column(
         Decimal6,
@@ -65,7 +67,7 @@ class TransactionSplit(Base):
 
     @override
     def __setattr__(self, name: str, value: t.Any) -> None:
-        if name in ["parent_id", "date", "locked", "account_uuid", "account_id"]:
+        if name in ["parent_id", "date", "locked", "account_id"]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
@@ -171,7 +173,7 @@ class Transaction(Base):
 
     Attributes:
         id: Transaction unique identifier
-        uuid: Transaction unique identifier
+        uri: Transaction unique identifier
         account: Account that owns this Transaction
         date: Date on which Transaction occurred
         amount: Amount amount of cash exchanged. Positive indicated Account
@@ -181,6 +183,8 @@ class Transaction(Base):
             (namely auto labeling field based on similar Transactions)
         splits: List of TransactionSplits
     """
+
+    __table_id__ = 0x90000000
 
     account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 

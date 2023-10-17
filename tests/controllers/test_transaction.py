@@ -23,10 +23,10 @@ class TestTransaction(WebTestBase):
         Returns:
             {
                 "acct": Account name,
-                "t_0": UUID for transaction 0
-                "t_split_0": UUID for split 0
-                "t_1": UUID for transaction 1
-                "t_split_1": UUID for split 1
+                "t_0": URI for transaction 0
+                "t_split_0": URI for split 0
+                "t_1": URI for transaction 1
+                "t_split_1": URI for split 1
                 "payee_0": Payee for transaction 0
                 "payee_1": Payee for transaction 1
                 "cat_0": Payee for transaction 0
@@ -76,8 +76,8 @@ class TestTransaction(WebTestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-            t_0_uuid = txn.uuid
-            t_split_0_uuid = t_split.uuid
+            t_0_uri = txn.uri
+            t_split_0_uri = t_split.uri
 
             txn = Transaction(
                 account_id=acct.id_,
@@ -96,15 +96,15 @@ class TestTransaction(WebTestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-            t_1_uuid = txn.uuid
-            t_split_1_uuid = t_split.uuid
+            t_1_uri = txn.uri
+            t_split_1_uri = t_split.uri
 
         return {
             "acct": acct_name,
-            "t_0": t_0_uuid,
-            "t_split_0": t_split_0_uuid,
-            "t_1": t_1_uuid,
-            "t_split_1": t_split_1_uuid,
+            "t_0": t_0_uri,
+            "t_split_0": t_split_0_uri,
+            "t_1": t_1_uri,
+            "t_split_1": t_split_1_uri,
             "payee_0": payee_0,
             "payee_1": payee_1,
             "cat_0": cat_0,
@@ -306,7 +306,7 @@ class TestTransaction(WebTestBase):
             categories = TransactionCategory.map_name(s)
 
             query = s.query(Transaction)
-            query = query.where(Transaction.uuid == t_0)
+            query = query.where(Transaction.id_ == Transaction.uri_to_id(t_0))
             txn: Transaction = query.scalar()
             splits = txn.splits
 
@@ -350,7 +350,7 @@ class TestTransaction(WebTestBase):
             categories = TransactionCategory.map_name(s)
 
             query = s.query(Transaction)
-            query = query.where(Transaction.uuid == t_0)
+            query = query.where(Transaction.id_ == Transaction.uri_to_id(t_0))
             txn: Transaction = query.scalar()
             splits = txn.splits
 

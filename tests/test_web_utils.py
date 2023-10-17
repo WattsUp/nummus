@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import uuid
 
 import flask
 
@@ -25,16 +24,13 @@ class TestWebUtils(TestBase):
         s.add(acct)
         s.commit()
 
-        acct_uuid = str(acct.uuid)
-        result = web_utils.find(s, Account, acct_uuid)
-        self.assertEqual(acct, result)
-
-        # Get by uuid without dashes
-        result = web_utils.find(s, Account, acct_uuid.replace("-", ""))
+        acct_uri = acct.uri
+        result = web_utils.find(s, Account, acct_uri)
         self.assertEqual(acct, result)
 
         # Account does not exist
-        self.assertHTTPRaises(404, web_utils.find, s, Account, str(uuid.uuid4()))
+        mising_uri = Account.id_to_uri(acct.id_ + 1)
+        self.assertHTTPRaises(404, web_utils.find, s, Account, mising_uri)
 
     def test_parse_period(self) -> None:
         today = datetime.date.today()
