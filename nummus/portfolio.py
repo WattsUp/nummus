@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import secrets
 import shutil
@@ -145,6 +146,8 @@ class Portfolio:
         config["key_version"] = 1  # Increment if there is a breaking change
         config["salt"] = salt
         config["encrypt"] = enc is not None
+        cipher_bytes = models.Cipher.generate().to_bytes()
+        config["cipher"] = base64.b64encode(cipher_bytes).decode()
         config.save()
         path_config.chmod(0o600)  # Only owner can read/write
         path_images.chmod(0o700)  # Only owner can read/write
@@ -217,6 +220,8 @@ class Portfolio:
             if password_decrypted != key_salted:
                 msg = "Root user's password did not match"
                 raise ValueError(msg)
+        # Load Cipher
+        models.load_cipher(base64.b64decode(self._config["cipher"]))
         # All good :)
 
     def get_session(self) -> orm.Session:

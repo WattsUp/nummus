@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import base64
+import json
 import secrets
 import tarfile
 
 import autodict
 
-from nummus import portfolio, sql
+from nummus import models, portfolio, sql
 from nummus.models import (
     Account,
     AccountCategory,
@@ -77,6 +79,12 @@ class TestPortfolio(TestBase):
             portfolio.Portfolio.is_encrypted(path_db),
             "Database is unexpectedly encrypted",
         )
+
+        # Check config contains valid cipher
+        with path_config.open("r") as file:
+            j = json.load(file)
+            buf = j["cipher"]
+            models.Cipher.from_bytes(base64.b64decode(buf))
 
         # Database already exists
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
