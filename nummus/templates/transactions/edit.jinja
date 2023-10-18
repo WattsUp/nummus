@@ -56,7 +56,7 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        <a hx-put="{{ url_for('transaction.split', path_uuid=parent['uuid']) }}"
+        <a hx-put="{{ url_for('transaction.split', uri=parent['uri']) }}"
            hx-target="#txn-splits"
            class="button hover:blue mr-auto">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -68,7 +68,7 @@
            class="button hover:green"
            hx-swap="innerHTML"
            hx-include="this">Cancel</a>
-        <a hx-post="{{ url_for('transaction.edit', path_uuid=parent['uuid']) }}"
+        <a hx-post="{{ url_for('transaction.edit', uri=parent['uri']) }}"
            hx-target="#overlay-error"
            hx-swap="innerHTML"
            class="button bg-green">Save</a>

@@ -1,6 +1,6 @@
-<a id="txn-{{ txn['uuid'] }}"
+<a id="txn-{{ txn['uri'] }}"
    class="row hoverable"
-   hx-get="{{ url_for('transaction.edit', path_uuid=txn['uuid']) }}"
+   hx-get="{{ url_for('transaction.edit', uri=txn['uri']) }}"
    hx-target="#overlay"
    hx-swap="innerHTML"
    hx-include="this">

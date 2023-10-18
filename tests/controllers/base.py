@@ -31,10 +31,7 @@ if TYPE_CHECKING:
     import werkzeug
 
 
-_RE_UUID = re.compile(
-    r"[0-9a-fA-F]{8}\b-[0-9a-fA-F]{4}\b-[0-9a-fA-F]{4}\b-"
-    r"[0-9a-fA-F]{4}\b-[0-9a-fA-F]{12}",
-)
+_RE_URI = re.compile(r"[0-9a-zA-Z_-]{6}")
 
 ResultType = t.DictAny | str | bytes
 
@@ -192,20 +189,20 @@ class WebTestBase(TestBase):
             self.assertEqual(content_type, response.content_type)
 
             with autodict.JSONAutoDict(TEST_LOG) as d:
-                # Replace uuid with {accountUUID, assetUUID, ...}
+                # Replace uri with {accountURI, assetURI, ...}
                 parts = []
                 for p in endpoint.split("/"):
-                    if _RE_UUID.match(p):
+                    if _RE_URI.match(p):
                         if "account" in parts[-1]:
-                            parts.append("{accountUUID}")
+                            parts.append("{accountURI}")
                         elif "asset" in parts[-1]:
-                            parts.append("{assetUUID}")
+                            parts.append("{assetURI}")
                         elif "budget" in parts[-1]:
-                            parts.append("{budgetUUID}")
+                            parts.append("{budgetURI}")
                         elif "transaction" in parts[-1]:
-                            parts.append("{transactionUUID}")
+                            parts.append("{transactionURI}")
                         else:
-                            parts.append("{uuid}")
+                            parts.append("{uri}")
                     else:
                         parts.append(p)
                 endpoint = "/".join(parts)

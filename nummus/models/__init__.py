@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 from nummus.models.account import Account, AccountCategory
 from nummus.models.asset import Asset, AssetCategory, AssetSplit, AssetValuation
 from nummus.models.base import Base, BaseEnum
+from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -28,7 +29,9 @@ __all__ = [
     "Base",
     "BaseEnum",
     "Budget",
+    "Cipher",
     "Credentials",
+    "load_cipher",
     "Transaction",
     "TransactionSplit",
     "TransactionCategory",

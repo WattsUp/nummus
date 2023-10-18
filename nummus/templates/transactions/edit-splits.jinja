@@ -25,13 +25,13 @@
                    value="{{ '%.2f' % txn['amount'] if txn['amount'] }}"
                    placeholder="Amount"
                    class="col-amount"
-                   hx-post="{{ url_for('transaction.remaining', path_uuid=parent['uuid']) }}"
+                   hx-post="{{ url_for('transaction.remaining', uri=parent['uri']) }}"
                    hx-target="#txn-remaining"
                    hx-trigger="keyup changed">
             {% if splits | length == 1 %}
                 <div class="w-[24px] h-[24px] my-0.5"></div>
             {% else %}
-                <a hx-delete="{{ url_for('transaction.split', path_uuid=parent['uuid']) }}?index={{ loop.index }}"
+                <a hx-delete="{{ url_for('transaction.split', uri=parent['uri']) }}?index={{ loop.index }}"
                    hx-target="#txn-splits">
                     {% with class="w-[24px] h-[24px] my-0.5" %}
                         {% include "svg/trash.svg" %}

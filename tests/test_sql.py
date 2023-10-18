@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
 
 import autodict
-import sqlalchemy
 from sqlalchemy import orm, schema
 
 from nummus import sql
@@ -18,11 +16,7 @@ class ORMBase(orm.DeclarativeBase):
     def __tablename__(self) -> None:
         return self.__name__.lower()
 
-    id_: orm.Mapped[str] = orm.mapped_column(
-        sqlalchemy.String(36),
-        primary_key=True,
-        default=lambda: str(uuid.uuid4()),
-    )
+    id_: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
 
     def __repr__(self) -> str:
         try:

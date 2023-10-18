@@ -32,7 +32,7 @@ def overlay() -> str:
 
         for cat in s.query(TransactionCategory).all():
             cat_d: t.DictAny = {
-                "uuid": cat.uuid,
+                "uri": cat.uri,
                 "name": cat.name,
                 "locked": cat.locked,
             }
@@ -66,7 +66,7 @@ def new() -> str:
     """
     if flask.request.method == "GET":
         ctx: t.DictAny = {
-            "uuid": None,
+            "uri": None,
             "name": None,
             "group": None,
             "group_type": TransactionCategoryGroup,
@@ -92,8 +92,8 @@ def new() -> str:
     return common.overlay_swap(overlay())
 
 
-def edit(path_uuid: str) -> str:
-    """GET & POST /h/txn-categories/<category_uuid>/edit.
+def edit(uri: str) -> str:
+    """GET & POST /h/txn-categories/<uri>/edit.
 
     Returns:
         string HTML response
@@ -102,11 +102,11 @@ def edit(path_uuid: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, path_uuid)
+        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: t.DictAny = {
-                "uuid": cat.uuid,
+                "uri": uri,
                 "name": cat.name,
                 "group": cat.group,
                 "group_type": TransactionCategoryGroup,
@@ -136,8 +136,8 @@ def edit(path_uuid: str) -> str:
         return common.overlay_swap(overlay())
 
 
-def delete(path_uuid: str) -> str:
-    """GET & POST /h/txn-categories/<category_uuid>/delete.
+def delete(uri: str) -> str:
+    """GET & POST /h/txn-categories/<uri>/delete.
 
     Returns:
         string HTML response
@@ -146,11 +146,11 @@ def delete(path_uuid: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, path_uuid)
+        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: t.DictAny = {
-                "uuid": cat.uuid,
+                "uri": uri,
                 "name": cat.name,
                 "group": cat.group,
                 "group_type": TransactionCategoryGroup,
@@ -188,6 +188,6 @@ def delete(path_uuid: str) -> str:
 ROUTES: t.Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
-    "/h/txn-categories/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
-    "/h/txn-categories/<path:path_uuid>/delete": (delete, ["GET", "POST"]),
+    "/h/txn-categories/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/txn-categories/<path:uri>/delete": (delete, ["GET", "POST"]),
 }

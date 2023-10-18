@@ -28,7 +28,7 @@ class TestAccount(WebTestBase):
             s.add(acct)
             s.commit()
 
-            acct_uuid = acct.uuid
+            acct_uri = acct.uri
 
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
@@ -50,7 +50,7 @@ class TestAccount(WebTestBase):
 
             s.commit()
 
-        endpoint = f"/h/accounts/a/{acct_uuid}/edit"
+        endpoint = f"/h/accounts/a/{acct_uri}/edit"
         result, _ = self.web_get(endpoint)
         self.assertIn("Edit account", result)
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import re
 import secrets
 import shutil
@@ -145,6 +146,8 @@ class Portfolio:
         config["key_version"] = 1  # Increment if there is a breaking change
         config["salt"] = salt
         config["encrypt"] = enc is not None
+        cipher_bytes = models.Cipher.generate().to_bytes()
+        config["cipher"] = base64.b64encode(cipher_bytes).decode()
         config.save()
         path_config.chmod(0o600)  # Only owner can read/write
         path_images.chmod(0o700)  # Only owner can read/write
@@ -217,6 +220,8 @@ class Portfolio:
             if password_decrypted != key_salted:
                 msg = "Root user's password did not match"
                 raise ValueError(msg)
+        # Load Cipher
+        models.load_cipher(base64.b64decode(self._config["cipher"]))
         # All good :)
 
     def get_session(self) -> orm.Session:
@@ -298,7 +303,7 @@ class Portfolio:
         query: t.IntOrStr,
         session: orm.Session = None,
     ) -> int | Account:
-        """Find a matching Account by name, UUID, institution, or ID.
+        """Find a matching Account by name, URI, institution, or ID.
 
         Args:
             query: Search query
@@ -313,25 +318,25 @@ class Portfolio:
             if isinstance(query, int):
                 # See if account is an ID first...
                 matches = s.query(Account).where(Account.id_ == query).all()
+                return matches[0] if len(matches) == 1 else None
+            try:
+                # See if query is an URI
+                id_ = Account.uri_to_id(query)
+                matches = s.query(Account).where(Account.id_ == id_).all()
                 if len(matches) == 1:
-                    # Woot
                     return matches[0]
-            else:
-                # See if account is an UUID first...
-                matches = s.query(Account).where(Account.uuid == query).all()
-                if len(matches) == 1:
-                    # Woot
-                    return matches[0]
-                # Maybe a name next
-                matches = s.query(Account).where(Account.name == query).all()
-                if len(matches) == 1:
-                    # Woot
-                    return matches[0]
-                # Last chance, institution
-                matches = s.query(Account).where(Account.institution == query).all()
-                if len(matches) == 1:
-                    # Woot
-                    return matches[0]
+            except TypeError:
+                pass
+
+            # Maybe a name next
+            matches = s.query(Account).where(Account.name == query).all()
+            if len(matches) == 1:
+                return matches[0]
+
+            # Last chance, institution
+            matches = s.query(Account).where(Account.institution == query).all()
+            if len(matches) == 1:
+                return matches[0]
             return None
 
         if session is None:
@@ -348,7 +353,7 @@ class Portfolio:
         query: t.IntOrStr,
         session: orm.Session = None,
     ) -> int | Asset:
-        """Find a matching Asset by name, UUID, or ID.
+        """Find a matching Asset by name, URI, or ID.
 
         Args:
             query: Search query
@@ -361,22 +366,22 @@ class Portfolio:
 
         def _find(s: orm.Session) -> Asset:
             if isinstance(query, int):
-                # See if asset is an ID first...
+                # See if account is an ID first...
                 matches = s.query(Asset).where(Asset.id_ == query).all()
+                return matches[0] if len(matches) == 1 else None
+            try:
+                # See if query is an URI
+                id_ = Asset.uri_to_id(query)
+                matches = s.query(Asset).where(Asset.id_ == id_).all()
                 if len(matches) == 1:
-                    # Woot
                     return matches[0]
-            else:
-                # See if asset is an UUID first...
-                matches = s.query(Asset).where(Asset.uuid == query).all()
-                if len(matches) == 1:
-                    # Woot
-                    return matches[0]
-                # Maybe a name next
-                matches = s.query(Asset).where(Asset.name == query).all()
-                if len(matches) == 1:
-                    # Woot
-                    return matches[0]
+            except TypeError:
+                pass
+
+            # Maybe a name next
+            matches = s.query(Asset).where(Asset.name == query).all()
+            if len(matches) == 1:
+                return matches[0]
             return None
 
         if session is None:

@@ -16,8 +16,8 @@ if TYPE_CHECKING:
     from nummus import custom_types as t
 
 
-def edit(path_uuid: str) -> str:
-    """GET & POST /h/accounts/a/<account_uuid>/edit.
+def edit(uri: str) -> str:
+    """GET & POST /h/accounts/a/<uri>/edit.
 
     Returns:
         string HTML response
@@ -27,14 +27,14 @@ def edit(path_uuid: str) -> str:
     today = datetime.date.today()
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, path_uuid)
+        acct: Account = web_utils.find(s, Account, uri)
 
         _, values, _ = acct.get_value(today, today)
         v = values[0]
 
         if flask.request.method == "GET":
             ctx: t.DictAny = {
-                "uuid": acct.uuid,
+                "uri": uri,
                 "name": acct.name,
                 "institution": acct.institution,
                 "category": acct.category,
@@ -71,5 +71,5 @@ def edit(path_uuid: str) -> str:
 
 
 ROUTES: t.Routes = {
-    "/h/accounts/a/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
+    "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }

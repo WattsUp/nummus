@@ -19,7 +19,7 @@
                     {% if item["locked"] %}
                         <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
                     {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}"
+                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
                            class="txn-category">
                             {% with class="w-[24px] h-[24px]" %}
                                 {% include "svg/pencil.svg" %}
@@ -37,7 +37,7 @@
                     {% if item["locked"] %}
                         <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
                     {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}"
+                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
                            class="txn-category">
                             {% with class="w-[24px] h-[24px]" %}
                                 {% include "svg/pencil.svg" %}
@@ -55,7 +55,7 @@
                     {% if item["locked"] %}
                         <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
                     {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', path_uuid=item['uuid']) }}"
+                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
                            class="txn-category">
                             {% with class="w-[24px] h-[24px]" %}
                                 {% include "svg/pencil.svg" %}

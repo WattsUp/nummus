@@ -127,10 +127,11 @@ calculates net worth, and predicts future performance."""
     sub_web.add_argument(
         "--debug",
         # Default to if it detects a dev install
-        # Aka at a tag on master branch
+        # Aka not at a clean tag on master branch
         default=(
             version.version_dict["branch"] != "master"
-            and version.version_dict["distance"] != 0
+            or version.version_dict["distance"] != 0
+            or version.version_dict["dirty"]
         ),
         action="store_true",
         help=argparse.SUPPRESS,

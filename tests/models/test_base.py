@@ -10,6 +10,8 @@ from tests.base import TestBase
 
 
 class Parent(base.Base):
+    __table_id__ = 0xF0000000
+
     generic_column: t.ORMIntOpt
     name: t.ORMStrOpt
     children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
@@ -21,7 +23,7 @@ class Parent(base.Base):
         return self.children[0]
 
     @property
-    def uuid_bytes(self) -> bytes:
+    def uri_bytes(self) -> bytes:
         class Bytes:
             def __init__(self, s: str) -> None:
                 self._data = s.encode(encoding="utf-8")
@@ -29,10 +31,12 @@ class Parent(base.Base):
             def __eq__(self, other: Bytes) -> bool:
                 return self._data == other._data
 
-        return Bytes(self.uuid)
+        return Bytes(self.uri)
 
 
 class Child(base.Base):
+    __table_id__ = 0xE0000000
+
     parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id_"))
     parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
 
@@ -50,22 +54,22 @@ class TestORMBase(TestBase):
 
         parent = Parent()
         self.assertIsNone(parent.id_)
-        self.assertIsNone(parent.uuid)
+        self.assertIsNone(parent.uri)
         s.add(parent)
         s.commit()
         self.assertIsNotNone(parent.id_)
-        self.assertIsNotNone(parent.uuid)
+        self.assertIsNotNone(parent.uri)
 
         child = Child()
         self.assertIsNone(child.id_)
-        self.assertIsNone(child.uuid)
+        self.assertIsNone(child.uri)
         self.assertIsNone(child.parent)
         self.assertIsNone(child.parent_id)
         child.parent = parent
         s.add(child)
         s.commit()
         self.assertIsNotNone(child.id_)
-        self.assertIsNotNone(child.uuid)
+        self.assertIsNotNone(child.uri)
         self.assertIsNotNone(child.parent)
         self.assertIsNotNone(child.parent_id)
 

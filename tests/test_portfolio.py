@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import base64
+import json
 import secrets
 import tarfile
-import uuid
 
 import autodict
 
-from nummus import portfolio, sql
+from nummus import models, portfolio, sql
 from nummus.models import (
     Account,
     AccountCategory,
@@ -78,6 +79,12 @@ class TestPortfolio(TestBase):
             portfolio.Portfolio.is_encrypted(path_db),
             "Database is unexpectedly encrypted",
         )
+
+        # Check config contains valid cipher
+        with path_config.open("r") as file:
+            j = json.load(file)
+            buf = j["cipher"]
+            models.Cipher.from_bytes(base64.b64decode(buf))
 
         # Database already exists
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -235,7 +242,7 @@ class TestPortfolio(TestBase):
         path_db.unlink()
 
     def test_find_account(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
         result = p.find_account("Monkey Bank Checking")
@@ -274,9 +281,13 @@ class TestPortfolio(TestBase):
             result = p.find_account(10)
             self.assertIsNone(result)
 
-            # Find by UUID
-            result = p.find_account(acct_checking.uuid)
+            # Find by URI
+            result = p.find_account(acct_checking.uri)
             self.assertEqual(acct_checking.id_, result)
+
+            # No match with random URI
+            result = p.find_account(Account.id_to_uri(0x0FFFFFFF))
+            self.assertIsNone(result)
 
             # Find by name
             result = p.find_account("Monkey Bank Checking")
@@ -291,7 +302,7 @@ class TestPortfolio(TestBase):
             self.assertEqual(acct_invest_1.id_, result)
 
     def test_find_asset(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
         result = p.find_asset("BANANA")
@@ -315,9 +326,13 @@ class TestPortfolio(TestBase):
             result = p.find_asset(10)
             self.assertIsNone(result)
 
-            # Find by UUID
-            result = p.find_asset(a_banana.uuid)
+            # Find by URI
+            result = p.find_asset(a_banana.uri)
             self.assertEqual(a_banana.id_, result)
+
+            # No match with random URI
+            result = p.find_asset(Asset.id_to_uri(0x0FFFFFFF))
+            self.assertIsNone(result)
 
             # Find by name
             result = p.find_asset("BANANA")
@@ -328,7 +343,7 @@ class TestPortfolio(TestBase):
             self.assertIsNone(result)
 
     def test_import_file(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
         # Fail to import non-importable file
@@ -415,7 +430,7 @@ class TestPortfolio(TestBase):
                         self.assertEqual(test_value, r_v)
 
     def test_backup_restore(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
 
@@ -577,8 +592,8 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
     def test_clean(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
-        path_other_db = self._TEST_ROOT.joinpath(f"{uuid.uuid4()}.db")
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
+        path_other_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
         _ = portfolio.Portfolio.create(path_other_db)
@@ -622,7 +637,7 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)
 
         # Make an asset image
-        path_a_img = p.image_path.joinpath(f"{uuid.uuid4()}.png")
+        path_a_img = p.image_path.joinpath(f"{secrets.token_hex()}.png")
         with path_a_img.open("wb") as file:
             file.write(self.random_string().encode())
 

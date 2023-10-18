@@ -22,11 +22,13 @@ class TransactionCategory(Base):
 
     Attributes:
         id: TransactionCategory unique identifier
-        uuid: TransactionCategory unique identifier
+        uri: TransactionCategory unique identifier
         name: Name of category
         group: Type of category
         locked: True will prevent any changes being made
     """
+
+    __table_id__ = 0x70000000
 
     name: t.ORMStr = orm.mapped_column(unique=True)
     group: orm.Mapped[TransactionCategoryGroup]

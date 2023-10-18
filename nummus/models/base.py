@@ -3,23 +3,22 @@
 from __future__ import annotations
 
 import enum
-import uuid
 from decimal import Decimal
 
-import sqlalchemy
 from sqlalchemy import orm, schema, types
 from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import utils
+from nummus.models import base_uri
 
 
 class Base(orm.DeclarativeBase):
     """Base ORM model.
 
     Attributes:
-        id: Primary key identifier
-        uuid: Universally unique identifier
+        id_: Primary key identifier, unique
+        uri: Uniform Resource Identifier, unique
     """
 
     metadata: schema.MetaData
@@ -29,57 +28,72 @@ class Base(orm.DeclarativeBase):
     def __tablename__(self) -> str:
         return utils.camel_to_snake(self.__name__)
 
+    __table_id__: int = None
+
     id_: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
-    # Could be better with storing a uuid as a 16B int but SQLite doesn't have
-    # that large of integers
-    uuid: t.ORMStr = orm.mapped_column(
-        sqlalchemy.String(36),
-        default=lambda: str(uuid.uuid4()),
-    )
+    @classmethod
+    def id_to_uri(cls, id_: int) -> str:
+        """Uniform Resource Identifier derived from id_ and __table_id__.
+
+        Args:
+            id_: Model ID
+
+        Returns:
+            URI string
+        """
+        return base_uri.id_to_uri(id_ | cls.__table_id__)
+
+    @classmethod
+    def uri_to_id(cls, uri: str) -> int:
+        """Reverse id_to_uri.
+
+        Args:
+            uri: URI string
+
+        Returns:
+            Model ID
+        """
+        id_ = base_uri.uri_to_id(uri)
+        table_id = id_ & base_uri.MASK_TABLE
+        if table_id != cls.__table_id__:
+            msg = f"URI did not belong to {cls.__name__}: {uri}"
+            raise TypeError(msg)
+        return id_ & base_uri.MASK_ID
+
+    @property
+    def uri(self) -> str:
+        """Uniform Resource Identifier derived from id_ and __table_id__."""
+        return None if self.id_ is None else self.id_to_uri(self.id_)
 
     @override
     def __repr__(self) -> str:
         try:
-            return f"<{self.__class__.__name__} id={self.id_} uuid={self.uuid}>"
+            return f"<{self.__class__.__name__} id={self.id_}>"
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
     def __eq__(self, other: Base) -> bool:
-        """Test equality by UUID.
+        """Test equality by URI.
 
         Args:
             other: Other object to test
 
         Returns:
-            True if UUIDs match
+            True if URIs match
         """
-        return other is not None and self.uuid == other.uuid
+        return isinstance(other, Base) and self.uri == other.uri
 
     def __ne__(self, other: Base) -> bool:
-        """Test inequality by UUID.
+        """Test inequality by URI.
 
         Args:
             other: Other object to test
 
         Returns:
-            True if UUIDs do not match
+            True if URIs do not match
         """
-        return other is None or self.uuid != other.uuid
-
-    @classmethod
-    def map_uuid(cls, s: orm.Session) -> t.DictIntStr:
-        """Mapping between id and uuid.
-
-        Args:
-            s: SQL session to use
-
-        Returns:
-            Dictionary {id: uuid}
-        """
-        query = s.query(cls)
-        query = query.with_entities(cls.id_, cls.uuid)
-        return dict(query.all())
+        return not isinstance(other, Base) or self.uri != other.uri
 
     @classmethod
     def map_name(cls, s: orm.Session) -> t.DictIntStr:

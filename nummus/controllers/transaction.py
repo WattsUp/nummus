@@ -10,6 +10,7 @@ import sqlalchemy
 import sqlalchemy.exc
 from rapidfuzz import process
 from sqlalchemy import orm
+from werkzeug import exceptions
 
 from nummus import custom_types as t
 from nummus import portfolio, utils, web_utils
@@ -303,7 +304,7 @@ def ctx_split(
         Dictionary HTML context
     """
     return {
-        "uuid": t_split.uuid,
+        "uri": t_split.uri,
         "date": t_split.date,
         "account": accounts[t_split.account_id],
         "payee": t_split.payee,
@@ -315,11 +316,11 @@ def ctx_split(
     }
 
 
-def edit(path_uuid: str) -> str:
-    """GET & POST /h/transactions/t/<path_uuid>/edit.
+def edit(uri: str) -> str:
+    """GET & POST /h/transactions/t/<uri>/edit.
 
     Args:
-        path_uuid: UUID of Transaction or TransactionSplit
+        uri: URI of Transaction or TransactionSplit
 
     Returns:
         string HTML response
@@ -328,9 +329,10 @@ def edit(path_uuid: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio
 
     with p.get_session() as s:
-        parent: Transaction = web_utils.find(s, Transaction, path_uuid, do_raise=False)
-        if parent is None:
-            child: TransactionSplit = web_utils.find(s, TransactionSplit, path_uuid)
+        try:
+            parent: Transaction = web_utils.find(s, Transaction, uri)
+        except exceptions.BadRequest:
+            child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)
             parent = child.parent
         categories = TransactionCategory.map_name(s)
 
@@ -338,7 +340,7 @@ def edit(path_uuid: str) -> str:
             accounts = Account.map_name(s)
 
             ctx_parent = {
-                "uuid": parent.uuid,
+                "uri": parent.uri,
                 "account": accounts[parent.account_id],
                 "locked": parent.locked,
                 "date": parent.date,
@@ -426,8 +428,8 @@ def edit(path_uuid: str) -> str:
         return common.overlay_swap(event="update-transaction")
 
 
-def split(path_uuid: str) -> str:
-    """PUT & DELETE /h/transactions/<path_uuid>/split.
+def split(uri: str) -> str:
+    """PUT & DELETE /h/transactions/<uri>/split.
 
     Returns:
         string HTML response
@@ -480,11 +482,11 @@ def split(path_uuid: str) -> str:
         "transactions/edit-splits.jinja",
         splits=ctx_splits,
         categories=categories.values(),
-        parent={"uuid": path_uuid},
+        parent={"uri": uri},
     )
     if flask.request.method == "DELETE":
         with p.get_session() as s:
-            parent: Transaction = web_utils.find(s, Transaction, path_uuid)
+            parent: Transaction = web_utils.find(s, Transaction, uri)
             current = sum(filter(None, amount))
             html += flask.render_template(
                 "transactions/edit-remaining.jinja",
@@ -494,8 +496,8 @@ def split(path_uuid: str) -> str:
     return html
 
 
-def remaining(path_uuid: str) -> str:
-    """POST /h/transactions/<path_uuid>/remaining.
+def remaining(uri: str) -> str:
+    """POST /h/transactions/<uri>/remaining.
 
     Returns:
       string HTML response
@@ -504,7 +506,7 @@ def remaining(path_uuid: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio
 
     with p.get_session() as s:
-        parent: Transaction = web_utils.find(s, Transaction, path_uuid)
+        parent: Transaction = web_utils.find(s, Transaction, uri)
         form = flask.request.form
 
         amount = form.getlist("amount", utils.parse_real)
@@ -520,7 +522,7 @@ ROUTES: t.Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),
-    "/h/transactions/t/<path:path_uuid>/edit": (edit, ["GET", "POST"]),
-    "/h/transactions/t/<path:path_uuid>/split": (split, ["PUT", "DELETE"]),
-    "/h/transactions/t/<path:path_uuid>/remaining": (remaining, ["POST"]),
+    "/h/transactions/t/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/transactions/t/<path:uri>/split": (split, ["PUT", "DELETE"]),
+    "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
 }
