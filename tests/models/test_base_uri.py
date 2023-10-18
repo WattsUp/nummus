@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+import numpy as np
+
 from nummus.models import base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
@@ -8,17 +12,19 @@ from nummus.models.credentials import Credentials
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 from tests.base import TestBase
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from nummus.models.base import Base
 
 
 class TestBaseURI(TestBase):
-    def test_symmetrical(self) -> None:
+    def test_symmetrical_unique(self) -> None:
+        self.assertRaises(TypeError, base_uri.uri_to_id, "")
+
         uris = set()
 
-        for i in range(100):
+        n = 10000
+        for i in range(n):
             uri = base_uri.id_to_uri(i)
             self.assertEqual(base_uri.URI_BYTES, len(uri))
             self.assertNotIn(uri, uris)
@@ -26,6 +32,23 @@ class TestBaseURI(TestBase):
 
             i_decoded = base_uri.uri_to_id(uri)
             self.assertEqual(i, i_decoded)
+
+    def test_distribution(self) -> None:
+        # Aim for an even distribution of bits
+        nibbles = {f"{i:x}": 0 for i in range(16)}
+
+        n = 10000
+        for i in range(n):
+            uri = base_uri.id_to_uri(i)
+            for nibble in uri:
+                nibbles[nibble] += 1
+
+        counts = list(nibbles.values())
+        total = n * 8
+        self.assertEqual(total, sum(counts))
+
+        std = np.std(counts) / total
+        self.assertLessEqual(std, 0.02)
 
     def test_table_ids(self) -> None:
         models: list[type[Base]] = [
