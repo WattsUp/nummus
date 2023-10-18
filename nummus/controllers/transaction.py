@@ -34,6 +34,7 @@ def page_all() -> str:
     return flask.render_template(
         "transactions/index.jinja",
         sidebar=common.ctx_sidebar(),
+        base=common.ctx_base(),
         txn_table=ctx_table(),
     )
 
