@@ -67,7 +67,7 @@
   }
 
   .checkbox input {
-    @apply absolute opacity-0 cursor-pointer h-0 w-0;
+    @apply hidden;
   }
 
   .checkbox svg {
@@ -80,79 +80,6 @@
 
   .checkbox input:checked ~ svg {
     @apply bg-green fill-white;
-  }
-
-  .transactions-table .row:nth-child(even) {
-    @apply bg-grey-50;
-  }
-
-  .transactions-table .row,
-  .transactions-table.header {
-    @apply w-full flex justify-between;
-  }
-
-  .transactions-table .row.hoverable {
-    @apply hover:bg-grey-100;
-  }
-
-  .transactions-table .col {
-    @apply p-1 whitespace-nowrap overflow-hidden text-ellipsis;
-  }
-
-  .transactions-table .col-date {
-    @apply w-[6rem] min-w-[6rem];
-  }
-
-  .transactions-table .col-account {
-    @apply w-[8rem] min-w-[8rem];
-  }
-
-  .transactions-table .col-payee {
-    @apply w-[8rem] min-w-[8rem];
-  }
-
-  .transactions-table .col-desc {
-    @apply w-[8rem] min-w-[8rem] grow;
-  }
-
-  .transactions-table .col-cat {
-    @apply w-[8rem] min-w-[8rem];
-  }
-
-  .transactions-table .col-tag {
-    @apply w-[6rem] min-w-[6rem];
-  }
-
-  .transactions-table .col-amount {
-    @apply w-[7rem] min-w-[7rem] text-right;
-  }
-
-  .transactions-table .col-locked {
-    @apply w-[1.5rem] min-w-[1.5rem] p-0 flex items-center;
-  }
-
-  .transactions-table .col-locked svg {
-    @apply m-0 w-[24px] h-[24px];
-  }
-
-  .transactions-table.header .col-locked svg {
-    @apply bg-grey-200 transition-colors fill-grey-600 cursor-pointer hover:bg-green-400 hover:fill-white;
-  }
-
-  .transactions-table.header .col-locked svg.checked {
-    @apply bg-green fill-white;
-  }
-
-  .transactions-table.header .col-locked svg.unchecked {
-    @apply bg-green fill-transparent;
-  }
-
-  .transactions-table.header .col {
-    @apply flex items-center relative overflow-visible;
-  }
-
-  .transactions-table.header .col:hover > svg {
-    @apply fill-green;
   }
 }
 

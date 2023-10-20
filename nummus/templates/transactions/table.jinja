@@ -3,26 +3,18 @@
         {% include "transactions/table-config.jinja" %}
         {% include "transactions/table-locked.jinja" %}
     {% endwith %}
-    <div id="txn-account" hx-swap-oob="insideHTML">
-        {% with options = txn_table["options-account"], name="account" %}
-            {% include "transactions/table-options.jinja" %}
-        {% endwith %}
-    </div>
-    <div id="txn-payee" hx-swap-oob="insideHTML">
-        {% with options = txn_table["options-payee"], name="payee" %}
-            {% include "transactions/table-options.jinja" %}
-        {% endwith %}
-    </div>
-    <div id="txn-category" hx-swap-oob="insideHTML">
-        {% with options = txn_table["options-category"], name="category" %}
-            {% include "transactions/table-options.jinja" %}
-        {% endwith %}
-    </div>
-    <div id="txn-tag" hx-swap-oob="insideHTML">
-        {% with options = txn_table["options-tag"], name="tag" %}
-            {% include "transactions/table-options.jinja" %}
-        {% endwith %}
-    </div>
+    {% for name in ["account", "payee", "category", "tag"] %}
+        <div id="txn-icon-{{ name }}" hx-swap-oob="insideHTML">
+            {% with any_filters = txn_table["any-filters-" + name] %}
+                {% include "transactions/table-options-icon.jinja" %}
+            {% endwith %}
+        </div>
+        <div id="txn-{{ name }}" hx-swap-oob="insideHTML">
+            {% with options = txn_table["options-" + name] %}
+                {% include "transactions/table-options.jinja" %}
+            {% endwith %}
+        </div>
+    {% endfor %}
 {% endif %}
 <div id="txn-table"
      class="transactions-table w-full flex flex-col"
@@ -34,12 +26,12 @@
     {% for txn in txn_table["transactions"] %}
         {% include "transactions/table-view.jinja" %}
     {% endfor %}
-    <div class="row font-bold border-t border-t-grey-200">
-        <div class="col col-date grow">Page Total</div>
-        <div class="col col-amount">{{ txn_table["page_total"] | money }}</div>
+    <div class="w-full flex justify-between font-bold border-t border-t-grey-200">
+        <div class="p-1 grow">Page Total</div>
+        <div class="p-1">{{ txn_table["page_total"] | money }}</div>
     </div>
-    <div class="row font-bold">
-        <div class="col col-date grow">Query Total</div>
-        <div class="col col-amount">{{ txn_table["query_total"] | money }}</div>
+    <div class="w-full flex justify-between font-bold">
+        <div class="p-1 grow">Query Total</div>
+        <div class="p-1">{{ txn_table["query_total"] | money }}</div>
     </div>
 </div>

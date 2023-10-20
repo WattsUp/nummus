@@ -292,6 +292,10 @@ def ctx_table() -> t.DictStr:
             "options-payee": options_payee,
             "options-category": options_category,
             "options-tag": options_tag,
+            "any-filters-account": len(selected_accounts) > 0,
+            "any-filters-payee": len(selected_payees) > 0,
+            "any-filters-category": len(selected_categories) > 0,
+            "any-filters-tag": len(selected_tags) > 0,
         }
 
 
