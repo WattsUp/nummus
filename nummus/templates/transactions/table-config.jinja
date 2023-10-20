@@ -41,9 +41,12 @@
 <div id="txn-paging"
      class="flex w-full justify-end my-1"
      hx-swap-oob="{{ oob }}">
-    <button class="button hover:green mr-auto"
+    <button class="button hover:red mr-1"
             hx-get="{{ url_for("transaction.table") }}?search="
             hx-include="#txn-config">Clear Filters</button>
+    <button class="button hover:green mr-auto"
+            hx-get="{{ url_for("transaction.table") }}?period=90-days&locked=false"
+            hx-include="this">Recent & Unlocked</button>
     <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_first'] }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-first.svg" %}
