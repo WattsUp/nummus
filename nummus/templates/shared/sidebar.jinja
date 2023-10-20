@@ -59,11 +59,11 @@
                                 </a>
                             </object>
                             <h1 class="flex gap-4 justify-between text-lg leading-tight">
-                                <span class="text-ellipsis overflow-hidden pl-6 pr-1">{{ acct["institution"] }}</span>
+                                <span class="truncate pl-6 pr-1">{{ acct["institution"] }}</span>
                                 <span>{{ acct["value"] | money }}</span>
                             </h1>
                             <h2 class="flex gap-4 justify-between text-sm italic text-grey-500">
-                                <span class="text-ellipsis overflow-hidden pl-6 pr-1">{{ acct["name"] }}</span>
+                                <span class="truncate pl-6 pr-1">{{ acct["name"] }}</span>
                                 <span>txn
                                     {{ acct["updated_days_ago"] | days }}
                                 ago</span>
