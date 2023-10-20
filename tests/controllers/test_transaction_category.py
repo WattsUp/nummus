@@ -22,7 +22,7 @@ class TestTransactionCategory(WebTestBase):
 
         endpoint = "/h/txn-categories"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(n, result.count("txn-category"))
+        self.assertEqual(3 + n, result.count("<a"))
         self.assertIn("Edit transaction categories", result)
 
     def test_new(self) -> None:

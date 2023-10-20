@@ -62,22 +62,6 @@
     @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
   }
 
-  .empty-hidden:empty {
-    @apply hidden;
-  }
-
-  .txn-category {
-    @apply flex;
-  }
-
-  .txn-category:hover > svg {
-    @apply fill-black;
-  }
-
-  .txn-category > svg {
-    @apply block fill-white transition-colors p-1;
-  }
-
   .checkbox {
     @apply cursor-pointer relative;
   }

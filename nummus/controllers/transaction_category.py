@@ -50,7 +50,7 @@ def overlay() -> str:
         expense = sorted(expense, key=lambda cat: cat["name"])
         other = sorted(other, key=lambda cat: cat["name"])
 
-        ctx: t.DictAny = {"income": income, "expense": expense, "other": other}
+        ctx: t.DictAny = {"Income": income, "Expense": expense, "Other": other}
 
     return flask.render_template(
         "transaction_categories/table.jinja",
