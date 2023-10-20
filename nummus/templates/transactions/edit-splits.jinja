@@ -1,16 +1,16 @@
 <div id="txn-splits" class="grow overflow-y-scroll">
     {% for txn in splits %}
-        <div class="split-row">
+        <div class="w-full flex justify-between mt-1">
             <input name="payee"
                    value="{{ txn['payee'] or '' }}"
                    placeholder="Payee"
                    list="payees"
-                   class="col col-payee">
+                   class="w-[12rem] min-w-[12rem] p-1 truncate">
             <input name="description"
                    value="{{ txn['description'] or '' }}"
                    placeholder="Description"
-                   class="col col-desc">
-            <select name="category" class="col col-cat">
+                   class="w-[10rem] min-w-[10rem] p-1 truncate">
+            <select name="category" class="w-[9rem] min-w-[9rem] p-1 truncate">
                 {% for item in categories %}
                     <option value="{{ item }}" {{ "selected" if item == txn["category"] }}>{{ item }}
                     </option>
@@ -20,11 +20,11 @@
                    value="{{ txn['tag'] or '' }}"
                    placeholder="Tag"
                    list="tags"
-                   class="col col-tag">
+                   class="w-[11rem] min-w-[11rem] p-1 truncate">
             <input name="amount"
                    value="{{ '%.2f' % txn['amount'] if txn['amount'] }}"
                    placeholder="Amount"
-                   class="col-amount"
+                   class="w-[7rem] min-w-[7rem] text-right p-1 truncate"
                    hx-post="{{ url_for('transaction.remaining', uri=parent['uri']) }}"
                    hx-target="#txn-remaining"
                    hx-trigger="keyup changed">

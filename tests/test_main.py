@@ -200,7 +200,8 @@ class TestMain(TestBase):
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             is_dev = (
                 version.version_dict["branch"] != "master"
-                and version.version_dict["distance"] != 0
+                or version.version_dict["distance"] != 0
+                or version.version_dict["dirty"]
             )
             self.assertDictEqual(
                 {

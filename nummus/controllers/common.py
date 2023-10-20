@@ -157,6 +157,51 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     }
 
 
+def ctx_base() -> t.DictAny:
+    """Get the context to build the base page.
+
+    Returns:
+        Dictionary HTML context
+    """
+    # TODO(WattsUp): Implement remaining pages
+    pages: dict[str, dict[str, str]] = {
+        "Overview": {
+            "Dashboard": None,
+            "Net Worth": None,
+            "Transactions": "transaction.page_all",
+            "Instrument Transactions": None,
+        },
+        "Banking": {
+            "Cash Flow": None,
+            "Budgeting": None,
+        },
+        "Investing": {
+            "Holdings": None,
+            "Instrument Transactions": None,
+            "Balances": None,
+            "Performance": None,
+            "Allocation": None,
+            "US Sectors": None,
+        },
+        "Planning": {
+            "Future Net Worth": None,
+            "Retirement": None,
+            "Emergency Fund": None,
+            "Investment": None,
+        },
+    }
+    for section, subpages in pages.items():
+        pages[section] = {k: v for k, v in subpages.items() if v}
+
+    menu = {
+        "Logout": None,
+    }
+    return {
+        "pages": {k: v for k, v in pages.items() if v},
+        "menu": {k: v for k, v in menu.items() if v},
+    }
+
+
 def empty() -> str:
     """GET /h/empty.
 

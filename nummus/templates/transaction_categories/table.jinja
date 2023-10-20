@@ -12,59 +12,25 @@
     <a hx-get="{{ url_for("transaction_category.new") }}"
        class="button bg-green ml-auto mx-6">Create category</a>
     <div class="flex w-full gap-4 px-6 grow min-h-0 pb-4">
-        <div class="w-1/3 flex flex-col h-full">
-            <h1 class="font-bold border-b border-grey-200">Income</h1>
-            <div class="flex flex-col overflow-y-scroll grow">
-                {% for item in categories["income"] %}
-                    {% if item["locked"] %}
-                        <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
-                    {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
-                           class="txn-category">
-                            {% with class="w-[24px] h-[24px]" %}
-                                {% include "svg/pencil.svg" %}
-                            {% endwith %}
-                            {{ item["name"] }}
-                        </a>
-                    {% endif %}
-                {% endfor %}
+        {% for group, items in categories.items() %}
+            <div class="w-1/3 flex flex-col h-full">
+                <h1 class="font-bold border-b border-grey-200">{{ group }}</h1>
+                <div class="flex flex-col overflow-y-scroll grow">
+                    {% for item in items %}
+                        {% if item["locked"] %}
+                            <a class="flex pl-[24px]">{{ item["name"] }}</a>
+                        {% else %}
+                            <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
+                               class="flex group">
+                                {% with class="w-[24px] h-[24px] block fill-white transition-colors p-1 group-hover:fill-black" %}
+                                    {% include "svg/pencil.svg" %}
+                                {% endwith %}
+                                {{ item["name"] }}
+                            </a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
             </div>
-        </div>
-        <div class="w-1/3 flex flex-col h-full">
-            <h1 class="font-bold border-b border-grey-200">Expense</h1>
-            <div class="flex flex-col overflow-y-scroll grow">
-                {% for item in categories["expense"] %}
-                    {% if item["locked"] %}
-                        <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
-                    {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
-                           class="txn-category">
-                            {% with class="w-[24px] h-[24px]" %}
-                                {% include "svg/pencil.svg" %}
-                            {% endwith %}
-                            {{ item["name"] }}
-                        </a>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
-        <div class="w-1/3 flex flex-col h-full">
-            <h1 class="font-bold border-b border-grey-200">Other</h1>
-            <div class="flex flex-col overflow-y-scroll grow">
-                {% for item in categories["other"] %}
-                    {% if item["locked"] %}
-                        <a class="txn-category pl-[24px]">{{ item["name"] }}</a>
-                    {% else %}
-                        <a hx-get="{{ url_for('transaction_category.edit', uri=item['uri']) }}"
-                           class="txn-category">
-                            {% with class="w-[24px] h-[24px]" %}
-                                {% include "svg/pencil.svg" %}
-                            {% endwith %}
-                            {{ item["name"] }}
-                        </a>
-                    {% endif %}
-                {% endfor %}
-            </div>
-        </div>
+        {% endfor %}
     </div>
 </div>

@@ -34,6 +34,7 @@ def page_all() -> str:
     return flask.render_template(
         "transactions/index.jinja",
         sidebar=common.ctx_sidebar(),
+        base=common.ctx_base(),
         txn_table=ctx_table(),
     )
 
@@ -122,11 +123,12 @@ def ctx_options(
         "category": TransactionSplit.category_id,
         "tag": TransactionSplit.tag,
     }
-    for (name,) in query.with_entities(entities[field]).distinct():
-        if name is None:
+    for (id_,) in query.with_entities(entities[field]).distinct():
+        if id_ is None:
             continue
+        name = id_mapping[id_] if id_mapping else id_
         item = {
-            "name": id_mapping[name] if id_mapping else name,
+            "name": name,
             "checked": name in selected,
             "hidden": False,
             "score": 0,
@@ -290,6 +292,10 @@ def ctx_table() -> t.DictStr:
             "options-payee": options_payee,
             "options-category": options_category,
             "options-tag": options_tag,
+            "any-filters-account": len(selected_accounts) > 0,
+            "any-filters-payee": len(selected_payees) > 0,
+            "any-filters-category": len(selected_categories) > 0,
+            "any-filters-tag": len(selected_tags) > 0,
         }
 
 

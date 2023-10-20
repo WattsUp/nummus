@@ -8,82 +8,30 @@
         </div>
         <div class="ml-auto items-center h-full hidden lg:flex">
             <ul class="flex h-full">
-                <li class="nav-list nav-list-text nav-list-l">
-                    Overview
-                    <ul>
-                        <li>
-                            <a todo="/#todo">Dashboard</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Net Worth</a>
-                        </li>
-                        <li>
-                            <a href="{{ url_for("transaction.page_all") }}">Transactions</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Instrument Transactions</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-list nav-list-text nav-list-l">
-                    Banking
-                    <ul>
-                        <li>
-                            <a todo="/#todo">Cash Flow</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Budgeting</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-list nav-list-text nav-list-l">
-                    Investing
-                    <ul>
-                        <li>
-                            <a todo="/#todo">Holdings</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Instrument Transactions</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Balances</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Performance</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Allocation</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">US Sectors</a>
-                        </li>
-                    </ul>
-                </li>
-                <li class="nav-list nav-list-text nav-list-l">
-                    Planning
-                    <ul>
-                        <li>
-                            <a todo="/#todo">Future Net Worth</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Retirement</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Emergency Fund</a>
-                        </li>
-                        <li>
-                            <a todo="/#todo">Investment</a>
-                        </li>
-                    </ul>
-                </li>
+                {% for section, subpages in base["pages"].items() %}
+                    <li class="hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full group">
+                        {{ section }}
+                        <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 left-0">
+                            {% for title, url in subpages.items() %}
+                                <li class="border-l-green-800 border-l-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
+                                    <a href="{{ url_for(url) }}" class="inset-0 px-2 py-1 block">{{ title }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
             </ul>
             <div class="bg-white w-px h-8 ml-1"></div>
-            <div class="nav-list nav-list-icon nav-list-r">
-                {% include "svg/menu.svg" %}
-                <ul>
-                    <li>
-                        <a todo="/#todo">Logout</a>
-                    </li>
+            <div class="h-12 w-12 relative p-2 group">
+                {% with class="fill-white transition-colors w-[32px] h-[32px] group-hover:fill-green-900" %}
+                    {% include "svg/menu.svg" %}
+                {% endwith %}
+                <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 right-0">
+                    {% for title, url in base["menu"].items() %}
+                        <li class="border-r-green-800 border-r-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
+                            <a href="{{ url_for(url) }}" class="inset-0 px-2 py-1 block">{{ title }}</a>
+                        </li>
+                    {% endfor %}
                 </ul>
             </div>
         </div>

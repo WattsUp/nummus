@@ -18,7 +18,11 @@ def page_home() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template("index.jinja", sidebar=common.ctx_sidebar())
+    return flask.render_template(
+        "index.jinja",
+        sidebar=common.ctx_sidebar(),
+        base=common.ctx_base(),
+    )
 
 
 ROUTES: t.Routes = {

@@ -48,13 +48,13 @@
         </table>
         <hr class="w-full border-grey-200">
         {% include "transactions/edit-splits.jinja" %}
-        <div class="split-row">
+        <div class="w-full flex justify-between mt-1">
             <h1 class="font-bold">Amount yet to be assigned</h1>
             {% include "transactions/edit-remaining.jinja" %}
         </div>
     </form>
     <div id="overlay-error"
-         class="w-full bg-red px-6 py-2 text-xl empty-hidden"></div>
+         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <a hx-put="{{ url_for('transaction.split', uri=parent['uri']) }}"
            hx-target="#txn-splits"
