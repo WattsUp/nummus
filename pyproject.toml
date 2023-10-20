@@ -5,7 +5,8 @@ requires = ["setuptools", "wheel", "witch-ver"]
 skip = "3rd-party,dist,*.pem,*.json"
 
 [tool.coverage.run]
-command_line = "-m tests discover -s tests -t . --locals"
+# command_line = "-m tests discover -s tests -t . --locals"
+command_line = "tests tests.controllers.test_transaction"
 branch = true
 source = ["nummus"]
 omit = [

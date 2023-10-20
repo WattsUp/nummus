@@ -199,23 +199,37 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/account"
         result, _ = self.web_get(endpoint)
         self.assertEqual(2, result.count("span"))
-        self.assertIn(f"<span>{acct}</span>", result)
+        self.assertIn(f'value="{acct}"  hx-get', result)
+        self.assertNotIn("checked", result)
 
         endpoint = "/h/transactions/options/category"
-        result, _ = self.web_get(endpoint, queries={"period": "all"})
+        queries = {"period": "all"}
+        result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(4, result.count("span"))
-        self.assertIn(f"<span>{cat_0}</span>", result)
-        self.assertIn(f"<span>{cat_1}</span>", result)
+        self.assertIn(f'value="{cat_0}"  hx-get', result)
+        self.assertIn(f'value="{cat_1}"  hx-get', result)
+        self.assertNotIn("checked", result)
         # Check sorting
         i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
+        queries = {"category": cat_1}
+        result, _ = self.web_get(endpoint, queries=queries)
+        self.assertEqual(4, result.count("span"))
+        self.assertIn(f'value="{cat_0}"  hx-get', result)
+        self.assertIn(f'value="{cat_1}" checked hx-get', result)
+        # Check sorting
+        i_0 = result.find(cat_0)
+        i_1 = result.find(cat_1)
+        self.assertLess(i_1, i_0)
+
         endpoint = "/h/transactions/options/tag"
         result, _ = self.web_get(endpoint)
         self.assertEqual(4, result.count("span"))
-        self.assertIn("<span>[blank]</span>", result)
-        self.assertIn(f"<span>{tag_1}</span>", result)
+        self.assertIn('value="[blank]"  hx-get', result)
+        self.assertIn(f'value="{tag_1}"  hx-get', result)
+        self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
         i_0 = result.find(tag_1)
@@ -224,9 +238,10 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/payee"
         result, _ = self.web_get(endpoint)
         self.assertEqual(6, result.count("span"))
-        self.assertIn("<span>[blank]</span>", result)
+        self.assertIn('value="[blank]"', result)
         self.assertIn(f'value="{payee_0}"  hx-get', result)
         self.assertIn(f'value="{payee_1}"  hx-get', result)
+        self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
         i_0 = result.find(payee_0)
@@ -237,7 +252,7 @@ class TestTransaction(WebTestBase):
         queries = {"payee": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(6, result.count("span"))
-        self.assertIn("<span>[blank]</span>", result)
+        self.assertIn('value="[blank]"', result)
         self.assertIn(f'value="{payee_0}"  hx-get', result)
         self.assertIn(f'value="{payee_1}" checked hx-get', result)
         # Check sorting

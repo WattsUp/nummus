@@ -1,42 +1,46 @@
 <div id="txn-header"
      class="transactions-table header font-bold border-b border-b-grey-200">
     <div class="col col-date">Date</div>
-    <a class="col col-account">Account
+    <a class="col col-account group">Account
         {% with class="w-[24px] h-[24px]" %}
             {% include "svg/filter.svg" %}
         {% endwith %}
-        <div id="txn-account" class="filter-dropdown">
+        <div id="txn-account"
+             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
             {% with options = txn_table["options-account"], name="account" %}
                 {% include "transactions/table-options.jinja" %}
             {% endwith %}
         </div>
     </a>
-    <a class="col col-payee ">Payee
+    <a class="col col-payee group">Payee
         {% with class="w-[24px] h-[24px]" %}
             {% include "svg/filter.svg" %}
         {% endwith %}
-        <div id="txn-payee" class="filter-dropdown">
+        <div id="txn-payee"
+             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
             {% with options = txn_table["options-payee"], name="payee" %}
                 {% include "transactions/table-options.jinja" %}
             {% endwith %}
         </div>
     </a>
     <div class="col col-desc">Description</div>
-    <a class="col col-cat">Category
+    <a class="col col-cat group">Category
         {% with class="w-[24px] h-[24px]" %}
             {% include "svg/filter.svg" %}
         {% endwith %}
-        <div id="txn-category" class="filter-dropdown">
+        <div id="txn-category"
+             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
             {% with options = txn_table["options-category"], name="category" %}
                 {% include "transactions/table-options.jinja" %}
             {% endwith %}
         </div>
     </a>
-    <a class="col col-tag">Tag
+    <a class="col col-tag group">Tag
         {% with class="w-[24px] h-[24px]" %}
             {% include "svg/filter.svg" %}
         {% endwith %}
-        <div id="txn-tag" class="filter-dropdown">
+        <div id="txn-tag"
+             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
             {% with options = txn_table["options-tag"], name="tag" %}
                 {% include "transactions/table-options.jinja" %}
             {% endwith %}
