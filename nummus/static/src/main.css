@@ -82,29 +82,6 @@
     @apply bg-green fill-white;
   }
 
-  .sidebar {
-    /* Default styling */
-    @apply h-full overflow-y-auto bg-green-300 w-full font-serif;
-  }
-
-  .sidebar-container {
-    /* Default styling */
-    @apply h-full w-[18rem] z-10 pt-12 top-0;
-    /* Collapable */
-    @apply fixed left-[-18rem] hover:left-0 transition-[left] hover:after:content-["🡄"];
-    /* Not collapsible */
-    @apply xl:relative xl:left-0 xl:transition-none;
-  }
-
-  .sidebar-container::after {
-    /* Hover tab */
-    @apply block absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg;
-    /* Arrow */
-    @apply content-["🡆"] text-white text-center text-2xl;
-    /* Not collapsible */
-    @apply xl:hidden;
-  }
-
   .transactions-table .row:nth-child(even) {
     @apply bg-grey-50;
   }

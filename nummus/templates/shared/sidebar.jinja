@@ -1,9 +1,14 @@
 <div id="sidebar"
-     class="sidebar-container"
+     class="h-full w-[18rem] z-10 pt-12 top-0 fixed left-[-18rem] hover:left-0 transition-[left] duration-300 xl:relative xl:left-0 xl:transition-none group/sidebar"
      hx-get="{{ url_for("common.sidebar") }}"
      hx-trigger="update-account from:body"
      hx-target="#sidebar">
-    <nav class="sidebar">
+    <div class="absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg text-white text-center text-2xl xl:hidden">
+        <div class="transition-transform duration-300 group-hover/sidebar:rotate-180 group-hover/sidebar:translate-y-16">
+            🡆
+        </div>
+    </div>
+    <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
         <a class="block m-2" todo="/#todo">
             <div class="bg-green-800">
                 <h1 class="text-white p-1 text-2xl flex justify-between">
@@ -43,12 +48,12 @@
                     {% for acct in item[1] %}
                         {% if loop.index != 1 %}<div class="mx-3 h-px bg-grey-200"></div>{% endif %}
                         <a class="block whitespace-nowrap relative p-px border-2 {{ 'border-red' if acct['closed'] else 'border-transparent' }}">
-                            <object class="w-[18px] h-full absolute group">
+                            <object class="w-[18px] h-full absolute group/navitem">
                                 <a class="h-full block"
                                    hx-get="{{ url_for('account.edit', uri=acct['uri']) }}"
                                    hx-target="#overlay"
                                    hx-swap="innerHTML">
-                                    {% with class="fill-white transition-colors group-hover:fill-black" %}
+                                    {% with class="fill-white transition-colors group-hover/navitem:fill-black" %}
                                         {% include "svg/pencil.svg" %}
                                     {% endwith %}
                                 </a>
