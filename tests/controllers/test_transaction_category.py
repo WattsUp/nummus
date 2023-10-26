@@ -22,7 +22,7 @@ class TestTransactionCategory(WebTestBase):
 
         endpoint = "/h/txn-categories"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(3 + n, result.count("<a"))
+        self.assertEqual(result.count("<a"), 3 + n)
         self.assertIn("Edit transaction categories", result)
 
     def test_new(self) -> None:
@@ -42,7 +42,7 @@ class TestTransactionCategory(WebTestBase):
 
         with p.get_session() as s:
             n_after = s.query(TransactionCategory).count()
-            self.assertEqual(n_before + 1, n_after)
+            self.assertEqual(n_after, n_before + 1)
 
         e_str = "Transaction category name must be unique"
         result, _ = self.web_post(endpoint, data=form)
@@ -50,7 +50,7 @@ class TestTransactionCategory(WebTestBase):
 
         with p.get_session() as s:
             n_after = s.query(TransactionCategory).count()
-            self.assertEqual(n_before + 1, n_after)
+            self.assertEqual(n_after, n_before + 1)
 
     def test_edit(self) -> None:
         p = self._portfolio
@@ -147,7 +147,7 @@ class TestTransactionCategory(WebTestBase):
             query = query.where(TransactionCategory.id_ == t_split.category_id)
             t_cat: TransactionCategory = query.scalar()
 
-            self.assertEqual("Uncategorized", t_cat.name)
+            self.assertEqual(t_cat.name, "Uncategorized")
 
         with p.get_session() as s:
             query = s.query(TransactionCategory)

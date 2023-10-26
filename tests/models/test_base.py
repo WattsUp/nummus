@@ -59,6 +59,7 @@ class TestORMBase(TestBase):
         s.commit()
         self.assertIsNotNone(parent.id_)
         self.assertIsNotNone(parent.uri)
+        self.assertEqual(Parent.uri_to_id(parent.uri), parent.id_)
 
         child = Child()
         self.assertIsNone(child.id_)
@@ -73,6 +74,8 @@ class TestORMBase(TestBase):
         self.assertIsNotNone(child.parent)
         self.assertIsNotNone(child.parent_id)
 
+        self.assertRaises(TypeError, Parent.uri_to_id, child.uri)
+
         child.height = None
         s.commit()
         self.assertIsNone(child.height)
@@ -81,14 +84,14 @@ class TestORMBase(TestBase):
         child.height = height
         s.commit()
         self.assertIsInstance(child.height, Decimal)
-        self.assertEqual(height, child.height)
+        self.assertEqual(child.height, height)
 
         # Only 6 decimals
         height = Decimal("1.23456789")
         child.height = height
         s.commit()
         self.assertIsInstance(child.height, Decimal)
-        self.assertEqual(Decimal("1.234567"), child.height)
+        self.assertEqual(child.height, Decimal("1.234567"))
 
     def test_comparators(self) -> None:
         s = self.get_session()
@@ -135,7 +138,7 @@ class TestORMBase(TestBase):
             parent_a.id_: parent_a.name,
             parent_b.id_: parent_b.name,
         }
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
     def test_validate_strings(self) -> None:
         parent = Parent()
@@ -152,7 +155,7 @@ class TestORMBase(TestBase):
 
         field = self.random_string(3)
         result = parent.validate_strings(key, field)
-        self.assertEqual(field, result)
+        self.assertEqual(result, field)
 
         self.assertRaises(ValueError, parent.validate_strings, key, "ab")
 
@@ -168,15 +171,15 @@ class Derived(base.BaseEnum):
 
 class TestBaseEnum(TestBase):
     def test_parse(self) -> None:
-        self.assertEqual(None, Derived.parse(None))
-        self.assertEqual(None, Derived.parse(""))
+        self.assertIsNone(Derived.parse(None))
+        self.assertIsNone(Derived.parse(""))
 
         for e in Derived:
-            self.assertEqual(e, Derived.parse(e))
-            self.assertEqual(e, Derived.parse(e.name))
-            self.assertEqual(e, Derived.parse(e.value))
+            self.assertEqual(Derived.parse(e), e)
+            self.assertEqual(Derived.parse(e.name), e)
+            self.assertEqual(Derived.parse(e.value), e)
 
         for s, e in Derived._lut().items():  # noqa: SLF001
-            self.assertEqual(e, Derived.parse(s.upper()))
+            self.assertEqual(Derived.parse(s.upper()), e)
 
         self.assertRaises(ValueError, Derived.parse, "FAKE")

@@ -77,8 +77,9 @@ class TestMain(TestBase):
 
             args = ["create"]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "create",
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
@@ -86,13 +87,13 @@ class TestMain(TestBase):
                     "no_encrypt": False,
                     "path_password": None,
                 },
-                self._called_kwargs,
             )
 
             args = ["create", "--no-encrypt"]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "create",
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
@@ -100,7 +101,6 @@ class TestMain(TestBase):
                     "no_encrypt": True,
                     "path_password": None,
                 },
-                self._called_kwargs,
             )
 
             args = [
@@ -112,8 +112,9 @@ class TestMain(TestBase):
                 "--force",
             ]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "create",
                     "path_db": path,
@@ -121,7 +122,6 @@ class TestMain(TestBase):
                     "no_encrypt": False,
                     "path_password": path_password,
                 },
-                self._called_kwargs,
             )
         finally:
             self._tear_down_commands()
@@ -164,22 +164,22 @@ class TestMain(TestBase):
             args = ["--portfolio", str(path), "import", *paths]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": [Path(p) for p in paths]},
                 self._called_kwargs,
+                {"_func": "import_files", "paths": [Path(p) for p in paths]},
             )
 
             paths = ["transactions.csv", "statement-dir"]
             args = ["--portfolio", str(path), "import", *paths]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": [Path(p) for p in paths]},
                 self._called_kwargs,
+                {"_func": "import_files", "paths": [Path(p) for p in paths]},
             )
 
         finally:
@@ -196,7 +196,7 @@ class TestMain(TestBase):
             args = ["--portfolio", str(path), "web"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             is_dev = (
                 version.version_dict["branch"] != "master"
@@ -204,23 +204,23 @@ class TestMain(TestBase):
                 or version.version_dict["dirty"]
             )
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "run_web",
                     "host": "127.0.0.1",
                     "port": 8080,
                     "debug": is_dev,
                 },
-                self._called_kwargs,
             )
 
             args = ["--portfolio", str(path), "web", "--debug"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "run_web", "host": "127.0.0.1", "port": 8080, "debug": True},
                 self._called_kwargs,
+                {"_func": "run_web", "host": "127.0.0.1", "port": 8080, "debug": True},
             )
 
             host = "192.168.1.2"
@@ -237,11 +237,11 @@ class TestMain(TestBase):
             ]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "run_web", "host": host, "port": port, "debug": False},
                 self._called_kwargs,
+                {"_func": "run_web", "host": host, "port": port, "debug": False},
             )
         finally:
             self._tear_down_commands()
@@ -255,29 +255,29 @@ class TestMain(TestBase):
 
             args = ["restore"]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "restore",
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "path_password": None,
                     "tar_ver": None,
                 },
-                self._called_kwargs,
             )
 
             tar_ver = self._RNG.integers(1, 100)
             args = ["restore", "-v", str(tar_ver)]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "restore",
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "path_password": None,
                     "tar_ver": tar_ver,
                 },
-                self._called_kwargs,
             )
 
             args = [
@@ -288,15 +288,15 @@ class TestMain(TestBase):
                 "restore",
             ]
             main.main(args)
-            self.assertListEqual([], self._called_args)
+            self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
+                self._called_kwargs,
                 {
                     "_func": "restore",
                     "path_db": path,
                     "path_password": path_password,
                     "tar_ver": None,
                 },
-                self._called_kwargs,
             )
         finally:
             self._tear_down_commands()
@@ -312,9 +312,9 @@ class TestMain(TestBase):
             args = ["--portfolio", str(path), "backup"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
-            self.assertDictEqual({"_func": "backup"}, self._called_kwargs)
+            self.assertDictEqual(self._called_kwargs, {"_func": "backup"})
         finally:
             self._tear_down_commands()
 
@@ -329,8 +329,8 @@ class TestMain(TestBase):
             args = ["--portfolio", str(path), "clean"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
-            self.assertEqual(1, len(self._called_args))
+            self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
-            self.assertDictEqual({"_func": "clean"}, self._called_kwargs)
+            self.assertDictEqual(self._called_kwargs, {"_func": "clean"})
         finally:
             self._tear_down_commands()

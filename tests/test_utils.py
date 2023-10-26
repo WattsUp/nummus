@@ -13,27 +13,27 @@ class TestUtils(TestBase):
         s = "CamelCase"
         target = "camel_case"
         result = utils.camel_to_snake(s)
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         s = "Camel"
         target = "camel"
         result = utils.camel_to_snake(s)
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         s = "camel"
         target = "camel"
         result = utils.camel_to_snake(s)
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         s = "HTTPClass"
         target = "http_class"
         result = utils.camel_to_snake(s)
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         s = "HTTPClassXYZ"
         target = "http_class_xyz"
         result = utils.camel_to_snake(s)
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
     def test_get_input(self) -> None:
         prompt = self.random_string()
@@ -65,20 +65,20 @@ class TestUtils(TestBase):
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=False)
 
-            self.assertEqual(prompt + prompt_input + "\n", fake_stdout.getvalue())
-            self.assertEqual(result, prompt_input)
+            self.assertEqual(fake_stdout.getvalue(), prompt + prompt_input + "\n")
+            self.assertEqual(prompt_input, result)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=True, print_key=False)
 
-            self.assertEqual(prompt + "\n", fake_stdout.getvalue())
-            self.assertEqual(result, prompt_input)
+            self.assertEqual(fake_stdout.getvalue(), prompt + "\n")
+            self.assertEqual(prompt_input, result)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=True, print_key=True)
 
-            self.assertEqual("\u26BF  " + prompt + "\n", fake_stdout.getvalue())
-            self.assertEqual(result, prompt_input)
+            self.assertEqual(fake_stdout.getvalue(), "\u26BF  " + prompt + "\n")
+            self.assertEqual(prompt_input, result)
 
             mock.builtins.input = mock_input_interrupt
             utils.getpass.getpass = mock_get_pass_eof
@@ -86,13 +86,13 @@ class TestUtils(TestBase):
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=False)
 
-            self.assertEqual(prompt + prompt_input + "\n", fake_stdout.getvalue())
+            self.assertEqual(fake_stdout.getvalue(), prompt + prompt_input + "\n")
             self.assertIsNone(result)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=True, print_key=False)
 
-            self.assertEqual(prompt + "\n", fake_stdout.getvalue())
+            self.assertEqual(fake_stdout.getvalue(), prompt + "\n")
             self.assertIsNone(result)
 
         finally:
@@ -109,20 +109,20 @@ class TestUtils(TestBase):
             mock.builtins.input = lambda _: None
 
             result = utils.confirm(prompt=None, default=False)
-            self.assertEqual(result, False)
+            self.assertFalse(result, "Default is not False")
 
             result = utils.confirm(prompt=prompt, default=True)
-            self.assertEqual(result, True)
+            self.assertTrue(result, "Default is not True")
 
             mock.builtins.input = lambda _: "Y"
 
             result = utils.confirm(prompt=prompt)
-            self.assertEqual(result, True)
+            self.assertTrue(result, "Y is not True")
 
             mock.builtins.input = lambda _: "N"
 
             result = utils.confirm(prompt=prompt)
-            self.assertEqual(result, False)
+            self.assertFalse(result, "N is not False")
 
             queue = [prompt_input, "y"]
 
@@ -135,7 +135,7 @@ class TestUtils(TestBase):
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 result = utils.confirm(prompt=prompt)
-            self.assertEqual(result, True)
+            self.assertTrue(result, "Y is not True")
 
         finally:
             mock.builtins.input = original_input
@@ -152,32 +152,32 @@ class TestUtils(TestBase):
 
         s = "1000.1"
         result = utils.parse_real(s)
-        self.assertEqual(Decimal("1000.1"), result)
+        self.assertEqual(result, Decimal("1000.1"))
 
         s = "1,000.1"
         result = utils.parse_real(s)
-        self.assertEqual(Decimal("1000.1"), result)
+        self.assertEqual(result, Decimal("1000.1"))
 
         s = "$1000.1"
         result = utils.parse_real(s)
-        self.assertEqual(Decimal("1000.1"), result)
+        self.assertEqual(result, Decimal("1000.1"))
 
         s = "-$1,000.1"
         result = utils.parse_real(s)
-        self.assertEqual(Decimal("-1000.1"), result)
+        self.assertEqual(result, Decimal("-1000.1"))
 
     def test_format_financial(self) -> None:
         x = Decimal("1000.1")
         result = utils.format_financial(x)
-        self.assertEqual("$1,000.10", result)
+        self.assertEqual(result, "$1,000.10")
 
         x = Decimal("-1000.1")
         result = utils.format_financial(x)
-        self.assertEqual("-$1,000.10", result)
+        self.assertEqual(result, "-$1,000.10")
 
         x = Decimal("0")
         result = utils.format_financial(x)
-        self.assertEqual("$0.00", result)
+        self.assertEqual(result, "$0.00")
 
     def test_parse_bool(self) -> None:
         result = utils.parse_bool("")
@@ -208,43 +208,43 @@ class TestUtils(TestBase):
     def test_format_days(self) -> None:
         d = 0
         result = utils.format_days(d)
-        self.assertEqual("0 days", result)
+        self.assertEqual(result, "0 days")
 
         labels = [self.random_string() for _ in range(4)]
         d = 2
         result = utils.format_days(d, labels=labels)
-        self.assertEqual(f"2 {labels[0]}", result)
+        self.assertEqual(result, f"2 {labels[0]}")
 
         d = 10
         result = utils.format_days(d)
-        self.assertEqual("10 days", result)
+        self.assertEqual(result, "10 days")
 
         d = 11
         result = utils.format_days(d)
-        self.assertEqual("2 wks", result)
+        self.assertEqual(result, "2 wks")
 
         d = 8 * 7
         result = utils.format_days(d)
-        self.assertEqual("8 wks", result)
+        self.assertEqual(result, "8 wks")
 
         d = 8 * 7 + 1
         result = utils.format_days(d)
-        self.assertEqual("2 mos", result)
+        self.assertEqual(result, "2 mos")
 
         d = 18 * 365.25 / 12
         result = utils.format_days(d)
-        self.assertEqual("18 mos", result)
+        self.assertEqual(result, "18 mos")
 
         d = 18 * 365.25 / 12 + 1
         result = utils.format_days(d)
-        self.assertEqual("2 yrs", result)
+        self.assertEqual(result, "2 yrs")
 
     def test_round_list(self) -> None:
         n = 9
         list_ = [1 / Decimal(n) for _ in range(n)]
-        self.assertNotEqual(1, sum(list_))
+        self.assertNotEqual(sum(list_), 1)
 
         l_round = utils.round_list(list_)
-        self.assertEqual(1, sum(l_round))
-        self.assertNotEqual(list_[0], l_round[0])
-        self.assertEqual(round(list_[0], 6), l_round[0])
+        self.assertEqual(sum(l_round), 1)
+        self.assertNotEqual(l_round[0], list_[0])
+        self.assertEqual(l_round[0], round(list_[0], 6))

@@ -40,9 +40,9 @@ class TestAssetSplit(TestBase):
         s.add(v)
         s.commit()
 
-        self.assertEqual(d["asset_id"], v.asset_id)
-        self.assertEqual(d["multiplier"], v.multiplier)
-        self.assertEqual(d["date"], v.date)
+        self.assertEqual(v.asset_id, d["asset_id"])
+        self.assertEqual(v.multiplier, d["multiplier"])
+        self.assertEqual(v.date, d["date"])
 
 
 class TestAssetValuation(TestBase):
@@ -64,9 +64,9 @@ class TestAssetValuation(TestBase):
         s.add(v)
         s.commit()
 
-        self.assertEqual(d["asset_id"], v.asset_id)
-        self.assertEqual(d["value"], v.value)
-        self.assertEqual(d["date"], v.date)
+        self.assertEqual(v.asset_id, d["asset_id"])
+        self.assertEqual(v.value, d["value"])
+        self.assertEqual(v.date, d["date"])
 
 
 class TestAsset(TestBase):
@@ -87,13 +87,13 @@ class TestAsset(TestBase):
         s.add(a)
         s.commit()
 
-        self.assertEqual(d["name"], a.name)
-        self.assertEqual(d["description"], a.description)
-        self.assertEqual(d["category"], a.category)
-        self.assertEqual(d["unit"], a.unit)
-        self.assertEqual(d["tag"], a.tag)
-        self.assertEqual(d["img_suffix"], a.img_suffix)
-        self.assertEqual(f"{a.uri}{d['img_suffix']}", a.image_name)
+        self.assertEqual(a.name, d["name"])
+        self.assertEqual(a.description, d["description"])
+        self.assertEqual(a.category, d["category"])
+        self.assertEqual(a.unit, d["unit"])
+        self.assertEqual(a.tag, d["tag"])
+        self.assertEqual(a.img_suffix, d["img_suffix"])
+        self.assertEqual(a.image_name, f"{a.uri}{d['img_suffix']}")
 
         a.img_suffix = None
         self.assertIsNone(a.image_name)
@@ -120,9 +120,9 @@ class TestAsset(TestBase):
         s.commit()
 
         result = s.query(Asset).all()
-        self.assertEqual([], result)
+        self.assertEqual(result, [])
         result = s.query(AssetValuation).all()
-        self.assertEqual([], result)
+        self.assertEqual(result, [])
 
     def test_add_valuations(self) -> None:
         s = self.get_session()
@@ -203,48 +203,48 @@ class TestAsset(TestBase):
         end = target_dates[-1]
 
         r_dates, r_values = a.get_value(start, end)
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual(target_values, r_values)
+        self.assertEqual(r_dates, target_dates)
+        self.assertEqual(r_values, target_values)
 
         r_dates, r_values = Asset.get_value_all(s, start, end)
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({a.id_: target_values}, r_values)
+        self.assertEqual(r_dates, target_dates)
+        self.assertEqual(r_values, {a.id_: target_values})
 
         r_dates, r_values = Asset.get_value_all(s, start, end, ids=[a.id_])
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({a.id_: target_values}, r_values)
+        self.assertEqual(r_dates, target_dates)
+        self.assertEqual(r_values, {a.id_: target_values})
 
         r_dates, r_values = Asset.get_value_all(s, start, end, ids=[-100])
-        self.assertEqual(target_dates, r_dates)
-        self.assertEqual({}, r_values)
+        self.assertEqual(r_dates, target_dates)
+        self.assertEqual(r_values, {})
 
         # Test single value
         r_dates, r_values = a.get_value(today, today)
-        self.assertEqual([today], r_dates)
-        self.assertEqual([v_today.value], r_values)
+        self.assertEqual(r_dates, [today])
+        self.assertEqual(r_values, [v_today.value])
 
         r_dates, r_values = Asset.get_value_all(s, today, today)
-        self.assertEqual([today], r_dates)
-        self.assertEqual({a.id_: [v_today.value]}, r_values)
+        self.assertEqual(r_dates, [today])
+        self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
         r_dates, r_values = a.get_value(tomorrow, tomorrow)
-        self.assertEqual([tomorrow], r_dates)
-        self.assertEqual([v_today.value], r_values)
+        self.assertEqual(r_dates, [tomorrow])
+        self.assertEqual(r_values, [v_today.value])
 
         r_dates, r_values = Asset.get_value_all(s, tomorrow, tomorrow)
-        self.assertEqual([tomorrow], r_dates)
-        self.assertEqual({a.id_: [v_today.value]}, r_values)
+        self.assertEqual(r_dates, [tomorrow])
+        self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
         long_ago = today - datetime.timedelta(days=7)
         r_dates, r_values = a.get_value(long_ago, long_ago)
-        self.assertEqual([long_ago], r_dates)
-        self.assertEqual([Decimal(0)], r_values)
+        self.assertEqual(r_dates, [long_ago])
+        self.assertEqual(r_values, [Decimal(0)])
 
         r_dates, r_values = Asset.get_value_all(s, long_ago, long_ago)
-        self.assertEqual([long_ago], r_dates)
-        self.assertEqual({a.id_: [Decimal(0)]}, r_values)
+        self.assertEqual(r_dates, [long_ago])
+        self.assertEqual(r_values, {a.id_: [Decimal(0)]})
 
     def test_update_splits(self) -> None:
         s = self.get_session()
@@ -330,18 +330,18 @@ class TestAsset(TestBase):
         a.update_splits()
         s.commit()
 
-        self.assertEqual(1, t_split_0.asset_quantity_unadjusted)
-        self.assertEqual(1, t_split_1.asset_quantity_unadjusted)
+        self.assertEqual(t_split_0.asset_quantity_unadjusted, 1)
+        self.assertEqual(t_split_1.asset_quantity_unadjusted, 1)
 
-        self.assertEqual(1 * multiplier, t_split_0.asset_quantity)
-        self.assertEqual(1, t_split_1.asset_quantity)
+        self.assertEqual(t_split_0.asset_quantity, 1 * multiplier)
+        self.assertEqual(t_split_1.asset_quantity, 1)
 
         _, r_assets = acct.get_asset_qty(yesterday, today)
         r_values = r_assets[a.id_]
         target_values = [multiplier, multiplier + 1]
-        self.assertEqual(target_values, r_values)
+        self.assertEqual(r_values, target_values)
 
         _, _, r_assets = acct.get_value(yesterday, today)
         r_values = r_assets[a.id_]
         target_values = [value_yesterday, value_yesterday + value_today]
-        self.assertEqual(target_values, r_values)
+        self.assertEqual(r_values, target_values)

@@ -62,10 +62,10 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
-        self.assertEqual(path_images, p.image_path)
-        self.assertEqual(path_db, p.path)
-        self.assertEqual(path_ssl.joinpath("cert.pem"), p.ssl_cert_path)
-        self.assertEqual(path_ssl.joinpath("key.pem"), p.ssl_key_path)
+        self.assertEqual(p.image_path, path_images)
+        self.assertEqual(p.path, path_db)
+        self.assertEqual(p.ssl_cert_path, path_ssl.joinpath("cert.pem"))
+        self.assertEqual(p.ssl_key_path, path_ssl.joinpath("key.pem"))
         p = None
         sql.drop_session()
 
@@ -73,7 +73,7 @@ class TestPortfolio(TestBase):
         with path_db.open("rb") as file:
             buf = file.read()
             target = b"SQLite format 3"
-            self.assertEqual(target, buf[: len(target)])
+            self.assertEqual(buf[: len(target)], target)
             buf = None  # Clear local buffer
         self.assertFalse(
             portfolio.Portfolio.is_encrypted(path_db),
@@ -158,7 +158,7 @@ class TestPortfolio(TestBase):
         with path_db.open("rb") as file:
             buf = file.read()
             target = b"SQLite format 3"
-            self.assertNotEqual(target, buf[: len(target)])
+            self.assertNotEqual(buf[: len(target)], target)
             buf = None  # Clear local buffer
         self.assertTrue(
             portfolio.Portfolio.is_encrypted(path_db),
@@ -273,17 +273,17 @@ class TestPortfolio(TestBase):
 
             # Find by ID, kinda redundant but lol: id = find(id)
             result = p.find_account(acct_checking.id_)
-            self.assertEqual(acct_checking.id_, result)
+            self.assertEqual(result, acct_checking.id_)
             result = p.find_account(acct_invest_0.id_)
-            self.assertEqual(acct_invest_0.id_, result)
+            self.assertEqual(result, acct_invest_0.id_)
             result = p.find_account(acct_invest_1.id_)
-            self.assertEqual(acct_invest_1.id_, result)
+            self.assertEqual(result, acct_invest_1.id_)
             result = p.find_account(10)
             self.assertIsNone(result)
 
             # Find by URI
             result = p.find_account(acct_checking.uri)
-            self.assertEqual(acct_checking.id_, result)
+            self.assertEqual(result, acct_checking.id_)
 
             # No match with random URI
             result = p.find_account(Account.id_to_uri(0x0FFFFFFF))
@@ -291,7 +291,7 @@ class TestPortfolio(TestBase):
 
             # Find by name
             result = p.find_account("Monkey Bank Checking")
-            self.assertEqual(acct_checking.id_, result)
+            self.assertEqual(result, acct_checking.id_)
 
             # More than 1 match by name
             result = p.find_account("Primate Investments")
@@ -299,7 +299,7 @@ class TestPortfolio(TestBase):
 
             # Find by institution
             result = p.find_account("Gorilla Bank")
-            self.assertEqual(acct_invest_1.id_, result)
+            self.assertEqual(result, acct_invest_1.id_)
 
     def test_find_asset(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -318,17 +318,17 @@ class TestPortfolio(TestBase):
 
             # Find by ID, kinda redundant but lol: id = find(id)
             result = p.find_asset(a_banana.id_)
-            self.assertEqual(a_banana.id_, result)
+            self.assertEqual(result, a_banana.id_)
             result = p.find_asset(a_apple_0.id_)
-            self.assertEqual(a_apple_0.id_, result)
+            self.assertEqual(result, a_apple_0.id_)
             result = p.find_asset(a_apple_1.id_)
-            self.assertEqual(a_apple_1.id_, result)
+            self.assertEqual(result, a_apple_1.id_)
             result = p.find_asset(10)
             self.assertIsNone(result)
 
             # Find by URI
             result = p.find_asset(a_banana.uri)
-            self.assertEqual(a_banana.id_, result)
+            self.assertEqual(result, a_banana.id_)
 
             # No match with random URI
             result = p.find_asset(Asset.id_to_uri(0x0FFFFFFF))
@@ -336,7 +336,7 @@ class TestPortfolio(TestBase):
 
             # Find by name
             result = p.find_asset("BANANA")
-            self.assertEqual(a_banana.id_, result)
+            self.assertEqual(result, a_banana.id_)
 
             # More than 1 match by name
             result = p.find_asset("APPLE")
@@ -384,7 +384,7 @@ class TestPortfolio(TestBase):
             transactions = s.query(Transaction).all()
 
             target = TRANSACTIONS_EXTRAS
-            self.assertEqual(len(target), len(transactions))
+            self.assertEqual(len(transactions), len(target))
             split_properties = [
                 "payee",
                 "description",
@@ -395,7 +395,7 @@ class TestPortfolio(TestBase):
                 "asset_id",
             ]
             for tgt, res in zip(target, transactions, strict=True):
-                self.assertEqual(1, len(res.splits))
+                self.assertEqual(len(res.splits), 1)
                 r_split = res.splits[0]
                 for k, t_v in tgt.items():
                     prop = k
@@ -418,16 +418,16 @@ class TestPortfolio(TestBase):
                             .where(TransactionCategory.id_ == cat_id)
                             .first()
                         )
-                        self.assertEqual(test_value, r_v.name)
+                        self.assertEqual(r_v.name, test_value)
                     elif prop in split_properties:
                         r_v = getattr(r_split, prop)
-                        self.assertEqual(test_value, r_v)
+                        self.assertEqual(r_v, test_value)
                     elif prop == "amount":
-                        self.assertEqual(test_value, res.amount)
-                        self.assertEqual(test_value, r_split.amount)
+                        self.assertEqual(res.amount, test_value)
+                        self.assertEqual(r_split.amount, test_value)
                     else:
                         r_v = getattr(res, prop)
-                        self.assertEqual(test_value, r_v)
+                        self.assertEqual(r_v, test_value)
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -451,13 +451,13 @@ class TestPortfolio(TestBase):
             s.commit()
 
             accounts = s.query(Account).all()
-            self.assertEqual(1, len(accounts))
+            self.assertEqual(len(accounts), 1)
 
         result, tar_ver = p.backup()
 
         path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
-        self.assertEqual(path_backup_1, result)
-        self.assertEqual(1, tar_ver)
+        self.assertEqual(result, path_backup_1)
+        self.assertEqual(tar_ver, 1)
 
         self.assertTrue(path_backup_1.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
@@ -466,12 +466,12 @@ class TestPortfolio(TestBase):
             buf_backup = tar.extractfile(path_db.name).read()
             with path_db.open("rb") as file:
                 buf = file.read()
-            self.assertEqual(buf, buf_backup)
+            self.assertEqual(buf_backup, buf)
 
             buf_backup = tar.extractfile(path_config.name).read()
             with path_config.open("rb") as file:
                 buf = file.read()
-            self.assertEqual(buf, buf_backup)
+            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -487,13 +487,13 @@ class TestPortfolio(TestBase):
             s.commit()
 
             accounts = s.query(Account).all()
-            self.assertEqual(2, len(accounts))
+            self.assertEqual(len(accounts), 2)
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
             buf_backup = tar.extractfile(path_db.name).read()
             with path_db.open("rb") as file:
                 buf = file.read()
-            self.assertNotEqual(buf, buf_backup)
+            self.assertNotEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -504,19 +504,19 @@ class TestPortfolio(TestBase):
             buf_backup = tar.extractfile(path_db.name).read()
             with path_db.open("rb") as file:
                 buf = file.read()
-            self.assertEqual(buf, buf_backup)
+            self.assertEqual(buf_backup, buf)
 
             buf_backup = tar.extractfile(path_config.name).read()
             with path_config.open("rb") as file:
                 buf = file.read()
-            self.assertEqual(buf, buf_backup)
+            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
         # Only the original account present
         with p.get_session() as s:
             accounts = s.query(Account).all()
-            self.assertEqual(1, len(accounts))
+            self.assertEqual(len(accounts), 1)
 
         # Can't restore if wrong version requested
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.restore, p, tar_ver=2)
@@ -566,11 +566,11 @@ class TestPortfolio(TestBase):
         p.backup()
         with tarfile.open(path_backup_1, "r:gz") as tar:
             buf_backup = tar.extractfile(path_a_img_rel).read()
-            self.assertEqual(a_img, buf_backup)
+            self.assertEqual(buf_backup, a_img)
             buf_backup = tar.extractfile(path_cert_rel).read()
-            self.assertEqual(ssl_cert, buf_backup)
+            self.assertEqual(buf_backup, ssl_cert)
             buf_backup = tar.extractfile(path_key_rel).read()
-            self.assertEqual(ssl_key, buf_backup)
+            self.assertEqual(buf_backup, ssl_key)
         a_img = None
         buf_backup = None
 
@@ -617,21 +617,21 @@ class TestPortfolio(TestBase):
             s.commit()
 
             accounts = s.query(Account).all()
-            self.assertEqual(1, len(accounts))
+            self.assertEqual(len(accounts), 1)
 
         path_backup_1, tar_ver = p.backup()
-        self.assertEqual(1, tar_ver)
+        self.assertEqual(tar_ver, 1)
         path_backup_2, tar_ver = p.backup()
-        self.assertEqual(2, tar_ver)
+        self.assertEqual(tar_ver, 2)
         path_backup_3, tar_ver = p.backup()
-        self.assertEqual(3, tar_ver)
+        self.assertEqual(tar_ver, 3)
 
         # Test for real this time
         result, tar_ver = p.backup()
 
         path_backup_4 = path_db.with_suffix(".backup4.tar.gz")
-        self.assertEqual(path_backup_4, result)
-        self.assertEqual(4, tar_ver)
+        self.assertEqual(result, path_backup_4)
+        self.assertEqual(tar_ver, 4)
 
         self.assertTrue(path_backup_4.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)

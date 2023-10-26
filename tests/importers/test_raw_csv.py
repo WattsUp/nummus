@@ -137,23 +137,23 @@ class TestCSVTransactionImporter(base.TestBase):
             },
         ]
         result = i.run()
-        self.assertEqual(len(target), len(result))
+        self.assertEqual(len(result), len(target))
         for tgt, res in zip(target, result, strict=True):
             for k, t_v in tgt.items():
                 r_v = res.pop(k)
-                self.assertEqual(t_v, r_v)
+                self.assertEqual(r_v, t_v)
             # No remaining items
-            self.assertEqual(0, len(res))
+            self.assertEqual(len(res), 0)
 
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
         i = raw_csv.CSVTransactionImporter(path=path)
         target = TRANSACTIONS_EXTRAS
 
         result = i.run()
-        self.assertEqual(len(target), len(result))
+        self.assertEqual(len(result), len(target))
         for tgt, res in zip(target, result, strict=True):
             for k, t_v in tgt.items():
                 r_v = res.pop(k)
-                self.assertEqual(t_v, r_v)
+                self.assertEqual(r_v, t_v)
             # No remaining items
-            self.assertEqual(0, len(res), msg=f"Extra keys: {list(res.keys())}")
+            self.assertEqual(len(res), 0, msg=f"Extra keys: {list(res.keys())}")

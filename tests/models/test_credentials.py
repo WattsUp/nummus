@@ -20,6 +20,6 @@ class TestCredentials(TestBase):
         s.add(c)
         s.commit()
 
-        self.assertEqual(d["site"], c.site)
-        self.assertEqual(d["user"], c.user)
-        self.assertEqual(d["password"], c.password)
+        self.assertEqual(c.site, d["site"])
+        self.assertEqual(c.user, d["user"])
+        self.assertEqual(c.password, d["password"])

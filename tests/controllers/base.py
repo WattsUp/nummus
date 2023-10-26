@@ -66,7 +66,7 @@ class WebTestBase(TestBase):
         self.assertIn(tag, [None, "html"])  # <html> might not be closed
         if parent is not None:
             parent: t.DictAny
-            self.assertEqual({"__parent__", "html"}, parent.keys())
+            self.assertEqual(parent.keys(), {"__parent__", "html"})
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -185,8 +185,8 @@ class WebTestBase(TestBase):
                     with mock.patch("sys.stderr", new=io.StringIO()) as _:
                         response = self._client.open(url, **kwargs)
             duration = time.perf_counter() - start
-            self.assertEqual(rc, response.status_code, msg=response.text)
-            self.assertEqual(content_type, response.content_type)
+            self.assertEqual(response.status_code, rc, msg=response.text)
+            self.assertEqual(response.content_type, content_type)
 
             with autodict.JSONAutoDict(TEST_LOG) as d:
                 # Replace uri with {accountURI, assetURI, ...}
@@ -207,7 +207,7 @@ class WebTestBase(TestBase):
                         parts.append(p)
                 endpoint = "/".join(parts)
                 k = f"{method:6} {endpoint}"
-                if queries is not None and len(queries) >= 1:
+                if queries:
                     queries_flat = [f"{k}=<value>" for k in queries]
                     k += f"?{'&'.join(queries_flat)}"
                 if k not in d["web_latency"]:

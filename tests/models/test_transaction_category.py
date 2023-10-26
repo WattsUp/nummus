@@ -20,9 +20,9 @@ class TestTransactionCategory(TestBase):
         s.add(t_cat)
         s.commit()
 
-        self.assertEqual(d["name"], t_cat.name)
-        self.assertEqual(d["group"], t_cat.group)
-        self.assertEqual(d["locked"], t_cat.locked)
+        self.assertEqual(t_cat.name, d["name"])
+        self.assertEqual(t_cat.group, d["group"])
+        self.assertEqual(t_cat.locked, d["locked"])
 
         # Short strings are bad
         self.assertRaises(ValueError, setattr, t_cat, "name", "ab")
@@ -49,18 +49,18 @@ class TestTransactionCategory(TestBase):
         query = query.where(
             TransactionCategory.group == TransactionCategoryGroup.INCOME,
         )
-        self.assertEqual(n_income, query.count())
+        self.assertEqual(query.count(), n_income)
 
         query = s.query(TransactionCategory)
         query = query.where(
             TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
         )
-        self.assertEqual(n_expense, query.count())
+        self.assertEqual(query.count(), n_expense)
 
         query = s.query(TransactionCategory)
         query = query.where(TransactionCategory.group == TransactionCategoryGroup.OTHER)
-        self.assertEqual(n_other, query.count())
+        self.assertEqual(query.count(), n_other)
 
         query = s.query(TransactionCategory)
-        self.assertEqual(n_income + n_expense + n_other, query.count())
-        self.assertEqual(63, query.count())
+        self.assertEqual(query.count(), n_income + n_expense + n_other)
+        self.assertEqual(query.count(), 63)

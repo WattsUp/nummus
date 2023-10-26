@@ -22,8 +22,8 @@ class TestBudget(TestBase):
         s.add(b)
         s.commit()
 
-        self.assertEqual(d["date"], b.date)
-        self.assertEqual(d["amount"], b.amount)
+        self.assertEqual(b.date, d["date"])
+        self.assertEqual(b.amount, d["amount"])
 
         # Positive amounts are bad
         b.amount = 1
