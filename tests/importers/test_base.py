@@ -23,10 +23,10 @@ class TestCSVTransactionImporter(test_base.TestBase):
             buf = file.read()
 
         i = Derived(buf=buf)
-        self.assertEqual(buf, i._buf)  # noqa: SLF001
+        self.assertEqual(i._buf, buf)  # noqa: SLF001
 
         i = Derived(path=path)
-        self.assertEqual(buf, i._buf)  # noqa: SLF001
+        self.assertEqual(i._buf, buf)  # noqa: SLF001
 
     def test_get_importer(self) -> None:
         files = {

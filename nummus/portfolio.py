@@ -440,10 +440,7 @@ class Portfolio:
 
         # Optimize database
         with self.get_session() as s:
-            # TODO(WattsUp): Defragment primary keys?
             s.execute(sqlalchemy.text("VACUUM"))
-
-        # TODO(WattsUp): If anything failed, restore from path_backup
 
         # Backup again
         path_backup, _ = self.backup()

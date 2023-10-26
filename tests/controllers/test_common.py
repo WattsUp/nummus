@@ -45,7 +45,7 @@ class TestCommon(WebTestBase):
             "n_closed": 0,
             "categories": {},
         }
-        self.assertDictEqual(target, result)
+        self.assertDictEqual(result, target)
 
         with p.get_session() as s:
             acct_checking = Account(
@@ -133,7 +133,7 @@ class TestCommon(WebTestBase):
         }
         with self._flask_app.app_context():
             result = common.ctx_sidebar(include_closed=True)
-        self.assertDictEqual(target, result)
+        self.assertDictEqual(result, target)
 
         target_accounts = [target_accounts[0]]
         target = {
@@ -150,10 +150,10 @@ class TestCommon(WebTestBase):
         }
         with self._flask_app.app_context():
             result = common.ctx_sidebar(include_closed=False)
-        self.assertDictEqual(target, result)
+        self.assertDictEqual(result, target)
 
     def test_empty(self) -> None:
-        self.assertEqual("", common.empty())
+        self.assertEqual(common.empty(), "")
 
     def test_overlay_swap(self) -> None:
         with self._flask_app.app_context():
@@ -173,14 +173,14 @@ class TestCommon(WebTestBase):
             html = data.decode()
             self.assertValidHTML(html)
             self.assertIn(content, html)
-            self.assertEqual(event_0, response.headers["HX-Trigger"])
+            self.assertEqual(response.headers["HX-Trigger"], event_0)
 
             response = common.overlay_swap(content, [event_0, event_1])
             data: bytes = response.data
             html = data.decode()
             self.assertValidHTML(html)
             self.assertIn(content, html)
-            self.assertEqual(f"{event_0},{event_1}", response.headers["HX-Trigger"])
+            self.assertEqual(response.headers["HX-Trigger"], f"{event_0},{event_1}")
 
     def test_error(self) -> None:
         p = self._portfolio

@@ -8,6 +8,6 @@ class TestDashboard(WebTestBase):
         endpoint = "/"
         result, _ = self.web_get(endpoint)
         target = '<!DOCTYPE html>\n<html lang="en-US">'
-        self.assertEqual(target, result[: len(target)])
+        self.assertEqual(result[: len(target)], target)
         target = "</html>"
-        self.assertEqual(target, result[-len(target) :])
+        self.assertEqual(result[-len(target) :], target)

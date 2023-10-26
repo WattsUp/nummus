@@ -46,8 +46,8 @@ class TestSQL(TestBase):
         self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
         s2 = sql.get_session(path, config)
-        self.assertNotEqual(s, s2)  # Different sessions
-        self.assertEqual(s.get_bind(), s2.get_bind())  # But same engine
+        self.assertNotEqual(s2, s)  # Different sessions
+        self.assertEqual(s2.get_bind(), s.get_bind())  # But same engine
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())

@@ -58,7 +58,7 @@ class TestAccount(WebTestBase):
         institution = self.random_string()
         form = {"institution": institution, "name": name, "category": "credit"}
         result, headers = self.web_post(endpoint, data=form)
-        self.assertEqual("update-account", headers["HX-Trigger"])
+        self.assertEqual(headers["HX-Trigger"], "update-account")
         with p.get_session() as s:
             acct = s.query(Account).first()
             self.assertEqual(acct.name, name)

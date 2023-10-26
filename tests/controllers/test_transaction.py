@@ -201,14 +201,14 @@ class TestTransaction(WebTestBase):
 
         endpoint = "/h/transactions/options/account"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(2, result.count("span"))
+        self.assertEqual(result.count("span"), 2)
         self.assertIn(f'value="{acct}"  hx-get', result)
         self.assertNotIn("checked", result)
 
         endpoint = "/h/transactions/options/category"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(4, result.count("span"))
+        self.assertEqual(result.count("span"), 4)
         self.assertIn(f'value="{cat_0}"  hx-get', result)
         self.assertIn(f'value="{cat_1}"  hx-get', result)
         self.assertNotIn("checked", result)
@@ -219,7 +219,7 @@ class TestTransaction(WebTestBase):
 
         queries = {"category": cat_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(4, result.count("span"))
+        self.assertEqual(result.count("span"), 4)
         self.assertIn(f'value="{cat_0}"  hx-get', result)
         self.assertIn(f'value="{cat_1}" checked hx-get', result)
         # Check sorting
@@ -229,7 +229,7 @@ class TestTransaction(WebTestBase):
 
         endpoint = "/h/transactions/options/tag"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(4, result.count("span"))
+        self.assertEqual(result.count("span"), 4)
         self.assertIn('value="[blank]"  hx-get', result)
         self.assertIn(f'value="{tag_1}"  hx-get', result)
         self.assertNotIn("checked", result)
@@ -240,7 +240,7 @@ class TestTransaction(WebTestBase):
 
         endpoint = "/h/transactions/options/payee"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(6, result.count("span"))
+        self.assertEqual(result.count("span"), 6)
         self.assertIn('value="[blank]"', result)
         self.assertIn(f'value="{payee_0}"  hx-get', result)
         self.assertIn(f'value="{payee_1}"  hx-get', result)
@@ -254,7 +254,7 @@ class TestTransaction(WebTestBase):
 
         queries = {"payee": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(6, result.count("span"))
+        self.assertEqual(result.count("span"), 6)
         self.assertIn('value="[blank]"', result)
         self.assertIn(f'value="{payee_0}"  hx-get', result)
         self.assertIn(f'value="{payee_1}" checked hx-get', result)
@@ -267,7 +267,7 @@ class TestTransaction(WebTestBase):
 
         queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(2, result.count("span"))
+        self.assertEqual(result.count("span"), 2)
         self.assertIn(f'value="{payee_0}" checked hx-get', result)
 
     def test_edit(self) -> None:
@@ -283,7 +283,7 @@ class TestTransaction(WebTestBase):
 
         endpoint = f"/h/transactions/t/{t_split_0}/edit"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(1, result.count('name="payee"'))
+        self.assertEqual(result.count('name="payee"'), 1)
 
         endpoint = f"/h/transactions/t/{t_0}/edit"
         form = {"amount": ""}
@@ -318,7 +318,7 @@ class TestTransaction(WebTestBase):
             "amount": ["20", "80"],
         }
         result, headers = self.web_post(endpoint, data=form)
-        self.assertEqual("update-transaction", headers["HX-Trigger"])
+        self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
             categories = TransactionCategory.map_name(s)
@@ -328,27 +328,27 @@ class TestTransaction(WebTestBase):
             txn: Transaction = query.scalar()
             splits = txn.splits
 
-            self.assertEqual(new_date, txn.date)
+            self.assertEqual(txn.date, new_date)
             self.assertTrue(txn.locked)
-            self.assertEqual(2, len(splits))
+            self.assertEqual(len(splits), 2)
 
             t_split = splits[0]
-            self.assertEqual(new_date, t_split.date)
+            self.assertEqual(t_split.date, new_date)
             self.assertTrue(t_split.locked)
-            self.assertEqual(payee_0, t_split.payee)
-            self.assertEqual(new_desc, t_split.description)
-            self.assertEqual(cat_0, categories[t_split.category_id])
+            self.assertEqual(t_split.payee, payee_0)
+            self.assertEqual(t_split.description, new_desc)
+            self.assertEqual(categories[t_split.category_id], cat_0)
             self.assertIsNone(t_split.tag)
-            self.assertEqual(20, t_split.amount)
+            self.assertEqual(t_split.amount, 20)
 
             t_split = splits[1]
-            self.assertEqual(new_date, t_split.date)
+            self.assertEqual(t_split.date, new_date)
             self.assertTrue(t_split.locked)
             self.assertIsNone(t_split.payee)
             self.assertIsNone(t_split.description)
-            self.assertEqual(cat_1, categories[t_split.category_id])
+            self.assertEqual(categories[t_split.category_id], cat_1)
             self.assertIsNone(t_split.tag)
-            self.assertEqual(80, t_split.amount)
+            self.assertEqual(t_split.amount, 80)
 
         # Remove split
         new_date = today - datetime.timedelta(days=10)
@@ -362,7 +362,7 @@ class TestTransaction(WebTestBase):
             "amount": "100",
         }
         result, headers = self.web_post(endpoint, data=form)
-        self.assertEqual("update-transaction", headers["HX-Trigger"])
+        self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
             categories = TransactionCategory.map_name(s)
@@ -372,18 +372,18 @@ class TestTransaction(WebTestBase):
             txn: Transaction = query.scalar()
             splits = txn.splits
 
-            self.assertEqual(new_date, txn.date)
+            self.assertEqual(txn.date, new_date)
             self.assertFalse(txn.locked)
-            self.assertEqual(1, len(splits))
+            self.assertEqual(len(splits), 1)
 
             t_split = splits[0]
-            self.assertEqual(new_date, t_split.date)
+            self.assertEqual(t_split.date, new_date)
             self.assertFalse(t_split.locked)
-            self.assertEqual(payee_0, t_split.payee)
-            self.assertEqual(new_desc, t_split.description)
-            self.assertEqual(cat_0, categories[t_split.category_id])
+            self.assertEqual(t_split.payee, payee_0)
+            self.assertEqual(t_split.description, new_desc)
+            self.assertEqual(categories[t_split.category_id], cat_0)
             self.assertIsNone(t_split.tag)
-            self.assertEqual(100, t_split.amount)
+            self.assertEqual(t_split.amount, 100)
 
     def test_split(self) -> None:
         d = self._setup_portfolio()
@@ -404,12 +404,12 @@ class TestTransaction(WebTestBase):
             "amount": "100",
         }
         result, _ = self.web_put(endpoint, data=form)
-        self.assertEqual(2, result.count('name="payee"'))
+        self.assertEqual(result.count('name="payee"'), 2)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
         self.assertRegex(result, r'name="payee"[ \n]+value=""')
         self.assertRegex(result, rf'name="description"[ \n]+value="{desc}"')
         self.assertRegex(result, r'name="description"[ \n]+value=""')
-        self.assertEqual(2, result.count("selected"))
+        self.assertEqual(result.count("selected"), 2)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+selected')
         self.assertRegex(result, r'value="Uncategorized"[ \n]+selected')
         self.assertRegex(result, rf'name="tag"[ \n]+value="{tag}"')
@@ -425,10 +425,10 @@ class TestTransaction(WebTestBase):
             "amount": ["100", ""],
         }
         result, _ = self.web_delete(endpoint + "?index=2", data=form)
-        self.assertEqual(1, result.count('name="payee"'))
+        self.assertEqual(result.count('name="payee"'), 1)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
         self.assertRegex(result, rf'name="description"[ \n]+value="{desc}"')
-        self.assertEqual(1, result.count("selected"))
+        self.assertEqual(result.count("selected"), 1)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+selected')
         self.assertRegex(result, rf'name="tag"[ \n]+value="{tag}"')
         self.assertRegex(result, r'name="amount"[ \n]+value="100\.00"')

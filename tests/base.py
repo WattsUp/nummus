@@ -15,6 +15,7 @@ from werkzeug import exceptions
 
 from nummus import custom_types as t
 from nummus import sql
+from nummus.models import base_uri
 from tests import TEST_LOG
 
 
@@ -78,32 +79,32 @@ class TestBase(unittest.TestCase):
 
     def assertEqualWithinError(  # noqa: N802
         self,
-        target: t.Any,
         real: t.Any,
+        target: t.Any,
         threshold: float,
         msg: str | None = None,
     ) -> None:
         """Assert if target != real within threshold.
 
         Args:
-            target: Target value
             real: Test value
+            target: Target value
             threshold: Fractional amount real can be off
             msg: Error message to print
         """
         self.assertIsNotNone(real)
         if isinstance(target, dict):
             self.assertIsInstance(real, dict, msg)
-            self.assertEqual(target.keys(), real.keys(), msg)
+            self.assertEqual(real.keys(), target.keys(), msg)
             for k, t_v in target.items():
                 r_v = real[k]
-                self.assertEqualWithinError(t_v, r_v, threshold, msg=f"Key: {k}")
+                self.assertEqualWithinError(r_v, t_v, threshold, msg=f"Key: {k}")
             return
         if isinstance(target, list):
             self.assertIsInstance(real, list, msg)
-            self.assertEqual(len(target), len(real), msg)
+            self.assertEqual(len(real), len(target), msg)
             for t_v, r_v in zip(target, real, strict=True):
-                self.assertEqualWithinError(t_v, r_v, threshold, msg)
+                self.assertEqualWithinError(r_v, t_v, threshold, msg)
             return
         if isinstance(target, int | float):
             self.assertIsInstance(real, int | float, msg)
@@ -111,7 +112,7 @@ class TestBase(unittest.TestCase):
             self.assertLessEqual(error, threshold, msg)
         else:
             # Decimals included here since their math should be immune from FP error
-            self.assertEqual(target, real, msg)
+            self.assertEqual(real, target, msg)
 
     def assertHTTPRaises(  # noqa: N802
         self,
@@ -131,7 +132,7 @@ class TestBase(unittest.TestCase):
         with self.assertRaises(exceptions.HTTPException) as cm:
             func(*args, **kwargs)
         e: exceptions.HTTPException = cm.exception
-        self.assertEqual(rc, e.code)
+        self.assertEqual(e.code, rc)
 
     def setUp(self, *, clean: bool = True) -> None:
         if clean:
@@ -177,6 +178,9 @@ class TestBase(unittest.TestCase):
 
         # Change all engines to NullPool so timing isn't an issue
         sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # noqa: SLF001
+
+        # Generate a cipher for URI encoding
+        base_uri._CIPHER = base_uri.Cipher.generate()  # noqa: SLF001
 
     @classmethod
     def tearDownClass(cls) -> None:

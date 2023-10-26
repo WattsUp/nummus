@@ -35,27 +35,27 @@ class TestServer(TestBase):
             f"{p.ssl_cert_path}\n"
             "Replace with real certificate to disable this warning\n"
         )
-        self.assertEqual(target, fake_stderr)
+        self.assertEqual(fake_stderr, target)
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.MAGENTA}Running in debug mode\n"
             f"{Fore.MAGENTA}Generating self-signed certificate\n"
             "Please install certificate in web browser\n"
         )
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
-        self.assertEqual(p, s._portfolio)  # noqa: SLF001
+        self.assertEqual(s._portfolio, p)  # noqa: SLF001
 
         s_server = s._server  # noqa: SLF001
         flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
             flask_p: portfolio.Portfolio = flask.current_app.portfolio
-        self.assertEqual(p, flask_p)
-        self.assertEqual(debug, flask_app.debug)
+        self.assertEqual(flask_p, p)
+        self.assertEqual(flask_app.debug, debug)
 
-        self.assertEqual(host, s_server.server_host)
-        self.assertEqual(port, s_server.server_port)
+        self.assertEqual(s_server.server_host, host)
+        self.assertEqual(s_server.server_port, port)
 
         # Copy not self-signed cert over
         path_cert = self._DATA_ROOT.joinpath("cert_not_ss.pem")
@@ -70,10 +70,10 @@ class TestServer(TestBase):
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
         ):
             s = web.Server(p, host, port, debug=debug)
-        self.assertEqual("", fake_stderr.getvalue())
-        self.assertEqual("", fake_stdout.getvalue())
+        self.assertEqual(fake_stderr.getvalue(), "")
+        self.assertEqual(fake_stdout.getvalue(), "")
         flask_app = s._app  # noqa: SLF001
-        self.assertEqual(debug, flask_app.debug)
+        self.assertEqual(flask_app.debug, debug)
 
     def test_run(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -108,7 +108,7 @@ class TestServer(TestBase):
             "serve_forever\n"
             f"{Fore.YELLOW}nummus web shutdown at "
         )  # skip timestamp
-        self.assertEqual(target, fake_stdout[: len(target)])
+        self.assertEqual(fake_stdout[: len(target)], target)
 
         debug = False
         with (
@@ -133,7 +133,7 @@ class TestServer(TestBase):
             f"{Fore.YELLOW}Shutting down on interrupt\n"
             f"{Fore.YELLOW}nummus web shutdown at "
         )  # skip timestamp
-        self.assertEqual(target, fake_stdout[: len(target)])
+        self.assertEqual(fake_stdout[: len(target)], target)
 
         # Artificially set started=True
         s_server._stop_event.clear()  # noqa: SLF001
@@ -147,7 +147,7 @@ class TestServer(TestBase):
             "stop\n"
             f"{Fore.YELLOW}nummus web shutdown at "
         )  # skip timestamp
-        self.assertEqual(target, fake_stdout[: len(target)])
+        self.assertEqual(fake_stdout[: len(target)], target)
 
     def test_generate_ssl_cert(self) -> None:
         path_cert = self._TEST_ROOT.joinpath("cert.pem")
@@ -201,7 +201,7 @@ class TestServer(TestBase):
         with flask_app.app_context():
             target = __version__
             result = flask.render_template_string("{{ version }}")
-            self.assertEqual(target, result)
+            self.assertEqual(result, target)
 
     def test_jinja_filters(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -227,20 +227,20 @@ class TestServer(TestBase):
             context = {"number": Decimal("1000.100000")}
             target = "1000.100000"
             result = flask.render_template_string("{{ number }}", **context)
-            self.assertEqual(target, result)
+            self.assertEqual(result, target)
 
             target = "$1,000.10"
             result = flask.render_template_string("{{ number | money }}", **context)
-            self.assertEqual(target, result)
+            self.assertEqual(result, target)
 
             target = "1,000.10"
             result = flask.render_template_string("{{ number | comma }}", **context)
-            self.assertEqual(target, result)
+            self.assertEqual(result, target)
 
             context = {"duration": 14}
             target = "2 wks"
             result = flask.render_template_string("{{ duration | days }}", **context)
-            self.assertEqual(target, result)
+            self.assertEqual(result, target)
 
 
 class TestHandler(TestBase):
@@ -258,7 +258,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.response_length = 1000
         h.time_finish = 0.3
@@ -275,7 +275,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.time_finish = 0.2
         h.time_start = 0.1
@@ -291,7 +291,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.time_finish = 0.15
         h.time_start = 0.1
@@ -307,7 +307,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.client_address = "127.0.0.1"
         h.requestline = "DELETE /h/sidebar HTTP/1.1"
@@ -321,7 +321,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.requestline = "OPTIONS /h/sidebar HTTP/1.1"
         target = (
@@ -333,7 +333,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.requestline = "HEAD /h/sidebar HTTP/1.1"
         target = (
@@ -345,7 +345,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.requestline = "PATCH /h/sidebar HTTP/1.1"
         target = (
@@ -357,7 +357,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.requestline = "TRACE /h/sidebar HTTP/1.1"
         target = (
@@ -369,7 +369,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
         h.requestline = "GOT /h/sidebar HTTP/1.1"
         h.code = 600
@@ -382,7 +382,7 @@ class TestHandler(TestBase):
         )
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
-        self.assertEqual(target, result)
+        self.assertEqual(result, target)
 
 
 class TestTailwindCSSFilter(TestBase):
@@ -393,4 +393,4 @@ class TestTailwindCSSFilter(TestBase):
         f.output(None, out)
         buf = out.getvalue()
         target = "/*! tailwindcss"
-        self.assertEqual(target, buf[: len(target)])
+        self.assertEqual(buf[: len(target)], target)

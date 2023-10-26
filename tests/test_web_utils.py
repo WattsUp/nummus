@@ -26,7 +26,7 @@ class TestWebUtils(TestBase):
 
         acct_uri = acct.uri
         result = web_utils.find(s, Account, acct_uri)
-        self.assertEqual(acct, result)
+        self.assertEqual(result, acct)
 
         # Account does not exist
         mising_uri = Account.id_to_uri(acct.id_ + 1)
@@ -122,4 +122,4 @@ class TestWebUtils(TestBase):
         # All good
         req = flask.Request({"CONTENT_TYPE": "image/png", "CONTENT_LENGTH": "1000000"})
         suffix = web_utils.validate_image_upload(req)
-        self.assertEqual(".png", suffix)
+        self.assertEqual(suffix, ".png")

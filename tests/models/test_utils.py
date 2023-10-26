@@ -40,27 +40,27 @@ class TestUtils(TestBase):
 
         # No results return all
         result = utils.search(query, Account, None).all()
-        self.assertEqual([acct_checking, acct_invest], result)
+        self.assertEqual(result, [acct_checking, acct_invest])
 
         # Short query return all
         result = utils.search(query, Account, "ab").all()
-        self.assertEqual([acct_checking, acct_invest], result)
+        self.assertEqual(result, [acct_checking, acct_invest])
 
         # No matches return first 5
         result = utils.search(query, Account, "crazy unrelated words").all()
-        self.assertEqual([acct_checking, acct_invest], result)
+        self.assertEqual(result, [acct_checking, acct_invest])
 
         result = utils.search(query, Account, "checking").all()
-        self.assertEqual([acct_checking], result)
+        self.assertEqual(result, [acct_checking])
 
         result = utils.search(query, Account, "Monkey Bank").all()
-        self.assertEqual([acct_checking], result)
+        self.assertEqual(result, [acct_checking])
 
         result = utils.search(query, Account, "monkey gorilla").all()
-        self.assertEqual([acct_checking, acct_invest], result)
+        self.assertEqual(result, [acct_checking, acct_invest])
 
         result = utils.search(query, Account, "trading").all()
-        self.assertEqual([acct_invest], result)
+        self.assertEqual(result, [acct_invest])
 
     def test_paginate(self) -> None:
         s = self.get_session()
@@ -103,36 +103,36 @@ class TestUtils(TestBase):
         query = s.query(Transaction)
 
         page, count, next_offset = utils.paginate(query, 50, 0)
-        self.assertEqual(transactions, page)
-        self.assertEqual(n_transactions, count)
+        self.assertEqual(page, transactions)
+        self.assertEqual(count, n_transactions)
         self.assertIsNone(next_offset)
 
         page, count, next_offset = utils.paginate(query, 3, 0)
-        self.assertEqual(transactions[0:3], page)
-        self.assertEqual(n_transactions, count)
-        self.assertEqual(3, next_offset)
+        self.assertEqual(page, transactions[0:3])
+        self.assertEqual(count, n_transactions)
+        self.assertEqual(next_offset, 3)
 
         page, count, next_offset = utils.paginate(query, 3, 3)
-        self.assertEqual(transactions[3:6], page)
-        self.assertEqual(n_transactions, count)
-        self.assertEqual(6, next_offset)
+        self.assertEqual(page, transactions[3:6])
+        self.assertEqual(count, n_transactions)
+        self.assertEqual(next_offset, 6)
 
         page, count, next_offset = utils.paginate(query, 3, 6)
-        self.assertEqual(transactions[6:9], page)
-        self.assertEqual(n_transactions, count)
-        self.assertEqual(9, next_offset)
+        self.assertEqual(page, transactions[6:9])
+        self.assertEqual(count, n_transactions)
+        self.assertEqual(next_offset, 9)
 
         page, count, next_offset = utils.paginate(query, 3, 9)
-        self.assertEqual(transactions[9:], page)
-        self.assertEqual(n_transactions, count)
+        self.assertEqual(page, transactions[9:])
+        self.assertEqual(count, n_transactions)
         self.assertIsNone(next_offset)
 
         page, count, next_offset = utils.paginate(query, 3, 1000)
-        self.assertEqual([], page)
-        self.assertEqual(n_transactions, count)
+        self.assertEqual(page, [])
+        self.assertEqual(count, n_transactions)
         self.assertIsNone(next_offset)
 
         page, count, next_offset = utils.paginate(query, 3, -1000)
-        self.assertEqual(transactions[0:3], page)
-        self.assertEqual(n_transactions, count)
-        self.assertEqual(3, next_offset)
+        self.assertEqual(page, transactions[0:3])
+        self.assertEqual(count, n_transactions)
+        self.assertEqual(next_offset, 3)

@@ -52,7 +52,7 @@ class TestCommands(TestBase):
             with path_db.open("rb") as file:
                 buf = file.read()
                 target = b"SQLite format 3"
-                self.assertEqual(target, buf[: len(target)])
+                self.assertEqual(buf[: len(target)], target)
                 buf = None  # Clear local buffer
 
             # Fail to overwrite
@@ -219,7 +219,7 @@ class TestCommands(TestBase):
                 f"{Fore.RED}Portfolio does not exist at {path_db}. "
                 "Run nummus create\n"
             )
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # Create and unlock unencrypted Portfolio
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
@@ -230,7 +230,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Portfolio is unlocked\n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
         finally:
             mock.builtins.input = original_input
@@ -278,7 +278,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # Password file does exist
             with path_password.open("w", encoding="utf-8") as file:
@@ -290,7 +290,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Portfolio is unlocked\n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # Password file does exist but incorrect
             with path_password.open("w", encoding="utf-8") as file:
@@ -302,7 +302,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.RED}Could not decrypt with password file\n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # No password file at all
             queue = [key]
@@ -312,7 +312,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # Cancel entry
             queue = [None]
@@ -322,7 +322,7 @@ class TestCommands(TestBase):
 
             fake_stdout = fake_stdout.getvalue()
             target = "Please enter password: \n"
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
             # 3 failed attempts
             queue = ["bad", "still wrong", "not going to work"]
@@ -340,7 +340,7 @@ class TestCommands(TestBase):
                 f"{Fore.RED}Incorrect password\n"
                 f"{Fore.RED}Too many incorrect attempts\n"
             )
-            self.assertEqual(target, fake_stdout)
+            self.assertEqual(fake_stdout, target)
 
         finally:
             mock.builtins.input = original_input
@@ -395,12 +395,12 @@ class TestCommands(TestBase):
             f"{Fore.RED}File does not exist: {file_missing}\n"
             f"{Fore.RED}Abandoned import, restored from backup\n"
         )
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         # Check file_a was not imported
         with p.get_session() as s:
             transactions = s.query(Transaction).all()
-            self.assertEqual(0, len(transactions))
+            self.assertEqual(len(transactions), 0)
 
         # Try importing with a bad file, should restore from backup
         paths = [file_a, file_c]
@@ -413,12 +413,12 @@ class TestCommands(TestBase):
             f"{Fore.RED}File is an unknown type: {file_c}\n"
             f"{Fore.RED}Abandoned import, restored from backup\n"
         )
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         # Check file_a was not imported
         with p.get_session() as s:
             transactions = s.query(Transaction).all()
-            self.assertEqual(0, len(transactions))
+            self.assertEqual(len(transactions), 0)
 
         # Delete file so dir import works
         file_c.unlink()
@@ -431,12 +431,12 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.GREEN}Imported 2 files\n"
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         # Check all transactions were imported
         with p.get_session() as s:
             transactions = s.query(Transaction).all()
-            self.assertEqual(6 + 4, len(transactions))
+            self.assertEqual(len(transactions), 6 + 4)
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -452,7 +452,7 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.GREEN}Portfolio backed up to {path_backup}\n"
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_backup.exists(), "Backup does not exist")
 
@@ -469,7 +469,7 @@ class TestCommands(TestBase):
             f"{Fore.GREEN}Portfolio is unlocked\n"
             f"{Fore.GREEN}Portfolio restored for {path_db}\n"
         )
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
 
@@ -480,7 +480,7 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.RED}Backup does not exist {path_backup}\n"
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -503,7 +503,7 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.GREEN}Portfolio cleaned\n"
-        self.assertEqual(target, fake_stdout)
+        self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")

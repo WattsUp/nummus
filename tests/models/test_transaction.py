@@ -42,10 +42,10 @@ class TestTransaction(TestBase):
         s.add(txn)
         s.commit()
 
-        self.assertEqual(acct.id_, txn.account_id)
-        self.assertEqual(d["date"], txn.date)
-        self.assertEqual(d["amount"], txn.amount)
-        self.assertEqual(d["statement"], txn.statement)
+        self.assertEqual(txn.account_id, acct.id_)
+        self.assertEqual(txn.date, d["date"])
+        self.assertEqual(txn.amount, d["amount"])
+        self.assertEqual(txn.statement, d["statement"])
         self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
 
 
@@ -180,13 +180,13 @@ class TestTransactionSplit(TestBase):
         s.add_all((txn, t_split))
         s.commit()
 
-        self.assertEqual(qty, t_split.asset_quantity_unadjusted)
-        self.assertEqual(qty, t_split.asset_quantity)
+        self.assertEqual(t_split.asset_quantity_unadjusted, qty)
+        self.assertEqual(t_split.asset_quantity, qty)
 
         multiplier = self.random_decimal(1, 10)
         t_split.adjust_asset_quantity(multiplier)
-        self.assertEqual(qty, t_split.asset_quantity_unadjusted)
-        self.assertEqual(qty * multiplier, t_split.asset_quantity)
+        self.assertEqual(t_split.asset_quantity_unadjusted, qty)
+        self.assertEqual(t_split.asset_quantity, qty * multiplier)
 
         t_split.asset_quantity_unadjusted = None
         s.commit()

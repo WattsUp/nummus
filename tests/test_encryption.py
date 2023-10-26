@@ -24,10 +24,10 @@ class TestEncryption(TestBase):
         enc = encryption.Encryption(key)
 
         encrypted = enc.encrypt(secret)
-        self.assertNotEqual(secret, encrypted)
-        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        self.assertNotEqual(encrypted, secret)
+        self.assertNotEqual(base64.b64decode(encrypted), secret)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(secret, decrypted)
+        self.assertEqual(decrypted, secret)
 
     def test_bad_key(self) -> None:
         key = self.random_string().encode()
@@ -36,8 +36,8 @@ class TestEncryption(TestBase):
         enc = encryption.Encryption(key)
 
         encrypted = enc.encrypt(secret)
-        self.assertNotEqual(secret, encrypted)
-        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        self.assertNotEqual(encrypted, secret)
+        self.assertNotEqual(base64.b64decode(encrypted), secret)
 
         bad_key = key + self.random_string().encode()
         enc_bad = encryption.Encryption(bad_key)
@@ -45,7 +45,7 @@ class TestEncryption(TestBase):
         try:
             secret_bad = enc_bad.decrypt(encrypted)
             # Sometimes decrypting is valid but yields wrong secret
-            self.assertNotEqual(secret, secret_bad)
+            self.assertNotEqual(secret_bad, secret)
         except ValueError:
             pass  # Expected mismatch of padding
 
@@ -58,17 +58,17 @@ class TestEncryption(TestBase):
         salt = enc.gen_salt(set_salt=True)
 
         encrypted = enc.encrypt(secret)
-        self.assertNotEqual(secret, encrypted)
-        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        self.assertNotEqual(encrypted, secret)
+        self.assertNotEqual(base64.b64decode(encrypted), secret)
         enc.set_salt(salt)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(secret, decrypted)
+        self.assertEqual(decrypted, secret)
 
         salt = enc.gen_salt(set_salt=False)
         enc.set_salt(salt)
         encrypted = enc.encrypt(secret)
-        self.assertNotEqual(secret, encrypted)
-        self.assertNotEqual(secret, base64.b64decode(encrypted))
+        self.assertNotEqual(encrypted, secret)
+        self.assertNotEqual(base64.b64decode(encrypted), secret)
         enc.set_salt(salt)
         decrypted = enc.decrypt(encrypted)
-        self.assertEqual(secret, decrypted)
+        self.assertEqual(decrypted, secret)
