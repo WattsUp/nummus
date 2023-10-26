@@ -1,7 +1,7 @@
 """Command line interface commands."""
 from __future__ import annotations
 
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import colorama
 from colorama import Fore
@@ -9,17 +9,20 @@ from colorama import Fore
 from nummus import custom_types as t
 from nummus import portfolio, utils, web
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 colorama.init(autoreset=True)
 
 MIN_PASS_LEN = 8
 
 
-def create(path: str, pass_file: str, *, force: bool, no_encrypt: bool) -> int:
+def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool) -> int:
     """Create a new Portfolio.
 
     Args:
-        path: Path to Portfolio DB to create
-        pass_file: Path to password file, None will prompt when necessary
+        path_db: Path to Portfolio DB to create
+        path_password: Path to password file, None will prompt when necessary
         force: True will overwrite existing if necessary
         no_encrypt: True will not encrypt the Portfolio
 
@@ -27,7 +30,6 @@ def create(path: str, pass_file: str, *, force: bool, no_encrypt: bool) -> int:
         0 on success
         non-zero on failure
     """
-    path_db = Path(path)
     if path_db.exists():
         if force:
             path_db.unlink()
@@ -39,11 +41,9 @@ def create(path: str, pass_file: str, *, force: bool, no_encrypt: bool) -> int:
 
     key: str = None
     if not no_encrypt:
-        if pass_file is not None:
-            path_password = Path(pass_file)
-            if path_password.exists():
-                with path_password.open(encoding="utf-8") as file:
-                    key = file.read().strip()
+        if path_password is not None and path_password.exists():
+            with path_password.open(encoding="utf-8") as file:
+                key = file.read().strip()
 
         # Get key from user is password file empty
 
@@ -72,17 +72,16 @@ def create(path: str, pass_file: str, *, force: bool, no_encrypt: bool) -> int:
     return 0
 
 
-def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
+def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
     """Unlock an existing Portfolio.
 
     Args:
-        path: Path to Portfolio DB to create
-        pass_file: Path to password file, None will prompt when necessary
+        path_db: Path to Portfolio DB to create
+        path_password: Path to password file, None will prompt when necessary
 
     Returns:
         Unlocked Portfolio or None if unlocking failed
     """
-    path_db = Path(path)
     if not path_db.exists():
         print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
         return None
@@ -94,11 +93,9 @@ def unlock(path: str, pass_file: str) -> portfolio.Portfolio:
 
     key: str = None
 
-    if pass_file is not None:
-        path_password = Path(pass_file)
-        if path_password.exists():
-            with path_password.open(encoding="utf-8") as file:
-                key = file.read().strip()
+    if path_password is not None and path_password.exists():
+        with path_password.open(encoding="utf-8") as file:
+            key = file.read().strip()
 
     if key is not None:
         # Try once with password file
@@ -144,12 +141,12 @@ def backup(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def restore(path: str, pass_file: str, tar_ver: int | None = None) -> int:
+def restore(path_db: Path, path_password: Path, tar_ver: int | None = None) -> int:
     """Backup portfolio to tar.gz.
 
     Args:
-        path: Path to Portfolio DB to restore
-        pass_file: Path to password file, None will prompt when necessary
+        path_db: Path to Portfolio DB to create
+        path_password: Path to password file, None will prompt when necessary
         tar_ver: Backup tar version to restore from, None will restore latest
 
     Returns:
@@ -157,12 +154,12 @@ def restore(path: str, pass_file: str, tar_ver: int | None = None) -> int:
         non-zero on failure
     """
     try:
-        portfolio.Portfolio.restore(path, tar_ver=tar_ver)
+        portfolio.Portfolio.restore(path_db, tar_ver=tar_ver)
         print(f"{Fore.CYAN}Extracted backup tar.gz")
     except FileNotFoundError as e:
         print(f"{Fore.RED}{e}")
         return 1
-    p = unlock(path, pass_file)
+    p = unlock(path_db, path_password)
     print(f"{Fore.GREEN}Portfolio restored for {p.path}")
     return 0
 
@@ -182,7 +179,7 @@ def clean(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
+def import_files(p: portfolio.Portfolio, paths: t.Paths) -> int:
     """Import a list of files or directories into a portfolio.
 
     Args:
@@ -201,17 +198,16 @@ def import_files(p: portfolio.Portfolio, paths: t.Strings) -> int:
 
     try:
         for path in paths:
-            file = Path(path)
-            if not file.exists():
-                print(f"{Fore.RED}File does not exist: {file}")
+            if not path.exists():
+                print(f"{Fore.RED}File does not exist: {path}")
                 return 1
-            if file.is_dir():
-                for f in file.iterdir():
+            if path.is_dir():
+                for f in path.iterdir():
                     if f.is_file():
                         p.import_file(f)
                         count += 1
             else:
-                p.import_file(file)
+                p.import_file(path)
                 count += 1
 
         success = True

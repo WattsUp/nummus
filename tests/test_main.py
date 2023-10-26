@@ -70,8 +70,8 @@ class TestMain(TestBase):
 
     def test_create(self) -> None:
         home = Path("~").expanduser()
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
-        path_password = str(self._TEST_ROOT.joinpath(".password"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
+        path_password = self._TEST_ROOT.joinpath(".password")
         try:
             self._set_up_commands()
 
@@ -81,10 +81,10 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 {
                     "_func": "create",
-                    "path": str(home.joinpath(".nummus", "portfolio.db")),
+                    "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "force": False,
                     "no_encrypt": False,
-                    "pass_file": None,
+                    "path_password": None,
                 },
                 self._called_kwargs,
             )
@@ -95,19 +95,19 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 {
                     "_func": "create",
-                    "path": str(home.joinpath(".nummus", "portfolio.db")),
+                    "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "force": False,
                     "no_encrypt": True,
-                    "pass_file": None,
+                    "path_password": None,
                 },
                 self._called_kwargs,
             )
 
             args = [
                 "--portfolio",
-                path,
+                str(path),
                 "--pass-file",
-                path_password,
+                str(path_password),
                 "create",
                 "--force",
             ]
@@ -116,10 +116,10 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 {
                     "_func": "create",
-                    "path": path,
+                    "path_db": path,
                     "force": True,
                     "no_encrypt": False,
-                    "pass_file": path_password,
+                    "path_password": path_password,
                 },
                 self._called_kwargs,
             )
@@ -127,10 +127,10 @@ class TestMain(TestBase):
             self._tear_down_commands()
 
     def test_unlock(self) -> None:
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
 
         # Try unlocking non-existent Portfolio
-        args = ["--portfolio", path, "unlock"]
+        args = ["--portfolio", str(path), "unlock"]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             rc = main.main(args)
         self.assertNotEqual(rc, 0)
@@ -138,7 +138,7 @@ class TestMain(TestBase):
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path, None, force=False, no_encrypt=True)
 
-        args = ["--portfolio", path, "unlock"]
+        args = ["--portfolio", str(path), "unlock"]
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = main.main(args)
         self.assertEqual(rc, 0)
@@ -147,38 +147,38 @@ class TestMain(TestBase):
         self.assertIn("Portfolio is unlocked", fake_stdout)
 
     def test_import(self) -> None:
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
 
-            args = ["--portfolio", path, "import"]
+            args = ["--portfolio", str(path), "import"]
             with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
                 self.assertRaises(SystemExit, main.main, args)
             fake_stderr = fake_stderr.getvalue()
             self.assertIn("arguments are required: PATH", fake_stderr)
 
             paths = ["transactions.csv"]
-            args = ["--portfolio", path, "import", *paths]
+            args = ["--portfolio", str(path), "import", *paths]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": paths},
+                {"_func": "import_files", "paths": [Path(p) for p in paths]},
                 self._called_kwargs,
             )
 
             paths = ["transactions.csv", "statement-dir"]
-            args = ["--portfolio", path, "import", *paths]
+            args = ["--portfolio", str(path), "import", *paths]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
-                {"_func": "import_files", "paths": paths},
+                {"_func": "import_files", "paths": [Path(p) for p in paths]},
                 self._called_kwargs,
             )
 
@@ -186,14 +186,14 @@ class TestMain(TestBase):
             self._tear_down_commands()
 
     def test_web(self) -> None:
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
 
-            args = ["--portfolio", path, "web"]
+            args = ["--portfolio", str(path), "web"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))
@@ -213,7 +213,7 @@ class TestMain(TestBase):
                 self._called_kwargs,
             )
 
-            args = ["--portfolio", path, "web", "--debug"]
+            args = ["--portfolio", str(path), "web", "--debug"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))
@@ -227,7 +227,7 @@ class TestMain(TestBase):
             port = 80
             args = [
                 "--portfolio",
-                path,
+                str(path),
                 "web",
                 "-H",
                 host,
@@ -248,8 +248,8 @@ class TestMain(TestBase):
 
     def test_restore(self) -> None:
         home = Path("~").expanduser()
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
-        path_password = str(self._TEST_ROOT.joinpath(".password"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
+        path_password = self._TEST_ROOT.joinpath(".password")
         try:
             self._set_up_commands()
 
@@ -259,8 +259,8 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 {
                     "_func": "restore",
-                    "path": str(home.joinpath(".nummus", "portfolio.db")),
-                    "pass_file": None,
+                    "path_db": home.joinpath(".nummus", "portfolio.db"),
+                    "path_password": None,
                     "tar_ver": None,
                 },
                 self._called_kwargs,
@@ -273,21 +273,27 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 {
                     "_func": "restore",
-                    "path": str(home.joinpath(".nummus", "portfolio.db")),
-                    "pass_file": None,
+                    "path_db": home.joinpath(".nummus", "portfolio.db"),
+                    "path_password": None,
                     "tar_ver": tar_ver,
                 },
                 self._called_kwargs,
             )
 
-            args = ["--portfolio", path, "--pass-file", path_password, "restore"]
+            args = [
+                "--portfolio",
+                str(path),
+                "--pass-file",
+                str(path_password),
+                "restore",
+            ]
             main.main(args)
             self.assertListEqual([], self._called_args)
             self.assertDictEqual(
                 {
                     "_func": "restore",
-                    "path": path,
-                    "pass_file": path_password,
+                    "path_db": path,
+                    "path_password": path_password,
                     "tar_ver": None,
                 },
                 self._called_kwargs,
@@ -296,14 +302,14 @@ class TestMain(TestBase):
             self._tear_down_commands()
 
     def test_backup(self) -> None:
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
 
-            args = ["--portfolio", path, "backup"]
+            args = ["--portfolio", str(path), "backup"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))
@@ -313,14 +319,14 @@ class TestMain(TestBase):
             self._tear_down_commands()
 
     def test_clean(self) -> None:
-        path = str(self._TEST_ROOT.joinpath("portfolio.db"))
+        path = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.create(path, None, force=False, no_encrypt=True)
 
         try:
             self._set_up_commands()
 
-            args = ["--portfolio", path, "clean"]
+            args = ["--portfolio", str(path), "clean"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(1, len(self._called_args))

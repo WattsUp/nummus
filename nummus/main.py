@@ -35,12 +35,14 @@ calculates net worth, and predicts future performance."""
         "--portfolio",
         "-p",
         metavar="PATH",
+        type=Path,
         default=default_path,
         help="specify portfolio.db location",
     )
     parser.add_argument(
         "--pass-file",
         metavar="PATH",
+        type=Path,
         help="specify password file location, omit will prompt when necessary",
     )
 
@@ -102,6 +104,7 @@ calculates net worth, and predicts future performance."""
     sub_import.add_argument(
         "paths",
         metavar="PATH",
+        type=Path,
         nargs="+",
         help="list of files and directories to import",
     )
@@ -145,8 +148,8 @@ calculates net worth, and predicts future performance."""
 
     args = parser.parse_args(args=command_line)
 
-    path_db: str = args.portfolio
-    path_password: str = args.pass_file
+    path_db: Path = args.portfolio
+    path_password: Path = args.pass_file
     cmd: str = args.cmd
 
     # Defer import to make main loading faster
@@ -156,16 +159,20 @@ calculates net worth, and predicts future performance."""
         force: bool = args.force
         no_encrypt: bool = args.no_encrypt
         return commands.create(
-            path=path_db,
-            pass_file=path_password,
+            path_db=path_db,
+            path_password=path_password,
             force=force,
             no_encrypt=no_encrypt,
         )
     if cmd == "restore":
         tar_ver: int = args.v
-        return commands.restore(path=path_db, pass_file=path_password, tar_ver=tar_ver)
+        return commands.restore(
+            path_db=path_db,
+            path_password=path_password,
+            tar_ver=tar_ver,
+        )
 
-    p = commands.unlock(path=path_db, pass_file=path_password)
+    p = commands.unlock(path_db=path_db, path_password=path_password)
     if p is None:
         return 1
 
@@ -182,7 +189,7 @@ calculates net worth, and predicts future performance."""
     if cmd == "clean":
         return commands.clean(p)
     if cmd == "import":
-        paths: t.Strings = args.paths
+        paths: t.Paths = args.paths
         return commands.import_files(p, paths=paths)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"

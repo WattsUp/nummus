@@ -76,6 +76,7 @@ class TestBase(unittest.TestCase):
         if cls._TEST_ROOT.exists():
             shutil.rmtree(cls._TEST_ROOT)
 
+    # TODO(WattsUp): Remove all yoda conditions
     def assertEqualWithinError(  # noqa: N802
         self,
         target: t.Any,
