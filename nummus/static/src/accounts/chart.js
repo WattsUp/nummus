@@ -65,6 +65,11 @@ function accountChart(raw) {
                 },
             },
         },
-        plugins: [hoverLine],
+        plugins: [hoverLine(
+            'account-chart-bar',
+            'account-chart-date',
+            'account-chart-value',
+            'account-chart-change',
+            )],
     });
 }

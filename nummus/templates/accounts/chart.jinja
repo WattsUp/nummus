@@ -36,8 +36,21 @@
                value="{{ acct_chart["end"] }}"
                hx-get="{{ url_for("accounts.chart", uri=acct_chart["uri"], period="custom") }}">
     </div>
-    <div class="w-full h-96">
-        <canvas id="account-chart-canvas"></canvas>
-        <script>accountChart(JSON.parse('{{ acct_chart["data"] | tojson }}'))</script>
+    <div class="w-full">
+        <div id="account-chart-bar"
+             class="w-full flex opacity-0 transition-opacity text-sm">
+            <div class="w-1/2 flex justify-end gap-4">
+                <div id="account-chart-date" class="w-28 text-right"></div>
+                <div id="account-chart-value" class="w-28 text-right"></div>
+            </div>
+            <div class="w-1/2 flex justify-end gap-4">
+                <div>1-Day Change</div>
+                <div id="account-chart-change" class="mr-12 w-28 text-right"></div>
+            </div>
+        </div>
+        <div class="w-full h-96">
+            <canvas id="account-chart-canvas"></canvas>
+            <script>accountChart(JSON.parse('{{ acct_chart["data"] | tojson }}'))</script>
+        </div>
     </div>
 </div>
