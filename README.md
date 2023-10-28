@@ -101,6 +101,7 @@ Formatters
 > isort .
 > black .
 > djlint . --reformat
+> clang-format $EACH_JS_FILE
 ```
 
 ### Tools
