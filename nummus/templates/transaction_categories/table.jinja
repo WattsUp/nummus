@@ -20,7 +20,7 @@
                         {% if item["locked"] %}
                             <a class="flex pl-[24px]">{{ item["name"] }}</a>
                         {% else %}
-                            <a hx-get="{{ url_for("transaction_categories.edit", uri=item['uri']) }}"
+                            <a hx-get="{{ url_for("transaction_categories.edit", uri=item["uri"]) }}"
                                class="flex group">
                                 {% with class="w-[24px] h-[24px] block fill-white transition-colors p-1 group-hover:fill-black" %}
                                     {% include "svg/pencil.svg" %}

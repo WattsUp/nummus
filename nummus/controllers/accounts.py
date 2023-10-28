@@ -19,6 +19,9 @@ if TYPE_CHECKING:
 def edit(uri: str) -> str:
     """GET & POST /h/accounts/a/<uri>/edit.
 
+    Args:
+        uri: Account URI
+
     Returns:
         string HTML response
     """
@@ -89,8 +92,37 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     }
 
 
+def ctx_chart(acct: Account) -> t.DictAny:
+    """Get the context to build the account chart.
+
+    Args:
+        acct: Account to generate context for
+
+    Returns:
+        Dictionary HTML context
+    """
+    args = flask.request.args
+
+    period = args.get("period", "this-month")
+    start, end = web_utils.parse_period(
+        period,
+        args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat),
+    )
+
+    return {
+        "uri": acct.uri,
+        "start": start,
+        "end": end,
+        "period": period,
+    }
+
+
 def page(uri: str) -> str:
     """GET /accounts/<uri>.
+
+    Args:
+        uri: Account URI
 
     Returns:
         string HTML response
@@ -102,11 +134,33 @@ def page(uri: str) -> str:
         acct: Account = web_utils.find(s, Account, uri)
         return common.page(
             "accounts/index-content.jinja",
-            account=ctx_account(acct),
+            acct=ctx_account(acct),
+            acct_chart=ctx_chart(acct),
+        )
+
+
+def chart(uri: str) -> str:
+    """GET /h/accounts/a/<uri>/chart.
+
+    Args:
+        uri: Account URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio
+
+    with p.get_session() as s:
+        acct: Account = web_utils.find(s, Account, uri)
+        return common.page(
+            "accounts/chart.jinja",
+            acct_chart=ctx_chart(acct),
         )
 
 
 ROUTES: t.Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
+    "/h/accounts/a/<path:uri>/chart": (chart, ["GET"]),
     "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }

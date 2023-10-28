@@ -43,13 +43,13 @@
                         <td>
                             <input class="w-full"
                                    name="institution"
-                                   value="{{ account['institution'] }}">
+                                   value="{{ account["institution"] }}">
                         </td>
                     </tr>
                     <tr>
                         <td>Account Name</td>
                         <td>
-                            <input class="w-full" name="name" value="{{ account['name'] }}">
+                            <input class="w-full" name="name" value="{{ account["name"] }}">
                         </td>
                     </tr>
                     <tr>
@@ -71,7 +71,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <a hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</a>
-        <a hx-post="{{ url_for("accounts.edit", uri=account['uri']) }}"
+        <a hx-post="{{ url_for("accounts.edit", uri=account["uri"]) }}"
            hx-target="#overlay-error"
            hx-include="#form-account"
            class="button bg-green">Save</a>

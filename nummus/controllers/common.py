@@ -280,13 +280,11 @@ def page(content_template: str, **context: t.DictAny) -> str:
         content_template: Path to content template
         context: context passed to render_template
     """
-    print(flask.request.headers.get("Hx-Request", "false"))
     if flask.request.headers.get("Hx-Request", "false") == "true":
         # Send just the content
         return flask.render_template(content_template, **context)
     return flask.render_template_string(
-        f"""
-{{% extends "shared/base.jinja" %}}
+        f"""{{% extends "shared/base.jinja" %}}
 {{% block content %}}
 {{% include "{content_template}" %}}
 {{% endblock content %}}

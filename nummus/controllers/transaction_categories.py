@@ -95,6 +95,9 @@ def new() -> str:
 def edit(uri: str) -> str:
     """GET & POST /h/txn-categories/<uri>/edit.
 
+    Args:
+        uri: TransactionCategory URI
+
     Returns:
         string HTML response
     """
@@ -138,6 +141,9 @@ def edit(uri: str) -> str:
 
 def delete(uri: str) -> str:
     """GET & POST /h/txn-categories/<uri>/delete.
+
+    Args:
+        uri: TransactionCategory URI
 
     Returns:
         string HTML response

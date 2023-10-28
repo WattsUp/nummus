@@ -21,19 +21,19 @@
                     <span>Assets</span><span>{{ sidebar["assets"] | money }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
-                    <div class="bg-green h-full" style="width: {{ sidebar['assets-w'] }}%"></div>
+                    <div class="bg-green h-full" style="width: {{ sidebar["assets-w"] }}%"></div>
                 </div>
                 <h2 class="flex justify-between">
                     <span>Liabilities</span><span>{{ sidebar["liabilities"] | money }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
-                    <div class="bg-blue h-full" style="width: {{ sidebar['liabilities-w'] }}%"></div>
+                    <div class="bg-blue h-full" style="width: {{ sidebar["liabilities-w"] }}%"></div>
                 </div>
             </div>
         </a>
         {% if sidebar["include_closed"] %}
             <a class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900"
-               hx-get="{{ url_for("common.sidebar") }}?closed=excluded">
+               hx-get="{{ url_for("common.sidebar", closed="excluded") }}">
                 Closed accounts marked with red borders. Click to hide.
             </a>
         {% endif %}
@@ -47,9 +47,9 @@
                 <div class="bg-white">
                     {% for acct in item[1] %}
                         {% if loop.index != 1 %}<div class="mx-3 h-px bg-grey-200"></div>{% endif %}
-                        <div class="block whitespace-nowrap relative p-px border-2 {{ 'border-red' if acct['closed'] else 'border-transparent' }}">
+                        <div class="block whitespace-nowrap relative p-px border-2 {{ "border-red" if acct["closed"] else "border-transparent" }}">
                             <div class="w-[18px] h-full absolute group/navitem cursor-pointer"
-                                 hx-get="{{ url_for("accounts.edit", uri=acct['uri']) }}"
+                                 hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
                                 {% with class="fill-white transition-colors group-hover/navitem:fill-black" %}
@@ -57,7 +57,7 @@
                                 {% endwith %}
                             </div>
                             <div class="cursor-pointer"
-                                 hx-get="{{ url_for("accounts.page", uri=acct['uri']) }}"
+                                 hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
                                  hx-target="#main"
                                  hx-swap="innerHTML"
                                  hx-push-url="true">
@@ -84,14 +84,14 @@
                     closed accounts
                 </span>
                 <a class="button bg-white"
-                   hx-get="{{ url_for("common.sidebar") }}?closed=excluded">Click to hide</a>
+                   hx-get="{{ url_for("common.sidebar", closed="excluded") }}">Click to hide</a>
             {% else %}
                 <span>Excluded
                     {{ sidebar["n_closed"] }}
                     closed accounts
                 </span>
                 <a class="button bg-white"
-                   hx-get="{{ url_for("common.sidebar") }}?closed=included">Click to show</a>
+                   hx-get="{{ url_for("common.sidebar", closed="included") }}">Click to show</a>
             {% endif %}
         </div>
     </nav>

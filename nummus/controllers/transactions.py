@@ -277,10 +277,10 @@ def ctx_table() -> t.DictAny:
             "page_len": page_len,
             "page_total": page_total,
             "query_total": query_total,
-            "offset_first": "offset=0",
-            "offset_prev": f"offset={max(0, offset - page_len)}",
-            "offset_next": f"offset={offset_next or offset_last}",
-            "offset_last": f"offset={offset_last}",
+            "offset_first": 0,
+            "offset_prev": max(0, offset - page_len),
+            "offset_next": offset_next or offset_last,
+            "offset_last": offset_last,
             "start": start,
             "end": end,
             "period": period,
@@ -303,6 +303,11 @@ def ctx_split(
     categories: t.DictIntStr,
 ) -> t.DictAny:
     """Get the context to build the transaction edit dialog.
+
+    Args:
+        t_split: TransactionSplit to build context for
+        accounts: Dict {id: account name}
+        categories: Dict {id: category name}
 
     Returns:
         Dictionary HTML context
@@ -435,6 +440,9 @@ def edit(uri: str) -> str:
 def split(uri: str) -> str:
     """PUT & DELETE /h/transactions/<uri>/split.
 
+    Args:
+        uri: Transaction URI
+
     Returns:
         string HTML response
     """
@@ -502,6 +510,9 @@ def split(uri: str) -> str:
 
 def remaining(uri: str) -> str:
     """POST /h/transactions/<uri>/remaining.
+
+    Args:
+        uri: Transaction URI
 
     Returns:
       string HTML response

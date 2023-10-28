@@ -32,7 +32,7 @@
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <a hx-get="{{ url_for("transaction_categories.overlay") }}"
            class="button hover:green">Cancel</a>
-        <a hx-post="{{ url_for("transaction_categories.delete", uri=category['uri']) }}"
+        <a hx-post="{{ url_for("transaction_categories.delete", uri=category["uri"]) }}"
            hx-target="#overlay-error"
            hx-include="#form-category"
            class="button bg-red">

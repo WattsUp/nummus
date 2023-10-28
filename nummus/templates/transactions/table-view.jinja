@@ -1,6 +1,6 @@
-<a id="txn-{{ txn['uri'] }}"
+<a id="txn-{{ txn["uri"] }}"
    class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100"
-   hx-get="{{ url_for("transactions.edit", uri=txn['uri']) }}"
+   hx-get="{{ url_for("transactions.edit", uri=txn["uri"]) }}"
    hx-target="#overlay"
    hx-swap="innerHTML"
    hx-include="this">
