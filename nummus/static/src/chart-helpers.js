@@ -6,7 +6,7 @@
  */
 function getThemeColor(name) {
     'use strict';
-    let style = getComputedStyle(document.body);
+    const style = getComputedStyle(document.body);
     return style.getPropertyValue(`--color-${name}`);
 }
 
@@ -33,8 +33,8 @@ function formatMoneyTicks(value, index, ticks) {
         maximumFractionDigits: 1,
     });
     if (index == 0) {
-        let step = Math.abs(ticks[0].value - ticks[1].value);
-        let smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
+        const step = Math.abs(ticks[0].value - ticks[1].value);
+        const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
         ticks.forEach((t) => {
             if (step >= 1000) {
                 t.label = formatterF0.format(t.value / 1000) + 'k';
@@ -46,4 +46,40 @@ function formatMoneyTicks(value, index, ticks) {
         });
     }
     return ticks[index].label;
+}
+
+/**
+ * Chart.js plugin to draw a vertical line on hover
+ */
+const hoverLine = {
+    id: 'hoverLine',
+    afterDatasetsDraw(chart, args, plugins) {
+        const {
+            ctx,
+            tooltip,
+            chartArea: {top, bottom, left, right, width, height},
+        } = chart;
+        if (tooltip._active.length == 0) return;
+
+        const e = tooltip._active[0].element;
+        const x = Math.floor(e.x) + 0.5;
+        const y = e.y;
+        const color = getThemeColor('grey-500');
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = color;
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bottom);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, 2 * Math.PI);
+        ctx.fillStyle = color + '40';
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.restore();
+    }
 }

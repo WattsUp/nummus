@@ -5,23 +5,28 @@
  */
 function accountChart(raw) {
     'use strict';
-    let dates = raw.dates;
-    let values = raw.values;
+    const dates = raw.dates;
+    const values = raw.values;
 
     // TODO(WattsUp) Add hover logic
 
-    let ctx = document.querySelector('#account-chart-canvas').getContext('2d');
-    let chart = new Chart(ctx, {
+    const ctx =
+        document.querySelector('#account-chart-canvas').getContext('2d');
+    const chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: dates,
             datasets: [
                 {
                     data: values,
-                    backgroundColor: getThemeColor('green'),
                     borderWidth: 0,
                     pointRadius: 0,
-                    fill: 'origin',
+                    hoverRadius: 0,
+                    fill: {
+                        target: 'origin',
+                        above: getThemeColor('green'),
+                        below: getThemeColor('blue'),
+                    },
                 },
             ],
         },
@@ -35,7 +40,11 @@ function accountChart(raw) {
                         display: false,
                     },
                     ticks: {
-                        display: false,
+                        callback: function(value, index, ticks) {
+                            if (index == 0 || index == (ticks.length - 1)) {
+                                return dates[index];
+                            }
+                        }
                     },
                 },
                 y: {
@@ -49,7 +58,13 @@ function accountChart(raw) {
                 legend: {
                     display: false,
                 },
+                tooltip: {
+                    intersect: false,
+                    mode: 'index',
+                    enabled: false,
+                },
             },
         },
+        plugins: [hoverLine],
     });
 }
