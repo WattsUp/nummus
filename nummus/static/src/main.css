@@ -22,6 +22,12 @@
     @apply cursor-pointer;
   }
 
+  body {
+    --color-green: theme("colors.green.DEFAULT");
+    --color-blue: theme("colors.blue.DEFAULT");
+    --color-red: theme("colors.red.DEFAULT");
+  }
+
   .button {
     @apply px-2 rounded border transition-colors;
   }

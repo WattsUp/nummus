@@ -103,18 +103,24 @@ def ctx_chart(acct: Account) -> t.DictAny:
     """
     args = flask.request.args
 
-    period = args.get("period", "this-month")
+    period = args.get("period", "90-days")
     start, end = web_utils.parse_period(
         period,
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
 
+    dates, values, _ = acct.get_value(start, end)
+
     return {
         "uri": acct.uri,
         "start": start,
         "end": end,
         "period": period,
+        "data": {
+            "dates": [d.isoformat() for d in dates],
+            "values": values,
+        },
     }
 
 
