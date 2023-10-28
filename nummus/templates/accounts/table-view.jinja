@@ -1,0 +1,18 @@
+<a id="txn-{{ txn["uri"] }}"
+   class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100"
+   hx-get="{{ url_for("transactions.edit", uri=txn["uri"]) }}"
+   hx-target="#overlay"
+   hx-swap="innerHTML"
+   hx-include="this">
+    <div class="w-[6rem] min-w-[6rem] p-1">{{ txn["date"] }}</div>
+    <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["payee"] or "" }}</div>
+    <div class="w-[10rem] min-w-[10rem] p-1 truncate grow">{{ txn["description"] or "" }}</div>
+    <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["category"] }}</div>
+    <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["tag"] or "" }}</div>
+    <div class="w-[7rem] min-w-[7rem] p-1 truncate text-right">{{ txn["amount"] | money }}</div>
+    <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
+        {% if txn["locked"] %}
+            {% include "svg/lock.svg" %}
+        {% endif %}
+    </div>
+</a>

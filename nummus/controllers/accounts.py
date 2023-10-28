@@ -9,11 +9,19 @@ import flask
 import sqlalchemy.exc
 
 from nummus import portfolio, web_utils
-from nummus.controllers import common
-from nummus.models import Account, AccountCategory
+from nummus.controllers import common, transactions
+from nummus.models import (
+    Account,
+    AccountCategory,
+    TransactionCategory,
+    TransactionSplit,
+)
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
+
+DEFAULT_PERIOD = "90-days"
+PREVIOUS_PERIOD = {"start": None, "end": None}
 
 
 def edit(uri: str) -> str:
@@ -103,12 +111,16 @@ def ctx_chart(acct: Account) -> t.DictAny:
     """
     args = flask.request.args
 
-    period = args.get("period", "90-days")
+    period = args.get("period", DEFAULT_PERIOD)
     start, end = web_utils.parse_period(
         period,
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
+    start = start or acct.opened_on
+
+    PREVIOUS_PERIOD["start"] = start
+    PREVIOUS_PERIOD["end"] = end
 
     dates, values, _ = acct.get_value(start, end)
 
@@ -142,11 +154,12 @@ def page(uri: str) -> str:
             "accounts/index-content.jinja",
             acct=ctx_account(acct),
             acct_chart=ctx_chart(acct),
+            txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
         )
 
 
-def chart(uri: str) -> str:
-    """GET /h/accounts/a/<uri>/chart.
+def table(uri: str) -> str:
+    """GET /h/accounts/a/<uri>/table.
 
     Args:
         uri: Account URI
@@ -159,14 +172,86 @@ def chart(uri: str) -> str:
 
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)
+
+        args = flask.request.args
+        period = args.get("period", DEFAULT_PERIOD)
+        start, end = web_utils.parse_period(
+            period,
+            args.get("start", type=datetime.date.fromisoformat),
+            args.get("end", type=datetime.date.fromisoformat),
+        )
+        start = start or acct.opened_on
+        if PREVIOUS_PERIOD["start"] == start and PREVIOUS_PERIOD["end"] == end:
+            return common.page(
+                "accounts/table.jinja",
+                txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+                include_oob=True,
+            )
         return common.page(
-            "accounts/chart.jinja",
+            "accounts/table.jinja",
             acct_chart=ctx_chart(acct),
+            txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+            include_oob=True,
+            include_chart_oob=True,
+        )
+
+
+def options(uri: str, field: str) -> str:
+    """GET /h/transactions/options/<field>.
+
+    Args:
+        uri: Account URI
+        field: Name of field to get options for
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio
+
+    with p.get_session() as s:
+        acct: Account = web_utils.find(s, Account, uri)
+        args = flask.request.args
+
+        id_mapping = None
+        if field == "account":
+            id_mapping = Account.map_name(s)
+        elif field == "category":
+            id_mapping = TransactionCategory.map_name(s)
+
+        period = args.get("period", "this-month")
+        start, end = web_utils.parse_period(
+            period,
+            args.get("start", type=datetime.date.fromisoformat),
+            args.get("end", type=datetime.date.fromisoformat),
+        )
+
+        query = s.query(TransactionSplit)
+        query = query.where(TransactionSplit.asset_id.is_(None))
+        if start is not None:
+            query = query.where(TransactionSplit.date >= start)
+        query = query.where(TransactionSplit.date <= end)
+        query = query.where(TransactionSplit.account_id == acct.id_)
+
+        search_str = args.get(f"search-{field}")
+
+        return flask.render_template(
+            "accounts/table-options.jinja",
+            options=transactions.ctx_options(
+                query,
+                field,
+                id_mapping,
+                search_str=search_str,
+            ),
+            txn_table={"uri": uri},
+            name=field,
+            search_str=search_str,
         )
 
 
 ROUTES: t.Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
-    "/h/accounts/a/<path:uri>/chart": (chart, ["GET"]),
+    "/h/accounts/a/<path:uri>/table": (table, ["GET"]),
+    "/h/accounts/a/<path:uri>/options/<path:field>": (options, ["GET"]),
     "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }

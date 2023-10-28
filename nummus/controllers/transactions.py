@@ -159,8 +159,15 @@ def ctx_options(
     )
 
 
-def ctx_table() -> t.DictAny:
+def ctx_table(
+    acct: Account | None = None,
+    default_period: str = "this-month",
+) -> t.DictAny:
     """Get the context to build the transaction table.
+
+    Args:
+        acct: Account to get transactions for, None will use filter queries
+        default_period: Default period to use if no period given
 
     Returns:
         Dictionary HTML context
@@ -174,12 +181,14 @@ def ctx_table() -> t.DictAny:
         accounts = Account.map_name(s)
         categories = TransactionCategory.map_name(s)
 
-        period = args.get("period", "this-month")
+        period = args.get("period", default_period)
         start, end = web_utils.parse_period(
             period,
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
+        if acct is not None:
+            start = start or acct.opened_on
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
 
@@ -193,6 +202,8 @@ def ctx_table() -> t.DictAny:
             query = query.where(TransactionSplit.date >= start)
         query = query.where(TransactionSplit.date <= end)
         query = query.order_by(TransactionSplit.date)
+        if acct is not None:
+            query = query.where(TransactionSplit.account_id == acct.id_)
 
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
@@ -205,7 +216,7 @@ def ctx_table() -> t.DictAny:
         selected_categories = args.getlist("category")
         selected_tags = args.getlist("tag")
 
-        if len(selected_accounts) != 0:
+        if acct is None and len(selected_accounts) != 0:
             ids = [
                 acct_id
                 for acct_id, name in accounts.items()
@@ -269,6 +280,7 @@ def ctx_table() -> t.DictAny:
         offset_last = max(0, (count // page_len) * page_len)
 
         return {
+            "uri": None if acct is None else acct.uri,
             "transactions": transactions,
             "count": count,
             "offset": offset,

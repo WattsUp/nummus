@@ -8,7 +8,8 @@ function accountChart(raw) {
     const dates = raw.dates;
     const values = raw.values;
 
-    // TODO(WattsUp) Add hover logic
+    // TODO(WattsUp) Add downsampling
+    // TODO(WattsUp) Add data replacement instead of rebuilding
 
     const ctx =
         document.querySelector('#account-chart-canvas').getContext('2d');

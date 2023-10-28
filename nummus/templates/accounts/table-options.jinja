@@ -1,0 +1,26 @@
+<input id="txn-search-{{ name }}"
+       class="w-full"
+       placeholder="Search..."
+       name="search-{{ name }}"
+       value="{{ search_str }}"
+       hx-get="{{ url_for("accounts.options", uri=txn_table["uri"], field=name) }}"
+       hx-target="#txn-{{ name }}"
+       hx-swap="innerHTML"
+       hx-trigger="keyup changed throttle:250ms">
+<div class="options overflow-y-scroll overflow-x-hidden h-60 pr-1">
+    {% for option in options %}
+        {% if not option["hidden"] %}
+            <label class="flex w-full checkbox">
+                <input type="checkbox"
+                       name="{{ name }}"
+                       value="{{ option["name"] }}"
+                       {% if option["checked"] %}checked{% endif %}
+                       hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], period="custom") }}">
+                {% with class = "w-5 h-5" %}
+                    {% include "svg/check.svg" %}
+                {% endwith %}
+                <span class="min-w-0 truncate">{{ option["name"] }}</span>
+            </label>
+        {% endif %}
+    {% endfor %}
+</div>

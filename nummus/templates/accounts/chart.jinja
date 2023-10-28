@@ -1,41 +1,4 @@
-<div id="account-chart"
-     class="w-full"
-     hx-include="#chart-config"
-     hx-target="this">
-    <div id="chart-config" class="w-full flex justify-end gap-1 font-serif">
-        <select name="period"
-                hx-get="{{ url_for("accounts.chart", uri=acct_chart["uri"]) }}">
-            <option value="this-month" {{ "selected" if acct_chart["period"] == "this-month" }}>This Month
-            </option>
-            <option value="last-month" {{ "selected" if acct_chart["period"] == "last-month" }}>Last Month
-            </option>
-            <option value="30-days" {{ "selected" if acct_chart["period"] == "30-days" }}>30 Days
-            </option>
-            <option value="90-days" {{ "selected" if acct_chart["period"] == "90-days" }}>90 Days
-            </option>
-            <option value="1-year" {{ "selected" if acct_chart["period"] == "1-year" }}>1 year
-            </option>
-            <option value="5-years" {{ "selected" if acct_chart["period"] == "5-years" }}>5 years
-            </option>
-            <option value="this-year" {{ "selected" if acct_chart["period"] == "this-year" }}>This Year
-            </option>
-            <option value="last-year" {{ "selected" if acct_chart["period"] == "last-year" }}>Last Year
-            </option>
-            <option value="all" {{ "selected" if acct_chart["period"] == "all" }}>All
-            </option>
-            <option value="custom" hidden="hidden" {{ "selected" if acct_chart["period"] == "custom" }}>Custom
-            </option>
-        </select>
-        <input type="date"
-               name="start"
-               value="{{ acct_chart["start"] }}"
-               hx-get="{{ url_for("accounts.chart", uri=acct_chart["uri"], period="custom") }}">
-        to
-        <input type="date"
-               name="end"
-               value="{{ acct_chart["end"] }}"
-               hx-get="{{ url_for("accounts.chart", uri=acct_chart["uri"], period="custom") }}">
-    </div>
+<div id="account-chart" class="w-full" hx-swap-oob="{{ oob }}">
     <div class="w-full">
         <div id="account-chart-bar"
              class="w-full flex opacity-0 transition-opacity text-sm">
