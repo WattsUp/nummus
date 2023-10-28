@@ -5,8 +5,8 @@
            value="{{ txn_table['search'] }}"
            placeholder="Search Transactions"
            class="mr-8 grow"
-           hx-get="{{ url_for("transaction.table") }}">
-    <select name="period" hx-get="{{ url_for("transaction.table") }}">
+           hx-get="{{ url_for("transactions.table") }}">
+    <select name="period" hx-get="{{ url_for("transactions.table") }}">
         <option value="this-month" {{ "selected" if txn_table["period"] == "this-month" }}>This Month
         </option>
         <option value="last-month" {{ "selected" if txn_table["period"] == "last-month" }}>Last Month
@@ -31,28 +31,28 @@
     <input type="date"
            name="start"
            value="{{ txn_table['start'] }}"
-           hx-get="{{ url_for("transaction.table") }}?period=custom">
+           hx-get="{{ url_for("transactions.table") }}?period=custom">
     to
     <input type="date"
            name="end"
            value="{{ txn_table['end'] }}"
-           hx-get="{{ url_for("transaction.table") }}?period=custom">
+           hx-get="{{ url_for("transactions.table") }}?period=custom">
 </div>
 <div id="txn-paging"
      class="flex w-full justify-end my-1"
      hx-swap-oob="{{ oob }}">
     <button class="button hover:red mr-1"
-            hx-get="{{ url_for("transaction.table") }}?search="
+            hx-get="{{ url_for("transactions.table") }}?search="
             hx-include="#txn-config">Clear Filters</button>
     <button class="button hover:green mr-auto"
-            hx-get="{{ url_for("transaction.table") }}?period=90-days&locked=false"
+            hx-get="{{ url_for("transactions.table") }}?period=90-days&locked=false"
             hx-include="this">Recent & Unlocked</button>
-    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_first'] }}">
+    <button hx-get="{{ url_for("transactions.table") }}?{{ txn_table['offset_first'] }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-first.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_prev'] }}">
+    <button hx-get="{{ url_for("transactions.table") }}?{{ txn_table['offset_prev'] }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-left.svg" %}
         {% endwith %}
@@ -64,12 +64,12 @@
         of
         {{ txn_table["count"] }}
     </span>
-    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_next'] }}">
+    <button hx-get="{{ url_for("transactions.table") }}?{{ txn_table['offset_next'] }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-right.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for("transaction.table") }}?{{ txn_table['offset_last'] }}">
+    <button hx-get="{{ url_for("transactions.table") }}?{{ txn_table['offset_last'] }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-last.svg" %}
         {% endwith %}

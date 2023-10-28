@@ -167,7 +167,7 @@ def ctx_base() -> t.DictAny:
         "Overview": {
             "Dashboard": None,
             "Net Worth": None,
-            "Transactions": "transaction.page_all",
+            "Transactions": "transactions.page_all",
             "Instrument Transactions": None,
         },
         "Banking": {

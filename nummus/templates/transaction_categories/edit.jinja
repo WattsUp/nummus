@@ -38,7 +38,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         {% if category["uri"] %}
-            <a hx-get="{{ url_for('transaction_category.delete', uri=category['uri']) }}"
+            <a hx-get="{{ url_for("transaction_categories.delete", uri=category['uri']) }}"
                class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
@@ -46,15 +46,15 @@
                 Delete
             </a>
         {% endif %}
-        <a hx-get="{{ url_for("transaction_category.overlay") }}"
+        <a hx-get="{{ url_for("transaction_categories.overlay") }}"
            class="button hover:green">Cancel</a>
         {% if category["uri"] %}
-            <a hx-post="{{ url_for('transaction_category.edit', uri=category['uri']) }}"
+            <a hx-post="{{ url_for("transaction_categories.edit", uri=category['uri']) }}"
                hx-target="#overlay-error"
                hx-include="#form-category"
                class="button bg-green">Save</a>
         {% else %}
-            <a hx-post="{{ url_for("transaction_category.new") }}"
+            <a hx-post="{{ url_for("transaction_categories.new") }}"
                hx-target="#overlay-error"
                hx-include="#form-category"
                class="button bg-green">Save</a>

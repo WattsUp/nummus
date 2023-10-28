@@ -4,21 +4,21 @@
     {% with svg_class="transition-colors cursor-pointer m-0 w-[24px] h-[24px]" %}
         {% if txn_table["locked"] is none %}
             <input name="locked" value="" class="hidden">
-            <div hx-get="{{ url_for("transaction.table") }}?locked=true">
+            <div hx-get="{{ url_for("transactions.table") }}?locked=true">
                 {% with class = svg_class + " bg-grey-200 fill-grey-600" %}
                     {% include "svg/lock.svg" %}
                 {% endwith %}
             </div>
         {% elif txn_table["locked"] %}
             <input name="locked" value="true" class="hidden">
-            <div hx-get="{{ url_for("transaction.table") }}?locked=false">
+            <div hx-get="{{ url_for("transactions.table") }}?locked=false">
                 {% with class = svg_class + " bg-green fill-white" %}
                     {% include "svg/lock.svg" %}
                 {% endwith %}
             </div>
         {% else %}
             <input name="locked" value="false" class="hidden">
-            <div hx-get="{{ url_for("transaction.table") }}?locked=">
+            <div hx-get="{{ url_for("transactions.table") }}?locked=">
                 {% with class = svg_class + " bg-green fill-transparent" %}
                     {% include "svg/lock.svg" %}
                 {% endwith %}
