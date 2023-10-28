@@ -101,7 +101,7 @@ def ctx_options(
     field: str,
     id_mapping: t.DictIntStr = None,
     search_str: str | None = None,
-) -> list[t.DictStr]:
+) -> list[t.DictAny]:
     """Get the context to build the options for table.
 
     Args:
@@ -161,7 +161,7 @@ def ctx_options(
     )
 
 
-def ctx_table() -> t.DictStr:
+def ctx_table() -> t.DictAny:
     """Get the context to build the transaction table.
 
     Returns:
@@ -303,7 +303,7 @@ def ctx_split(
     t_split: TransactionSplit,
     accounts: t.DictIntStr,
     categories: t.DictIntStr,
-) -> t.DictStr:
+) -> t.DictAny:
     """Get the context to build the transaction edit dialog.
 
     Returns:

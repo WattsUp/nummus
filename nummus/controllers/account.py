@@ -33,19 +33,10 @@ def edit(uri: str) -> str:
         v = values[0]
 
         if flask.request.method == "GET":
-            ctx: t.DictAny = {
-                "uri": uri,
-                "name": acct.name,
-                "institution": acct.institution,
-                "category": acct.category,
-                "category_type": AccountCategory,
-                "value": v,
-                "closed": acct.closed,
-                "updated_days_ago": (today - acct.updated_on).days,
-                "opened_days_ago": (today - acct.opened_on).days,
-            }
-
-            return flask.render_template("accounts/edit.jinja", account=ctx)
+            return flask.render_template(
+                "accounts/edit.jinja",
+                account=ctx_account(acct, v),
+            )
 
         form = flask.request.form
         institution = form["institution"].strip()
@@ -70,6 +61,54 @@ def edit(uri: str) -> str:
         return common.overlay_swap(event="update-account")
 
 
+def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny:
+    """Get the context to build the account details.
+
+    Args:
+        acct: Account to generate context for
+        current_value: Current value to include, None will fetch
+
+    Returns:
+        Dictionary HTML context
+    """
+    today = datetime.date.today()
+    if current_value is None:
+        _, values, _ = acct.get_value(today, today)
+        current_value = values[0]
+
+    return {
+        "uri": acct.uri,
+        "name": acct.name,
+        "institution": acct.institution,
+        "category": acct.category,
+        "category_type": AccountCategory,
+        "value": current_value,
+        "closed": acct.closed,
+        "updated_days_ago": (today - acct.updated_on).days,
+        "opened_days_ago": (today - acct.opened_on).days,
+    }
+
+
+def page(uri: str) -> str:
+    """GET /accounts/<uri>.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio
+
+    with p.get_session() as s:
+        acct: Account = web_utils.find(s, Account, uri)
+        return flask.render_template(
+            "accounts/index.jinja",
+            sidebar=common.ctx_sidebar(),
+            base=common.ctx_base(),
+            account=ctx_account(acct),
+        )
+
+
 ROUTES: t.Routes = {
+    "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }

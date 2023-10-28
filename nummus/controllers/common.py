@@ -141,7 +141,6 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         if len(accounts) > 0
     }
 
-    # TODO(WattsUp): Add account URIs for links
     return {
         "net-worth": assets + liabilities,
         "assets": assets,

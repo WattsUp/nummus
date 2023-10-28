@@ -47,28 +47,29 @@
                 <div class="bg-white">
                     {% for acct in item[1] %}
                         {% if loop.index != 1 %}<div class="mx-3 h-px bg-grey-200"></div>{% endif %}
-                        <a class="block whitespace-nowrap relative p-px border-2 {{ 'border-red' if acct['closed'] else 'border-transparent' }}">
-                            <object class="w-[18px] h-full absolute group/navitem">
-                                <a class="h-full block"
-                                   hx-get="{{ url_for('account.edit', uri=acct['uri']) }}"
-                                   hx-target="#overlay"
-                                   hx-swap="innerHTML">
-                                    {% with class="fill-white transition-colors group-hover/navitem:fill-black" %}
-                                        {% include "svg/pencil.svg" %}
-                                    {% endwith %}
-                                </a>
-                            </object>
-                            <h1 class="flex gap-4 justify-between text-lg leading-tight">
-                                <span class="truncate pl-6 pr-1">{{ acct["institution"] }}</span>
-                                <span>{{ acct["value"] | money }}</span>
-                            </h1>
-                            <h2 class="flex gap-4 justify-between text-sm italic text-grey-500">
-                                <span class="truncate pl-6 pr-1">{{ acct["name"] }}</span>
-                                <span>txn
-                                    {{ acct["updated_days_ago"] | days }}
-                                ago</span>
-                            </h2>
-                        </a>
+                        <div class="block whitespace-nowrap relative p-px border-2 {{ 'border-red' if acct['closed'] else 'border-transparent' }}">
+                            <div class="w-[18px] h-full absolute group/navitem cursor-pointer"
+                                 hx-get="{{ url_for('account.edit', uri=acct['uri']) }}"
+                                 hx-target="#overlay"
+                                 hx-swap="innerHTML">
+                                {% with class="fill-white transition-colors group-hover/navitem:fill-black" %}
+                                    {% include "svg/pencil.svg" %}
+                                {% endwith %}
+                            </div>
+                            <a href="{{ url_for('account.page', uri=acct['uri']) }}"
+                               hx-target="body">
+                                <h1 class="flex gap-4 justify-between text-lg leading-tight">
+                                    <span class="truncate pl-6 pr-1">{{ acct["institution"] }}</span>
+                                    <span>{{ acct["value"] | money }}</span>
+                                </h1>
+                                <h2 class="flex gap-4 justify-between text-sm italic text-grey-500">
+                                    <span class="truncate pl-6 pr-1">{{ acct["name"] }}</span>
+                                    <span>txn
+                                        {{ acct["updated_days_ago"] | days }}
+                                    ago</span>
+                                </h2>
+                            </a>
+                        </div>
                     {% endfor %}
                 </div>
             </div>

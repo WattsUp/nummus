@@ -188,6 +188,6 @@ def delete(uri: str) -> str:
 ROUTES: t.Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
-    "/h/txn-categories/<path:uri>/edit": (edit, ["GET", "POST"]),
-    "/h/txn-categories/<path:uri>/delete": (delete, ["GET", "POST"]),
+    "/h/txn-categories/c/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/txn-categories/c/<path:uri>/delete": (delete, ["GET", "POST"]),
 }
