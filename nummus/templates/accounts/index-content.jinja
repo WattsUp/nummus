@@ -1,0 +1,23 @@
+<section class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2"
+         hx-get="{{ url_for("accounts.page", uri=account['uri']) }}"
+         hx-trigger="update-account from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
+        {{ account["institution"] }}
+        <div class="w-[20px] h-full group cursor-pointer"
+             hx-get="{{ url_for("accounts.edit", uri=account['uri']) }}"
+             hx-target="#overlay"
+             hx-swap="innerHTML">
+            {% with class="fill-green-600 transition-colors group-hover:fill-black" %}
+                {% include "svg/pencil.svg" %}
+            {% endwith %}
+        </div>
+    </h1>
+    <div class="w-full flex justify-between text-lg">
+        <h2>{{ account["name"] }}</h2>
+        <h2>
+            Balance <b>{{ account["value"] | money }}</b>
+        </h2>
+    </div>
+</section>

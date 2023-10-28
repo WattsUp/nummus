@@ -100,10 +100,8 @@ def page(uri: str) -> str:
 
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)
-        return flask.render_template(
-            "accounts/index.jinja",
-            sidebar=common.ctx_sidebar(),
-            base=common.ctx_base(),
+        return common.page(
+            "accounts/index-content.jinja",
             account=ctx_account(acct),
         )
 

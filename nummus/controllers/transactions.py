@@ -31,10 +31,8 @@ def page_all() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "transactions/index.jinja",
-        sidebar=common.ctx_sidebar(),
-        base=common.ctx_base(),
+    return common.page(
+        "transactions/index-content.jinja",
         txn_table=ctx_table(),
     )
 

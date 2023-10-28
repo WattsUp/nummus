@@ -56,8 +56,11 @@
                                     {% include "svg/pencil.svg" %}
                                 {% endwith %}
                             </div>
-                            <a href="{{ url_for("accounts.page", uri=acct['uri']) }}"
-                               hx-target="body">
+                            <div class="cursor-pointer"
+                                 hx-get="{{ url_for("accounts.page", uri=acct['uri']) }}"
+                                 hx-target="#main"
+                                 hx-swap="innerHTML"
+                                 hx-push-url="true">
                                 <h1 class="flex gap-4 justify-between text-lg leading-tight">
                                     <span class="truncate pl-6 pr-1">{{ acct["institution"] }}</span>
                                     <span>{{ acct["value"] | money }}</span>
@@ -68,7 +71,7 @@
                                         {{ acct["updated_days_ago"] | days }}
                                     ago</span>
                                 </h2>
-                            </a>
+                            </div>
                         </div>
                     {% endfor %}
                 </div>

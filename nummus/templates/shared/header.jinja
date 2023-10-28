@@ -1,10 +1,13 @@
 <header class="bg-green text-white fixed top-0 left-0 right-0 h-8 lg:h-12 z-40">
-    <div class="max-w-7xl flex items-center h-full mx-auto">
+    <div class="max-w-7xl flex items-center h-full mx-auto"
+         hx-target="#main"
+         hx-swap="innerHTML"
+         hx-push-url="true">
         <div class="overflow-hidden h-full">
-            <a href="{{ url_for("dashboard.page_home") }}"
-               class="block hover:text-green-900 transition-colors px-2 mt-[-6px]">
+            <div hx-get="{{ url_for("dashboard.page_home") }}"
+                 class="block cursor-pointer hover:text-green-900 transition-colors px-2 mt-[-6px]">
                 <h1 class="font-title text-4xl lg:text-6xl">nummus</h1>
-            </a>
+            </div>
         </div>
         <div class="ml-auto items-center h-full hidden lg:flex">
             <ul class="flex h-full">
@@ -14,7 +17,8 @@
                         <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 left-0">
                             {% for title, url in subpages.items() %}
                                 <li class="border-l-green-800 border-l-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
-                                    <a href="{{ url_for(url) }}" class="inset-0 px-2 py-1 block">{{ title }}</a>
+                                    <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                         hx-get="{{ url_for(url) }}">{{ title }}</div>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -29,7 +33,7 @@
                 <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 right-0">
                     {% for title, url in base["menu"].items() %}
                         <li class="border-r-green-800 border-r-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
-                            <a href="{{ url_for(url) }}" class="inset-0 px-2 py-1 block">{{ title }}</a>
+                            <div class="inset-0 px-2 py-1 block" hx-get="{{ url_for(url) }}">{{ title }}</div>
                         </li>
                     {% endfor %}
                 </ul>

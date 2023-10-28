@@ -21,7 +21,6 @@
         {% endassets %}
     </head>
     <body class="antialiased bg-grey-100 h-screen w-screen relative"
-          hx-boost="true"
           hx-swap="outerHTML">
         {% block header %}
             {% include "/shared/header.jinja" %}
@@ -31,7 +30,7 @@
                 {% include "/shared/sidebar.jinja" %}
             {% endblock sidebar %}
             <div class="flex flex-col h-full overflow-y-scroll grow">
-                <main class="py-2 px-12 xl:px-2">
+                <main class="py-2 px-12 xl:px-2" id="main">
                     {% block content %}
                     {% endblock content %}
                 </main>

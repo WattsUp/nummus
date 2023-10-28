@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import flask
 
 from nummus.controllers import common
 
@@ -18,11 +17,7 @@ def page_home() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "index.jinja",
-        sidebar=common.ctx_sidebar(),
-        base=common.ctx_base(),
-    )
+    return common.page("index-content.jinja")
 
 
 ROUTES: t.Routes = {
