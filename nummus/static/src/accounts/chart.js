@@ -61,7 +61,6 @@ const accountChart = {
      */
     update: function(raw, uri) {
         'use strict';
-        console.log('update');
 
         this.dates = raw.dates;
         const values = raw.values.map(v => Number(v));
@@ -107,12 +106,14 @@ const accountChart = {
             valuesMax.push(currentMax);
             valuesAvg.push(currentSum / currentN);
 
+            let color = getThemeColor('grey-500');
+
             datasets.push({
                 data: valuesAvg,
                 borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,
-                borderColor: getThemeColor('green'),
+                borderColor: color,
             });
             datasets.push({
                 data: valuesMin,
@@ -120,7 +121,7 @@ const accountChart = {
                 pointRadius: 0,
                 hoverRadius: 0,
                 fill: 1,
-                backgroundColor: getThemeColor('green') + '40',
+                backgroundColor: color + '40',
             });
             datasets.push({
                 data: valuesMax,
@@ -128,7 +129,7 @@ const accountChart = {
                 pointRadius: 0,
                 hoverRadius: 0,
                 fill: 1,
-                backgroundColor: getThemeColor('green') + '40',
+                backgroundColor: color + '40',
             });
         } else {
             datasets.push({
@@ -138,8 +139,8 @@ const accountChart = {
                 hoverRadius: 0,
                 fill: {
                     target: 'origin',
-                    above: getThemeColor('green'),
-                    below: getThemeColor('blue'),
+                    above: getThemeColor('blue'),
+                    below: getThemeColor('yellow'),
                 },
             })
         }
@@ -152,12 +153,14 @@ const accountChart = {
         }
 
         this.chart.data.labels = this.dates;
-        // if (datasets.length == 1) {
-        //     this.chart.data.datasets[0].data = datasets[0].data;
-        // } else {
-        //     this.chart.data.datasets = datasets;
-        // }
-        this.chart.data.datasets = datasets;
+        if (this.chart.data.datasets.length == datasets.length) {
+            // Swapping same type monthly or not
+            for (let i = 0; i < datasets.length; ++i) {
+                this.chart.data.datasets[i].data = datasets[i].data;
+            }
+        } else {
+            this.chart.data.datasets = datasets;
+        }
         this.chart.config.plugins[0].monthly = monthly;
         this.chart.update();
     }

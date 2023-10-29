@@ -21,13 +21,14 @@
                     <span>Assets</span><span>{{ sidebar["assets"] | money }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
-                    <div class="bg-green h-full" style="width: {{ sidebar["assets-w"] }}%"></div>
+                    <div class="bg-blue h-full" style="width: {{ sidebar["assets-w"] }}%"></div>
                 </div>
                 <h2 class="flex justify-between">
                     <span>Liabilities</span><span>{{ sidebar["liabilities"] | money }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
-                    <div class="bg-blue h-full" style="width: {{ sidebar["liabilities-w"] }}%"></div>
+                    <div class="bg-yellow h-full"
+                         style="width: {{ sidebar["liabilities-w"] }}%"></div>
                 </div>
             </div>
         </a>

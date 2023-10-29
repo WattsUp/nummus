@@ -26,6 +26,7 @@
     --color-green: theme("colors.green.DEFAULT");
     --color-blue: theme("colors.blue.DEFAULT");
     --color-red: theme("colors.red.DEFAULT");
+    --color-yellow: theme("colors.yellow.DEFAULT");
     --color-grey-500: theme("colors.grey.500");
   }
 

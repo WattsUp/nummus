@@ -45,6 +45,21 @@ module.exports = {
                         900 : '#782524',
                         950 : '#410f0e',
             },
+            yellow : {
+                DEFAULT : '#ffd166',
+                        50 : '#fffaeb',
+                        100 : '#fff0c6',
+                        200 : '#ffdf88',
+                        300 : '#ffd166',
+                        400 : '#ffb220',
+                        500 : '#f98f07',
+                        600 : '#dd6802',
+                        700 : '#b74706',
+                        800 : '#94360c',
+                        900 : '#7a2e0d',
+                        950 : '#461502',
+            },
+
             grey : {
                 50 : '#f6f6f6',
                 100 : '#e7e7e7',
@@ -96,6 +111,7 @@ module.exports = {
                  'text-green-600',
                  'text-red-600',
                  'text-blue-600',
+                 'text-yellow-600',
              ],
     plugins : [],
 };
