@@ -12,8 +12,8 @@
                    class="w-[10rem] min-w-[10rem] p-1 truncate">
             <select name="category" class="w-[9rem] min-w-[9rem] p-1 truncate">
                 {% for item in categories %}
-                    <option value="{{ item }}" {{ "selected" if item == txn["category"] }}>{{ item }}
-                    </option>
+                    <option value="{{ item }}"
+                            {% if item == txn["category"] %}selected{% endif %}>{{ item }}</option>
                 {% endfor %}
             </select>
             <input name="tag"

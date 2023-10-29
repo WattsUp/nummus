@@ -25,7 +25,9 @@
                     <td>
                         <select name="group">
                             {% for group in category["group_type"] %}
-                                <option value="{{ group.name | lower }}" {{ "selected" if group == category["group"] }}>{{ group.name | title }}
+                                <option value="{{ group.name | lower }}"
+                                        {% if group == category["group"] %}selected{% endif %}>
+                                    {{ group.name | title }}
                                 </option>
                             {% endfor %}
                         </select>

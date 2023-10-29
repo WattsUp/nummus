@@ -11,7 +11,11 @@
     {% for option in options %}
         {% if not option["hidden"] %}
             <label class="flex w-full checkbox">
-                <input type="checkbox" name="{{ name }}" value="{{ option["name"] }}" {{ "checked" if option["checked"] }} hx-get="{{ url_for("transactions.table", period="custom") }}">
+                <input type="checkbox"
+                       name="{{ name }}"
+                       value="{{ option["name"] }}"
+                       {% if option["checked"] %}checked{% endif %}
+                       hx-get="{{ url_for("transactions.table", period="custom") }}">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}

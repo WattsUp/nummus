@@ -9,26 +9,26 @@
            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
     <select name="period"
             hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
-        <option value="this-month" {{ "selected" if txn_table["period"] == "this-month" }}>This Month
-        </option>
-        <option value="last-month" {{ "selected" if txn_table["period"] == "last-month" }}>Last Month
-        </option>
-        <option value="30-days" {{ "selected" if txn_table["period"] == "30-days" }}>30 Days
-        </option>
-        <option value="90-days" {{ "selected" if txn_table["period"] == "90-days" }}>90 Days
-        </option>
-        <option value="1-year" {{ "selected" if txn_table["period"] == "1-year" }}>1 year
-        </option>
-        <option value="5-years" {{ "selected" if txn_table["period"] == "5-years" }}>5 years
-        </option>
-        <option value="this-year" {{ "selected" if txn_table["period"] == "this-year" }}>This Year
-        </option>
-        <option value="last-year" {{ "selected" if txn_table["period"] == "last-year" }}>Last Year
-        </option>
-        <option value="all" {{ "selected" if txn_table["period"] == "all" }}>All
-        </option>
-        <option value="custom" hidden="hidden" {{ "selected" if txn_table["period"] == "custom" }}>Custom
-        </option>
+        <option value="this-month"
+                {% if txn_table["period"] == "this-month" %}selected{% endif %}>This Month</option>
+        <option value="last-month"
+                {% if txn_table["period"] == "last-month" %}selected{% endif %}>Last Month</option>
+        <option value="30-days"
+                {% if txn_table["period"] == "30-days" %}selected{% endif %}>30 Days</option>
+        <option value="90-days"
+                {% if txn_table["period"] == "90-days" %}selected{% endif %}>90 Days</option>
+        <option value="1-year"
+                {% if txn_table["period"] == "1-year" %}selected{% endif %}>1 year</option>
+        <option value="5-years"
+                {% if txn_table["period"] == "5-years" %}selected{% endif %}>5 years</option>
+        <option value="this-year"
+                {% if txn_table["period"] == "this-year" %}selected{% endif %}>This Year</option>
+        <option value="last-year"
+                {% if txn_table["period"] == "last-year" %}selected{% endif %}>Last Year</option>
+        <option value="all" {% if txn_table["period"] == "all" %}selected{% endif %}>All</option>
+        <option value="custom"
+                hidden="hidden"
+                {% if txn_table["period"] == "custom" %}selected{% endif %}>Custom</option>
     </select>
     <input type="date"
            name="start"

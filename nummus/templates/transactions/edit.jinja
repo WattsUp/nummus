@@ -37,7 +37,9 @@
                     <td>Transaction Locked</td>
                     <td>
                         <label class="checkbox">
-                            <input type="checkbox" name="locked" {{ "checked" if parent["locked"] }}>
+                            <input type="checkbox"
+                                   name="locked"
+                                   {% if parent["locked"] %}checked{% endif %}>
                             {% with class = "w-6 h-6" %}
                                 {% include "svg/lock.svg" %}
                             {% endwith %}

@@ -97,15 +97,15 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/account"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 2)
-        self.assertIn(f'value="{acct}"  hx-get', result)
+        self.assertRegex(result, rf'value="{acct}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
 
         endpoint = "/h/transactions/options/category"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn(f'value="{cat_0}"  hx-get', result)
-        self.assertIn(f'value="{cat_1}"  hx-get', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_0 = result.find(cat_0)
@@ -115,8 +115,8 @@ class TestTransaction(WebTestBase):
         queries = {"category": cat_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn(f'value="{cat_0}"  hx-get', result)
-        self.assertIn(f'value="{cat_1}" checked hx-get', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
         i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
@@ -125,8 +125,8 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/tag"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn('value="[blank]"  hx-get', result)
-        self.assertIn(f'value="{tag_1}"  hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
@@ -136,9 +136,9 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/payee"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 6)
-        self.assertIn('value="[blank]"', result)
-        self.assertIn(f'value="{payee_0}"  hx-get', result)
-        self.assertIn(f'value="{payee_1}"  hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
@@ -150,9 +150,9 @@ class TestTransaction(WebTestBase):
         queries = {"payee": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 6)
-        self.assertIn('value="[blank]"', result)
-        self.assertIn(f'value="{payee_0}"  hx-get', result)
-        self.assertIn(f'value="{payee_1}" checked hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
         i_blank = result.find("[blank]")
         i_0 = result.find(payee_0)
@@ -163,7 +163,7 @@ class TestTransaction(WebTestBase):
         queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 2)
-        self.assertIn(f'value="{payee_0}" checked hx-get', result)
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+checked[ \n]+hx-get')
 
     def test_edit(self) -> None:
         p = self._portfolio

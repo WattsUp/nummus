@@ -27,7 +27,10 @@
             <hr class="w-full border-grey-200">
             <label class="flex gap-4 justify-between w-full checkbox">
                 <span class="font-bold">Account closed:</span>
-                <input type="checkbox" name="closed" {{ "checked" if account["closed"] }} id="account-closed">
+                <input type="checkbox"
+                       name="closed"
+                       {% if account["closed"] %}checked{% endif %}
+                       id="account-closed">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
@@ -57,7 +60,9 @@
                         <td>
                             <select class="w-full" name="category">
                                 {% for cat in account["category_type"] %}
-                                    <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] }}>{{ cat.name | title }}
+                                    <option value="{{ cat.name | lower }}"
+                                            {% if cat == account["category"] %}selected{% endif %}>
+                                        {{ cat.name | title }}
                                     </option>
                                 {% endfor %}
                             </select>
