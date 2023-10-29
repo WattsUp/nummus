@@ -1,16 +1,27 @@
 const accountChart = {
     chart: null,
     dates: null,
-    uri: null,
+    observer: null,
+    ctx: null,
+    /**
+     * Create chart if it doesn't already exist
+     *
+     * @param datasets Datasets to create chart with
+     * @return true if chart was created
+     * @return false if chart already exists
+     */
     create: function(datasets) {
         'use strict';
-        const ctx =
-            document.querySelector('#account-chart-canvas').getContext('2d');
+        const canvas = document.getElementById('account-chart-canvas');
+        const ctx = canvas.getContext('2d');
+        // Context is the same, chart already exists
+        if (ctx == this.ctx) return false;
+        this.ctx = ctx;
+
         this.chart = new Chart(ctx, {
             type: 'line',
             data: {labels: this.dates, datasets: datasets},
             options: {
-                // animations: false,
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
@@ -52,14 +63,14 @@ const accountChart = {
                 'account-chart-change-label',
                 )],
         });
+        return true;
     },
     /**
      * Create Account Chart
      *
      * @param raw Raw data from accounts controller
-     * @param force True will force recreate the chart
      */
-    update: function(raw, uri) {
+    update: function(raw) {
         'use strict';
 
         this.dates = raw.dates;
@@ -145,9 +156,8 @@ const accountChart = {
             })
         }
 
-        if (!this.chart || this.uri != uri) {
-            this.uri = uri;
-            this.create(datasets);
+        // If created a new chart, skip update
+        if (this.create(datasets)) {
             this.chart.config.plugins[0].monthly = monthly;
             return;
         }
