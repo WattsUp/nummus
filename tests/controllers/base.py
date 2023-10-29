@@ -34,7 +34,7 @@ if TYPE_CHECKING:
     import werkzeug
 
 
-_RE_URI = re.compile(r"[0-9a-zA-Z_-]{6}")
+_RE_URI = re.compile(r"^[0-9a-f]{8}$")
 
 ResultType = t.DictAny | str | bytes
 
@@ -296,16 +296,7 @@ class WebTestBase(TestBase):
                 parts = []
                 for p in endpoint.split("/"):
                     if _RE_URI.match(p):
-                        if "account" in parts[-1]:
-                            parts.append("{accountURI}")
-                        elif "asset" in parts[-1]:
-                            parts.append("{assetURI}")
-                        elif "budget" in parts[-1]:
-                            parts.append("{budgetURI}")
-                        elif "transaction" in parts[-1]:
-                            parts.append("{transactionURI}")
-                        else:
-                            parts.append("{uri}")
+                        parts.append("{uri}")
                     else:
                         parts.append(p)
                 endpoint = "/".join(parts)

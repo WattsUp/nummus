@@ -10,7 +10,8 @@ from tests.controllers.base import WebTestBase
 class TestTransaction(WebTestBase):
     def test_page_all(self) -> None:
         endpoint = "/transactions"
-        result, _ = self.web_get(endpoint)
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn('id="txn-config"', result)
         self.assertIn('id="txn-paging"', result)
         self.assertIn('id="txn-header"', result)

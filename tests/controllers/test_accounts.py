@@ -59,7 +59,8 @@ class TestAccount(WebTestBase):
         t_split_1 = d["t_split_1"]
 
         endpoint = f"/accounts/{acct_uri}"
-        result, _ = self.web_get(endpoint)
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
@@ -69,7 +70,7 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
         queries = {"period": "last-year"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint, queries, headers=headers)
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
