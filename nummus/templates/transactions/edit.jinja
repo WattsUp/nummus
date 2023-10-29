@@ -60,14 +60,18 @@
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <a hx-put="{{ url_for("transactions.split", uri=parent["uri"]) }}"
            hx-target="#txn-splits"
-           class="button hover:blue mr-auto">
+           class="button hover:blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/plus.svg" %}
             {% endwith %}
             Add split
         </a>
+        <a hx-get="{{ url_for("transaction_categories.overlay") }}"
+           hx-target="#overlay"
+           hx-swap="innerHTML"
+           class="button hover:blue">Edit categories</a>
         <a hx-get="{{ url_for("common.empty") }}"
-           class="button hover:green"
+           class="button hover:green ml-auto"
            hx-swap="innerHTML"
            hx-include="this">Cancel</a>
         <a hx-post="{{ url_for("transactions.edit", uri=parent["uri"]) }}"

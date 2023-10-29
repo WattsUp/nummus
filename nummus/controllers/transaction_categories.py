@@ -136,7 +136,7 @@ def edit(uri: str) -> str:
         except (sqlalchemy.exc.IntegrityError, ValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(overlay())
+        return common.overlay_swap(overlay(), event="update-transaction")
 
 
 def delete(uri: str) -> str:
@@ -188,7 +188,7 @@ def delete(uri: str) -> str:
         s.delete(cat)
         s.commit()
 
-        return common.overlay_swap(overlay())
+        return common.overlay_swap(overlay(), event="update-transaction")
 
 
 ROUTES: t.Routes = {
