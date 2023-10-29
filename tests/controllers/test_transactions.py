@@ -2,117 +2,12 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import TYPE_CHECKING
 
-from nummus.models import (
-    Account,
-    AccountCategory,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
+from nummus.models import Transaction, TransactionCategory
 from tests.controllers.base import WebTestBase
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class TestTransaction(WebTestBase):
-    def _setup_portfolio(self) -> t.DictStr:
-        """Create accounts and transactions to test with.
-
-        Returns:
-            {
-                "acct": Account name,
-                "t_0": URI for transaction 0
-                "t_split_0": URI for split 0
-                "t_1": URI for transaction 1
-                "t_split_1": URI for split 1
-                "payee_0": Payee for transaction 0
-                "payee_1": Payee for transaction 1
-                "cat_0": Payee for transaction 0
-                "cat_1": Payee for transaction 1
-                "tag_1": Tag for transaction 1
-            }
-        """
-        p = self._portfolio
-
-        today = datetime.date.today()
-
-        acct_name = "Monkey Bank Checking"
-        payee_0 = "Apple"
-        payee_1 = "Banana"
-
-        cat_0 = "Interest"
-        cat_1 = "Uncategorized"
-
-        tag_1 = self.random_string()
-
-        with p.get_session() as s:
-            acct = Account(
-                name=acct_name,
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-            )
-            s.add(acct)
-            s.commit()
-
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                payee=payee_0,
-                category_id=categories[cat_0],
-            )
-            s.add_all((txn, t_split))
-            s.commit()
-
-            t_0_uri = txn.uri
-            t_split_0_uri = t_split.uri
-
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=-100,
-                statement=self.random_string(),
-                locked=True,
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                payee=payee_1,
-                category_id=categories[cat_1],
-                tag=tag_1,
-            )
-            s.add_all((txn, t_split))
-            s.commit()
-
-            t_1_uri = txn.uri
-            t_split_1_uri = t_split.uri
-
-        return {
-            "acct": acct_name,
-            "t_0": t_0_uri,
-            "t_split_0": t_split_0_uri,
-            "t_1": t_1_uri,
-            "t_split_1": t_split_1_uri,
-            "payee_0": payee_0,
-            "payee_1": payee_1,
-            "cat_0": cat_0,
-            "cat_1": cat_1,
-            "tag_1": tag_1,
-        }
-
     def test_page_all(self) -> None:
         endpoint = "/transactions"
         result, _ = self.web_get(endpoint)

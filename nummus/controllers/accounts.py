@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import flask
 import sqlalchemy.exc
+from werkzeug import exceptions
 
 from nummus import portfolio, web_utils
 from nummus.controllers import common, transactions
@@ -197,7 +198,7 @@ def table(uri: str) -> str:
 
 
 def options(uri: str, field: str) -> str:
-    """GET /h/transactions/options/<field>.
+    """GET /h/accounts/a/<uri>/options/<field>/.
 
     Args:
         uri: Account URI
@@ -215,8 +216,9 @@ def options(uri: str, field: str) -> str:
 
         id_mapping = None
         if field == "account":
-            id_mapping = Account.map_name(s)
-        elif field == "category":
+            msg = "Cannot get account options for account transactions"
+            raise exceptions.BadRequest(msg)
+        if field == "category":
             id_mapping = TransactionCategory.map_name(s)
 
         period = args.get("period", "this-month")
