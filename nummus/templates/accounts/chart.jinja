@@ -1,0 +1,19 @@
+<div id="account-chart" class="w-full" hx-swap-oob="{{ oob }}">
+    <div class="w-full">
+        <div id="account-chart-bar"
+             class="w-full flex opacity-0 transition-opacity text-sm">
+            <div class="w-1/2 flex justify-end gap-4">
+                <div id="account-chart-date" class="w-28 text-right"></div>
+                <div id="account-chart-value" class="w-28 text-right"></div>
+            </div>
+            <div class="w-1/2 flex justify-end gap-4">
+                <div id="account-chart-change-label">1-Day Change</div>
+                <div id="account-chart-change" class="mr-12 w-28 text-right"></div>
+            </div>
+        </div>
+        <div class="w-full h-96">
+            <canvas id="account-chart-canvas"></canvas>
+            {% include "accounts/chart-data.jinja" %}
+        </div>
+    </div>
+</div>

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import io
 import re
 import shutil
@@ -17,11 +18,13 @@ from nummus import custom_types as t
 from nummus import portfolio, sql, web
 from nummus.models import (
     Account,
+    AccountCategory,
     Asset,
     AssetValuation,
     Budget,
     Credentials,
     Transaction,
+    TransactionCategory,
     TransactionSplit,
 )
 from tests import TEST_LOG
@@ -31,11 +34,12 @@ if TYPE_CHECKING:
     import werkzeug
 
 
-_RE_URI = re.compile(r"[0-9a-zA-Z_-]{6}")
+_RE_URI = re.compile(r"^[0-9a-f]{8}$")
 
 ResultType = t.DictAny | str | bytes
 
 HTTP_CODE_OK = 200
+HTTP_CODE_BAD_REQUEST = 400
 
 
 class WebTestBase(TestBase):
@@ -67,6 +71,105 @@ class WebTestBase(TestBase):
         if parent is not None:
             parent: t.DictAny
             self.assertEqual(parent.keys(), {"__parent__", "html"})
+
+    def _setup_portfolio(self) -> t.DictStr:
+        """Create accounts and transactions to test with.
+
+        Returns:
+            {
+                "acct": Account name,
+                "acct_uri": URI for Account,
+                "t_0": URI for transaction 0
+                "t_split_0": URI for split 0
+                "t_1": URI for transaction 1
+                "t_split_1": URI for split 1
+                "payee_0": Payee for transaction 0
+                "payee_1": Payee for transaction 1
+                "cat_0": Payee for transaction 0
+                "cat_1": Payee for transaction 1
+                "tag_1": Tag for transaction 1
+            }
+        """
+        p = self._portfolio
+
+        today = datetime.date.today()
+
+        acct_name = "Monkey Bank Checking"
+        payee_0 = "Apple"
+        payee_1 = "Banana"
+
+        cat_0 = "Interest"
+        cat_1 = "Uncategorized"
+
+        tag_1 = self.random_string()
+
+        with p.get_session() as s:
+            acct = Account(
+                name=acct_name,
+                institution="Monkey Bank",
+                category=AccountCategory.CASH,
+                closed=False,
+            )
+            s.add(acct)
+            s.commit()
+
+            acct_uri = acct.uri
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            txn = Transaction(
+                account_id=acct.id_,
+                date=today,
+                amount=100,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                payee=payee_0,
+                category_id=categories[cat_0],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            t_0_uri = txn.uri
+            t_split_0_uri = t_split.uri
+
+            txn = Transaction(
+                account_id=acct.id_,
+                date=today,
+                amount=-10,
+                statement=self.random_string(),
+                locked=True,
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                payee=payee_1,
+                category_id=categories[cat_1],
+                tag=tag_1,
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            t_1_uri = txn.uri
+            t_split_1_uri = t_split.uri
+
+        return {
+            "acct": acct_name,
+            "acct_uri": acct_uri,
+            "t_0": t_0_uri,
+            "t_split_0": t_split_0_uri,
+            "t_1": t_1_uri,
+            "t_split_1": t_split_1_uri,
+            "payee_0": payee_0,
+            "payee_1": payee_1,
+            "cat_0": cat_0,
+            "cat_1": cat_1,
+            "tag_1": tag_1,
+        }
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -193,16 +296,7 @@ class WebTestBase(TestBase):
                 parts = []
                 for p in endpoint.split("/"):
                     if _RE_URI.match(p):
-                        if "account" in parts[-1]:
-                            parts.append("{accountURI}")
-                        elif "asset" in parts[-1]:
-                            parts.append("{assetURI}")
-                        elif "budget" in parts[-1]:
-                            parts.append("{budgetURI}")
-                        elif "transaction" in parts[-1]:
-                            parts.append("{transactionURI}")
-                        else:
-                            parts.append("{uri}")
+                        parts.append("{uri}")
                     else:
                         parts.append(p)
                 endpoint = "/".join(parts)

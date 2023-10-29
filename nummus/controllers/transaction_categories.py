@@ -95,6 +95,9 @@ def new() -> str:
 def edit(uri: str) -> str:
     """GET & POST /h/txn-categories/<uri>/edit.
 
+    Args:
+        uri: TransactionCategory URI
+
     Returns:
         string HTML response
     """
@@ -133,11 +136,14 @@ def edit(uri: str) -> str:
         except (sqlalchemy.exc.IntegrityError, ValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(overlay())
+        return common.overlay_swap(overlay(), event="update-transaction")
 
 
 def delete(uri: str) -> str:
     """GET & POST /h/txn-categories/<uri>/delete.
+
+    Args:
+        uri: TransactionCategory URI
 
     Returns:
         string HTML response
@@ -182,12 +188,12 @@ def delete(uri: str) -> str:
         s.delete(cat)
         s.commit()
 
-        return common.overlay_swap(overlay())
+        return common.overlay_swap(overlay(), event="update-transaction")
 
 
 ROUTES: t.Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
-    "/h/txn-categories/<path:uri>/edit": (edit, ["GET", "POST"]),
-    "/h/txn-categories/<path:uri>/delete": (delete, ["GET", "POST"]),
+    "/h/txn-categories/c/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/txn-categories/c/<path:uri>/delete": (delete, ["GET", "POST"]),
 }

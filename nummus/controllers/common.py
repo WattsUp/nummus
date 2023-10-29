@@ -141,7 +141,6 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         if len(accounts) > 0
     }
 
-    # TODO(WattsUp): Add account URIs for links
     return {
         "net-worth": assets + liabilities,
         "assets": assets,
@@ -168,7 +167,7 @@ def ctx_base() -> t.DictAny:
         "Overview": {
             "Dashboard": None,
             "Net Worth": None,
-            "Transactions": "transaction.page_all",
+            "Transactions": "transactions.page_all",
             "Instrument Transactions": None,
         },
         "Banking": {
@@ -272,6 +271,28 @@ def error(e: str | Exception) -> str:
 
     # Default return exception's string
     return flask.render_template("shared/error.jinja", error=str(e))
+
+
+def page(content_template: str, **context: t.DictAny) -> str:
+    """Render a page with a given content template.
+
+    Args:
+        content_template: Path to content template
+        context: context passed to render_template
+    """
+    if flask.request.headers.get("Hx-Request", "false") == "true":
+        # Send just the content
+        return flask.render_template(content_template, **context)
+    return flask.render_template_string(
+        f"""{{% extends "shared/base.jinja" %}}
+{{% block content %}}
+{{% include "{content_template}" %}}
+{{% endblock content %}}
+""",
+        sidebar=ctx_sidebar(),
+        base=ctx_base(),
+        **context,
+    )
 
 
 ROUTES: t.Routes = {

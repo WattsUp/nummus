@@ -60,9 +60,11 @@ def parse_period(
     """
     today = datetime.date.today()
     if period == "custom":
+        earliest = datetime.date(1970, 1, 1)
         start = start_custom or today
         end = end_custom or today
-        end = max(start, end)
+        start = max(start, earliest)
+        end = max(start, end, earliest)
     elif period == "this-month":
         start = datetime.date(today.year, today.month, 1)
         end = today

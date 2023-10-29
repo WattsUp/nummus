@@ -2,120 +2,16 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import TYPE_CHECKING
 
-from nummus.models import (
-    Account,
-    AccountCategory,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
+from nummus.models import Transaction, TransactionCategory
 from tests.controllers.base import WebTestBase
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class TestTransaction(WebTestBase):
-    def _setup_portfolio(self) -> t.DictStr:
-        """Create accounts and transactions to test with.
-
-        Returns:
-            {
-                "acct": Account name,
-                "t_0": URI for transaction 0
-                "t_split_0": URI for split 0
-                "t_1": URI for transaction 1
-                "t_split_1": URI for split 1
-                "payee_0": Payee for transaction 0
-                "payee_1": Payee for transaction 1
-                "cat_0": Payee for transaction 0
-                "cat_1": Payee for transaction 1
-                "tag_1": Tag for transaction 1
-            }
-        """
-        p = self._portfolio
-
-        today = datetime.date.today()
-
-        acct_name = "Monkey Bank Checking"
-        payee_0 = "Apple"
-        payee_1 = "Banana"
-
-        cat_0 = "Interest"
-        cat_1 = "Uncategorized"
-
-        tag_1 = self.random_string()
-
-        with p.get_session() as s:
-            acct = Account(
-                name=acct_name,
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-            )
-            s.add(acct)
-            s.commit()
-
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                payee=payee_0,
-                category_id=categories[cat_0],
-            )
-            s.add_all((txn, t_split))
-            s.commit()
-
-            t_0_uri = txn.uri
-            t_split_0_uri = t_split.uri
-
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=-100,
-                statement=self.random_string(),
-                locked=True,
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                payee=payee_1,
-                category_id=categories[cat_1],
-                tag=tag_1,
-            )
-            s.add_all((txn, t_split))
-            s.commit()
-
-            t_1_uri = txn.uri
-            t_split_1_uri = t_split.uri
-
-        return {
-            "acct": acct_name,
-            "t_0": t_0_uri,
-            "t_split_0": t_split_0_uri,
-            "t_1": t_1_uri,
-            "t_split_1": t_split_1_uri,
-            "payee_0": payee_0,
-            "payee_1": payee_1,
-            "cat_0": cat_0,
-            "cat_1": cat_1,
-            "tag_1": tag_1,
-        }
-
     def test_page_all(self) -> None:
         endpoint = "/transactions"
-        result, _ = self.web_get(endpoint)
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn('id="txn-config"', result)
         self.assertIn('id="txn-paging"', result)
         self.assertIn('id="txn-header"', result)
@@ -134,60 +30,60 @@ class TestTransaction(WebTestBase):
 
         endpoint = "/h/transactions/table"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 2)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"account": "Non selected", "period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertNotRegex(result, r'<a id="txn-[a-f0-9]{8}"')
+        self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
 
         queries = {"payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"payee": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertNotRegex(result, r'<a id="txn-[a-f0-9]{8}"')
+        self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
 
         queries = {"payee": ["[blank]", payee_1]}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"category": cat_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"tag": tag_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"tag": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"tag": ["[blank]", tag_1]}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 2)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"locked": "true"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"search": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
     def test_options(self) -> None:
         d = self._setup_portfolio()
@@ -202,15 +98,15 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/account"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 2)
-        self.assertIn(f'value="{acct}"  hx-get', result)
+        self.assertRegex(result, rf'value="{acct}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
 
         endpoint = "/h/transactions/options/category"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn(f'value="{cat_0}"  hx-get', result)
-        self.assertIn(f'value="{cat_1}"  hx-get', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_0 = result.find(cat_0)
@@ -220,8 +116,8 @@ class TestTransaction(WebTestBase):
         queries = {"category": cat_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn(f'value="{cat_0}"  hx-get', result)
-        self.assertIn(f'value="{cat_1}" checked hx-get', result)
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
         i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
@@ -230,8 +126,8 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/tag"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 4)
-        self.assertIn('value="[blank]"  hx-get', result)
-        self.assertIn(f'value="{tag_1}"  hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
@@ -241,9 +137,9 @@ class TestTransaction(WebTestBase):
         endpoint = "/h/transactions/options/payee"
         result, _ = self.web_get(endpoint)
         self.assertEqual(result.count("span"), 6)
-        self.assertIn('value="[blank]"', result)
-        self.assertIn(f'value="{payee_0}"  hx-get', result)
-        self.assertIn(f'value="{payee_1}"  hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
@@ -255,9 +151,9 @@ class TestTransaction(WebTestBase):
         queries = {"payee": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 6)
-        self.assertIn('value="[blank]"', result)
-        self.assertIn(f'value="{payee_0}"  hx-get', result)
-        self.assertIn(f'value="{payee_1}" checked hx-get', result)
+        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{payee_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
         i_blank = result.find("[blank]")
         i_0 = result.find(payee_0)
@@ -268,7 +164,7 @@ class TestTransaction(WebTestBase):
         queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(result.count("span"), 2)
-        self.assertIn(f'value="{payee_0}" checked hx-get', result)
+        self.assertRegex(result, rf'value="{payee_0}"[ \n]+checked[ \n]+hx-get')
 
     def test_edit(self) -> None:
         p = self._portfolio

@@ -1,13 +1,13 @@
-<a class="absolute inset-0 bg-grey-500 opacity-50 z-[-1]"
-   hx-get="{{ url_for("common.empty") }}"
-   hx-swap="innerHTML"></a>
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
+     hx-get="{{ url_for("common.empty") }}"
+     hx-swap="innerHTML"></div>
 <div class="w-[800px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-swap="innerHTML">
-    <a hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
+    <button hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
         {% with class="w-[32px] h-[32px]" %}
             {% include "svg/x.svg" %}
         {% endwith %}
-    </a>
+    </button>
     <h1 class="font-serif text-4xl px-6 text-green-600">Edit account</h1>
     <form class="flex w-full gap-4 px-6 grow" id="form-account">
         <div class="w-5/12 flex flex-col items-center">
@@ -27,7 +27,10 @@
             <hr class="w-full border-grey-200">
             <label class="flex gap-4 justify-between w-full checkbox">
                 <span class="font-bold">Account closed:</span>
-                <input type="checkbox" name="closed" {{ "checked" if account["closed"] }} id="account-closed">
+                <input type="checkbox"
+                       name="closed"
+                       {% if account["closed"] %}checked{% endif %}
+                       id="account-closed">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
@@ -43,13 +46,13 @@
                         <td>
                             <input class="w-full"
                                    name="institution"
-                                   value="{{ account['institution'] }}">
+                                   value="{{ account["institution"] }}">
                         </td>
                     </tr>
                     <tr>
                         <td>Account Name</td>
                         <td>
-                            <input class="w-full" name="name" value="{{ account['name'] }}">
+                            <input class="w-full" name="name" value="{{ account["name"] }}">
                         </td>
                     </tr>
                     <tr>
@@ -57,7 +60,9 @@
                         <td>
                             <select class="w-full" name="category">
                                 {% for cat in account["category_type"] %}
-                                    <option value="{{ cat.name | lower }}" {{ "selected" if cat == account["category"] }}>{{ cat.name | title }}
+                                    <option value="{{ cat.name | lower }}"
+                                            {% if cat == account["category"] %}selected{% endif %}>
+                                        {{ cat.name | title }}
                                     </option>
                                 {% endfor %}
                             </select>
@@ -70,10 +75,10 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        <a hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</a>
-        <a hx-post="{{ url_for('account.edit', uri=account['uri']) }}"
-           hx-target="#overlay-error"
-           hx-include="#form-account"
-           class="button bg-green">Save</a>
+        <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
+        <button hx-post="{{ url_for("accounts.edit", uri=account["uri"]) }}"
+                hx-target="#overlay-error"
+                hx-include="#form-account"
+                class="button bg-green">Save</button>
     </div>
 </div>

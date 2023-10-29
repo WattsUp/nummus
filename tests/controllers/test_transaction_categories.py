@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 
 from nummus.models import (
     Account,
@@ -22,7 +23,7 @@ class TestTransactionCategory(WebTestBase):
 
         endpoint = "/h/txn-categories"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(result.count("<a"), 3 + n)
+        self.assertEqual(len(re.findall(r'<div id="category-[a-f0-9]{8}"', result)), n)
         self.assertIn("Edit transaction categories", result)
 
     def test_new(self) -> None:
@@ -62,7 +63,7 @@ class TestTransactionCategory(WebTestBase):
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uri}/edit"
+        endpoint = f"/h/txn-categories/c/{t_cat_uri}/edit"
         result, _ = self.web_get(endpoint)
         self.assertIn("Delete", result)
 
@@ -91,7 +92,7 @@ class TestTransactionCategory(WebTestBase):
             t_cat = query.first()
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uri}/edit"
+        endpoint = f"/h/txn-categories/c/{t_cat_uri}/edit"
         form = {"name": "abc", "group": "other"}
         self.web_post(endpoint, rc=403, data=form)
 
@@ -131,7 +132,7 @@ class TestTransactionCategory(WebTestBase):
 
             t_split_id = t_split.id_
 
-        endpoint = f"/h/txn-categories/{t_cat_uri}/delete"
+        endpoint = f"/h/txn-categories/c/{t_cat_uri}/delete"
         result, _ = self.web_get(endpoint)
         self.assertIn("Are you sure you want to delete this category?", result)
 
@@ -155,5 +156,5 @@ class TestTransactionCategory(WebTestBase):
             t_cat = query.first()
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/{t_cat_uri}/delete"
+        endpoint = f"/h/txn-categories/c/{t_cat_uri}/delete"
         self.web_post(endpoint, rc=403)

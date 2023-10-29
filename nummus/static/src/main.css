@@ -15,11 +15,12 @@
     @apply fill-black;
   }
 
-  a[hx-get],
-  a[hx-post],
-  a[hx-delete],
-  a[hx-put] {
-    @apply cursor-pointer;
+  body {
+    --color-green: theme("colors.green.DEFAULT");
+    --color-blue: theme("colors.blue.DEFAULT");
+    --color-red: theme("colors.red.DEFAULT");
+    --color-yellow: theme("colors.yellow.DEFAULT");
+    --color-grey-500: theme("colors.grey.500");
   }
 
   .button {

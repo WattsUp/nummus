@@ -31,10 +31,8 @@ def page_all() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "transactions/index.jinja",
-        sidebar=common.ctx_sidebar(),
-        base=common.ctx_base(),
+    return common.page(
+        "transactions/index-content.jinja",
         txn_table=ctx_table(),
     )
 
@@ -101,7 +99,7 @@ def ctx_options(
     field: str,
     id_mapping: t.DictIntStr = None,
     search_str: str | None = None,
-) -> list[t.DictStr]:
+) -> list[t.DictAny]:
     """Get the context to build the options for table.
 
     Args:
@@ -161,8 +159,15 @@ def ctx_options(
     )
 
 
-def ctx_table() -> t.DictStr:
+def ctx_table(
+    acct: Account | None = None,
+    default_period: str = "this-month",
+) -> t.DictAny:
     """Get the context to build the transaction table.
+
+    Args:
+        acct: Account to get transactions for, None will use filter queries
+        default_period: Default period to use if no period given
 
     Returns:
         Dictionary HTML context
@@ -176,12 +181,14 @@ def ctx_table() -> t.DictStr:
         accounts = Account.map_name(s)
         categories = TransactionCategory.map_name(s)
 
-        period = args.get("period", "this-month")
+        period = args.get("period", default_period)
         start, end = web_utils.parse_period(
             period,
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
+        if acct is not None:
+            start = start or acct.opened_on
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
 
@@ -195,6 +202,8 @@ def ctx_table() -> t.DictStr:
             query = query.where(TransactionSplit.date >= start)
         query = query.where(TransactionSplit.date <= end)
         query = query.order_by(TransactionSplit.date)
+        if acct is not None:
+            query = query.where(TransactionSplit.account_id == acct.id_)
 
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
@@ -207,7 +216,7 @@ def ctx_table() -> t.DictStr:
         selected_categories = args.getlist("category")
         selected_tags = args.getlist("tag")
 
-        if len(selected_accounts) != 0:
+        if acct is None and len(selected_accounts) != 0:
             ids = [
                 acct_id
                 for acct_id, name in accounts.items()
@@ -271,6 +280,7 @@ def ctx_table() -> t.DictStr:
         offset_last = max(0, (count // page_len) * page_len)
 
         return {
+            "uri": None if acct is None else acct.uri,
             "transactions": transactions,
             "count": count,
             "offset": offset,
@@ -279,10 +289,10 @@ def ctx_table() -> t.DictStr:
             "page_len": page_len,
             "page_total": page_total,
             "query_total": query_total,
-            "offset_first": "offset=0",
-            "offset_prev": f"offset={max(0, offset - page_len)}",
-            "offset_next": f"offset={offset_next or offset_last}",
-            "offset_last": f"offset={offset_last}",
+            "offset_first": 0,
+            "offset_prev": max(0, offset - page_len),
+            "offset_next": offset_next or offset_last,
+            "offset_last": offset_last,
             "start": start,
             "end": end,
             "period": period,
@@ -303,8 +313,13 @@ def ctx_split(
     t_split: TransactionSplit,
     accounts: t.DictIntStr,
     categories: t.DictIntStr,
-) -> t.DictStr:
+) -> t.DictAny:
     """Get the context to build the transaction edit dialog.
+
+    Args:
+        t_split: TransactionSplit to build context for
+        accounts: Dict {id: account name}
+        categories: Dict {id: category name}
 
     Returns:
         Dictionary HTML context
@@ -437,6 +452,9 @@ def edit(uri: str) -> str:
 def split(uri: str) -> str:
     """PUT & DELETE /h/transactions/<uri>/split.
 
+    Args:
+        uri: Transaction URI
+
     Returns:
         string HTML response
     """
@@ -504,6 +522,9 @@ def split(uri: str) -> str:
 
 def remaining(uri: str) -> str:
     """POST /h/transactions/<uri>/remaining.
+
+    Args:
+        uri: Transaction URI
 
     Returns:
       string HTML response

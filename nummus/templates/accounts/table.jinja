@@ -1,9 +1,9 @@
 {% if include_oob %}
     {% with oob = True %}
-        {% include "transactions/table-config.jinja" %}
-        {% include "transactions/table-locked.jinja" %}
+        {% include "accounts/table-config.jinja" %}
+        {% include "accounts/table-locked.jinja" %}
     {% endwith %}
-    {% for name in ["account", "payee", "category", "tag"] %}
+    {% for name in ["payee", "category", "tag"] %}
         <div id="txn-icon-{{ name }}" hx-swap-oob="insideHTML">
             {% with any_filters = txn_table["any-filters-" + name] %}
                 {% include "transactions/table-options-icon.jinja" %}
@@ -11,20 +11,25 @@
         </div>
         <div id="txn-{{ name }}" hx-swap-oob="insideHTML">
             {% with options = txn_table["options-" + name] %}
-                {% include "transactions/table-options.jinja" %}
+                {% include "accounts/table-options.jinja" %}
             {% endwith %}
         </div>
     {% endfor %}
 {% endif %}
+{% if include_chart_oob %}
+    {% with oob = True %}
+        {% include "accounts/chart-data.jinja" %}
+    {% endwith %}
+{% endif %}
 <div id="txn-table"
-     class="w-full flex flex-col"
-     hx-get="{{ url_for("transactions.table") }}"
+     class="w-full flex flex-col min-h-[70vh]"
+     hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
      hx-trigger="update-transaction from:body">
     {% if txn_table["transactions"] | length == 0 %}
         <div class="text-center">No matching transactions for given query filters</div>
     {% endif %}
     {% for txn in txn_table["transactions"] %}
-        {% include "transactions/table-view.jinja" %}
+        {% include "accounts/table-view.jinja" %}
     {% endfor %}
     <div class="w-full flex justify-between font-bold border-t border-t-grey-200">
         <div class="p-1 grow">Page Total</div>

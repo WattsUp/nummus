@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from nummus.controllers import (
-    account,
+    accounts,
     common,
     dashboard,
-    transaction,
-    transaction_category,
+    transaction_categories,
+    transactions,
 )
 
 if TYPE_CHECKING:
@@ -25,11 +25,11 @@ def add_routes(app: flask.Flask) -> None:
         app: Flask app to route under
     """
     module = [
-        account,
+        accounts,
         common,
         dashboard,
-        transaction,
-        transaction_category,
+        transactions,
+        transaction_categories,
     ]
     n_trim = len(__name__) + 1
     for m in module:
