@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 
 from nummus.models import (
     Account,
@@ -22,7 +23,7 @@ class TestTransactionCategory(WebTestBase):
 
         endpoint = "/h/txn-categories"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(result.count("<a"), 3 + n)
+        self.assertEqual(len(re.findall(r'<div id="category-[a-f0-9]{8}"', result)), n)
         self.assertIn("Edit transaction categories", result)
 
     def test_new(self) -> None:

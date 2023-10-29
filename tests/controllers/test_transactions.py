@@ -29,60 +29,60 @@ class TestTransaction(WebTestBase):
 
         endpoint = "/h/transactions/table"
         result, _ = self.web_get(endpoint)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 2)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"account": "Non selected", "period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertNotRegex(result, r'<a id="txn-[a-f0-9]{8}"')
+        self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
 
         queries = {"payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"payee": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertNotRegex(result, r'<a id="txn-[a-f0-9]{8}"')
+        self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
 
         queries = {"payee": ["[blank]", payee_1]}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"category": cat_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"tag": tag_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"tag": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
 
         queries = {"tag": ["[blank]", tag_1]}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 2)
-        self.assertRegex(result, rf'<a id="txn-{t_split_0}"')
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
+        self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"locked": "true"}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries = {"search": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(len(re.findall(r'<a id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<a id="txn-{t_split_1}"')
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
     def test_options(self) -> None:
         d = self._setup_portfolio()
