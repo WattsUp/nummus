@@ -15,13 +15,6 @@
     @apply fill-black;
   }
 
-  a[hx-get],
-  a[hx-post],
-  a[hx-delete],
-  a[hx-put] {
-    @apply cursor-pointer;
-  }
-
   body {
     --color-green: theme("colors.green.DEFAULT");
     --color-blue: theme("colors.blue.DEFAULT");

@@ -31,12 +31,12 @@
             {% if splits | length == 1 %}
                 <div class="w-[24px] h-[24px] my-0.5"></div>
             {% else %}
-                <a hx-delete="{{ url_for("transactions.split", uri=parent["uri"], index=loop.index) }}"
-                   hx-target="#txn-splits">
+                <button hx-delete="{{ url_for("transactions.split", uri=parent["uri"], index=loop.index) }}"
+                        hx-target="#txn-splits">
                     {% with class="w-[24px] h-[24px] my-0.5" %}
                         {% include "svg/trash.svg" %}
                     {% endwith %}
-                </a>
+                </button>
             {% endif %}
         </div>
     {% endfor %}

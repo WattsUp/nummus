@@ -1,7 +1,8 @@
 <div id="txn-header"
      class="header w-full flex justify-between font-bold border-b border-b-grey-200">
     <div class="w-[6rem] min-w-[6rem] p-1">Date</div>
-    <a class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">Payee
+    <div class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">
+        Payee
         <div id="txn-icon-payee">
             {% with any_filters = txn_table["any-filters-payee"] %}
                 {% include "transactions/table-options-icon.jinja" %}
@@ -13,9 +14,10 @@
                 {% include "accounts/table-options.jinja" %}
             {% endwith %}
         </div>
-    </a>
+    </div>
     <div class="w-[10rem] min-w-[10rem] p-1 grow">Description</div>
-    <a class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">Category
+    <div class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">
+        Category
         <div id="txn-icon-category">
             {% with any_filters = txn_table["any-filters-category"] %}
                 {% include "transactions/table-options-icon.jinja" %}
@@ -27,8 +29,9 @@
                 {% include "accounts/table-options.jinja" %}
             {% endwith %}
         </div>
-    </a>
-    <a class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">Tag
+    </div>
+    <div class="w-[10rem] min-w-[10rem] p-1 flex items-center relative group">
+        Tag
         <div id="txn-icon-tag">
             {% with any_filters = txn_table["any-filters-tag"] %}
                 {% include "transactions/table-options-icon.jinja" %}
@@ -40,7 +43,7 @@
                 {% include "accounts/table-options.jinja" %}
             {% endwith %}
         </div>
-    </a>
+    </div>
     <div class="w-[7rem] min-w-[7rem] p-1 text-right">Amount</div>
     {% include "accounts/table-locked.jinja" %}
 </div>

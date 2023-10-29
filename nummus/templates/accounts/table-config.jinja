@@ -48,6 +48,10 @@
     <button class="button hover:red mr-1"
             hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], search="") }}"
             hx-include="#txn-config">Clear Filters</button>
+    <button class="button hover:blue mr-1"
+            hx-get="{{ url_for("transaction_categories.overlay") }}"
+            hx-target="#overlay"
+            hx-swap="innerHTML">Edit categories</button>
     <button class="button hover:green mr-auto"
             hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], period="90-days", locked=False) }}"
             hx-include="this">Recent & Unlocked</button>
