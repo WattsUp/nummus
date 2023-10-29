@@ -73,15 +73,18 @@ function formatMoneyTicks(value, index, ticks) {
  * @param idDate ID of date element
  * @param idValue ID of value element
  * @param idChange ID of value change element
+ * @param idChangeLabel ID of value change label element
  * @return Chart.js plugin
  */
-function hoverLine(idBar, idDate, idValue, idChange) {
+function hoverLine(idBar, idDate, idValue, idChange, idChangeLabel) {
     const plugin = {
         id: 'hoverLine',
         eBar: document.getElementById(idBar),
         eDate: document.getElementById(idDate),
         eValue: document.getElementById(idValue),
         eChange: document.getElementById(idChange),
+        eChangeLabel: document.getElementById(idChangeLabel),
+        monthly: false,
         afterDatasetsDraw(chart, args, plugins) {
             const {
                 ctx,
@@ -120,7 +123,13 @@ function hoverLine(idBar, idDate, idValue, idChange) {
             const value = data.datasets[0].data[i];
             const change = (i == 0) ? 0 : value - data.datasets[0].data[i - 1];
 
-            this.eDate.innerHTML = date;
+            if (this.monthly) {
+                this.eDate.innerHTML = `${date} AVG`;
+                this.eChangeLabel.innerHTML = '1-Month AVG Change';
+            } else {
+                this.eDate.innerHTML = date;
+                this.eChangeLabel.innerHTML = '1-Day Change';
+            }
 
             function setAndColor(e, v) {
                 e.innerHTML = formatterF2.format(v);
@@ -145,3 +154,11 @@ function hoverLine(idBar, idDate, idValue, idChange) {
     };
     return plugin;
 }
+
+/**
+ * Compute the average of an array
+ *
+ * @param array Array to compute over
+ * @return Average value
+ */
+const average = array => array.reduce((a, b) => a + b) / array.length;
