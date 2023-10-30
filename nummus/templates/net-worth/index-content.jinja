@@ -1,0 +1,18 @@
+<section class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2"
+         hx-get="{{ url_for("net_worth.page") }}"
+         hx-trigger="update-account from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
+    <div class="w-full flex text-lg">
+        <h2 class="ml-auto">
+            Today's Balance <b>{{ chart["current"] | money }}</b>
+        </h2>
+    </div>
+    {% with name="total" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    {% include "net-worth/chart-config.jinja" %}
+    TODO(WattsUp): Add asset and liabilities charts
+    {% include "net-worth/chart-data.jinja" %}
+</section>

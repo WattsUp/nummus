@@ -166,7 +166,7 @@ def ctx_base() -> t.DictAny:
     pages: dict[str, dict[str, str]] = {
         "Overview": {
             "Dashboard": None,
-            "Net Worth": None,
+            "Net Worth": "net_worth.page",
             "Transactions": "transactions.page_all",
             "Instrument Transactions": None,
         },

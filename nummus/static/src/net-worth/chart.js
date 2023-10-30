@@ -1,4 +1,4 @@
-const accountChart = {
+const netWorthChart = {
     chart: null,
     ctx: null,
     /**
@@ -9,15 +9,15 @@ const accountChart = {
     update: function(raw) {
         'use strict';
         const dates = raw.dates;
-        const values = raw.values.map(v => Number(v));
+        const values = raw.total.map(v => Number(v));
 
-        const canvas = document.getElementById('account-chart-canvas');
+        const canvas = document.getElementById('total-chart-canvas');
         const ctx = canvas.getContext('2d');
         if (ctx == this.ctx)
             return chartSingle.update(this.chart, dates, values);
         this.ctx = ctx;
 
-        this.chart = chartSingle.create(ctx, 'account', dates, values);
+        this.chart = chartSingle.create(ctx, 'total', dates, values);
         return;
     }
 }

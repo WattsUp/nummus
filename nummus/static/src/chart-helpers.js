@@ -1,8 +1,8 @@
 /**
  * Get theme colors
  *
- * @param name Name of color to get
- * @return Hex string of color
+ * @param {String} name Name of color to get
+ * @return {String} Hex string of color
  */
 function getThemeColor(name) {
     'use strict';
@@ -43,10 +43,10 @@ const formatterF2 = new Intl.NumberFormat('en-US', {
 /**
  * Format ticks as money
  *
- * @param value Value of current tick
- * @param index Index of current tick
- * @param ticks Array of all ticks
- * @return Label for current tick
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
  */
 function formatMoneyTicks(value, index, ticks) {
     'use strict';
@@ -70,10 +70,10 @@ function formatMoneyTicks(value, index, ticks) {
 /**
  * Format ticks as money
  *
- * @param value Value of current tick
- * @param index Index of current tick
- * @param ticks Array of all ticks
- * @return Label for current tick
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
  */
 function formatDateTicks(value, index, ticks) {
     if (index == 0) {
@@ -113,29 +113,18 @@ function formatDateTicks(value, index, ticks) {
 /**
  * Chart.js plugin to draw a vertical line on hover
  *
- * @param idBar ID of status bar
- * @param idDate ID of date element
- * @param idValue ID of value element
- * @param idChange ID of value change element
- * @param idChangeLabel ID of value change label element
- * @param monthly True if data is monthly data
- * @return Chart.js plugin
+ * @param {String} name Base name of chart elements
+ * @param {Boolean} monthly True if data is monthly data
+ * @return {Object} Chart.js plugin
  */
-function pluginHoverLine(
-    idBar,
-    idDate,
-    idValue,
-    idChange,
-    idChangeLabel,
-    monthly,
-) {
+function pluginHoverLine(name, monthly) {
     const plugin = {
         id: 'hoverLine',
-        eBar: document.getElementById(idBar),
-        eDate: document.getElementById(idDate),
-        eValue: document.getElementById(idValue),
-        eChange: document.getElementById(idChange),
-        eChangeLabel: document.getElementById(idChangeLabel),
+        eBar: document.getElementById(name + '-chart-bar'),
+        eDate: document.getElementById(name + '-chart-date'),
+        eValue: document.getElementById(name + '-chart-value'),
+        eChange: document.getElementById(name + '-chart-change'),
+        eChangeLabel: document.getElementById(name + '-chart-change-label'),
         monthly: monthly,
         afterDatasetsDraw(chart, args, plugins) {
             const {
@@ -150,22 +139,22 @@ function pluginHoverLine(
                 return;
             }
 
-            const i = tooltip._active[0].index;
-            const x = Math.floor(tooltip._active[0].element.x) + 0.5;
-            const y = tooltip._active[0].element.y;
-            const color = getThemeColor('grey-500');
+            const tt = tooltip._active[0];
+            const i = tt.index;
+            const x = Math.min(right - 1, Math.floor(tt.element.x));
+            const y = tt.element.y;
 
             ctx.save();
             ctx.beginPath();
             ctx.lineWidth = 1;
-            ctx.strokeStyle = color;
-            ctx.moveTo(x, top);
-            ctx.lineTo(x, bottom);
+            ctx.strokeStyle = getThemeColor('black');
+            ctx.moveTo(x + 0.5, top);
+            ctx.lineTo(x + 0.5, bottom);
             ctx.stroke();
 
             ctx.beginPath();
             ctx.arc(x, y, 6, 0, 2 * Math.PI);
-            ctx.fillStyle = color + '40';
+            ctx.fillStyle = getThemeColor('white');
             ctx.fill();
             ctx.stroke();
 
@@ -210,7 +199,7 @@ function pluginHoverLine(
 /**
  * Compute the average of an array
  *
- * @param array Array to compute over
- * @return Average value
+ * @param {Array} array Array to compute over
+ * @return {Number} Average value
  */
 const average = array => array.reduce((a, b) => a + b) / array.length;

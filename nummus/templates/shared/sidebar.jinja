@@ -9,7 +9,11 @@
         </div>
     </div>
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
-        <div class="block m-2" todo="/#todo">
+        <div class="block m-2 cursor-pointer"
+             hx-get="{{ url_for("net_worth.page") }}"
+             hx-target="#main"
+             hx-swap="innerHTML"
+             hx-push-url="true">
             <div class="bg-green-800">
                 <h1 class="text-white p-1 text-2xl flex justify-between">
                     <span>Net Worth</span>

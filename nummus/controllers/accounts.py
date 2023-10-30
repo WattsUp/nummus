@@ -126,7 +126,6 @@ def ctx_chart(acct: Account) -> t.DictAny:
     dates, values, _ = acct.get_value(start, end)
 
     return {
-        "uri": acct.uri,
         "start": start,
         "end": end,
         "period": period,
@@ -154,7 +153,7 @@ def page(uri: str) -> str:
         return common.page(
             "accounts/index-content.jinja",
             acct=ctx_account(acct),
-            acct_chart=ctx_chart(acct),
+            chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
         )
 
@@ -190,7 +189,7 @@ def table(uri: str) -> str:
             )
         return common.page(
             "accounts/table.jinja",
-            acct_chart=ctx_chart(acct),
+            chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
             include_oob=True,
             include_chart_oob=True,
