@@ -1,16 +1,18 @@
 const accountChart = {
     chart: null,
-    dates: null,
     observer: null,
     ctx: null,
     /**
      * Create chart if it doesn't already exist
      *
+     * @param labels Labels to create chart with
      * @param datasets Datasets to create chart with
+     * @param dateMode x ticks date mode
+     * @param monthly True if data is monthly data
      * @return true if chart was created
      * @return false if chart already exists
      */
-    create: function(datasets) {
+    create: function(labels, datasets, dateMode, monthly) {
         'use strict';
         const canvas = document.getElementById('account-chart-canvas');
         const ctx = canvas.getContext('2d');
@@ -20,21 +22,18 @@ const accountChart = {
 
         this.chart = new Chart(ctx, {
             type: 'line',
-            data: {labels: this.dates, datasets: datasets},
+            data: {labels: labels, datasets: datasets},
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
                     x: {
                         grid: {
-                            display: false,
+                            display: true,
                         },
                         ticks: {
-                            callback: function(value, index, ticks) {
-                                if (index == 0 || index == (ticks.length - 1)) {
-                                    return this.dates[index];
-                                }
-                            }.bind(this)
+                            callback: formatDateTicks,
+                            dateMode: dateMode,
                         },
                     },
                     y: {
@@ -55,12 +54,13 @@ const accountChart = {
                     },
                 },
             },
-            plugins: [hoverLine(
+            plugins: [pluginHoverLine(
                 'account-chart-bar',
                 'account-chart-date',
                 'account-chart-value',
                 'account-chart-change',
                 'account-chart-change-label',
+                monthly,
                 )],
         });
         return true;
@@ -73,29 +73,32 @@ const accountChart = {
     update: function(raw) {
         'use strict';
 
-        this.dates = raw.dates;
+        let labels = [];
+        let dateMode = null;
+
+        const dates = raw.dates;
         const values = raw.values.map(v => Number(v));
         const datasets = [];
         let monthly = false;
-        if (this.dates.length > 400) {
+        if (dates.length > 400) {
+            dateMode = 'years';
             monthly = true;
 
-            this.dates = [];
             let valuesMin = [];
             let valuesMax = [];
             let valuesAvg = [];
 
-            let currentMonth = raw.dates[0].slice(0, 7);
+            let currentMonth = dates[0].slice(0, 7);
             let currentMin = values[0];
             let currentMax = values[0];
             let currentSum = 0;
             let currentN = 0
-            for (let i = 0; i < raw.dates.length; ++i) {
-                let month = raw.dates[i].slice(0, 7);
+            for (let i = 0; i < dates.length; ++i) {
+                let month = dates[i].slice(0, 7);
                 let v = values[i];
 
                 if (month != currentMonth) {
-                    this.dates.push(currentMonth);
+                    labels.push(currentMonth);
                     valuesMin.push(currentMin);
                     valuesMax.push(currentMax);
                     valuesAvg.push(currentSum / currentN);
@@ -112,7 +115,7 @@ const accountChart = {
                 currentSum += v;
                 ++currentN;
             }
-            this.dates.push(currentMonth);
+            labels.push(currentMonth);
             valuesMin.push(currentMin);
             valuesMax.push(currentMax);
             valuesAvg.push(currentSum / currentN);
@@ -143,6 +146,11 @@ const accountChart = {
                 backgroundColor: color + '40',
             });
         } else {
+            labels = dates;
+            if (dates.length > 80)
+                dateMode = 'months';
+            else if (dates.length > 10)
+                dateMode = 'weeks';
             datasets.push({
                 data: raw.values,
                 borderWidth: 0,
@@ -157,12 +165,9 @@ const accountChart = {
         }
 
         // If created a new chart, skip update
-        if (this.create(datasets)) {
-            this.chart.config.plugins[0].monthly = monthly;
-            return;
-        }
+        if (this.create(labels, datasets, dateMode, monthly)) return;
 
-        this.chart.data.labels = this.dates;
+        this.chart.data.labels = labels;
         if (this.chart.data.datasets.length == datasets.length) {
             // Swapping same type monthly or not
             for (let i = 0; i < datasets.length; ++i) {
@@ -172,6 +177,7 @@ const accountChart = {
             this.chart.data.datasets = datasets;
         }
         this.chart.config.plugins[0].monthly = monthly;
+        this.chart.config.options.scales.x.ticks.dateMode = dateMode;
         this.chart.update();
     }
 }

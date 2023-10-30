@@ -66,6 +66,50 @@ function formatMoneyTicks(value, index, ticks) {
     return ticks[index].label;
 }
 
+
+/**
+ * Format ticks as money
+ *
+ * @param value Value of current tick
+ * @param index Index of current tick
+ * @param ticks Array of all ticks
+ * @return Label for current tick
+ */
+function formatDateTicks(value, index, ticks) {
+    if (index == 0) {
+        const chart = this.chart;
+        const labels = chart.data.labels;
+        const dateMode = chart.config.options.scales.x.ticks.dateMode;
+        switch (dateMode) {
+            case 'years':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    if (l.slice(-2) == '01') t.label = l.slice(0, 4);
+                });
+                break;
+            case 'months':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    if (l.slice(-2) == '01') t.label = l.slice(0, 7);
+                });
+                break;
+            case 'weeks':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    let date = new Date(l);
+                    // Mark each Sunday
+                    if (date.getUTCDay() == 0) t.label = l;
+                });
+                break;
+            case 'days':
+            default:
+                ticks.forEach((t, i) => t.label = labels[i]);
+                break
+        }
+    }
+    return ticks[index].label;
+}
+
 /**
  * Chart.js plugin to draw a vertical line on hover
  *
@@ -74,9 +118,17 @@ function formatMoneyTicks(value, index, ticks) {
  * @param idValue ID of value element
  * @param idChange ID of value change element
  * @param idChangeLabel ID of value change label element
+ * @param monthly True if data is monthly data
  * @return Chart.js plugin
  */
-function hoverLine(idBar, idDate, idValue, idChange, idChangeLabel) {
+function pluginHoverLine(
+    idBar,
+    idDate,
+    idValue,
+    idChange,
+    idChangeLabel,
+    monthly,
+) {
     const plugin = {
         id: 'hoverLine',
         eBar: document.getElementById(idBar),
@@ -84,7 +136,7 @@ function hoverLine(idBar, idDate, idValue, idChange, idChangeLabel) {
         eValue: document.getElementById(idValue),
         eChange: document.getElementById(idChange),
         eChangeLabel: document.getElementById(idChangeLabel),
-        monthly: false,
+        monthly: monthly,
         afterDatasetsDraw(chart, args, plugins) {
             const {
                 ctx,
