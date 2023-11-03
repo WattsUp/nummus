@@ -196,7 +196,7 @@ class Account(Base):
         start: t.Date,
         end: t.Date,
         ids: t.Ints = None,
-    ) -> tuple[t.Dates, t.DictReals]:
+    ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Accounts from start to end date.
 
         Args:

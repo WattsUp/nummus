@@ -13,6 +13,13 @@
         {% include "shared/chart.jinja" %}
     {% endwith %}
     {% include "net-worth/chart-config.jinja" %}
-    TODO(WattsUp): Add asset and liabilities charts
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
+    {% with name="assets" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
+    {% with name="liabilities" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
     {% include "net-worth/chart-data.jinja" %}
 </section>

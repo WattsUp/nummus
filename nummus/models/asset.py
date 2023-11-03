@@ -95,6 +95,9 @@ class Asset(Base):
         """
         s = orm.object_session(self)
 
+        # TODO(Bradley): Add optional spline interpolation for
+        # infrequently valued assets
+
         # Get latest Valuation before or including start date
         query = s.query(AssetValuation)
         query = query.with_entities(

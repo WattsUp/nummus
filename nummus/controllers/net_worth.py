@@ -37,6 +37,8 @@ def ctx_chart() -> t.DictAny:
         args.get("end", type=datetime.date.fromisoformat),
     )
 
+    accounts: list[t.DictAny] = []
+
     with p.get_session() as s:
         # TODO(WatsUp): Net worth, period=all is too slow
         if start is None:
@@ -48,6 +50,16 @@ def ctx_chart() -> t.DictAny:
         dates, acct_values = Account.get_value_all(s, start, end)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+
+        mapping = Account.map_name(s)
+
+        for acct_id, values in acct_values.items():
+            accounts.append(
+                {
+                    "name": mapping[acct_id],
+                    "values": values,
+                },
+            )
 
         if end == today:
             current = total[-1]
@@ -63,6 +75,7 @@ def ctx_chart() -> t.DictAny:
         "data": {
             "dates": [d.isoformat() for d in dates],
             "total": total,
+            "accounts": accounts,
         },
     }
 

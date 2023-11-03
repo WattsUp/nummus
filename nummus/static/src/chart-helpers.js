@@ -132,6 +132,7 @@ function pluginHoverLine(name, monthly) {
                 tooltip,
                 chartArea: {top, bottom, left, right, width, height},
                 data,
+                scales
             } = chart;
             if (tooltip._active.length == 0) {
                 this.eBar.classList.remove('opacity-100');
@@ -141,8 +142,14 @@ function pluginHoverLine(name, monthly) {
 
             const tt = tooltip._active[0];
             const i = tt.index;
+
+            const date = data.labels[i];
+            const values = data.datasets[data.datasets.length - 1].data;
+            const value = values[i];
+            const change = (i == 0) ? 0 : value - values[i - 1];
+
             const x = Math.min(right - 1, Math.floor(tt.element.x));
-            const y = tt.element.y;
+            const y = scales.y.getPixelForValue(value);
 
             ctx.save();
             ctx.beginPath();
@@ -159,10 +166,6 @@ function pluginHoverLine(name, monthly) {
             ctx.stroke();
 
             ctx.restore();
-
-            const date = data.labels[i];
-            const value = data.datasets[0].data[i];
-            const change = (i == 0) ? 0 : value - data.datasets[0].data[i - 1];
 
             if (this.monthly) {
                 this.eDate.innerHTML = `${date} AVG`;
