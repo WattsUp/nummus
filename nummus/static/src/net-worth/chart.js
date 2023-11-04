@@ -23,56 +23,64 @@ const netWorthChart = {
                 a.values[a.values.length - 1];
         });
 
+        const width = 65;
+
         const canvasTotal = document.getElementById('total-chart-canvas');
         const ctxTotal = canvasTotal.getContext('2d');
         if (ctxTotal == this.ctxTotal) {
             chartSingle.update(this.chartTotal, dates, values);
         } else {
+            const plugins = [
+                [pluginFixedAxisWidth, {width: width}],
+            ];
             this.ctxTotal = ctxTotal;
-            this.chartTotal =
-                chartSingle.create(ctxTotal, 'total', dates, values);
+            this.chartTotal = chartSingle.create(
+                ctxTotal,
+                'total',
+                dates,
+                values,
+                plugins,
+            );
         }
 
         const assets = [];
         const liabilities = [];
-        const valuesAssets = [];
-        const valuesLiabilities = [];
-        for (const a of accounts) {
-            const valuesPos = [...a.values].map(v => Math.max(0, v));
-            const valuesNeg = [...a.values].map(v => Math.min(0, v));
+        for (let i = 0; i < accounts.length; ++i) {
+            const a = accounts[i];
+            const c = getChartColor(i);
 
             assets.push({
                 name: a.name,
-                values: valuesPos,
+                values: [...a.values].map(v => Math.max(0, v)),
+                color: c,
             });
-            valuesAssets.push(valuesPos);
-
             liabilities.push({
                 name: a.name,
-                values: valuesNeg,
+                values: [...a.values].map(v => Math.min(0, v)),
+                color: c,
             });
-            valuesLiabilities.push(valuesNeg);
         }
-
-
+        liabilities.reverse();
 
         const canvasAssets = document.getElementById('assets-chart-canvas');
         const ctxAssets = canvasAssets.getContext('2d');
         if (ctxAssets == this.ctxAssets) {
-            chartSingle.update(
+            chartStacked.update(
                 this.chartAssets,
                 dates,
-                valuesAssets,
-                true,
+                assets,
             );
         } else {
+            const plugins = [
+                [pluginFixedAxisWidth, {width: width}],
+            ];
             this.ctxAssets = ctxAssets;
             this.chartAssets = chartStacked.create(
                 ctxAssets,
                 'assets',
                 dates,
-                valuesAssets,
-                false,
+                assets,
+                plugins,
             );
         }
 
@@ -80,20 +88,22 @@ const netWorthChart = {
             document.getElementById('liabilities-chart-canvas');
         const ctxLiabilities = canvasLiabilities.getContext('2d');
         if (ctxLiabilities == this.ctxLiabilities) {
-            chartSingle.update(
+            chartStacked.update(
                 this.chartLiabilities,
                 dates,
-                valuesLiabilities,
-                true,
+                liabilities,
             );
         } else {
+            const plugins = [
+                [pluginFixedAxisWidth, {width: width}],
+            ];
             this.ctxLiabilities = ctxLiabilities;
             this.chartLiabilities = chartStacked.create(
                 ctxLiabilities,
                 'liabilities',
                 dates,
-                valuesLiabilities,
-                true,
+                liabilities,
+                plugins,
             );
         }
     },

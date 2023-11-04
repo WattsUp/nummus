@@ -11,6 +11,72 @@ function getThemeColor(name) {
 }
 
 /**
+ * Get nth color for chart colors
+ *
+ * @param {Number} i Index of color to get
+ * @return {String} Hex string of color
+ */
+function getChartColor(i) {
+    'use strict';
+    const base = getThemeColor('green');
+    return tinycolor(base).spin(i * 27).toHexString();
+}
+
+/**
+ * Downsample data to monthly min/max/avg values
+ *
+ * @param {Array} dates Array of sample dates
+ * @param {Array} values Array of sample values
+ * @return {Object} Object with the following keys
+ * @return {Array} labels
+ * @return {Array} min
+ * @return {Array} max
+ * @return {Array} avg
+ */
+function downsampleMonths(dates, values) {
+    let labels = [];
+    let min = [];
+    let max = [];
+    let avg = [];
+
+    let currentMonth = dates[0].slice(0, 7);
+    let currentMin = values[0];
+    let currentMax = values[0];
+    let currentSum = 0;
+    let currentN = 0
+    for (let i = 0; i < dates.length; ++i) {
+        let month = dates[i].slice(0, 7);
+        let v = values[i];
+
+        if (month != currentMonth) {
+            labels.push(currentMonth);
+            min.push(currentMin);
+            max.push(currentMax);
+            avg.push(currentSum / currentN);
+
+            currentMonth = month;
+            currentMin = v;
+            currentMax = v;
+            currentSum = 0;
+            currentN = 0;
+        }
+
+        currentMin = Math.min(currentMin, v);
+        currentMax = Math.max(currentMax, v);
+        currentSum += v;
+        ++currentN;
+    }
+    labels.push(currentMonth);
+    min.push(currentMin);
+    max.push(currentMax);
+    avg.push(currentSum / currentN);
+
+    return {
+        labels: labels, min: min, max: max, avg: avg,
+    }
+}
+
+/**
  * USD formatter with zero fractional digits
  */
 const formatterF0 = new Intl.NumberFormat('en-US', {
@@ -108,95 +174,6 @@ function formatDateTicks(value, index, ticks) {
         }
     }
     return ticks[index].label;
-}
-
-/**
- * Chart.js plugin to draw a vertical line on hover
- *
- * @param {String} name Base name of chart elements
- * @param {Boolean} monthly True if data is monthly data
- * @return {Object} Chart.js plugin
- */
-function pluginHoverLine(name, monthly) {
-    const plugin = {
-        id: 'hoverLine',
-        eBar: document.getElementById(name + '-chart-bar'),
-        eDate: document.getElementById(name + '-chart-date'),
-        eValue: document.getElementById(name + '-chart-value'),
-        eChange: document.getElementById(name + '-chart-change'),
-        eChangeLabel: document.getElementById(name + '-chart-change-label'),
-        monthly: monthly,
-        afterDatasetsDraw(chart, args, plugins) {
-            const {
-                ctx,
-                tooltip,
-                chartArea: {top, bottom, left, right, width, height},
-                data,
-                scales
-            } = chart;
-            if (tooltip._active.length == 0) {
-                this.eBar.classList.remove('opacity-100');
-                this.eBar.classList.add('opacity-0');
-                return;
-            }
-
-            const tt = tooltip._active[0];
-            const i = tt.index;
-
-            const date = data.labels[i];
-            const values = data.datasets[data.datasets.length - 1].data;
-            const value = values[i];
-            const change = (i == 0) ? 0 : value - values[i - 1];
-
-            const x = Math.min(right - 1, Math.floor(tt.element.x));
-            const y = scales.y.getPixelForValue(value);
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = getThemeColor('black');
-            ctx.moveTo(x + 0.5, top);
-            ctx.lineTo(x + 0.5, bottom);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, 2 * Math.PI);
-            ctx.fillStyle = getThemeColor('white');
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.restore();
-
-            if (this.monthly) {
-                this.eDate.innerHTML = `${date} AVG`;
-                this.eChangeLabel.innerHTML = '1-Month AVG Change';
-            } else {
-                this.eDate.innerHTML = date;
-                this.eChangeLabel.innerHTML = '1-Day Change';
-            }
-
-            function setAndColor(e, v) {
-                e.innerHTML = formatterF2.format(v);
-                if (v > 0) {
-                    e.classList.remove('text-red-600');
-                    e.classList.add('text-green-600');
-                } else if (v < 0) {
-                    e.classList.add('text-red-600');
-                    e.classList.remove('text-green-600');
-                } else {
-                    e.classList.remove('text-red-600');
-                    e.classList.remove('text-green-600');
-                }
-            }
-
-            setAndColor(this.eValue, value);
-            setAndColor(this.eChange, change);
-
-            this.eBar.classList.remove('opacity-0');
-            this.eBar.classList.add('opacity-100');
-        }
-    };
-    return plugin;
 }
 
 /**

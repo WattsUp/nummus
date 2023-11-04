@@ -20,102 +20,75 @@ const chartSingle = {
     datasets: function(dates, values) {
         'use strict';
 
-        let labels = [];
-        const datasets = [];
-
-        let dateMode = null;
-        let monthly = false;
-
         // Downsample values to months: min, max, & avg
         if (dates.length > 400) {
-            dateMode = 'years';
-            monthly = true;
-
-            let valuesMin = [];
-            let valuesMax = [];
-            let valuesAvg = [];
-
-            let currentMonth = dates[0].slice(0, 7);
-            let currentMin = values[0];
-            let currentMax = values[0];
-            let currentSum = 0;
-            let currentN = 0
-            for (let i = 0; i < dates.length; ++i) {
-                let month = dates[i].slice(0, 7);
-                let v = values[i];
-
-                if (month != currentMonth) {
-                    labels.push(currentMonth);
-                    valuesMin.push(currentMin);
-                    valuesMax.push(currentMax);
-                    valuesAvg.push(currentSum / currentN);
-
-                    currentMonth = month;
-                    currentMin = v;
-                    currentMax = v;
-                    currentSum = 0;
-                    currentN = 0;
-                }
-
-                currentMin = Math.min(currentMin, v);
-                currentMax = Math.max(currentMax, v);
-                currentSum += v;
-                ++currentN;
-            }
-            labels.push(currentMonth);
-            valuesMin.push(currentMin);
-            valuesMax.push(currentMax);
-            valuesAvg.push(currentSum / currentN);
+            const {
+                labels,
+                min,
+                max,
+                avg,
+            } = downsampleMonths(dates, values);
 
             let color = getThemeColor('grey-500');
 
+            const datasets = [];
             datasets.push({
-                data: valuesAvg,
+                data: min,
+                borderWidth: 0,
+                pointRadius: 0,
+                hoverRadius: 0,
+                fill: 1,
+                backgroundColor: color + '40',
+            });
+            datasets.push({
+                data: max,
+                borderWidth: 0,
+                pointRadius: 0,
+                hoverRadius: 0,
+                fill: 1,
+                backgroundColor: color + '40',
+            });
+            datasets.push({
+                data: avg,
                 borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,
                 borderColor: color,
             });
-            datasets.push({
-                data: valuesMin,
-                borderWidth: 0,
-                pointRadius: 0,
-                hoverRadius: 0,
-                fill: 1,
-                backgroundColor: color + '40',
-            });
-            datasets.push({
-                data: valuesMax,
-                borderWidth: 0,
-                pointRadius: 0,
-                hoverRadius: 0,
-                fill: 1,
-                backgroundColor: color + '40',
-            });
+            return {
+                labels: labels,
+                datasets: datasets,
+                dateMode: 'years',
+                monthly: true,
+            };
         } else {
-            labels = dates;
+            let dateMode = null;
+
             if (dates.length > 80)
                 dateMode = 'months';
             else if (dates.length > 10)
                 dateMode = 'weeks';
+
+            const datasets = [];
             datasets.push({
                 data: values,
-                borderWidth: 0,
+                borderColor: getThemeColor('grey-500'),
+                borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,
                 fill: {
                     target: 'origin',
-                    above: getThemeColor('blue'),
-                    below: getThemeColor('yellow'),
+                    above: getThemeColor('blue') + '80',
+                    below: getThemeColor('yellow') + '80',
                 },
             })
+            return {
+                labels: dates,
+                datasets: datasets,
+                dateMode: dateMode,
+                monthly: false,
+            };
         }
-        return {
-            labels: labels,
-            datasets: datasets,
-            dateMode: dateMode,
-            monthly: monthly,
-        };
     },
     /**
      * Create a new chart with a single data source
@@ -124,9 +97,10 @@ const chartSingle = {
      * @param {String} name Name of chart objects for pluginHoverLine
      * @param {Array} dates Array of dates
      * @param {Array} values Array of values
+     * @param {Array} plugins Array of plugins
      * @return {Object} Chart object
      */
-    create: function(ctx, name, dates, values) {
+    create: function(ctx, name, dates, values, plugins) {
         'use strict';
 
         const {
@@ -135,6 +109,31 @@ const chartSingle = {
             dateMode,
             monthly,
         } = this.datasets(dates, values);
+
+        const pluginObjects = [
+            pluginHoverLine,
+        ];
+        const pluginOptions = {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                intersect: false,
+                mode: 'index',
+                enabled: false,
+            },
+            hoverLine: {
+                name: name,
+                monthly: monthly,
+            },
+        };
+        if (plugins) {
+            for (const item of plugins) {
+                const plugin = item[0];
+                pluginObjects.push(plugin);
+                pluginOptions[plugin.id] = item[1];
+            }
+        }
 
         return new Chart(ctx, {
             type: 'line',
@@ -159,18 +158,9 @@ const chartSingle = {
                         },
                     },
                 },
-                plugins: {
-                    legend: {
-                        display: false,
-                    },
-                    tooltip: {
-                        intersect: false,
-                        mode: 'index',
-                        enabled: false,
-                    },
-                },
+                plugins: pluginOptions,
             },
-            plugins: [pluginHoverLine(name, monthly)],
+            plugins: pluginObjects,
         });
     },
     /**
@@ -198,7 +188,7 @@ const chartSingle = {
         } else {
             chart.data.datasets = datasets;
         }
-        chart.config.plugins[0].monthly = monthly;
+        chart.config.options.plugins.hoverLine.monthly = monthly;
         chart.config.options.scales.x.ticks.dateMode = dateMode;
         chart.update();
     },

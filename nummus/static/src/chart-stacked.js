@@ -11,48 +11,58 @@ const chartStacked = {
      * Prepare datasets
      *
      * @param {Array} dates Array of dates
-     * @param {Array} sources Array of sources [values0, values1, ...]
-     * @param {Boolean} reverse True will plot last source first but keep same
-     *     order of colors
+     * @param {Array} sources Array of sources [{values:, color:}, ...]
      * @return {Object} Object with the following keys
      * @return {Array} labels
      * @return {Array} datasets
      * @return {Array} dateMode Date mode of formatDateTicks
      * @return {Array} monthly True if data is downsampled to months
      */
-    datasets: function(dates, sources, reverse) {
+    datasets: function(dates, sources) {
         'use strict';
 
-        let labels = [];
+        let labels = null;
         const datasets = [];
 
         let dateMode = null;
         let monthly = false;
 
         // Downsample values to months: min, max, & avg
-        if (dates.length > 400 && false) {
-            // TODO
+        if (dates.length > 400) {
+            let sourcesDownsampled = [];
+            for (const source of sources) {
+                const result = downsampleMonths(dates, source.values);
+                if (!labels) labels = result.labels;
+                sourcesDownsampled.push({
+                    color: source.color,
+                    values: result.avg,
+                });
+            }
+            sources = sourcesDownsampled
+            dateMode = 'years';
+            monthly = true;
         } else {
             labels = dates;
-            const n = dates.length;
-            if (n > 80)
+            if (dates.length > 80)
                 dateMode = 'months';
-            else if (n > 10)
+            else if (dates.length > 10)
                 dateMode = 'weeks';
-            let values = new Array(n).fill(0);
-            let first = true;
-            for (let i = 0; i < sources.length; ++i) {
-                const source = sources[reverse ? sources.length - 1 - i : i];
-                for (let ii = 0; ii < n; ++ii) values[ii] += source[ii];
-                datasets.push({
-                    data: [...values],
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    hoverRadius: 0,
-                    fill: first ? 'origin' : '-1',
-                });
-                first = false;
-            }
+        }
+        const n = labels.length;
+        let values = new Array(n).fill(0);
+        let first = true;
+        for (const source of sources) {
+            for (let i = 0; i < n; ++i) values[i] += source.values[i];
+            datasets.push({
+                data: [...values],
+                borderColor: source.color,
+                backgroundColor: source.color + '80',
+                borderWidth: 2,
+                pointRadius: 0,
+                hoverRadius: 0,
+                fill: first ? 'origin' : '-1',
+            });
+            first = false;
         }
         return {
             labels: labels,
@@ -68,11 +78,10 @@ const chartStacked = {
      * @param {String} name Name of chart objects for pluginHoverLine
      * @param {Array} dates Array of dates
      * @param {Array} sources Array of sources [values0, values1, ...]
-     * @param {Boolean} reverse True will plot last source first but keep same
-     *     order of colors
+     * @param {Array} plugins Array of plugins
      * @return {Object} Chart object
      */
-    create: function(ctx, name, dates, sources, reverse) {
+    create: function(ctx, name, dates, sources, plugins) {
         'use strict';
 
         const {
@@ -80,7 +89,32 @@ const chartStacked = {
             datasets,
             dateMode,
             monthly,
-        } = this.datasets(dates, sources, reverse);
+        } = this.datasets(dates, sources);
+
+        const pluginObjects = [
+            pluginHoverLine,
+        ];
+        const pluginOptions = {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                intersect: false,
+                mode: 'index',
+                enabled: false,
+            },
+            hoverLine: {
+                name: name,
+                monthly: monthly,
+            },
+        };
+        if (plugins) {
+            for (const item of plugins) {
+                const plugin = item[0];
+                pluginObjects.push(plugin);
+                pluginOptions[plugin.id] = item[1];
+            }
+        }
 
         return new Chart(ctx, {
             type: 'line',
@@ -105,18 +139,9 @@ const chartStacked = {
                         },
                     },
                 },
-                plugins: {
-                    legend: {
-                        display: false,
-                    },
-                    tooltip: {
-                        intersect: false,
-                        mode: 'index',
-                        enabled: false,
-                    },
-                },
+                plugins: pluginOptions,
             },
-            plugins: [pluginHoverLine(name, monthly)],
+            plugins: pluginObjects,
         });
     },
     /**
@@ -125,17 +150,15 @@ const chartStacked = {
      * @param {Object} chart Chart object
      * @param {Array} dates Array of dates
      * @param {Array} sources Array of sources [values0, values1, ...]
-     * @param {Boolean} reverse True will plot last source first but keep same
-     *     order of colors
      */
-    update: function(chart, dates, sources, reverse) {
+    update: function(chart, dates, sources) {
         'use strict';
         const {
             labels,
             datasets,
             dateMode,
             monthly,
-        } = this.datasets(dates, sources, reverse);
+        } = this.datasets(dates, sources);
 
         chart.data.labels = labels;
         if (chart.data.datasets.length == datasets.length) {
@@ -146,7 +169,7 @@ const chartStacked = {
         } else {
             chart.data.datasets = datasets;
         }
-        chart.config.plugins[0].monthly = monthly;
+        chart.config.options.plugins.hoverLine.monthly = monthly;
         chart.config.options.scales.x.ticks.dateMode = dateMode;
         chart.update();
     },
