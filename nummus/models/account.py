@@ -250,6 +250,8 @@ class Account(Base):
         )
         query = query.where(TransactionSplit.asset_id.is_not(None))
         query = query.where(TransactionSplit.date <= start)
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
         for acct_id, a_id, qty_int, qty_frac in query.all():
             acct_id: int
             a_id: int

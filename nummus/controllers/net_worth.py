@@ -10,7 +10,7 @@ import sqlalchemy.exc
 
 from nummus import portfolio, web_utils
 from nummus.controllers import common
-from nummus.models import Account, TransactionSplit
+from nummus.models import Account, AccountCategory, TransactionSplit
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
@@ -36,6 +36,7 @@ def ctx_chart() -> t.DictAny:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
+    category = args.get("category", None, type=AccountCategory)
 
     accounts: list[t.DictAny] = []
 
@@ -47,7 +48,13 @@ def ctx_chart() -> t.DictAny:
             query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
             start = query.scalar() or datetime.date(1970, 1, 1)
 
-        dates, acct_values = Account.get_value_all(s, start, end)
+        ids = None
+        if category is not None:
+            query = s.query(Account.id_)
+            query = query.where(Account.category == category)
+            ids = [id_ for id_, in query.all()]
+
+        dates, acct_values = Account.get_value_all(s, start, end, ids=ids)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
@@ -77,6 +84,8 @@ def ctx_chart() -> t.DictAny:
             "total": total,
             "accounts": accounts,
         },
+        "category": category,
+        "category_type": AccountCategory,
     }
 
 

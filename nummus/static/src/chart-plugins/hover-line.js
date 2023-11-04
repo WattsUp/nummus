@@ -4,7 +4,7 @@
  */
 const pluginHoverLine = {
     id: 'hoverLine',
-    afterInit(chart) {
+    afterInit: function(chart) {
         const {config: {options: {plugins: {hoverLine}}}} = chart;
 
         const name = hoverLine.name;
@@ -18,7 +18,7 @@ const pluginHoverLine = {
             eChangeLabel: document.getElementById(name + '-chart-change-label'),
         };
     },
-    afterDatasetsDraw(chart) {
+    afterDatasetsDraw: function(chart) {
         const {
             ctx,
             tooltip,

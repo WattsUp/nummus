@@ -428,6 +428,36 @@ class TestAccount(TestBase):
         self.assertEqual(r_dates, [future])
         self.assertEqual(r_values, {acct.id_: [target_values[-1]]})
 
+        # Create an unrelated account
+        acct_unrelated = Account(
+            name=self.random_string(),
+            institution=self.random_string(),
+            category=AccountCategory.INVESTMENT,
+            closed=False,
+        )
+        s.add(acct_unrelated)
+        s.commit()
+        txn = Transaction(
+            account_id=acct_unrelated.id_,
+            date=target_dates[-1],
+            amount=t1,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            asset_id=assets[0].id_,
+            asset_quantity_unadjusted=-q0,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # Unchanged get value
+        r_dates, r_values = Account.get_value_all(s, future, future, ids=[acct.id_])
+        self.assertEqual(r_dates, [future])
+        self.assertEqual(r_values, {acct.id_: [target_values[-1]]})
+
     def test_get_cash_flow(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)

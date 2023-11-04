@@ -4,7 +4,7 @@
  */
 const pluginFixedAxisWidth = {
     id: 'fixedAxisWidth',
-    afterInit(chart) {
+    afterInit: function(chart) {
         const {
             config: {
                 options: {
