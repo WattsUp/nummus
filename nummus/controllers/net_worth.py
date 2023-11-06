@@ -26,7 +26,6 @@ def ctx_chart() -> t.DictAny:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio
-    today = datetime.date.today()
 
     args = flask.request.args
 
@@ -48,11 +47,16 @@ def ctx_chart() -> t.DictAny:
             query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
             start = query.scalar() or datetime.date(1970, 1, 1)
 
-        ids = None
+        query = s.query(Account)
         if category is not None:
-            query = s.query(Account.id_)
             query = query.where(Account.category == category)
-            ids = [id_ for id_, in query.all()]
+        # Include account if not closed
+        # Include account if most recent transaction is in period
+        ids = [
+            acct.id_
+            for acct in query.all()
+            if (not acct.closed or acct.updated_on > start)
+        ]
 
         dates, acct_values = Account.get_value_all(s, start, end, ids=ids)
 
@@ -68,17 +72,10 @@ def ctx_chart() -> t.DictAny:
                 },
             )
 
-        if end == today:
-            current = total[-1]
-        else:
-            _, acct_values = Account.get_value_all(s, today, today)
-            current = sum(item[0] for item in acct_values.values())
-
     return {
         "start": start,
         "end": end,
         "period": period,
-        "current": current,
         "data": {
             "dates": [d.isoformat() for d in dates],
             "total": total,
@@ -95,9 +92,17 @@ def page() -> str:
     Returns:
         string HTML response
     """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio
+    today = datetime.date.today()
+
+    with p.get_session() as s:
+        _, acct_values = Account.get_value_all(s, today, today)
+        current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",
         chart=ctx_chart(),
+        current=current,
     )
 
 

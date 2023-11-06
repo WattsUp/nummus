@@ -102,6 +102,7 @@ const chartSingle = {
      */
     create: function(ctx, name, dates, values, plugins) {
         'use strict';
+        setChartDefaults();
 
         const {
             labels,

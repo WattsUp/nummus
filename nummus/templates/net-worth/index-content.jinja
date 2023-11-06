@@ -1,4 +1,4 @@
-<section class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2"
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("net_worth.page") }}"
          hx-trigger="update-account from:body"
          hx-target="#main"
@@ -6,7 +6,7 @@
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
     <div class="w-full flex text-lg">
         <h2 class="ml-auto">
-            Today's Balance <b>{{ chart["current"] | money }}</b>
+            Today's Balance <b>{{ current | money }}</b>
         </h2>
     </div>
     {% with name="total" %}
@@ -21,6 +21,15 @@
     {% with name="liabilities" %}
         {% include "shared/chart.jinja" %}
     {% endwith %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
+    <div class="flex space justify-between">
+        <div class="w-[49%]">
+            <canvas id="assets-pie-chart-canvas"></canvas>
+        </div>
+        <div class="w-[49%]">
+            <canvas id="liabilities-pie-chart-canvas"></canvas>
+        </div>
+    </div>
     TODO(WattsUp): Synchronize hovering
     TODO(WattsUp): Added pie chart
     {% include "net-worth/chart-data.jinja" %}

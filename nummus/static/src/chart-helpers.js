@@ -183,3 +183,10 @@ function formatDateTicks(value, index, ticks) {
  * @return {Number} Average value
  */
 const average = array => array.reduce((a, b) => a + b) / array.length;
+
+/**
+ * Configures chart defaults
+ */
+function setChartDefaults() {
+    Chart.defaults.font.family = '\'liberation-sans\', \'sans-serif\'';
+}

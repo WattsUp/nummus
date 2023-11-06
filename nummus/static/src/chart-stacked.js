@@ -57,7 +57,7 @@ const chartStacked = {
                 data: [...values],
                 borderColor: source.color,
                 backgroundColor: source.color + '80',
-                borderWidth: 2,
+                borderWidth: 1,
                 pointRadius: 0,
                 hoverRadius: 0,
                 fill: first ? 'origin' : '-1',
@@ -83,6 +83,7 @@ const chartStacked = {
      */
     create: function(ctx, name, dates, sources, plugins) {
         'use strict';
+        setChartDefaults();
 
         const {
             labels,

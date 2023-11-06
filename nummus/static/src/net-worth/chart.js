@@ -2,9 +2,13 @@ const netWorthChart = {
     chartTotal: null,
     chartAssets: null,
     chartLiabilities: null,
+    chartPieAssets: null,
+    chartPieLiabilities: null,
     ctxTotal: null,
     ctxAssets: null,
     ctxLiabilities: null,
+    ctxPieAssets: null,
+    ctxPieLiabilities: null,
     /**
      * Create Account Chart
      *
@@ -25,22 +29,24 @@ const netWorthChart = {
 
         const width = 65;
 
-        const canvasTotal = document.getElementById('total-chart-canvas');
-        const ctxTotal = canvasTotal.getContext('2d');
-        if (ctxTotal == this.ctxTotal) {
-            chartSingle.update(this.chartTotal, dates, values);
-        } else {
-            const plugins = [
-                [pluginFixedAxisWidth, {width: width}],
-            ];
-            this.ctxTotal = ctxTotal;
-            this.chartTotal = chartSingle.create(
-                ctxTotal,
-                'total',
-                dates,
-                values,
-                plugins,
-            );
+        {
+            const canvas = document.getElementById('total-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx == this.ctxTotal) {
+                chartSingle.update(this.chartTotal, dates, values);
+            } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
+                this.ctxTotal = ctx;
+                this.chartTotal = chartSingle.create(
+                    ctx,
+                    'total',
+                    dates,
+                    values,
+                    plugins,
+                );
+            }
         }
 
         const assets = [];
@@ -62,49 +68,76 @@ const netWorthChart = {
         }
         liabilities.reverse();
 
-        const canvasAssets = document.getElementById('assets-chart-canvas');
-        const ctxAssets = canvasAssets.getContext('2d');
-        if (ctxAssets == this.ctxAssets) {
-            chartStacked.update(
-                this.chartAssets,
-                dates,
-                assets,
-            );
-        } else {
-            const plugins = [
-                [pluginFixedAxisWidth, {width: width}],
-            ];
-            this.ctxAssets = ctxAssets;
-            this.chartAssets = chartStacked.create(
-                ctxAssets,
-                'assets',
-                dates,
-                assets,
-                plugins,
-            );
+        {
+            const canvas = document.getElementById('assets-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx == this.ctxAssets) {
+                chartStacked.update(
+                    this.chartAssets,
+                    dates,
+                    assets,
+                );
+            } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
+                this.ctxAssets = ctx;
+                this.chartAssets = chartStacked.create(
+                    ctx,
+                    'assets',
+                    dates,
+                    assets,
+                    plugins,
+                );
+            }
         }
 
-        const canvasLiabilities =
-            document.getElementById('liabilities-chart-canvas');
-        const ctxLiabilities = canvasLiabilities.getContext('2d');
-        if (ctxLiabilities == this.ctxLiabilities) {
-            chartStacked.update(
-                this.chartLiabilities,
-                dates,
-                liabilities,
-            );
-        } else {
-            const plugins = [
-                [pluginFixedAxisWidth, {width: width}],
-            ];
-            this.ctxLiabilities = ctxLiabilities;
-            this.chartLiabilities = chartStacked.create(
-                ctxLiabilities,
-                'liabilities',
-                dates,
-                liabilities,
-                plugins,
-            );
+        {
+            const canvas = document.getElementById('liabilities-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx == this.ctxLiabilities) {
+                chartStacked.update(
+                    this.chartLiabilities,
+                    dates,
+                    liabilities,
+                );
+            } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
+                this.ctxLiabilities = ctx;
+                this.chartLiabilities = chartStacked.create(
+                    ctx,
+                    'liabilities',
+                    dates,
+                    liabilities,
+                    plugins,
+                );
+            }
         }
+
+        {
+            const canvas = document.getElementById('assets-pie-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx == this.ctxPieAssets) {
+                chartPie.update(this.chartPieAssets, assets);
+            } else {
+                this.ctxPieAssets = ctx;
+                this.chartPieAssets = chartPie.create(ctx, assets);
+            }
+        }
+
+        {
+            const canvas =
+                document.getElementById('liabilities-pie-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (ctx == this.ctxPieLiabilities) {
+                chartPie.update(this.chartPieLiabilities, liabilities);
+            } else {
+                this.ctxPieLiabilities = ctx;
+                this.chartPieLiabilities = chartPie.create(ctx, liabilities);
+            }
+        }
+        // TODO(WattsUp): Added data table/legend
     },
 }
