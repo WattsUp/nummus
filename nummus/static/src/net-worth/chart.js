@@ -57,11 +57,13 @@ const netWorthChart = {
 
             assets.push({
                 name: a.name,
+                rawValues: a.values,
                 values: [...a.values].map(v => Math.max(0, v)),
                 color: c,
             });
             liabilities.push({
                 name: a.name,
+                rawValues: a.values,
                 values: [...a.values].map(v => Math.min(0, v)),
                 color: c,
             });
@@ -138,6 +140,52 @@ const netWorthChart = {
                 this.chartPieLiabilities = chartPie.create(ctx, liabilities);
             }
         }
-        // TODO(WattsUp): Added data table/legend
+
+        {
+            const breakdown = document.getElementById('assets-breakdown');
+            this.createBreakdown(breakdown, assets, false);
+        }
+
+        {
+            const breakdown = document.getElementById('liabilities-breakdown');
+            this.createBreakdown(breakdown, liabilities, true);
+        }
+    },
+    /**
+     * Create breakdown table
+     *
+     * @param {DOMElement} parent Parent table element
+     * @param {Array} accounts Array of account objects
+     * @param {Boolean} negative True will skip non-negative, False will skip
+     *     negative accounts
+     */
+    createBreakdown: function(parent, accounts, negative) {
+        parent.innerHTML = '';
+        for (const account of accounts) {
+            const v = account.rawValues[account.rawValues.length - 1];
+            if (v < 0 ^ negative) continue;
+
+            const row = document.createElement('div');
+            row.classList.add('flex');
+
+            const square = document.createElement('div');
+            square.style.height = '24px'
+            square.style.width = '24px'
+            square.style.background = account.color + '80';
+            square.style.border = `1px solid ${account.color}`;
+            square.style.marginRight = '2px';
+            row.appendChild(square);
+
+            const name = document.createElement('div');
+            name.innerHTML = account.name;
+            name.classList.add('grow');
+            row.appendChild(name);
+
+            const value = document.createElement('div');
+            value.innerHTML = formatterF2.format(v);
+            row.appendChild(value);
+
+            parent.appendChild(row);
+        }
     },
 }

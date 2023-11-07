@@ -25,12 +25,13 @@
     <div class="flex space justify-between">
         <div class="w-[49%]">
             <canvas id="assets-pie-chart-canvas"></canvas>
+            <div id="assets-breakdown"></div>
         </div>
         <div class="w-[49%]">
             <canvas id="liabilities-pie-chart-canvas"></canvas>
+            <div id="liabilities-breakdown"></div>
         </div>
     </div>
-    TODO(WattsUp): Synchronize hovering
-    TODO(WattsUp): Added pie chart
+    {# TODO(WattsUp): Synchronize hovering #}
     {% include "net-worth/chart-data.jinja" %}
 </section>

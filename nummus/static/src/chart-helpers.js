@@ -19,7 +19,7 @@ function getThemeColor(name) {
 function getChartColor(i) {
     'use strict';
     const base = getThemeColor('green');
-    return tinycolor(base).spin(i * 27).toHexString();
+    return tinycolor(base).spin(i * 22).toHexString();
 }
 
 /**

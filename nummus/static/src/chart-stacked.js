@@ -52,6 +52,8 @@ const chartStacked = {
         let values = new Array(n).fill(0);
         let first = true;
         for (const source of sources) {
+            // Skip if every value is zero
+            if (source.values.every((v) => v == 0)) continue;
             for (let i = 0; i < n; ++i) values[i] += source.values[i];
             datasets.push({
                 data: [...values],
