@@ -143,32 +143,13 @@ class BaseEnum(enum.Enum):
     """Enum class with a parser."""
 
     @classmethod
-    def parse(cls, s: str) -> BaseEnum:
-        """Parse a string and return matching enum.
-
-        Args:
-            s: String to parse
-
-        Returns:
-            BaseEnum enumeration that matches
-        """
-        if isinstance(s, cls):
-            return s
-        if isinstance(s, int):
-            return cls(s)
-        if s in ["", None]:
-            return None
-        s = s.upper().strip()
-        if s in cls._member_names_:
-            return cls[s]
-
-        s = s.lower()
-        # LUT of common strings to the matching enum
-        res = cls._lut().get(s)
-        if res is None:
-            msg = f"String not found in {cls.__name__}: {s}"
-            raise ValueError(msg)
-        return res
+    def _missing_(cls, value: object) -> BaseEnum:
+        if isinstance(value, str):
+            s = value.upper().strip()
+            if s in cls._member_names_:
+                return cls[s]
+            return cls._lut().get(s.lower())
+        return super()._missing_(value)
 
     @classmethod
     def _lut(cls) -> dict[str, BaseEnum]:

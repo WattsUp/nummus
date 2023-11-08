@@ -77,7 +77,7 @@ def new() -> str:
 
     form = flask.request.form
     name = form["name"].strip()
-    group = form.get("group", type=TransactionCategoryGroup.parse)
+    group = form.get("group", type=TransactionCategoryGroup)
 
     try:
         with flask.current_app.app_context():
@@ -127,7 +127,7 @@ def edit(uri: str) -> str:
 
         form = flask.request.form
         name = form["name"].strip()
-        group = form.get("group", type=TransactionCategoryGroup.parse)
+        group = form.get("group", type=TransactionCategoryGroup)
 
         try:
             cat.name = name

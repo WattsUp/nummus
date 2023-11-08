@@ -1,13 +1,79 @@
 /**
  * Get theme colors
  *
- * @param name Name of color to get
- * @return Hex string of color
+ * @param {String} name Name of color to get
+ * @return {String} Hex string of color
  */
 function getThemeColor(name) {
     'use strict';
     const style = getComputedStyle(document.body);
     return style.getPropertyValue(`--color-${name}`);
+}
+
+/**
+ * Get nth color for chart colors
+ *
+ * @param {Number} i Index of color to get
+ * @return {String} Hex string of color
+ */
+function getChartColor(i) {
+    'use strict';
+    const base = getThemeColor('green');
+    return tinycolor(base).spin(i * 22).toHexString();
+}
+
+/**
+ * Downsample data to monthly min/max/avg values
+ *
+ * @param {Array} dates Array of sample dates
+ * @param {Array} values Array of sample values
+ * @return {Object} Object with the following keys
+ * @return {Array} labels
+ * @return {Array} min
+ * @return {Array} max
+ * @return {Array} avg
+ */
+function downsampleMonths(dates, values) {
+    let labels = [];
+    let min = [];
+    let max = [];
+    let avg = [];
+
+    let currentMonth = dates[0].slice(0, 7);
+    let currentMin = values[0];
+    let currentMax = values[0];
+    let currentSum = 0;
+    let currentN = 0
+    for (let i = 0; i < dates.length; ++i) {
+        let month = dates[i].slice(0, 7);
+        let v = values[i];
+
+        if (month != currentMonth) {
+            labels.push(currentMonth);
+            min.push(currentMin);
+            max.push(currentMax);
+            avg.push(currentSum / currentN);
+
+            currentMonth = month;
+            currentMin = v;
+            currentMax = v;
+            currentSum = 0;
+            currentN = 0;
+        }
+
+        currentMin = Math.min(currentMin, v);
+        currentMax = Math.max(currentMax, v);
+        currentSum += v;
+        ++currentN;
+    }
+    labels.push(currentMonth);
+    min.push(currentMin);
+    max.push(currentMax);
+    avg.push(currentSum / currentN);
+
+    return {
+        labels: labels, min: min, max: max, avg: avg,
+    }
 }
 
 /**
@@ -43,10 +109,10 @@ const formatterF2 = new Intl.NumberFormat('en-US', {
 /**
  * Format ticks as money
  *
- * @param value Value of current tick
- * @param index Index of current tick
- * @param ticks Array of all ticks
- * @return Label for current tick
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
  */
 function formatMoneyTicks(value, index, ticks) {
     'use strict';
@@ -66,99 +132,61 @@ function formatMoneyTicks(value, index, ticks) {
     return ticks[index].label;
 }
 
+
 /**
- * Chart.js plugin to draw a vertical line on hover
+ * Format ticks as money
  *
- * @param idBar ID of status bar
- * @param idDate ID of date element
- * @param idValue ID of value element
- * @param idChange ID of value change element
- * @param idChangeLabel ID of value change label element
- * @return Chart.js plugin
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
  */
-function hoverLine(idBar, idDate, idValue, idChange, idChangeLabel) {
-    const plugin = {
-        id: 'hoverLine',
-        eBar: document.getElementById(idBar),
-        eDate: document.getElementById(idDate),
-        eValue: document.getElementById(idValue),
-        eChange: document.getElementById(idChange),
-        eChangeLabel: document.getElementById(idChangeLabel),
-        monthly: false,
-        afterDatasetsDraw(chart, args, plugins) {
-            const {
-                ctx,
-                tooltip,
-                chartArea: {top, bottom, left, right, width, height},
-                data,
-            } = chart;
-            if (tooltip._active.length == 0) {
-                this.eBar.classList.remove('opacity-100');
-                this.eBar.classList.add('opacity-0');
-                return;
-            }
-
-            const i = tooltip._active[0].index;
-            const x = Math.floor(tooltip._active[0].element.x) + 0.5;
-            const y = tooltip._active[0].element.y;
-            const color = getThemeColor('grey-500');
-
-            ctx.save();
-            ctx.beginPath();
-            ctx.lineWidth = 1;
-            ctx.strokeStyle = color;
-            ctx.moveTo(x, top);
-            ctx.lineTo(x, bottom);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, 2 * Math.PI);
-            ctx.fillStyle = color + '40';
-            ctx.fill();
-            ctx.stroke();
-
-            ctx.restore();
-
-            const date = data.labels[i];
-            const value = data.datasets[0].data[i];
-            const change = (i == 0) ? 0 : value - data.datasets[0].data[i - 1];
-
-            if (this.monthly) {
-                this.eDate.innerHTML = `${date} AVG`;
-                this.eChangeLabel.innerHTML = '1-Month AVG Change';
-            } else {
-                this.eDate.innerHTML = date;
-                this.eChangeLabel.innerHTML = '1-Day Change';
-            }
-
-            function setAndColor(e, v) {
-                e.innerHTML = formatterF2.format(v);
-                if (v > 0) {
-                    e.classList.remove('text-red-600');
-                    e.classList.add('text-green-600');
-                } else if (v < 0) {
-                    e.classList.add('text-red-600');
-                    e.classList.remove('text-green-600');
-                } else {
-                    e.classList.remove('text-red-600');
-                    e.classList.remove('text-green-600');
-                }
-            }
-
-            setAndColor(this.eValue, value);
-            setAndColor(this.eChange, change);
-
-            this.eBar.classList.remove('opacity-0');
-            this.eBar.classList.add('opacity-100');
+function formatDateTicks(value, index, ticks) {
+    if (index == 0) {
+        const chart = this.chart;
+        const labels = chart.data.labels;
+        const dateMode = chart.config.options.scales.x.ticks.dateMode;
+        switch (dateMode) {
+            case 'years':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    if (l.slice(-2) == '01') t.label = l.slice(0, 4);
+                });
+                break;
+            case 'months':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    if (l.slice(-2) == '01') t.label = l.slice(0, 7);
+                });
+                break;
+            case 'weeks':
+                ticks.forEach((t, i) => {
+                    let l = labels[i];
+                    let date = new Date(l);
+                    // Mark each Sunday
+                    if (date.getUTCDay() == 0) t.label = l;
+                });
+                break;
+            case 'days':
+            default:
+                ticks.forEach((t, i) => t.label = labels[i]);
+                break
         }
-    };
-    return plugin;
+    }
+    return ticks[index].label;
 }
 
 /**
  * Compute the average of an array
  *
- * @param array Array to compute over
- * @return Average value
+ * @param {Array} array Array to compute over
+ * @return {Number} Average value
  */
 const average = array => array.reduce((a, b) => a + b) / array.length;
+
+/**
+ * Configures chart defaults
+ */
+function setChartDefaults() {
+    Chart.defaults.font.family = '\'liberation-sans\', \'sans-serif\'';
+}

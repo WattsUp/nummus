@@ -1,0 +1,37 @@
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
+         hx-get="{{ url_for("net_worth.page") }}"
+         hx-trigger="update-account from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
+    <div class="w-full flex text-lg">
+        <h2 class="ml-auto">
+            Today's Balance <b>{{ current | money }}</b>
+        </h2>
+    </div>
+    {% with name="total" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    {% include "net-worth/chart-config.jinja" %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
+    {% with name="assets" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
+    {% with name="liabilities" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
+    <div class="flex space justify-between">
+        <div class="w-[49%]">
+            <canvas id="assets-pie-chart-canvas"></canvas>
+            <div id="assets-breakdown"></div>
+        </div>
+        <div class="w-[49%]">
+            <canvas id="liabilities-pie-chart-canvas"></canvas>
+            <div id="liabilities-breakdown"></div>
+        </div>
+    </div>
+    {# TODO(WattsUp): Synchronize hovering #}
+    {% include "net-worth/chart-data.jinja" %}
+</section>

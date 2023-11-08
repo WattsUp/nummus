@@ -90,7 +90,7 @@ def main(command_line: t.Strings = None) -> int:
     url: str = args.url
     no_call_twice: bool = args.no_call_twice
 
-    p = commands.unlock(path=path_db, pass_file=path_password)
+    p = commands.unlock(path_db=path_db, path_password=path_password)
     if p is None:
         return 1
 

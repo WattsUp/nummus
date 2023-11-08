@@ -1,6 +1,7 @@
 """Miscellaneous functions and classes."""
 from __future__ import annotations
 
+import datetime
 import getpass
 import re
 import sys
@@ -174,6 +175,25 @@ def format_days(days: int, labels: t.Strings = None) -> str:
     if days > THRESHOLD_DAYS:
         return f"{weeks:.0f} {labels[1]}"
     return f"{days} {labels[0]}"
+
+
+def range_date(start: t.Date, end: t.Date, *_, include_end: bool = True) -> t.Dates:
+    """Create a range of dates from start to end.
+
+    Args:
+        start: First date
+        end: Last date
+        include_end: True will include end date in range, False will not
+
+    Returns:
+        [start, ..., end] if include_end is True
+        [start, ..., end) if include_end is False
+    """
+    n = (end - start).days
+    if include_end:
+        n += 1
+    start_ord = start.toordinal()
+    return [datetime.date.fromordinal(start_ord + i) for i in range(n)]
 
 
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:

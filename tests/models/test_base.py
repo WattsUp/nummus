@@ -170,16 +170,15 @@ class Derived(base.BaseEnum):
 
 
 class TestBaseEnum(TestBase):
-    def test_parse(self) -> None:
-        self.assertIsNone(Derived.parse(None))
-        self.assertIsNone(Derived.parse(""))
+    def test_missing(self) -> None:
+        self.assertRaises(ValueError, Derived, None)
+        self.assertRaises(ValueError, Derived, "")
+        self.assertRaises(ValueError, Derived, "FAKE")
 
         for e in Derived:
-            self.assertEqual(Derived.parse(e), e)
-            self.assertEqual(Derived.parse(e.name), e)
-            self.assertEqual(Derived.parse(e.value), e)
+            self.assertEqual(Derived(e), e)
+            self.assertEqual(Derived(e.name), e)
+            self.assertEqual(Derived(e.value), e)
 
         for s, e in Derived._lut().items():  # noqa: SLF001
-            self.assertEqual(Derived.parse(s.upper()), e)
-
-        self.assertRaises(ValueError, Derived.parse, "FAKE")
+            self.assertEqual(Derived(s.upper()), e)

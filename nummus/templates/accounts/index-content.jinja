@@ -1,4 +1,4 @@
-<section class="flex flex-col bg-white justify-center items-center max-w-screen-lg m-auto p-2"
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
          hx-trigger="update-account from:body"
          hx-target="#main"
@@ -14,14 +14,17 @@
             {% endwith %}
         </div>
     </h1>
-    <div class="w-full flex justify-between text-lg">
+    <div class="w-full flex text-lg">
         <h2>{{ acct["name"] }}</h2>
-        <h2>
+        <h2 class="ml-auto">
             Today's Balance <b>{{ acct["value"] | money }}</b>
         </h2>
     </div>
-    {% include "accounts/chart.jinja" %}
-    <div class="w-full"
+    {% with name="account" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    {% include "accounts/chart-data.jinja" %}
+    <div class="w-full grow"
          hx-target="#txn-table"
          hx-include="#txn-config,#txn-header">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>

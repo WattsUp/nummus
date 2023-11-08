@@ -21,6 +21,8 @@
     --color-red: theme("colors.red.DEFAULT");
     --color-yellow: theme("colors.yellow.DEFAULT");
     --color-grey-500: theme("colors.grey.500");
+    --color-white: theme("colors.white.DEFAULT");
+    --color-black: theme("colors.black.DEFAULT");
   }
 
   .button {

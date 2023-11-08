@@ -1,0 +1,8 @@
+{% if include_oob %}
+    {% with oob = True %}
+        {% include "net-worth/chart-config.jinja" %}
+    {% endwith %}
+{% endif %}
+<div id="net-worth-chart-data">
+    <script>netWorthChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+</div>

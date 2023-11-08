@@ -196,14 +196,14 @@ class Account(Base):
         start: t.Date,
         end: t.Date,
         ids: t.Ints = None,
-    ) -> tuple[t.Dates, t.DictReals]:
+    ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Accounts from start to end date.
 
         Args:
             s: SQL session to use
             start: First date to evaluate
             end: Last date to evaluate (inclusive)
-            ids: Limit results to specific Assets by ID
+            ids: Limit results to specific Accounts by ID
 
         Returns:
             (List[dates], dict{Account.id_: list[values]})
@@ -250,6 +250,8 @@ class Account(Base):
         )
         query = query.where(TransactionSplit.asset_id.is_not(None))
         query = query.where(TransactionSplit.date <= start)
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
         for acct_id, a_id, qty_int, qty_frac in query.all():
             acct_id: int
             a_id: int
@@ -289,6 +291,8 @@ class Account(Base):
             query = query.where(TransactionSplit.date <= end)
             query = query.where(TransactionSplit.date > start)
             query = query.order_by(TransactionSplit.date)
+            if ids is not None:
+                query = query.where(TransactionSplit.account_id.in_(ids))
 
             for acct_id, t_date, amount, a_id, qty_int, qty_frac in query.all():
                 acct_id: int
@@ -324,21 +328,21 @@ class Account(Base):
                 else:
                     a_ids.append(a_id)
         _, assets_values = Asset.get_value_all(s, start, end, ids=a_ids)
+        n = len(dates)
         for acct_id, assets in qty_assets.items():
             if len(assets) == 0:
                 acct_values[acct_id] = cash[acct_id]
             else:
                 # Get Asset objects and convert qty to value
-                to_sum: list[t.Reals] = [cash[acct_id]]
+                summed = cash[acct_id]
                 for a_id, qty in assets.items():
                     price = assets_values[a_id]
-                    a_values = [
-                        round(p * q, 6) for p, q in zip(price, qty, strict=True)
-                    ]
-                    to_sum.append(a_values)
-
-                # Sum with cash
-                acct_values[acct_id] = [sum(x) for x in zip(*to_sum, strict=True)]
+                    for i in range(n):
+                        q = qty[i]
+                        if q == 0:
+                            continue
+                        summed[i] += price[i] * q
+                acct_values[acct_id] = [round(v, 6) for v in summed]
 
         return dates, acct_values
 
