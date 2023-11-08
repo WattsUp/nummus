@@ -53,7 +53,7 @@ def edit(uri: str) -> str:
         form = flask.request.form
         institution = form["institution"].strip()
         name = form["name"].strip()
-        category = form.get("category", type=AccountCategory.parse)
+        category = form.get("category", type=AccountCategory)
         closed = "closed" in form
 
         try:

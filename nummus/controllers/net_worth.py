@@ -112,7 +112,7 @@ def chart() -> str:
     Returns:
         string HTML response
     """
-    return common.page(
+    return flask.render_template(
         "net-worth/chart-data.jinja",
         chart=ctx_chart(),
         include_oob=True,

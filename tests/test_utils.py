@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import io
 from decimal import Decimal
 from unittest import mock
@@ -238,6 +239,20 @@ class TestUtils(TestBase):
         d = 18 * 365.25 / 12 + 1
         result = utils.format_days(d)
         self.assertEqual(result, "2 yrs")
+
+    def test_range_date(self) -> None:
+        start = datetime.date.today()
+        end = start + datetime.timedelta(days=7)
+
+        result = utils.range_date(start, end, include_end=True)
+        self.assertEqual(len(result), 8)
+        self.assertEqual(result[0], start)
+        self.assertEqual(result[-1], end)
+
+        result = utils.range_date(start, end, include_end=False)
+        self.assertEqual(len(result), 7)
+        self.assertEqual(result[0], start)
+        self.assertEqual(result[-1], end - datetime.timedelta(days=1))
 
     def test_round_list(self) -> None:
         n = 9
