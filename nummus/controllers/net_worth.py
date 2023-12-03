@@ -41,6 +41,8 @@ def ctx_chart() -> t.DictAny:
 
     with p.get_session() as s:
         # TODO(WatsUp): Net worth, period=all is too slow
+        # Replace date with date_ord
+        # Have htmx return a waiting overlay that triggers the real request
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))

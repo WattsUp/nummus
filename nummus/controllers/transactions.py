@@ -366,6 +366,7 @@ def edit(uri: str) -> str:
                 "locked": parent.locked,
                 "date": parent.date,
                 "amount": parent.amount,
+                "statement": parent.statement,
             }
 
             splits = parent.splits
