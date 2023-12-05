@@ -15,19 +15,19 @@ from tests.base import TestBase
 
 class TestCommands(TestBase):
     def test_create_unencrypted(self) -> None:
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -75,26 +75,26 @@ class TestCommands(TestBase):
             self.assertTrue(path_config.exists(), "Config does not exist")
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -188,24 +188,24 @@ class TestCommands(TestBase):
             self.assertNotEqual(rc, 0)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_unencrypted(self) -> None:
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
-            commands.utils.getpass.getpass = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
+            commands.utils.getpass.getpass = mock_input  # type: ignore[attr-defined]
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -233,27 +233,27 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
-            commands.utils.getpass.getpass = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
+            commands.utils.getpass.getpass = mock_input  # type: ignore[attr-defined]
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -343,7 +343,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_import_files(self) -> None:

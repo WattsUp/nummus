@@ -4,16 +4,23 @@ from pathlib import Path
 
 import autodict
 from sqlalchemy import orm, schema
+from typing_extensions import override
 
 from nummus import sql
 from tests.base import TestBase
+
+try:
+    from nummus import encryption
+except ImportError:
+    encryption = None
 
 
 class ORMBase(orm.DeclarativeBase):
     metadata: schema.MetaData
 
-    @orm.declared_attr
-    def __tablename__(self) -> None:
+    @orm.declared_attr  # type: ignore[attr-defined]
+    @override
+    def __tablename__(self) -> str:
         return self.__name__.lower()
 
     id_: orm.Mapped[int] = orm.mapped_column(primary_key=True, autoincrement=True)
@@ -97,12 +104,12 @@ class TestSQL(TestBase):
         self._clean_test_root()
 
     def test_get_session_encrypted(self) -> None:
-        if sql.Encryption is None:
+        if encryption is None:
             self.skipTest("Encryption is not installed")
         salt = self.random_string()
         key = self.random_string().encode()
         config = autodict.AutoDict(encrypt=True, salt=salt)
-        enc = sql.Encryption(key)
+        enc = encryption.Encryption(key)
 
         # Relative file
         path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(Path.cwd())

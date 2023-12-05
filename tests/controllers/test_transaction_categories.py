@@ -60,6 +60,8 @@ class TestTransactionCategory(WebTestBase):
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(False))
             t_cat = query.first()
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
@@ -78,6 +80,8 @@ class TestTransactionCategory(WebTestBase):
                 .where(TransactionCategory.id_ == t_cat_id)
                 .first()
             )
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.group, TransactionCategoryGroup.OTHER)
 
@@ -90,6 +94,8 @@ class TestTransactionCategory(WebTestBase):
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(True))
             t_cat = query.first()
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
             t_cat_uri = t_cat.uri
 
         endpoint = f"/h/txn-categories/c/{t_cat_uri}/edit"
@@ -102,9 +108,13 @@ class TestTransactionCategory(WebTestBase):
         today = datetime.date.today()
 
         with p.get_session() as s:
-            query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.locked.is_(False))
-            t_cat = query.first()
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.locked.is_(False))
+                .first()
+            )
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
             t_cat_uri = t_cat.uri
 
             acct = Account(
@@ -146,14 +156,18 @@ class TestTransactionCategory(WebTestBase):
 
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.id_ == t_split.category_id)
-            t_cat: TransactionCategory = query.scalar()
+            t_cat = query.scalar()
 
             self.assertEqual(t_cat.name, "Uncategorized")
 
         with p.get_session() as s:
-            query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.locked.is_(True))
-            t_cat = query.first()
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.locked.is_(True))
+                .first()
+            )
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
             t_cat_uri = t_cat.uri
 
         endpoint = f"/h/txn-categories/c/{t_cat_uri}/delete"

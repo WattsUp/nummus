@@ -36,7 +36,7 @@ class TransactionCategory(Base):
 
     @orm.validates("name")
     @override
-    def validate_strings(self, key: str, field: str) -> str:
+    def validate_strings(self, key: str, field: str) -> str | None:
         return super().validate_strings(key, field)
 
     @staticmethod

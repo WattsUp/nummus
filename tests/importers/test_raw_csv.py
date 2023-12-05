@@ -74,7 +74,7 @@ TRANSACTIONS_EXTRAS = [
 class TestCSVTransactionImporter(base.TestBase):
     def test_is_importable(self) -> None:
         path = Path("Not a CSV")
-        result = raw_csv.CSVTransactionImporter.is_importable(path, None)
+        result = raw_csv.CSVTransactionImporter.is_importable(path, b"")
         self.assertFalse(result, "File is unexpectedly importable")
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")

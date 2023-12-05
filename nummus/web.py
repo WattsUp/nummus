@@ -152,7 +152,7 @@ class Server:
 
         # Add Portfolio to context for controllers
         with self._app.app_context():
-            flask.current_app.portfolio = p
+            flask.current_app.portfolio = p  # type: ignore[attr-defined]
 
         # Enable debugger and reloader when debug
         self._app.debug = debug

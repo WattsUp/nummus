@@ -7,7 +7,9 @@ from tests import base as test_base
 
 class Derived(base.TransactionImporter):
     @classmethod
-    def is_importable(cls, name: str, buf: bytes) -> bool:  # noqa: ARG003
+    def is_importable(cls, name: str, buf: bytes) -> bool:
+        _ = name
+        _ = buf
         return False
 
     def run(self) -> base.TxnDicts:

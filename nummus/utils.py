@@ -39,7 +39,7 @@ def get_input(
     *,
     secure: bool = False,
     print_key: bool | None = None,
-) -> str:
+) -> str | None:
     """Get input from the user, optionally secure.
 
     Args:
@@ -70,7 +70,7 @@ def confirm(
     prompt: str | None = None,
     *,
     default: bool | None = False,
-) -> bool:
+) -> bool | None:
     """Prompt user for yes/no confirmation.
 
     Args:
@@ -101,7 +101,7 @@ def confirm(
         print()
 
 
-def parse_real(s: str) -> t.Real:
+def parse_real(s: str | None) -> t.Real | None:
     """Parse a string into a real number.
 
     Args:
@@ -134,7 +134,7 @@ def format_financial(x: t.Real) -> str:
     return f"${x:,.2f}"
 
 
-def parse_bool(s: str) -> bool:
+def parse_bool(s: str) -> bool | None:
     """Parse a string into a bool.
 
     Args:
@@ -151,7 +151,7 @@ def parse_bool(s: str) -> bool:
     return s.lower() in ["true", "t", "1"]
 
 
-def format_days(days: int, labels: t.Strings = None) -> str:
+def format_days(days: int, labels: t.Strings | None = None) -> str:
     """Format number of days to days, weeks, months, or years.
 
     Args:

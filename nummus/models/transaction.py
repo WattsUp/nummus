@@ -62,7 +62,7 @@ class TransactionSplit(Base):
 
     @orm.validates("payee", "description", "tag")
     @override
-    def validate_strings(self, key: str, field: str) -> str:
+    def validate_strings(self, key: str, field: str) -> str | None:
         return super().validate_strings(key, field)
 
     @override
@@ -76,27 +76,30 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
     @property
-    def asset_quantity(self) -> t.Real:
+    def asset_quantity(self) -> t.Real | None:
         """Number of units of Asset exchanged.
 
         Positive indicates Account gained Assets (inflow), adjusted for splits.
         """
-        if self._asset_qty_int is None:
+        if self._asset_qty_int is None or self._asset_qty_frac is None:
             return None
         return self._asset_qty_int + self._asset_qty_frac
 
     @property
-    def asset_quantity_unadjusted(self) -> t.Real:
+    def asset_quantity_unadjusted(self) -> t.Real | None:
         """Number of units of Asset exchanged.
 
         Positive indicates Account gained Assets (inflow), unadjusted for splits.
         """
-        if self._asset_qty_int_unadjusted is None:
+        if (
+            self._asset_qty_int_unadjusted is None
+            or self._asset_qty_frac_unadjusted is None
+        ):
             return None
         return self._asset_qty_int_unadjusted + self._asset_qty_frac_unadjusted
 
     @asset_quantity_unadjusted.setter
-    def asset_quantity_unadjusted(self, qty: t.Real) -> None:
+    def asset_quantity_unadjusted(self, qty: t.Real | None) -> None:
         if qty is None:
             self._asset_qty_int_unadjusted = None
             self._asset_qty_frac_unadjusted = None
@@ -131,7 +134,11 @@ class TransactionSplit(Base):
     def parent(self) -> Transaction:
         """Parent Transaction."""
         s = orm.object_session(self)
-        return s.query(Transaction).where(Transaction.id_ == self.parent_id).first()
+        if s is None:
+            msg = "Object is unbound to a session"
+            raise ValueError(msg)
+        query = s.query(Transaction).where(Transaction.id_ == self.parent_id)
+        return query.scalar()  # type: ignore[attr-defined]
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:
@@ -197,5 +204,5 @@ class Transaction(Base):
 
     @orm.validates("statement")
     @override
-    def validate_strings(self, key: str, field: str) -> str:
+    def validate_strings(self, key: str, field: str) -> str | None:
         return super().validate_strings(key, field)

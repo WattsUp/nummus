@@ -229,7 +229,7 @@ class TestCommon(WebTestBase):
 
                 b = Budget()
                 b.date = today
-                b.amount = 1
+                b.amount = Decimal(1)
                 with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
                     s.add(b)
                     s.commit()

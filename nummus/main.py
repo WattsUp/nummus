@@ -14,7 +14,7 @@ from nummus import custom_types as t
 from nummus import version
 
 
-def main(command_line: t.Strings = None) -> int:
+def main(command_line: t.Strings | None = None) -> int:
     """Main program entry.
 
     Args:

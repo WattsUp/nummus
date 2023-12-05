@@ -45,7 +45,7 @@ class Portfolio:
     _NUMMUS_USER = "root"
     _NUMMUS_PASSWORD = "unencrypted database"  # noqa: S105
 
-    def __init__(self, path: str, key: str) -> None:
+    def __init__(self, path: str | Path, key: str | None) -> None:
         """Initialize Portfolio.
 
         Args:
@@ -68,12 +68,12 @@ class Portfolio:
             raise FileNotFoundError(msg)
         self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
-        self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
+        self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
 
         if key is None:
             self._enc = None
         else:
-            self._enc = encryption.Encryption(key.encode())
+            self._enc = encryption.Encryption(key)  # type: ignore[attr-defined]
         self._unlock()
 
     @property
@@ -82,7 +82,7 @@ class Portfolio:
         return self._path_db
 
     @staticmethod
-    def is_encrypted(path: str) -> bool:
+    def is_encrypted(path: str | Path) -> bool:
         """Check Portfolio's config for encryption status.
 
         Args:
@@ -102,11 +102,11 @@ class Portfolio:
         if not path_config.exists():
             msg = f"Portfolio configuration does not exist, for {path_db}"
             raise FileNotFoundError(msg)
-        with autodict.JSONAutoDict(path_config, save_on_exit=False) as config:
+        with autodict.JSONAutoDict(str(path_config), save_on_exit=False) as config:
             return config["encrypt"]
 
     @staticmethod
-    def create(path: str, key: str | None = None) -> Portfolio:
+    def create(path: str | Path, key: str | None = None) -> Portfolio:
         """Create a new Portfolio.
 
         Saves database and configuration file
@@ -134,13 +134,13 @@ class Portfolio:
 
         enc = None
         if encryption is not None and key is not None:
-            enc = encryption.Encryption(key.encode())
+            enc = encryption.Encryption(key)
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_images.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
         salt = secrets.token_urlsafe()
-        config = autodict.JSONAutoDict(path_config)
+        config = autodict.JSONAutoDict(str(path_config))
         config.clear()
         config["version"] = str(version.__version__)
         config["key_version"] = 1  # Increment if there is a breaking change
@@ -189,7 +189,7 @@ class Portfolio:
         sql.drop_session(self._path_db)
         try:
             with self.get_session() as s:
-                user: Credentials = (
+                user: Credentials | None = (
                     s.query(Credentials)
                     .where(
                         Credentials.site == self._NUMMUS_SITE,
@@ -232,6 +232,45 @@ class Portfolio:
         """
         return sql.get_session(self._path_db, self._config, self._enc)
 
+    def encrypt(self, secret: bytes | str) -> str:
+        """Encrypt a secret using the key.
+
+        Args:
+            secret: Secret object
+
+        Returns:
+            base64 encoded encrypted object
+        """
+        if self._enc is None:
+            msg = "Portfolio is not encrypted"
+            raise PermissionError(msg)
+        return self._enc.encrypt(secret)
+
+    def decrypt(self, enc_secret: str) -> bytes:
+        """Decrypt an encoded secret using the key.
+
+        Args:
+            enc_secret: base64 encoded encrypted object
+
+        Returns:
+            bytes decoded object
+        """
+        if self._enc is None:
+            msg = "Portfolio is not encrypted"
+            raise PermissionError(msg)
+        return self._enc.decrypt(enc_secret)
+
+    def decrypt_s(self, enc_secret: str) -> str:
+        """Decrypt an encoded secret using the key.
+
+        Args:
+            enc_secret: base64 encoded encrypted string
+
+        Returns:
+            decoded string
+        """
+        return self.decrypt(enc_secret).decode()
+
     def import_file(self, path: Path) -> None:
         """Import a file into the Portfolio.
 
@@ -257,6 +296,9 @@ class Portfolio:
             for d in i.run():
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
+                if not isinstance(category_s, str):
+                    msg = "Category is not a string"
+                    raise TypeError(msg)
                 d_split: importers.TxnDict = {
                     "amount": d["amount"],  # Both split and parent have amount
                     "payee": d.pop("payee", None),
@@ -267,10 +309,13 @@ class Portfolio:
                 }
 
                 account_raw = d.pop("account")
+                if not isinstance(account_raw, str):
+                    msg = "Account is not a string"
+                    raise TypeError(msg)
                 account_id = account_mapping.get(account_raw)
                 if account_id is None:
                     account = self.find_account(account_raw, session=s)
-                    if account is None:
+                    if not isinstance(account, Account):
                         msg = f"Could not find Account by '{account_raw}'"
                         raise KeyError(msg)
                     account_id = account.id_
@@ -279,11 +324,14 @@ class Portfolio:
 
                 asset_raw = d.pop("asset", None)
                 if asset_raw is not None:
+                    if not isinstance(asset_raw, str):
+                        msg = "Asset is not a string"
+                        raise TypeError(msg)
                     # Find its ID
                     asset_id = asset_mapping.get(asset_raw)
                     if asset_id is None:
                         asset = self.find_asset(asset_raw, session=s)
-                        if asset is None:
+                        if not isinstance(asset, Asset):
                             msg = f"Could not find Asset by '{asset_raw}'"
                             raise KeyError(msg)
                         asset_id = asset.id_
@@ -300,9 +348,9 @@ class Portfolio:
 
     def find_account(
         self,
-        query: t.IntOrStr,
-        session: orm.Session = None,
-    ) -> int | Account:
+        query: int | str,
+        session: orm.Session | None = None,
+    ) -> int | Account | None:
         """Find a matching Account by name, URI, institution, or ID.
 
         Args:
@@ -314,7 +362,7 @@ class Portfolio:
             If session is not None: return Account object or None
         """
 
-        def _find(s: orm.Session) -> Account:
+        def _find(s: orm.Session) -> Account | None:
             if isinstance(query, int):
                 # See if account is an ID first...
                 matches = s.query(Account).where(Account.id_ == query).all()
@@ -350,9 +398,9 @@ class Portfolio:
 
     def find_asset(
         self,
-        query: t.IntOrStr,
-        session: orm.Session = None,
-    ) -> int | Asset:
+        query: int | str,
+        session: orm.Session | None = None,
+    ) -> int | Asset | None:
         """Find a matching Asset by name, URI, or ID.
 
         Args:
@@ -364,7 +412,7 @@ class Portfolio:
             If session is not None: return Asset object or None
         """
 
-        def _find(s: orm.Session) -> Asset:
+        def _find(s: orm.Session) -> Asset | None:
             if isinstance(query, int):
                 # See if account is an ID first...
                 matches = s.query(Asset).where(Asset.id_ == query).all()
@@ -424,7 +472,7 @@ class Portfolio:
                 query = s.query(Asset).where(Asset.img_suffix.is_not(None))
                 for asset in query.all():
                     # Query whole object okay, need image_name property
-                    file = self._path_images.joinpath(asset.image_name)
+                    file = self._path_images.joinpath(asset.image_name)  # type: ignore[attr-defined]
                     files.append(file)
 
             for file in files:
@@ -464,7 +512,7 @@ class Portfolio:
         Portfolio.restore(self, tar_ver=1)
 
     @staticmethod
-    def restore(p: str | Portfolio, tar_ver: int | None = None) -> None:
+    def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
         """Restore Portfolio from backup.
 
         Args:
@@ -507,7 +555,7 @@ class Portfolio:
         # Reload Portfolio
         if isinstance(p, Portfolio):
             p._config = autodict.JSONAutoDict(  # noqa: SLF001
-                p._path_config,  # noqa: SLF001
+                str(p._path_config),  # noqa: SLF001
                 save_on_exit=False,
             )
             p._unlock()  # noqa: SLF001

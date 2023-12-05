@@ -12,7 +12,7 @@ class TestTransactionCategory(TestBase):
 
         d = {
             "name": self.random_string(),
-            "group": self._RNG.choice(TransactionCategoryGroup),
+            "group": TransactionCategoryGroup.INCOME,
             "locked": False,
         }
 

@@ -15,7 +15,6 @@ from sqlalchemy import orm
 Date = datetime.date
 Dates = list[Date]
 Ints = list[int]
-IntOrStr = int | str
 Paths = list[Path]
 Real = decimal.Decimal
 Reals = list[Real]

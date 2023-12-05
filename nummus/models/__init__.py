@@ -17,6 +17,7 @@ from nummus.models.transaction_category import (
 from nummus.models.utils import paginate, query_count, search
 
 if TYPE_CHECKING:
+    import sqlalchemy
     from sqlalchemy import orm
 
 __all__ = [
@@ -51,7 +52,7 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    tables = [
+    tables: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
         Account.__table__,
         Asset.__table__,
         AssetSplit.__table__,

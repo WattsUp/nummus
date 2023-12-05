@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 import sqlalchemy.exc
 
@@ -133,7 +134,7 @@ class TestTransactionSplit(TestBase):
         self.assertEqual(t_split_1.account_id, acct.id_)
 
         # Zero amounts are bad
-        t_split_0.amount = 0
+        t_split_0.amount = Decimal(0)
         self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
         s.rollback()
 

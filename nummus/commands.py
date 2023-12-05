@@ -17,7 +17,13 @@ colorama.init(autoreset=True)
 MIN_PASS_LEN = 8
 
 
-def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool) -> int:
+def create(
+    path_db: Path,
+    path_password: Path | None,
+    *,
+    force: bool,
+    no_encrypt: bool,
+) -> int:
     """Create a new Portfolio.
 
     Args:
@@ -39,7 +45,7 @@ def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool)
             )
             return 1
 
-    key: str = None
+    key: str | None = None
     if not no_encrypt:
         if path_password is not None and path_password.exists():
             with path_password.open(encoding="utf-8") as file:
@@ -72,7 +78,7 @@ def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool)
     return 0
 
 
-def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
+def unlock(path_db: Path, path_password: Path | None) -> portfolio.Portfolio | None:
     """Unlock an existing Portfolio.
 
     Args:
@@ -91,7 +97,7 @@ def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
         print(f"{Fore.GREEN}Portfolio is unlocked")
         return p
 
-    key: str = None
+    key: str | None = None
 
     if path_password is not None and path_password.exists():
         with path_password.open(encoding="utf-8") as file:
@@ -141,7 +147,11 @@ def backup(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def restore(path_db: Path, path_password: Path, tar_ver: int | None = None) -> int:
+def restore(
+    path_db: Path,
+    path_password: Path | None,
+    tar_ver: int | None = None,
+) -> int:
     """Backup portfolio to tar.gz.
 
     Args:
@@ -160,7 +170,7 @@ def restore(path_db: Path, path_password: Path, tar_ver: int | None = None) -> i
         print(f"{Fore.RED}{e}")
         return 1
     p = unlock(path_db, path_password)
-    print(f"{Fore.GREEN}Portfolio restored for {p.path}")
+    print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
     return 0
 
 

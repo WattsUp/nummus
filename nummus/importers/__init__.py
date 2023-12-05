@@ -18,7 +18,7 @@ __all__ = [
 ]
 
 
-def get_importer(path: Path) -> TransactionImporter:
+def get_importer(path: Path) -> TransactionImporter | None:
     """Get the best importer for a file.
 
     Args:

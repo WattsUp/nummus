@@ -199,8 +199,6 @@ class WebTestBase(TestBase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        cls._client = None
-        cls._portfolio = None
         sql.drop_session()
         cls._clean_test_root()
         super().tearDownClass()
@@ -245,11 +243,10 @@ class WebTestBase(TestBase):
         self,
         method: str,
         endpoint: str,
-        queries: t.DictStr = None,
-        content_type: str = "text/html; charset=utf-8",
+        queries: t.DictAny | None = None,
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> tuple[ResultType, t.DictStr]:
+    ) -> tuple[str, t.DictStr]:
         """Run a test HTTP request.
 
         Args:
@@ -257,13 +254,11 @@ class WebTestBase(TestBase):
             endpoint: URL endpoint to test
             queries: Dictionary of queries to append, will run through
             urllib.parse.quote
-            content_type: Expected content type
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
-            (response.text, headers) if content_type == text/html
-            (response.get_data(), headers) otherwise
+            (response.text, headers)
         """
         if queries is None or len(queries) < 1:
             url = endpoint
@@ -277,7 +272,7 @@ class WebTestBase(TestBase):
             url = f"{endpoint}?{'&'.join(queries_flat)}"
 
         kwargs["method"] = method
-        response: werkzeug.test.TestResponse = None
+        response: werkzeug.test.TestResponse | None = None
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -289,9 +284,9 @@ class WebTestBase(TestBase):
                         response = self._client.open(url, **kwargs)
             duration = time.perf_counter() - start
             self.assertEqual(response.status_code, rc, msg=response.text)
-            self.assertEqual(response.content_type, content_type)
+            self.assertEqual(response.content_type, "text/html; charset=utf-8")
 
-            with autodict.JSONAutoDict(TEST_LOG) as d:
+            with autodict.JSONAutoDict(str(TEST_LOG)) as d:
                 # Replace uri with {accountURI, assetURI, ...}
                 parts = []
                 for p in endpoint.split("/"):
@@ -310,13 +305,9 @@ class WebTestBase(TestBase):
 
             self.assertLessEqual(duration, 0.2)  # All responses faster than 200ms
 
-            if content_type is None:
-                return response.get_data(), response.headers
-            if content_type.startswith("text/html"):
-                html = response.text
-                self.assertValidHTML(html)
-                return html, response.headers
-            return response.get_data(), response.headers
+            html = response.text
+            self.assertValidHTML(html)
+            return html, response.headers
         finally:
             if response is not None:
                 response.close()
@@ -324,30 +315,26 @@ class WebTestBase(TestBase):
     def web_get(
         self,
         endpoint: str,
-        queries: t.DictStr = None,
-        content_type: str = "text/html; charset=utf-8",
+        queries: t.DictAny | None = None,
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> tuple[ResultType, t.DictStr]:
+    ) -> tuple[str, t.DictStr]:
         """Run a test HTTP GET request.
 
         Args:
             endpoint: URL endpoint to test
             queries: Dictionary of queries to append, will run through
             urllib.parse.quote
-            content_type: Expected content type
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
-            (response.text, headers) if content_type == text/html
-            (response.get_data(), headers) otherwise
+            (response.text, headers)
         """
         return self.web_open(
             "GET",
             endpoint,
             queries,
-            content_type=content_type,
             rc=rc,
             **kwargs,
         )
@@ -355,30 +342,26 @@ class WebTestBase(TestBase):
     def web_put(
         self,
         endpoint: str,
-        queries: t.DictStr = None,
-        content_type: str = "text/html; charset=utf-8",
+        queries: t.DictAny | None = None,
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> tuple[ResultType, t.DictStr]:
+    ) -> tuple[str, t.DictStr]:
         """Run a test HTTP PUT request.
 
         Args:
             endpoint: URL endpoint to test
             queries: Dictionary of queries to append, will run through
             urllib.parse.quote
-            content_type: Expected content type
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
-            (response.text, headers) if content_type == text/html
-            (response.get_data(), headers) otherwise
+            (response.text, headers)
         """
         return self.web_open(
             "PUT",
             endpoint,
             queries,
-            content_type=content_type,
             rc=rc,
             **kwargs,
         )
@@ -386,30 +369,26 @@ class WebTestBase(TestBase):
     def web_post(
         self,
         endpoint: str,
-        queries: t.DictStr = None,
-        content_type: str = "text/html; charset=utf-8",
+        queries: t.DictAny | None = None,
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> tuple[ResultType, t.DictStr]:
+    ) -> tuple[str, t.DictStr]:
         """Run a test HTTP POST request.
 
         Args:
             endpoint: URL endpoint to test
             queries: Dictionary of queries to append, will run through
             urllib.parse.quote
-            content_type: Expected content type
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
-            (response.text, headers) if content_type == text/html
-            (response.get_data(), headers) otherwise
+            (response.text, headers)
         """
         return self.web_open(
             "POST",
             endpoint,
             queries,
-            content_type=content_type,
             rc=rc,
             **kwargs,
         )
@@ -417,30 +396,26 @@ class WebTestBase(TestBase):
     def web_delete(
         self,
         endpoint: str,
-        queries: t.DictStr = None,
-        content_type: str = "text/html; charset=utf-8",
+        queries: t.DictAny | None = None,
         rc: int = HTTP_CODE_OK,
         **kwargs: t.Any,
-    ) -> tuple[ResultType, t.DictStr]:
+    ) -> tuple[str, t.DictStr]:
         """Run a test HTTP DELETE request.
 
         Args:
             endpoint: URL endpoint to test
             queries: Dictionary of queries to append, will run through
             urllib.parse.quote
-            content_type: Expected content type
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
-            (response.text, headers) if content_type == text/html
-            (response.get_data(), headers) otherwise
+            (response.text, headers)
         """
         return self.web_open(
             "DELETE",
             endpoint,
             queries,
-            content_type=content_type,
             rc=rc,
             **kwargs,
         )

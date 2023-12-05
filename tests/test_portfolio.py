@@ -39,7 +39,7 @@ class TestPortfolio(TestBase):
         self.assertRaises(FileNotFoundError, portfolio.Portfolio, path_db, None)
 
         # Make config
-        autodict.JSONAutoDict(path_config).save()
+        autodict.JSONAutoDict(str(path_config)).save()
 
         # Failed to unlock
         self.assertRaises(TypeError, portfolio.Portfolio, path_db, None)
@@ -93,12 +93,14 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             user.password = self.random_string()
             s.commit()
 
@@ -117,12 +119,14 @@ class TestPortfolio(TestBase):
         # Delete root
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             s.delete(user)
             s.commit()
 
@@ -175,13 +179,15 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
-            user.password = p._enc.encrypt(secrets.token_bytes())  # noqa: SLF001
+            if user is None:
+                self.fail("Missing nummus user")
+            user.password = p.encrypt(secrets.token_bytes())
             s.commit()
 
         # Invalid root password
@@ -199,12 +205,14 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             user.password = key
             s.commit()
 
@@ -223,7 +231,7 @@ class TestPortfolio(TestBase):
         # Still missing config
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
 
-        with autodict.JSONAutoDict(path_config) as c:
+        with autodict.JSONAutoDict(str(path_config)) as c:
             c["encrypt"] = True
 
         self.assertTrue(
@@ -231,7 +239,7 @@ class TestPortfolio(TestBase):
             "Database is unexpectedly unencrypted",
         )
 
-        with autodict.JSONAutoDict(path_config) as c:
+        with autodict.JSONAutoDict(str(path_config)) as c:
             c["encrypt"] = False
 
         self.assertFalse(
@@ -418,6 +426,8 @@ class TestPortfolio(TestBase):
                             .where(TransactionCategory.id_ == cat_id)
                             .first()
                         )
+                        if r_v is None:
+                            self.fail(f"Missing category: {cat_id}")
                         self.assertEqual(r_v.name, test_value)
                     elif prop in split_properties:
                         r_v = getattr(r_split, prop)
@@ -463,12 +473,12 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()
+            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
             with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
@@ -490,7 +500,7 @@ class TestPortfolio(TestBase):
             self.assertEqual(len(accounts), 2)
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertNotEqual(buf_backup, buf)
@@ -501,12 +511,12 @@ class TestPortfolio(TestBase):
 
         # Files should match again
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()
+            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
             with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
@@ -544,6 +554,8 @@ class TestPortfolio(TestBase):
             s.add(asset)
             s.commit()
 
+            if asset.image_name is None:
+                self.fail("Asset is missing image")
             path_a_img = p.image_path.joinpath(asset.image_name)
             path_a_img_rel = str(path_a_img.relative_to(self._TEST_ROOT))
             a_img = self.random_string().encode()
@@ -565,11 +577,11 @@ class TestPortfolio(TestBase):
 
         p.backup()
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_a_img_rel).read()
+            buf_backup = tar.extractfile(path_a_img_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, a_img)
-            buf_backup = tar.extractfile(path_cert_rel).read()
+            buf_backup = tar.extractfile(path_cert_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_cert)
-            buf_backup = tar.extractfile(path_key_rel).read()
+            buf_backup = tar.extractfile(path_key_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_key)
         a_img = None
         buf_backup = None

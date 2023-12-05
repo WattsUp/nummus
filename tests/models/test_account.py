@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 from nummus import models
 from nummus.models import (
@@ -383,7 +384,7 @@ class TestAccount(TestBase):
         self.assertEqual(r_values, {acct.id_: target_values})
 
         # Add valuations to Asset
-        prices = self.random_decimal(1, 10, size=len(target_dates))
+        prices = [self.random_decimal(1, 10) for _ in range(len(target_dates))]
         for date, p in zip(target_dates, prices, strict=True):
             v = AssetValuation(asset_id=assets[0].id_, date=date, value=p)
             s.add(v)
@@ -478,7 +479,7 @@ class TestAccount(TestBase):
         t_cat_trade = categories["Securities Traded"]
 
         target_dates = [(today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)]
-        target_categories = {cat.id_: [0] * 7 for cat in categories.values()}
+        target_categories = {cat.id_: [Decimal(0)] * 7 for cat in categories.values()}
         start = target_dates[0]
         end = target_dates[-1]
 

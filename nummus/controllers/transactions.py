@@ -60,7 +60,7 @@ def options(field: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
         args = flask.request.args
@@ -97,7 +97,7 @@ def options(field: str) -> str:
 def ctx_options(
     query: orm.Query,
     field: str,
-    id_mapping: t.DictIntStr = None,
+    id_mapping: t.DictIntStr | None = None,
     search_str: str | None = None,
 ) -> list[t.DictAny]:
     """Get the context to build the options for table.
@@ -114,7 +114,7 @@ def ctx_options(
     query = query.order_by(None)
     args = flask.request.args
     selected: t.Strings = args.getlist(field)
-    options_: list[t.DictStr] = []
+    options_: list[dict[str, str | int | bool]] = []
     entities = {
         "account": TransactionSplit.account_id,
         "payee": TransactionSplit.payee,
@@ -141,7 +141,7 @@ def ctx_options(
             processor=lambda s: s.lower(),
         )
         for _, score, i in extracted:
-            options_[i]["score"] = score
+            options_[i]["score"] = int(score)
             options_[i]["hidden"] = score < utils.SEARCH_THRESHOLD
     if field in ["payee", "tag"]:
         name = "[blank]"
@@ -173,7 +173,7 @@ def ctx_table(
         Dictionary HTML context
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
         args = flask.request.args
@@ -256,9 +256,9 @@ def ctx_table(
             query = query.where(TransactionSplit.locked == locked)
 
         if search_str != "":
-            query = search(query, TransactionSplit, search_str)
+            query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
 
-        page, count, offset_next = paginate(query, page_len, offset)
+        page, count, offset_next = paginate(query, page_len, offset)  # type: ignore[attr-defined]
 
         query = query.with_entities(sqlalchemy.func.sum(TransactionSplit.amount))
         query_total = query.scalar() or Decimal(0)
@@ -270,7 +270,7 @@ def ctx_table(
             start = query.scalar() or datetime.date(1970, 1, 1)
 
         transactions: list[t.DictAny] = []
-        for t_split in page:
+        for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
             t_split_ctx = ctx_split(t_split, accounts, categories)
             page_total += t_split.amount
@@ -337,7 +337,7 @@ def ctx_split(
     }
 
 
-def edit(uri: str) -> str:
+def edit(uri: str) -> str | flask.Response:
     """GET & POST /h/transactions/t/<uri>/edit.
 
     Args:
@@ -347,13 +347,13 @@ def edit(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
         try:
-            parent: Transaction = web_utils.find(s, Transaction, uri)
+            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
         except exceptions.BadRequest:
-            child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)
+            child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
         categories = TransactionCategory.map_name(s)
 
@@ -401,7 +401,10 @@ def edit(uri: str) -> str:
         try:
             form = flask.request.form
 
-            parent.date = form.get("date", type=datetime.date.fromisoformat)
+            date = form.get("date", type=datetime.date.fromisoformat)
+            if date is None:
+                return common.error("Transaction date must not be empty")
+            parent.date = date
             parent.locked = "locked" in form
 
             payee = form.getlist("payee")
@@ -437,11 +440,17 @@ def edit(uri: str) -> str:
             for i, t_split in enumerate(splits):
                 t_split.parent = parent
 
-                t_split.payee = payee[i]
-                t_split.description = description[i]
-                t_split.category_id = categories_rev[category[i]]
-                t_split.tag = tag[i]
-                t_split.amount = amount[i]
+                try:
+                    t_split.payee = payee[i]
+                    t_split.description = description[i]
+                    t_split.category_id = categories_rev[category[i]]
+                    t_split.tag = tag[i]
+                    a = amount[i]
+                except IndexError:
+                    return common.error("Transaction split missing properties")
+                if a is None:
+                    return common.error("Transaction split amount must not be empty")
+                t_split.amount = a
 
             s.commit()
         except (sqlalchemy.exc.IntegrityError, ValueError) as e:
@@ -460,18 +469,18 @@ def split(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
         categories = TransactionCategory.map_name(s)
 
     form = flask.request.form
 
-    payee = form.getlist("payee")
-    description = form.getlist("description")
-    category = form.getlist("category")
-    tag = form.getlist("tag")
-    amount = form.getlist("amount", utils.parse_real)
+    payee: list[str | None] = list(form.getlist("payee"))
+    description: list[str | None] = list(form.getlist("description"))
+    category: list[str] = form.getlist("category")
+    tag: list[str | None] = list(form.getlist("tag"))
+    amount: list[t.Real | None] = list(form.getlist("amount", utils.parse_real))
 
     if flask.request.method == "PUT":
         payee.append(None)
@@ -511,7 +520,7 @@ def split(uri: str) -> str:
     )
     if flask.request.method == "DELETE":
         with p.get_session() as s:
-            parent: Transaction = web_utils.find(s, Transaction, uri)
+            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
             current = sum(filter(None, amount))
             html += flask.render_template(
                 "transactions/edit-remaining.jinja",
@@ -531,10 +540,10 @@ def remaining(uri: str) -> str:
       string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        parent: Transaction = web_utils.find(s, Transaction, uri)
+        parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
         form = flask.request.form
 
         amount = form.getlist("amount", utils.parse_real)

@@ -23,6 +23,8 @@ class TestAccount(WebTestBase):
         self.assertEqual(headers["HX-Trigger"], "update-account")
         with p.get_session() as s:
             acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
             self.assertEqual(acct.name, name)
             self.assertEqual(acct.institution, institution)
             self.assertEqual(acct.category, AccountCategory.CREDIT)

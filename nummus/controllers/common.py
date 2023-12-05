@@ -42,7 +42,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     """
     # Create sidebar context
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
 
     assets = Decimal(0)
@@ -163,7 +163,7 @@ def ctx_base() -> t.DictAny:
         Dictionary HTML context
     """
     # TODO(WattsUp): Implement remaining pages
-    pages: dict[str, dict[str, str]] = {
+    pages: dict[str, dict[str, str | None]] = {
         "Overview": {
             "Dashboard": None,
             "Net Worth": "net_worth.page",
@@ -273,7 +273,7 @@ def error(e: str | Exception) -> str:
     return flask.render_template("shared/error.jinja", error=str(e))
 
 
-def page(content_template: str, **context: t.DictAny) -> str:
+def page(content_template: str, **context: t.Any) -> str:
     """Render a page with a given content template.
 
     Args:

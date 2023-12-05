@@ -50,7 +50,7 @@ class TestServer(TestBase):
         flask_app = s._app  # noqa: SLF001
 
         with flask_app.app_context():
-            flask_p: portfolio.Portfolio = flask.current_app.portfolio
+            flask_p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         self.assertEqual(flask_p, p)
         self.assertEqual(flask_app.debug, debug)
 
@@ -96,8 +96,8 @@ class TestServer(TestBase):
             s = web.Server(p, host, port, debug=debug)
         s_server = s._server  # noqa: SLF001
 
-        s_server.serve_forever = lambda *_: print("serve_forever")
-        s_server.stop = lambda *_: print("stop")
+        s_server.serve_forever = lambda *_: print("serve_forever")  # type: ignore[attr-defined]
+        s_server.stop = lambda *_: print("stop")  # type: ignore[attr-defined]
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
@@ -121,8 +121,8 @@ class TestServer(TestBase):
         def raise_keyboard_interrupt() -> None:
             raise KeyboardInterrupt
 
-        s_server.serve_forever = raise_keyboard_interrupt
-        s_server.stop = lambda *_: print("stop")
+        s_server.serve_forever = raise_keyboard_interrupt  # type: ignore[attr-defined]
+        s_server.stop = lambda *_: print("stop")  # type: ignore[attr-defined]
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
@@ -247,7 +247,7 @@ class TestHandler(TestBase):
     def test_format_request(self) -> None:
         h = web.Handler(None, None, None, "Not None")
 
-        h.response_length = None
+        h.response_length = None  # type: ignore[attr-defined]
         utc_now = datetime.datetime.utcnow()
         with time_machine.travel(utc_now, tick=False):
             now = datetime.datetime.now().replace(microsecond=0)
@@ -390,7 +390,7 @@ class TestTailwindCSSFilter(TestBase):
         f = web.TailwindCSSFilter()
 
         out = io.StringIO()
-        f.output(None, out)
+        f.output(None, out)  # type: ignore[attr-defined]
         buf = out.getvalue()
         target = "/*! tailwindcss"
         self.assertEqual(buf[: len(target)], target)

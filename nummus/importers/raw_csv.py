@@ -67,12 +67,11 @@ class CSVTransactionImporter(TransactionImporter):
             for key, item in self._COLUMNS.items():
                 required, cleaner = item
                 value = row.get(key)
-                if value in [None, ""]:
-                    if required:
-                        msg = f"CSV is missing column: {key}"
-                        raise KeyError(msg)
-                else:
+                if value:
                     txn[key] = cleaner(value)
+                elif required:
+                    msg = f"CSV is missing column: {key}"
+                    raise KeyError(msg)
             txn["statement"] = txn["description"]
             transactions.append(txn)
         return transactions

@@ -22,10 +22,10 @@ if TYPE_CHECKING:
     from nummus import custom_types as t
 
 DEFAULT_PERIOD = "90-days"
-PREVIOUS_PERIOD = {"start": None, "end": None}
+PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
-def edit(uri: str) -> str:
+def edit(uri: str) -> str | flask.Response:
     """GET & POST /h/accounts/a/<uri>/edit.
 
     Args:
@@ -35,11 +35,11 @@ def edit(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)
+        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
         _, values, _ = acct.get_value(today, today)
         v = values[0]
@@ -55,6 +55,9 @@ def edit(uri: str) -> str:
         name = form["name"].strip()
         category = form.get("category", type=AccountCategory)
         closed = "closed" in form
+
+        if category is None:
+            return common.error("Account category must not be None")
 
         try:
             if closed and v != 0:
@@ -146,10 +149,10 @@ def page(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)
+        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
         return common.page(
             "accounts/index-content.jinja",
             acct=ctx_account(acct),
@@ -168,10 +171,10 @@ def table(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)
+        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)
@@ -207,10 +210,10 @@ def options(uri: str, field: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)
+        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
         args = flask.request.args
 
         id_mapping = None

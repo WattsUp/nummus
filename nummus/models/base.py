@@ -23,12 +23,12 @@ class Base(orm.DeclarativeBase):
 
     metadata: schema.MetaData
 
-    @orm.declared_attr
+    @orm.declared_attr  # type: ignore[attr-defined]
     @override
     def __tablename__(self) -> str:
         return utils.camel_to_snake(self.__name__)
 
-    __table_id__: int = None
+    __table_id__: int
 
     id_: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
@@ -64,7 +64,7 @@ class Base(orm.DeclarativeBase):
     @property
     def uri(self) -> str:
         """Uniform Resource Identifier derived from id_ and __table_id__."""
-        return None if self.id_ is None else self.id_to_uri(self.id_)
+        return self.id_to_uri(self.id_)
 
     @override
     def __repr__(self) -> str:
@@ -113,10 +113,10 @@ class Base(orm.DeclarativeBase):
             raise KeyError(msg)
 
         query = s.query(cls)
-        query = query.with_entities(cls.id_, cls.name)
+        query = query.with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]
         return dict(query.all())
 
-    def validate_strings(self, key: str, field: str) -> str:
+    def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields are not empty.
 
         Args:
@@ -129,7 +129,7 @@ class Base(orm.DeclarativeBase):
         Raises:
             ValueError if field is empty
         """
-        if field in [None, "", "[blank]"]:
+        if field is None or field in ["", "[blank]"]:
             return None
         if len(field) < utils.MIN_STR_LEN:
             table: str = self.__tablename__
@@ -143,7 +143,7 @@ class BaseEnum(enum.Enum):
     """Enum class with a parser."""
 
     @classmethod
-    def _missing_(cls, value: object) -> BaseEnum:
+    def _missing_(cls, value: object) -> BaseEnum | None:
         if isinstance(value, str):
             s = value.upper().strip()
             if s in cls._member_names_:
@@ -170,7 +170,7 @@ class Decimal6(types.TypeDecorator):
 
     _FACTOR = Decimal("1e6")
 
-    def process_bind_param(self, value: t.Real, _) -> int:
+    def process_bind_param(self, value: t.Real, _) -> int | None:
         """Receive a bound parameter value to be converted.
 
         Args:
@@ -183,7 +183,7 @@ class Decimal6(types.TypeDecorator):
             return None
         return int(value * self._FACTOR)
 
-    def process_result_value(self, value: int, _) -> t.Real:
+    def process_result_value(self, value: int, _) -> t.Real | None:
         """Receive a result-row column value to be converted.
 
         Args:
