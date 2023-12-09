@@ -53,6 +53,7 @@ def edit(uri: str) -> str | flask.Response:
         form = flask.request.form
         institution = form["institution"].strip()
         name = form["name"].strip()
+        number = form["number"].strip()
         category = form.get("category", type=AccountCategory)
         closed = "closed" in form
 
@@ -67,6 +68,7 @@ def edit(uri: str) -> str | flask.Response:
             # Make the changes
             acct.institution = institution
             acct.name = name
+            acct.number = number
             acct.category = category
             acct.closed = closed
             s.commit()
@@ -94,6 +96,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     return {
         "uri": acct.uri,
         "name": acct.name,
+        "number": acct.number,
         "institution": acct.institution,
         "category": acct.category,
         "category_type": AccountCategory,

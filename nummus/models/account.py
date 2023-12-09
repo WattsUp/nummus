@@ -34,6 +34,7 @@ class Account(Base):
     Attributes:
         uri: Account unique identifier
         name: Account name
+        number: Account number
         institution: Account holding institution
         category: Type of Account
         closed: True if Account is closed, will hide from view and not update
@@ -43,12 +44,13 @@ class Account(Base):
 
     __table_id__ = 0x10000000
 
-    name: t.ORMStr = orm.mapped_column()
+    name: t.ORMStr
+    number: t.ORMStrOpt
     institution: t.ORMStr
     category: orm.Mapped[AccountCategory]
     closed: t.ORMBool
 
-    @orm.validates("name", "institution")
+    @orm.validates("name", "number", "institution")
     @override
     def validate_strings(self, key: str, field: str) -> str | None:
         return super().validate_strings(key, field)
