@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import re
 import secrets
 import shutil
@@ -20,6 +21,7 @@ from nummus.models import (
     Account,
     Asset,
     Credentials,
+    ImportedFile,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -286,16 +288,27 @@ class Portfolio:
         Raises:
             KeyError if account or asset cannot be resolved
         """
+        # Compute hash of file contents to check if already imported
+        sha = hashlib.sha256()
+        with path.open("rb") as file:
+            sha.update(file.read())
+        h = sha.hexdigest()
+        with self.get_session() as s:
+            existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+            if existing is not None:
+                msg = f"File already imported on {existing.date}"
+                raise ValueError(msg)
+
         i = importers.get_importer(path, self._importers)
         if i is None:
             msg = f"File is an unknown type: {path}"
             raise TypeError(msg)
 
-        # Cache a mapping from account/asset name to the ID
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
+            # Cache a mapping from account/asset name to the ID
             account_mapping: t.DictInt = {}
             asset_mapping: t.DictInt = {}
             transactions: list[tuple[Transaction, TransactionSplit]] = []
@@ -350,6 +363,9 @@ class Portfolio:
             for txn, t_split in transactions:
                 t_split.parent = txn
                 s.add_all((txn, t_split))
+
+            # Add file hash to prevent importing again
+            s.add(ImportedFile(hash_=h))
             s.commit()
 
     def find_account(
