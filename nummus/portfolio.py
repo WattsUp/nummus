@@ -16,6 +16,7 @@ import sqlalchemy.exc
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import importers, models, sql, version
 from nummus.models import (
     Account,
@@ -86,6 +87,11 @@ class Portfolio:
     def path(self) -> Path:
         """Path to Portfolio database."""
         return self._path_db
+
+    @property
+    def importers_path(self) -> Path:
+        """Path to Portfolio importers."""
+        return self._path_importers
 
     @staticmethod
     def is_encrypted(path: str | Path) -> bool:
@@ -188,10 +194,7 @@ class Portfolio:
         """Unlock the database.
 
         Raises:
-            TypeError if database file fails to open
-            PermissionError if decryption failed
-            KeyError if root password is missing
-            ValueError if root password does not match expected
+            UnlockingError if database file fails to open
         """
         # Drop any open session
         sql.drop_session(self._path_db)
@@ -205,18 +208,18 @@ class Portfolio:
                     )
                     .first()
                 )
-        except sqlalchemy.exc.DatabaseError as e:
+        except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
-            raise TypeError(msg) from e
+            raise exc.UnlockingError(msg) from e
 
         if user is None:
             msg = "Root password not found"
-            raise KeyError(msg)
+            raise exc.UnlockingError(msg)
 
         if self._enc is None:
             if user.password != self._NUMMUS_PASSWORD:
                 msg = "Root password did not match"
-                raise ValueError(msg)
+                raise exc.UnlockingError(msg)
         else:
             salt: str = self._config["salt"]
             key_salted = self._enc.key + salt.encode()
@@ -224,10 +227,10 @@ class Portfolio:
                 password_decrypted = self._enc.decrypt(user.password)
             except ValueError as e:
                 msg = "Failed to decrypt root password"
-                raise PermissionError(msg) from e
+                raise exc.UnlockingError(msg) from e
             if password_decrypted != key_salted:
                 msg = "Root user's password did not match"
-                raise ValueError(msg)
+                raise exc.UnlockingError(msg)
         # Load Cipher
         models.load_cipher(base64.b64decode(self._config["cipher"]))
         # All good :)
@@ -248,10 +251,12 @@ class Portfolio:
 
         Returns:
             base64 encoded encrypted object
+
+        Raises:
+            NotEncryptedError if portfolio does not support encryption
         """
         if self._enc is None:
-            msg = "Portfolio is not encrypted"
-            raise PermissionError(msg)
+            raise exc.NotEncryptedError
         return self._enc.encrypt(secret)
 
     def decrypt(self, enc_secret: str) -> bytes:
@@ -262,10 +267,12 @@ class Portfolio:
 
         Returns:
             bytes decoded object
+
+        Raises:
+            NotEncryptedError if portfolio does not support encryption
         """
         if self._enc is None:
-            msg = "Portfolio is not encrypted"
-            raise PermissionError(msg)
+            raise exc.NotEncryptedError
         return self._enc.decrypt(enc_secret)
 
     def decrypt_s(self, enc_secret: str) -> str:
@@ -279,13 +286,17 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    def import_file(self, path: Path) -> None:
+    def import_file(self, path: Path, *_, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
         Args:
             path: Path to file to import
+            force: True will not check for already imported files
 
         Raises:
+            FileAlreadyImportedError if file has already been imported
+            UnknownImporterError if no importer is found for file
+            TypeError if importer returns wrong types
             KeyError if account or asset cannot be resolved
         """
         # Compute hash of file contents to check if already imported
@@ -293,16 +304,15 @@ class Portfolio:
         with path.open("rb") as file:
             sha.update(file.read())
         h = sha.hexdigest()
-        with self.get_session() as s:
-            existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
-            if existing is not None:
-                msg = f"File already imported on {existing.date}"
-                raise ValueError(msg)
+        if not force:
+            with self.get_session() as s:
+                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                if existing is not None:
+                    raise exc.FileAlreadyImportedError(existing.date, path)
 
         i = importers.get_importer(path, self._importers)
         if i is None:
-            msg = f"File is an unknown type: {path}"
-            raise TypeError(msg)
+            raise exc.UnknownImporterError(path)
 
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
@@ -365,6 +375,12 @@ class Portfolio:
                 s.add_all((txn, t_split))
 
             # Add file hash to prevent importing again
+            if force:
+                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                if existing is not None:
+                    s.delete(existing)
+                    s.commit()
+
             s.add(ImportedFile(hash_=h))
             s.commit()
 

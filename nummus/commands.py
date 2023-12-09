@@ -7,6 +7,7 @@ import colorama
 from colorama import Fore
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web
 
 if TYPE_CHECKING:
@@ -189,12 +190,18 @@ def clean(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def import_files(p: portfolio.Portfolio, paths: t.Paths) -> int:
+def import_files(
+    p: portfolio.Portfolio,
+    paths: t.Paths,
+    *_,
+    force: bool = False,
+) -> int:
     """Import a list of files or directories into a portfolio.
 
     Args:
         p: Working Portfolio
         paths: List of files or directories to import
+        force: True will not check for already imported files
 
     Returns:
         0 on success
@@ -214,14 +221,25 @@ def import_files(p: portfolio.Portfolio, paths: t.Paths) -> int:
             if path.is_dir():
                 for f in path.iterdir():
                     if f.is_file():
-                        p.import_file(f)
+                        p.import_file(f, force=force)
                         count += 1
             else:
-                p.import_file(path)
+                p.import_file(path, force=force)
                 count += 1
 
         success = True
-    except TypeError as e:
+    except exc.FileAlreadyImportedError as e:
+        print(f"{Fore.RED}{e}")
+        print(
+            f"{Fore.CYAN}Delete file or run import with --force flag which "
+            "may create duplicate transactions.",
+        )
+        return 2
+    except exc.UnknownImporterError as e:
+        print(f"{Fore.RED}{e}")
+        print(f"{Fore.CYAN}Create a custom importer in {p.importers_path}")
+        return 3
+    except (TypeError, KeyError) as e:
         print(f"{Fore.RED}{e}")
         return 1
     finally:
