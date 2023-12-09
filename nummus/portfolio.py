@@ -59,6 +59,7 @@ class Portfolio:
         name = self._path_db.with_suffix("").name
         self._path_config = self._path_db.with_suffix(".config")
         self._path_images = self._path_db.parent.joinpath(f"{name}.images")
+        self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
@@ -67,6 +68,7 @@ class Portfolio:
             msg = "Portfolio configuration does not exist, cannot open database"
             raise FileNotFoundError(msg)
         self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
+        self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
 
@@ -75,6 +77,8 @@ class Portfolio:
         else:
             self._enc = encryption.Encryption(key)  # type: ignore[attr-defined]
         self._unlock()
+
+        self._importers = importers.get_importers(self._path_importers)
 
     @property
     def path(self) -> Path:
@@ -130,6 +134,7 @@ class Portfolio:
         name = path_db.with_suffix("").name
         path_config = path_db.with_suffix(".config")
         path_images = path_db.parent.joinpath(f"{name}.images")
+        path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         enc = None
@@ -138,6 +143,7 @@ class Portfolio:
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_images.mkdir(exist_ok=True)
+        path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
         salt = secrets.token_urlsafe()
         config = autodict.JSONAutoDict(str(path_config))
@@ -280,7 +286,7 @@ class Portfolio:
         Raises:
             KeyError if account or asset cannot be resolved
         """
-        i = importers.get_importer(path)
+        i = importers.get_importer(path, self._importers)
         if i is None:
             msg = f"File is an unknown type: {path}"
             raise TypeError(msg)
@@ -375,6 +381,11 @@ class Portfolio:
                     return matches[0]
             except TypeError:
                 pass
+
+            # Maybe a number next
+            matches = s.query(Account).where(Account.number == query).all()
+            if len(matches) == 1:
+                return matches[0]
 
             # Maybe a name next
             matches = s.query(Account).where(Account.name == query).all()
@@ -498,6 +509,8 @@ class Portfolio:
         name = self._path_db.with_suffix("").name
         for file in parent.iterdir():
             if file == path_backup:
+                continue
+            if file == self._path_importers:
                 continue
             if file.name.startswith(f"{name}."):
                 if file.is_dir():

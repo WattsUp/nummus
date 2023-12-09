@@ -6,15 +6,11 @@ import csv
 import datetime
 import io
 import types
-from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 class CSVTransactionImporter(TransactionImporter):
@@ -32,7 +28,6 @@ class CSVTransactionImporter(TransactionImporter):
             "amount": (True, utils.parse_real),
             "payee": (True, str),
             "description": (True, str),
-            "sales_tax": (False, utils.parse_real),
             "category": (False, str),
             "subcategory": (False, str),
             "tag": (False, str),
@@ -43,8 +38,8 @@ class CSVTransactionImporter(TransactionImporter):
 
     @classmethod
     @override
-    def is_importable(cls, name: Path, buf: bytes) -> bool:
-        if name.suffix != ".csv":
+    def is_importable(cls, suffix: str, buf: bytes | None, **_) -> bool:
+        if suffix != ".csv" or buf is None:
             return False
 
         # Check if the columns start with the expected ones
@@ -58,6 +53,9 @@ class CSVTransactionImporter(TransactionImporter):
 
     @override
     def run(self) -> TxnDicts:
+        if self._buf is None:
+            msg = "Importer did not initialized with byte buffer"
+            raise ValueError(msg)
         first_line, remaining = self._buf.decode().split("\n", 1)
         first_line = first_line.lower().replace(" ", "_")
         reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))

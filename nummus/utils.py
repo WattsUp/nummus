@@ -115,7 +115,8 @@ def parse_real(s: str | None) -> t.Real | None:
     clean = _REGEX_REAL_CLEAN.sub("", s)
     if clean == "":
         return None
-    if "-" in s:
+    # Negative if -x.xx or (x.xx)
+    if "-" in s or "(" in s:
         return Decimal(clean) * -1
     return Decimal(clean)
 
