@@ -109,7 +109,7 @@ def unlock(path_db: Path, path_password: Path | None) -> portfolio.Portfolio | N
         # Try once with password file
         try:
             p = portfolio.Portfolio(path_db, key)
-        except TypeError:
+        except exc.UnlockingError:
             print(f"{Fore.RED}Could not decrypt with password file")
             return None
         else:
@@ -123,7 +123,7 @@ def unlock(path_db: Path, path_password: Path | None) -> portfolio.Portfolio | N
             return None
         try:
             p = portfolio.Portfolio(path_db, key)
-        except TypeError:
+        except exc.UnlockingError:
             print(f"{Fore.RED}Incorrect password")
             # Try again
         else:

@@ -4,16 +4,22 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy.exc import DatabaseError
+from sqlalchemy.exc import DatabaseError, UnboundExecutionError
 
 if TYPE_CHECKING:
     import datetime
 
     from nummus import custom_types as t
 
-_ = DatabaseError
-
-# TODO(WattsUp): Add more custom exceptions when appropriate
+__all__ = [
+    "DatabaseError",
+    "UnboundExecutionError",
+    "FileAlreadyImportedError",
+    "UnknownImporterError",
+    "UnlockingError",
+    "NotEncryptedError",
+]
+# TODO (WattsUp): Add more custom exceptions when appropriate
 
 
 class FileAlreadyImportedError(ValueError):

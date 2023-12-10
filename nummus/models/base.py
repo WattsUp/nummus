@@ -5,7 +5,7 @@ from __future__ import annotations
 import enum
 from decimal import Decimal
 
-from sqlalchemy import orm, schema, types
+from sqlalchemy import orm, types
 from typing_extensions import override
 
 from nummus import custom_types as t
@@ -20,8 +20,6 @@ class Base(orm.DeclarativeBase):
         id_: Primary key identifier, unique
         uri: Uniform Resource Identifier, unique
     """
-
-    metadata: schema.MetaData
 
     @orm.declared_attr  # type: ignore[attr-defined]
     @override
@@ -73,7 +71,7 @@ class Base(orm.DeclarativeBase):
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
-    def __eq__(self, other: Base) -> bool:
+    def __eq__(self, other: Base | t.Any) -> bool:
         """Test equality by URI.
 
         Args:
@@ -84,7 +82,7 @@ class Base(orm.DeclarativeBase):
         """
         return isinstance(other, Base) and self.uri == other.uri
 
-    def __ne__(self, other: Base) -> bool:
+    def __ne__(self, other: Base | t.Any) -> bool:
         """Test inequality by URI.
 
         Args:
@@ -170,7 +168,8 @@ class Decimal6(types.TypeDecorator):
 
     _FACTOR = Decimal("1e6")
 
-    def process_bind_param(self, value: t.Real, _) -> int | None:
+    @override
+    def process_bind_param(self, value: t.Real | None, *_) -> int | None:
         """Receive a bound parameter value to be converted.
 
         Args:
@@ -183,7 +182,8 @@ class Decimal6(types.TypeDecorator):
             return None
         return int(value * self._FACTOR)
 
-    def process_result_value(self, value: int, _) -> t.Real | None:
+    @override
+    def process_result_value(self, value: int | None, *_) -> t.Real | None:
         """Receive a result-row column value to be converted.
 
         Args:

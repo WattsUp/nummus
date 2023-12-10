@@ -7,6 +7,7 @@ import tarfile
 
 import autodict
 
+from nummus import exceptions as exc
 from nummus import models, portfolio, sql
 from nummus.models import (
     Account,
@@ -42,7 +43,7 @@ class TestPortfolio(TestBase):
         autodict.JSONAutoDict(str(path_config)).save()
 
         # Failed to unlock
-        self.assertRaises(TypeError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -105,7 +106,7 @@ class TestPortfolio(TestBase):
             s.commit()
 
         # Invalid root password
-        self.assertRaises(ValueError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
         # Recreate
         path_db.unlink()
@@ -131,7 +132,7 @@ class TestPortfolio(TestBase):
             s.commit()
 
         # Missing root password
-        self.assertRaises(KeyError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
@@ -173,7 +174,12 @@ class TestPortfolio(TestBase):
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
 
         # Bad key
-        self.assertRaises(TypeError, portfolio.Portfolio, path_db, self.random_string())
+        self.assertRaises(
+            exc.UnlockingError,
+            portfolio.Portfolio,
+            path_db,
+            self.random_string(),
+        )
 
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, key)
@@ -191,7 +197,7 @@ class TestPortfolio(TestBase):
             s.commit()
 
         # Invalid root password
-        self.assertRaises(ValueError, portfolio.Portfolio, path_db, key)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
         # Recreate
         path_db.unlink()
@@ -356,7 +362,7 @@ class TestPortfolio(TestBase):
 
         # Fail to import non-importable file
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        self.assertRaises(TypeError, p.import_file, path)
+        self.assertRaises(exc.UnknownImporterError, p.import_file, path)
 
         # Fail to match Accounts and Assets
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")

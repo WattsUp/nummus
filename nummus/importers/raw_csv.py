@@ -6,11 +6,15 @@ import csv
 import datetime
 import io
 import types
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
+
+if TYPE_CHECKING:
+    from nummus import custom_types as t
 
 
 class CSVTransactionImporter(TransactionImporter):
@@ -38,9 +42,17 @@ class CSVTransactionImporter(TransactionImporter):
 
     @classmethod
     @override
-    def is_importable(cls, suffix: str, buf: bytes | None, **_) -> bool:
-        if suffix != ".csv" or buf is None:
+    def is_importable(
+        cls,
+        suffix: str,
+        buf: bytes | None,
+        buf_pdf: t.Strings | None,
+    ) -> bool:
+        if suffix != ".csv":
             return False
+        if buf is None or buf_pdf is not None:
+            msg = "buf not given with non-pdf suffix"
+            raise ValueError(msg)
 
         # Check if the columns start with the expected ones
         first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")

@@ -10,6 +10,7 @@ from sqlalchemy import orm
 from typing_extensions import override
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models.asset import Asset
 from nummus.models.base import Base, BaseEnum
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -52,7 +53,7 @@ class Account(Base):
 
     @orm.validates("name", "number", "institution")
     @override
-    def validate_strings(self, key: str, field: str) -> str | None:
+    def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
 
     @property
@@ -60,8 +61,7 @@ class Account(Base):
         """Date of first Transaction."""
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
         query = s.query(Transaction)
         query = query.with_entities(sqlalchemy.func.min(Transaction.date))
         query = query.where(Transaction.account_id == self.id_)
@@ -72,8 +72,7 @@ class Account(Base):
         """Date of latest Transaction."""
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
         query = s.query(Transaction)
         query = query.with_entities(sqlalchemy.func.max(Transaction.date))
         query = query.where(Transaction.account_id == self.id_)
@@ -96,8 +95,7 @@ class Account(Base):
         """
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
 
         # Get Account value on start date
         # It is callable, sum returns a generator type
@@ -381,8 +379,7 @@ class Account(Base):
         """
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
 
         date = start
 
@@ -446,8 +443,7 @@ class Account(Base):
         """
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
 
         date = start + datetime.timedelta(days=1)
         dates: t.Dates = [start]

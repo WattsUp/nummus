@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 
-def get_importers(extra: Path) -> t.Sequence[type[TransactionImporter]]:
+def get_importers(extra: Path | None) -> t.Sequence[type[TransactionImporter]]:
     """Get a list of importers from a directory.
 
     Args:
@@ -35,10 +35,12 @@ def get_importers(extra: Path) -> t.Sequence[type[TransactionImporter]]:
     available = [
         CSVTransactionImporter,
     ]
+    if extra is None:
+        return tuple(available)
     for file in extra.glob("**/*.py"):
         name = ".".join(file.relative_to(extra).parts[:-1] + (file.name.split(".")[0],))
         spec = importlib.util.spec_from_file_location(name, file)
-        if spec is None or spec.loader is None:
+        if spec is None or spec.loader is None:  # pragma: no cover
             msg = f"Failed to create spec for {file}"
             raise ImportError(msg)
 

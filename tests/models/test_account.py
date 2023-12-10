@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import (
     Account,
@@ -31,6 +32,11 @@ class TestAccount(TestBase):
         }
 
         acct = Account(**d)
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "opened_on")
+        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "updated_on")
+
         s.add(acct)
         s.commit()
 
@@ -126,6 +132,10 @@ class TestAccount(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
         )
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, acct.get_asset_qty, today, today)
+
         s.add(t_cat)
         s.add(acct)
         s.add_all(assets)
@@ -253,6 +263,10 @@ class TestAccount(TestBase):
                 category=AssetCategory.SECURITY,
             )
             assets.append(new_asset)
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, acct.get_value, today, today)
+
         s.add(acct)
         s.add_all(assets)
         s.commit()
@@ -471,6 +485,10 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
         )
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, acct.get_cash_flow, today, today)
+
         s.add(acct)
         s.commit()
 

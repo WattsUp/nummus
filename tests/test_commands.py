@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import io
 import shutil
 from unittest import mock
@@ -410,7 +411,8 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = (
-            f"{Fore.RED}File is an unknown type: {file_c}\n"
+            f"{Fore.RED}Unknown importer for {file_c}\n"
+            f"{Fore.YELLOW}Create a custom importer in {p.importers_path}\n"
             f"{Fore.RED}Abandoned import, restored from backup\n"
         )
         self.assertEqual(fake_stdout, target)
@@ -438,6 +440,22 @@ class TestCommands(TestBase):
             transactions = s.query(Transaction).all()
             self.assertEqual(len(transactions), 6 + 4)
 
+        # Import same files again, should fail
+        paths = [file_a, file_c]
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            rc = commands.import_files(p, paths)
+        self.assertNotEqual(rc, 0)
+
+        fake_stdout = fake_stdout.getvalue()
+        today = datetime.date.today()
+        target = (
+            f"{Fore.RED}Already imported {file_a} on {today}\n"
+            f"{Fore.YELLOW}Delete file or run import with --force flag "
+            "which may create duplicate transactions.\n"
+            f"{Fore.RED}Abandoned import, restored from backup\n"
+        )
+        self.assertEqual(fake_stdout, target)
+
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup = path_db.with_suffix(".backup1.tar.gz")
@@ -458,6 +476,14 @@ class TestCommands(TestBase):
 
         path_db.unlink()
         self.assertFalse(path_db.exists(), "Portfolio does exist")
+
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            rc = commands.restore(path_db, None, list_ver=True)
+        self.assertEqual(rc, 0)
+
+        fake_stdout = fake_stdout.getvalue()
+        target = f"{Fore.CYAN}Backup # 1 created at"
+        self.assertEqual(fake_stdout[: len(target)], target)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.restore(path_db, None)
