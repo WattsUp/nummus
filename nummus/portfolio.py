@@ -315,20 +315,25 @@ class Portfolio:
         i = importers.get_importer(path, self._importers)
         if i is None:
             raise exc.UnknownImporterError(path)
+        ctx = f"<importer={i.__class__.__name__}, file={path}>"
 
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
             # Cache a mapping from account/asset name to the ID
-            account_mapping: t.DictInt = {}
+            acct_mapping: t.DictInt = {}
             asset_mapping: t.DictInt = {}
-            transactions: list[tuple[Transaction, TransactionSplit]] = []
-            for d in i.run():
+            txns: list[tuple[Transaction, TransactionSplit]] = []
+            txns_raw = i.run()
+            if not txns_raw:
+                msg = f"Importer returned no transactions, ctx={ctx}"
+                raise TypeError(msg)
+            for d in txns_raw:
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
                 if not isinstance(category_s, str):
-                    msg = "Category is not a string"
+                    msg = f"Category is not a string, ctx={ctx}"
                     raise TypeError(msg)
                 d_split: importers.TxnDict = {
                     "amount": d["amount"],  # Both split and parent have amount
@@ -339,40 +344,40 @@ class Portfolio:
                     "asset_quantity_unadjusted": d.pop("asset_quantity", None),
                 }
 
-                account_raw = d.pop("account")
-                if not isinstance(account_raw, str):
-                    msg = "Account is not a string"
+                acct_raw = d.pop("account")
+                if not isinstance(acct_raw, str):
+                    msg = f"Account is not a string, ctx={ctx}"
                     raise TypeError(msg)
-                account_id = account_mapping.get(account_raw)
-                if account_id is None:
-                    account = self.find_account(account_raw, session=s)
-                    if not isinstance(account, Account):
-                        msg = f"Could not find Account by '{account_raw}'"
+                acct_id = acct_mapping.get(acct_raw)
+                if acct_id is None:
+                    acct = self.find_account(acct_raw, session=s)
+                    if not isinstance(acct, Account):
+                        msg = f"Could not find Account by '{acct_raw}', ctx={ctx}"
                         raise KeyError(msg)
-                    account_id = account.id_
-                    account_mapping[account_raw] = account_id
-                d["account_id"] = account_id
+                    acct_id = acct.id_
+                    acct_mapping[acct_raw] = acct_id
+                d["account_id"] = acct_id
 
                 asset_raw = d.pop("asset", None)
                 if asset_raw is not None:
                     if not isinstance(asset_raw, str):
-                        msg = "Asset is not a string"
+                        msg = f"Asset is not a string, ctx={ctx}"
                         raise TypeError(msg)
                     # Find its ID
                     asset_id = asset_mapping.get(asset_raw)
                     if asset_id is None:
                         asset = self.find_asset(asset_raw, session=s)
                         if not isinstance(asset, Asset):
-                            msg = f"Could not find Asset by '{asset_raw}'"
+                            msg = f"Could not find Asset by '{asset_raw}', ctx={ctx}"
                             raise KeyError(msg)
                         asset_id = asset.id_
                         asset_mapping[asset_raw] = asset_id
                     d_split["asset_id"] = asset_id
 
-                transactions.append((Transaction(**d), TransactionSplit(**d_split)))
+                txns.append((Transaction(**d), TransactionSplit(**d_split)))
 
             # All good, add transactions and commit
-            for txn, t_split in transactions:
+            for txn, t_split in txns:
                 t_split.parent = txn
                 s.add_all((txn, t_split))
 
@@ -564,7 +569,7 @@ class Portfolio:
                 ts = datetime.datetime.fromisoformat(file_ts.read().decode())
                 ts = ts.replace(tzinfo=datetime.timezone.utc)
                 backups.append((tar_ver, ts))
-        return backups
+        return sorted(backups, key=lambda item: item[0])
 
     def clean(self) -> None:
         """Delete any unused files, creates a new backup."""

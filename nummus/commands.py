@@ -249,17 +249,14 @@ def import_files(
     except exc.FileAlreadyImportedError as e:
         print(f"{Fore.RED}{e}")
         print(
-            f"{Fore.CYAN}Delete file or run import with --force flag which "
+            f"{Fore.YELLOW}Delete file or run import with --force flag which "
             "may create duplicate transactions.",
         )
         return 2
     except exc.UnknownImporterError as e:
         print(f"{Fore.RED}{e}")
-        print(f"{Fore.CYAN}Create a custom importer in {p.importers_path}")
+        print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
         return 3
-    except (TypeError, KeyError) as e:
-        print(f"{Fore.RED}{e}")
-        return 1
     finally:
         # Restore backup if anything went wrong
         # Coverage gets confused with finally blocks
