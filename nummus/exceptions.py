@@ -23,7 +23,7 @@ __all__ = [
 
 
 class FileAlreadyImportedError(ValueError):
-    """Exception when a file has already been imported."""
+    """Error when a file has already been imported."""
 
     def __init__(self, date: datetime.date, path: t.Path) -> None:
         """Initialize FileAlreadyImportedError.
@@ -37,7 +37,7 @@ class FileAlreadyImportedError(ValueError):
 
 
 class UnknownImporterError(ValueError):
-    """Exception when a file does not match any importer."""
+    """Error when a file does not match any importer."""
 
     def __init__(self, path: t.Path) -> None:
         """Initialize UnknownImporterError.
@@ -50,13 +50,26 @@ class UnknownImporterError(ValueError):
 
 
 class UnlockingError(PermissionError):
-    """Exception when portfolio fails to unlock."""
+    """Error when portfolio fails to unlock."""
 
 
 class NotEncryptedError(PermissionError):
-    """Exception when encryption operation is called on a unencrypted portfolio."""
+    """Error when encryption operation is called on a unencrypted portfolio."""
 
     def __init__(self) -> None:
         """Initialize NotEncryptedError."""
         msg = "Portfolio is not encrypted"
+        super().__init__(msg)
+
+
+class ParentAttributeError(PermissionError):
+    """Error when attempting to set an attribute directly instead of via parent."""
+
+
+class NonAssetTransactionError(TypeError):
+    """Error when attempting to perform Asset operation when Transaction has none."""
+
+    def __init__(self) -> None:
+        """Initialize NonAssetTransactionError."""
+        msg = "Cannot perform operation on Transaction without an Asset"
         super().__init__(msg)

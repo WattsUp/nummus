@@ -240,6 +240,35 @@ class TestUtils(TestBase):
         result = utils.format_days(d)
         self.assertEqual(result, "2 yrs")
 
+    def test_format_seconds(self) -> None:
+        s = 0.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "0.0 s")
+
+        s = 60.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "60.0 s")
+
+        s = 90.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "1.5 min")
+
+        s = 5400.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "1.5 hrs")
+
+        s = 86400.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "24.0 hrs")
+
+        s = 86400 * 4.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "96.0 hrs")
+
+        s = 86400 * 4.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "4 days")
+
     def test_range_date(self) -> None:
         start = datetime.date.today()
         end = start + datetime.timedelta(days=7)

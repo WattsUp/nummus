@@ -7,6 +7,7 @@ from sqlalchemy import event, ForeignKey, orm
 from typing_extensions import override
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models.base import Base, Decimal6, Decimal18
 
 
@@ -62,7 +63,7 @@ class TransactionSplit(Base):
 
     @orm.validates("payee", "description", "tag")
     @override
-    def validate_strings(self, key: str, field: str) -> str | None:
+    def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
 
     @override
@@ -72,7 +73,7 @@ class TransactionSplit(Base):
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
             )
-            raise PermissionError(msg)
+            raise exc.ParentAttributeError(msg)
         super().__setattr__(name, value)
 
     @property
@@ -123,8 +124,7 @@ class TransactionSplit(Base):
         """
         qty = self.asset_quantity_unadjusted
         if qty is None:
-            msg = "Cannot adjust non-asset transaction"
-            raise ValueError(msg)
+            raise exc.NonAssetTransactionError
         i, f = divmod(qty * multiplier, 1)
         i = int(i)
         self._asset_qty_int = i
@@ -135,8 +135,7 @@ class TransactionSplit(Base):
         """Parent Transaction."""
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
         query = s.query(Transaction).where(Transaction.id_ == self.parent_id)
         return query.scalar()  # type: ignore[attr-defined]
 
@@ -204,5 +203,5 @@ class Transaction(Base):
 
     @orm.validates("statement")
     @override
-    def validate_strings(self, key: str, field: str) -> str | None:
+    def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)

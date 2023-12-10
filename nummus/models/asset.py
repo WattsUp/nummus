@@ -9,6 +9,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models.base import Base, BaseEnum, Decimal6
 
 
@@ -95,10 +96,9 @@ class Asset(Base):
         """
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
 
-        # TODO(Bradley): Add optional spline interpolation for
+        # TODO (Bradley): Add optional spline interpolation for
         # infrequently valued assets
 
         # Get latest Valuation before or including start date
@@ -231,8 +231,7 @@ class Asset(Base):
 
         s = orm.object_session(self)
         if s is None:
-            msg = "Object is unbound to a session"
-            raise ValueError(msg)
+            raise exc.UnboundExecutionError
 
         multiplier = Decimal(1)
         splits: list[tuple[t.Date, t.Real]] = []

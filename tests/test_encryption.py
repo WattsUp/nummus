@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 
+from nummus import encryption_fb
 from tests.base import TestBase
 
 try:
@@ -12,9 +13,10 @@ except ImportError:
 
 
 class TestEncryption(TestBase):
-    def setUp(self) -> None:
-        super().setUp()
+    def setUp(self, *_, clean: bool = True) -> None:
+        super().setUp(clean=clean)
         if encryption is None:
+            self.assertIsNotNone(encryption_fb.Encryption)
             self.skipTest("Encryption is not installed")
 
     def test_good_key(self) -> None:

@@ -19,10 +19,9 @@ class BananaBankImporter(base.TransactionImporter):
         buf: bytes | None,
         buf_pdf: t.Strings | None,
     ) -> bool:
-        _ = suffix
         _ = buf
         _ = buf_pdf
-        return False
+        return suffix == ".pdf"
 
     def run(self) -> base.TxnDicts:
         return []

@@ -90,6 +90,11 @@ class TestTransactionCategory(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn(e_str, result)
 
+        e_str = "Transaction group must not be None"
+        form = {"name": "ab", "group": ""}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn(e_str, result)
+
         with p.get_session() as s:
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(True))

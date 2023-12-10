@@ -332,7 +332,8 @@ class Portfolio:
             for d in txns_raw:
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
-                if not isinstance(category_s, str):
+                if not isinstance(category_s, str):  # pragma: no cover
+                    # Don't need to test debug code
                     msg = f"Category is not a string, ctx={ctx}"
                     raise TypeError(msg)
                 d_split: importers.TxnDict = {
@@ -345,7 +346,8 @@ class Portfolio:
                 }
 
                 acct_raw = d.pop("account")
-                if not isinstance(acct_raw, str):
+                if not isinstance(acct_raw, str):  # pragma: no cover
+                    # Don't need to test debug code
                     msg = f"Account is not a string, ctx={ctx}"
                     raise TypeError(msg)
                 acct_id = acct_mapping.get(acct_raw)
@@ -360,7 +362,8 @@ class Portfolio:
 
                 asset_raw = d.pop("asset", None)
                 if asset_raw is not None:
-                    if not isinstance(asset_raw, str):
+                    if not isinstance(asset_raw, str):  # pragma: no cover
+                        # Don't need to test debug code
                         msg = f"Asset is not a string, ctx={ctx}"
                         raise TypeError(msg)
                     # Find its ID
@@ -562,7 +565,8 @@ class Portfolio:
             # tar archive preserved owner and mode so no need to set these
             with tarfile.open(file, "r:gz") as tar:
                 file_ts = tar.extractfile("_timestamp")
-                if file_ts is None:
+                if file_ts is None:  # pragma: no cover
+                    # Backup file should always have timestamp file
                     msg = "timestamp file is None"
                     raise TypeError(msg)
                 tar_ver = int(m[1])

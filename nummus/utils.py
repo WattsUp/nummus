@@ -168,7 +168,7 @@ def format_days(days: int, labels: t.Strings | None = None) -> str:
         labels: Override labels [days, weeks, months, years]
 
     Returns:
-        x d
+        x days
         x wks
         x mos
         x yrs
@@ -202,7 +202,7 @@ def format_seconds(
         x s
         x min
         x hrs
-        x d
+        x days
         x wks
         x mos
         x yrs
