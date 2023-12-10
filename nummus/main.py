@@ -89,6 +89,14 @@ calculates net worth, and predicts future performance."""
         type=int,
         help="number of backup to use for restore, omit for latest",
     )
+    sub_restore.add_argument(
+        "-l",
+        "--list",
+        dest="list_ver",
+        default=False,
+        action="store_true",
+        help="list available backups",
+    )
 
     _ = subparsers.add_parser(
         "clean",
@@ -172,10 +180,12 @@ calculates net worth, and predicts future performance."""
         )
     if cmd == "restore":
         tar_ver: int = args.v
+        list_ver: bool = args.list_ver
         return commands.restore(
             path_db=path_db,
             path_password=path_password,
             tar_ver=tar_ver,
+            list_ver=list_ver,
         )
 
     p = commands.unlock(path_db=path_db, path_password=path_password)

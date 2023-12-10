@@ -1,6 +1,7 @@
 """Command line interface commands."""
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 import colorama
@@ -152,6 +153,8 @@ def restore(
     path_db: Path,
     path_password: Path | None,
     tar_ver: int | None = None,
+    *_,
+    list_ver: bool = False,
 ) -> int:
     """Backup portfolio to tar.gz.
 
@@ -159,12 +162,27 @@ def restore(
         path_db: Path to Portfolio DB to create
         path_password: Path to password file, None will prompt when necessary
         tar_ver: Backup tar version to restore from, None will restore latest
+        list_ver: True will list backups available, False will restore
 
     Returns:
         0 on success
         non-zero on failure
     """
     try:
+        if list_ver:
+            backups = portfolio.Portfolio.backups(path_db)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for ver, ts in backups:
+                ago_s = (now - ts).total_seconds()
+                ago = utils.format_seconds(ago_s)
+
+                # Convert ts utc to local timezone
+                ts_local = ts.astimezone()
+                print(
+                    f"{Fore.CYAN}Backup #{ver:2} created at "
+                    f"{ts_local.isoformat(timespec='seconds')} ({ago} ago)",
+                )
+            return 0
         portfolio.Portfolio.restore(path_db, tar_ver=tar_ver)
         print(f"{Fore.CYAN}Extracted backup tar.gz")
     except FileNotFoundError as e:

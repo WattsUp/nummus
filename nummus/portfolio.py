@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+import datetime
 import hashlib
+import io
 import re
 import secrets
 import shutil
@@ -520,9 +522,49 @@ class Portfolio:
 
             for file in files:
                 tar.add(file, arcname=file.relative_to(parent))
+            # Add a timestamp of when it was created
+            info = tarfile.TarInfo("_timestamp")
+            buf = datetime.datetime.utcnow().isoformat().encode()
+            info.size = len(buf)
+            tar.addfile(info, io.BytesIO(buf))
 
         path_backup.chmod(0o600)  # Only owner can read/write
         return path_backup, tar_ver
+
+    @staticmethod
+    def backups(p: str | Path | Portfolio) -> list[tuple[int, datetime.datetime]]:
+        """Get a list of all backups for this portfolio.
+
+        Args:
+            p: Path to database file, or Portfolio which will get its path
+
+        Returns:
+            List[(tar_ver, created timestamp), ...]
+        """
+        backups: list[tuple[int, datetime.datetime]] = []
+
+        path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
+        path_db = path_db.resolve().with_suffix(".db")
+        parent = path_db.parent
+        name = path_db.with_suffix("").name
+
+        # Find latest backup file for this Portfolio
+        re_filter = re.compile(rf"^{name}.backup(\d+).tar.gz$")
+        for file in parent.iterdir():
+            m = re_filter.match(file.name)
+            if m is None:
+                continue
+            # tar archive preserved owner and mode so no need to set these
+            with tarfile.open(file, "r:gz") as tar:
+                file_ts = tar.extractfile("_timestamp")
+                if file_ts is None:
+                    msg = "timestamp file is None"
+                    raise TypeError(msg)
+                tar_ver = int(m[1])
+                ts = datetime.datetime.fromisoformat(file_ts.read().decode())
+                ts = ts.replace(tzinfo=datetime.timezone.utc)
+                backups.append((tar_ver, ts))
+        return backups
 
     def clean(self) -> None:
         """Delete any unused files, creates a new backup."""
