@@ -23,7 +23,7 @@ required = [
     "gevent",
     "colorama",
     "rapidfuzz",
-    "pyopenssl",
+    "cryptography",
     "flask-assets",
     "pytailwindcss",
     "jsmin",
