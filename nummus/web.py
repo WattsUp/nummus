@@ -13,7 +13,9 @@ import gevent.pywsgi
 import pytailwindcss
 import webassets.filter
 from colorama import Back, Fore
-from OpenSSL import crypto
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 
 from nummus import controllers, portfolio, utils, version
 
@@ -152,7 +154,7 @@ class Server:
 
         # Add Portfolio to context for controllers
         with self._app.app_context():
-            flask.current_app.portfolio = p
+            flask.current_app.portfolio = p  # type: ignore[attr-defined]
 
         # Enable debugger and reloader when debug
         self._app.debug = debug
@@ -234,30 +236,36 @@ class Server:
             path_cert: Path to SSL certificate
             path_key: Path to SSL certificate signing key
         """
-        key = crypto.PKey()
-        key.generate_key(crypto.TYPE_RSA, 4096)
+        now = datetime.datetime.now(datetime.timezone.utc)
 
-        cert = crypto.X509()
-        cert.set_version(2)  # Version x509v3 for SAN
-        cert.get_subject().CN = "localhost"
-        san_list = ["DNS:localhost"]
-        ext = crypto.X509Extension(
-            type_name=b"subjectAltName",
-            critical=False,
-            value=", ".join(san_list).encode(),
+        key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+
+        subject = x509.Name([x509.NameAttribute(x509.NameOID.COMMON_NAME, "localhost")])
+        cert = (
+            x509.CertificateBuilder()
+            .subject_name(subject)
+            .issuer_name(subject)
+            .public_key(key.public_key())
+            .serial_number(x509.random_serial_number())
+            .not_valid_before(now)
+            .not_valid_after(now + datetime.timedelta(days=10 * 365))
+            .add_extension(
+                x509.SubjectAlternativeName([x509.DNSName("localhost")]),
+                critical=False,
+            )
+            .sign(key, hashes.SHA512())
         )
-        cert.add_extensions([ext])
-        cert.set_serial_number(0)
-        cert.gmtime_adj_notBefore(0)
-        cert.gmtime_adj_notAfter(10 * 365 * 24 * 60 * 60)  # 10 yrs in seconds
-        cert.set_issuer(cert.get_subject())
-        cert.set_pubkey(key)
-        cert.sign(key, "sha512")
 
         with path_cert.open("wb") as file:
-            file.write(crypto.dump_certificate(crypto.FILETYPE_PEM, cert))
+            buf = cert.public_bytes(serialization.Encoding.PEM)
+            file.write(buf)
         with path_key.open("wb") as file:
-            file.write(crypto.dump_privatekey(crypto.FILETYPE_PEM, key))
+            buf = key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption(),
+            )
+            file.write(buf)
 
         path_cert.chmod(0o600)
         path_key.chmod(0o600)
@@ -274,5 +282,5 @@ class Server:
         """
         with path_cert.open("rb") as file:
             buf = file.read()
-        cert = crypto.load_certificate(crypto.FILETYPE_PEM, buf)
-        return cert.get_subject().CN == "localhost"
+        cert = x509.load_pem_x509_certificate(buf)
+        return any(s.value == "localhost" for s in cert.subject)

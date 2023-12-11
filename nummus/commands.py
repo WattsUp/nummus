@@ -1,12 +1,14 @@
 """Command line interface commands."""
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 import colorama
 from colorama import Fore
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web
 
 if TYPE_CHECKING:
@@ -17,7 +19,13 @@ colorama.init(autoreset=True)
 MIN_PASS_LEN = 8
 
 
-def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool) -> int:
+def create(
+    path_db: Path,
+    path_password: Path | None,
+    *,
+    force: bool,
+    no_encrypt: bool,
+) -> int:
     """Create a new Portfolio.
 
     Args:
@@ -39,7 +47,7 @@ def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool)
             )
             return 1
 
-    key: str = None
+    key: str | None = None
     if not no_encrypt:
         if path_password is not None and path_password.exists():
             with path_password.open(encoding="utf-8") as file:
@@ -72,7 +80,7 @@ def create(path_db: Path, path_password: Path, *, force: bool, no_encrypt: bool)
     return 0
 
 
-def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
+def unlock(path_db: Path, path_password: Path | None) -> portfolio.Portfolio | None:
     """Unlock an existing Portfolio.
 
     Args:
@@ -91,7 +99,7 @@ def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
         print(f"{Fore.GREEN}Portfolio is unlocked")
         return p
 
-    key: str = None
+    key: str | None = None
 
     if path_password is not None and path_password.exists():
         with path_password.open(encoding="utf-8") as file:
@@ -101,7 +109,7 @@ def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
         # Try once with password file
         try:
             p = portfolio.Portfolio(path_db, key)
-        except TypeError:
+        except exc.UnlockingError:
             print(f"{Fore.RED}Could not decrypt with password file")
             return None
         else:
@@ -115,7 +123,7 @@ def unlock(path_db: Path, path_password: Path) -> portfolio.Portfolio:
             return None
         try:
             p = portfolio.Portfolio(path_db, key)
-        except TypeError:
+        except exc.UnlockingError:
             print(f"{Fore.RED}Incorrect password")
             # Try again
         else:
@@ -141,26 +149,47 @@ def backup(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def restore(path_db: Path, path_password: Path, tar_ver: int | None = None) -> int:
+def restore(
+    path_db: Path,
+    path_password: Path | None,
+    tar_ver: int | None = None,
+    *_,
+    list_ver: bool = False,
+) -> int:
     """Backup portfolio to tar.gz.
 
     Args:
         path_db: Path to Portfolio DB to create
         path_password: Path to password file, None will prompt when necessary
         tar_ver: Backup tar version to restore from, None will restore latest
+        list_ver: True will list backups available, False will restore
 
     Returns:
         0 on success
         non-zero on failure
     """
     try:
+        if list_ver:
+            backups = portfolio.Portfolio.backups(path_db)
+            now = datetime.datetime.now(datetime.timezone.utc)
+            for ver, ts in backups:
+                ago_s = (now - ts).total_seconds()
+                ago = utils.format_seconds(ago_s)
+
+                # Convert ts utc to local timezone
+                ts_local = ts.astimezone()
+                print(
+                    f"{Fore.CYAN}Backup #{ver:2} created at "
+                    f"{ts_local.isoformat(timespec='seconds')} ({ago} ago)",
+                )
+            return 0
         portfolio.Portfolio.restore(path_db, tar_ver=tar_ver)
         print(f"{Fore.CYAN}Extracted backup tar.gz")
     except FileNotFoundError as e:
         print(f"{Fore.RED}{e}")
         return 1
     p = unlock(path_db, path_password)
-    print(f"{Fore.GREEN}Portfolio restored for {p.path}")
+    print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
     return 0
 
 
@@ -179,12 +208,18 @@ def clean(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def import_files(p: portfolio.Portfolio, paths: t.Paths) -> int:
+def import_files(
+    p: portfolio.Portfolio,
+    paths: t.Paths,
+    *_,
+    force: bool = False,
+) -> int:
     """Import a list of files or directories into a portfolio.
 
     Args:
         p: Working Portfolio
         paths: List of files or directories to import
+        force: True will not check for already imported files
 
     Returns:
         0 on success
@@ -204,16 +239,24 @@ def import_files(p: portfolio.Portfolio, paths: t.Paths) -> int:
             if path.is_dir():
                 for f in path.iterdir():
                     if f.is_file():
-                        p.import_file(f)
+                        p.import_file(f, force=force)
                         count += 1
             else:
-                p.import_file(path)
+                p.import_file(path, force=force)
                 count += 1
 
         success = True
-    except TypeError as e:
+    except exc.FileAlreadyImportedError as e:
         print(f"{Fore.RED}{e}")
-        return 1
+        print(
+            f"{Fore.YELLOW}Delete file or run import with --force flag which "
+            "may create duplicate transactions.",
+        )
+        return 2
+    except exc.UnknownImporterError as e:
+        print(f"{Fore.RED}{e}")
+        print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
+        return 3
     finally:
         # Restore backup if anything went wrong
         # Coverage gets confused with finally blocks

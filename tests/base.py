@@ -43,29 +43,21 @@ class TestBase(unittest.TestCase):
         low: str | float | t.Real,
         high: str | float | t.Real,
         precision: int = 6,
-        size: int = 1,
-    ) -> t.Real | t.Reals:
+    ) -> t.Real:
         """Generate a random decimal from a uniform distribution.
 
         Args:
             low: lower bound
             high: upper bound
             precision: Digits to round to
-            size: number of Decimals to generate
 
         Returns:
             Decimal between bounds rounded to precision
         """
-        if size > 1:
-            return [cls.random_decimal(low, high, precision) for _ in range(size)]
         d_low = round(Decimal(low), precision)
         d_high = round(Decimal(high), precision)
-        result = round(Decimal(cls._RNG.uniform(d_low, d_high)), precision)
-        if result <= d_low:
-            return d_low
-        if result >= d_high:
-            return d_high
-        return result
+        x = cls._RNG.uniform(float(d_low), float(d_high))
+        return min(max(round(Decimal(x), precision), d_low), d_high)
 
     def get_session(self) -> orm.Session:
         config = autodict.AutoDict(encrypt=False)
@@ -148,7 +140,7 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self, *, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start
-        with autodict.JSONAutoDict(TEST_LOG) as d:
+        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
             d["methods"][self.id()] = duration
         if clean:
             sql.drop_session()
@@ -164,8 +156,8 @@ class TestBase(unittest.TestCase):
             slow_duration: Duration of slow test
             fast_duration: Duration of fast test
         """
-        with autodict.JSONAutoDict(TEST_LOG) as d:
-            d["speed"][self.id_()] = {
+        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
+            d["speed"][self.id()] = {
                 "slow": slow_duration,
                 "fast": fast_duration,
                 "increase": slow_duration / fast_duration,
@@ -186,5 +178,5 @@ class TestBase(unittest.TestCase):
     def tearDownClass(cls) -> None:
         print("]done", flush=True)
         duration = time.perf_counter() - cls._CLASS_START
-        with autodict.JSONAutoDict(TEST_LOG) as d:
+        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
             d["classes"][f"{cls.__module__}.{cls.__qualname__}"] = duration

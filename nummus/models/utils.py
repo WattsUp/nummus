@@ -27,7 +27,7 @@ _SEARCH_PROPERTIES: dict[type[Base], t.Strings] = {
 def search(
     query: orm.Query[Base],
     cls: type[Base],
-    search_str: str,
+    search_str: str | None,
 ) -> orm.Query[Base]:
     """Perform a fuzzy search and return matches.
 
@@ -83,19 +83,19 @@ def query_count(query: orm.Query[Base]) -> int:
     # From here:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
     col_one = sqlalchemy.literal_column("1")
-    counter = query.statement.with_only_columns(
+    counter = query.statement.with_only_columns(  # type: ignore[attr-defined]
         sqlalchemy.func.count(col_one),
         maintain_column_froms=True,
     )
     counter = counter.order_by(None)
-    return query.session.execute(counter).scalar()
+    return query.session.execute(counter).scalar() or 0
 
 
 def paginate(
     query: orm.Query[Base],
     limit: int,
     offset: int,
-) -> tuple[list[Base], int, int]:
+) -> tuple[list[Base], int, int | None]:
     """Paginate query response for smaller results.
 
     Args:
@@ -105,7 +105,7 @@ def paginate(
 
     Returns:
         Page (list of result from query), amount count for query, next_offset for
-        subsequent calls
+        subsequent calls (None if no more)
     """
     offset = max(0, offset)
 

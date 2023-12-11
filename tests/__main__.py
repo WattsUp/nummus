@@ -16,7 +16,7 @@ def pre_tests() -> None:
     """Things to run before all tests."""
     print(f"Testing version {__version__}")
     TEST_LOG.unlink(missing_ok=True)
-    with autodict.JSONAutoDict(TEST_LOG) as d:
+    with autodict.JSONAutoDict(str(TEST_LOG)) as d:
         d["classes"] = {}
         d["methods"] = {}
 
@@ -28,7 +28,7 @@ def post_tests() -> bool:
         True if post tests were successful, False otherwise
     """
     n_slowest = 10
-    with autodict.JSONAutoDict(TEST_LOG) as d:
+    with autodict.JSONAutoDict(str(TEST_LOG)) as d:
         classes = sorted(d["classes"].items(), key=lambda item: -item[1])
         methods = sorted(d["methods"].items(), key=lambda item: -item[1])
         web_latency = sorted(d["web_latency"].items(), key=lambda item: -max(item[1]))

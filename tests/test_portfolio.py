@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import base64
+import datetime
 import json
 import secrets
+import shutil
 import tarfile
 
 import autodict
+import time_machine
 
-from nummus import models, portfolio, sql
+from nummus import exceptions as exc
+from nummus import importers, models, portfolio, sql
 from nummus.models import (
     Account,
     AccountCategory,
@@ -39,15 +43,16 @@ class TestPortfolio(TestBase):
         self.assertRaises(FileNotFoundError, portfolio.Portfolio, path_db, None)
 
         # Make config
-        autodict.JSONAutoDict(path_config).save()
+        autodict.JSONAutoDict(str(path_config)).save()
 
         # Failed to unlock
-        self.assertRaises(TypeError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
         path_images = path_db.parent.joinpath("portfolio.images")
+        path_importers = path_db.parent.joinpath("portfolio.importers")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         # Create unencrypted portfolio
@@ -56,6 +61,8 @@ class TestPortfolio(TestBase):
         self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_images.exists(), "images does not exist")
         self.assertTrue(path_images.is_dir(), "images is not a directory")
+        self.assertTrue(path_importers.exists(), "importers does not exist")
+        self.assertTrue(path_importers.is_dir(), "importers is not a directory")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
@@ -63,9 +70,14 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
         self.assertEqual(p.image_path, path_images)
+        self.assertEqual(p.importers_path, path_importers)
         self.assertEqual(p.path, path_db)
         self.assertEqual(p.ssl_cert_path, path_ssl.joinpath("cert.pem"))
         self.assertEqual(p.ssl_key_path, path_ssl.joinpath("key.pem"))
+
+        self.assertRaises(exc.NotEncryptedError, p.encrypt, "")
+        self.assertRaises(exc.NotEncryptedError, p.decrypt, "")
+
         p = None
         sql.drop_session()
 
@@ -93,17 +105,19 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             user.password = self.random_string()
             s.commit()
 
         # Invalid root password
-        self.assertRaises(ValueError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
         # Recreate
         path_db.unlink()
@@ -117,17 +131,19 @@ class TestPortfolio(TestBase):
         # Delete root
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             s.delete(user)
             s.commit()
 
         # Missing root password
-        self.assertRaises(KeyError, portfolio.Portfolio, path_db, None)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
@@ -141,7 +157,7 @@ class TestPortfolio(TestBase):
         key = self.random_string()
 
         # Create unencrypted portfolio
-        portfolio.Portfolio.create(path_db, key)
+        p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_images.exists(), "images does not exist")
@@ -152,6 +168,13 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
+
+        secret = self.random_string()
+        enc_secret = p.encrypt(secret)
+        result = p.decrypt_s(enc_secret)
+        self.assertEqual(result, secret)
+
+        p = None
         sql.drop_session()
 
         # Check portfolio is encrypted
@@ -169,23 +192,30 @@ class TestPortfolio(TestBase):
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
 
         # Bad key
-        self.assertRaises(TypeError, portfolio.Portfolio, path_db, self.random_string())
+        self.assertRaises(
+            exc.UnlockingError,
+            portfolio.Portfolio,
+            path_db,
+            self.random_string(),
+        )
 
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
-            user.password = p._enc.encrypt(secrets.token_bytes())  # noqa: SLF001
+            if user is None:
+                self.fail("Missing nummus user")
+            user.password = p.encrypt(secrets.token_bytes())
             s.commit()
 
         # Invalid root password
-        self.assertRaises(ValueError, portfolio.Portfolio, path_db, key)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
         # Recreate
         path_db.unlink()
@@ -199,12 +229,14 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
             # Good, now change root password
-            user: Credentials = (
+            user = (
                 s.query(Credentials)
                 .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
                 .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
                 .first()
             )
+            if user is None:
+                self.fail("Missing nummus user")
             user.password = key
             s.commit()
 
@@ -223,7 +255,7 @@ class TestPortfolio(TestBase):
         # Still missing config
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
 
-        with autodict.JSONAutoDict(path_config) as c:
+        with autodict.JSONAutoDict(str(path_config)) as c:
             c["encrypt"] = True
 
         self.assertTrue(
@@ -231,7 +263,7 @@ class TestPortfolio(TestBase):
             "Database is unexpectedly unencrypted",
         )
 
-        with autodict.JSONAutoDict(path_config) as c:
+        with autodict.JSONAutoDict(str(path_config)) as c:
             c["encrypt"] = False
 
         self.assertFalse(
@@ -253,12 +285,14 @@ class TestPortfolio(TestBase):
             acct_checking = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
+                number="MONKEY-0123",
                 category=AccountCategory.CASH,
                 closed=False,
             )
             acct_invest_0 = Account(
                 name="Primate Investments",
                 institution="Monkey Bank",
+                number="MONKEY-9999",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
             )
@@ -288,6 +322,10 @@ class TestPortfolio(TestBase):
             # No match with random URI
             result = p.find_account(Account.id_to_uri(0x0FFFFFFF))
             self.assertIsNone(result)
+
+            # Find by number
+            result = p.find_account("MONKEY-0123")
+            self.assertEqual(result, acct_checking.id_)
 
             # Find by name
             result = p.find_account("Monkey Bank Checking")
@@ -348,7 +386,7 @@ class TestPortfolio(TestBase):
 
         # Fail to import non-importable file
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        self.assertRaises(TypeError, p.import_file, path)
+        self.assertRaises(exc.UnknownImporterError, p.import_file, path)
 
         # Fail to match Accounts and Assets
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
@@ -418,6 +456,8 @@ class TestPortfolio(TestBase):
                             .where(TransactionCategory.id_ == cat_id)
                             .first()
                         )
+                        if r_v is None:
+                            self.fail(f"Missing category: {cat_id}")
                         self.assertEqual(r_v.name, test_value)
                     elif prop in split_properties:
                         r_v = getattr(r_split, prop)
@@ -429,10 +469,30 @@ class TestPortfolio(TestBase):
                         r_v = getattr(res, prop)
                         self.assertEqual(r_v, test_value)
 
+            # Fail to import file again
+            self.assertRaises(exc.FileAlreadyImportedError, p.import_file, path)
+
+            # But it will work with force
+            p.import_file(path, force=True)
+
+            # Fine importing with force when not required
+            path = self._DATA_ROOT.joinpath("transactions_required.csv")
+            p.import_file(path, force=True)
+
+            # Install importer that returns empty list
+            shutil.copyfile(
+                self._DATA_ROOT.joinpath("custom_importer.py"),
+                p.importers_path.joinpath("custom_importer.py"),
+            )
+            p._importers = importers.get_importers(p._path_importers)  # noqa: SLF001
+            path = self._DATA_ROOT.joinpath("banana_bank_statement.pdf")
+            self.assertRaises(TypeError, p.import_file, path)
+
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
@@ -453,7 +513,12 @@ class TestPortfolio(TestBase):
             accounts = s.query(Account).all()
             self.assertEqual(len(accounts), 1)
 
-        result, tar_ver = p.backup()
+        # Get list of backups
+        result = portfolio.Portfolio.backups(path_db)
+        self.assertEqual(len(result), 0)
+
+        with time_machine.travel(utc_now, tick=False):
+            result, tar_ver = p.backup()
 
         path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
         self.assertEqual(result, path_backup_1)
@@ -463,17 +528,23 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()
+            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
             with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
+
+        # Get list of backups
+        result = portfolio.Portfolio.backups(path_db)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0][0], 1)
+        self.assertEqual(result[0][1], utc_now)
 
         # Accidentally add a new Account
         with p.get_session() as s:
@@ -490,7 +561,7 @@ class TestPortfolio(TestBase):
             self.assertEqual(len(accounts), 2)
 
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertNotEqual(buf_backup, buf)
@@ -501,12 +572,12 @@ class TestPortfolio(TestBase):
 
         # Files should match again
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_db.name).read()
+            buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()
+            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
             with path_config.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
@@ -544,6 +615,8 @@ class TestPortfolio(TestBase):
             s.add(asset)
             s.commit()
 
+            if asset.image_name is None:
+                self.fail("Asset is missing image")
             path_a_img = p.image_path.joinpath(asset.image_name)
             path_a_img_rel = str(path_a_img.relative_to(self._TEST_ROOT))
             a_img = self.random_string().encode()
@@ -565,11 +638,11 @@ class TestPortfolio(TestBase):
 
         p.backup()
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_a_img_rel).read()
+            buf_backup = tar.extractfile(path_a_img_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, a_img)
-            buf_backup = tar.extractfile(path_cert_rel).read()
+            buf_backup = tar.extractfile(path_cert_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_cert)
-            buf_backup = tar.extractfile(path_key_rel).read()
+            buf_backup = tar.extractfile(path_key_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_key)
         a_img = None
         buf_backup = None

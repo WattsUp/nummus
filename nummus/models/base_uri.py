@@ -18,7 +18,7 @@ _ORDER = "big"
 _ROUNDS = 3
 
 
-_CIPHER: Cipher = None
+_CIPHER: Cipher = None  # type: ignore[attr-defined]
 
 
 class Cipher:

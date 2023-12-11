@@ -19,13 +19,21 @@ _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 MIN_STR_LEN = 3
 SEARCH_THRESHOLD = 60
 
-THRESHOLD_YEARS = 12 * 1.5
+THRESHOLD_MONTHS = 12 * 1.5
 THRESHOLD_WEEKS = 4 * 2
 THRESHOLD_DAYS = 7 * 1.5
 
 MONTHS_IN_YEAR = 12
 DAYS_IN_YEAR = 365.25
 DAYS_IN_WEEK = 7
+
+THRESHOLD_HOURS = 96
+THRESHOLD_MINUTES = 90
+THRESHOLD_SECONDS = 90
+
+SECONDS_IN_MINUTE = 60
+SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE
+SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
 
 
 def camel_to_snake(s: str) -> str:
@@ -39,7 +47,7 @@ def get_input(
     *,
     secure: bool = False,
     print_key: bool | None = None,
-) -> str:
+) -> str | None:
     """Get input from the user, optionally secure.
 
     Args:
@@ -70,7 +78,7 @@ def confirm(
     prompt: str | None = None,
     *,
     default: bool | None = False,
-) -> bool:
+) -> bool | None:
     """Prompt user for yes/no confirmation.
 
     Args:
@@ -101,7 +109,7 @@ def confirm(
         print()
 
 
-def parse_real(s: str) -> t.Real:
+def parse_real(s: str | None) -> t.Real | None:
     """Parse a string into a real number.
 
     Args:
@@ -115,7 +123,8 @@ def parse_real(s: str) -> t.Real:
     clean = _REGEX_REAL_CLEAN.sub("", s)
     if clean == "":
         return None
-    if "-" in s:
+    # Negative if -x.xx or (x.xx)
+    if "-" in s or "(" in s:
         return Decimal(clean) * -1
     return Decimal(clean)
 
@@ -134,7 +143,7 @@ def format_financial(x: t.Real) -> str:
     return f"${x:,.2f}"
 
 
-def parse_bool(s: str) -> bool:
+def parse_bool(s: str) -> bool | None:
     """Parse a string into a bool.
 
     Args:
@@ -151,7 +160,7 @@ def parse_bool(s: str) -> bool:
     return s.lower() in ["true", "t", "1"]
 
 
-def format_days(days: int, labels: t.Strings = None) -> str:
+def format_days(days: int, labels: t.Strings | None = None) -> str:
     """Format number of days to days, weeks, months, or years.
 
     Args:
@@ -159,7 +168,7 @@ def format_days(days: int, labels: t.Strings = None) -> str:
         labels: Override labels [days, weeks, months, years]
 
     Returns:
-        x d
+        x days
         x wks
         x mos
         x yrs
@@ -167,7 +176,7 @@ def format_days(days: int, labels: t.Strings = None) -> str:
     labels = labels or ["days", "wks", "mos", "yrs"]
     years = days / DAYS_IN_YEAR
     months = years * MONTHS_IN_YEAR
-    if months > THRESHOLD_YEARS:
+    if months > THRESHOLD_MONTHS:
         return f"{years:.0f} {labels[3]}"
     weeks = days / DAYS_IN_WEEK
     if weeks > THRESHOLD_WEEKS:
@@ -175,6 +184,40 @@ def format_days(days: int, labels: t.Strings = None) -> str:
     if days > THRESHOLD_DAYS:
         return f"{weeks:.0f} {labels[1]}"
     return f"{days} {labels[0]}"
+
+
+def format_seconds(
+    seconds: float,
+    labels: t.Strings | None = None,
+    labels_days: t.Strings | None = None,
+) -> str:
+    """Format number of seconds to seconds, minutes, or hours.
+
+    Args:
+        seconds: Number of seconds to format
+        labels: Override labels [seconds, minutes, hours]
+        labels_days: Override day labels, passed to format_days
+
+    Returns:
+        x s
+        x min
+        x hrs
+        x days
+        x wks
+        x mos
+        x yrs
+    """
+    labels = labels or ["s", "min", "hrs"]
+    hours = seconds / SECONDS_IN_HOUR
+    if hours > THRESHOLD_HOURS:
+        days = int(seconds // SECONDS_IN_DAY)
+        return format_days(days, labels=labels_days)
+    minutes = seconds / SECONDS_IN_MINUTE
+    if minutes > THRESHOLD_MINUTES:
+        return f"{hours:.1f} {labels[2]}"
+    if seconds > THRESHOLD_SECONDS:
+        return f"{minutes:.1f} {labels[1]}"
+    return f"{seconds:.1f} {labels[0]}"
 
 
 def range_date(start: t.Date, end: t.Date, *_, include_end: bool = True) -> t.Dates:

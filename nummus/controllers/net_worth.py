@@ -25,7 +25,7 @@ def ctx_chart() -> t.DictAny:
         Dictionary HTML context
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     args = flask.request.args
 
@@ -41,6 +41,8 @@ def ctx_chart() -> t.DictAny:
 
     with p.get_session() as s:
         # TODO(WatsUp): Net worth, period=all is too slow
+        # Replace date with date_ord
+        # Have htmx return a waiting overlay that triggers the real request
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
@@ -93,7 +95,7 @@ def page() -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
 
     with p.get_session() as s:

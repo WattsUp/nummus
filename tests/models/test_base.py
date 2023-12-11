@@ -9,6 +9,14 @@ from nummus.models import base
 from tests.base import TestBase
 
 
+class Bytes:
+    def __init__(self, s: str) -> None:
+        self._data = s.encode(encoding="utf-8")
+
+    def __eq__(self, other: Bytes) -> bool:
+        return self._data == other._data
+
+
 class Parent(base.Base):
     __table_id__ = 0xF0000000
 
@@ -17,20 +25,13 @@ class Parent(base.Base):
     children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
 
     @property
-    def favorite_child(self) -> Child:
+    def favorite_child(self) -> Child | None:
         if len(self.children) < 1:
             return None
         return self.children[0]
 
     @property
-    def uri_bytes(self) -> bytes:
-        class Bytes:
-            def __init__(self, s: str) -> None:
-                self._data = s.encode(encoding="utf-8")
-
-            def __eq__(self, other: Bytes) -> bool:
-                return self._data == other._data
-
+    def uri_bytes(self) -> Bytes:
         return Bytes(self.uri)
 
 
@@ -48,13 +49,12 @@ class TestORMBase(TestBase):
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(),
-            tables=[Parent.__table__, Child.__table__],
+            tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
         )
         s.commit()
 
         parent = Parent()
         self.assertIsNone(parent.id_)
-        self.assertIsNone(parent.uri)
         s.add(parent)
         s.commit()
         self.assertIsNotNone(parent.id_)
@@ -63,7 +63,6 @@ class TestORMBase(TestBase):
 
         child = Child()
         self.assertIsNone(child.id_)
-        self.assertIsNone(child.uri)
         self.assertIsNone(child.parent)
         self.assertIsNone(child.parent_id)
         child.parent = parent
@@ -97,7 +96,7 @@ class TestORMBase(TestBase):
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(),
-            tables=[Parent.__table__, Child.__table__],
+            tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
         )
         s.commit()
 
@@ -122,7 +121,7 @@ class TestORMBase(TestBase):
         s = self.get_session()
         base.Base.metadata.create_all(
             s.get_bind(),
-            tables=[Parent.__table__, Child.__table__],
+            tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
         )
         s.commit()
 

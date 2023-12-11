@@ -18,7 +18,7 @@ List of dependencies for package to run.
   - gevent
   - colorama
   - rapidfuzz
-  - pyopenssl
+  - cryptography
   - flask-assets
   - pytailwindcss
   - jsmin

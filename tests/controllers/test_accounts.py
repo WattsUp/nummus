@@ -18,11 +18,18 @@ class TestAccount(WebTestBase):
 
         name = self.random_string()
         institution = self.random_string()
-        form = {"institution": institution, "name": name, "category": "credit"}
+        form = {
+            "institution": institution,
+            "name": name,
+            "category": "credit",
+            "number": "",
+        }
         result, headers = self.web_post(endpoint, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-account")
         with p.get_session() as s:
             acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
             self.assertEqual(acct.name, name)
             self.assertEqual(acct.institution, institution)
             self.assertEqual(acct.category, AccountCategory.CREDIT)
@@ -32,6 +39,7 @@ class TestAccount(WebTestBase):
             "institution": institution,
             "name": name,
             "category": "credit",
+            "number": "",
             "closed": "",
         }
         result, _ = self.web_post(endpoint, data=form)
@@ -44,12 +52,23 @@ class TestAccount(WebTestBase):
             "institution": institution,
             "name": "ab",
             "category": "credit",
+            "number": "",
         }
         result, _ = self.web_post(endpoint, data=form)
         e_str = "Account name must be at least 3 characters long"
         self.assertIn(e_str, result)
         with p.get_session() as s:
             self.assertFalse(acct.closed)
+
+        form = {
+            "institution": institution,
+            "name": "ab",
+            "category": "",
+            "number": "",
+        }
+        result, _ = self.web_post(endpoint, data=form)
+        e_str = "Account category must not be None"
+        self.assertIn(e_str, result)
 
     def test_page(self) -> None:
         d = self._setup_portfolio()

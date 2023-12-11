@@ -17,17 +17,20 @@ if TYPE_CHECKING:
 
     from nummus import custom_types as t
 
+    try:
+        from nummus import encryption
+    except ImportError:
+        # Helpful information printed in nummus.portfolio
+        from nummus import encryption_fb as encryption
+
 try:
     # TODO(WattsUp): figure out Windows sqlcipher installation
     import sqlcipher3
-
-    from nummus.encryption import Encryption
 except ImportError:
-    # Helpful information printed in nummus.portfolio
-    Encryption = None
+    sqlcipher3 = None
 
 # Cache engines so recomputing db_key is avoided
-_ENGINES: dict[str, sqlalchemy.engine.Engine] = {}
+_ENGINES: dict[Path, sqlalchemy.engine.Engine] = {}
 
 _ENGINE_ARGS: t.DictAny = {}
 
@@ -45,9 +48,9 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
 
 
 def get_session(
-    path: str,
+    path: Path,
     config: autodict.AutoDict,
-    enc: Encryption = None,
+    enc: encryption.Encryption | None = None,  # type: ignore[attr-defined]
 ) -> orm.Session:
     """Get database session.
 
@@ -68,7 +71,7 @@ def get_session(
     return orm.Session(bind=_ENGINES[path])
 
 
-def drop_session(path: str | None = None) -> None:
+def drop_session(path: Path | None = None) -> None:
     """Close database session.
 
     Args:
@@ -84,7 +87,7 @@ def drop_session(path: str | None = None) -> None:
 def _get_engine(
     path: Path,
     config: autodict.AutoDict,
-    enc: Encryption = None,
+    enc: encryption.Encryption | None = None,
 ) -> sqlalchemy.engine.Engine:
     """Get sqlalchemy Engine to the database.
 

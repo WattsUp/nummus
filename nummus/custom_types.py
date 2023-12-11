@@ -6,16 +6,17 @@ from __future__ import annotations
 
 import datetime
 import decimal
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any, Union
 
 from sqlalchemy import orm
 
+_ = Sequence
+
 Date = datetime.date
 Dates = list[Date]
 Ints = list[int]
-IntOrStr = int | str
 Paths = list[Path]
 Real = decimal.Decimal
 Reals = list[Real]

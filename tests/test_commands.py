@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import io
 import shutil
 from unittest import mock
@@ -15,19 +16,19 @@ from tests.base import TestBase
 
 class TestCommands(TestBase):
     def test_create_unencrypted(self) -> None:
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
         queue: t.Strings = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -75,26 +76,26 @@ class TestCommands(TestBase):
             self.assertTrue(path_config.exists(), "Config does not exist")
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_create_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -188,24 +189,24 @@ class TestCommands(TestBase):
             self.assertNotEqual(rc, 0)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_unencrypted(self) -> None:
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
-            commands.utils.getpass.getpass = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
+            commands.utils.getpass.getpass = mock_input  # type: ignore[attr-defined]
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -233,27 +234,27 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_encrypted(self) -> None:
         if portfolio.encryption is None:
             self.skipTest("Encryption is not installed")
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str | None] = []
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print)
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
 
         try:
-            mock.builtins.input = mock_input
-            commands.utils.getpass.getpass = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
+            commands.utils.getpass.getpass = mock_input  # type: ignore[attr-defined]
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
@@ -343,7 +344,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_import_files(self) -> None:
@@ -410,7 +411,8 @@ class TestCommands(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = (
-            f"{Fore.RED}File is an unknown type: {file_c}\n"
+            f"{Fore.RED}Unknown importer for {file_c}\n"
+            f"{Fore.YELLOW}Create a custom importer in {p.importers_path}\n"
             f"{Fore.RED}Abandoned import, restored from backup\n"
         )
         self.assertEqual(fake_stdout, target)
@@ -438,6 +440,22 @@ class TestCommands(TestBase):
             transactions = s.query(Transaction).all()
             self.assertEqual(len(transactions), 6 + 4)
 
+        # Import same files again, should fail
+        paths = [file_a, file_c]
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            rc = commands.import_files(p, paths)
+        self.assertNotEqual(rc, 0)
+
+        fake_stdout = fake_stdout.getvalue()
+        today = datetime.date.today()
+        target = (
+            f"{Fore.RED}Already imported {file_a} on {today}\n"
+            f"{Fore.YELLOW}Delete file or run import with --force flag "
+            "which may create duplicate transactions.\n"
+            f"{Fore.RED}Abandoned import, restored from backup\n"
+        )
+        self.assertEqual(fake_stdout, target)
+
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup = path_db.with_suffix(".backup1.tar.gz")
@@ -458,6 +476,14 @@ class TestCommands(TestBase):
 
         path_db.unlink()
         self.assertFalse(path_db.exists(), "Portfolio does exist")
+
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            rc = commands.restore(path_db, None, list_ver=True)
+        self.assertEqual(rc, 0)
+
+        fake_stdout = fake_stdout.getvalue()
+        target = f"{Fore.CYAN}Backup # 1 created at"
+        self.assertEqual(fake_stdout[: len(target)], target)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.restore(path_db, None)

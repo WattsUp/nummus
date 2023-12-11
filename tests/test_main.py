@@ -168,18 +168,26 @@ class TestMain(TestBase):
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
                 self._called_kwargs,
-                {"_func": "import_files", "paths": [Path(p) for p in paths]},
+                {
+                    "_func": "import_files",
+                    "paths": [Path(p) for p in paths],
+                    "force": False,
+                },
             )
 
             paths = ["transactions.csv", "statement-dir"]
-            args = ["--portfolio", str(path), "import", *paths]
+            args = ["--portfolio", str(path), "import", *paths, "--force"]
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 main.main(args)
             self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
                 self._called_kwargs,
-                {"_func": "import_files", "paths": [Path(p) for p in paths]},
+                {
+                    "_func": "import_files",
+                    "paths": [Path(p) for p in paths],
+                    "force": True,
+                },
             )
 
         finally:
@@ -253,7 +261,7 @@ class TestMain(TestBase):
         try:
             self._set_up_commands()
 
-            args = ["restore"]
+            args = ["restore", "-l"]
             main.main(args)
             self.assertListEqual(self._called_args, [])
             self.assertDictEqual(
@@ -263,6 +271,7 @@ class TestMain(TestBase):
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "path_password": None,
                     "tar_ver": None,
+                    "list_ver": True,
                 },
             )
 
@@ -277,6 +286,7 @@ class TestMain(TestBase):
                     "path_db": home.joinpath(".nummus", "portfolio.db"),
                     "path_password": None,
                     "tar_ver": tar_ver,
+                    "list_ver": False,
                 },
             )
 
@@ -296,6 +306,7 @@ class TestMain(TestBase):
                     "path_db": path,
                     "path_password": path_password,
                     "tar_ver": None,
+                    "list_ver": False,
                 },
             )
         finally:

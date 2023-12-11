@@ -44,9 +44,9 @@ def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
 
 def parse_period(
     period: str,
-    start_custom: datetime.date,
-    end_custom: datetime.date,
-) -> tuple[datetime.date, datetime.date]:
+    start_custom: datetime.date | None,
+    end_custom: datetime.date | None,
+) -> tuple[datetime.date | None, datetime.date]:
     """Parse time period from arguments.
 
     Args:

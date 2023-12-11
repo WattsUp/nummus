@@ -3,12 +3,8 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
 
 from nummus import custom_types as t
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 TxnDict = dict[str, str | t.Real | t.Date | t.Any]
 TxnDicts = list[TxnDict]
@@ -19,42 +15,48 @@ class TransactionImporter(ABC):
 
     def __init__(
         self,
-        path: Path | None = None,
         buf: bytes | None = None,
+        buf_pdf: t.Strings | None = None,
     ) -> None:
         """Initialize Transaction Importer.
 
         Args:
             Provide one or the other
-            path: Path to file
             buf: Contents of file
+            buf_pdf: Contents of PDF pages as text
         """
         super().__init__()
 
-        if buf is not None:
-            self._buf = buf
-        elif path is not None:
-            with path.open("rb") as file:
-                self._buf = file.read()
-        else:
-            msg = "Must provide path or buffer"
+        self._buf = buf
+        self._buf_pdf = buf_pdf
+
+        if buf is None and buf_pdf is None:
+            msg = "Must provide buffer or PDF pages"
             raise ValueError(msg)
 
     @classmethod
     @abstractmethod
-    def is_importable(cls, name: Path, buf: bytes) -> bool:
+    def is_importable(
+        cls,
+        suffix: str,
+        buf: bytes | None,
+        buf_pdf: t.Strings | None,
+    ) -> bool:  # pragma: no cover
         """Test if file is importable for this Importer.
 
         Args:
-            name: Name of file to import
+            suffix: Suffix of file to import
             buf: Contents of file
+            buf_pdf: Contents of PDF pages as text
 
         Returns:
             True if file is importable
         """
+        msg = f"Method not implemented for {cls}"
+        raise NotImplementedError(msg)
 
     @abstractmethod
-    def run(self) -> TxnDicts:
+    def run(self) -> TxnDicts:  # pragma: no cover
         """Run importer.
 
         Returns:
@@ -62,3 +64,5 @@ class TransactionImporter(ABC):
             properties. Accounts, Assets, and TransactionCategories referred to by
             name since ID is unknown here.
         """
+        msg = f"Method not implemented for {self.__class__}"
+        raise NotImplementedError(msg)

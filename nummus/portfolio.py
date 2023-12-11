@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import base64
+import datetime
+import hashlib
+import io
 import re
 import secrets
 import shutil
@@ -15,11 +18,13 @@ import sqlalchemy.exc
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import importers, models, sql, version
 from nummus.models import (
     Account,
     Asset,
     Credentials,
+    ImportedFile,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -45,7 +50,7 @@ class Portfolio:
     _NUMMUS_USER = "root"
     _NUMMUS_PASSWORD = "unencrypted database"  # noqa: S105
 
-    def __init__(self, path: str, key: str) -> None:
+    def __init__(self, path: str | Path, key: str | None) -> None:
         """Initialize Portfolio.
 
         Args:
@@ -59,6 +64,7 @@ class Portfolio:
         name = self._path_db.with_suffix("").name
         self._path_config = self._path_db.with_suffix(".config")
         self._path_images = self._path_db.parent.joinpath(f"{name}.images")
+        self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
@@ -67,22 +73,30 @@ class Portfolio:
             msg = "Portfolio configuration does not exist, cannot open database"
             raise FileNotFoundError(msg)
         self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
+        self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
-        self._config = autodict.JSONAutoDict(self._path_config, save_on_exit=False)
+        self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
 
         if key is None:
             self._enc = None
         else:
-            self._enc = encryption.Encryption(key.encode())
+            self._enc = encryption.Encryption(key)  # type: ignore[attr-defined]
         self._unlock()
+
+        self._importers = importers.get_importers(self._path_importers)
 
     @property
     def path(self) -> Path:
         """Path to Portfolio database."""
         return self._path_db
 
+    @property
+    def importers_path(self) -> Path:
+        """Path to Portfolio importers."""
+        return self._path_importers
+
     @staticmethod
-    def is_encrypted(path: str) -> bool:
+    def is_encrypted(path: str | Path) -> bool:
         """Check Portfolio's config for encryption status.
 
         Args:
@@ -102,11 +116,11 @@ class Portfolio:
         if not path_config.exists():
             msg = f"Portfolio configuration does not exist, for {path_db}"
             raise FileNotFoundError(msg)
-        with autodict.JSONAutoDict(path_config, save_on_exit=False) as config:
+        with autodict.JSONAutoDict(str(path_config), save_on_exit=False) as config:
             return config["encrypt"]
 
     @staticmethod
-    def create(path: str, key: str | None = None) -> Portfolio:
+    def create(path: str | Path, key: str | None = None) -> Portfolio:
         """Create a new Portfolio.
 
         Saves database and configuration file
@@ -130,17 +144,19 @@ class Portfolio:
         name = path_db.with_suffix("").name
         path_config = path_db.with_suffix(".config")
         path_images = path_db.parent.joinpath(f"{name}.images")
+        path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         enc = None
         if encryption is not None and key is not None:
-            enc = encryption.Encryption(key.encode())
+            enc = encryption.Encryption(key)
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_images.mkdir(exist_ok=True)
+        path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
         salt = secrets.token_urlsafe()
-        config = autodict.JSONAutoDict(path_config)
+        config = autodict.JSONAutoDict(str(path_config))
         config.clear()
         config["version"] = str(version.__version__)
         config["key_version"] = 1  # Increment if there is a breaking change
@@ -180,16 +196,13 @@ class Portfolio:
         """Unlock the database.
 
         Raises:
-            TypeError if database file fails to open
-            PermissionError if decryption failed
-            KeyError if root password is missing
-            ValueError if root password does not match expected
+            UnlockingError if database file fails to open
         """
         # Drop any open session
         sql.drop_session(self._path_db)
         try:
             with self.get_session() as s:
-                user: Credentials = (
+                user: Credentials | None = (
                     s.query(Credentials)
                     .where(
                         Credentials.site == self._NUMMUS_SITE,
@@ -197,18 +210,18 @@ class Portfolio:
                     )
                     .first()
                 )
-        except sqlalchemy.exc.DatabaseError as e:
+        except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
-            raise TypeError(msg) from e
+            raise exc.UnlockingError(msg) from e
 
         if user is None:
             msg = "Root password not found"
-            raise KeyError(msg)
+            raise exc.UnlockingError(msg)
 
         if self._enc is None:
             if user.password != self._NUMMUS_PASSWORD:
                 msg = "Root password did not match"
-                raise ValueError(msg)
+                raise exc.UnlockingError(msg)
         else:
             salt: str = self._config["salt"]
             key_salted = self._enc.key + salt.encode()
@@ -216,10 +229,10 @@ class Portfolio:
                 password_decrypted = self._enc.decrypt(user.password)
             except ValueError as e:
                 msg = "Failed to decrypt root password"
-                raise PermissionError(msg) from e
+                raise exc.UnlockingError(msg) from e
             if password_decrypted != key_salted:
                 msg = "Root user's password did not match"
-                raise ValueError(msg)
+                raise exc.UnlockingError(msg)
         # Load Cipher
         models.load_cipher(base64.b64decode(self._config["cipher"]))
         # All good :)
@@ -232,31 +245,97 @@ class Portfolio:
         """
         return sql.get_session(self._path_db, self._config, self._enc)
 
-    def import_file(self, path: Path) -> None:
+    def encrypt(self, secret: bytes | str) -> str:
+        """Encrypt a secret using the key.
+
+        Args:
+            secret: Secret object
+
+        Returns:
+            base64 encoded encrypted object
+
+        Raises:
+            NotEncryptedError if portfolio does not support encryption
+        """
+        if self._enc is None:
+            raise exc.NotEncryptedError
+        return self._enc.encrypt(secret)
+
+    def decrypt(self, enc_secret: str) -> bytes:
+        """Decrypt an encoded secret using the key.
+
+        Args:
+            enc_secret: base64 encoded encrypted object
+
+        Returns:
+            bytes decoded object
+
+        Raises:
+            NotEncryptedError if portfolio does not support encryption
+        """
+        if self._enc is None:
+            raise exc.NotEncryptedError
+        return self._enc.decrypt(enc_secret)
+
+    def decrypt_s(self, enc_secret: str) -> str:
+        """Decrypt an encoded secret using the key.
+
+        Args:
+            enc_secret: base64 encoded encrypted string
+
+        Returns:
+            decoded string
+        """
+        return self.decrypt(enc_secret).decode()
+
+    def import_file(self, path: Path, *_, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
         Args:
             path: Path to file to import
+            force: True will not check for already imported files
 
         Raises:
+            FileAlreadyImportedError if file has already been imported
+            UnknownImporterError if no importer is found for file
+            TypeError if importer returns wrong types
             KeyError if account or asset cannot be resolved
         """
-        i = importers.get_importer(path)
-        if i is None:
-            msg = f"File is an unknown type: {path}"
-            raise TypeError(msg)
+        # Compute hash of file contents to check if already imported
+        sha = hashlib.sha256()
+        with path.open("rb") as file:
+            sha.update(file.read())
+        h = sha.hexdigest()
+        if not force:
+            with self.get_session() as s:
+                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                if existing is not None:
+                    raise exc.FileAlreadyImportedError(existing.date, path)
 
-        # Cache a mapping from account/asset name to the ID
+        i = importers.get_importer(path, self._importers)
+        if i is None:
+            raise exc.UnknownImporterError(path)
+        ctx = f"<importer={i.__class__.__name__}, file={path}>"
+
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
-            account_mapping: t.DictInt = {}
+            # Cache a mapping from account/asset name to the ID
+            acct_mapping: t.DictInt = {}
             asset_mapping: t.DictInt = {}
-            transactions: list[tuple[Transaction, TransactionSplit]] = []
-            for d in i.run():
+            txns: list[tuple[Transaction, TransactionSplit]] = []
+            txns_raw = i.run()
+            if not txns_raw:
+                msg = f"Importer returned no transactions, ctx={ctx}"
+                raise TypeError(msg)
+            for d in txns_raw:
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
+                if not isinstance(category_s, str):  # pragma: no cover
+                    # Don't need to test debug code
+                    msg = f"Category is not a string, ctx={ctx}"
+                    raise TypeError(msg)
                 d_split: importers.TxnDict = {
                     "amount": d["amount"],  # Both split and parent have amount
                     "payee": d.pop("payee", None),
@@ -266,43 +345,60 @@ class Portfolio:
                     "asset_quantity_unadjusted": d.pop("asset_quantity", None),
                 }
 
-                account_raw = d.pop("account")
-                account_id = account_mapping.get(account_raw)
-                if account_id is None:
-                    account = self.find_account(account_raw, session=s)
-                    if account is None:
-                        msg = f"Could not find Account by '{account_raw}'"
+                acct_raw = d.pop("account")
+                if not isinstance(acct_raw, str):  # pragma: no cover
+                    # Don't need to test debug code
+                    msg = f"Account is not a string, ctx={ctx}"
+                    raise TypeError(msg)
+                acct_id = acct_mapping.get(acct_raw)
+                if acct_id is None:
+                    acct = self.find_account(acct_raw, session=s)
+                    if not isinstance(acct, Account):
+                        msg = f"Could not find Account by '{acct_raw}', ctx={ctx}"
                         raise KeyError(msg)
-                    account_id = account.id_
-                    account_mapping[account_raw] = account_id
-                d["account_id"] = account_id
+                    acct_id = acct.id_
+                    acct_mapping[acct_raw] = acct_id
+                d["account_id"] = acct_id
 
                 asset_raw = d.pop("asset", None)
                 if asset_raw is not None:
+                    if not isinstance(asset_raw, str):  # pragma: no cover
+                        # Don't need to test debug code
+                        msg = f"Asset is not a string, ctx={ctx}"
+                        raise TypeError(msg)
                     # Find its ID
                     asset_id = asset_mapping.get(asset_raw)
                     if asset_id is None:
                         asset = self.find_asset(asset_raw, session=s)
-                        if asset is None:
-                            msg = f"Could not find Asset by '{asset_raw}'"
+                        if not isinstance(asset, Asset):
+                            msg = f"Could not find Asset by '{asset_raw}', ctx={ctx}"
                             raise KeyError(msg)
                         asset_id = asset.id_
                         asset_mapping[asset_raw] = asset_id
                     d_split["asset_id"] = asset_id
 
-                transactions.append((Transaction(**d), TransactionSplit(**d_split)))
+                txns.append((Transaction(**d), TransactionSplit(**d_split)))
 
             # All good, add transactions and commit
-            for txn, t_split in transactions:
+            for txn, t_split in txns:
                 t_split.parent = txn
                 s.add_all((txn, t_split))
+
+            # Add file hash to prevent importing again
+            if force:
+                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                if existing is not None:
+                    s.delete(existing)
+                    s.commit()
+
+            s.add(ImportedFile(hash_=h))
             s.commit()
 
     def find_account(
         self,
-        query: t.IntOrStr,
-        session: orm.Session = None,
-    ) -> int | Account:
+        query: int | str,
+        session: orm.Session | None = None,
+    ) -> int | Account | None:
         """Find a matching Account by name, URI, institution, or ID.
 
         Args:
@@ -314,7 +410,7 @@ class Portfolio:
             If session is not None: return Account object or None
         """
 
-        def _find(s: orm.Session) -> Account:
+        def _find(s: orm.Session) -> Account | None:
             if isinstance(query, int):
                 # See if account is an ID first...
                 matches = s.query(Account).where(Account.id_ == query).all()
@@ -327,6 +423,11 @@ class Portfolio:
                     return matches[0]
             except TypeError:
                 pass
+
+            # Maybe a number next
+            matches = s.query(Account).where(Account.number == query).all()
+            if len(matches) == 1:
+                return matches[0]
 
             # Maybe a name next
             matches = s.query(Account).where(Account.name == query).all()
@@ -350,9 +451,9 @@ class Portfolio:
 
     def find_asset(
         self,
-        query: t.IntOrStr,
-        session: orm.Session = None,
-    ) -> int | Asset:
+        query: int | str,
+        session: orm.Session | None = None,
+    ) -> int | Asset | None:
         """Find a matching Asset by name, URI, or ID.
 
         Args:
@@ -364,7 +465,7 @@ class Portfolio:
             If session is not None: return Asset object or None
         """
 
-        def _find(s: orm.Session) -> Asset:
+        def _find(s: orm.Session) -> Asset | None:
             if isinstance(query, int):
                 # See if account is an ID first...
                 matches = s.query(Asset).where(Asset.id_ == query).all()
@@ -424,14 +525,55 @@ class Portfolio:
                 query = s.query(Asset).where(Asset.img_suffix.is_not(None))
                 for asset in query.all():
                     # Query whole object okay, need image_name property
-                    file = self._path_images.joinpath(asset.image_name)
+                    file = self._path_images.joinpath(asset.image_name)  # type: ignore[attr-defined]
                     files.append(file)
 
             for file in files:
                 tar.add(file, arcname=file.relative_to(parent))
+            # Add a timestamp of when it was created
+            info = tarfile.TarInfo("_timestamp")
+            buf = datetime.datetime.utcnow().isoformat().encode()
+            info.size = len(buf)
+            tar.addfile(info, io.BytesIO(buf))
 
         path_backup.chmod(0o600)  # Only owner can read/write
         return path_backup, tar_ver
+
+    @staticmethod
+    def backups(p: str | Path | Portfolio) -> list[tuple[int, datetime.datetime]]:
+        """Get a list of all backups for this portfolio.
+
+        Args:
+            p: Path to database file, or Portfolio which will get its path
+
+        Returns:
+            List[(tar_ver, created timestamp), ...]
+        """
+        backups: list[tuple[int, datetime.datetime]] = []
+
+        path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
+        path_db = path_db.resolve().with_suffix(".db")
+        parent = path_db.parent
+        name = path_db.with_suffix("").name
+
+        # Find latest backup file for this Portfolio
+        re_filter = re.compile(rf"^{name}.backup(\d+).tar.gz$")
+        for file in parent.iterdir():
+            m = re_filter.match(file.name)
+            if m is None:
+                continue
+            # tar archive preserved owner and mode so no need to set these
+            with tarfile.open(file, "r:gz") as tar:
+                file_ts = tar.extractfile("_timestamp")
+                if file_ts is None:  # pragma: no cover
+                    # Backup file should always have timestamp file
+                    msg = "timestamp file is None"
+                    raise TypeError(msg)
+                tar_ver = int(m[1])
+                ts = datetime.datetime.fromisoformat(file_ts.read().decode())
+                ts = ts.replace(tzinfo=datetime.timezone.utc)
+                backups.append((tar_ver, ts))
+        return sorted(backups, key=lambda item: item[0])
 
     def clean(self) -> None:
         """Delete any unused files, creates a new backup."""
@@ -451,6 +593,8 @@ class Portfolio:
         for file in parent.iterdir():
             if file == path_backup:
                 continue
+            if file == self._path_importers:
+                continue
             if file.name.startswith(f"{name}."):
                 if file.is_dir():
                     shutil.rmtree(file)
@@ -464,7 +608,7 @@ class Portfolio:
         Portfolio.restore(self, tar_ver=1)
 
     @staticmethod
-    def restore(p: str | Portfolio, tar_ver: int | None = None) -> None:
+    def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
         """Restore Portfolio from backup.
 
         Args:
@@ -507,7 +651,7 @@ class Portfolio:
         # Reload Portfolio
         if isinstance(p, Portfolio):
             p._config = autodict.JSONAutoDict(  # noqa: SLF001
-                p._path_config,  # noqa: SLF001
+                str(p._path_config),  # noqa: SLF001
                 save_on_exit=False,
             )
             p._unlock()  # noqa: SLF001

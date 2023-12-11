@@ -40,14 +40,14 @@ class TestUtils(TestBase):
         prompt = self.random_string()
         prompt_input = self.random_string(length=50)
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = utils.getpass.getpass
 
-        def mock_input(to_print: str) -> None:
+        def mock_input(to_print: str) -> str | None:
             print(to_print + prompt_input)
             return prompt_input
 
-        def mock_get_pass(to_print: str) -> None:
+        def mock_get_pass(to_print: str) -> str | None:
             print(to_print)
             return prompt_input
 
@@ -60,7 +60,7 @@ class TestUtils(TestBase):
             raise EOFError
 
         try:
-            mock.builtins.input = mock_input
+            mock.builtins.input = mock_input  # type: ignore[attr-defined]
             utils.getpass.getpass = mock_get_pass
 
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -81,7 +81,7 @@ class TestUtils(TestBase):
             self.assertEqual(fake_stdout.getvalue(), "\u26BF  " + prompt + "\n")
             self.assertEqual(prompt_input, result)
 
-            mock.builtins.input = mock_input_interrupt
+            mock.builtins.input = mock_input_interrupt  # type: ignore[attr-defined]
             utils.getpass.getpass = mock_get_pass_eof
 
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -97,17 +97,17 @@ class TestUtils(TestBase):
             self.assertIsNone(result)
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
             utils.getpass.getpass = original_get_pass
 
     def test_confirm(self) -> None:
         prompt = self.random_string()
         prompt_input = self.random_string(length=50)
 
-        original_input = mock.builtins.input
+        original_input = mock.builtins.input  # type: ignore[attr-defined]
 
         try:
-            mock.builtins.input = lambda _: None
+            mock.builtins.input = lambda _: None  # type: ignore[attr-defined]
 
             result = utils.confirm(prompt=None, default=False)
             self.assertFalse(result, "Default is not False")
@@ -115,31 +115,31 @@ class TestUtils(TestBase):
             result = utils.confirm(prompt=prompt, default=True)
             self.assertTrue(result, "Default is not True")
 
-            mock.builtins.input = lambda _: "Y"
+            mock.builtins.input = lambda _: "Y"  # type: ignore[attr-defined]
 
             result = utils.confirm(prompt=prompt)
             self.assertTrue(result, "Y is not True")
 
-            mock.builtins.input = lambda _: "N"
+            mock.builtins.input = lambda _: "N"  # type: ignore[attr-defined]
 
             result = utils.confirm(prompt=prompt)
             self.assertFalse(result, "N is not False")
 
             queue = [prompt_input, "y"]
 
-            def _mock_input(_) -> None:
+            def _mock_input(_) -> str | None:
                 if len(queue) == 1:
                     return queue[0]
                 return queue.pop(0)
 
-            mock.builtins.input = _mock_input
+            mock.builtins.input = _mock_input  # type: ignore[attr-defined]
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
                 result = utils.confirm(prompt=prompt)
             self.assertTrue(result, "Y is not True")
 
         finally:
-            mock.builtins.input = original_input
+            mock.builtins.input = original_input  # type: ignore[attr-defined]
 
     def test_parse_financial(self) -> None:
         result = utils.parse_real(None)
@@ -232,13 +232,42 @@ class TestUtils(TestBase):
         result = utils.format_days(d)
         self.assertEqual(result, "2 mos")
 
-        d = 18 * 365.25 / 12
+        d = int(18 * 365.25 / 12)
         result = utils.format_days(d)
         self.assertEqual(result, "18 mos")
 
-        d = 18 * 365.25 / 12 + 1
+        d = int(18 * 365.25 / 12 + 1)
         result = utils.format_days(d)
         self.assertEqual(result, "2 yrs")
+
+    def test_format_seconds(self) -> None:
+        s = 0.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "0.0 s")
+
+        s = 60.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "60.0 s")
+
+        s = 90.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "1.5 min")
+
+        s = 5400.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "1.5 hrs")
+
+        s = 86400.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "24.0 hrs")
+
+        s = 86400 * 4.0
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "96.0 hrs")
+
+        s = 86400 * 4.1
+        result = utils.format_seconds(s)
+        self.assertEqual(result, "4 days")
 
     def test_range_date(self) -> None:
         start = datetime.date.today()

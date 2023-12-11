@@ -9,6 +9,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models.base import Base, BaseEnum, Decimal6
 
 
@@ -76,7 +77,7 @@ class Asset(Base):
     img_suffix: t.ORMStrOpt
 
     @property
-    def image_name(self) -> str:
+    def image_name(self) -> str | None:
         """Get name of Asset's image, None if it doesn't exist."""
         s = self.img_suffix
         if s is None:
@@ -94,8 +95,10 @@ class Asset(Base):
             List[dates], list[values]
         """
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
 
-        # TODO(Bradley): Add optional spline interpolation for
+        # TODO (Bradley): Add optional spline interpolation for
         # infrequently valued assets
 
         # Get latest Valuation before or including start date
@@ -145,7 +148,7 @@ class Asset(Base):
         s: orm.Session,
         start: t.Date,
         end: t.Date,
-        ids: t.Ints = None,
+        ids: t.Ints | None = None,
     ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Assets from start to end date.
 
@@ -227,6 +230,8 @@ class Asset(Base):
         from nummus.models import TransactionSplit
 
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
 
         multiplier = Decimal(1)
         splits: list[tuple[t.Date, t.Real]] = []

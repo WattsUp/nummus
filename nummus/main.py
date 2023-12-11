@@ -14,7 +14,7 @@ from nummus import custom_types as t
 from nummus import version
 
 
-def main(command_line: t.Strings = None) -> int:
+def main(command_line: t.Strings | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -89,6 +89,14 @@ calculates net worth, and predicts future performance."""
         type=int,
         help="number of backup to use for restore, omit for latest",
     )
+    sub_restore.add_argument(
+        "-l",
+        "--list",
+        dest="list_ver",
+        default=False,
+        action="store_true",
+        help="list available backups",
+    )
 
     _ = subparsers.add_parser(
         "clean",
@@ -107,6 +115,12 @@ calculates net worth, and predicts future performance."""
         type=Path,
         nargs="+",
         help="list of files and directories to import",
+    )
+    sub_import.add_argument(
+        "--force",
+        default=False,
+        action="store_true",
+        help="do not check for already imported files",
     )
 
     sub_web = subparsers.add_parser(
@@ -166,10 +180,12 @@ calculates net worth, and predicts future performance."""
         )
     if cmd == "restore":
         tar_ver: int = args.v
+        list_ver: bool = args.list_ver
         return commands.restore(
             path_db=path_db,
             path_password=path_password,
             tar_ver=tar_ver,
+            list_ver=list_ver,
         )
 
     p = commands.unlock(path_db=path_db, path_password=path_password)
@@ -190,7 +206,8 @@ calculates net worth, and predicts future performance."""
         return commands.clean(p)
     if cmd == "import":
         paths: t.Paths = args.paths
-        return commands.import_files(p, paths=paths)
+        force: bool = args.force
+        return commands.import_files(p, paths=paths, force=force)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)

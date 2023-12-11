@@ -163,7 +163,8 @@ class TestTransaction(WebTestBase):
 
         queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
-        self.assertEqual(result.count("span"), 2)
+        self.assertEqual(len(re.findall(r"<label.*>", result)), 3)
+        self.assertEqual(len(re.findall(r"<label.*hidden.*>", result)), 2)
         self.assertRegex(result, rf'value="{payee_0}"[ \n]+checked[ \n]+hx-get')
 
     def test_edit(self) -> None:
@@ -182,17 +183,22 @@ class TestTransaction(WebTestBase):
         self.assertEqual(result.count('name="payee"'), 1)
 
         endpoint = f"/h/transactions/t/{t_0}/edit"
-        form = {"amount": ""}
+
+        form = {}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Transaction date must not be empty", result)
+
+        form = {"date": today, "amount": ""}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Non-zero remaining amount to be assigned", result)
 
-        form = {"amount": "100"}
+        form = {"date": today, "amount": "100"}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Transaction must have at least one split", result)
 
-        form = {"payee": "", "amount": "100"}
+        form = {"date": today, "payee": "", "amount": "100"}
         result, _ = self.web_post(endpoint, data=form)
-        self.assertIn("Transaction date must not be empty", result)
+        self.assertIn("Transaction split missing properties", result)
 
         form = {"date": today, "payee": "ab", "amount": "100"}
         result, _ = self.web_post(endpoint, data=form)
@@ -200,6 +206,18 @@ class TestTransaction(WebTestBase):
             "Transaction split payee must be at least 3 characters long",
             result,
         )
+
+        form = {
+            "date": today,
+            "locked": "",
+            "payee": [payee_0, ""],
+            "description": ["", ""],
+            "category": [cat_0, cat_1],
+            "tag": ["", ""],
+            "amount": ["100", ""],
+        }
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Transaction split amount must not be empty", result)
 
         # Add split
         new_date = today - datetime.timedelta(days=10)

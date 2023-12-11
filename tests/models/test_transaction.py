@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 import sqlalchemy.exc
 
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import (
     Account,
@@ -88,6 +90,10 @@ class TestTransactionSplit(TestBase):
         }
 
         t_split_0 = TransactionSplit(**d)
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, getattr, t_split_0, "parent")
+
         s.add(t_split_0)
         s.commit()
         self.assertEqual(t_split_0.parent, txn)
@@ -133,7 +139,7 @@ class TestTransactionSplit(TestBase):
         self.assertEqual(t_split_1.account_id, acct.id_)
 
         # Zero amounts are bad
-        t_split_0.amount = 0
+        t_split_0.amount = Decimal(0)
         self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
         s.rollback()
 
@@ -144,7 +150,13 @@ class TestTransactionSplit(TestBase):
         self.assertRaises(TypeError, setattr, t_split_0, "parent", self.random_string())
 
         # Set parent_id directly
-        self.assertRaises(PermissionError, setattr, t_split_0, "parent_id", txn.id_)
+        self.assertRaises(
+            exc.ParentAttributeError,
+            setattr,
+            t_split_0,
+            "parent_id",
+            txn.id_,
+        )
 
     def test_asset_quantity(self) -> None:
         s = self.get_session()
@@ -193,4 +205,8 @@ class TestTransactionSplit(TestBase):
 
         self.assertIsNone(t_split.asset_quantity)
 
-        self.assertRaises(ValueError, t_split.adjust_asset_quantity, multiplier)
+        self.assertRaises(
+            exc.NonAssetTransactionError,
+            t_split.adjust_asset_quantity,
+            multiplier,
+        )

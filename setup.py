@@ -23,12 +23,13 @@ required = [
     "gevent",
     "colorama",
     "rapidfuzz",
-    "pyopenssl",
+    "cryptography",
     "flask-assets",
     "pytailwindcss",
     "jsmin",
     "flask<2.3,>=2",
     "typing-extensions",
+    "pdfplumber",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

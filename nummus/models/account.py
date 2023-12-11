@@ -10,6 +10,7 @@ from sqlalchemy import orm
 from typing_extensions import override
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models.asset import Asset
 from nummus.models.base import Base, BaseEnum
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -34,6 +35,7 @@ class Account(Base):
     Attributes:
         uri: Account unique identifier
         name: Account name
+        number: Account number
         institution: Account holding institution
         category: Type of Account
         closed: True if Account is closed, will hide from view and not update
@@ -43,20 +45,23 @@ class Account(Base):
 
     __table_id__ = 0x10000000
 
-    name: t.ORMStr = orm.mapped_column()
+    name: t.ORMStr
+    number: t.ORMStrOpt
     institution: t.ORMStr
     category: orm.Mapped[AccountCategory]
     closed: t.ORMBool
 
-    @orm.validates("name", "institution")
+    @orm.validates("name", "number", "institution")
     @override
-    def validate_strings(self, key: str, field: str) -> str:
+    def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
 
     @property
     def opened_on(self) -> t.Date:
         """Date of first Transaction."""
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
         query = s.query(Transaction)
         query = query.with_entities(sqlalchemy.func.min(Transaction.date))
         query = query.where(Transaction.account_id == self.id_)
@@ -66,6 +71,8 @@ class Account(Base):
     def updated_on(self) -> t.Date:
         """Date of latest Transaction."""
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
         query = s.query(Transaction)
         query = query.with_entities(sqlalchemy.func.max(Transaction.date))
         query = query.where(Transaction.account_id == self.id_)
@@ -87,6 +94,8 @@ class Account(Base):
             List[dates], list[values], dict{Asset.id_: list[values]}
         """
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
 
         # Get Account value on start date
         # It is callable, sum returns a generator type
@@ -101,7 +110,7 @@ class Account(Base):
         cash: t.Reals = [current_cash]
 
         # Get Asset quantities on start date
-        current_qty_assets: t.DictReal = {}
+        current_qty_assets: t.DictIntReal = {}
         query = s.query(TransactionSplit)
         query = query.with_entities(
             TransactionSplit.asset_id,
@@ -119,7 +128,7 @@ class Account(Base):
                 current_qty_assets[a_id] = Decimal(0)
             current_qty_assets[a_id] += qty_int + qty_frac
 
-        qty_assets: t.DictReals = {}
+        qty_assets: t.DictIntReals = {}
         for a_id, qty in current_qty_assets.items():
             qty_assets[a_id] = [qty]
 
@@ -185,7 +194,9 @@ class Account(Base):
             value_assets[a.id_] = a_values
 
         # Sum with cash
-        values = [sum(x) for x in zip(cash, *value_assets.values(), strict=True)]
+        values: t.Reals = [  # type: ignore[attr-defined]
+            sum(x) for x in zip(cash, *value_assets.values(), strict=True)
+        ]
 
         return dates, values, value_assets
 
@@ -195,7 +206,7 @@ class Account(Base):
         s: orm.Session,
         start: t.Date,
         end: t.Date,
-        ids: t.Ints = None,
+        ids: t.Ints | None = None,
     ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the value of all Accounts from start to end date.
 
@@ -235,7 +246,7 @@ class Account(Base):
 
         date = start + datetime.timedelta(days=1)
         dates: t.Dates = [start]
-        cash: t.DictReals = {acct_id: [v] for acct_id, v in current_cash.items()}
+        cash: t.DictIntReals = {acct_id: [v] for acct_id, v in current_cash.items()}
 
         # Get Asset quantities on start date
         current_qty_assets: dict[int, t.DictIntReal] = {
@@ -262,7 +273,9 @@ class Account(Base):
                 acct_current_qty_assets[a_id] = Decimal(0)
             acct_current_qty_assets[a_id] += qty_int + qty_frac
 
-        qty_assets: dict[int, t.DictReals] = {acct_id: {} for acct_id in current_cash}
+        qty_assets: dict[int, t.DictIntReals] = {
+            acct_id: {} for acct_id in current_cash
+        }
         for acct_id, assets in current_qty_assets.items():
             for a_id, qty in assets.items():
                 qty_assets[acct_id][a_id] = [qty]
@@ -319,7 +332,7 @@ class Account(Base):
                 date = next_day(date)
 
         # Skip assets with zero quantity
-        acct_values: t.DictReals = {}
+        acct_values: t.DictIntReals = {}
         a_ids: t.Ints = []
         for assets in qty_assets.values():
             for a_id, qty in list(assets.items()):
@@ -350,7 +363,7 @@ class Account(Base):
         self,
         start: t.Date,
         end: t.Date,
-    ) -> tuple[t.Dates, t.DictIntReal]:
+    ) -> tuple[t.Dates, t.DictIntReals]:
         """Get the cash_flow of Account from start to end date.
 
         Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
@@ -365,6 +378,8 @@ class Account(Base):
             Includes None in categories
         """
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
 
         date = start
 
@@ -373,7 +388,7 @@ class Account(Base):
             cat_id: [] for cat_id, in s.query(TransactionCategory.id_).all()
         }
 
-        daily_categories: t.DictIntReal = {cat_id: 0 for cat_id in categories}
+        daily_categories: t.DictIntReal = {cat_id: Decimal(0) for cat_id in categories}
 
         # Transactions between start and end
         query = s.query(TransactionSplit)
@@ -397,7 +412,7 @@ class Account(Base):
                 # Append and clear daily
                 for k, v in daily_categories.items():
                     categories[k].append(v)
-                    daily_categories[k] = 0
+                    daily_categories[k] = Decimal(0)
                 date += datetime.timedelta(days=1)
 
             daily_categories[category_id] += amount
@@ -407,7 +422,7 @@ class Account(Base):
             # Append and clear daily
             for k, v in daily_categories.items():
                 categories[k].append(v)
-                daily_categories[k] = 0
+                daily_categories[k] = Decimal(0)
             date += datetime.timedelta(days=1)
 
         return dates, categories
@@ -427,6 +442,8 @@ class Account(Base):
             List[dates], dict{Asset.id_: list[values]}
         """
         s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
 
         date = start + datetime.timedelta(days=1)
         dates: t.Dates = [start]
@@ -450,7 +467,7 @@ class Account(Base):
                 current_qty_assets[a_id] = Decimal(0)
             current_qty_assets[a_id] += qty_int + qty_frac
 
-        qty_assets: t.DictReals = {}
+        qty_assets: t.DictIntReals = {}
         for a_id, qty in current_qty_assets.items():
             qty_assets[a_id] = [qty]
 

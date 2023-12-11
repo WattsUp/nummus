@@ -23,7 +23,7 @@ def overlay() -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
         income: list[t.DictAny] = []
@@ -58,7 +58,7 @@ def overlay() -> str:
     )
 
 
-def new() -> str:
+def new() -> str | flask.Response:
     """GET & POST /h/txn-categories/new.
 
     Returns:
@@ -81,7 +81,7 @@ def new() -> str:
 
     try:
         with flask.current_app.app_context():
-            p: portfolio.Portfolio = flask.current_app.portfolio
+            p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.get_session() as s:
             cat = TransactionCategory(name=name, group=group, locked=False)
             s.add(cat)
@@ -92,7 +92,7 @@ def new() -> str:
     return common.overlay_swap(overlay())
 
 
-def edit(uri: str) -> str:
+def edit(uri: str) -> str | flask.Response:
     """GET & POST /h/txn-categories/<uri>/edit.
 
     Args:
@@ -102,10 +102,10 @@ def edit(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)
+        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
 
         if flask.request.method == "GET":
             ctx: t.DictAny = {
@@ -129,6 +129,9 @@ def edit(uri: str) -> str:
         name = form["name"].strip()
         group = form.get("group", type=TransactionCategoryGroup)
 
+        if group is None:
+            return common.error("Transaction group must not be None")
+
         try:
             cat.name = name
             cat.group = group
@@ -139,7 +142,7 @@ def edit(uri: str) -> str:
         return common.overlay_swap(overlay(), event="update-transaction")
 
 
-def delete(uri: str) -> str:
+def delete(uri: str) -> str | flask.Response:
     """GET & POST /h/txn-categories/<uri>/delete.
 
     Args:
@@ -149,10 +152,10 @@ def delete(uri: str) -> str:
         string HTML response
     """
     with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)
+        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
 
         if flask.request.method == "GET":
             ctx: t.DictAny = {

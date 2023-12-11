@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import sqlalchemy.exc
 
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import (
     Account,
@@ -168,6 +169,10 @@ class TestAsset(TestBase):
         }
 
         a = Asset(**d)
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, a.get_value, today, today)
+
         s.add(a)
         s.commit()
 
@@ -267,6 +272,10 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
         )
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, a.update_splits)
+
         s.add_all((a, acct))
         s.commit()
 

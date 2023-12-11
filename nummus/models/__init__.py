@@ -9,6 +9,7 @@ from nummus.models.base import Base, BaseEnum
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
+from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
@@ -17,6 +18,7 @@ from nummus.models.transaction_category import (
 from nummus.models.utils import paginate, query_count, search
 
 if TYPE_CHECKING:
+    import sqlalchemy
     from sqlalchemy import orm
 
 __all__ = [
@@ -31,6 +33,7 @@ __all__ = [
     "Budget",
     "Cipher",
     "Credentials",
+    "ImportedFile",
     "load_cipher",
     "Transaction",
     "TransactionSplit",
@@ -51,13 +54,14 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    tables = [
+    tables: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
         Account.__table__,
         Asset.__table__,
         AssetSplit.__table__,
         AssetValuation.__table__,
         Budget.__table__,
         Credentials.__table__,
+        ImportedFile.__table__,
         Transaction.__table__,
         TransactionCategory.__table__,
         TransactionSplit.__table__,

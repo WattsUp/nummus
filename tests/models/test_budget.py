@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 
 import sqlalchemy.exc
 
@@ -26,7 +27,7 @@ class TestBudget(TestBase):
         self.assertEqual(b.amount, d["amount"])
 
         # Positive amounts are bad
-        b.amount = 1
+        b.amount = Decimal(1)
         self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
         s.rollback()
 
