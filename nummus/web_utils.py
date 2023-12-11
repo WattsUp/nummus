@@ -5,7 +5,7 @@ import datetime
 import mimetypes
 from typing import TYPE_CHECKING
 
-from werkzeug import exceptions
+from nummus import exceptions as exc
 
 if TYPE_CHECKING:
     import flask
@@ -33,12 +33,12 @@ def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
     """
     try:
         id_ = cls.uri_to_id(uri)
-    except TypeError as e:
-        raise exceptions.BadRequest(str(e)) from e
+    except (exc.InvalidURIError, exc.WrongURITypeError) as e:
+        raise exc.http.BadRequest(str(e)) from e
     obj = s.query(cls).where(cls.id_ == id_).scalar()
     if obj is None:
         msg = f"{cls.__name__} {uri} not found in Portfolio"
-        raise exceptions.NotFound(msg)
+        raise exc.http.NotFound(msg)
     return obj
 
 
@@ -95,7 +95,7 @@ def parse_period(
         end = today
     else:
         msg = f"Unknown period: {period}"
-        raise exceptions.BadRequest(msg)
+        raise exc.http.BadRequest(msg)
     return start, end
 
 
@@ -115,23 +115,23 @@ def validate_image_upload(req: flask.Request) -> str:
         HTTPError(422): Missing Content-Type
     """
     if req.content_length is None:
-        raise exceptions.LengthRequired
+        raise exc.http.LengthRequired
 
     if req.content_type is None:
         msg = "Request missing Content-Type"
-        raise exceptions.UnprocessableEntity(msg)
+        raise exc.http.UnprocessableEntity(msg)
 
     if not req.content_type.startswith("image/"):
         msg = f"Content-type must be image/*: {req.content_type}"
-        raise exceptions.UnsupportedMediaType(msg)
+        raise exc.http.UnsupportedMediaType(msg)
 
     suffix = mimetypes.guess_extension(req.content_type)
     if suffix is None:
         msg = f"Unsupported image type: {req.content_type}"
-        raise exceptions.UnsupportedMediaType(msg)
+        raise exc.http.UnsupportedMediaType(msg)
 
     if req.content_length > MAX_IMAGE_SIZE:
         msg = f"Payload length > {MAX_IMAGE_SIZE}B: {req.content_length}B"
-        raise exceptions.RequestEntityTooLarge(msg)
+        raise exc.http.RequestEntityTooLarge(msg)
 
     return suffix

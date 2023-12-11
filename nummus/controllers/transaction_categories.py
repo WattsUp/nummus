@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import flask
-import sqlalchemy.exc
-from werkzeug import exceptions
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import portfolio, web_utils
 from nummus.controllers import common
 from nummus.models import (
@@ -86,7 +85,7 @@ def new() -> str | flask.Response:
             cat = TransactionCategory(name=name, group=group, locked=False)
             s.add(cat)
             s.commit()
-    except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
 
     return common.overlay_swap(overlay())
@@ -123,7 +122,7 @@ def edit(uri: str) -> str | flask.Response:
 
         if cat.locked:
             msg = f"Locked category {cat.name} cannot be modified"
-            raise exceptions.Forbidden(msg)
+            raise exc.http.Forbidden(msg)
 
         form = flask.request.form
         name = form["name"].strip()
@@ -136,7 +135,7 @@ def edit(uri: str) -> str | flask.Response:
             cat.name = name
             cat.group = group
             s.commit()
-        except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
         return common.overlay_swap(overlay(), event="update-transaction")
@@ -173,7 +172,7 @@ def delete(uri: str) -> str | flask.Response:
 
         if cat.locked:
             msg = f"Locked category {cat.name} cannot be deleted"
-            raise exceptions.Forbidden(msg)
+            raise exc.http.Forbidden(msg)
 
         # Move all transactions to Uncategorized
         query = s.query(TransactionCategory)
@@ -182,7 +181,7 @@ def delete(uri: str) -> str | flask.Response:
         if uncategorized is None:  # pragma: no cover
             # Uncategorized is locked and cannot be deleted
             msg = "Could not find Uncategorized id"
-            raise ValueError(msg)
+            raise exc.ProtectedObjectNotFoundError(msg)
 
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.category_id == cat.id_)

@@ -4,6 +4,8 @@ from __future__ import annotations
 import random
 import secrets
 
+from nummus import exceptions as exc
+
 ID_BYTES = 4
 ID_BITS = ID_BYTES * 8
 URI_BYTES = ID_BYTES * 2  # HEX doubles
@@ -178,6 +180,10 @@ class Cipher:
 
         Returns:
             Loaded Cipher
+
+        Raises:
+            TypeError if buf is not bytes
+            ValueError if Cipher fails to load
         """
         if not isinstance(buf, bytes):
             msg = f"Expected bytes, got: {type(buf)}"
@@ -231,9 +237,9 @@ def uri_to_id(uri: str) -> int:
         ID, 1:1 mapping
 
     Raises:
-        TypeError if uri is not the correct length
+        InvalidURIError if uri is not the correct length
     """
     if len(uri) != URI_BYTES:
         msg = f"URI is not {URI_BYTES} bytes long: {uri}"
-        raise TypeError(msg)
+        raise exc.InvalidURIError(msg)
     return _CIPHER.decode(int(uri, 16))

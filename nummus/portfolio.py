@@ -421,7 +421,7 @@ class Portfolio:
                 matches = s.query(Account).where(Account.id_ == id_).all()
                 if len(matches) == 1:
                     return matches[0]
-            except TypeError:
+            except (exc.InvalidURIError, exc.WrongURITypeError):
                 pass
 
             # Maybe a number next
@@ -476,7 +476,7 @@ class Portfolio:
                 matches = s.query(Asset).where(Asset.id_ == id_).all()
                 if len(matches) == 1:
                     return matches[0]
-            except TypeError:
+            except (exc.InvalidURIError, exc.WrongURITypeError):
                 pass
 
             # Maybe a name next

@@ -5,6 +5,7 @@ from decimal import Decimal
 from sqlalchemy import ForeignKey, orm
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus.models import base
 from tests.base import TestBase
 
@@ -13,8 +14,8 @@ class Bytes:
     def __init__(self, s: str) -> None:
         self._data = s.encode(encoding="utf-8")
 
-    def __eq__(self, other: Bytes) -> bool:
-        return self._data == other._data
+    def __eq__(self, other: Bytes | t.Any) -> bool:
+        return isinstance(other, Bytes) and self._data == other._data
 
 
 class Parent(base.Base):
@@ -73,7 +74,7 @@ class TestORMBase(TestBase):
         self.assertIsNotNone(child.parent)
         self.assertIsNotNone(child.parent_id)
 
-        self.assertRaises(TypeError, Parent.uri_to_id, child.uri)
+        self.assertRaises(exc.WrongURITypeError, Parent.uri_to_id, child.uri)
 
         child.height = None
         s.commit()
@@ -156,7 +157,7 @@ class TestORMBase(TestBase):
         result = parent.validate_strings(key, field)
         self.assertEqual(result, field)
 
-        self.assertRaises(ValueError, parent.validate_strings, key, "ab")
+        self.assertRaises(exc.InvalidORMValueError, parent.validate_strings, key, "ab")
 
 
 class Derived(base.BaseEnum):
@@ -164,7 +165,7 @@ class Derived(base.BaseEnum):
     BLUE = 2
 
     @classmethod
-    def _lut(cls) -> dict[str, Derived]:
+    def _lut(cls) -> t.Mapping[str, Derived]:
         return {"r": cls.RED, "b": cls.BLUE}
 
 
