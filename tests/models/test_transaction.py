@@ -144,7 +144,7 @@ class TestTransactionSplit(TestBase):
         s.rollback()
 
         # Short strings are bad
-        self.assertRaises(ValueError, setattr, t_split_0, "payee", "ab")
+        self.assertRaises(exc.InvalidORMValueError, setattr, t_split_0, "payee", "ab")
 
         # Set an not an Transaction
         self.assertRaises(TypeError, setattr, t_split_0, "parent", self.random_string())

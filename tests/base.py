@@ -11,9 +11,9 @@ from pathlib import Path
 import autodict
 import numpy as np
 from sqlalchemy import orm, pool
-from werkzeug import exceptions
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import sql
 from nummus.models import base_uri
 from tests import TEST_LOG
@@ -121,9 +121,9 @@ class TestBase(unittest.TestCase):
             args: Passed to func()
             kwargs: Passed to func()
         """
-        with self.assertRaises(exceptions.HTTPException) as cm:
+        with self.assertRaises(exc.http.HTTPException) as cm:
             func(*args, **kwargs)
-        e: exceptions.HTTPException = cm.exception
+        e: exc.http.HTTPException = cm.exception
         self.assertEqual(e.code, rc)
 
     def setUp(self, *, clean: bool = True) -> None:

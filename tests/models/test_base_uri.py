@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from nummus import exceptions as exc
 from nummus.models import base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
@@ -42,7 +43,7 @@ class TestBaseURI(TestBase):
         self.assertEqual(pt_decoded, pt)
 
     def test_symmetrical_unique(self) -> None:
-        self.assertRaises(TypeError, base_uri.uri_to_id, "")
+        self.assertRaises(exc.InvalidURIError, base_uri.uri_to_id, "")
 
         uris = set()
 

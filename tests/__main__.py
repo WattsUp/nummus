@@ -64,5 +64,9 @@ if not post_fail:
 
 pre_tests()
 m = unittest.main(module=None, exit=False)
-post = post_tests()
-sys.exit(not m.result.wasSuccessful() or (post_fail and not post))
+all_passed = m.result.wasSuccessful()
+if all_passed:
+    post = post_tests()
+    sys.exit(post_fail and not post)
+else:
+    sys.exit(1)

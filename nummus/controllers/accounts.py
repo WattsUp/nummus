@@ -6,9 +6,8 @@ import datetime
 from typing import TYPE_CHECKING
 
 import flask
-import sqlalchemy.exc
-from werkzeug import exceptions
 
+from nummus import exceptions as exc
 from nummus import portfolio, web_utils
 from nummus.controllers import common, transactions
 from nummus.models import (
@@ -72,7 +71,7 @@ def edit(uri: str) -> str | flask.Response:
             acct.category = category
             acct.closed = closed
             s.commit()
-        except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
         return common.overlay_swap(event="update-account")
@@ -222,7 +221,7 @@ def options(uri: str, field: str) -> str:
         id_mapping = None
         if field == "account":
             msg = "Cannot get account options for account transactions"
-            raise exceptions.BadRequest(msg)
+            raise exc.http.BadRequest(msg)
         if field == "category":
             id_mapping = TransactionCategory.map_name(s)
 

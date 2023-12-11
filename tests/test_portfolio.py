@@ -241,7 +241,7 @@ class TestPortfolio(TestBase):
             s.commit()
 
         # Invalid unencrypted password
-        self.assertRaises(PermissionError, portfolio.Portfolio, path_db, key)
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
     def test_is_encrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")

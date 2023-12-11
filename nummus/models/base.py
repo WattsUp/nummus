@@ -9,6 +9,7 @@ from sqlalchemy import orm, types
 from typing_extensions import override
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import utils
 from nummus.models import base_uri
 
@@ -56,7 +57,7 @@ class Base(orm.DeclarativeBase):
         table_id = id_ & base_uri.MASK_TABLE
         if table_id != cls.__table_id__:
             msg = f"URI did not belong to {cls.__name__}: {uri}"
-            raise TypeError(msg)
+            raise exc.WrongURITypeError(msg)
         return id_ & base_uri.MASK_ID
 
     @property
@@ -125,7 +126,7 @@ class Base(orm.DeclarativeBase):
             field
 
         Raises:
-            ValueError if field is empty
+            InvalidORMValueError if field is empty
         """
         if field is None or field in ["", "[blank]"]:
             return None
@@ -133,7 +134,7 @@ class Base(orm.DeclarativeBase):
             table: str = self.__tablename__
             table = table.replace("_", " ").capitalize()
             msg = f"{table} {key} must be at least {utils.MIN_STR_LEN} characters long"
-            raise ValueError(msg)
+            raise exc.InvalidORMValueError(msg)
         return field
 
 
@@ -150,7 +151,7 @@ class BaseEnum(enum.Enum):
         return super()._missing_(value)
 
     @classmethod
-    def _lut(cls) -> dict[str, BaseEnum]:
+    def _lut(cls) -> t.Mapping[str, BaseEnum]:
         """Look up table, mapping of strings to matching Enums.
 
         Returns:

@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy.exc import DatabaseError, UnboundExecutionError
+from sqlalchemy.exc import DatabaseError, IntegrityError, UnboundExecutionError
+from werkzeug import exceptions as http
 
 if TYPE_CHECKING:
     import datetime
@@ -13,16 +14,17 @@ if TYPE_CHECKING:
 
 __all__ = [
     "DatabaseError",
+    "IntegrityError",
     "UnboundExecutionError",
+    "http",
     "FileAlreadyImportedError",
     "UnknownImporterError",
     "UnlockingError",
     "NotEncryptedError",
 ]
-# TODO (WattsUp): Add more custom exceptions when appropriate
 
 
-class FileAlreadyImportedError(ValueError):
+class FileAlreadyImportedError(Exception):
     """Error when a file has already been imported."""
 
     def __init__(self, date: datetime.date, path: t.Path) -> None:
@@ -36,7 +38,7 @@ class FileAlreadyImportedError(ValueError):
         super().__init__(msg)
 
 
-class UnknownImporterError(ValueError):
+class UnknownImporterError(Exception):
     """Error when a file does not match any importer."""
 
     def __init__(self, path: t.Path) -> None:
@@ -49,11 +51,11 @@ class UnknownImporterError(ValueError):
         super().__init__(msg)
 
 
-class UnlockingError(PermissionError):
+class UnlockingError(Exception):
     """Error when portfolio fails to unlock."""
 
 
-class NotEncryptedError(PermissionError):
+class NotEncryptedError(Exception):
     """Error when encryption operation is called on a unencrypted portfolio."""
 
     def __init__(self) -> None:
@@ -62,14 +64,30 @@ class NotEncryptedError(PermissionError):
         super().__init__(msg)
 
 
-class ParentAttributeError(PermissionError):
+class ParentAttributeError(Exception):
     """Error when attempting to set an attribute directly instead of via parent."""
 
 
-class NonAssetTransactionError(TypeError):
+class NonAssetTransactionError(Exception):
     """Error when attempting to perform Asset operation when Transaction has none."""
 
     def __init__(self) -> None:
         """Initialize NonAssetTransactionError."""
         msg = "Cannot perform operation on Transaction without an Asset"
         super().__init__(msg)
+
+
+class ProtectedObjectNotFoundError(Exception):
+    """Error when a protected object (non-deletable) could not be found."""
+
+
+class WrongURITypeError(Exception):
+    """Error when a URI is decoded for a different model."""
+
+
+class InvalidURIError(Exception):
+    """Error when object does not match expected URI format."""
+
+
+class InvalidORMValueError(Exception):
+    """Error when validation fails for an ORM column."""

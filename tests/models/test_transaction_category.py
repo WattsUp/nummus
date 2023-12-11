@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import TransactionCategory, TransactionCategoryGroup
 from tests.base import TestBase
@@ -25,7 +26,7 @@ class TestTransactionCategory(TestBase):
         self.assertEqual(t_cat.locked, d["locked"])
 
         # Short strings are bad
-        self.assertRaises(ValueError, setattr, t_cat, "name", "ab")
+        self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "ab")
 
     def test_add_default(self) -> None:
         s = self.get_session()

@@ -7,12 +7,11 @@ from decimal import Decimal
 
 import flask
 import sqlalchemy
-import sqlalchemy.exc
 from rapidfuzz import process
 from sqlalchemy import orm
-from werkzeug import exceptions
 
 from nummus import custom_types as t
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import (
@@ -352,7 +351,7 @@ def edit(uri: str) -> str | flask.Response:
     with p.get_session() as s:
         try:
             parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
-        except exceptions.BadRequest:
+        except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
         categories = TransactionCategory.map_name(s)
@@ -453,7 +452,7 @@ def edit(uri: str) -> str | flask.Response:
                 t_split.amount = a
 
             s.commit()
-        except (sqlalchemy.exc.IntegrityError, ValueError) as e:
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
         return common.overlay_swap(event="update-transaction")
