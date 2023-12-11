@@ -15,7 +15,7 @@ except ImportError:
 class TestEncryption(TestBase):
     def setUp(self, *_, clean: bool = True) -> None:
         super().setUp(clean=clean)
-        if encryption is None:
+        if encryption is encryption_fb:
             self.assertIsNotNone(encryption_fb.Encryption)
             self.skipTest("Encryption is not installed")
 
