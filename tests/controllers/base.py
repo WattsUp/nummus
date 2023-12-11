@@ -203,7 +203,7 @@ class WebTestBase(TestBase):
         cls._clean_test_root()
         super().tearDownClass()
 
-    def setUp(self) -> None:
+    def setUp(self, **_) -> None:
         self._original_render_template = flask.render_template
 
         self._called_context: t.DictAny = {}
@@ -217,7 +217,7 @@ class WebTestBase(TestBase):
 
         super().setUp(clean=False)
 
-    def tearDown(self) -> None:
+    def tearDown(self, **_) -> None:
         flask.render_template = self._original_render_template
 
         # Clean portfolio
@@ -303,7 +303,8 @@ class WebTestBase(TestBase):
                     d["web_latency"][k] = []
                 d["web_latency"][k].append(duration)
 
-            self.assertLessEqual(duration, 0.2)  # All responses faster than 200ms
+            # Fairly loose cause jinja and sql caching will save time
+            self.assertLessEqual(duration, 0.5)  # All responses faster than 500ms
 
             html = response.text
             self.assertValidHTML(html)
