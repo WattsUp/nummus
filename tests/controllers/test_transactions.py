@@ -221,6 +221,7 @@ class TestTransaction(WebTestBase):
 
         # Add split
         new_date = today - datetime.timedelta(days=10)
+        new_date_ord = new_date.toordinal()
         new_desc = self.random_string()
         form = {
             "date": new_date,
@@ -242,12 +243,12 @@ class TestTransaction(WebTestBase):
             txn: Transaction = query.scalar()
             splits = txn.splits
 
-            self.assertEqual(txn.date, new_date)
+            self.assertEqual(txn.date_ord, new_date_ord)
             self.assertTrue(txn.locked)
             self.assertEqual(len(splits), 2)
 
             t_split = splits[0]
-            self.assertEqual(t_split.date, new_date)
+            self.assertEqual(t_split.date_ord, new_date_ord)
             self.assertTrue(t_split.locked)
             self.assertEqual(t_split.payee, payee_0)
             self.assertEqual(t_split.description, new_desc)
@@ -256,7 +257,7 @@ class TestTransaction(WebTestBase):
             self.assertEqual(t_split.amount, 20)
 
             t_split = splits[1]
-            self.assertEqual(t_split.date, new_date)
+            self.assertEqual(t_split.date_ord, new_date_ord)
             self.assertTrue(t_split.locked)
             self.assertIsNone(t_split.payee)
             self.assertIsNone(t_split.description)
@@ -266,6 +267,7 @@ class TestTransaction(WebTestBase):
 
         # Remove split
         new_date = today - datetime.timedelta(days=10)
+        new_date_ord = new_date.toordinal()
         new_desc = self.random_string()
         form = {
             "date": new_date,
@@ -286,12 +288,12 @@ class TestTransaction(WebTestBase):
             txn: Transaction = query.scalar()
             splits = txn.splits
 
-            self.assertEqual(txn.date, new_date)
+            self.assertEqual(txn.date_ord, new_date_ord)
             self.assertFalse(txn.locked)
             self.assertEqual(len(splits), 1)
 
             t_split = splits[0]
-            self.assertEqual(t_split.date, new_date)
+            self.assertEqual(t_split.date_ord, new_date_ord)
             self.assertFalse(t_split.locked)
             self.assertEqual(t_split.payee, payee_0)
             self.assertEqual(t_split.description, new_desc)

@@ -5,7 +5,7 @@ import datetime
 import flask
 
 from nummus import models, web_utils
-from nummus.models import Account, AccountCategory
+from nummus.models import Account, AccountCategory, base_uri
 from tests.base import TestBase
 
 
@@ -31,6 +31,10 @@ class TestWebUtils(TestBase):
         # Account does not exist
         mising_uri = Account.id_to_uri(acct.id_ + 1)
         self.assertHTTPRaises(404, web_utils.find, s, Account, mising_uri)
+
+        # Bad URI
+        bad_uri = base_uri.id_to_uri(0)
+        self.assertHTTPRaises(400, web_utils.find, s, Account, bad_uri)
 
     def test_parse_period(self) -> None:
         today = datetime.date.today()

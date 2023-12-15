@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import flask
 import sqlalchemy.exc
 
-from nummus import portfolio, web_utils
+from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import Account, AccountCategory, TransactionSplit
 
@@ -40,14 +40,21 @@ def ctx_chart() -> t.DictAny:
     accounts: list[t.DictAny] = []
 
     with p.get_session() as s:
-        # TODO(WatsUp): Net worth, period=all is too slow
+        # TODO (WatsUp): Net worth, period=all is too slow
         # Replace date with date_ord
         # Have htmx return a waiting overlay that triggers the real request
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
-            start = query.scalar() or datetime.date(1970, 1, 1)
+            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+            start_ord = query.scalar()
+            start = (
+                datetime.date.fromordinal(start_ord)
+                if start_ord
+                else datetime.date(1970, 1, 1)
+            )
+        start_ord = start.toordinal()
+        end_ord = end.toordinal()
 
         query = s.query(Account)
         if category is not None:
@@ -57,10 +64,10 @@ def ctx_chart() -> t.DictAny:
         ids = [
             acct.id_
             for acct in query.all()
-            if (not acct.closed or acct.updated_on > start)
+            if (not acct.closed or acct.updated_on_ord > start_ord)
         ]
 
-        dates, acct_values = Account.get_value_all(s, start, end, ids=ids)
+        _, acct_values = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
@@ -79,7 +86,7 @@ def ctx_chart() -> t.DictAny:
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in dates],
+            "dates": utils.range_date(start_ord, end_ord),
             "total": total,
             "accounts": accounts,
         },
@@ -97,9 +104,10 @@ def page() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
+    today_ord = today.toordinal()
 
     with p.get_session() as s:
-        _, acct_values = Account.get_value_all(s, today, today)
+        _, acct_values = Account.get_value_all(s, today_ord, today_ord)
         current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",

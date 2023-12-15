@@ -76,12 +76,14 @@ def options(field: str) -> str:
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
+        end_ord = end.toordinal()
 
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))
         if start is not None:
-            query = query.where(TransactionSplit.date >= start)
-        query = query.where(TransactionSplit.date <= end)
+            start_ord = start.toordinal()
+            query = query.where(TransactionSplit.date_ord >= start_ord)
+        query = query.where(TransactionSplit.date_ord <= end_ord)
 
         search_str = args.get(f"search-{field}")
 
@@ -187,7 +189,8 @@ def ctx_table(
             args.get("end", type=datetime.date.fromisoformat),
         )
         if acct is not None:
-            start = start or acct.opened_on
+            start = start or datetime.date.fromordinal(acct.opened_on_ord)
+        end_ord = end.toordinal()
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
 
@@ -198,9 +201,10 @@ def ctx_table(
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))
         if start is not None:
-            query = query.where(TransactionSplit.date >= start)
-        query = query.where(TransactionSplit.date <= end)
-        query = query.order_by(TransactionSplit.date)
+            start_ord = start.toordinal()
+            query = query.where(TransactionSplit.date_ord >= start_ord)
+        query = query.where(TransactionSplit.date_ord <= end_ord)
+        query = query.order_by(TransactionSplit.date_ord)
         if acct is not None:
             query = query.where(TransactionSplit.account_id == acct.id_)
 
@@ -265,8 +269,13 @@ def ctx_table(
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
-            start = query.scalar() or datetime.date(1970, 1, 1)
+            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+            start_ord = query.scalar()
+            start = (
+                datetime.date.fromordinal(start_ord)
+                if start_ord
+                else datetime.date(1970, 1, 1)
+            )
 
         transactions: list[t.DictAny] = []
         for t_split in page:  # type: ignore[attr-defined]
@@ -325,7 +334,7 @@ def ctx_split(
     """
     return {
         "uri": t_split.uri,
-        "date": t_split.date,
+        "date": datetime.date.fromordinal(t_split.date_ord),
         "account": accounts[t_split.account_id],
         "payee": t_split.payee,
         "description": t_split.description,
@@ -363,7 +372,7 @@ def edit(uri: str) -> str | flask.Response:
                 "uri": parent.uri,
                 "account": accounts[parent.account_id],
                 "locked": parent.locked,
-                "date": parent.date,
+                "date": datetime.date.fromordinal(parent.date_ord),
                 "amount": parent.amount,
                 "statement": parent.statement,
             }
@@ -403,7 +412,7 @@ def edit(uri: str) -> str | flask.Response:
             date = form.get("date", type=datetime.date.fromisoformat)
             if date is None:
                 return common.error("Transaction date must not be empty")
-            parent.date = date
+            parent.date_ord = date.toordinal()
             parent.locked = "locked" in form
 
             payee = form.getlist("payee")

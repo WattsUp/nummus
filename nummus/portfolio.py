@@ -308,9 +308,12 @@ class Portfolio:
         h = sha.hexdigest()
         if not force:
             with self.get_session() as s:
-                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                existing: ImportedFile | None = (
+                    s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
+                )
                 if existing is not None:
-                    raise exc.FileAlreadyImportedError(existing.date, path)
+                    date = datetime.date.fromordinal(existing.date_ord)
+                    raise exc.FileAlreadyImportedError(date, path)
 
         i = importers.get_importer(path, self._importers)
         if i is None:
@@ -336,6 +339,12 @@ class Portfolio:
                     # Don't need to test debug code
                     msg = f"Category is not a string, ctx={ctx}"
                     raise TypeError(msg)
+                date = d.pop("date")
+                if not isinstance(date, datetime.date):  # pragma: no cover
+                    # Don't need to test debug code
+                    msg = f"Date is not a datetime.date, ctx={ctx}"
+                    raise TypeError(msg)
+                d["date_ord"] = date.toordinal()
                 d_split: importers.TxnDict = {
                     "amount": d["amount"],  # Both split and parent have amount
                     "payee": d.pop("payee", None),

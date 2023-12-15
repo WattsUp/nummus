@@ -44,6 +44,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
+    today_ord = today.toordinal()
 
     assets = Decimal(0)
     liabilities = Decimal(0)
@@ -97,16 +98,16 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         query = s.query(Transaction)
         query = query.with_entities(
             Transaction.account_id,
-            sqlalchemy.func.max(Transaction.date),
+            sqlalchemy.func.max(Transaction.date_ord),
         )
         query = query.group_by(Transaction.account_id)
-        for acct_id, updated_on in query.all():
+        for acct_id, updated_on_ord in query.all():
             acct_id: int
-            updated_on: datetime.date
-            accounts[acct_id]["updated_days_ago"] = (today - updated_on).days
+            updated_on_ord: int
+            accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
 
         # Get all Account values
-        _, acct_values = Account.get_value_all(s, today, today)
+        _, acct_values = Account.get_value_all(s, today_ord, today_ord)
         for acct_id, values in acct_values.items():
             acct_dict = accounts[acct_id]
             v = values[0]

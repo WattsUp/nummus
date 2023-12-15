@@ -448,6 +448,9 @@ class TestPortfolio(TestBase):
                             test_value = acct_checking.id_
                         else:
                             test_value = acct_invest.id_
+                    elif k == "date":
+                        prop = "date_ord"
+                        test_value = t_v.toordinal()
 
                     if prop == "category":
                         cat_id = r_split.category_id
