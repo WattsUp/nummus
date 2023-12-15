@@ -86,7 +86,7 @@ def ctx_chart() -> t.DictAny:
         "end": end,
         "period": period,
         "data": {
-            "dates": utils.range_date(start_ord, end_ord),
+            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
             "total": total,
             "accounts": accounts,
         },
