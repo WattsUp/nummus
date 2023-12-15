@@ -27,6 +27,9 @@ class TestAssetSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
         a = Asset(name=self.random_string(), category=AssetCategory.CASH)
         s.add(a)
         s.commit()
@@ -34,7 +37,7 @@ class TestAssetSplit(TestBase):
         d = {
             "asset_id": a.id_,
             "multiplier": self.random_decimal(1, 10),
-            "date": datetime.date.today(),
+            "date_ord": today_ord,
         }
 
         v = AssetSplit(**d)
@@ -43,13 +46,16 @@ class TestAssetSplit(TestBase):
 
         self.assertEqual(v.asset_id, d["asset_id"])
         self.assertEqual(v.multiplier, d["multiplier"])
-        self.assertEqual(v.date, d["date"])
+        self.assertEqual(v.date_ord, d["date_ord"])
 
 
 class TestAssetValuation(TestBase):
     def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
 
         a = Asset(name=self.random_string(), category=AssetCategory.CASH)
         s.add(a)
@@ -58,7 +64,7 @@ class TestAssetValuation(TestBase):
         d = {
             "asset_id": a.id_,
             "value": self.random_decimal(0, 1),
-            "date": datetime.date.today(),
+            "date_ord": today_ord,
         }
 
         v = AssetValuation(**d)
@@ -67,13 +73,16 @@ class TestAssetValuation(TestBase):
 
         self.assertEqual(v.asset_id, d["asset_id"])
         self.assertEqual(v.value, d["value"])
-        self.assertEqual(v.date, d["date"])
+        self.assertEqual(v.date_ord, d["date_ord"])
 
 
 class TestAsset(TestBase):
     def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
 
         d = {
             "name": self.random_string(),
@@ -102,7 +111,7 @@ class TestAsset(TestBase):
         d = {
             "asset_id": a.id_,
             "value": self.random_decimal(0, 1),
-            "date": datetime.date.today(),
+            "date_ord": today_ord,
         }
 
         v = AssetValuation(**d)
@@ -130,6 +139,7 @@ class TestAsset(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         d = {
             "name": self.random_string(),
@@ -146,7 +156,7 @@ class TestAsset(TestBase):
 
         v_today = AssetValuation(
             asset_id=a.id_,
-            date=today,
+            date_ord=today_ord,
             value=self.random_decimal(-1, 1),
         )
         s.add(v_today)
@@ -157,7 +167,8 @@ class TestAsset(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
-        tomorrow = today + datetime.timedelta(days=1)
+        today_ord = today.toordinal()
+        tomorrow_ord = today_ord + 1
 
         d = {
             "name": self.random_string(),
@@ -171,30 +182,35 @@ class TestAsset(TestBase):
         a = Asset(**d)
 
         # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, a.get_value, today, today)
+        self.assertRaises(
+            exc.UnboundExecutionError,
+            a.get_value,
+            today_ord,
+            today_ord,
+        )
 
         s.add(a)
         s.commit()
 
         v_today = AssetValuation(
             asset_id=a.id_,
-            date=today,
+            date_ord=today_ord,
             value=self.random_decimal(-1, 1),
         )
         v_before = AssetValuation(
             asset_id=a.id_,
-            date=today - datetime.timedelta(days=2),
+            date_ord=today_ord - 2,
             value=self.random_decimal(-1, 1),
         )
         v_after = AssetValuation(
             asset_id=a.id_,
-            date=today + datetime.timedelta(days=2),
+            date_ord=today_ord + 2,
             value=self.random_decimal(-1, 1),
         )
         s.add_all((v_today, v_before, v_after))
         s.commit()
 
-        target_dates = [today + datetime.timedelta(days=i) for i in range(-3, 3 + 1)]
+        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_values = [
             0,
             v_before.value,
@@ -224,25 +240,25 @@ class TestAsset(TestBase):
         self.assertEqual(r_values, {})
 
         # Test single value
-        r_dates, r_values = a.get_value(today, today)
-        self.assertEqual(r_dates, [today])
+        r_dates, r_values = a.get_value(today_ord, today_ord)
+        self.assertEqual(r_dates, [today_ord])
         self.assertEqual(r_values, [v_today.value])
 
-        r_dates, r_values = Asset.get_value_all(s, today, today)
-        self.assertEqual(r_dates, [today])
+        r_dates, r_values = Asset.get_value_all(s, today_ord, today_ord)
+        self.assertEqual(r_dates, [today_ord])
         self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
-        r_dates, r_values = a.get_value(tomorrow, tomorrow)
-        self.assertEqual(r_dates, [tomorrow])
+        r_dates, r_values = a.get_value(tomorrow_ord, tomorrow_ord)
+        self.assertEqual(r_dates, [tomorrow_ord])
         self.assertEqual(r_values, [v_today.value])
 
-        r_dates, r_values = Asset.get_value_all(s, tomorrow, tomorrow)
-        self.assertEqual(r_dates, [tomorrow])
+        r_dates, r_values = Asset.get_value_all(s, tomorrow_ord, tomorrow_ord)
+        self.assertEqual(r_dates, [tomorrow_ord])
         self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
-        long_ago = today - datetime.timedelta(days=7)
+        long_ago = today_ord - 7
         r_dates, r_values = a.get_value(long_ago, long_ago)
         self.assertEqual(r_dates, [long_ago])
         self.assertEqual(r_values, [Decimal(0)])
@@ -256,7 +272,8 @@ class TestAsset(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
-        yesterday = today - datetime.timedelta(days=1)
+        today_ord = today.toordinal()
+        yesterday_ord = today_ord - 1
 
         multiplier_0 = round(self.random_decimal(1, 10))
         multiplier_1 = round(self.random_decimal(1, 10))
@@ -289,15 +306,23 @@ class TestAsset(TestBase):
 
         v = AssetValuation(
             asset_id=a.id_,
-            date=today - datetime.timedelta(days=100),
+            date_ord=today_ord - 100,
             value=value_today,
         )
         s.add(v)
         s.commit()
 
         # Multiple splits that need be included on the first valuation
-        split_0 = AssetSplit(asset_id=a.id_, date=today, multiplier=multiplier_0)
-        split_1 = AssetSplit(asset_id=a.id_, date=today, multiplier=multiplier_1)
+        split_0 = AssetSplit(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            multiplier=multiplier_0,
+        )
+        split_1 = AssetSplit(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            multiplier=multiplier_1,
+        )
         s.add_all((split_0, split_1))
         s.commit()
 
@@ -305,7 +330,7 @@ class TestAsset(TestBase):
         # A split on today means trading occurs at yesterday / multiplier pricing
         txn_0 = Transaction(
             account_id=acct.id_,
-            date=yesterday,
+            date_ord=yesterday_ord,
             amount=value_yesterday,
             statement=self.random_string(),
         )
@@ -320,7 +345,7 @@ class TestAsset(TestBase):
 
         txn_1 = Transaction(
             account_id=acct.id_,
-            date=today,
+            date_ord=today_ord,
             amount=value_today,
             statement=self.random_string(),
         )
@@ -345,12 +370,12 @@ class TestAsset(TestBase):
         self.assertEqual(t_split_0.asset_quantity, 1 * multiplier)
         self.assertEqual(t_split_1.asset_quantity, 1)
 
-        _, r_assets = acct.get_asset_qty(yesterday, today)
+        _, r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
         r_values = r_assets[a.id_]
         target_values = [multiplier, multiplier + 1]
         self.assertEqual(r_values, target_values)
 
-        _, _, r_assets = acct.get_value(yesterday, today)
+        _, _, r_assets = acct.get_value(yesterday_ord, today_ord)
         r_values = r_assets[a.id_]
         target_values = [value_yesterday, value_yesterday + value_today]
         self.assertEqual(r_values, target_values)

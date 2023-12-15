@@ -21,4 +21,6 @@ class ImportedFile(Base):
     # No __table_id__ because this is not user accessible
 
     hash_: t.ORMStr = orm.MappedColumn(unique=True)
-    date: t.ORMDate = orm.MappedColumn(default=datetime.date.today)
+    date_ord: t.ORMInt = orm.MappedColumn(
+        default=lambda: datetime.date.today().toordinal(),
+    )

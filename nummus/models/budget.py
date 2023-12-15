@@ -14,13 +14,13 @@ class Budget(Base):
 
     Attributes:
         uri: Budget unique identifier
-        date: Date on which Budget is effective
+        date_ord: Date ordinal on which Budget is effective
         amount: Target limit of expense per month, zero or negative
     """
 
     __table_id__ = 0x50000000
 
-    date: t.ORMDate = orm.mapped_column(unique=True)
+    date_ord: t.ORMInt = orm.mapped_column(unique=True)
     amount: t.ORMReal = orm.mapped_column(
         Decimal6,
         sqlalchemy.CheckConstraint(

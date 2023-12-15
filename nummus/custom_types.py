@@ -45,8 +45,6 @@ StrToObj = Callable[[str], object]
 
 ORMBool = orm.Mapped[bool]
 ORMBoolOpt = orm.Mapped[bool | None]
-ORMDate = orm.Mapped[datetime.date]
-ORMDateOpt = orm.Mapped[datetime.date | None]
 ORMInt = orm.Mapped[int]
 ORMIntOpt = orm.Mapped[int | None]
 ORMStr = orm.Mapped[str]

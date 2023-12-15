@@ -16,14 +16,18 @@ class TestBudget(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
-        d = {"date": today, "amount": self.random_decimal(-1, 0)}
+        d = {
+            "date_ord": today_ord,
+            "amount": self.random_decimal(-1, 0),
+        }
 
         b = budget.Budget(**d)
         s.add(b)
         s.commit()
 
-        self.assertEqual(b.date, d["date"])
+        self.assertEqual(b.date_ord, d["date_ord"])
         self.assertEqual(b.amount, d["amount"])
 
         # Positive amounts are bad
@@ -32,7 +36,7 @@ class TestBudget(TestBase):
         s.rollback()
 
         # Duplicate dates are bad
-        b = budget.Budget(date=today, amount=0)
+        b = budget.Budget(date_ord=today_ord, amount=0)
         s.add(b)
         self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
         s.rollback()

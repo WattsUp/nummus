@@ -26,7 +26,7 @@ class TransactionSplit(Base):
         tag: Unique tag linked across datasets
         category: Type of Transaction
         parent: Parent Transaction
-        date: Date on which Transaction occurred
+        date_ord: Date ordinal on which Transaction occurred
         locked: True only allows manually editing, False allows automatic changes
             (namely auto labeling field based on similar Transactions)
         account: Account that owns this Transaction
@@ -51,7 +51,7 @@ class TransactionSplit(Base):
     category_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
     parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
-    date: t.ORMDate
+    date_ord: t.ORMInt
     locked: t.ORMBool
     account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
@@ -148,7 +148,7 @@ class TransactionSplit(Base):
             self._parent_tmp = parent
             return
         super().__setattr__("parent_id", parent.id_)
-        super().__setattr__("date", parent.date)
+        super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("locked", parent.locked)
         super().__setattr__("account_id", parent.account_id)
 
@@ -181,7 +181,7 @@ class Transaction(Base):
         id: Transaction unique identifier
         uri: Transaction unique identifier
         account: Account that owns this Transaction
-        date: Date on which Transaction occurred
+        date_ord: Date ordinal on which Transaction occurred
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
         statement: Text appearing on Account statement
@@ -194,7 +194,7 @@ class Transaction(Base):
 
     account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
-    date: t.ORMDate
+    date_ord: t.ORMInt
     amount: t.ORMReal = orm.mapped_column(Decimal6)
     statement: t.ORMStr
     locked: t.ORMBool = orm.mapped_column(default=False)

@@ -24,6 +24,9 @@ class TestTransaction(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
         acct = Account(
             name=self.random_string(),
             institution=self.random_string(),
@@ -35,7 +38,7 @@ class TestTransaction(TestBase):
 
         d = {
             "account_id": acct.id_,
-            "date": datetime.date.today(),
+            "date_ord": today_ord,
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
         }
@@ -45,7 +48,7 @@ class TestTransaction(TestBase):
         s.commit()
 
         self.assertEqual(txn.account_id, acct.id_)
-        self.assertEqual(txn.date, d["date"])
+        self.assertEqual(txn.date_ord, d["date_ord"])
         self.assertEqual(txn.amount, d["amount"])
         self.assertEqual(txn.statement, d["statement"])
         self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
@@ -55,6 +58,9 @@ class TestTransactionSplit(TestBase):
     def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -74,7 +80,7 @@ class TestTransactionSplit(TestBase):
 
         d = {
             "account_id": acct.id_,
-            "date": datetime.date.today(),
+            "date_ord": today_ord,
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
         }
@@ -103,7 +109,7 @@ class TestTransactionSplit(TestBase):
         self.assertIsNone(t_split_0.asset_quantity)
         self.assertIsNone(t_split_0.asset_quantity_unadjusted)
         self.assertEqual(t_split_0.amount, d["amount"])
-        self.assertEqual(t_split_0.date, txn.date)
+        self.assertEqual(t_split_0.date_ord, txn.date_ord)
         self.assertEqual(t_split_0.locked, txn.locked)
         self.assertEqual(t_split_0.account_id, acct.id_)
 
@@ -134,7 +140,7 @@ class TestTransactionSplit(TestBase):
         self.assertEqual(t_split_1.payee, d["payee"])
         self.assertEqual(t_split_1.description, d["description"])
         self.assertEqual(t_split_1.tag, d["tag"])
-        self.assertEqual(t_split_1.date, txn.date)
+        self.assertEqual(t_split_1.date_ord, txn.date_ord)
         self.assertEqual(t_split_1.locked, txn.locked)
         self.assertEqual(t_split_1.account_id, acct.id_)
 
@@ -162,6 +168,9 @@ class TestTransactionSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
         acct = Account(
             name=self.random_string(),
             institution=self.random_string(),
@@ -174,12 +183,10 @@ class TestTransactionSplit(TestBase):
         categories = TransactionCategory.add_default(s)
         t_cat = categories["Uncategorized"]
 
-        today = datetime.date.today()
-
         qty = self.random_decimal(10, 100, precision=18)
         txn = Transaction(
             account_id=acct.id_,
-            date=today,
+            date_ord=today_ord,
             statement=self.random_string(),
             amount=10,
         )
