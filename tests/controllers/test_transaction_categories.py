@@ -111,6 +111,7 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         with p.get_session() as s:
             t_cat = (
@@ -133,7 +134,7 @@ class TestTransactionCategory(WebTestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date=today,
+                date_ord=today_ord,
                 amount=100,
                 statement=self.random_string(),
             )

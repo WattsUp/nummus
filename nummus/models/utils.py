@@ -39,7 +39,7 @@ def search(
     Returns:
         List of results, count of amount results
     """
-    # TODO(WattsUp): Caching and cache invalidation
+    # TODO (WattsUp): Caching and cache invalidation
     if search_str is None or len(search_str) < utils.MIN_STR_LEN:
         return query
 

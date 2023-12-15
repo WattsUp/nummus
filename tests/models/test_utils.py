@@ -68,6 +68,7 @@ class TestUtils(TestBase):
 
         n_transactions = 10
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         # Create accounts
         acct = Account(
@@ -90,7 +91,7 @@ class TestUtils(TestBase):
         for _ in range(n_transactions):
             txn = Transaction(
                 account_id=acct.id_,
-                date=today,
+                date_ord=today_ord,
                 amount=100,
                 statement=self.random_string(),
             )

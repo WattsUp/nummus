@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import flask
 
 from nummus import exceptions as exc
-from nummus import portfolio, web_utils
+from nummus import portfolio, utils, web_utils
 from nummus.controllers import common, transactions
 from nummus.models import (
     Account,
@@ -36,11 +36,12 @@ def edit(uri: str) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
     today = datetime.date.today()
+    today_ord = today.toordinal()
 
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
-        _, values, _ = acct.get_value(today, today)
+        _, values, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
 
         if flask.request.method == "GET":
@@ -88,8 +89,9 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
         Dictionary HTML context
     """
     today = datetime.date.today()
+    today_ord = today.toordinal()
     if current_value is None:
-        _, values, _ = acct.get_value(today, today)
+        _, values, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
 
     return {
@@ -101,8 +103,8 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
         "category_type": AccountCategory,
         "value": current_value,
         "closed": acct.closed,
-        "updated_days_ago": (today - acct.updated_on).days,
-        "opened_days_ago": (today - acct.opened_on).days,
+        "updated_days_ago": today_ord - acct.updated_on_ord,
+        "opened_days_ago": today_ord - acct.opened_on_ord,
     }
 
 
@@ -123,19 +125,21 @@ def ctx_chart(acct: Account) -> t.DictAny:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    start = start or acct.opened_on
+    start = start or datetime.date.fromordinal(acct.opened_on_ord)
 
     PREVIOUS_PERIOD["start"] = start
     PREVIOUS_PERIOD["end"] = end
 
-    dates, values, _ = acct.get_value(start, end)
+    start_ord = start.toordinal()
+    end_ord = end.toordinal()
+    _, values, _ = acct.get_value(start_ord, end_ord)
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in dates],
+            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
             "values": values,
         },
     }
@@ -185,7 +189,7 @@ def table(uri: str) -> str:
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
-        start = start or acct.opened_on
+        start = start or datetime.date.fromordinal(acct.opened_on_ord)
         if PREVIOUS_PERIOD["start"] == start and PREVIOUS_PERIOD["end"] == end:
             return common.page(
                 "accounts/table.jinja",
@@ -231,12 +235,14 @@ def options(uri: str, field: str) -> str:
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
+        end_ord = end.toordinal()
 
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))
         if start is not None:
-            query = query.where(TransactionSplit.date >= start)
-        query = query.where(TransactionSplit.date <= end)
+            start_ord = start.toordinal()
+            query = query.where(TransactionSplit.date_ord >= start_ord)
+        query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.where(TransactionSplit.account_id == acct.id_)
 
         search_str = args.get(f"search-{field}")

@@ -272,13 +272,25 @@ class TestUtils(TestBase):
     def test_range_date(self) -> None:
         start = datetime.date.today()
         end = start + datetime.timedelta(days=7)
+        start_ord = start.toordinal()
+        end_ord = end.toordinal()
 
         result = utils.range_date(start, end, include_end=True)
         self.assertEqual(len(result), 8)
         self.assertEqual(result[0], start)
         self.assertEqual(result[-1], end)
 
+        result = utils.range_date(start_ord, end_ord, include_end=True)
+        self.assertEqual(len(result), 8)
+        self.assertEqual(result[0], start)
+        self.assertEqual(result[-1], end)
+
         result = utils.range_date(start, end, include_end=False)
+        self.assertEqual(len(result), 7)
+        self.assertEqual(result[0], start)
+        self.assertEqual(result[-1], end - datetime.timedelta(days=1))
+
+        result = utils.range_date(start_ord, end_ord, include_end=False)
         self.assertEqual(len(result), 7)
         self.assertEqual(result[0], start)
         self.assertEqual(result[-1], end - datetime.timedelta(days=1))

@@ -34,8 +34,8 @@ class TestAccount(TestBase):
         acct = Account(**d)
 
         # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "opened_on")
-        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "updated_on")
+        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "opened_on_ord")
+        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "updated_on_ord")
 
         s.add(acct)
         s.commit()
@@ -44,8 +44,8 @@ class TestAccount(TestBase):
         self.assertEqual(acct.institution, d["institution"])
         self.assertEqual(acct.category, d["category"])
         self.assertEqual(acct.closed, d["closed"])
-        self.assertIsNone(acct.opened_on)
-        self.assertIsNone(acct.updated_on)
+        self.assertIsNone(acct.opened_on_ord)
+        self.assertIsNone(acct.updated_on_ord)
 
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, acct, "name", "ab")
@@ -55,6 +55,7 @@ class TestAccount(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         d = {
             "name": self.random_string(),
@@ -67,52 +68,53 @@ class TestAccount(TestBase):
         s.add(acct)
         s.commit()
 
-        self.assertIsNone(acct.opened_on)
-        self.assertIsNone(acct.updated_on)
+        self.assertIsNone(acct.opened_on_ord)
+        self.assertIsNone(acct.updated_on_ord)
 
         # Transaction are sorted by date
 
         t_today = Transaction(
             account_id=acct.id_,
-            date=today,
+            date_ord=today_ord,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
         s.add(t_today)
         s.commit()
 
-        self.assertEqual(acct.opened_on, today)
-        self.assertEqual(acct.updated_on, today)
+        self.assertEqual(acct.opened_on_ord, today_ord)
+        self.assertEqual(acct.updated_on_ord, today_ord)
 
         t_before = Transaction(
             account_id=acct.id_,
-            date=today - datetime.timedelta(days=1),
+            date_ord=today_ord - 1,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
         s.add(t_before)
         s.commit()
 
-        self.assertEqual(acct.opened_on, t_before.date)
-        self.assertEqual(acct.updated_on, today)
+        self.assertEqual(acct.opened_on_ord, t_before.date_ord)
+        self.assertEqual(acct.updated_on_ord, today_ord)
 
         t_after = Transaction(
             account_id=acct.id_,
-            date=today + datetime.timedelta(days=1),
+            date_ord=today_ord + 1,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
         s.add(t_after)
         s.commit()
 
-        self.assertEqual(acct.opened_on, t_before.date)
-        self.assertEqual(acct.updated_on, t_after.date)
+        self.assertEqual(acct.opened_on_ord, t_before.date_ord)
+        self.assertEqual(acct.updated_on_ord, t_after.date_ord)
 
     def test_get_asset_qty(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -134,14 +136,19 @@ class TestAccount(TestBase):
         )
 
         # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, acct.get_asset_qty, today, today)
+        self.assertRaises(
+            exc.UnboundExecutionError,
+            acct.get_asset_qty,
+            today_ord,
+            today_ord,
+        )
 
         s.add(t_cat)
         s.add(acct)
         s.add_all(assets)
         s.commit()
 
-        target_dates = [(today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)]
+        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_qty = {}
 
         result_dates, result_qty = acct.get_asset_qty(target_dates[0], target_dates[-1])
@@ -151,7 +158,7 @@ class TestAccount(TestBase):
         # Fund account on first day
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=self.random_decimal(10, 100),
             statement=self.random_string(),
         )
@@ -163,7 +170,7 @@ class TestAccount(TestBase):
         q0 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=self.random_decimal(-10, -1),
             statement=self.random_string(),
         )
@@ -187,7 +194,7 @@ class TestAccount(TestBase):
         q1 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[-1],
+            date_ord=target_dates[-1],
             amount=self.random_decimal(1, 10),
             statement=self.random_string(),
         )
@@ -211,7 +218,7 @@ class TestAccount(TestBase):
         q2 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=today,
+            date_ord=today_ord,
             amount=self.random_decimal(-10, -1),
             statement=self.random_string(),
         )
@@ -227,18 +234,18 @@ class TestAccount(TestBase):
 
         target_qty = {assets[0].id_: [0, q0, q0, q0], assets[1].id_: [0, 0, 0, q2]}
 
-        result_dates, result_qty = acct.get_asset_qty(target_dates[0], today)
+        result_dates, result_qty = acct.get_asset_qty(target_dates[0], today_ord)
         self.assertEqual(result_dates, target_dates[0:4])
         self.assertEqual(result_qty, target_qty)
 
         # Test single value
         target_qty = {assets[0].id_: [q0], assets[1].id_: [q2]}
-        result_dates, result_qty = acct.get_asset_qty(today, today)
-        self.assertListEqual(result_dates, [today])
+        result_dates, result_qty = acct.get_asset_qty(today_ord, today_ord)
+        self.assertListEqual(result_dates, [today_ord])
         self.assertEqual(result_qty, target_qty)
 
         # Test single value
-        future = target_dates[-1] + datetime.timedelta(days=1)
+        future = target_dates[-1] + 1
         target_qty = {assets[0].id_: [q0 - q1], assets[1].id_: [q2]}
         result_dates, result_qty = acct.get_asset_qty(future, future)
         self.assertListEqual(result_dates, [future])
@@ -249,6 +256,7 @@ class TestAccount(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -265,7 +273,12 @@ class TestAccount(TestBase):
             assets.append(new_asset)
 
         # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, acct.get_value, today, today)
+        self.assertRaises(
+            exc.UnboundExecutionError,
+            acct.get_value,
+            today_ord,
+            today_ord,
+        )
 
         s.add(acct)
         s.add_all(assets)
@@ -274,7 +287,7 @@ class TestAccount(TestBase):
         categories = TransactionCategory.add_default(s)
         t_cat = categories["Uncategorized"]
 
-        target_dates = [(today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)]
+        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_values = [0] * 7
         target_assets = {}
         start = target_dates[0]
@@ -301,7 +314,7 @@ class TestAccount(TestBase):
         t_fund = self.random_decimal(10, 100)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=t_fund,
             statement=self.random_string(),
         )
@@ -325,7 +338,7 @@ class TestAccount(TestBase):
         q0 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=t0,
             statement=self.random_string(),
         )
@@ -363,7 +376,7 @@ class TestAccount(TestBase):
         t1 = self.random_decimal(1, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[-1],
+            date_ord=target_dates[-1],
             amount=t1,
             statement=self.random_string(),
         )
@@ -399,8 +412,8 @@ class TestAccount(TestBase):
 
         # Add valuations to Asset
         prices = [self.random_decimal(1, 10) for _ in range(len(target_dates))]
-        for date, p in zip(target_dates, prices, strict=True):
-            v = AssetValuation(asset_id=assets[0].id_, date=date, value=p)
+        for date_ord, p in zip(target_dates, prices, strict=True):
+            v = AssetValuation(asset_id=assets[0].id_, date_ord=date_ord, value=p)
             s.add(v)
         s.commit()
 
@@ -423,17 +436,17 @@ class TestAccount(TestBase):
         self.assertEqual(r_values, {acct.id_: target_values})
 
         # Test single value
-        r_dates, r_values, r_assets = acct.get_value(today, today)
-        self.assertEqual(r_dates, [today])
+        r_dates, r_values, r_assets = acct.get_value(today_ord, today_ord)
+        self.assertEqual(r_dates, [today_ord])
         self.assertEqual(r_values, [target_values[3]])
         self.assertEqual(r_assets, {assets[0].id_: [asset_values[3]]})
 
-        r_dates, r_values = Account.get_value_all(s, today, today)
-        self.assertEqual(r_dates, [today])
+        r_dates, r_values = Account.get_value_all(s, today_ord, today_ord)
+        self.assertEqual(r_dates, [today_ord])
         self.assertEqual(r_values, {acct.id_: [target_values[3]]})
 
         # Test single value
-        future = target_dates[-1] + datetime.timedelta(days=1)
+        future = target_dates[-1] + 1
         r_dates, r_values, r_assets = acct.get_value(future, future)
         self.assertEqual(r_dates, [future])
         self.assertEqual(r_values, [target_values[-1]])
@@ -454,7 +467,7 @@ class TestAccount(TestBase):
         s.commit()
         txn = Transaction(
             account_id=acct_unrelated.id_,
-            date=target_dates[-1],
+            date_ord=target_dates[-1],
             amount=t1,
             statement=self.random_string(),
         )
@@ -478,6 +491,7 @@ class TestAccount(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -496,7 +510,7 @@ class TestAccount(TestBase):
         t_cat_fund = categories["Transfers"]
         t_cat_trade = categories["Securities Traded"]
 
-        target_dates = [(today + datetime.timedelta(days=i)) for i in range(-3, 3 + 1)]
+        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_categories = {cat.id_: [Decimal(0)] * 7 for cat in categories.values()}
         start = target_dates[0]
         end = target_dates[-1]
@@ -509,7 +523,7 @@ class TestAccount(TestBase):
         t_fund = self.random_decimal(10, 100)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=t_fund,
             statement=self.random_string(),
         )
@@ -531,7 +545,7 @@ class TestAccount(TestBase):
         t0 = self.random_decimal(-10, -1)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[1],
+            date_ord=target_dates[1],
             amount=t0,
             statement=self.random_string(),
         )
@@ -553,7 +567,7 @@ class TestAccount(TestBase):
         t1 = self.random_decimal(1, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date=target_dates[-1],
+            date_ord=target_dates[-1],
             amount=t1,
             statement=self.random_string(),
         )
@@ -572,8 +586,8 @@ class TestAccount(TestBase):
         self.assertEqual(r_categories, target_categories)
 
         # Test single value
-        r_dates, r_categories = acct.get_cash_flow(today, today)
-        self.assertEqual(r_dates, [today])
+        r_dates, r_categories = acct.get_cash_flow(today_ord, today_ord)
+        self.assertEqual(r_dates, [today_ord])
         self.assertEqual(
             r_categories,
             {cat: [v[3]] for cat, v in target_categories.items()},

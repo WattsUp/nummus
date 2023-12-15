@@ -220,7 +220,12 @@ def format_seconds(
     return f"{seconds:.1f} {labels[0]}"
 
 
-def range_date(start: t.Date, end: t.Date, *_, include_end: bool = True) -> t.Dates:
+def range_date(
+    start: t.Date | int,
+    end: t.Date | int,
+    *_,
+    include_end: bool = True,
+) -> t.Dates:
     """Create a range of dates from start to end.
 
     Args:
@@ -232,11 +237,11 @@ def range_date(start: t.Date, end: t.Date, *_, include_end: bool = True) -> t.Da
         [start, ..., end] if include_end is True
         [start, ..., end) if include_end is False
     """
-    n = (end - start).days
+    start_ord = start if isinstance(start, int) else start.toordinal()
+    end_ord = end if isinstance(end, int) else end.toordinal()
     if include_end:
-        n += 1
-    start_ord = start.toordinal()
-    return [datetime.date.fromordinal(start_ord + i) for i in range(n)]
+        end_ord += 1
+    return [datetime.date.fromordinal(i) for i in range(start_ord, end_ord)]
 
 
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import datetime
+import re
+
 from nummus.controllers import accounts
 from nummus.models import Account, AccountCategory
 from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
@@ -100,6 +103,7 @@ class TestAccount(WebTestBase):
 
     def test_table(self) -> None:
         d = self._setup_portfolio()
+        today = datetime.date.today()
 
         acct_uri = d["acct_uri"]
         t_split_0 = d["t_split_0"]
@@ -112,6 +116,13 @@ class TestAccount(WebTestBase):
         result, _ = self.web_get(endpoint)
         # First different call for table should update chart as well
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
+        m = re.search(
+            r'<script>accountChart\.update\(.*"dates": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        dates_s = m[1] if m else ""
+        self.assertIn(today.isoformat(), dates_s)
         self.assertNotIn("txn-account", result)  # No account column on account page
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")

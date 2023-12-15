@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
 
 import sqlalchemy
@@ -18,7 +17,7 @@ class AssetSplit(Base):
 
     Attributes:
         asset_uri: Asset unique identifier
-        date: Date of split
+        date_ord: Date ordinal of split
         multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
     """
 
@@ -26,7 +25,7 @@ class AssetSplit(Base):
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     multiplier: t.ORMReal = orm.mapped_column(Decimal6)
-    date: t.ORMDate
+    date_ord: t.ORMInt
 
 
 class AssetValuation(Base):
@@ -34,7 +33,7 @@ class AssetValuation(Base):
 
     Attributes:
         asset_uri: Asset unique identifier
-        date: Date of valuation
+        date_ord: Date ordinal of valuation
         value: Value of assert
     """
 
@@ -42,7 +41,7 @@ class AssetValuation(Base):
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: t.ORMReal = orm.mapped_column(Decimal6)
-    date: t.ORMDate
+    date_ord: t.ORMInt
 
 
 class AssetCategory(BaseEnum):
@@ -84,15 +83,15 @@ class Asset(Base):
             return None
         return f"{self.uri}{s}"
 
-    def get_value(self, start: t.Date, end: t.Date) -> tuple[t.Dates, t.Reals]:
+    def get_value(self, start_ord: int, end_ord: int) -> tuple[t.Ints, t.Reals]:
         """Get the value of Asset from start to end date.
 
         Args:
-            start: First date to evaluate
-            end: Last date to evaluate (inclusive)
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
 
         Returns:
-            List[dates], list[values]
+            List[date ordinals], list[values]
         """
         s = orm.object_session(self)
         if s is None:
@@ -105,61 +104,61 @@ class Asset(Base):
         query = s.query(AssetValuation)
         query = query.with_entities(
             AssetValuation.value,
-            sqlalchemy.func.max(AssetValuation.date),
+            sqlalchemy.func.max(AssetValuation.date_ord),
         )
         query = query.where(AssetValuation.asset_id == self.id_)
-        query = query.where(AssetValuation.date <= start)
+        query = query.where(AssetValuation.date_ord <= start_ord)
         iv = query.scalar()
         value = iv or Decimal(0)
 
-        date = start + datetime.timedelta(days=1)
-        dates: t.Dates = [start]
+        date_ord = start_ord + 1
+        date_ords: t.Ints = [start_ord]
         values: t.Reals = [value]
 
-        if start == end:
-            return dates, values
+        if start_ord == end_ord:
+            return date_ords, values
 
         # Valuations between start and end
         query = s.query(AssetValuation)
-        query = query.with_entities(AssetValuation.date, AssetValuation.value)
+        query = query.with_entities(AssetValuation.date_ord, AssetValuation.value)
         query = query.where(AssetValuation.asset_id == self.id_)
-        query = query.where(AssetValuation.date <= end)
-        query = query.where(AssetValuation.date > start)
-        query = query.order_by(AssetValuation.date)
+        query = query.where(AssetValuation.date_ord <= end_ord)
+        query = query.where(AssetValuation.date_ord > start_ord)
+        query = query.order_by(AssetValuation.date_ord)
 
-        for v_date, v_value in query.all():
-            v_date: datetime.date
+        for v_date_ord, v_value in query.all():
+            v_date_ord: int
             v_value: Decimal
 
-            while date < v_date:
+            while date_ord < v_date_ord:
                 values.append(value)
-                dates.append(date)
-                date += datetime.timedelta(days=1)
+                date_ords.append(date_ord)
+                date_ord += 1
             value = v_value
-        while date <= end:
+        while date_ord <= end_ord:
             values.append(value)
-            dates.append(date)
-            date += datetime.timedelta(days=1)
-        return dates, values
+            date_ords.append(date_ord)
+            date_ord += 1
+        return date_ords, values
 
     @classmethod
     def get_value_all(
         cls,
         s: orm.Session,
-        start: t.Date,
-        end: t.Date,
+        start_ord: int,
+        end_ord: int,
         ids: t.Ints | None = None,
-    ) -> tuple[t.Dates, t.DictIntReals]:
+    ) -> tuple[t.Ints, t.DictIntReals]:
         """Get the value of all Assets from start to end date.
 
         Args:
             s: SQL session to use
-            start: First date to evaluate
-            end: Last date to evaluate (inclusive)
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
             ids: Limit results to specific Assets by ID
 
         Returns:
-            (List[dates], dict{Asset.id_: list[values]})
+            (List[date ordinals], dict{Asset.id_: list[values]})
         """
         values: t.DictIntReal = {a_id: Decimal(0) for a_id, in s.query(Asset.id_).all()}
 
@@ -171,9 +170,9 @@ class Asset(Base):
         query = query.with_entities(
             AssetValuation.asset_id,
             AssetValuation.value,
-            sqlalchemy.func.max(AssetValuation.date),
+            sqlalchemy.func.max(AssetValuation.date_ord),
         )
-        query = query.where(AssetValuation.date <= start)
+        query = query.where(AssetValuation.date_ord <= start_ord)
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
         query = query.group_by(AssetValuation.asset_id)
@@ -182,46 +181,46 @@ class Asset(Base):
             iv: Decimal
             values[a_id] = iv
 
-        date = start + datetime.timedelta(days=1)
-        dates: t.Dates = [start]
+        date_ord = start_ord + 1
+        date_ords: t.Ints = [start_ord]
         assets_values: t.DictIntReals = {a_id: [v] for a_id, v in values.items()}
 
-        if start == end:
-            return dates, assets_values
+        if start_ord == end_ord:
+            return date_ords, assets_values
 
-        def next_day(current: datetime.date) -> datetime.date:
+        def next_day(current: int) -> int:
             """Push currents into the lists."""
             for a_id, v in values.items():
                 assets_values[a_id].append(v)
-            dates.append(current)
-            return current + datetime.timedelta(days=1)
+            date_ords.append(current)
+            return current + 1
 
         # Transactions between start and end
         query = s.query(AssetValuation)
         query = query.with_entities(
             AssetValuation.asset_id,
-            AssetValuation.date,
+            AssetValuation.date_ord,
             AssetValuation.value,
         )
-        query = query.where(AssetValuation.date <= end)
-        query = query.where(AssetValuation.date > start)
+        query = query.where(AssetValuation.date_ord <= end_ord)
+        query = query.where(AssetValuation.date_ord > start_ord)
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
-        query = query.order_by(AssetValuation.date)
+        query = query.order_by(AssetValuation.date_ord)
 
-        for a_id, v_date, v in query.all():
+        for a_id, v_date_ord, v in query.all():
             a_id: int
-            v_date: datetime.date
+            v_date_ord: int
             v: Decimal
-            while date < v_date:
-                date = next_day(date)
+            while date_ord < v_date_ord:
+                date_ord = next_day(date_ord)
 
             values[a_id] = v
 
-        while date <= end:
-            date = next_day(date)
+        while date_ord <= end_ord:
+            date_ord = next_day(date_ord)
 
-        return dates, assets_values
+        return date_ords, assets_values
 
     def update_splits(self) -> None:
         """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
@@ -234,29 +233,29 @@ class Asset(Base):
             raise exc.UnboundExecutionError
 
         multiplier = Decimal(1)
-        splits: list[tuple[t.Date, t.Real]] = []
+        splits: list[tuple[int, t.Real]] = []
 
         query = s.query(AssetSplit)
-        query = query.with_entities(AssetSplit.date, AssetSplit.multiplier)
+        query = query.with_entities(AssetSplit.date_ord, AssetSplit.multiplier)
         query = query.where(AssetSplit.asset_id == self.id_)
-        query = query.order_by(AssetSplit.date.desc())
+        query = query.order_by(AssetSplit.date_ord.desc())
 
-        for s_date, s_multiplier in query.all():
-            s_date: datetime.date
+        for s_date_ord, s_multiplier in query.all():
+            s_date_ord: int
             s_multiplier: Decimal
             # Compound splits as we go
             multiplier = multiplier * s_multiplier
-            splits.append((s_date, multiplier))
+            splits.append((s_date_ord, multiplier))
 
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id == self.id_)
-        query = query.order_by(TransactionSplit.date.desc())
+        query = query.order_by(TransactionSplit.date_ord.desc())
 
         multiplier = Decimal(1)
         for t_split in query.all():
             # Query whole object okay, need to set things
             t_split: TransactionSplit
             # If txn is before the split, update the multiplier
-            while len(splits) >= 1 and t_split.date < splits[0][0]:
+            while len(splits) >= 1 and t_split.date_ord < splits[0][0]:
                 multiplier = splits.pop(0)[1]
             t_split.adjust_asset_quantity(multiplier)

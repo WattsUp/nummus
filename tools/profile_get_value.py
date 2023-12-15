@@ -19,7 +19,7 @@ from nummus.models import Account, Asset, AssetValuation, TransactionSplit
 colorama.init(autoreset=True)
 
 
-def main(command_line: t.Strings = None) -> int:
+def main(command_line: t.Strings | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -70,22 +70,29 @@ def main(command_line: t.Strings = None) -> int:
         # Get start date
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))
-        query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date))
-        start = query.scalar() or datetime.date(1970, 1, 1)
+        query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+        start_ord = query.scalar()
+        start = (
+            datetime.date.fromordinal(start_ord)
+            if start_ord
+            else datetime.date(1970, 1, 1)
+        )
         end = datetime.date.today()
+        start_ord = start.toordinal()
+        end_ord = end.toordinal()
 
         # All accounts
-        Account.get_value_all(s, start, end)  # Cache stuff
+        Account.get_value_all(s, start_ord, end_ord)  # Cache stuff
 
         with viztracer.VizTracer(output_file=str(output_file)) as _:
             t_start = time.perf_counter()
-            Account.get_value_all(s, start, end)
+            Account.get_value_all(s, start_ord, end_ord)
             t_duration = time.perf_counter() - t_start
         print(f"All accounts {t_duration*1000:6.1f}ms (with profiler)")
 
         # Don't attach profiler
         t_start = time.perf_counter()
-        Account.get_value_all(s, start, end)
+        Account.get_value_all(s, start_ord, end_ord)
         t_duration = time.perf_counter() - t_start
         print(f"All accounts {t_duration*1000:6.1f}ms (sans profiler)")
 
@@ -93,20 +100,20 @@ def main(command_line: t.Strings = None) -> int:
 
         accounts = s.query(Account).all()
         for acct in accounts:
-            acct.get_value(start, end)  # Cache stuff
+            acct.get_value(start_ord, end_ord)  # Cache stuff
 
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.account_id == acct.id_)
             n = query.count()
 
             t_start = time.perf_counter()
-            acct.get_value(start, end)
+            acct.get_value(start_ord, end_ord)
             t_duration_single = time.perf_counter() - t_start
 
-            Account.get_value_all(s, start, end, ids=[acct.id_])  # Cache stuff
+            Account.get_value_all(s, start_ord, end_ord, ids=[acct.id_])  # Cache stuff
 
             t_start = time.perf_counter()
-            Account.get_value_all(s, start, end, ids=[acct.id_])
+            Account.get_value_all(s, start_ord, end_ord, ids=[acct.id_])
             t_duration_all = time.perf_counter() - t_start
 
             durations.append(
@@ -133,20 +140,20 @@ def main(command_line: t.Strings = None) -> int:
 
         assets = s.query(Asset).all()
         for asset in assets:
-            asset.get_value(start, end)  # Cache stuff
+            asset.get_value(start_ord, end_ord)  # Cache stuff
 
             query = s.query(AssetValuation)
             query = query.where(AssetValuation.asset_id == asset.id_)
             n = query.count()
 
             t_start = time.perf_counter()
-            asset.get_value(start, end)
+            asset.get_value(start_ord, end_ord)
             t_duration_single = time.perf_counter() - t_start
 
-            Asset.get_value_all(s, start, end, ids=[asset.id_])  # Cache stuff
+            Asset.get_value_all(s, start_ord, end_ord, ids=[asset.id_])  # Cache stuff
 
             t_start = time.perf_counter()
-            Asset.get_value_all(s, start, end, ids=[asset.id_])
+            Asset.get_value_all(s, start_ord, end_ord, ids=[asset.id_])
             t_duration_all = time.perf_counter() - t_start
 
             durations.append(
