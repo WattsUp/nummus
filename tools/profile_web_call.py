@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 colorama.init(autoreset=True)
 
 
-def main(command_line: t.Strings = None) -> int:
+def main(command_line: t.Strings | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -101,7 +101,7 @@ def main(command_line: t.Strings = None) -> int:
         client = flask_app.test_client()
 
     print(f"{Fore.CYAN}GET {url}")
-    response: werkzeug.test.TestResponse = None
+    response: werkzeug.test.TestResponse | None = None
     try:
         if not no_call_twice:
             # Send one request, sqlalchemy with cache queries and such
