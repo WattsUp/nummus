@@ -20,15 +20,15 @@
                 </h1>
             </div>
             <div class="bg-white p-1">
-                <h1 class="text-3xl ml-auto text-right">{{ sidebar["net-worth"] | money }}</h1>
+                <h1 class="text-3xl ml-auto text-right">{{ sidebar["net-worth"] | money0 }}</h1>
                 <h2 class="flex justify-between pt-2">
-                    <span>Assets</span><span>{{ sidebar["assets"] | money }}</span>
+                    <span>Assets</span><span>{{ sidebar["assets"] | money0 }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
                     <div class="bg-blue h-full" style="width: {{ sidebar["assets-w"] }}%"></div>
                 </div>
                 <h2 class="flex justify-between">
-                    <span>Liabilities</span><span>{{ sidebar["liabilities"] | money }}</span>
+                    <span>Liabilities</span><span>{{ sidebar["liabilities"] | money0 }}</span>
                 </h2>
                 <div class="h-1 bg-grey-400">
                     <div class="bg-yellow h-full"

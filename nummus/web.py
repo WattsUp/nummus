@@ -185,6 +185,7 @@ class Server:
         bundle_js.build()
 
         self._app.jinja_env.filters["money"] = utils.format_financial
+        self._app.jinja_env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         self._app.jinja_env.filters["days"] = utils.format_days
         self._app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
 

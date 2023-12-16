@@ -27,6 +27,8 @@ MONTHS_IN_YEAR = 12
 DAYS_IN_YEAR = 365.25
 DAYS_IN_WEEK = 7
 
+DAYS_IN_QUARTER = int(DAYS_IN_YEAR // 4)
+
 THRESHOLD_HOURS = 96
 THRESHOLD_MINUTES = 90
 THRESHOLD_SECONDS = 90
@@ -129,18 +131,19 @@ def parse_real(s: str | None) -> t.Real | None:
     return Decimal(clean)
 
 
-def format_financial(x: t.Real) -> str:
+def format_financial(x: t.Real, precision: int = 2) -> str:
     """Format a number to financial notation.
 
     Args:
         x: Number to format
+        precision: Number of decimals
 
     Returns:
         x formatted similar to $1,000.00 or -$1,000.00
     """
     if x < 0:
-        return f"-${-x:,.2f}"
-    return f"${x:,.2f}"
+        return f"-${-x:,.{precision}f}"
+    return f"${x:,.{precision}f}"
 
 
 def parse_bool(s: str) -> bool | None:

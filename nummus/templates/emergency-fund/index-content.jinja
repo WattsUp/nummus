@@ -1,0 +1,63 @@
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
+         hx-get="{{ url_for("emergency_fund.page") }}"
+         hx-trigger="update-account from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Emergency Fund</h1>
+    <div class="w-full flex justify-around text-lg">
+        <div class="text-center">
+            <h1 class="text-lg font-bold">Emergency fund savings</h1>
+            <h1 class="text-2xl font-bold text-blue">{{ e_fund["current"] | money0 }}</h1>
+        </div>
+        <div class="text-center">
+            <h1 class="text-lg font-bold">Recommended emergency fund</h1>
+            <h1 class="text-2xl font-bold text-green-600">
+                {{ e_fund["target_low"] | money0 }} - {{ e_fund["target_high"] | money0 }}
+            </h1>
+        </div>
+        <div class="text-center">
+            <h1 class="text-lg font-bold">Monthly budget</h1>
+            <h1 class="text-2xl font-bold">
+                {{ e_fund["budget"] | money0 }}
+                <!-- TODO (WattsUp): Add href to budget editor -->
+            </h1>
+        </div>
+    </div>
+    {% with name="fund" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    {% include "emergency-fund/chart-data.jinja" %}
+    <div class="max-w-[800px] mx-auto">
+        {% if e_fund["delta_low"] > 0 %}
+            <p>
+                You have {{ e_fund["current"] | money0 }} in your emergency fund.
+                You need {{ e_fund["target_low"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
+                Consider increasing your emergency fund by {{ e_fund["delta_low"] | money0 }}.
+            </p>
+        {% elif e_fund["delta_high"] > 0 %}
+            <p>
+                You have {{ e_fund["current"] | money0 }} in your emergency fund
+                which will cover {{ e_fund["months"] }} months of budgeted expenses.
+                You only need {{ e_fund["target_high"] | money0 }} to cover 6 months of budgeted expenses.
+                Unless you have a planned spending goal this year, the extra {{ e_fund["delta_high"] | money0 }} could be invested.
+            </p>
+        {% else %}
+            <p>
+                You have {{ e_fund["current"] | money0 }} in your emergency fund
+                which will cover {{ e_fund["months"] }} months of budgeted expenses.
+                You are in good shape to cover the recommended 3 - 6 months of budgeted expenses.
+            </p>
+        {% endif %}
+    </div>
+    <div>
+        {% for uri, acct in e_fund["accts"].items() %}
+            <div>
+                <div>
+                    {{ acct["institution"] }}
+                    <br>
+                    {{ acct["name"] }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</section>

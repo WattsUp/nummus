@@ -186,7 +186,7 @@ def ctx_base() -> t.DictAny:
         "Planning": {
             "Future Net Worth": None,
             "Retirement": None,
-            "Emergency Fund": None,
+            "Emergency Fund": "emergency_fund.page",
             "Investment": None,
         },
     }
