@@ -56,6 +56,7 @@ def edit(uri: str) -> str | flask.Response:
         number = form["number"].strip()
         category = form.get("category", type=AccountCategory)
         closed = "closed" in form
+        emergency = "emergency" in form
 
         if category is None:
             return common.error("Account category must not be None")
@@ -71,6 +72,7 @@ def edit(uri: str) -> str | flask.Response:
             acct.number = number
             acct.category = category
             acct.closed = closed
+            acct.emergency = emergency
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -103,6 +105,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
         "category_type": AccountCategory,
         "value": current_value,
         "closed": acct.closed,
+        "emergency": acct.emergency,
         "updated_days_ago": today_ord - acct.updated_on_ord,
         "opened_days_ago": today_ord - acct.opened_on_ord,
     }

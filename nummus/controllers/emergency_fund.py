@@ -10,7 +10,7 @@ import flask
 
 from nummus import portfolio, utils
 from nummus.controllers import common
-from nummus.models import Account, AccountCategory, Budget
+from nummus.models import Account, Budget
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
@@ -37,7 +37,7 @@ def ctx_page() -> t.DictAny:
         b_amount = -b.amount  # Budgets are negative
 
         # Get liquid account ids
-        query = s.query(Account).where(Account.category == AccountCategory.CASH)
+        query = s.query(Account).where(Account.emergency.is_(True))
         accts = query.all()
         acct_ids = [acct.id_ for acct in accts]
 

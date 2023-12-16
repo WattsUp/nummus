@@ -55,12 +55,12 @@
                 <tr>
                     <th class="px-2">Institution</th>
                     <th class="px-2">Account</th>
-                    <th class="px-2 text-right">Cash Balance</th>
+                    <th class="px-2 text-right">Balance</th>
                 </tr>
             </thead>
             <tbody>
                 <tr class="border-y border-grey-500 font-bold">
-                    <td class="px-2">Cash</td>
+                    <td class="px-2">Total</td>
                     <td class="px-2"></td>
                     <td class="px-2 text-right">{{ e_fund["current"] | money }}</td>
                 </tr>
@@ -74,4 +74,5 @@
             </tbody>
         </table>
     </div>
+    <p class="text-center italic">If you would like to change which accounts are included, edit them in the sidebar</p>
 </section>
