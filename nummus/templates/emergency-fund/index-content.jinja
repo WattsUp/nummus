@@ -50,14 +50,28 @@
         {% endif %}
     </div>
     <div>
-        {% for uri, acct in e_fund["accts"].items() %}
-            <div>
-                <div>
-                    {{ acct["institution"] }}
-                    <br>
-                    {{ acct["name"] }}
-                </div>
-            </div>
-        {% endfor %}
+        <table class="mx-auto min-w-[70%]">
+            <thead>
+                <tr>
+                    <th class="px-2">Institution</th>
+                    <th class="px-2">Account</th>
+                    <th class="px-2 text-right">Cash Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-y border-grey-500 font-bold">
+                    <td class="px-2">Cash</td>
+                    <td class="px-2"></td>
+                    <td class="px-2 text-right">{{ e_fund["current"] | money }}</td>
+                </tr>
+                {% for uri, acct in e_fund["accts"].items() %}
+                    <tr>
+                        <td class="px-2">{{ acct["institution"] }}</td>
+                        <td class="px-2">{{ acct["name"] }}</td>
+                        <td class="px-2 text-right">{{ acct["balance"] | money }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </section>

@@ -53,6 +53,9 @@ def ctx_page() -> t.DictAny:
                 "institution": acct.institution,
                 "balance": acct_values[acct.id_][-1],
             }
+        acct_info = dict(
+            sorted(acct_info.items(), key=lambda item: -item[1]["balance"]),
+        )
 
     # Current target is latest target rounded to 2 sig figs
     target_low = Decimal(f"{b_amount * 3:.2g}")
