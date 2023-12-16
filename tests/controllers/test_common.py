@@ -54,12 +54,14 @@ class TestCommon(WebTestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             acct_savings = Account(
                 name="Monkey Bank Savings",
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=True,
+                emergency=False,
             )
             s.add_all((acct_checking, acct_savings))
             s.commit()

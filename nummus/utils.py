@@ -1,6 +1,7 @@
 """Miscellaneous functions and classes."""
 from __future__ import annotations
 
+import calendar
 import datetime
 import getpass
 import re
@@ -260,7 +261,9 @@ def date_add_months(date: datetime.date, months: int) -> datetime.date:
     m_sum = date.month + months - 1
     y = date.year + int(m_sum // 12)
     m = (m_sum % 12) + 1
-    return datetime.date(y, m, date.day)
+    # Keep day but max out at end of month
+    d = min(date.day, calendar.monthrange(y, m)[1])
+    return datetime.date(y, m, d)
 
 
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:

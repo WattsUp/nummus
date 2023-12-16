@@ -12,13 +12,17 @@
         <div class="text-center">
             <h1 class="text-lg font-bold">Recommended emergency fund</h1>
             <h1 class="text-2xl font-bold text-green-600">
-                {{ e_fund["target_low"] | money0 }} - {{ e_fund["target_high"] | money0 }}
+                {% if e_fund["budget"] %}{{ e_fund["target_low"] | money0 }} - {{ e_fund["target_high"] | money0 }}{% endif %}
             </h1>
         </div>
         <div class="text-center">
             <h1 class="text-lg font-bold">Monthly budget</h1>
             <h1 class="text-2xl font-bold">
-                {{ e_fund["budget"] | money0 }}
+                {% if e_fund["budget"] %}
+                    {{ e_fund["budget"] | money0 }}
+                {% else %}
+                    <span class="text-red">No budget</span>
+                {% endif %}
                 <!-- TODO (WattsUp): Add href to budget editor -->
             </h1>
         </div>
@@ -28,7 +32,10 @@
     {% endwith %}
     {% include "emergency-fund/chart-data.jinja" %}
     <div>
-        {% if e_fund["delta_low"] > 0 %}
+        {% if e_fund["delta_low"] is none %}
+            No budget found, please create one to get target emergency fund balance.
+            <!-- TODO (WattsUp): Add href to budget editor -->
+        {% elif e_fund["delta_low"] > 0 %}
             <p>
                 You have {{ e_fund["current"] | money0 }} in your emergency fund.
                 You need {{ e_fund["target_low"] | money0 }} for emergencies to cover 3 months of budgeted expenses.

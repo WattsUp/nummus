@@ -4,7 +4,13 @@ import datetime
 import re
 
 from nummus.controllers import accounts
-from nummus.models import Account, AccountCategory
+from nummus.models import (
+    Account,
+    AccountCategory,
+    Transaction,
+    TransactionCategory,
+    TransactionSplit,
+)
 from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
@@ -14,6 +20,7 @@ class TestAccount(WebTestBase):
         d = self._setup_portfolio()
 
         acct_uri = d["acct_uri"]
+        cat_1 = d["cat_1"]
 
         endpoint = f"/h/accounts/a/{acct_uri}/edit"
         result, _ = self.web_get(endpoint)
@@ -26,9 +33,11 @@ class TestAccount(WebTestBase):
             "name": name,
             "category": "credit",
             "number": "",
+            "emergency": "",
         }
         result, headers = self.web_post(endpoint, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-account")
+        self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
             acct = s.query(Account).first()
             if acct is None:
@@ -37,6 +46,7 @@ class TestAccount(WebTestBase):
             self.assertEqual(acct.institution, institution)
             self.assertEqual(acct.category, AccountCategory.CREDIT)
             self.assertFalse(acct.closed)
+            self.assertTrue(acct.emergency)
 
         form = {
             "institution": institution,
@@ -49,6 +59,9 @@ class TestAccount(WebTestBase):
         e_str = "Cannot close Account with non-zero balance"
         self.assertIn(e_str, result)
         with p.get_session() as s:
+            acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
             self.assertFalse(acct.closed)
 
         form = {
@@ -61,6 +74,9 @@ class TestAccount(WebTestBase):
         e_str = "Account name must be at least 3 characters long"
         self.assertIn(e_str, result)
         with p.get_session() as s:
+            acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
             self.assertFalse(acct.closed)
 
         form = {
@@ -72,6 +88,51 @@ class TestAccount(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         e_str = "Account category must not be None"
         self.assertIn(e_str, result)
+
+        # Cancel balance
+        with p.get_session() as s:
+            today = datetime.date.today()
+            today_ord = today.toordinal()
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
+
+            txn = Transaction(
+                account_id=acct.id_,
+                date_ord=today_ord,
+                amount=-90,
+                statement=self.random_string(),
+                locked=True,
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                payee=self.random_string(),
+                category_id=categories[cat_1],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+        form = {
+            "institution": institution,
+            "name": name,
+            "category": "credit",
+            "number": "",
+            "closed": "",
+        }
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertNotIn("<svg", result)  # No error SVG
+        with p.get_session() as s:
+            acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
+            self.assertTrue(acct.closed)
+            self.assertFalse(acct.emergency)
 
     def test_page(self) -> None:
         d = self._setup_portfolio()

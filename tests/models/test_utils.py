@@ -26,12 +26,14 @@ class TestUtils(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
         acct_invest = Account(
             name="Gorilla Investments",
             institution="Ape Trading",
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
         s.add_all((acct_checking, acct_invest))
         s.commit()
@@ -76,6 +78,7 @@ class TestUtils(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
         s.add(acct)
         s.commit()

@@ -32,9 +32,7 @@ def ctx_page() -> t.DictAny:
 
     with p.get_session() as s:
         b = s.query(Budget).order_by(Budget.date_ord.desc()).first()
-        if b is None:
-            return {"no_budget": True}
-        b_amount = -b.amount  # Budgets are negative
+        b_amount = None if b is None else -b.amount  # Budgets are negative
 
         # Get liquid account ids
         query = s.query(Account).where(Account.emergency.is_(True))
@@ -43,7 +41,10 @@ def ctx_page() -> t.DictAny:
 
         _, acct_values = Account.get_value_all(s, start_ord, today_ord, ids=acct_ids)
 
-        balances = [sum(x) for x in zip(*acct_values.values(), strict=True)]
+        if len(acct_values) == 0:
+            balances = [Decimal(0) for _ in range(today_ord - start_ord + 1)]
+        else:
+            balances = [sum(x) for x in zip(*acct_values.values(), strict=True)]
 
         acct_info: t.DictAny = {}
         for acct in accts:
@@ -58,13 +59,23 @@ def ctx_page() -> t.DictAny:
             sorted(acct_info.items(), key=lambda item: -item[1]["balance"]),
         )
 
-    # Current target is latest target rounded to 2 sig figs
-    target_low = Decimal(f"{b_amount * 3:.2g}")
-    target_high = Decimal(f"{b_amount * 6:.2g}")
     current = balances[-1]
+    if b_amount is None:
+        target_low = None
+        target_high = None
+        delta_low = None
+        delta_high = None
+        months = None
+    else:
+        # Current target is latest target rounded to 2 sig figs
+        target_low = Decimal(f"{b_amount * 3:.2g}")
+        target_high = Decimal(f"{b_amount * 6:.2g}")
 
-    # Compute the number of months in savings
-    months = int(current // b_amount)
+        delta_low = target_low - current
+        delta_high = current - target_high
+
+        # Compute the number of months in savings
+        months = int(current // b_amount)
 
     return {
         "chart": {
@@ -78,8 +89,8 @@ def ctx_page() -> t.DictAny:
         "target_low": target_low,
         "budget": b_amount,
         "months": months,
-        "delta_low": target_low - current,
-        "delta_high": current - target_high,
+        "delta_low": delta_low,
+        "delta_high": delta_high,
         "accts": acct_info,
     }
 
