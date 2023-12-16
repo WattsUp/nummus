@@ -32,6 +32,7 @@ class TestTransaction(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
         s.add(acct)
         s.commit()
@@ -67,6 +68,7 @@ class TestTransactionSplit(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
         s.add(acct)
         s.commit()
@@ -176,6 +178,7 @@ class TestTransactionSplit(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
         s.add(acct)
         s.commit()

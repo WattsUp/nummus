@@ -360,12 +360,14 @@ class TestCommands(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             acct_invest = Account(
                 name="Monkey Investments",
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
+                emergency=False,
             )
             asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
             s.add_all((acct_checking, acct_invest, asset))

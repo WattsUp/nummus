@@ -29,6 +29,7 @@ class TestAccount(TestBase):
             "institution": self.random_string(),
             "category": AccountCategory.CASH,
             "closed": False,
+            "emergency": False,
         }
 
         acct = Account(**d)
@@ -44,6 +45,7 @@ class TestAccount(TestBase):
         self.assertEqual(acct.institution, d["institution"])
         self.assertEqual(acct.category, d["category"])
         self.assertEqual(acct.closed, d["closed"])
+        self.assertEqual(acct.emergency, d["emergency"])
         self.assertIsNone(acct.opened_on_ord)
         self.assertIsNone(acct.updated_on_ord)
 
@@ -62,6 +64,7 @@ class TestAccount(TestBase):
             "institution": self.random_string(),
             "category": AccountCategory.CASH,
             "closed": False,
+            "emergency": False,
         }
 
         acct = Account(**d)
@@ -121,6 +124,7 @@ class TestAccount(TestBase):
             institution=self.random_string(),
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -263,6 +267,7 @@ class TestAccount(TestBase):
             institution=self.random_string(),
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -462,6 +467,7 @@ class TestAccount(TestBase):
             institution=self.random_string(),
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
         s.add(acct_unrelated)
         s.commit()
@@ -498,6 +504,7 @@ class TestAccount(TestBase):
             institution=self.random_string(),
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
 
         # Unbound to a session will raise UnboundExecutionError

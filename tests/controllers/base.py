@@ -110,6 +110,7 @@ class WebTestBase(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             s.add(acct)
             s.commit()

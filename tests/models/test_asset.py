@@ -288,6 +288,7 @@ class TestAsset(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
+            emergency=False,
         )
 
         # Unbound to a session will raise UnboundExecutionError

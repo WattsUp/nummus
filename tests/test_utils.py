@@ -295,6 +295,65 @@ class TestUtils(TestBase):
         self.assertEqual(result[0], start)
         self.assertEqual(result[-1], end - datetime.timedelta(days=1))
 
+    def test_date_add_months(self) -> None:
+        start = datetime.date(2023, 1, 1)
+        self.assertEqual(
+            utils.date_add_months(start, 0),
+            start,
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 1),
+            datetime.date(2023, 2, 1),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 12),
+            datetime.date(2024, 1, 1),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 11),
+            datetime.date(2023, 12, 1),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, -1),
+            datetime.date(2022, 12, 1),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, -12),
+            datetime.date(2022, 1, 1),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, -11),
+            datetime.date(2022, 2, 1),
+        )
+
+        start = datetime.date(2023, 6, 30)
+        self.assertEqual(
+            utils.date_add_months(start, 0),
+            start,
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 1),
+            datetime.date(2023, 7, 30),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 12),
+            datetime.date(2024, 6, 30),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, 23),
+            datetime.date(2025, 5, 30),
+        )
+        self.assertEqual(
+            utils.date_add_months(start, -4),
+            datetime.date(2023, 2, 28),
+        )
+
+        start = datetime.date(2020, 1, 31)
+        self.assertEqual(
+            utils.date_add_months(start, 1),
+            datetime.date(2020, 2, 29),
+        )
+
     def test_round_list(self) -> None:
         n = 9
         list_ = [1 / Decimal(n) for _ in range(n)]

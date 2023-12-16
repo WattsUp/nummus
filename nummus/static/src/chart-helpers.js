@@ -190,3 +190,19 @@ const average = array => array.reduce((a, b) => a + b) / array.length;
 function setChartDefaults() {
     Chart.defaults.font.family = '\'liberation-sans\', \'sans-serif\'';
 }
+
+/**
+ * Expand a range about the center
+ *
+ * @param {Number} min Minimum of range
+ * @param {Number} max Maximum of range
+ * @param {Number} number Expansion ratio 0.0 will not expand, 1.0 will double
+ * @return {Object} Object with the following keys
+ * @return {Number} min New range minimum
+ * @return {Number} max New range maximum
+ */
+function widenRange(min, max, amount) {
+    const center = (min + max) / 2;
+    const range = (max - min) * (1 + amount);
+    return {min: center - range / 2, max: center + range / 2};
+}

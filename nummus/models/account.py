@@ -38,6 +38,7 @@ class Account(Base):
         institution: Account holding institution
         category: Type of Account
         closed: True if Account is closed, will hide from view and not update
+        emergency: True if Account is included in emergency fund
         opened_on: Date of first Transaction
         updated_on: Date of latest Transaction
     """
@@ -49,6 +50,7 @@ class Account(Base):
     institution: t.ORMStr
     category: orm.Mapped[AccountCategory]
     closed: t.ORMBool
+    emergency: t.ORMBool
 
     @orm.validates("name", "number", "institution")
     @override

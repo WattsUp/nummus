@@ -5,7 +5,7 @@
          hx-swap="innerHTML">
     <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
         {{ acct["institution"] }}
-        <div class="w-[20px] h-full group cursor-pointer"
+        <div class="w-[20px] group cursor-pointer"
              hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
              hx-target="#overlay"
              hx-swap="innerHTML">

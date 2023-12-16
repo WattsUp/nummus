@@ -1,6 +1,7 @@
 """Miscellaneous functions and classes."""
 from __future__ import annotations
 
+import calendar
 import datetime
 import getpass
 import re
@@ -26,6 +27,8 @@ THRESHOLD_DAYS = 7 * 1.5
 MONTHS_IN_YEAR = 12
 DAYS_IN_YEAR = 365.25
 DAYS_IN_WEEK = 7
+
+DAYS_IN_QUARTER = int(DAYS_IN_YEAR // 4)
 
 THRESHOLD_HOURS = 96
 THRESHOLD_MINUTES = 90
@@ -129,18 +132,19 @@ def parse_real(s: str | None) -> t.Real | None:
     return Decimal(clean)
 
 
-def format_financial(x: t.Real) -> str:
+def format_financial(x: t.Real, precision: int = 2) -> str:
     """Format a number to financial notation.
 
     Args:
         x: Number to format
+        precision: Number of decimals
 
     Returns:
         x formatted similar to $1,000.00 or -$1,000.00
     """
     if x < 0:
-        return f"-${-x:,.2f}"
-    return f"${x:,.2f}"
+        return f"-${-x:,.{precision}f}"
+    return f"${x:,.{precision}f}"
 
 
 def parse_bool(s: str) -> bool | None:
@@ -242,6 +246,24 @@ def range_date(
     if include_end:
         end_ord += 1
     return [datetime.date.fromordinal(i) for i in range(start_ord, end_ord)]
+
+
+def date_add_months(date: datetime.date, months: int) -> datetime.date:
+    """Add a number of months to a date.
+
+    Args:
+        date: Starting date
+        months: Number of months to add, negative okay
+
+    Returns:
+        datetime.date(date.year, date.month + months, date.day)
+    """
+    m_sum = date.month + months - 1
+    y = date.year + int(m_sum // 12)
+    m = (m_sum % 12) + 1
+    # Keep day but max out at end of month
+    d = min(date.day, calendar.monthrange(y, m)[1])
+    return datetime.date(y, m, d)
 
 
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:

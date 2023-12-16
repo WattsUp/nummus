@@ -288,6 +288,7 @@ class TestPortfolio(TestBase):
                 number="MONKEY-0123",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             acct_invest_0 = Account(
                 name="Primate Investments",
@@ -295,12 +296,14 @@ class TestPortfolio(TestBase):
                 number="MONKEY-9999",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
+                emergency=False,
             )
             acct_invest_1 = Account(
                 name="Primate Investments",
                 institution="Gorilla Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
+                emergency=False,
             )
             s.add_all((acct_checking, acct_invest_0, acct_invest_1))
             s.commit()
@@ -399,12 +402,14 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             acct_invest = Account(
                 name="Monkey Investments",
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
+                emergency=False,
             )
             s.add_all((acct_checking, acct_invest))
             s.commit()
@@ -509,6 +514,7 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             s.add(acct)
             s.commit()
@@ -556,6 +562,7 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             s.add(acct)
             s.commit()
@@ -688,6 +695,7 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
+                emergency=False,
             )
             s.add(acct)
             s.commit()
