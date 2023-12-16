@@ -27,7 +27,8 @@ def ctx_page() -> t.DictAny:
 
     today = datetime.date.today()
     today_ord = today.toordinal()
-    start_ord = today_ord - utils.DAYS_IN_QUARTER
+    start = utils.date_add_months(today, -8)
+    start_ord = start.toordinal()
 
     with p.get_session() as s:
         b = s.query(Budget).order_by(Budget.date_ord.desc()).first()

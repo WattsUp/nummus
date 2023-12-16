@@ -10,9 +10,9 @@ const netWorthChart = {
     ctxPieAssets: null,
     ctxPieLiabilities: null,
     /**
-     * Create Account Chart
+     * Create Net Worth Chart
      *
-     * @param {Object} raw Raw data from accounts controller
+     * @param {Object} raw Raw data from net worth controller
      */
     update: function(raw) {
         'use strict';

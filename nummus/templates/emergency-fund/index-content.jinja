@@ -23,11 +23,11 @@
             </h1>
         </div>
     </div>
-    {% with name="fund" %}
+    {% with name="e-fund" %}
         {% include "shared/chart.jinja" %}
     {% endwith %}
     {% include "emergency-fund/chart-data.jinja" %}
-    <div class="max-w-[800px] mx-auto">
+    <div>
         {% if e_fund["delta_low"] > 0 %}
             <p>
                 You have {{ e_fund["current"] | money0 }} in your emergency fund.

@@ -247,6 +247,22 @@ def range_date(
     return [datetime.date.fromordinal(i) for i in range(start_ord, end_ord)]
 
 
+def date_add_months(date: datetime.date, months: int) -> datetime.date:
+    """Add a number of months to a date.
+
+    Args:
+        date: Starting date
+        months: Number of months to add, negative okay
+
+    Returns:
+        datetime.date(date.year, date.month + months, date.day)
+    """
+    m_sum = date.month + months - 1
+    y = date.year + int(m_sum // 12)
+    m = (m_sum % 12) + 1
+    return datetime.date(y, m, date.day)
+
+
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     """Round a list, carrying over error such that sum(list) == sum(round_list).
 
