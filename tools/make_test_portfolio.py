@@ -164,42 +164,49 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
+            emergency=True,
         )
         savings = Account(
             name="Savings",
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
+            emergency=True,
         )
         cc_0 = Account(
             name="Banana VISA",
             institution="Monkey Bank",
             category=AccountCategory.CREDIT,
             closed=False,
+            emergency=False,
         )
         cc_1 = Account(
             name="Peanut Credit",
             institution="PB Loans",
             category=AccountCategory.CREDIT,
             closed=False,
+            emergency=False,
         )
         mortgage = Account(
             name="Monkey Mortgage",
             institution="Monkey Bank",
             category=AccountCategory.MORTGAGE,
             closed=False,
+            emergency=False,
         )
         retirement = Account(
             name="401k",
             institution="Monkey Bank Retirement",
             category=AccountCategory.INVESTMENT,
             closed=False,
+            emergency=False,
         )
         real_estate = Account(
             name="Real Estate",
             institution="Real Estate",
             category=AccountCategory.FIXED,
             closed=False,
+            emergency=False,
         )
 
         accts = [checking, savings, cc_0, cc_1, mortgage, retirement, real_estate]
