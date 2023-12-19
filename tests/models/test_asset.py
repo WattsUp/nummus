@@ -371,7 +371,7 @@ class TestAsset(TestBase):
         self.assertEqual(t_split_0.asset_quantity, 1 * multiplier)
         self.assertEqual(t_split_1.asset_quantity, 1)
 
-        _, r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
+        r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
         r_values = r_assets[a.id_]
         target_values = [multiplier, multiplier + 1]
         self.assertEqual(r_values, target_values)

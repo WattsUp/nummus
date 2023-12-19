@@ -10,8 +10,9 @@ from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
+from nummus import utils
 from nummus.models.asset import Asset
-from nummus.models.base import Base, BaseEnum
+from nummus.models.base import Base, BaseEnum, YIELD_PER
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 
@@ -264,7 +265,7 @@ class Account(Base):
         query = query.where(TransactionSplit.date_ord <= start_ord)
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        for acct_id, a_id, qty_int, qty_frac in query.all():
+        for acct_id, a_id, qty_int, qty_frac in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
             qty_int: int
@@ -308,7 +309,9 @@ class Account(Base):
             if ids is not None:
                 query = query.where(TransactionSplit.account_id.in_(ids))
 
-            for acct_id, t_date_ord, amount, a_id, qty_int, qty_frac in query.all():
+            for acct_id, t_date_ord, amount, a_id, qty_int, qty_frac in query.yield_per(
+                YIELD_PER,
+            ):
                 acct_id: int
                 t_date_ord: int
                 amount: Decimal
@@ -399,9 +402,8 @@ class Account(Base):
             query = query.where(TransactionSplit.account_id.in_(ids))
         query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.order_by(TransactionSplit.date_ord)
 
-        for t_date_ord, amount, category_id in query.all():
+        for t_date_ord, amount, category_id in query.yield_per(YIELD_PER):
             t_date_ord: int
             amount: Decimal
             category_id: int
@@ -434,11 +436,137 @@ class Account(Base):
 
         return self.get_cash_flow_all(s, start_ord, end_ord, [self.id_])
 
+    @classmethod
+    def get_asset_qty_all(
+        cls,
+        s: orm.Session,
+        start_ord: int,
+        end_ord: int,
+        ids: t.Ints | None = None,
+    ) -> dict[int, t.DictIntReals]:
+        """Get the quantity of Assets held from start to end date.
+
+        Args:
+            s: SQL session to use
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+            ids: Limit results to specific Accounts by ID
+
+        Returns:
+            dict{Account.id_: dict{Asset.id_: list[values]}}
+        """
+        n = end_ord - start_ord + 1
+
+        iv_accounts: dict[int, t.DictIntReal] = {}
+        if ids is not None:
+            iv_accounts = {acct_id: {} for acct_id in ids}
+        else:
+            iv_accounts = {acct_id: {} for acct_id, in s.query(Account.id_).all()}
+
+        # Get Asset quantities on start date
+        # Cannot do sql sum due to overflow fracional part
+        query = s.query(TransactionSplit)
+        query = query.with_entities(
+            TransactionSplit.account_id,
+            TransactionSplit.asset_id,
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
+        )
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
+        query = query.where(TransactionSplit.asset_id.is_not(None))
+        query = query.where(TransactionSplit.date_ord <= start_ord)
+        query = query.order_by(TransactionSplit.account_id)
+
+        current_acct_id: int | None = None
+        iv: t.DictIntReal = {}
+        for acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+            acct_id: int
+            a_id: int
+            qty_i: int
+            qty_f: Decimal
+            if acct_id != current_acct_id:
+                current_acct_id = acct_id
+                try:
+                    iv = iv_accounts[acct_id]
+                except KeyError:  # pragma: no cover
+                    # Should not happen cause iv_accounts is initialized with all
+                    iv = {}
+                    iv_accounts[acct_id] = iv
+            try:
+                iv[a_id] += qty_i + qty_f
+            except KeyError:
+                iv[a_id] = qty_i + qty_f
+
+        # Daily delta in qty
+        deltas_accounts: dict[int, dict[int, list[t.Real | None]]] = {}
+        for acct_id, iv in iv_accounts.items():
+            deltas: dict[int, list[t.Real | None]] = {}
+            for a_id, v in iv.items():
+                deltas[a_id] = [None] * n
+                deltas[a_id][0] = v
+            deltas_accounts[acct_id] = deltas
+
+        if start_ord != end_ord:
+            # Transactions between start and end
+            query = s.query(TransactionSplit)
+            query = query.with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit.account_id,
+                TransactionSplit.asset_id,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            )
+            if ids is not None:
+                query = query.where(TransactionSplit.account_id.in_(ids))
+            query = query.where(TransactionSplit.date_ord <= end_ord)
+            query = query.where(TransactionSplit.date_ord > start_ord)
+            query = query.where(TransactionSplit.asset_id.is_not(None))
+            query = query.order_by(TransactionSplit.account_id)
+
+            current_acct_id = None
+            deltas = {}
+
+            for date_ord, acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+                date_ord: int
+                acct_id: int
+                a_id: int
+                qty_i: int
+                qty_f: Decimal
+
+                i = date_ord - start_ord
+                qty = qty_i + qty_f
+
+                if acct_id != current_acct_id:
+                    current_acct_id = acct_id
+                    try:
+                        deltas = deltas_accounts[acct_id]
+                    except KeyError:  # pragma: no cover
+                        # Should not happen cause delta_accounts is initialized with all
+                        deltas = {}
+                        deltas_accounts[acct_id] = deltas
+                try:
+                    v = deltas[a_id][i]
+                    deltas[a_id][i] = qty if v is None else v + qty
+                except KeyError:
+                    deltas[a_id] = [None] * n
+                    deltas[a_id][i] = qty
+
+        # Integrate deltas
+        qty_accounts: dict[int, t.DictIntReals] = {}
+        for acct_id, deltas in deltas_accounts.items():
+            qty_assets: t.DictIntReals = {}
+            for a_id, delta in deltas.items():
+                qty_assets[a_id] = utils.integrate(delta)
+            qty_accounts[acct_id] = qty_assets
+
+        return qty_accounts
+
     def get_asset_qty(
         self,
         start_ord: int,
         end_ord: int,
-    ) -> tuple[t.Ints, t.DictIntReals]:
+    ) -> t.DictIntReals:
         """Get the quantity of Assets held from start to end date.
 
         Args:
@@ -446,78 +574,10 @@ class Account(Base):
             end_ord: Last date ordinal to evaluate (inclusive)
 
         Returns:
-            List[date ordinals], dict{Asset.id_: list[values]}
+            dict{Asset.id_: list[values]}
         """
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
 
-        date_ord = start_ord + 1
-        date_ords: t.Ints = [start_ord]
-
-        # Get Asset quantities on start date
-        current_qty_assets: t.DictIntReal = {}
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
-        )
-        query = query.where(TransactionSplit.account_id == self.id_)
-        query = query.where(TransactionSplit.asset_id.is_not(None))
-        query = query.where(TransactionSplit.date_ord <= start_ord)
-        for a_id, qty_int, qty_frac in query.all():
-            a_id: int
-            qty_int: int
-            qty_frac: Decimal
-            if a_id not in current_qty_assets:
-                current_qty_assets[a_id] = Decimal(0)
-            current_qty_assets[a_id] += qty_int + qty_frac
-
-        qty_assets: t.DictIntReals = {}
-        for a_id, qty in current_qty_assets.items():
-            qty_assets[a_id] = [qty]
-
-        if start_ord == end_ord:
-            return date_ords, qty_assets
-
-        # Transactions between start and end
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.date_ord,
-            TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
-        )
-        query = query.where(TransactionSplit.account_id == self.id_)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.where(TransactionSplit.date_ord > start_ord)
-        query = query.where(TransactionSplit.asset_id.is_not(None))
-        query = query.order_by(TransactionSplit.date_ord)
-
-        for t_date_ord, a_id, qty_int, qty_frac in query.all():
-            t_date_ord: int
-            a_id: int
-            qty_int: int
-            qty_frac: Decimal
-
-            while date_ord < t_date_ord:
-                for k, v in current_qty_assets.items():
-                    qty_assets[k].append(v)
-                date_ords.append(date_ord)
-                date_ord += 1
-
-            if a_id not in current_qty_assets:
-                # Asset not added during initial value
-                qty_assets[a_id] = [Decimal(0)] * len(date_ords)
-                current_qty_assets[a_id] = qty_int + qty_frac
-            else:
-                current_qty_assets[a_id] += qty_int + qty_frac
-
-        while date_ord <= end_ord:
-            for k, v in current_qty_assets.items():
-                qty_assets[k].append(v)
-            date_ords.append(date_ord)
-            date_ord += 1
-
-        return date_ords, qty_assets
+        return self.get_asset_qty_all(s, start_ord, end_ord, [self.id_])[self.id_]

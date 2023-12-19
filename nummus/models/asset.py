@@ -9,7 +9,7 @@ from sqlalchemy import orm
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus.models.base import Base, BaseEnum, Decimal6
+from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
 
 
 class AssetSplit(Base):
@@ -208,7 +208,7 @@ class Asset(Base):
             query = query.where(AssetValuation.asset_id.in_(ids))
         query = query.order_by(AssetValuation.date_ord)
 
-        for a_id, v_date_ord, v in query.all():
+        for a_id, v_date_ord, v in query.yield_per(YIELD_PER):
             a_id: int
             v_date_ord: int
             v: Decimal

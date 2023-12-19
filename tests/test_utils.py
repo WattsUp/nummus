@@ -363,3 +363,25 @@ class TestUtils(TestBase):
         self.assertEqual(sum(l_round), 1)
         self.assertNotEqual(l_round[0], list_[0])
         self.assertEqual(l_round[0], round(list_[0], 6))
+
+    def test_integrate(self) -> None:
+        deltas: list[Decimal | None] = []
+        result = utils.integrate(deltas)
+        self.assertEqual(result, [])
+
+        deltas = [Decimal(0)] * 5
+        target = [Decimal(0)] * 5
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)
+
+        deltas = [None] * 5
+        target = [Decimal(0)] * 5
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)
+
+        deltas[2] = Decimal(20)
+        target[2] += Decimal(20)
+        target[3] += Decimal(20)
+        target[4] += Decimal(20)
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)

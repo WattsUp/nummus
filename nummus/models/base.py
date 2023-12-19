@@ -13,6 +13,9 @@ from nummus import exceptions as exc
 from nummus import utils
 from nummus.models import base_uri
 
+# Yield per instead of fetch all is faster
+YIELD_PER = 100
+
 
 class Base(orm.DeclarativeBase):
     """Base ORM model.

@@ -285,3 +285,28 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
         l_rounded.append(v_round)
 
     return l_rounded
+
+
+def integrate(deltas: list[t.Real | None]) -> t.Reals:
+    """Integrate a list starting.
+
+    Args:
+        deltas: Change in values, use None instead of zero for faster speed
+
+    Returns:
+        list(values) where
+        values[0] = sum(deltas[:1])
+        values[1] = sum(deltas[:2])
+        ...
+        values[n] = sum(deltas[:])
+    """
+    n = len(deltas)
+    current = Decimal(0)
+    result = [Decimal(0)] * n
+
+    for i, v in enumerate(deltas):
+        if v is not None:
+            current += v
+        result[i] = current
+
+    return result
