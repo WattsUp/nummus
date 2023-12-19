@@ -517,20 +517,20 @@ class TestAccount(TestBase):
         t_cat_fund = categories["Transfers"]
         t_cat_trade = categories["Securities Traded"]
 
-        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_categories = {cat.id_: [Decimal(0)] * 7 for cat in categories.values()}
-        start = target_dates[0]
-        end = target_dates[-1]
+        start = today_ord - 3
+        end = today_ord + 3
 
-        r_dates, r_categories = acct.get_cash_flow(start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_categories = acct.get_cash_flow(start, end)
+        self.assertEqual(r_categories, target_categories)
+        r_categories = Account.get_cash_flow_all(s, start, end)
         self.assertEqual(r_categories, target_categories)
 
         # Fund account on second day
         t_fund = self.random_decimal(10, 100)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=target_dates[1],
+            date_ord=start + 1,
             amount=t_fund,
             statement=self.random_string(),
         )
@@ -544,15 +544,16 @@ class TestAccount(TestBase):
 
         target_categories[t_cat_fund.id_][1] += t_fund
 
-        r_dates, r_categories = acct.get_cash_flow(start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_categories = acct.get_cash_flow(start, end)
+        self.assertEqual(r_categories, target_categories)
+        r_categories = Account.get_cash_flow_all(s, start, end)
         self.assertEqual(r_categories, target_categories)
 
         # Buy something on the second day
         t0 = self.random_decimal(-10, -1)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=target_dates[1],
+            date_ord=start + 1,
             amount=t0,
             statement=self.random_string(),
         )
@@ -566,15 +567,16 @@ class TestAccount(TestBase):
 
         target_categories[t_cat_trade.id_][1] += t0
 
-        r_dates, r_categories = acct.get_cash_flow(start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_categories = acct.get_cash_flow(start, end)
+        self.assertEqual(r_categories, target_categories)
+        r_categories = Account.get_cash_flow_all(s, start, end)
         self.assertEqual(r_categories, target_categories)
 
         # Sell something on the last day
         t1 = self.random_decimal(1, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=target_dates[-1],
+            date_ord=end,
             amount=t1,
             statement=self.random_string(),
         )
@@ -588,21 +590,53 @@ class TestAccount(TestBase):
 
         target_categories[t_cat_trade.id_][-1] += t1
 
-        r_dates, r_categories = acct.get_cash_flow(start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_categories = acct.get_cash_flow(start, end)
+        self.assertEqual(r_categories, target_categories)
+        r_categories = Account.get_cash_flow_all(s, start, end)
         self.assertEqual(r_categories, target_categories)
 
         # Test single value
-        r_dates, r_categories = acct.get_cash_flow(today_ord, today_ord)
-        self.assertEqual(r_dates, [today_ord])
+        r_categories = acct.get_cash_flow(today_ord, today_ord)
         self.assertEqual(
             r_categories,
             {cat: [v[3]] for cat, v in target_categories.items()},
         )
 
-        r_dates, r_categories = acct.get_cash_flow(end, end)
-        self.assertEqual(r_dates, [end])
+        r_categories = acct.get_cash_flow(end, end)
         self.assertEqual(
             r_categories,
             {cat: [v[-1]] for cat, v in target_categories.items()},
         )
+
+        # Create an unrelated account
+        acct_unrelated = Account(
+            name=self.random_string(),
+            institution=self.random_string(),
+            category=AccountCategory.INVESTMENT,
+            closed=False,
+            emergency=False,
+        )
+        s.add(acct_unrelated)
+        s.commit()
+        txn = Transaction(
+            account_id=acct_unrelated.id_,
+            date_ord=end,
+            amount=t1,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=t_cat_fund.id_,
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # Unchanged get get_cash_flow
+        r_categories = acct.get_cash_flow(start, end)
+        self.assertEqual(r_categories, target_categories)
+
+        # But all will have changed
+        target_categories[t_cat_fund.id_][-1] += t1
+        r_categories = Account.get_cash_flow_all(s, start, end)
+        self.assertEqual(r_categories, target_categories)

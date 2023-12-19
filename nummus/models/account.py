@@ -360,36 +360,33 @@ class Account(Base):
 
         return date_ords, acct_values
 
-    def get_cash_flow(
-        self,
+    @classmethod
+    def get_cash_flow_all(
+        cls,
+        s: orm.Session,
         start_ord: int,
         end_ord: int,
-    ) -> tuple[t.Ints, t.DictIntReals]:
-        """Get the cash_flow of Account from start to end date.
+        ids: t.Ints | None = None,
+    ) -> t.DictIntReals:
+        """Get the cash flow of all Accounts from start to end date by category.
 
-        Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
-        third day; inflow[4] may be zero
+        Does not separate results by account.
 
         Args:
+            s: SQL session to use
             start_ord: First date ordinal to evaluate
             end_ord: Last date ordinal to evaluate (inclusive)
+            ids: Limit results to specific Accounts by ID
 
         Returns:
-            List[date ordinals], dict{Category: list[values]}
-            Includes None in categories
+            dict{TransactionCategory: list[values]}
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        n = end_ord - start_ord + 1
 
-        date_ord = start_ord
-
-        date_ords: t.Ints = []
         categories: t.DictIntReals = {
-            cat_id: [] for cat_id, in s.query(TransactionCategory.id_).all()
+            cat_id: [Decimal(0)] * n
+            for cat_id, in s.query(TransactionCategory.id_).all()
         }
-
-        daily_categories: t.DictIntReal = {cat_id: Decimal(0) for cat_id in categories}
 
         # Transactions between start and end
         query = s.query(TransactionSplit)
@@ -398,7 +395,8 @@ class Account(Base):
             TransactionSplit.amount,
             TransactionSplit.category_id,
         )
-        query = query.where(TransactionSplit.account_id == self.id_)
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
         query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.where(TransactionSplit.date_ord >= start_ord)
         query = query.order_by(TransactionSplit.date_ord)
@@ -408,25 +406,33 @@ class Account(Base):
             amount: Decimal
             category_id: int
 
-            while date_ord < t_date_ord:
-                date_ords.append(date_ord)
-                # Append and clear daily
-                for k, v in daily_categories.items():
-                    categories[k].append(v)
-                    daily_categories[k] = Decimal(0)
-                date_ord += 1
+            categories[category_id][t_date_ord - start_ord] += amount
 
-            daily_categories[category_id] += amount
+        return categories
 
-        while date_ord <= end_ord:
-            date_ords.append(date_ord)
-            # Append and clear daily
-            for k, v in daily_categories.items():
-                categories[k].append(v)
-                daily_categories[k] = Decimal(0)
-            date_ord += 1
+    def get_cash_flow(
+        self,
+        start_ord: int,
+        end_ord: int,
+    ) -> t.DictIntReals:
+        """Get the cash flow of Account from start to end date by category.
 
-        return date_ords, categories
+        Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
+        third day; inflow[4] may be zero
+
+        Args:
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            dict{TransactionCategory: list[values]}
+            Includes None in categories
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        return self.get_cash_flow_all(s, start_ord, end_ord, [self.id_])
 
     def get_asset_qty(
         self,

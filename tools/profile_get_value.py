@@ -138,6 +138,51 @@ def main(command_line: t.Strings | None = None) -> int:
 
         durations: list[t.DictAny] = []
 
+        accounts = s.query(Account).all()
+        for acct in accounts:
+            acct.get_cash_flow(start_ord, end_ord)  # Cache stuff
+
+            query = s.query(TransactionSplit)
+            query = query.where(TransactionSplit.account_id == acct.id_)
+            n = query.count()
+
+            t_start = time.perf_counter()
+            acct.get_cash_flow(start_ord, end_ord)
+            t_duration_single = time.perf_counter() - t_start
+
+            Account.get_cash_flow_all(
+                s,
+                start_ord,
+                end_ord,
+                ids=[acct.id_],
+            )  # Cache stuff
+
+            t_start = time.perf_counter()
+            Account.get_cash_flow_all(s, start_ord, end_ord, ids=[acct.id_])
+            t_duration_all = time.perf_counter() - t_start
+
+            durations.append(
+                {
+                    "uri": acct.uri,
+                    "name": acct.name,
+                    "n": n,
+                    "single": t_duration_single,
+                    "all": t_duration_all,
+                },
+            )
+
+        durations = sorted(durations, key=lambda item: -item["single"])
+        print(f"{Fore.CYAN}Individual account get_cash_flow")
+        for item in durations:
+            print(
+                f"{item['uri']} {item['name']:25} "
+                f"{item['single']*1000:6.1f}ms "
+                f"{item['all']*1000:6.1f}ms "
+                f"{item['n']:4} transactions",
+            )
+
+        durations: list[t.DictAny] = []
+
         assets = s.query(Asset).all()
         for asset in assets:
             asset.get_value(start_ord, end_ord)  # Cache stuff
