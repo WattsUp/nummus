@@ -170,7 +170,8 @@ class Decimal6(types.TypeDecorator):
 
     cache_ok = True
 
-    _FACTOR = Decimal("1e6")
+    _FACTOR_OUT = Decimal("1e-6")
+    _FACTOR_IN = 1 / _FACTOR_OUT
 
     @override
     def process_bind_param(self, value: t.Real | None, *_) -> int | None:
@@ -184,7 +185,7 @@ class Decimal6(types.TypeDecorator):
         """
         if value is None:
             return None
-        return int(value * self._FACTOR)
+        return int(value * self._FACTOR_IN)
 
     @override
     def process_result_value(self, value: int | None, *_) -> t.Real | None:
@@ -198,7 +199,7 @@ class Decimal6(types.TypeDecorator):
         """
         if value is None:
             return None
-        return Decimal(value) / self._FACTOR
+        return Decimal(value) * self._FACTOR_OUT
 
 
 class Decimal18(Decimal6):
@@ -206,4 +207,5 @@ class Decimal18(Decimal6):
 
     cache_ok = True
 
-    _FACTOR = Decimal("1e18")
+    _FACTOR_OUT = Decimal("1e-18")
+    _FACTOR_IN = 1 / _FACTOR_OUT

@@ -126,6 +126,18 @@ def main(command_line: t.Strings | None = None) -> int:
                 },
             )
 
+        Account.get_value_all(s, start_ord, end_ord)  # Cache stuff
+
+        t_start = time.perf_counter()
+        Account.get_value_all(s, start_ord, end_ord)
+        t_duration_all = time.perf_counter() - t_start
+
+        t_individual_sum = sum(item["single"] for item in durations)
+        print(
+            f"{Fore.CYAN}Account.get_value_all {t_duration_all*1000:6.1f}ms "
+            f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_value)",
+        )
+
         durations = sorted(durations, key=lambda item: -item["single"])
         print(f"{Fore.CYAN}Individual account get_value")
         for item in durations:
@@ -133,7 +145,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['uri']} {item['name']:25} "
                 f"{item['single']*1000:6.1f}ms "
                 f"{item['all']*1000:6.1f}ms "
-                f"{item['n']:4} transactions",
+                f"{item['n']:5} transactions",
             )
 
         durations: list[t.DictAny] = []
@@ -171,6 +183,18 @@ def main(command_line: t.Strings | None = None) -> int:
                 },
             )
 
+        Account.get_cash_flow_all(s, start_ord, end_ord)  # Cache stuff
+
+        t_start = time.perf_counter()
+        Account.get_cash_flow_all(s, start_ord, end_ord)
+        t_duration_all = time.perf_counter() - t_start
+
+        t_individual_sum = sum(item["single"] for item in durations)
+        print(
+            f"{Fore.CYAN}Account.get_cash_flow_all {t_duration_all*1000:6.1f}ms "
+            f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_cash_flow)",
+        )
+
         durations = sorted(durations, key=lambda item: -item["single"])
         print(f"{Fore.CYAN}Individual account get_cash_flow")
         for item in durations:
@@ -178,7 +202,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['uri']} {item['name']:25} "
                 f"{item['single']*1000:6.1f}ms "
                 f"{item['all']*1000:6.1f}ms "
-                f"{item['n']:4} transactions",
+                f"{item['n']:5} transactions",
             )
 
         durations: list[t.DictAny] = []
@@ -217,6 +241,18 @@ def main(command_line: t.Strings | None = None) -> int:
                 },
             )
 
+        Account.get_asset_qty_all(s, start_ord, end_ord)  # Cache stuff
+
+        t_start = time.perf_counter()
+        Account.get_asset_qty_all(s, start_ord, end_ord)
+        t_duration_all = time.perf_counter() - t_start
+
+        t_individual_sum = sum(item["single"] for item in durations)
+        print(
+            f"{Fore.CYAN}Account.get_asset_qty_all {t_duration_all*1000:6.1f}ms "
+            f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_asset_qty)",
+        )
+
         durations = sorted(durations, key=lambda item: -item["single"])
         print(f"{Fore.CYAN}Individual account get_asset_qty")
         for item in durations:
@@ -224,7 +260,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['uri']} {item['name']:25} "
                 f"{item['single']*1000:6.1f}ms "
                 f"{item['all']*1000:6.1f}ms "
-                f"{item['n']:4} transactions",
+                f"{item['n']:5} transactions",
             )
 
         durations: list[t.DictAny] = []
@@ -257,6 +293,18 @@ def main(command_line: t.Strings | None = None) -> int:
                 },
             )
 
+        Asset.get_value_all(s, start_ord, end_ord)  # Cache stuff
+
+        t_start = time.perf_counter()
+        Asset.get_value_all(s, start_ord, end_ord)
+        t_duration_all = time.perf_counter() - t_start
+
+        t_individual_sum = sum(item["single"] for item in durations)
+        print(
+            f"{Fore.CYAN}Asset.get_value_all {t_duration_all*1000:6.1f}ms "
+            f"vs {t_individual_sum*1000:6.1f}ms for sum(Asset.get_value)",
+        )
+
         durations = sorted(durations, key=lambda item: -item["single"])
         print(f"{Fore.CYAN}Individual asset get_value")
         for item in durations:
@@ -264,7 +312,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['uri']} {item['name']:25} "
                 f"{item['single']*1000:6.1f}ms "
                 f"{item['all']*1000:6.1f}ms "
-                f"{item['n']:4} valuations",
+                f"{item['n']:5} valuations",
             )
 
     return 0

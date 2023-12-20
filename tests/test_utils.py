@@ -385,3 +385,22 @@ class TestUtils(TestBase):
         target[4] += Decimal(20)
         result = utils.integrate(deltas)
         self.assertEqual(result, target)
+
+    def test_interpolate_step(self) -> None:
+        n = 5
+        values: list[tuple[int, Decimal]] = []
+
+        target = [Decimal(0)] * n
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+        values.append((0, Decimal(1)))
+        target = [Decimal(1)] * n
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+        values.append((3, Decimal(3)))
+        target[3] = Decimal(3)
+        target[4] = Decimal(3)
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)

@@ -210,7 +210,6 @@ class TestAsset(TestBase):
         s.add_all((v_today, v_before, v_after))
         s.commit()
 
-        target_dates = [today_ord + i for i in range(-3, 3 + 1)]
         target_values = [
             0,
             v_before.value,
@@ -220,51 +219,41 @@ class TestAsset(TestBase):
             v_after.value,
             v_after.value,
         ]
-        start = target_dates[0]
-        end = target_dates[-1]
+        start = today_ord - 3
+        end = today_ord + 3
 
-        r_dates, r_values = a.get_value(start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_values = a.get_value(start, end)
         self.assertEqual(r_values, target_values)
 
-        r_dates, r_values = Asset.get_value_all(s, start, end)
-        self.assertEqual(r_dates, target_dates)
+        r_values = Asset.get_value_all(s, start, end)
         self.assertEqual(r_values, {a.id_: target_values})
 
-        r_dates, r_values = Asset.get_value_all(s, start, end, ids=[a.id_])
-        self.assertEqual(r_dates, target_dates)
+        r_values = Asset.get_value_all(s, start, end, ids=[a.id_])
         self.assertEqual(r_values, {a.id_: target_values})
 
-        r_dates, r_values = Asset.get_value_all(s, start, end, ids=[-100])
-        self.assertEqual(r_dates, target_dates)
+        r_values = Asset.get_value_all(s, start, end, ids=[])
         self.assertEqual(r_values, {})
 
         # Test single value
-        r_dates, r_values = a.get_value(today_ord, today_ord)
-        self.assertEqual(r_dates, [today_ord])
+        r_values = a.get_value(today_ord, today_ord)
         self.assertEqual(r_values, [v_today.value])
 
-        r_dates, r_values = Asset.get_value_all(s, today_ord, today_ord)
-        self.assertEqual(r_dates, [today_ord])
+        r_values = Asset.get_value_all(s, today_ord, today_ord)
         self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
-        r_dates, r_values = a.get_value(tomorrow_ord, tomorrow_ord)
-        self.assertEqual(r_dates, [tomorrow_ord])
+        r_values = a.get_value(tomorrow_ord, tomorrow_ord)
         self.assertEqual(r_values, [v_today.value])
 
-        r_dates, r_values = Asset.get_value_all(s, tomorrow_ord, tomorrow_ord)
-        self.assertEqual(r_dates, [tomorrow_ord])
+        r_values = Asset.get_value_all(s, tomorrow_ord, tomorrow_ord)
         self.assertEqual(r_values, {a.id_: [v_today.value]})
 
         # Test single value
         long_ago = today_ord - 7
-        r_dates, r_values = a.get_value(long_ago, long_ago)
-        self.assertEqual(r_dates, [long_ago])
+        r_values = a.get_value(long_ago, long_ago)
         self.assertEqual(r_values, [Decimal(0)])
 
-        r_dates, r_values = Asset.get_value_all(s, long_ago, long_ago)
-        self.assertEqual(r_dates, [long_ago])
+        r_values = Asset.get_value_all(s, long_ago, long_ago)
         self.assertEqual(r_values, {a.id_: [Decimal(0)]})
 
     def test_update_splits(self) -> None:

@@ -310,3 +310,35 @@ def integrate(deltas: list[t.Real | None]) -> t.Reals:
         result[i] = current
 
     return result
+
+
+def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
+    """Interpolate a list of (index, value)s using a step function.
+
+    Args:
+        values: List of (index, value)
+        n: Length of output array
+
+    Returns:
+        list of interpolated values where result[i] = most recent values <= i
+    """
+    result = [Decimal(0)] * n
+    if len(values) == 0:
+        return result
+
+    current = Decimal(0)
+    current_values_i = 0
+    i_v, v = values[current_values_i]
+    for i in range(n):
+        # If at a valuation, update current and prep next
+        if i == i_v:
+            current = v
+            try:
+                current_values_i += 1
+                i_v, v = values[current_values_i]
+            except IndexError:
+                # End of list set i_v to -1 to never change current
+                i_v = -1
+        result[i] = current
+
+    return result

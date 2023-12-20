@@ -191,7 +191,7 @@ class Account(Base):
         query = query.where(Asset.id_.in_(qty_assets.keys()))
         for a in query.all():
             qty = qty_assets[a.id_]
-            _, price = a.get_value(start_ord, end_ord)
+            price = a.get_value(start_ord, end_ord)
             a_values = [round(p * q, 6) for p, q in zip(price, qty, strict=True)]
             value_assets[a.id_] = a_values
 
@@ -344,7 +344,7 @@ class Account(Base):
                     assets.pop(a_id)
                 else:
                     a_ids.append(a_id)
-        _, assets_values = Asset.get_value_all(s, start_ord, end_ord, ids=a_ids)
+        assets_values = Asset.get_value_all(s, start_ord, end_ord, ids=a_ids)
         n = len(date_ords)
         for acct_id, assets in qty_assets.items():
             if len(assets) == 0:

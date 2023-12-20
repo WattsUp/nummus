@@ -9,6 +9,7 @@ from sqlalchemy import orm
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
+from nummus import utils
 from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
 
 
@@ -83,64 +84,6 @@ class Asset(Base):
             return None
         return f"{self.uri}{s}"
 
-    def get_value(self, start_ord: int, end_ord: int) -> tuple[t.Ints, t.Reals]:
-        """Get the value of Asset from start to end date.
-
-        Args:
-            start_ord: First date ordinal to evaluate
-            end_ord: Last date ordinal to evaluate (inclusive)
-
-        Returns:
-            List[date ordinals], list[values]
-        """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
-
-        # TODO (Bradley): Add optional spline interpolation for
-        # infrequently valued assets
-
-        # Get latest Valuation before or including start date
-        query = s.query(AssetValuation)
-        query = query.with_entities(
-            AssetValuation.value,
-            sqlalchemy.func.max(AssetValuation.date_ord),
-        )
-        query = query.where(AssetValuation.asset_id == self.id_)
-        query = query.where(AssetValuation.date_ord <= start_ord)
-        iv = query.scalar()
-        value = iv or Decimal(0)
-
-        date_ord = start_ord + 1
-        date_ords: t.Ints = [start_ord]
-        values: t.Reals = [value]
-
-        if start_ord == end_ord:
-            return date_ords, values
-
-        # Valuations between start and end
-        query = s.query(AssetValuation)
-        query = query.with_entities(AssetValuation.date_ord, AssetValuation.value)
-        query = query.where(AssetValuation.asset_id == self.id_)
-        query = query.where(AssetValuation.date_ord <= end_ord)
-        query = query.where(AssetValuation.date_ord > start_ord)
-        query = query.order_by(AssetValuation.date_ord)
-
-        for v_date_ord, v_value in query.all():
-            v_date_ord: int
-            v_value: Decimal
-
-            while date_ord < v_date_ord:
-                values.append(value)
-                date_ords.append(date_ord)
-                date_ord += 1
-            value = v_value
-        while date_ord <= end_ord:
-            values.append(value)
-            date_ords.append(date_ord)
-            date_ord += 1
-        return date_ords, values
-
     @classmethod
     def get_value_all(
         cls,
@@ -148,7 +91,7 @@ class Asset(Base):
         start_ord: int,
         end_ord: int,
         ids: t.Ints | None = None,
-    ) -> tuple[t.Ints, t.DictIntReals]:
+    ) -> t.DictIntReals:
         """Get the value of all Assets from start to end date.
 
         Args:
@@ -158,12 +101,16 @@ class Asset(Base):
             ids: Limit results to specific Assets by ID
 
         Returns:
-            (List[date ordinals], dict{Asset.id_: list[values]})
+            dict{Asset.id_: list[values]}
         """
-        values: t.DictIntReal = {a_id: Decimal(0) for a_id, in s.query(Asset.id_).all()}
+        n = end_ord - start_ord + 1
 
+        # Get a list of valuations (date offset, value) for each Asset
+        valuations_assets: dict[int, list[tuple[int, t.Real]]] = {}
         if ids is not None:
-            values = {a_id: v for a_id, v in values.items() if a_id in ids}
+            valuations_assets = {a_id: [] for a_id in ids}
+        else:
+            valuations_assets = {a_id: [] for a_id, in s.query(Asset.id_).all()}
 
         # Get latest Valuation before or including start date
         query = s.query(AssetValuation)
@@ -176,51 +123,64 @@ class Asset(Base):
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
         query = query.group_by(AssetValuation.asset_id)
-        for a_id, iv, _ in query.all():
+        for a_id, v, _ in query.all():
             a_id: int
-            iv: Decimal
-            values[a_id] = iv
-
-        date_ord = start_ord + 1
-        date_ords: t.Ints = [start_ord]
-        assets_values: t.DictIntReals = {a_id: [v] for a_id, v in values.items()}
-
-        if start_ord == end_ord:
-            return date_ords, assets_values
-
-        def next_day(current: int) -> int:
-            """Push currents into the lists."""
-            for a_id, v in values.items():
-                assets_values[a_id].append(v)
-            date_ords.append(current)
-            return current + 1
-
-        # Transactions between start and end
-        query = s.query(AssetValuation)
-        query = query.with_entities(
-            AssetValuation.asset_id,
-            AssetValuation.date_ord,
-            AssetValuation.value,
-        )
-        query = query.where(AssetValuation.date_ord <= end_ord)
-        query = query.where(AssetValuation.date_ord > start_ord)
-        if ids is not None:
-            query = query.where(AssetValuation.asset_id.in_(ids))
-        query = query.order_by(AssetValuation.date_ord)
-
-        for a_id, v_date_ord, v in query.yield_per(YIELD_PER):
-            a_id: int
-            v_date_ord: int
             v: Decimal
-            while date_ord < v_date_ord:
-                date_ord = next_day(date_ord)
+            valuations_assets[a_id] = [(0, v)]
 
-            values[a_id] = v
+        if start_ord != end_ord:
+            # Transactions between start and end
+            query = s.query(AssetValuation)
+            query = query.with_entities(
+                AssetValuation.asset_id,
+                AssetValuation.date_ord,
+                AssetValuation.value,
+            )
+            query = query.where(AssetValuation.date_ord <= end_ord)
+            query = query.where(AssetValuation.date_ord > start_ord)
+            if ids is not None:
+                query = query.where(AssetValuation.asset_id.in_(ids))
 
-        while date_ord <= end_ord:
-            date_ord = next_day(date_ord)
+            for a_id, date_ord, v in query.yield_per(YIELD_PER):
+                a_id: int
+                date_ord: int
+                v: Decimal
 
-        return date_ords, assets_values
+                i = date_ord - start_ord
+
+                try:
+                    valuations_assets[a_id].append((i, v))
+                except KeyError:  # pragma: no cover
+                    # Should not happen cause delta_accounts is initialized with all
+                    valuations_assets[a_id] = [(i, v)]
+
+        # TODO (WattsUp): Add optional linear interpolation here
+
+        assets_values: t.DictIntReals = {}
+        for a_id, valuations in valuations_assets.items():
+            valuations_sorted = sorted(valuations, key=lambda item: item[0])
+            assets_values[a_id] = utils.interpolate_step(valuations_sorted, n)
+
+        return assets_values
+
+    def get_value(self, start_ord: int, end_ord: int) -> t.Reals:
+        """Get the value of Asset from start to end date.
+
+        Args:
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            list[values]
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        # Not reusing get_value_all is faster by ~2ms,
+        # not worth maintaining two almost identical implementations
+
+        return self.get_value_all(s, start_ord, end_ord, [self.id_])[self.id_]
 
     def update_splits(self) -> None:
         """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
