@@ -41,7 +41,7 @@ def edit(uri: str) -> str | flask.Response:
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
-        _, values, _ = acct.get_value(today_ord, today_ord)
+        values, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
 
         if flask.request.method == "GET":
@@ -93,7 +93,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     today = datetime.date.today()
     today_ord = today.toordinal()
     if current_value is None:
-        _, values, _ = acct.get_value(today_ord, today_ord)
+        values, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
 
     return {
@@ -135,7 +135,7 @@ def ctx_chart(acct: Account) -> t.DictAny:
 
     start_ord = start.toordinal()
     end_ord = end.toordinal()
-    _, values, _ = acct.get_value(start_ord, end_ord)
+    values, _ = acct.get_value(start_ord, end_ord)
 
     return {
         "start": start,

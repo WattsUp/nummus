@@ -39,7 +39,7 @@ def ctx_page() -> t.DictAny:
         accts = query.all()
         acct_ids = [acct.id_ for acct in accts]
 
-        _, acct_values = Account.get_value_all(s, start_ord, today_ord, ids=acct_ids)
+        acct_values, _ = Account.get_value_all(s, start_ord, today_ord, ids=acct_ids)
 
         if len(acct_values) == 0:
             balances = [Decimal(0) for _ in range(today_ord - start_ord + 1)]

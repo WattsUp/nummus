@@ -134,7 +134,7 @@ def main(command_line: t.Strings | None = None) -> int:
 
         t_individual_sum = sum(item["single"] for item in durations)
         print(
-            f"{Fore.CYAN}Account.get_value_all {t_duration_all*1000:6.1f}ms "
+            f"{Fore.MAGENTA}Account.get_value_all {t_duration_all*1000:6.1f}ms "
             f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_value)",
         )
 
@@ -191,7 +191,7 @@ def main(command_line: t.Strings | None = None) -> int:
 
         t_individual_sum = sum(item["single"] for item in durations)
         print(
-            f"{Fore.CYAN}Account.get_cash_flow_all {t_duration_all*1000:6.1f}ms "
+            f"{Fore.MAGENTA}Account.get_cash_flow_all {t_duration_all*1000:6.1f}ms "
             f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_cash_flow)",
         )
 
@@ -249,7 +249,7 @@ def main(command_line: t.Strings | None = None) -> int:
 
         t_individual_sum = sum(item["single"] for item in durations)
         print(
-            f"{Fore.CYAN}Account.get_asset_qty_all {t_duration_all*1000:6.1f}ms "
+            f"{Fore.MAGENTA}Account.get_asset_qty_all {t_duration_all*1000:6.1f}ms "
             f"vs {t_individual_sum*1000:6.1f}ms for sum(Account.get_asset_qty)",
         )
 
@@ -301,7 +301,7 @@ def main(command_line: t.Strings | None = None) -> int:
 
         t_individual_sum = sum(item["single"] for item in durations)
         print(
-            f"{Fore.CYAN}Asset.get_value_all {t_duration_all*1000:6.1f}ms "
+            f"{Fore.MAGENTA}Asset.get_value_all {t_duration_all*1000:6.1f}ms "
             f"vs {t_individual_sum*1000:6.1f}ms for sum(Asset.get_value)",
         )
 

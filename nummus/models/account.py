@@ -80,136 +80,14 @@ class Account(Base):
         query = query.where(Transaction.account_id == self.id_)
         return query.scalar()
 
-    def get_value(
-        self,
-        start_ord: int,
-        end_ord: int,
-    ) -> tuple[t.Ints, t.Reals, t.DictIntReals]:
-        """Get the value of Account from start to end date.
-
-        Args:
-            start_ord: First date ordinal to evaluate
-            end_ord: Last date ordinal to evaluate (inclusive)
-
-        Returns:
-            Also returns value by Asset (possibly empty for non-investment accounts)
-            List[date ordinals], list[values], dict{Asset.id_: list[values]}
-        """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
-
-        # Get Account value on start date
-        # It is callable, sum returns a generator type
-        query = s.query(sqlalchemy.func.sum(TransactionSplit.amount))
-        query = query.where(TransactionSplit.account_id == self.id_)
-        query = query.where(TransactionSplit.date_ord <= start_ord)
-        iv = query.scalar()
-        current_cash = iv or Decimal(0)
-
-        date_ord = start_ord + 1
-        date_ords: t.Ints = [start_ord]
-        cash: t.Reals = [current_cash]
-
-        # Get Asset quantities on start date
-        current_qty_assets: t.DictIntReal = {}
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
-        )
-        query = query.where(TransactionSplit.account_id == self.id_)
-        query = query.where(TransactionSplit.asset_id.is_not(None))
-        query = query.where(TransactionSplit.date_ord <= start_ord)
-        for a_id, qty_int, qty_frac in query.all():
-            a_id: int
-            qty_int: int
-            qty_frac: Decimal
-            if a_id not in current_qty_assets:
-                current_qty_assets[a_id] = Decimal(0)
-            current_qty_assets[a_id] += qty_int + qty_frac
-
-        qty_assets: t.DictIntReals = {}
-        for a_id, qty in current_qty_assets.items():
-            qty_assets[a_id] = [qty]
-
-        if start_ord != end_ord:
-
-            def next_day(current: int) -> int:
-                """Push currents into the lists."""
-                for k, v in current_qty_assets.items():
-                    qty_assets[k].append(v)
-                cash.append(current_cash)
-                date_ords.append(current)
-                return current + 1
-
-            # Transactions between start and end
-            query = s.query(TransactionSplit)
-            query = query.with_entities(
-                TransactionSplit.date_ord,
-                TransactionSplit.amount,
-                TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
-            )
-            query = query.where(TransactionSplit.account_id == self.id_)
-            query = query.where(TransactionSplit.date_ord <= end_ord)
-            query = query.where(TransactionSplit.date_ord > start_ord)
-            query = query.order_by(TransactionSplit.date_ord)
-
-            for t_date_ord, amount, a_id, qty_int, qty_frac in query.all():
-                t_date_ord: int
-                amount: Decimal
-                a_id: int
-                qty_int: int
-                qty_frac: Decimal
-
-                while date_ord < t_date_ord:
-                    date_ord = next_day(date_ord)
-
-                current_cash += amount
-                if a_id is None:
-                    continue
-                if a_id not in current_qty_assets:
-                    # Asset not added during initial value
-                    qty_assets[a_id] = [Decimal(0)] * len(date_ords)
-                    current_qty_assets[a_id] = Decimal(0)
-                current_qty_assets[a_id] += qty_int + qty_frac
-
-            while date_ord <= end_ord:
-                date_ord = next_day(date_ord)
-
-        # Skip assets with zero quantity
-        for a_id, qty in list(qty_assets.items()):
-            if all(q == 0 for q in qty):
-                qty_assets.pop(a_id)
-
-        # Get Asset objects and convert qty to value
-        value_assets: t.DictIntReals = {}
-        query = s.query(Asset)
-        query = query.where(Asset.id_.in_(qty_assets.keys()))
-        for a in query.all():
-            qty = qty_assets[a.id_]
-            price = a.get_value(start_ord, end_ord)
-            a_values = [round(p * q, 6) for p, q in zip(price, qty, strict=True)]
-            value_assets[a.id_] = a_values
-
-        # Sum with cash
-        values: t.Reals = [  # type: ignore[attr-defined]
-            sum(x) for x in zip(cash, *value_assets.values(), strict=True)
-        ]
-
-        return date_ords, values, value_assets
-
     @classmethod
     def get_value_all(
         cls,
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | None = None,
-    ) -> tuple[t.Ints, t.DictIntReals]:
+        ids: t.Ints | set[int] | None = None,
+    ) -> tuple[t.DictIntReals, t.DictIntReals]:
         """Get the value of all Accounts from start to end date.
 
         Args:
@@ -219,18 +97,20 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
-            (List[date ordinals], dict{Account.id_: list[values]})
+            Also returns value by Assets, Accounts holding same Assets will sum
+            (dict{Account.id_: list[values]}, dict{Asset.id_: list[values]}
         """
-        current_cash: t.DictIntReal = {
-            acct_id: Decimal(0) for acct_id, in s.query(Account.id_).all()
-        }
+        n = end_ord - start_ord + 1
 
+        cash_flow_accounts: dict[int, list[t.Real | None]] = {}
         if ids is not None:
-            current_cash = {
-                acct_id: v for acct_id, v in current_cash.items() if acct_id in ids
+            cash_flow_accounts = {acct_id: [None] * n for acct_id in ids}
+        else:
+            cash_flow_accounts = {
+                acct_id: [None] * n for acct_id, in s.query(Account.id_).all()
             }
 
-        # Get Account value on start date
+        # Get Account cash value on start date
         query = s.query(TransactionSplit)
         query = query.with_entities(
             TransactionSplit.account_id,
@@ -240,128 +120,101 @@ class Account(Base):
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
         query = query.group_by(TransactionSplit.account_id)
-
         for acct_id, iv in query.all():
             acct_id: int
             iv: Decimal
-            current_cash[acct_id] = iv
-
-        date_ord = start_ord + 1
-        date_ords: t.Ints = [start_ord]
-        cash: t.DictIntReals = {acct_id: [v] for acct_id, v in current_cash.items()}
-
-        # Get Asset quantities on start date
-        current_qty_assets: dict[int, t.DictIntReal] = {
-            acct_id: {} for acct_id in current_cash
-        }
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.account_id,
-            TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
-        )
-        query = query.where(TransactionSplit.asset_id.is_not(None))
-        query = query.where(TransactionSplit.date_ord <= start_ord)
-        if ids is not None:
-            query = query.where(TransactionSplit.account_id.in_(ids))
-        for acct_id, a_id, qty_int, qty_frac in query.yield_per(YIELD_PER):
-            acct_id: int
-            a_id: int
-            qty_int: int
-            qty_frac: Decimal
-            acct_current_qty_assets = current_qty_assets[acct_id]
-            if a_id not in acct_current_qty_assets:
-                acct_current_qty_assets[a_id] = Decimal(0)
-            acct_current_qty_assets[a_id] += qty_int + qty_frac
-
-        qty_assets: dict[int, t.DictIntReals] = {
-            acct_id: {} for acct_id in current_cash
-        }
-        for acct_id, assets in current_qty_assets.items():
-            for a_id, qty in assets.items():
-                qty_assets[acct_id][a_id] = [qty]
+            cash_flow_accounts[acct_id][0] = iv
 
         if start_ord != end_ord:
-
-            def next_day(current: int) -> int:
-                """Push currents into the lists."""
-                for acct_id, assets in current_qty_assets.items():
-                    for a_id, qty in assets.items():
-                        qty_assets[acct_id][a_id].append(qty)
-                    cash[acct_id].append(current_cash[acct_id])
-                date_ords.append(current)
-                return current + 1
-
-            # Transactions between start and end
+            # Get cash_flow on each day between start and end
+            # Not Account.get_cash_flow because being categorized doesn't matter and
+            # slows it down
             query = s.query(TransactionSplit)
             query = query.with_entities(
                 TransactionSplit.account_id,
                 TransactionSplit.date_ord,
                 TransactionSplit.amount,
-                TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
             )
             query = query.where(TransactionSplit.date_ord <= end_ord)
             query = query.where(TransactionSplit.date_ord > start_ord)
-            query = query.order_by(TransactionSplit.date_ord)
             if ids is not None:
                 query = query.where(TransactionSplit.account_id.in_(ids))
 
-            for acct_id, t_date_ord, amount, a_id, qty_int, qty_frac in query.yield_per(
-                YIELD_PER,
-            ):
+            for acct_id, date_ord, amount in query.yield_per(YIELD_PER):
                 acct_id: int
-                t_date_ord: int
+                date_ord: int
                 amount: Decimal
-                a_id: int
-                qty_int: int
-                qty_frac: Decimal
 
-                while date_ord < t_date_ord:
-                    date_ord = next_day(date_ord)
+                i = date_ord - start_ord
 
-                current_cash[acct_id] += amount
-                if a_id is None:
-                    continue
-                acct_current_qty_assets = current_qty_assets[acct_id]
-                if a_id not in acct_current_qty_assets:
-                    # Asset not added during initial value
-                    qty_assets[acct_id][a_id] = [Decimal(0)] * len(date_ords)
-                    acct_current_qty_assets[a_id] = Decimal(0)
-                acct_current_qty_assets[a_id] += qty_int + qty_frac
+                v = cash_flow_accounts[acct_id][i]
+                cash_flow_accounts[acct_id][i] = amount if v is None else v + amount
 
-            while date_ord <= end_ord:
-                date_ord = next_day(date_ord)
+        # Get assets for all Accounts
+        # TODO (WattsUp): Separate into Account.get_asset_value
+        assets_accounts = cls.get_asset_qty_all(
+            s,
+            start_ord,
+            end_ord,
+            list(cash_flow_accounts.keys()),
+        )
 
         # Skip assets with zero quantity
-        acct_values: t.DictIntReals = {}
-        a_ids: t.Ints = []
-        for assets in qty_assets.values():
+        a_ids: set[int] = set()
+        for assets in assets_accounts.values():
             for a_id, qty in list(assets.items()):
-                if all(q == 0 for q in qty):
+                if not any(qty):
+                    # Remove asset from account
                     assets.pop(a_id)
                 else:
-                    a_ids.append(a_id)
-        assets_values = Asset.get_value_all(s, start_ord, end_ord, ids=a_ids)
-        n = len(date_ords)
-        for acct_id, assets in qty_assets.items():
-            if len(assets) == 0:
-                acct_values[acct_id] = cash[acct_id]
-            else:
-                # Get Asset objects and convert qty to value
-                summed = cash[acct_id]
-                for a_id, qty in assets.items():
-                    price = assets_values[a_id]
-                    for i in range(n):
-                        q = qty[i]
-                        if q == 0:
-                            continue
-                        summed[i] += price[i] * q
-                acct_values[acct_id] = [round(v, 6) for v in summed]
+                    a_ids.add(a_id)
 
-        return date_ords, acct_values
+        asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
+
+        acct_values: t.DictIntReals = {}
+        asset_values: t.DictIntReals = {a_id: [Decimal(0)] * n for a_id in a_ids}
+        for acct_id, cash_flow in cash_flow_accounts.items():
+            assets = assets_accounts[acct_id]
+            cash = utils.integrate(cash_flow)
+
+            if len(assets) == 0:
+                acct_values[acct_id] = cash
+                continue
+
+            summed = cash
+            for a_id, qty in assets.items():
+                price = asset_prices[a_id]
+                asset_value = asset_values[a_id]
+                for i, q in enumerate(qty):
+                    if q:
+                        v = price[i] * q
+                        asset_value[i] += v
+                        summed[i] += v
+
+            acct_values[acct_id] = summed
+
+        return acct_values, asset_values
+
+    def get_value(self, start_ord: int, end_ord: int) -> tuple[t.Reals, t.DictIntReals]:
+        """Get the value of Account from start to end date.
+
+        Args:
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            Also returns value by Asset
+            (list[values], dict{Asset.id_: list[values]})
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        # Not reusing get_value_all is faster by ~2ms,
+        # not worth maintaining two almost identical implementations
+
+        accts, assets = self.get_value_all(s, start_ord, end_ord, [self.id_])
+        return accts[self.id_], assets
 
     @classmethod
     def get_cash_flow_all(
@@ -369,7 +222,7 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | None = None,
+        ids: t.Ints | set[int] | None = None,
     ) -> t.DictIntReals:
         """Get the cash flow of all Accounts from start to end date by category.
 
@@ -442,7 +295,7 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | None = None,
+        ids: t.Ints | set[int] | None = None,
     ) -> dict[int, t.DictIntReals]:
         """Get the quantity of Assets held from start to end date.
 

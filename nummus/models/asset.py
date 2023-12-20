@@ -90,7 +90,7 @@ class Asset(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | None = None,
+        ids: t.Ints | set[int] | None = None,
     ) -> t.DictIntReals:
         """Get the value of all Assets from start to end date.
 
