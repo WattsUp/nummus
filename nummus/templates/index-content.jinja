@@ -1,3 +1,25 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full">
-    <h1>Hello world!</h1>
+    <div class="grid grid-cols-3 grid-flow-dense">
+        <div hx-get="/h/dashboard/net-worth" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>
+        {#<div hx-get="/h/dashboard/budget" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+        {#<div hx-get="/h/dashboard/cash-flow" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+        {#<div hx-get="/h/dashboard/retirement" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+        {#<div hx-get="/h/dashboard/emergency-savings" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+        {#<div hx-get="/h/dashboard/debt-paydown" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+        {#<div hx-get="/h/dashboard/performance" hx-trigger="load">
+            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
+        </div>#}
+    </div>
 </section>

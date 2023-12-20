@@ -188,4 +188,33 @@ const netWorthChart = {
             parent.appendChild(row);
         }
     },
+    /**
+     * Create Net Worth Dashboard Chart
+     *
+     * @param {Object} raw Raw data from net worth controller
+     */
+    updateDashboard: function(raw) {
+        'use strict';
+        const dates = raw.dates;
+        const values = raw.total.map(v => Number(v));
+
+        const canvas = document.getElementById('net-worth-chart-canvas');
+        const ctx = canvas.getContext('2d');
+        if (ctx == this.ctxTotal) {
+            chartSingle.update(this.chartTotal, dates, values);
+        } else {
+            this.ctxTotal = ctx;
+            this.chartTotal = chartSingle.create(
+                ctx,
+                'net-worth',
+                dates,
+                values,
+                null,
+                {
+                    maintainAspectRatio: true,
+                    aspectRatio: 2,
+                },
+            );
+        }
+    },
 }

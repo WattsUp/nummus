@@ -1,0 +1,13 @@
+<div class="col-span-2 cursor-pointer"
+     hx-target="#main"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     hx-get="{{ url_for("net_worth.page") }}">
+    <h1 class="text-xl align-left w-full font-serif text-green-600">Net Worth</h1>
+    {% with name="net-worth" %}
+        {% include "shared/chart.jinja" %}
+    {% endwith %}
+    <div id="net-worth-chart-data">
+        <script>netWorthChart.updateDashboard(JSON.parse('{{ data | tojson }}'))</script>
+    </div>
+</div>

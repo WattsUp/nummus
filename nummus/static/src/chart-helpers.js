@@ -206,3 +206,37 @@ function widenRange(min, max, amount) {
     const range = (max - min) * (1 + amount);
     return {min: center - range / 2, max: center + range / 2};
 }
+
+/**
+ * Check if item is object
+ *
+ * @param {Object} item to check
+ * @return {Boolean} true if item is an object
+ */
+function isObject(item) {
+    return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+/**
+ * Merge nested objects
+ *
+ * @param {Object} target Target object to merge into
+ * @param {Object} sources Object keys to override
+ * @return {Object} Merged objects
+ */
+function merge(target, ...sources) {
+    if (!sources.length) return target;
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        for (const key in source) {
+            if (isObject(source[key])) {
+                if (!target[key]) Object.assign(target, {[key]: {}});
+                merge(target[key], source[key]);
+            } else {
+                Object.assign(target, {[key]: source[key]});
+            }
+        }
+    }
+    return merge(target, ...sources);
+}
