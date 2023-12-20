@@ -1,5 +1,5 @@
 <section class="flex flex-col max-w-screen-lg m-auto h-full">
-    <div class="grid grid-cols-3 grid-flow-dense">
+    <div class="grid grid-cols-3 grid-flow-dense gap-2">
         <div hx-get="/h/dashboard/net-worth" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>
@@ -12,9 +12,9 @@
         {#<div hx-get="/h/dashboard/retirement" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}
-        {#<div hx-get="/h/dashboard/emergency-savings" hx-trigger="load">
+        <div hx-get="/h/dashboard/emergency-fund" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
-        </div>#}
+        </div>
         {#<div hx-get="/h/dashboard/debt-paydown" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}

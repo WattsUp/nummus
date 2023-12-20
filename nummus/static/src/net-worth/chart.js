@@ -211,8 +211,9 @@ const netWorthChart = {
                 values,
                 null,
                 {
-                    maintainAspectRatio: true,
-                    aspectRatio: 2,
+                    scales: {
+                        y: {ticks: {display: false}},
+                    },
                 },
             );
         }

@@ -1,5 +1,5 @@
-<div id="{{ name }}-chart" class="w-full" hx-swap-oob="{{ oob }}">
-    <div class="w-full">
+<div id="{{ name }}-chart" class="w-full grow" hx-swap-oob="{{ oob }}">
+    <div class="w-full h-full flex flex-col">
         <div id="{{ name }}-chart-bar"
              class="w-full flex opacity-0 transition-opacity text-sm">
             <div class="w-1/2 flex justify-end gap-4">
@@ -11,7 +11,7 @@
                 <div id="{{ name }}-chart-change" class="mr-12 w-28 text-right"></div>
             </div>
         </div>
-        <div class="w-full h-96">
+        <div class="w-full grow">
             <canvas id="{{ name }}-chart-canvas"></canvas>
         </div>
     </div>

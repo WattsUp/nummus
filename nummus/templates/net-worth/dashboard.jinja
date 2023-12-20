@@ -1,4 +1,4 @@
-<div class="bg-white p-2 cursor-pointer group col-span-2"
+<div class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem] col-span-2"
      hx-target="#main"
      hx-swap="innerHTML"
      hx-push-url="true"
@@ -7,12 +7,12 @@
         <h1 class="text-xl align-left w-full font-serif text-green-600 group-hover:underline group-hover:after:content-['»']">
             Net Worth
         </h1>
-        <h1 class="text-lg">{{ current | money }}</h1>
+        <h1 class="text-lg">{{ chart["current"] | money }}</h1>
     </div>
-    {% with name="net-worth", class="w-full" %}
-        {% include "shared/chart.jinja" %}
+    {% with name="net-worth" %}
+        {% include "shared/chart-grow.jinja" %}
     {% endwith %}
     <div id="net-worth-chart-data">
-        <script>netWorthChart.updateDashboard(JSON.parse('{{ data | tojson }}'))</script>
+        <script>netWorthChart.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>
     </div>
 </div>

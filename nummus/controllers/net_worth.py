@@ -142,19 +142,22 @@ def dashboard() -> str:
 
     with p.get_session() as s:
         end_ord = today_ord
-        start_ord = today_ord - utils.DAYS_IN_QUARTER * 2
+        start = utils.date_add_months(today, -6)
+        start_ord = start.toordinal()
         _, acct_values = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
-    data = {
-        "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-        "total": total,
+    chart = {
+        "data": {
+            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "total": total,
+        },
+        "current": total[-1],
     }
     return flask.render_template(
         "net-worth/dashboard.jinja",
-        data=data,
-        current=total[-1],
+        chart=chart,
     )
 
 

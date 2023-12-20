@@ -134,7 +134,7 @@ function formatMoneyTicks(value, index, ticks) {
 
 
 /**
- * Format ticks as money
+ * Format ticks as date
  *
  * @param {Number} value Value of current tick
  * @param {Number} index Index of current tick
@@ -172,6 +172,43 @@ function formatDateTicks(value, index, ticks) {
                 ticks.forEach((t, i) => t.label = labels[i]);
                 break
         }
+    }
+    return ticks[index].label;
+}
+
+/**
+ * Format ticks as month string
+ *
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
+ */
+function formatDateTicksMonths(value, index, ticks) {
+    if (index == 0) {
+        const chart = this.chart;
+        const labels = chart.data.labels;
+        const months = {
+            '01': 'Jan',
+            '02': 'Feb',
+            '03': 'Mar',
+            '04': 'Apr',
+            '05': 'May',
+            '06': 'Jun',
+            '07': 'Jul',
+            '08': 'Aug',
+            '09': 'Sep',
+            '10': 'Oct',
+            '11': 'Nov',
+            '12': 'Dec',
+        };
+        ticks.forEach((t, i) => {
+            let l = labels[i];
+            if (l.slice(-2) == '01') {
+                console.log(l.slice(4, 7));
+                t.label = months[l.slice(5, 7)];
+            }
+        });
     }
     return ticks[index].label;
 }
