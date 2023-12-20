@@ -11,7 +11,7 @@
                 <div id="{{ name }}-chart-change" class="mr-12 w-28 text-right"></div>
             </div>
         </div>
-        <div class="w-full h-96">
+        <div class="{{ class or "w-full h-96" }}">
             <canvas id="{{ name }}-chart-canvas"></canvas>
         </div>
     </div>

@@ -154,6 +154,7 @@ def dashboard() -> str:
     return flask.render_template(
         "net-worth/dashboard.jinja",
         data=data,
+        current=total[-1],
     )
 
 
