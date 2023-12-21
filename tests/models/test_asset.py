@@ -256,6 +256,48 @@ class TestAsset(TestBase):
         r_values = Asset.get_value_all(s, long_ago, long_ago)
         self.assertEqual(r_values, {a.id_: [Decimal(0)]})
 
+        # Test interpolation
+        a.interpolate = True
+        s.commit()
+
+        v_before.value = Decimal(1)
+        v_today.value = Decimal(3)
+        v_after.value = Decimal(7)
+
+        # Should interpolate to point after the end
+        target_values = [
+            0,
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(5),
+        ]
+        r_values = a.get_value(start, end - 2)
+        self.assertEqual(r_values, target_values)
+
+        # Should interpolate to point before the end
+        target_values = [
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(5),
+        ]
+        r_values = a.get_value(start + 1, end - 2)
+        self.assertEqual(r_values, target_values)
+
+        # Should keep last value flat after the end
+        target_values = [
+            0,
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(5),
+            Decimal(7),
+            Decimal(7),
+        ]
+        r_values = a.get_value(start, end)
+        self.assertEqual(r_values, target_values)
+
     def test_update_splits(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
