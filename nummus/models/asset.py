@@ -65,6 +65,8 @@ class Asset(Base):
         category: Type of Asset
         unit: Unit name for an individual Asset (ex: shares)
         tag: Unique tag linked across datasets
+        interpolate: True will interpolate valuations with a linear function, for
+            sparsely (monthly) valued assets
     """
 
     __table_id__ = 0x40000000
@@ -75,6 +77,7 @@ class Asset(Base):
     unit: t.ORMStrOpt
     tag: t.ORMStrOpt
     img_suffix: t.ORMStrOpt
+    interpolate: t.ORMBool = orm.mapped_column(default=False)
 
     @property
     def image_name(self) -> str | None:
@@ -107,26 +110,35 @@ class Asset(Base):
 
         # Get a list of valuations (date offset, value) for each Asset
         valuations_assets: dict[int, list[tuple[int, t.Real]]] = {}
+        interpolated_assets: set[int] = set()
+        query = s.query(Asset)
+        query = query.with_entities(Asset.id_, Asset.interpolate)
         if ids is not None:
-            valuations_assets = {a_id: [] for a_id in ids}
-        else:
-            valuations_assets = {a_id: [] for a_id, in s.query(Asset.id_).all()}
+            query = query.where(Asset.id_.in_(ids))
+        for a_id, interpolate in query.all():
+            a_id: int
+            interpolate: bool
+            valuations_assets[a_id] = []
+            if interpolate:
+                interpolated_assets.add(a_id)
 
         # Get latest Valuation before or including start date
         query = s.query(AssetValuation)
         query = query.with_entities(
             AssetValuation.asset_id,
-            AssetValuation.value,
             sqlalchemy.func.max(AssetValuation.date_ord),
+            AssetValuation.value,
         )
         query = query.where(AssetValuation.date_ord <= start_ord)
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
         query = query.group_by(AssetValuation.asset_id)
-        for a_id, v, _ in query.all():
+        for a_id, date_ord, v in query.all():
             a_id: int
+            date_ord: int
             v: Decimal
-            valuations_assets[a_id] = [(0, v)]
+            i = date_ord - start_ord
+            valuations_assets[a_id] = [(i, v)]
 
         if start_ord != end_ord:
             # Transactions between start and end
@@ -154,12 +166,30 @@ class Asset(Base):
                     # Should not happen cause delta_accounts is initialized with all
                     valuations_assets[a_id] = [(i, v)]
 
-        # TODO (WattsUp): Add optional linear interpolation here
+        # Get interpolation point for assets with interpolation
+        query = s.query(AssetValuation)
+        query = query.with_entities(
+            AssetValuation.asset_id,
+            sqlalchemy.func.min(AssetValuation.date_ord),
+            AssetValuation.value,
+        )
+        query = query.where(AssetValuation.date_ord > end_ord)
+        query = query.where(AssetValuation.asset_id.in_(interpolated_assets))
+        query = query.group_by(AssetValuation.asset_id)
+        for a_id, date_ord, v in query.all():
+            a_id: int
+            date_ord: int
+            v: Decimal
+            i = date_ord - start_ord
+            valuations_assets[a_id].append((i, v))
 
         assets_values: t.DictIntReals = {}
         for a_id, valuations in valuations_assets.items():
             valuations_sorted = sorted(valuations, key=lambda item: item[0])
-            assets_values[a_id] = utils.interpolate_step(valuations_sorted, n)
+            if a_id in interpolated_assets:
+                assets_values[a_id] = utils.interpolate_linear(valuations_sorted, n)
+            else:
+                assets_values[a_id] = utils.interpolate_step(valuations_sorted, n)
 
         return assets_values
 

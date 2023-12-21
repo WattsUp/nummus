@@ -387,20 +387,78 @@ class TestUtils(TestBase):
         self.assertEqual(result, target)
 
     def test_interpolate_step(self) -> None:
-        n = 5
+        n = 6
         values: list[tuple[int, Decimal]] = []
 
         target = [Decimal(0)] * n
         result = utils.interpolate_step(values, n)
         self.assertEqual(result, target)
 
-        values.append((0, Decimal(1)))
-        target = [Decimal(1)] * n
+        values.append((-3, Decimal(-1)))
+        target = [Decimal(-1)] * n
         result = utils.interpolate_step(values, n)
         self.assertEqual(result, target)
 
-        values.append((3, Decimal(3)))
-        target[3] = Decimal(3)
-        target[4] = Decimal(3)
+        values.append((1, Decimal(1)))
+        target = [Decimal(1)] * n
+        target[0] = Decimal(-1)
         result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+        values.append((4, Decimal(3)))
+        target[4] = Decimal(3)
+        target[5] = Decimal(3)
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+    def test_interpolate_linear(self) -> None:
+        n = 6
+        values: list[tuple[int, Decimal]] = []
+
+        target = [Decimal(0)] * n
+        result = utils.interpolate_linear(values, n)
+        self.assertEqual(result, target)
+
+        values.append((-3, Decimal(-1)))
+        target = [Decimal(-1)] * n
+        result = utils.interpolate_linear(values, n)
+        self.assertEqual(result, target)
+
+        values.append((1, Decimal(1)))
+        target = [
+            Decimal("0.5"),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+        ]
+        result = utils.interpolate_linear(values, n)
+        self.assertEqual(result, target)
+
+        values.append((4, Decimal(3)))
+        target = [
+            Decimal("0.5"),
+            Decimal(1),
+            Decimal(1) + Decimal(2) / Decimal(3),
+            Decimal(1) + Decimal(2) / Decimal(3) * Decimal(2),
+            Decimal(3),
+            Decimal(3),  # Stay flat at the end
+        ]
+        result = utils.interpolate_linear(values, n)
+        self.assertEqual(result, target)
+
+        values = [
+            (2, Decimal(1)),
+            (4, Decimal(3)),
+        ]
+        target = [
+            Decimal(0),
+            Decimal(0),
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(3),
+        ]
+        result = utils.interpolate_linear(values, n)
         self.assertEqual(result, target)
