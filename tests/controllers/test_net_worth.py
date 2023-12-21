@@ -46,3 +46,22 @@ class TestNetWorth(WebTestBase):
             result,
             r'<script>netWorthChart\.update\(.*"accounts": \[\].*\)</script>',
         )
+
+    def test_dashboard(self) -> None:
+        _ = self._setup_portfolio()
+        today = datetime.date.today()
+
+        endpoint = "/h/dashboard/net-worth"
+        result, _ = self.web_get(endpoint)
+        self.assertRegex(
+            result,
+            r'<script>netWorthChart\.updateDashboard\(.*"total": \[.+\].*\)</script>',
+        )
+        m = re.search(
+            r"<script>netWorthChart\.updateDashboard\("
+            r'.*"dates": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        dates_s = m[1] if m else ""
+        self.assertIn(today.isoformat(), dates_s)
