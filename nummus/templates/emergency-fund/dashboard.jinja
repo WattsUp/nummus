@@ -1,0 +1,30 @@
+<div class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem]"
+     hx-target="#main"
+     hx-swap="innerHTML"
+     hx-push-url="true"
+     hx-get="{{ url_for("emergency_fund.page") }}">
+    <div class="w-full flex space-between">
+        <h1 class="text-xl align-left w-full font-serif text-green-600 group-hover:underline group-hover:after:content-['»']">
+            Emergency Fund
+        </h1>
+        <h1 class="text-lg">{{ e_fund["current"] | money0 }}</h1>
+    </div>
+    {% with name="e-fund", no_change=true %}
+        {% include "shared/chart-grow.jinja" %}
+    {% endwith %}
+    <div id="e-fund-chart-data">
+        <script>emergencyFundChart.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
+    </div>
+    <div class="text-sm text-center">
+        {% if e_fund["delta_low"] is none %}
+            No budget found, please create one to get target emergency fund balance.
+            <!-- TODO (WattsUp): Add href to budget editor -->
+        {% elif e_fund["delta_low"] > 0 %}
+            <p>Try to increase your fund to at least {{ e_fund["target_low"] | money0 }}.</p>
+        {% elif e_fund["delta_high"] > 0 %}
+            <p>{{ e_fund["delta_high"] | money0 }} could be invested for potential greater returns.</p>
+        {% else %}
+            <p>You should be able to cover {{ e_fund["months"] }} months of expenses.</p>
+        {% endif %}
+    </div>
+</div>
