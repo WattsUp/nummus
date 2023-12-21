@@ -151,7 +151,6 @@ class Account(Base):
                 cash_flow_accounts[acct_id][i] = amount if v is None else v + amount
 
         # Get assets for all Accounts
-        # TODO (WattsUp): Separate into Account.get_asset_value
         assets_accounts = cls.get_asset_qty_all(
             s,
             start_ord,
@@ -317,7 +316,7 @@ class Account(Base):
             iv_accounts = {acct_id: {} for acct_id, in s.query(Account.id_).all()}
 
         # Get Asset quantities on start date
-        # Cannot do sql sum due to overflow fracional part
+        # Cannot do sql sum due to overflow fractional part
         query = s.query(TransactionSplit)
         query = query.with_entities(
             TransactionSplit.account_id,
