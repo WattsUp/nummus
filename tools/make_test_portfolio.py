@@ -251,16 +251,19 @@ def make_assets(p: Portfolio) -> t.DictInt:
             name="Main St. House",
             description="House on Main St.",
             category=AssetCategory.REAL_ESTATE,
+            interpolate=True,
         )
         house_second = Asset(
             name="Second Ave. House",
             description="House on Second Ave.",
             category=AssetCategory.REAL_ESTATE,
+            interpolate=True,
         )
         house_third = Asset(
             name="Third Blvd. House",
             description="House on Third Blvd.",
             category=AssetCategory.REAL_ESTATE,
+            interpolate=True,
         )
 
         # Name: [Asset, current price, growth mean, growth stddev]
@@ -364,7 +367,7 @@ def print_stats(p: Portfolio) -> None:
         net_worth = 0
         for acct in s.query(Account).all():
             acct: Account
-            _, values, assets = acct.get_value(death_day_ord, death_day_ord)
+            values, assets = acct.get_value(death_day_ord, death_day_ord)
             v = values[0]
             net_worth += v
             buf[f"Acct '{acct.name}' final"] = f"${v:15,.3f}"
@@ -677,7 +680,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 pmi threshold)
             """
             date_ord = date.toordinal()
-            _, values, _ = acct_savings.get_value(date_ord, date_ord)
+            values, _ = acct_savings.get_value(date_ord, date_ord)
             closing_costs = round(price * Decimal(0.05), 2)
             max_dp = values[0] - closing_costs
             no_pmi_dp = price * Decimal(0.2)
@@ -1371,7 +1374,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        _, values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
+        values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
         total_interest = Decimal(0)
 
@@ -1441,7 +1444,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        _, values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
+        values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
         total_payment = Decimal(0)
 
