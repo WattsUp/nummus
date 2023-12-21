@@ -315,6 +315,8 @@ def integrate(deltas: list[t.Real | None]) -> t.Reals:
 def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
     """Interpolate a list of (index, value)s using a step function.
 
+    Indices can be outside of [0, n)
+
     Args:
         values: List of (index, value)
         n: Length of output array
@@ -326,19 +328,83 @@ def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
     if len(values) == 0:
         return result
 
-    current = Decimal(0)
-    current_values_i = 0
-    i_v, v = values[current_values_i]
+    v_current = Decimal(0)
+    values_i = 0
+    i_next, v_next = values[values_i]
     for i in range(n):
         # If at a valuation, update current and prep next
-        if i == i_v:
-            current = v
+        if i >= i_next:
+            v_current = v_next
+            values_i += 1
             try:
-                current_values_i += 1
-                i_v, v = values[current_values_i]
+                i_next, v_next = values[values_i]
             except IndexError:
-                # End of list set i_v to -1 to never change current
-                i_v = -1
-        result[i] = current
+                # End of list, set i_v to n to never change current
+                i_next = n
+        result[i] = v_current
+
+    return result
+
+
+def interpolate_linear(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
+    """Interpolate a list of (index, value)s using a linear function.
+
+    Indices can be outside of [0, n) to interpolate on the boundary
+
+    Args:
+        values: List of (index, value)
+        n: Length of output array
+
+    Returns:
+        list of interpolated values
+    """
+    result = [Decimal(0)] * n
+    if len(values) == 0:
+        return result
+
+    # Starting value
+    i_current = 0
+    v_current = Decimal(0)
+    values_i = 0
+    i_next, v_next = values[values_i]
+
+    if i_next < 0:
+        i_current = i_next
+        v_current = v_next
+        values_i += 1
+        slope_i = -i_next
+
+        # Compute slope to next
+        try:
+            i_next, v_next = values[values_i]
+            slope = (v_next - v_current) / (i_next - i_current)
+        except IndexError:
+            # End of list, set i_v to n to never change current
+            i_next = n
+            slope = 0
+
+    else:
+        slope = 0
+        slope_i = 0
+
+    for i in range(n):
+        # If at a valuation, update current and prep next
+        if i >= i_next:
+            i_current = i_next
+            v_current = v_next
+            values_i += 1
+            slope_i = 0
+
+            # Compute slope to next
+            try:
+                i_next, v_next = values[values_i]
+                slope = (v_next - v_current) / (i_next - i_current)
+            except IndexError:
+                # End of list set i_v to n to never change current
+                i_next = n
+                slope = 0
+            slope_i = 0
+        result[i] = v_current + slope * slope_i
+        slope_i += 1
 
     return result
