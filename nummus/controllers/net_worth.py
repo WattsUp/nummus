@@ -40,9 +40,6 @@ def ctx_chart() -> t.DictAny:
     accounts: list[t.DictAny] = []
 
     with p.get_session() as s:
-        # TODO (WatsUp): Net worth, period=all is too slow
-        # Replace date with date_ord
-        # Have htmx return a waiting overlay that triggers the real request
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
@@ -67,7 +64,7 @@ def ctx_chart() -> t.DictAny:
             if (not acct.closed or acct.updated_on_ord > start_ord)
         ]
 
-        _, acct_values = Account.get_value_all(s, start_ord, end_ord, ids=ids)
+        acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
@@ -107,7 +104,7 @@ def page() -> str:
     today_ord = today.toordinal()
 
     with p.get_session() as s:
-        _, acct_values = Account.get_value_all(s, today_ord, today_ord)
+        acct_values, _ = Account.get_value_all(s, today_ord, today_ord)
         current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",
@@ -144,7 +141,7 @@ def dashboard() -> str:
         end_ord = today_ord
         start = utils.date_add_months(today, -6)
         start_ord = start.toordinal()
-        _, acct_values = Account.get_value_all(s, start_ord, end_ord)
+        acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 

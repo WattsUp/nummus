@@ -363,3 +363,44 @@ class TestUtils(TestBase):
         self.assertEqual(sum(l_round), 1)
         self.assertNotEqual(l_round[0], list_[0])
         self.assertEqual(l_round[0], round(list_[0], 6))
+
+    def test_integrate(self) -> None:
+        deltas: list[Decimal | None] = []
+        result = utils.integrate(deltas)
+        self.assertEqual(result, [])
+
+        deltas = [Decimal(0)] * 5
+        target = [Decimal(0)] * 5
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)
+
+        deltas = [None] * 5
+        target = [Decimal(0)] * 5
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)
+
+        deltas[2] = Decimal(20)
+        target[2] += Decimal(20)
+        target[3] += Decimal(20)
+        target[4] += Decimal(20)
+        result = utils.integrate(deltas)
+        self.assertEqual(result, target)
+
+    def test_interpolate_step(self) -> None:
+        n = 5
+        values: list[tuple[int, Decimal]] = []
+
+        target = [Decimal(0)] * n
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+        values.append((0, Decimal(1)))
+        target = [Decimal(1)] * n
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)
+
+        values.append((3, Decimal(3)))
+        target[3] = Decimal(3)
+        target[4] = Decimal(3)
+        result = utils.interpolate_step(values, n)
+        self.assertEqual(result, target)

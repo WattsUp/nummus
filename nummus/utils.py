@@ -285,3 +285,60 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
         l_rounded.append(v_round)
 
     return l_rounded
+
+
+def integrate(deltas: list[t.Real | None]) -> t.Reals:
+    """Integrate a list starting.
+
+    Args:
+        deltas: Change in values, use None instead of zero for faster speed
+
+    Returns:
+        list(values) where
+        values[0] = sum(deltas[:1])
+        values[1] = sum(deltas[:2])
+        ...
+        values[n] = sum(deltas[:])
+    """
+    n = len(deltas)
+    current = Decimal(0)
+    result = [Decimal(0)] * n
+
+    for i, v in enumerate(deltas):
+        if v is not None:
+            current += v
+        result[i] = current
+
+    return result
+
+
+def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
+    """Interpolate a list of (index, value)s using a step function.
+
+    Args:
+        values: List of (index, value)
+        n: Length of output array
+
+    Returns:
+        list of interpolated values where result[i] = most recent values <= i
+    """
+    result = [Decimal(0)] * n
+    if len(values) == 0:
+        return result
+
+    current = Decimal(0)
+    current_values_i = 0
+    i_v, v = values[current_values_i]
+    for i in range(n):
+        # If at a valuation, update current and prep next
+        if i == i_v:
+            current = v
+            try:
+                current_values_i += 1
+                i_v, v = values[current_values_i]
+            except IndexError:
+                # End of list set i_v to -1 to never change current
+                i_v = -1
+        result[i] = current
+
+    return result

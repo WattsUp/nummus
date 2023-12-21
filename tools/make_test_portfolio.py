@@ -445,8 +445,8 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        _, a_growth_values = a_growth.get_value(a_values_start_ord, a_values_end_ord)
-        _, a_value_values = a_value.get_value(a_values_start_ord, a_values_end_ord)
+        a_growth_values = a_growth.get_value(a_values_start_ord, a_values_end_ord)
+        a_value_values = a_value.get_value(a_values_start_ord, a_values_end_ord)
 
         acct_savings: Account = (
             s.query(Account).where(Account.id_ == accts["savings"]).scalar()
@@ -640,9 +640,9 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        _, house_1_values = house_1.get_value(a_values_start_ord, a_values_end_ord)
-        _, house_2_values = house_2.get_value(a_values_start_ord, a_values_end_ord)
-        _, house_3_values = house_3.get_value(a_values_start_ord, a_values_end_ord)
+        house_1_values = house_1.get_value(a_values_start_ord, a_values_end_ord)
+        house_2_values = house_2.get_value(a_values_start_ord, a_values_end_ord)
+        house_3_values = house_3.get_value(a_values_start_ord, a_values_end_ord)
 
         acct_savings: Account = (
             s.query(Account).where(Account.id_ == accts["savings"]).scalar()
@@ -1294,7 +1294,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         date_sell_ord = date_sell.toordinal()
         date_transfer_ord = date_transfer.toordinal()
 
-        _, asset_qty = acct_retirement.get_asset_qty(date_sell_ord, date_sell_ord)
+        asset_qty = acct_retirement.get_asset_qty(date_sell_ord, date_sell_ord)
 
         def sell_asset(asset: Asset, qty: t.Real) -> None:
             """Add transactions to sell an Asset.
@@ -1303,7 +1303,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 asset: Asset to sell
                 qty: Quantity to sell
             """
-            _, values = asset.get_value(date_sell_ord, date_sell_ord)
+            values = asset.get_value(date_sell_ord, date_sell_ord)
             amount = round(qty * values[0], 2)
             txn = Transaction(
                 account_id=acct_retirement.id_,
