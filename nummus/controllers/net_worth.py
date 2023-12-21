@@ -144,7 +144,7 @@ def dashboard() -> str:
         end_ord = today_ord
         start = utils.date_add_months(today, -6)
         start_ord = start.toordinal()
-        _, acct_values = Account.get_value_all(s, start_ord, end_ord)
+        acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
