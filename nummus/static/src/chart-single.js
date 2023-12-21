@@ -98,9 +98,10 @@ const chartSingle = {
      * @param {Array} dates Array of dates
      * @param {Array} values Array of values
      * @param {Array} plugins Array of plugins
+     * @param {Object} options override
      * @return {Object} Chart object
      */
-    create: function(ctx, name, dates, values, plugins) {
+    create: function(ctx, name, dates, values, plugins, options) {
         'use strict';
         setChartDefaults();
 
@@ -136,10 +137,8 @@ const chartSingle = {
             }
         }
 
-        return new Chart(ctx, {
-            type: 'line',
-            data: {labels: labels, datasets: datasets},
-            options: {
+        options = merge(
+            {
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
@@ -161,6 +160,13 @@ const chartSingle = {
                 },
                 plugins: pluginOptions,
             },
+            options ?? {},
+        );
+
+        return new Chart(ctx, {
+            type: 'line',
+            data: {labels: labels, datasets: datasets},
+            options: options,
             plugins: pluginObjects,
         });
     },

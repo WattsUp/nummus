@@ -6,232 +6,335 @@
 @tailwind variants;
 
 @layer components {
-  input,
-  select {
-    @apply h-[1.75rem] border px-1;
-  }
 
-  svg {
-    @apply fill-black;
-  }
+    input,
+    select {
+        @apply h-[1.75rem] border px-1;
+    }
 
-  body {
-    --color-green: theme("colors.green.DEFAULT");
-    --color-blue: theme("colors.blue.DEFAULT");
-    --color-red: theme("colors.red.DEFAULT");
-    --color-yellow: theme("colors.yellow.DEFAULT");
-    --color-grey-500: theme("colors.grey.500");
-    --color-white: theme("colors.white.DEFAULT");
-    --color-black: theme("colors.black.DEFAULT");
-  }
+    svg {
+        @apply fill-black;
+    }
 
-  .button {
-    @apply px-2 rounded border transition-colors;
-  }
+    body {
+        --color-green: theme("colors.green.DEFAULT");
+        --color-blue: theme("colors.blue.DEFAULT");
+        --color-red: theme("colors.red.DEFAULT");
+        --color-yellow: theme("colors.yellow.DEFAULT");
+        --color-grey-500: theme("colors.grey.500");
+        --color-white: theme("colors.white.DEFAULT");
+        --color-black: theme("colors.black.DEFAULT");
+    }
 
-  .button svg {
-    @apply transition-colors;
-  }
+    .button {
+        @apply px-2 rounded border transition-colors;
+    }
 
-  .button:hover svg {
-    @apply fill-white;
-  }
+    .button svg {
+        @apply transition-colors;
+    }
 
-  .button.bg-green {
-    @apply text-white border-green hover:border-green-900 hover:bg-green-900;
-  }
+    .button:hover svg {
+        @apply fill-white;
+    }
 
-  .button.hover\:green {
-    @apply hover:border-green-900 hover:bg-green-900 hover:text-white;
-  }
+    .button.bg-green {
+        @apply text-white border-green hover:border-green-900 hover:bg-green-900;
+    }
 
-  .button.bg-red {
-    @apply text-black border-red hover:border-red-900 hover:bg-red-900 hover:text-white;
-  }
+    .button.hover\:green {
+        @apply hover:border-green-900 hover:bg-green-900 hover:text-white;
+    }
 
-  .button.hover\:red {
-    @apply hover:border-red-900 hover:bg-red-900 hover:text-white;
-  }
+    .button.bg-red {
+        @apply text-black border-red hover:border-red-900 hover:bg-red-900 hover:text-white;
+    }
 
-  .button.bg-blue {
-    @apply text-black border-blue hover:border-blue-900 hover:bg-blue-900 hover:text-white;
-  }
+    .button.hover\:red {
+        @apply hover:border-red-900 hover:bg-red-900 hover:text-white;
+    }
 
-  .button.hover\:blue {
-    @apply hover:border-blue-900 hover:bg-blue-900 hover:text-white;
-  }
+    .button.bg-blue {
+        @apply text-black border-blue hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+    }
 
-  .button.bg-white {
-    @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
-  }
+    .button.hover\:blue {
+        @apply hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+    }
 
-  .checkbox {
-    @apply cursor-pointer relative;
-  }
+    .button.bg-white {
+        @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
+    }
 
-  .checkbox input {
-    @apply hidden;
-  }
+    .checkbox {
+        @apply cursor-pointer relative;
+    }
 
-  .checkbox svg {
-    @apply bg-grey-200 m-0.5 transition-colors fill-grey-600 flex-shrink-0;
-  }
+    .checkbox input {
+        @apply hidden;
+    }
 
-  .checkbox:hover input ~ svg {
-    @apply bg-grey-400;
-  }
+    .checkbox svg {
+        @apply bg-grey-200 m-0.5 transition-colors fill-grey-600 flex-shrink-0;
+    }
 
-  .checkbox input:checked ~ svg {
-    @apply bg-green fill-white;
-  }
+    .checkbox:hover input~svg {
+        @apply bg-grey-400;
+    }
+
+    .checkbox input:checked~svg {
+        @apply bg-green fill-white;
+    }
+
+    .lds-roller {
+        display: inline-block;
+        position: relative;
+        width: 80px;
+        height: 80px;
+    }
+
+    .lds-roller div {
+        animation: lds-roller 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+        transform-origin: 40px 40px;
+    }
+
+    .lds-roller div:after {
+        content: " ";
+        display: block;
+        position: absolute;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin: -4px 0 0 -4px;
+        @apply bg-green;
+    }
+
+    .lds-roller div:nth-child(1) {
+        animation-delay: -0.036s;
+    }
+
+    .lds-roller div:nth-child(1):after {
+        top: 63px;
+        left: 63px;
+    }
+
+    .lds-roller div:nth-child(2) {
+        animation-delay: -0.072s;
+    }
+
+    .lds-roller div:nth-child(2):after {
+        top: 68px;
+        left: 56px;
+    }
+
+    .lds-roller div:nth-child(3) {
+        animation-delay: -0.108s;
+    }
+
+    .lds-roller div:nth-child(3):after {
+        top: 71px;
+        left: 48px;
+    }
+
+    .lds-roller div:nth-child(4) {
+        animation-delay: -0.144s;
+    }
+
+    .lds-roller div:nth-child(4):after {
+        top: 72px;
+        left: 40px;
+    }
+
+    .lds-roller div:nth-child(5) {
+        animation-delay: -0.18s;
+    }
+
+    .lds-roller div:nth-child(5):after {
+        top: 71px;
+        left: 32px;
+    }
+
+    .lds-roller div:nth-child(6) {
+        animation-delay: -0.216s;
+    }
+
+    .lds-roller div:nth-child(6):after {
+        top: 68px;
+        left: 24px;
+    }
+
+    .lds-roller div:nth-child(7) {
+        animation-delay: -0.252s;
+    }
+
+    .lds-roller div:nth-child(7):after {
+        top: 63px;
+        left: 17px;
+    }
+
+    .lds-roller div:nth-child(8) {
+        animation-delay: -0.288s;
+    }
+
+    .lds-roller div:nth-child(8):after {
+        top: 56px;
+        left: 12px;
+    }
+
+    @keyframes lds-roller {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
 }
 
 @font-face {
-  font-family: "code-new-roman";
-  src: url("/static/fonts/code-new-roman/bold.woff2") format("woff2"),
-    url("/static/fonts/code-new-roman/bold.woff") format("woff");
-  font-weight: bold;
+    font-family: "code-new-roman";
+    src: url("/static/fonts/code-new-roman/bold.woff2") format("woff2"),
+        url("/static/fonts/code-new-roman/bold.woff") format("woff");
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "code-new-roman";
-  src: url("/static/fonts/code-new-roman/regular.woff2") format("woff2"),
-    url("/static/fonts/code-new-roman/regular.woff") format("woff");
+    font-family: "code-new-roman";
+    src: url("/static/fonts/code-new-roman/regular.woff2") format("woff2"),
+        url("/static/fonts/code-new-roman/regular.woff") format("woff");
 }
 
 @font-face {
-  font-family: "fogtwo-no5";
-  src: url("/static/fonts/fogtwo-no5/regular.woff2") format("woff2"),
-    url("/static/fonts/fogtwo-no5/regular.woff") format("woff");
+    font-family: "fogtwo-no5";
+    src: url("/static/fonts/fogtwo-no5/regular.woff2") format("woff2"),
+        url("/static/fonts/fogtwo-no5/regular.woff") format("woff");
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/regular.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/regular.woff") format("woff");
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/regular.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/regular.woff") format("woff");
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/italic.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/italic.woff") format("woff");
-  font-style: italic;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/italic.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/italic.woff") format("woff");
+    font-style: italic;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/oblique.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/oblique.woff") format("woff");
-  font-style: oblique;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/oblique.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/oblique.woff") format("woff");
+    font-style: oblique;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/bold.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/bold.woff") format("woff");
-  font-weight: bold;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/bold.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/bold.woff") format("woff");
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/bold-italic.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/bold-italic.woff") format("woff");
-  font-style: italic;
-  font-weight: bold;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/bold-italic.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/bold-italic.woff") format("woff");
+    font-style: italic;
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/bold-oblique.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/bold-oblique.woff") format("woff");
-  font-style: oblique;
-  font-weight: bold;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/bold-oblique.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/bold-oblique.woff") format("woff");
+    font-style: oblique;
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/medium.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/medium.woff") format("woff");
-  font-weight: 600;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/medium.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/medium.woff") format("woff");
+    font-weight: 600;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/medium-italic.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/medium-italic.woff") format("woff");
-  font-style: italic;
-  font-weight: 600;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/medium-italic.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/medium-italic.woff") format("woff");
+    font-style: italic;
+    font-weight: 600;
 }
 
 @font-face {
-  font-family: "linux-libertine";
-  src: url("/static/fonts/linux-libertine/medium-oblique.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/medium-oblique.woff") format("woff");
-  font-style: oblique;
-  font-weight: 600;
+    font-family: "linux-libertine";
+    src: url("/static/fonts/linux-libertine/medium-oblique.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/medium-oblique.woff") format("woff");
+    font-style: oblique;
+    font-weight: 600;
 }
 
 @font-face {
-  font-family: "linux-libertine-capitals";
-  src: url("/static/fonts/linux-libertine/capitals.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/capitals.woff") format("woff");
+    font-family: "linux-libertine-capitals";
+    src: url("/static/fonts/linux-libertine/capitals.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/capitals.woff") format("woff");
 }
 
 @font-face {
-  font-family: "linux-libertine-capitals";
-  src: url("/static/fonts/linux-libertine/capitals-italic.woff2")
-      format("woff2"),
-    url("/static/fonts/linux-libertine/capitals-italic.woff") format("woff");
-  font-style: italic;
+    font-family: "linux-libertine-capitals";
+    src: url("/static/fonts/linux-libertine/capitals-italic.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/capitals-italic.woff") format("woff");
+    font-style: italic;
 }
 
 @font-face {
-  font-family: "linux-libertine-capitals";
-  src: url("/static/fonts/linux-libertine/capitals-bold.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/capitals-bold.woff") format("woff");
-  font-weight: bold;
+    font-family: "linux-libertine-capitals";
+    src: url("/static/fonts/linux-libertine/capitals-bold.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/capitals-bold.woff") format("woff");
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "linux-libertine-capitals";
-  src: url("/static/fonts/linux-libertine/capitals-medium-italic.woff2")
-      format("woff2"),
-    url("/static/fonts/linux-libertine/capitals-medium-italic.woff")
-      format("woff");
-  font-style: italic;
-  font-weight: 600;
+    font-family: "linux-libertine-capitals";
+    src: url("/static/fonts/linux-libertine/capitals-medium-italic.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/capitals-medium-italic.woff") format("woff");
+    font-style: italic;
+    font-weight: 600;
 }
 
 @font-face {
-  font-family: "linux-libertine-display";
-  src: url("/static/fonts/linux-libertine/display.woff2") format("woff2"),
-    url("/static/fonts/linux-libertine/display.woff") format("woff");
+    font-family: "linux-libertine-display";
+    src: url("/static/fonts/linux-libertine/display.woff2") format("woff2"),
+        url("/static/fonts/linux-libertine/display.woff") format("woff");
 }
 
 @font-face {
-  font-family: "liberation-sans";
-  src: url("/static/fonts/liberation-sans/regular.woff2") format("woff2"),
-    url("/static/fonts/liberation-sans/regular.woff") format("woff");
+    font-family: "liberation-sans";
+    src: url("/static/fonts/liberation-sans/regular.woff2") format("woff2"),
+        url("/static/fonts/liberation-sans/regular.woff") format("woff");
 }
 
 @font-face {
-  font-family: "liberation-sans";
-  src: url("/static/fonts/liberation-sans/italic.woff2") format("woff2"),
-    url("/static/fonts/liberation-sans/italic.woff") format("woff");
-  font-style: italic;
+    font-family: "liberation-sans";
+    src: url("/static/fonts/liberation-sans/italic.woff2") format("woff2"),
+        url("/static/fonts/liberation-sans/italic.woff") format("woff");
+    font-style: italic;
 }
 
 @font-face {
-  font-family: "liberation-sans";
-  src: url("/static/fonts/liberation-sans/bold.woff2") format("woff2"),
-    url("/static/fonts/liberation-sans/bold.woff") format("woff");
-  font-weight: bold;
+    font-family: "liberation-sans";
+    src: url("/static/fonts/liberation-sans/bold.woff2") format("woff2"),
+        url("/static/fonts/liberation-sans/bold.woff") format("woff");
+    font-weight: bold;
 }
 
 @font-face {
-  font-family: "liberation-sans";
-  src: url("/static/fonts/liberation-sans/bold-italic.woff2") format("woff2"),
-    url("/static/fonts/liberation-sans/bold-italic.woff") format("woff");
-  font-style: italic;
-  font-weight: bold;
+    font-family: "liberation-sans";
+    src: url("/static/fonts/liberation-sans/bold-italic.woff2") format("woff2"),
+        url("/static/fonts/liberation-sans/bold-italic.woff") format("woff");
+    font-style: italic;
+    font-weight: bold;
 }

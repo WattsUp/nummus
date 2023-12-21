@@ -129,7 +129,40 @@ def chart() -> str:
     )
 
 
+def dashboard() -> str:
+    """GET /h/dashboard/net-worth.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.date.today()
+    today_ord = today.toordinal()
+
+    with p.get_session() as s:
+        end_ord = today_ord
+        start = utils.date_add_months(today, -6)
+        start_ord = start.toordinal()
+        _, acct_values = Account.get_value_all(s, start_ord, end_ord)
+
+        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+
+    chart = {
+        "data": {
+            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "total": total,
+        },
+        "current": total[-1],
+    }
+    return flask.render_template(
+        "net-worth/dashboard.jinja",
+        chart=chart,
+    )
+
+
 ROUTES: t.Routes = {
     "/net-worth": (page, ["GET"]),
     "/h/net-worth/chart": (chart, ["GET"]),
+    "/h/dashboard/net-worth": (dashboard, ["GET"]),
 }

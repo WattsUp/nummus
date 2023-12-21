@@ -22,3 +22,11 @@ class TestDashboard(WebTestBase):
         self.assertEqual(result[: len(target)], target)
         target = "</section>"
         self.assertEqual(result[-len(target) :], target)
+
+        urls = [
+            "/h/dashboard/net-worth",
+            "/h/dashboard/emergency-fund",
+        ]
+        for url in urls:
+            self.assertIn(f'hx-get="{url}"', result)
+        self.assertEqual(result.count("hx-get"), len(urls))

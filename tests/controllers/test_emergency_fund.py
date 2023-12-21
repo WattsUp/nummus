@@ -91,3 +91,73 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("You have $90 in your emergency fund", result)
         self.assertIn("You need $120 for emergencies", result)
         self.assertIn("increasing your emergency fund by $30", result)
+
+    def test_dashboard(self) -> None:
+        p = self._portfolio
+        _ = self._setup_portfolio()
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        # No budget should not error out
+        endpoint = "/h/dashboard/emergency-fund"
+        result, _ = self.web_get(endpoint)
+        self.assertIn("No budget", result)
+        self.assertRegex(
+            result,
+            r"<script>emergencyFundChart\.updateDashboard\("
+            r'.*"balances": \[.+\].*\)</script>',
+        )
+
+        # Add a budget
+        with p.get_session() as s:
+            b = Budget(date_ord=today_ord, amount=-10)
+            s.add(b)
+            s.commit()
+
+        result, _ = self.web_get(endpoint)
+        self.assertIn("increase your fund to at least $30.", result)
+        self.assertRegex(
+            result,
+            r"<script>emergencyFundChart\.updateDashboard\("
+            r'.*"balances": \[.+\].*\)</script>',
+        )
+
+        # Add account to emergency fund
+        with p.get_session() as s:
+            acct = s.query(Account).first()
+            if acct is None:
+                self.fail("Account is missing")
+            acct.emergency = True
+            s.commit()
+        result, _ = self.web_get(endpoint)
+        self.assertIn("$30 could be invested", result)
+
+        # Adjust budget to be mid and add closed account
+        with p.get_session() as s:
+            b = s.query(Budget).first()
+            if b is None:
+                self.fail("Budget is missing")
+            b.amount = Decimal(-20)
+
+            acct = Account(
+                name=self.random_string(),
+                institution=self.random_string(),
+                category=AccountCategory.CASH,
+                closed=True,
+                emergency=True,
+            )
+            s.add(acct)
+            s.commit()
+        result, _ = self.web_get(endpoint)
+        self.assertIn("cover 4 months of expenses.", result)
+
+        # Adjust budget to be low
+        with p.get_session() as s:
+            b = s.query(Budget).first()
+            if b is None:
+                self.fail("Budget is missing")
+            b.amount = Decimal(-40)
+            s.commit()
+        result, _ = self.web_get(endpoint)
+        self.assertIn("Try to increase your fund to at least $120.", result)

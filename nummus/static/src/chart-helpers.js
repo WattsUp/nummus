@@ -134,7 +134,7 @@ function formatMoneyTicks(value, index, ticks) {
 
 
 /**
- * Format ticks as money
+ * Format ticks as date
  *
  * @param {Number} value Value of current tick
  * @param {Number} index Index of current tick
@@ -177,6 +177,43 @@ function formatDateTicks(value, index, ticks) {
 }
 
 /**
+ * Format ticks as month string
+ *
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
+ */
+function formatDateTicksMonths(value, index, ticks) {
+    if (index == 0) {
+        const chart = this.chart;
+        const labels = chart.data.labels;
+        const months = {
+            '01': 'Jan',
+            '02': 'Feb',
+            '03': 'Mar',
+            '04': 'Apr',
+            '05': 'May',
+            '06': 'Jun',
+            '07': 'Jul',
+            '08': 'Aug',
+            '09': 'Sep',
+            '10': 'Oct',
+            '11': 'Nov',
+            '12': 'Dec',
+        };
+        ticks.forEach((t, i) => {
+            let l = labels[i];
+            if (l.slice(-2) == '01') {
+                console.log(l.slice(4, 7));
+                t.label = months[l.slice(5, 7)];
+            }
+        });
+    }
+    return ticks[index].label;
+}
+
+/**
  * Compute the average of an array
  *
  * @param {Array} array Array to compute over
@@ -205,4 +242,38 @@ function widenRange(min, max, amount) {
     const center = (min + max) / 2;
     const range = (max - min) * (1 + amount);
     return {min: center - range / 2, max: center + range / 2};
+}
+
+/**
+ * Check if item is object
+ *
+ * @param {Object} item to check
+ * @return {Boolean} true if item is an object
+ */
+function isObject(item) {
+    return (item && typeof item === 'object' && !Array.isArray(item));
+}
+
+/**
+ * Merge nested objects
+ *
+ * @param {Object} target Target object to merge into
+ * @param {Object} sources Object keys to override
+ * @return {Object} Merged objects
+ */
+function merge(target, ...sources) {
+    if (!sources.length) return target;
+    const source = sources.shift();
+
+    if (isObject(target) && isObject(source)) {
+        for (const key in source) {
+            if (isObject(source[key])) {
+                if (!target[key]) Object.assign(target, {[key]: {}});
+                merge(target[key], source[key]);
+            } else {
+                Object.assign(target, {[key]: source[key]});
+            }
+        }
+    }
+    return merge(target, ...sources);
 }

@@ -107,6 +107,19 @@ def page() -> str:
     )
 
 
+def dashboard() -> str:
+    """GET /h/dashboard/emergency-fund.
+
+    Returns:
+        string HTML response
+    """
+    return flask.render_template(
+        "emergency-fund/dashboard.jinja",
+        e_fund=ctx_page(),
+    )
+
+
 ROUTES: t.Routes = {
     "/emergency-fund": (page, ["GET"]),
+    "/h/dashboard/emergency-fund": (dashboard, ["GET"]),
 }
