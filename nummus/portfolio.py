@@ -586,21 +586,27 @@ class Portfolio:
 
     def clean(self) -> None:
         """Delete any unused files, creates a new backup."""
-        # Create a backup
+        # Create a backup before optimizations
         path_backup, _ = self.backup()
+
+        # Prune unused AssetValuations
+        with self.get_session() as s:
+            for asset in s.query(Asset).all():
+                asset.prune_valuations()
+            s.commit()
 
         # Optimize database
         with self.get_session() as s:
             s.execute(sqlalchemy.text("VACUUM"))
+            s.commit()
 
-        # Backup again
-        path_backup, _ = self.backup()
+        path_backup_optimized, _ = self.backup()
 
-        # Delete all files that start with name except path_backup
+        # Delete all files that start with name except the fresh backups
         parent = self._path_db.parent
         name = self._path_db.with_suffix("").name
         for file in parent.iterdir():
-            if file == path_backup:
+            if file in (path_backup, path_backup_optimized):
                 continue
             if file == self._path_importers:
                 continue
@@ -611,10 +617,18 @@ class Portfolio:
                     file.unlink()
 
         # Move backup to i=1
-        shutil.move(path_backup, parent.joinpath(f"{name}.backup1.tar.gz"))
+        path_new = parent.joinpath(f"{name}.backup1.tar.gz")
+        shutil.move(path_backup, path_new)
 
-        # Restore
-        Portfolio.restore(self, tar_ver=1)
+        # Move optimized backup to i=2
+        path_new = parent.joinpath(f"{name}.backup2.tar.gz")
+        shutil.move(path_backup_optimized, path_new)
+
+        # Restore the optimized version
+        Portfolio.restore(self, tar_ver=2)
+
+        # Delete optimized backup version since that is the live version
+        path_new.unlink()
 
     @staticmethod
     def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
