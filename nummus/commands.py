@@ -171,6 +171,9 @@ def restore(
     try:
         if list_ver:
             backups = portfolio.Portfolio.backups(path_db)
+            if len(backups) == 0:
+                print(f"{Fore.RED}No backups found, run nummus backup")
+                return 0
             now = datetime.datetime.now(datetime.timezone.utc)
             for ver, ts in backups:
                 ago_s = (now - ts).total_seconds()

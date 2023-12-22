@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import sqlalchemy
@@ -11,6 +12,7 @@ from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
+from nummus.models.transaction import TransactionSplit
 
 
 class AssetSplit(Base):
@@ -249,3 +251,87 @@ class Asset(Base):
             while len(splits) >= 1 and t_split.date_ord < splits[0][0]:
                 multiplier = splits.pop(0)[1]
             t_split.adjust_asset_quantity(multiplier)
+
+    def prune_valuations(self) -> int:
+        """Remove valuations that are not neede due to zero quantity being held.
+
+        Does not commit changes, call s.commit() afterwards.
+
+        Returns:
+            Number of AssetValuations pruned
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        # Date when quantity is zero
+        date_ord_zero: int | None = None
+        date_ord_non_zero: int | None = None
+        current_qty = Decimal(0)
+
+        periods_zero: list[tuple[int | None, int | None]] = []
+
+        query = s.query(TransactionSplit)
+        query = query.with_entities(
+            TransactionSplit.date_ord,
+            TransactionSplit._asset_qty_int,  # noqa: SLF001
+            TransactionSplit._asset_qty_frac,  # noqa: SLF001
+        )
+        query = query.where(TransactionSplit.asset_id == self.id_)
+        query = query.order_by(TransactionSplit.date_ord)
+        for date_ord, qty_i, qty_f in query.yield_per(YIELD_PER):
+            date_ord: int
+            qty_i: int
+            qty_f: Decimal
+
+            if current_qty == 0:
+                # Bought some, record the period when zero
+                date_ord_non_zero = date_ord
+                periods_zero.append((date_ord_zero, date_ord_non_zero))
+                date_ord_zero = None
+            current_qty += qty_i + qty_f
+            if current_qty == 0:
+                # Went back to zero
+                date_ord_zero = date_ord
+                date_ord_non_zero = None
+        # Add last zero period if ended with zero
+        if current_qty == 0 and date_ord_zero is not None:
+            periods_zero.append((date_ord_zero, date_ord_non_zero))
+
+        n_deleted = 0
+        for date_ord_sell, date_ord_buy in periods_zero:
+            trim_start: int | None = None
+            trim_end: int | None = None
+            if date_ord_sell is not None:
+                # Get date of oldest valuation after the sell
+                query = s.query(sqlalchemy.func.min(AssetValuation.date_ord))
+                query = query.where(AssetValuation.asset_id == self.id_)
+                query = query.where(AssetValuation.date_ord > date_ord_sell)
+                trim_start = query.scalar()
+
+            if date_ord_buy is not None:
+                # Get date of most recent valuation before the buy
+                query = s.query(sqlalchemy.func.max(AssetValuation.date_ord))
+                query = query.where(AssetValuation.asset_id == self.id_)
+                query = query.where(AssetValuation.date_ord < date_ord_buy)
+                trim_end = query.scalar()
+
+            if trim_start is None and trim_end is None:
+                # Can happen if no valuations exist before/after a transaction
+                continue
+
+            query = s.query(AssetValuation)
+            query = query.where(AssetValuation.asset_id == self.id_)
+            if trim_start:
+                query = query.where(AssetValuation.date_ord > trim_start)
+            if trim_end:
+                query = query.where(AssetValuation.date_ord < trim_end)
+            n_deleted += query.count()
+
+            print(
+                f"Deleting {query.count()} valuations for {self.name} "
+                f"{trim_start and datetime.date.fromordinal(trim_start)} to "
+                f"{trim_end and datetime.date.fromordinal(trim_end)}",
+            )
+            query.delete()
+        return n_deleted
