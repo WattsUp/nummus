@@ -1,22 +1,19 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
 
 import numpy as np
 
 from nummus import exceptions as exc
-from nummus.models import base_uri
+from nummus.models import _TABLES, base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
 from nummus.models.budget import Budget
 from nummus.models.credentials import Credentials
+from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 from tests.base import TestBase
-
-if TYPE_CHECKING:
-    from nummus.models.base import Base
 
 
 class TestBaseURI(TestBase):
@@ -75,11 +72,12 @@ class TestBaseURI(TestBase):
         self.assertLessEqual(std, 0.05)
 
     def test_table_ids(self) -> None:
-        models: list[type[Base]] = [
+        # Make sure all models are covered
+        tables = set(_TABLES)
+
+        models = [
             Account,
             Asset,
-            AssetSplit,
-            AssetValuation,
             Budget,
             Credentials,
             Transaction,
@@ -92,6 +90,25 @@ class TestBaseURI(TestBase):
             self.assertNotIn(t_id, table_ids)
             table_ids.add(t_id)
             self.assertEqual(t_id & base_uri.MASK_TABLE, t_id)
+
+            tables.remove(model.__table__)
+
+        # Models without a URI not made for front end access
+        models_none = [
+            AssetSplit,
+            AssetValuation,
+            ImportedFile,
+        ]
+        for model in models_none:
+            try:
+                t_id = model.__table_id__
+                self.assertIsNone(t_id)
+            except AttributeError:
+                # Not there works too
+                pass
+            tables.remove(model.__table__)
+
+        self.assertEqual(len(tables), 0)
 
     def test_to_bytes(self) -> None:
         cipher = base_uri.Cipher.generate()

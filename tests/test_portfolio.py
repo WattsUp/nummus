@@ -21,6 +21,7 @@ from nummus.models import (
     Transaction,
     TransactionCategory,
 )
+from nummus.models.asset import AssetValuation
 from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 
@@ -681,6 +682,9 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
         _ = portfolio.Portfolio.create(path_other_db)
 
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
@@ -700,8 +704,26 @@ class TestPortfolio(TestBase):
             s.add(acct)
             s.commit()
 
-            accounts = s.query(Account).all()
-            self.assertEqual(len(accounts), 1)
+            n = s.query(Account).count()
+            self.assertEqual(n, 1)
+
+            a = Asset(
+                name="BANANA",
+                category=AssetCategory.ITEM,
+            )
+            s.add(a)
+            s.commit()
+
+            av = AssetValuation(
+                asset_id=a.id_,
+                date_ord=today_ord,
+                value=self.random_decimal(-1, 1),
+            )
+            s.add(av)
+            s.commit()
+
+            n = s.query(AssetValuation).count()
+            self.assertEqual(n, 1)
 
         path_backup_1, tar_ver = p.backup()
         self.assertEqual(tar_ver, 1)
@@ -741,3 +763,14 @@ class TestPortfolio(TestBase):
         self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")
         self.assertFalse(path_backup_3.exists(), "Backup #3 does exist")
         self.assertFalse(path_backup_4.exists(), "Backup #4 does exist")
+
+        # Check AssetValuations were pruned
+        with p.get_session() as s:
+            n = s.query(AssetValuation).count()
+            self.assertEqual(n, 0)
+
+        # Validate restoring only backup goes back before the prune
+        portfolio.Portfolio.restore(p)
+        with p.get_session() as s:
+            n = s.query(AssetValuation).count()
+            self.assertEqual(n, 1)

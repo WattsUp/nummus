@@ -45,6 +45,19 @@ __all__ = [
     "metadata_create_all",
 ]
 
+_TABLES: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
+    Account.__table__,
+    Asset.__table__,
+    AssetSplit.__table__,
+    AssetValuation.__table__,
+    Budget.__table__,
+    Credentials.__table__,
+    ImportedFile.__table__,
+    Transaction.__table__,
+    TransactionCategory.__table__,
+    TransactionSplit.__table__,
+]
+
 
 def metadata_create_all(s: orm.Session) -> None:
     """Create all tables for nummus models.
@@ -54,17 +67,5 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    tables: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
-        Account.__table__,
-        Asset.__table__,
-        AssetSplit.__table__,
-        AssetValuation.__table__,
-        Budget.__table__,
-        Credentials.__table__,
-        ImportedFile.__table__,
-        Transaction.__table__,
-        TransactionCategory.__table__,
-        TransactionSplit.__table__,
-    ]
-    Base.metadata.create_all(s.get_bind(), tables)
+    Base.metadata.create_all(s.get_bind(), _TABLES)
     s.commit()

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
 
 import sqlalchemy
@@ -24,7 +23,7 @@ class AssetSplit(Base):
         multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
     """
 
-    __table_id__ = 0x20000000
+    # No __table_id__ because this is not user accessible
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     multiplier: t.ORMReal = orm.mapped_column(Decimal6)
@@ -40,7 +39,7 @@ class AssetValuation(Base):
         value: Value of assert
     """
 
-    __table_id__ = 0x30000000
+    # No __table_id__ because this is not user accessible
 
     asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: t.ORMReal = orm.mapped_column(Decimal6)
@@ -279,6 +278,14 @@ class Asset(Base):
         )
         query = query.where(TransactionSplit.asset_id == self.id_)
         query = query.order_by(TransactionSplit.date_ord)
+        if query.count() == 0:
+            # No transactions, prune all
+            return (
+                s.query(AssetValuation)
+                .where(AssetValuation.asset_id == self.id_)
+                .delete()
+            )
+
         for date_ord, qty_i, qty_f in query.yield_per(YIELD_PER):
             date_ord: int
             qty_i: int
@@ -326,12 +333,6 @@ class Asset(Base):
                 query = query.where(AssetValuation.date_ord > trim_start)
             if trim_end:
                 query = query.where(AssetValuation.date_ord < trim_end)
-            n_deleted += query.count()
+            n_deleted += query.delete()
 
-            print(
-                f"Deleting {query.count()} valuations for {self.name} "
-                f"{trim_start and datetime.date.fromordinal(trim_start)} to "
-                f"{trim_end and datetime.date.fromordinal(trim_end)}",
-            )
-            query.delete()
         return n_deleted

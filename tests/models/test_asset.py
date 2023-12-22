@@ -411,3 +411,174 @@ class TestAsset(TestBase):
         r_values = r_assets[a.id_]
         target_values = [value_yesterday, value_yesterday + value_today]
         self.assertEqual(r_values, target_values)
+
+    def test_prune_valuations(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        # Create assets and accounts
+        a = Asset(name="BANANA", category=AssetCategory.ITEM)
+        acct = Account(
+            name="Monkey Bank Checking",
+            institution="Monkey Bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            emergency=False,
+        )
+        t_cat = TransactionCategory(
+            name="Securities Traded",
+            group=TransactionCategoryGroup.OTHER,
+            locked=False,
+        )
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(exc.UnboundExecutionError, a.prune_valuations)
+
+        s.add_all((a, acct, t_cat))
+        s.commit()
+
+        for i in range(-3, 3 + 1):
+            av = AssetValuation(
+                asset_id=a.id_,
+                date_ord=today_ord + i,
+                value=self.random_decimal(-1, 1),
+            )
+            s.add(av)
+        s.commit()
+
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 7)
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 7)
+
+        # No transactions should prune all
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 0)
+
+        # prune_valuations doesn't commit so rollback should work
+        s.rollback()
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 7)
+
+        # Add a transaction on today
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=2,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 2)
+
+        # Should be left with one valuation before and all after
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 5)
+        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord - 1)
+        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord + 3)
+        s.rollback()
+
+        # Add sell some today
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=-1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+
+        # And remaining tomorrow
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord + 1,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=-1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 3)
+
+        # Should be left with one valuation before and one after
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 4)
+        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord - 1)
+        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord + 2)
+        s.rollback()
+
+        # Buy and sell some on the last day
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord + 3,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord + 3,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=-1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 2)
+
+        # Should be left with one valuation before and all after
+        n = s.query(AssetValuation).count()
+        self.assertEqual(n, 5)
+        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord - 1)
+        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        self.assertEqual(date_ord, today_ord + 3)
+        s.rollback()

@@ -467,6 +467,14 @@ class TestCommands(TestBase):
         p = portfolio.Portfolio(path_db, None)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            rc = commands.restore(path_db, None, list_ver=True)
+        self.assertEqual(rc, 0)
+
+        fake_stdout = fake_stdout.getvalue()
+        target = f"{Fore.RED}No backups found, run nummus backup"
+        self.assertEqual(fake_stdout[: len(target)], target)
+
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.backup(p)
         self.assertEqual(rc, 0)
 
