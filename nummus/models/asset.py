@@ -252,7 +252,7 @@ class Asset(Base):
             t_split.adjust_asset_quantity(multiplier)
 
     def prune_valuations(self) -> int:
-        """Remove valuations that are not neede due to zero quantity being held.
+        """Remove valuations that are not needed due to zero quantity being held.
 
         Does not commit changes, call s.commit() afterwards.
 
