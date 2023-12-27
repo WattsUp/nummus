@@ -1,4 +1,4 @@
-"""Net worth controllers."""
+"""Cash Flow controllers."""
 
 from __future__ import annotations
 
@@ -10,7 +10,13 @@ import sqlalchemy
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
-from nummus.models import Account, AccountCategory, TransactionSplit
+from nummus.models import (
+    Account,
+    AccountCategory,
+    TransactionCategory,
+    TransactionCategoryGroup,
+    TransactionSplit,
+)
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
@@ -37,8 +43,6 @@ def ctx_chart() -> t.DictAny:
     )
     category = args.get("category", None, type=AccountCategory)
 
-    accounts: list[t.DictAny] = []
-
     with p.get_session() as s:
         if start is None:
             query = s.query(TransactionSplit)
@@ -52,6 +56,7 @@ def ctx_chart() -> t.DictAny:
             )
         start_ord = start.toordinal()
         end_ord = end.toordinal()
+        n = end_ord - start_ord + 1
 
         query = s.query(Account)
         if category is not None:
@@ -64,19 +69,30 @@ def ctx_chart() -> t.DictAny:
             if (not acct.closed or acct.updated_on_ord > start_ord)
         ]
 
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
+        cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
+        income_daily: list[t.Real | None] = [None] * n
+        expenses_daily: list[t.Real | None] = [None] * n
 
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+        query = s.query(TransactionCategory)
+        query = query.with_entities(
+            TransactionCategory.id_,
+            TransactionCategory.group,
+        )
+        for cat_id, group in query.all():
+            add_to: list[t.Real | None] | None = None
+            if group == TransactionCategoryGroup.INCOME:
+                add_to = income_daily
+            elif group == TransactionCategoryGroup.EXPENSE:
+                add_to = expenses_daily
+            else:
+                continue
+            for i, amount in enumerate(cash_flow[cat_id]):
+                v = add_to[i]
+                add_to[i] = amount if v is None else v + amount
 
-        mapping = Account.map_name(s)
-
-        for acct_id, values in acct_values.items():
-            accounts.append(
-                {
-                    "name": mapping[acct_id],
-                    "values": values,
-                },
-            )
+        income = utils.integrate(income_daily)
+        expenses = utils.integrate(expenses_daily)
+        total = [i + e for i, e in zip(income, expenses, strict=True)]
 
     return {
         "start": start,
@@ -85,7 +101,8 @@ def ctx_chart() -> t.DictAny:
         "data": {
             "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
             "total": total,
-            "accounts": accounts,
+            "income": income,
+            "expenses": expenses,
         },
         "category": category,
         "category_type": AccountCategory,
@@ -93,73 +110,44 @@ def ctx_chart() -> t.DictAny:
 
 
 def page() -> str:
-    """GET /net-worth.
+    """GET /cash-flow.
 
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    with p.get_session() as s:
-        acct_values, _ = Account.get_value_all(s, today_ord, today_ord)
-        current = sum(item[0] for item in acct_values.values())
     return common.page(
-        "net-worth/index-content.jinja",
+        "cash-flow/index-content.jinja",
         chart=ctx_chart(),
-        current=current,
     )
 
 
 def chart() -> str:
-    """GET /h/net-worth/chart.
+    """GET /h/cash-flow/chart.
 
     Returns:
         string HTML response
     """
     return flask.render_template(
-        "net-worth/chart-data.jinja",
+        "cash-flow/chart-data.jinja",
         chart=ctx_chart(),
         include_oob=True,
     )
 
 
 def dashboard() -> str:
-    """GET /h/dashboard/net-worth.
+    """GET /h/dashboard/cash-flow.
 
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    with p.get_session() as s:
-        end_ord = today_ord
-        start = utils.date_add_months(today, -6)
-        start_ord = start.toordinal()
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
-
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
-
-    chart = {
-        "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "total": total,
-        },
-        "current": total[-1],
-    }
+    raise NotImplementedError
     return flask.render_template(
-        "net-worth/dashboard.jinja",
-        chart=chart,
+        "cash-flow/dashboard.jinja",
     )
 
 
 ROUTES: t.Routes = {
-    "/net-worth": (page, ["GET"]),
-    "/h/net-worth/chart": (chart, ["GET"]),
-    "/h/dashboard/net-worth": (dashboard, ["GET"]),
+    "/cash-flow": (page, ["GET"]),
+    "/h/cash-flow/chart": (chart, ["GET"]),
+    "/h/dashboard/cash-flow": (dashboard, ["GET"]),
 }
