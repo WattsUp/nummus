@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import flask
@@ -69,41 +70,74 @@ def ctx_chart() -> t.DictAny:
             if (not acct.closed or acct.updated_on_ord > start_ord)
         ]
 
-        cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
-        income_daily: list[t.Real | None] = [None] * n
-        expenses_daily: list[t.Real | None] = [None] * n
-
+        # Categorize whole period
         query = s.query(TransactionCategory)
         query = query.with_entities(
             TransactionCategory.id_,
+            TransactionCategory.name,
             TransactionCategory.group,
         )
-        for cat_id, group in query.all():
-            add_to: list[t.Real | None] | None = None
+        categories_incomes: t.DictIntStr = {}
+        categories_expenses: t.DictIntStr = {}
+        for cat_id, name, group in query.all():
             if group == TransactionCategoryGroup.INCOME:
-                add_to = income_daily
+                categories_incomes[cat_id] = name
             elif group == TransactionCategoryGroup.EXPENSE:
-                add_to = expenses_daily
-            else:
-                continue
-            for i, amount in enumerate(cash_flow[cat_id]):
-                v = add_to[i]
-                add_to[i] = amount if v is None else v + amount
+                categories_expenses[cat_id] = name
 
-        income = utils.integrate(income_daily)
-        expenses = utils.integrate(expenses_daily)
-        total = [i + e for i, e in zip(income, expenses, strict=True)]
+        query = s.query(TransactionSplit)
+        query = query.with_entities(
+            TransactionSplit.category_id,
+            sqlalchemy.func.sum(TransactionSplit.amount),
+        )
+        query = query.where(TransactionSplit.account_id.in_(ids))
+        query = query.where(TransactionSplit.date_ord >= start_ord)
+        query = query.where(TransactionSplit.date_ord <= end_ord)
+        query = query.group_by(TransactionSplit.category_id)
+        incomes: list[t.DictAny] = []
+        expenses: list[t.DictAny] = []
+        total_income = Decimal(0)
+        total_expense = Decimal(0)
+        for cat_id, amount in query.all():
+            cat_id: int
+            amount: t.Real
+            if cat_id in categories_incomes:
+                incomes.append(
+                    {
+                        "name": categories_incomes[cat_id],
+                        "amount": amount,
+                    },
+                )
+                total_income += amount
+            elif cat_id in categories_expenses:
+                expenses.append(
+                    {
+                        "name": categories_expenses[cat_id],
+                        "amount": -amount,  # Flip the sign
+                    },
+                )
+                total_expense += amount
+        data: t.DictAny = {
+            "total_income": total_income,
+            "total_expense": -total_expense,  # Flip the sign
+            "incomes_categorized": sorted(incomes, key=lambda item: -item["amount"]),
+            "expenses_categorized": sorted(expenses, key=lambda item: -item["amount"]),
+        }
+
+        # For the timeseries,
+        # If n > 400, sum by years and make bars
+        # elif n > 80, sum by months and make bars
+        # else make daily; and if period = this month or last month include previous
+        # period
+
+        data["dates"] = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
+        data["total"] = [Decimal(0)] * n
 
     return {
         "start": start,
         "end": end,
         "period": period,
-        "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "total": total,
-            "income": income,
-            "expenses": expenses,
-        },
+        "data": data,
         "category": category,
         "category_type": AccountCategory,
     }

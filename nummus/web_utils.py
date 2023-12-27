@@ -15,6 +15,10 @@ if TYPE_CHECKING:
 
 MAX_IMAGE_SIZE = int(1e6)
 
+LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
+LIMIT_PLOT_MONTHS = 80  # if n_days > LIMIT_PLOT_MONTHS then plot by months
+# else plot normally by days
+
 
 def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
     """Find the matching object by URI.

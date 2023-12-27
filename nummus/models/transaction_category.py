@@ -89,7 +89,6 @@ class TransactionCategory(Base):
                 "Home Improvement": False,
                 "Home Maintenance": False,
                 "Insurance": False,
-                "Loans": False,
                 "Mortgages": False,
                 "Office Maintenance": False,
                 "Office Supplies": False,
@@ -119,6 +118,7 @@ class TransactionCategory(Base):
                 "Transfers": True,
                 "Uncategorized": True,
                 "Fraud": False,
+                "Loans": False,
             },
         }
 
