@@ -2,11 +2,11 @@
     <div class="w-full">
         <div id="{{ name }}-chart-bar"
              class="w-full flex opacity-0 transition-opacity text-sm">
-            <div class="w-1/2 flex justify-end gap-4">
+            <div class="min-w-[50%] flex justify-end gap-4">
                 <div id="{{ name }}-chart-date" class="w-28 text-right"></div>
                 <div id="{{ name }}-chart-value" class="w-28 text-right">$</div>
             </div>
-            <div class="w-1/2 flex justify-end gap-4 {% if no_change %}hidden{% endif %}">
+            <div class="min-w-[50%] flex justify-end gap-4 {% if no_change %}hidden{% endif %}">
                 <div id="{{ name }}-chart-change-label">1-Day Change</div>
                 <div id="{{ name }}-chart-change" class="mr-12 w-28 text-right"></div>
             </div>
