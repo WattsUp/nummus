@@ -16,18 +16,26 @@ const cashFlowChart = {
      */
     update: function(raw) {
         'use strict';
-        const dates = raw.dates;
-        const values = raw.total.map(v => Number(v));
-        const incomes_categorized = raw.incomes_categorized.map(a => {
+        const chartBars = raw.chart_bars;
+        const labels = raw.labels;
+        const totals = raw.totals.map(v => Number(v));
+        const incomes = raw.incomes.map(v => Number(v));
+        const expenses = raw.expenses.map(v => Number(v));
+        const incomesCategorized = raw.incomes_categorized.map(a => {
             a.amount = Number(a.amount);
             return a;
         });
-        const expenses_categorized = raw.expenses_categorized.map(a => {
-            a.amount = Number(a.amount);
+        const expensesCategorized = raw.expenses_categorized.map(a => {
+            a.amount = -Number(a.amount);
             return a;
         });
-        console.log(incomes_categorized);
-        console.log(expenses_categorized);
+        console.log(chartBars);
+        console.log(labels);
+        console.log(totals);
+        console.log(incomes);
+        console.log(expenses);
+        console.log(incomesCategorized);
+        console.log(expensesCategorized);
 
         const width = 65;
 

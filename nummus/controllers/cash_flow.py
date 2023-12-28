@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 import flask
 import sqlalchemy
+from sqlalchemy import orm
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
@@ -94,15 +95,15 @@ def ctx_chart() -> t.DictAny:
         query = query.where(TransactionSplit.date_ord >= start_ord)
         query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.group_by(TransactionSplit.category_id)
-        incomes: list[t.DictAny] = []
-        expenses: list[t.DictAny] = []
+        incomes_categorized: list[t.DictAny] = []
+        expenses_categorized: list[t.DictAny] = []
         total_income = Decimal(0)
         total_expense = Decimal(0)
         for cat_id, amount in query.all():
             cat_id: int
             amount: t.Real
             if cat_id in categories_incomes:
-                incomes.append(
+                incomes_categorized.append(
                     {
                         "name": categories_incomes[cat_id],
                         "amount": amount,
@@ -110,37 +111,127 @@ def ctx_chart() -> t.DictAny:
                 )
                 total_income += amount
             elif cat_id in categories_expenses:
-                expenses.append(
+                expenses_categorized.append(
                     {
                         "name": categories_expenses[cat_id],
-                        "amount": -amount,  # Flip the sign
+                        "amount": amount,
                     },
                 )
                 total_expense += amount
-        data: t.DictAny = {
-            "total_income": total_income,
-            "total_expense": -total_expense,  # Flip the sign
-            "incomes_categorized": sorted(incomes, key=lambda item: -item["amount"]),
-            "expenses_categorized": sorted(expenses, key=lambda item: -item["amount"]),
-        }
 
         # For the timeseries,
         # If n > 400, sum by years and make bars
         # elif n > 80, sum by months and make bars
-        # else make daily; and if period = this month or last month include previous
-        # period
+        # else make daily
+        # TODO (WattsUp): Add a previous dailys when period is months
+        labels: t.Strings = []
+        incomes: t.Reals = []
+        expenses: t.Reals = []
+        chart_bars = False
 
-        data["dates"] = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
-        data["total"] = [Decimal(0)] * n
+        periods: dict[str, tuple[int, int]] | None = None
+        if n > web_utils.LIMIT_PLOT_YEARS:
+            # Sum for each year in period
+            periods = utils.period_years(start_ord, end_ord)
+
+        elif n > web_utils.LIMIT_PLOT_MONTHS:
+            periods = utils.period_months(start_ord, end_ord)
+        else:
+            # Daily amounts
+            labels = [date.isoformat() for date in utils.range_date(start_ord, end_ord)]
+            cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
+            incomes_daily: t.Reals = [Decimal(0)] * n
+            expenses_daily: t.Reals = [Decimal(0)] * n
+            for cat_id, dailys in cash_flow.items():
+                add_to: t.Reals | None = None
+                if cat_id in categories_incomes:
+                    add_to = incomes_daily
+                elif cat_id in categories_expenses:
+                    add_to = expenses_daily
+                else:
+                    continue
+                for i, amount in enumerate(dailys):
+                    add_to[i] += amount
+            incomes = utils.integrate(incomes_daily)
+            expenses = utils.integrate(expenses_daily)
+
+        if periods is not None:
+            chart_bars = True
+            for label, limits in periods.items():
+                labels.append(label)
+                i, e = sum_income_expenses(
+                    s,
+                    limits[0],
+                    limits[1],
+                    ids,
+                    set(categories_incomes),
+                    set(categories_expenses),
+                )
+                incomes.append(i)
+                expenses.append(e)
+
+        totals = [i + e for i, e in zip(incomes, expenses, strict=True)]
 
     return {
         "start": start,
         "end": end,
         "period": period,
-        "data": data,
+        "data": {
+            "total_income": total_income,
+            "total_expense": total_expense,
+            "incomes_categorized": incomes_categorized,
+            "expenses_categorized": expenses_categorized,
+            "chart_bars": chart_bars,
+            "labels": labels,
+            "totals": totals,
+            "incomes": incomes,
+            "expenses": expenses,
+        },
         "category": category,
         "category_type": AccountCategory,
     }
+
+
+def sum_income_expenses(
+    s: orm.Session,
+    start_ord: int,
+    end_ord: int,
+    ids: t.Ints | set[int],
+    categories_incomes: set[int],
+    categories_expenses: set[int],
+) -> tuple[t.Real, t.Real]:
+    """Sum income and expenses from start to end.
+
+    Args:
+        s: SQL session to use
+        start_ord: First date ordinal to evaluate
+        end_ord: Last date ordinal to evaluate (inclusive)
+        ids: Limit results to specific Accounts by ID
+        categories_incomes: Set of TransactionCategory.id_ for incomes
+        categories_expenses: Set of TransactionCategory.id_ for expenses
+
+    Returns:
+        income, expenses
+    """
+    income = Decimal(0)
+    expenses = Decimal(0)
+
+    query = s.query(TransactionSplit)
+    query = query.with_entities(
+        TransactionSplit.category_id,
+        sqlalchemy.func.sum(TransactionSplit.amount),
+    )
+    query = query.where(TransactionSplit.account_id.in_(ids))
+    query = query.where(TransactionSplit.date_ord >= start_ord)
+    query = query.where(TransactionSplit.date_ord <= end_ord)
+    query = query.group_by(TransactionSplit.category_id)
+    for cat_id, amount in query.all():
+        if cat_id in categories_incomes:
+            income += amount
+        elif cat_id in categories_expenses:
+            expenses += amount
+
+    return income, expenses
 
 
 def page() -> str:
