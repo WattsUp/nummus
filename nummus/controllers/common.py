@@ -70,8 +70,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     with p.get_session() as s:
         # Get basic info
         accounts: dict[int, t.DictAny] = {}
-        query = s.query(Account)
-        query = query.with_entities(
+        query = s.query(Account).with_entities(
             Account.id_,
             Account.name,
             Account.institution,
@@ -95,12 +94,14 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
                 n_closed += 1
 
         # Get updated_on
-        query = s.query(Transaction)
-        query = query.with_entities(
-            Transaction.account_id,
-            sqlalchemy.func.max(Transaction.date_ord),
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.account_id,
+                sqlalchemy.func.max(Transaction.date_ord),
+            )
+            .group_by(Transaction.account_id)
         )
-        query = query.group_by(Transaction.account_id)
         for acct_id, updated_on_ord in query.all():
             acct_id: int
             updated_on_ord: int

@@ -112,8 +112,7 @@ class Asset(Base):
         # Get a list of valuations (date offset, value) for each Asset
         valuations_assets: dict[int, list[tuple[int, t.Real]]] = {}
         interpolated_assets: set[int] = set()
-        query = s.query(Asset)
-        query = query.with_entities(Asset.id_, Asset.interpolate)
+        query = s.query(Asset).with_entities(Asset.id_, Asset.interpolate)
         if ids is not None:
             query = query.where(Asset.id_.in_(ids))
         for a_id, interpolate in query.all():
@@ -124,16 +123,18 @@ class Asset(Base):
                 interpolated_assets.add(a_id)
 
         # Get latest Valuation before or including start date
-        query = s.query(AssetValuation)
-        query = query.with_entities(
-            AssetValuation.asset_id,
-            sqlalchemy.func.max(AssetValuation.date_ord),
-            AssetValuation.value,
+        query = (
+            s.query(AssetValuation)
+            .with_entities(
+                AssetValuation.asset_id,
+                sqlalchemy.func.max(AssetValuation.date_ord),
+                AssetValuation.value,
+            )
+            .where(AssetValuation.date_ord <= start_ord)
+            .group_by(AssetValuation.asset_id)
         )
-        query = query.where(AssetValuation.date_ord <= start_ord)
         if ids is not None:
             query = query.where(AssetValuation.asset_id.in_(ids))
-        query = query.group_by(AssetValuation.asset_id)
         for a_id, date_ord, v in query.all():
             a_id: int
             date_ord: int
@@ -143,14 +144,18 @@ class Asset(Base):
 
         if start_ord != end_ord:
             # Transactions between start and end
-            query = s.query(AssetValuation)
-            query = query.with_entities(
-                AssetValuation.asset_id,
-                AssetValuation.date_ord,
-                AssetValuation.value,
+            query = (
+                s.query(AssetValuation)
+                .with_entities(
+                    AssetValuation.asset_id,
+                    AssetValuation.date_ord,
+                    AssetValuation.value,
+                )
+                .where(
+                    AssetValuation.date_ord <= end_ord,
+                    AssetValuation.date_ord > start_ord,
+                )
             )
-            query = query.where(AssetValuation.date_ord <= end_ord)
-            query = query.where(AssetValuation.date_ord > start_ord)
             if ids is not None:
                 query = query.where(AssetValuation.asset_id.in_(ids))
 
@@ -168,15 +173,19 @@ class Asset(Base):
                     valuations_assets[a_id] = [(i, v)]
 
         # Get interpolation point for assets with interpolation
-        query = s.query(AssetValuation)
-        query = query.with_entities(
-            AssetValuation.asset_id,
-            sqlalchemy.func.min(AssetValuation.date_ord),
-            AssetValuation.value,
+        query = (
+            s.query(AssetValuation)
+            .with_entities(
+                AssetValuation.asset_id,
+                sqlalchemy.func.min(AssetValuation.date_ord),
+                AssetValuation.value,
+            )
+            .where(
+                AssetValuation.date_ord > end_ord,
+                AssetValuation.asset_id.in_(interpolated_assets),
+            )
+            .group_by(AssetValuation.asset_id)
         )
-        query = query.where(AssetValuation.date_ord > end_ord)
-        query = query.where(AssetValuation.asset_id.in_(interpolated_assets))
-        query = query.group_by(AssetValuation.asset_id)
         for a_id, date_ord, v in query.all():
             a_id: int
             date_ord: int
@@ -226,10 +235,12 @@ class Asset(Base):
         multiplier = Decimal(1)
         splits: list[tuple[int, t.Real]] = []
 
-        query = s.query(AssetSplit)
-        query = query.with_entities(AssetSplit.date_ord, AssetSplit.multiplier)
-        query = query.where(AssetSplit.asset_id == self.id_)
-        query = query.order_by(AssetSplit.date_ord.desc())
+        query = (
+            s.query(AssetSplit)
+            .with_entities(AssetSplit.date_ord, AssetSplit.multiplier)
+            .where(AssetSplit.asset_id == self.id_)
+            .order_by(AssetSplit.date_ord.desc())
+        )
 
         for s_date_ord, s_multiplier in query.all():
             s_date_ord: int
@@ -238,9 +249,11 @@ class Asset(Base):
             multiplier = multiplier * s_multiplier
             splits.append((s_date_ord, multiplier))
 
-        query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.asset_id == self.id_)
-        query = query.order_by(TransactionSplit.date_ord.desc())
+        query = (
+            s.query(TransactionSplit)
+            .where(TransactionSplit.asset_id == self.id_)
+            .order_by(TransactionSplit.date_ord.desc())
+        )
 
         multiplier = Decimal(1)
         for t_split in query.all():
@@ -270,14 +283,16 @@ class Asset(Base):
 
         periods_zero: list[tuple[int | None, int | None]] = []
 
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.date_ord,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            )
+            .where(TransactionSplit.asset_id == self.id_)
+            .order_by(TransactionSplit.date_ord)
         )
-        query = query.where(TransactionSplit.asset_id == self.id_)
-        query = query.order_by(TransactionSplit.date_ord)
         if query.count() == 0:
             # No transactions, prune all
             return (
@@ -311,24 +326,25 @@ class Asset(Base):
             trim_end: int | None = None
             if date_ord_sell is not None:
                 # Get date of oldest valuation after the sell
-                query = s.query(sqlalchemy.func.min(AssetValuation.date_ord))
-                query = query.where(AssetValuation.asset_id == self.id_)
-                query = query.where(AssetValuation.date_ord > date_ord_sell)
+                query = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).where(
+                    AssetValuation.asset_id == self.id_,
+                    AssetValuation.date_ord > date_ord_sell,
+                )
                 trim_start = query.scalar()
 
             if date_ord_buy is not None:
                 # Get date of most recent valuation before the buy
-                query = s.query(sqlalchemy.func.max(AssetValuation.date_ord))
-                query = query.where(AssetValuation.asset_id == self.id_)
-                query = query.where(AssetValuation.date_ord < date_ord_buy)
+                query = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).where(
+                    AssetValuation.asset_id == self.id_,
+                    AssetValuation.date_ord < date_ord_buy,
+                )
                 trim_end = query.scalar()
 
             if trim_start is None and trim_end is None:
                 # Can happen if no valuations exist before/after a transaction
                 continue
 
-            query = s.query(AssetValuation)
-            query = query.where(AssetValuation.asset_id == self.id_)
+            query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
             if trim_start:
                 query = query.where(AssetValuation.date_ord > trim_start)
             if trim_end:

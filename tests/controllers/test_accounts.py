@@ -203,6 +203,14 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
+        queries = {"period": "all"}
+        result, _ = self.web_get(endpoint, queries)
+        self.assertRegex(result, r"<div .*>Uncategorized</div>")
+        self.assertRegex(result, r"<div .*>\$100.00</div>")
+        self.assertRegex(result, r"<div .*>-\$10.00</div>")
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+
     def test_options(self) -> None:
         d = self._setup_portfolio()
 
