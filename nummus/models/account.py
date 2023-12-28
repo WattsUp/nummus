@@ -59,25 +59,25 @@ class Account(Base):
         return super().validate_strings(key, field)
 
     @property
-    def opened_on_ord(self) -> int:
+    def opened_on_ord(self) -> int | None:
         """Date ordinal of first Transaction."""
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
-        query = s.query(Transaction)
-        query = query.with_entities(sqlalchemy.func.min(Transaction.date_ord))
-        query = query.where(Transaction.account_id == self.id_)
+        query = s.query(sqlalchemy.func.min(Transaction.date_ord)).where(
+            Transaction.account_id == self.id_,
+        )
         return query.scalar()
 
     @property
-    def updated_on_ord(self) -> int:
+    def updated_on_ord(self) -> int | None:
         """Date ordinal of latest Transaction."""
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
-        query = s.query(Transaction)
-        query = query.with_entities(sqlalchemy.func.max(Transaction.date_ord))
-        query = query.where(Transaction.account_id == self.id_)
+        query = s.query(sqlalchemy.func.max(Transaction.date_ord)).where(
+            Transaction.account_id == self.id_,
+        )
         return query.scalar()
 
     @classmethod
@@ -111,15 +111,17 @@ class Account(Base):
             }
 
         # Get Account cash value on start date
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.account_id,
-            sqlalchemy.func.sum(TransactionSplit.amount),
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.account_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+            )
+            .where(TransactionSplit.date_ord <= start_ord)
+            .group_by(TransactionSplit.account_id)
         )
-        query = query.where(TransactionSplit.date_ord <= start_ord)
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        query = query.group_by(TransactionSplit.account_id)
         for acct_id, iv in query.all():
             acct_id: int
             iv: Decimal
@@ -129,14 +131,18 @@ class Account(Base):
             # Get cash_flow on each day between start and end
             # Not Account.get_cash_flow because being categorized doesn't matter and
             # slows it down
-            query = s.query(TransactionSplit)
-            query = query.with_entities(
-                TransactionSplit.account_id,
-                TransactionSplit.date_ord,
-                TransactionSplit.amount,
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.account_id,
+                    TransactionSplit.date_ord,
+                    TransactionSplit.amount,
+                )
+                .where(
+                    TransactionSplit.date_ord <= end_ord,
+                    TransactionSplit.date_ord > start_ord,
+                )
             )
-            query = query.where(TransactionSplit.date_ord <= end_ord)
-            query = query.where(TransactionSplit.date_ord > start_ord)
             if ids is not None:
                 query = query.where(TransactionSplit.account_id.in_(ids))
 
@@ -244,16 +250,20 @@ class Account(Base):
         }
 
         # Transactions between start and end
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.date_ord,
-            TransactionSplit.amount,
-            TransactionSplit.category_id,
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit.amount,
+                TransactionSplit.category_id,
+            )
+            .where(
+                TransactionSplit.date_ord <= end_ord,
+                TransactionSplit.date_ord >= start_ord,
+            )
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.where(TransactionSplit.date_ord >= start_ord)
 
         for t_date_ord, amount, category_id in query.yield_per(YIELD_PER):
             t_date_ord: int
@@ -317,18 +327,22 @@ class Account(Base):
 
         # Get Asset quantities on start date
         # Cannot do sql sum due to overflow fractional part
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.account_id,
-            TransactionSplit.asset_id,
-            TransactionSplit._asset_qty_int,  # noqa: SLF001
-            TransactionSplit._asset_qty_frac,  # noqa: SLF001
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.account_id,
+                TransactionSplit.asset_id,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            )
+            .where(
+                TransactionSplit.asset_id.is_not(None),
+                TransactionSplit.date_ord <= start_ord,
+            )
+            .order_by(TransactionSplit.account_id)
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        query = query.where(TransactionSplit.asset_id.is_not(None))
-        query = query.where(TransactionSplit.date_ord <= start_ord)
-        query = query.order_by(TransactionSplit.account_id)
 
         current_acct_id: int | None = None
         iv: t.DictIntReal = {}
@@ -361,20 +375,24 @@ class Account(Base):
 
         if start_ord != end_ord:
             # Transactions between start and end
-            query = s.query(TransactionSplit)
-            query = query.with_entities(
-                TransactionSplit.date_ord,
-                TransactionSplit.account_id,
-                TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.date_ord,
+                    TransactionSplit.account_id,
+                    TransactionSplit.asset_id,
+                    TransactionSplit._asset_qty_int,  # noqa: SLF001
+                    TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                )
+                .where(
+                    TransactionSplit.date_ord <= end_ord,
+                    TransactionSplit.date_ord > start_ord,
+                    TransactionSplit.asset_id.is_not(None),
+                )
+                .order_by(TransactionSplit.account_id)
             )
             if ids is not None:
                 query = query.where(TransactionSplit.account_id.in_(ids))
-            query = query.where(TransactionSplit.date_ord <= end_ord)
-            query = query.where(TransactionSplit.date_ord > start_ord)
-            query = query.where(TransactionSplit.asset_id.is_not(None))
-            query = query.order_by(TransactionSplit.account_id)
 
             current_acct_id = None
             deltas = {}

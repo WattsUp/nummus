@@ -106,8 +106,8 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
         "value": current_value,
         "closed": acct.closed,
         "emergency": acct.emergency,
-        "updated_days_ago": today_ord - acct.updated_on_ord,
-        "opened_days_ago": today_ord - acct.opened_on_ord,
+        "updated_days_ago": today_ord - (acct.updated_on_ord or today_ord),
+        "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),
     }
 
 
@@ -128,7 +128,11 @@ def ctx_chart(acct: Account) -> t.DictAny:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    start = start or datetime.date.fromordinal(acct.opened_on_ord)
+    if start is None:
+        opened_on_ord = acct.opened_on_ord
+        start = (
+            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
+        )
 
     PREVIOUS_PERIOD["start"] = start
     PREVIOUS_PERIOD["end"] = end
@@ -192,7 +196,13 @@ def table(uri: str) -> str:
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
-        start = start or datetime.date.fromordinal(acct.opened_on_ord)
+        if start is None:
+            opened_on_ord = acct.opened_on_ord
+            start = (
+                end
+                if opened_on_ord is None
+                else datetime.date.fromordinal(opened_on_ord)
+            )
         if PREVIOUS_PERIOD["start"] == start and PREVIOUS_PERIOD["end"] == end:
             return common.page(
                 "accounts/table.jinja",
@@ -240,13 +250,14 @@ def options(uri: str, field: str) -> str:
         )
         end_ord = end.toordinal()
 
-        query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.asset_id.is_(None))
+        query = s.query(TransactionSplit).where(
+            TransactionSplit.asset_id.is_(None),
+            TransactionSplit.date_ord <= end_ord,
+            TransactionSplit.account_id == acct.id_,
+        )
         if start is not None:
             start_ord = start.toordinal()
             query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.where(TransactionSplit.account_id == acct.id_)
 
         search_str = args.get(f"search-{field}")
 
