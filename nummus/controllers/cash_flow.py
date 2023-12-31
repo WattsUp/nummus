@@ -23,7 +23,7 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus import custom_types as t
 
-DEFAULT_PERIOD = "90-days"
+DEFAULT_PERIOD = "1-year"
 
 
 def ctx_chart() -> t.DictAny:
@@ -78,13 +78,13 @@ def ctx_chart() -> t.DictAny:
             TransactionCategory.name,
             TransactionCategory.group,
         )
-        categories_incomes: t.DictIntStr = {}
-        categories_expenses: t.DictIntStr = {}
+        categories_income: t.DictIntStr = {}
+        categories_expense: t.DictIntStr = {}
         for cat_id, name, group in query.all():
             if group == TransactionCategoryGroup.INCOME:
-                categories_incomes[cat_id] = name
+                categories_income[cat_id] = name
             elif group == TransactionCategoryGroup.EXPENSE:
-                categories_expenses[cat_id] = name
+                categories_expense[cat_id] = name
 
         query = s.query(TransactionSplit)
         query = query.with_entities(
@@ -95,25 +95,25 @@ def ctx_chart() -> t.DictAny:
         query = query.where(TransactionSplit.date_ord >= start_ord)
         query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.group_by(TransactionSplit.category_id)
-        incomes_categorized: list[t.DictAny] = []
-        expenses_categorized: list[t.DictAny] = []
+        income_categorized: list[t.DictAny] = []
+        expense_categorized: list[t.DictAny] = []
         total_income = Decimal(0)
         total_expense = Decimal(0)
         for cat_id, amount in query.all():
             cat_id: int
             amount: t.Real
-            if cat_id in categories_incomes:
-                incomes_categorized.append(
+            if cat_id in categories_income:
+                income_categorized.append(
                     {
-                        "name": categories_incomes[cat_id],
+                        "name": categories_income[cat_id],
                         "amount": amount,
                     },
                 )
                 total_income += amount
-            elif cat_id in categories_expenses:
-                expenses_categorized.append(
+            elif cat_id in categories_expense:
+                expense_categorized.append(
                     {
-                        "name": categories_expenses[cat_id],
+                        "name": categories_expense[cat_id],
                         "amount": amount,
                     },
                 )
@@ -140,32 +140,32 @@ def ctx_chart() -> t.DictAny:
             # Daily amounts
             labels = [date.isoformat() for date in utils.range_date(start_ord, end_ord)]
             cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
-            incomes_daily: t.Reals = [Decimal(0)] * n
-            expenses_daily: t.Reals = [Decimal(0)] * n
+            daily_income: t.Reals = [Decimal(0)] * n
+            daily_expense: t.Reals = [Decimal(0)] * n
             for cat_id, dailys in cash_flow.items():
                 add_to: t.Reals | None = None
-                if cat_id in categories_incomes:
-                    add_to = incomes_daily
-                elif cat_id in categories_expenses:
-                    add_to = expenses_daily
+                if cat_id in categories_income:
+                    add_to = daily_income
+                elif cat_id in categories_expense:
+                    add_to = daily_expense
                 else:
                     continue
                 for i, amount in enumerate(dailys):
                     add_to[i] += amount
-            incomes = utils.integrate(incomes_daily)
-            expenses = utils.integrate(expenses_daily)
+            incomes = utils.integrate(daily_income)
+            expenses = utils.integrate(daily_expense)
 
         if periods is not None:
             chart_bars = True
             for label, limits in periods.items():
                 labels.append(label)
-                i, e = sum_income_expenses(
+                i, e = sum_income_expense(
                     s,
                     limits[0],
                     limits[1],
                     ids,
-                    set(categories_incomes),
-                    set(categories_expenses),
+                    set(categories_income),
+                    set(categories_expense),
                 )
                 incomes.append(i)
                 expenses.append(e)
@@ -179,8 +179,8 @@ def ctx_chart() -> t.DictAny:
         "data": {
             "total_income": total_income,
             "total_expense": total_expense,
-            "incomes_categorized": incomes_categorized,
-            "expenses_categorized": expenses_categorized,
+            "income_categorized": income_categorized,
+            "expense_categorized": expense_categorized,
             "chart_bars": chart_bars,
             "labels": labels,
             "totals": totals,
@@ -192,29 +192,29 @@ def ctx_chart() -> t.DictAny:
     }
 
 
-def sum_income_expenses(
+def sum_income_expense(
     s: orm.Session,
     start_ord: int,
     end_ord: int,
     ids: t.Ints | set[int],
-    categories_incomes: set[int],
-    categories_expenses: set[int],
+    categories_income: set[int],
+    categories_expense: set[int],
 ) -> tuple[t.Real, t.Real]:
-    """Sum income and expenses from start to end.
+    """Sum income and expense from start to end.
 
     Args:
         s: SQL session to use
         start_ord: First date ordinal to evaluate
         end_ord: Last date ordinal to evaluate (inclusive)
         ids: Limit results to specific Accounts by ID
-        categories_incomes: Set of TransactionCategory.id_ for incomes
-        categories_expenses: Set of TransactionCategory.id_ for expenses
+        categories_income: Set of TransactionCategory.id_ for income
+        categories_expense: Set of TransactionCategory.id_ for expense
 
     Returns:
-        income, expenses
+        income, expense
     """
     income = Decimal(0)
-    expenses = Decimal(0)
+    expense = Decimal(0)
 
     query = s.query(TransactionSplit)
     query = query.with_entities(
@@ -226,12 +226,12 @@ def sum_income_expenses(
     query = query.where(TransactionSplit.date_ord <= end_ord)
     query = query.group_by(TransactionSplit.category_id)
     for cat_id, amount in query.all():
-        if cat_id in categories_incomes:
+        if cat_id in categories_income:
             income += amount
-        elif cat_id in categories_expenses:
-            expenses += amount
+        elif cat_id in categories_expense:
+            expense += amount
 
-    return income, expenses
+    return income, expense
 
 
 def page() -> str:

@@ -25,7 +25,8 @@ const chartPie = {
         let total = 0;
 
         for (const source of sources) {
-            const value = source.values[source.values.length - 1];
+            const value =
+                source.amount ?? source.values[source.values.length - 1];
             total += value;
             data.push(value);
             colors.push(source.color);
