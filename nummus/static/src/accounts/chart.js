@@ -17,7 +17,7 @@ const accountChart = {
             return chartSingle.update(this.chart, dates, values);
         this.ctx = ctx;
 
-        this.chart = chartSingle.create(ctx, 'account', dates, values);
+        this.chart = chartSingle.create(ctx, dates, values);
         return;
     }
 }

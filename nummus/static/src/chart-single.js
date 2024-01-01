@@ -94,14 +94,13 @@ const chartSingle = {
      * Create a new chart with a single data source
      *
      * @param {Object} ctx Canvas context to use
-     * @param {String} name Name of chart objects for pluginHoverLine
      * @param {Array} dates Array of dates
      * @param {Array} values Array of values
      * @param {Array} plugins Array of plugins
      * @param {Object} options override
      * @return {Object} Chart object
      */
-    create: function(ctx, name, dates, values, plugins, options) {
+    create: function(ctx, dates, values, plugins, options) {
         'use strict';
         setChartDefaults();
 
@@ -123,10 +122,6 @@ const chartSingle = {
                 intersect: false,
                 mode: 'index',
                 enabled: false,
-            },
-            hoverLine: {
-                name: name,
-                monthly: monthly,
             },
         };
         if (plugins) {
@@ -195,7 +190,6 @@ const chartSingle = {
         } else {
             chart.data.datasets = datasets;
         }
-        chart.config.options.plugins.hoverLine.monthly = monthly;
         chart.config.options.scales.x.ticks.dateMode = dateMode;
         chart.update();
     },

@@ -118,6 +118,14 @@ def ctx_chart() -> t.DictAny:
                     },
                 )
                 total_expense += amount
+        income_categorized = sorted(
+            income_categorized,
+            key=lambda item: -item["amount"],
+        )
+        expense_categorized = sorted(
+            expense_categorized,
+            key=lambda item: item["amount"],
+        )
 
         # For the timeseries,
         # If n > 400, sum by years and make bars

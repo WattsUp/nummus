@@ -9,9 +9,9 @@
         </h1>
         <h1 class="text-lg">{{ e_fund["current"] | money0 }}</h1>
     </div>
-    {% with name="e-fund", no_change=true %}
-        {% include "shared/chart-grow.jinja" %}
-    {% endwith %}
+    <div class="w-full grow">
+        <canvas id="e-fund-chart-canvas"></canvas>
+    </div>
     <div id="e-fund-chart-data">
         <script>emergencyFundChart.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
     </div>

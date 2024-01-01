@@ -20,9 +20,9 @@
             Today's Balance <b>{{ acct["value"] | money }}</b>
         </h2>
     </div>
-    {% with name="account" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="account-chart-canvas"></canvas>
+    </div>
     {% include "accounts/chart-data.jinja" %}
     <div class="w-full grow"
          hx-target="#txn-table"

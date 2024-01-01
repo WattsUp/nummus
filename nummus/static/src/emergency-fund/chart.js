@@ -33,7 +33,6 @@ const emergencyFundChart = {
             this.ctx = ctx;
             this.chart = chartSingle.create(
                 ctx,
-                'e-fund',
                 dates,
                 values,
                 plugins,
@@ -72,7 +71,6 @@ const emergencyFundChart = {
             this.ctx = ctx;
             this.chart = chartSingle.create(
                 ctx,
-                'e-fund',
                 dates,
                 values,
                 plugins,

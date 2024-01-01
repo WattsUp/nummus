@@ -9,9 +9,9 @@
         </h1>
         <h1 class="text-lg">{{ chart["current"] | money }}</h1>
     </div>
-    {% with name="net-worth" %}
-        {% include "shared/chart-grow.jinja" %}
-    {% endwith %}
+    <div class="w-full grow">
+        <canvas id="net-worth-chart-canvas"></canvas>
+    </div>
     <div id="net-worth-chart-data">
         <script>netWorthChart.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>
     </div>

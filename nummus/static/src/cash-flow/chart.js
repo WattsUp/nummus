@@ -16,6 +16,7 @@ const cashFlowChart = {
      */
     update: function(raw) {
         'use strict';
+        // Import data, Strings to Numbers
         const chartBars = raw.chart_bars;
         const labels = raw.labels;
         const totals = raw.totals.map(v => Number(v));
@@ -35,13 +36,7 @@ const cashFlowChart = {
         console.log(incomes);
         console.log(expenses);
 
-        incomeCategorized.sort((a, b) => {
-            return b.amount - a.amount;
-        });
-        expenseCategorized.sort((a, b) => {
-            return b.amount - a.amount;
-        });
-
+        // Set a color for each category
         incomeCategorized.forEach((a, i) => {
             const c = getChartColor(i);
             a.color = c;
@@ -51,7 +46,6 @@ const cashFlowChart = {
             a.color = c;
         });
 
-        const width = 65;
 
         {
             const canvas = document.getElementById('cash-flow-chart-canvas');
@@ -59,16 +53,11 @@ const cashFlowChart = {
             if (ctx == this.ctxTotal) {
                 chartSingle.update(this.chartTotal, labels, totals);
             } else {
-                const plugins = [
-                    [pluginFixedAxisWidth, {width: width}],
-                ];
                 this.ctxTotal = ctx;
                 this.chartTotal = chartSingle.create(
                     ctx,
-                    'cash-flow',
                     labels,
                     totals,
-                    plugins,
                 );
             }
         }

@@ -41,7 +41,6 @@ const netWorthChart = {
                 this.ctxTotal = ctx;
                 this.chartTotal = chartSingle.create(
                     ctx,
-                    'total',
                     dates,
                     values,
                     plugins,
@@ -86,7 +85,6 @@ const netWorthChart = {
                 this.ctxAssets = ctx;
                 this.chartAssets = chartStacked.create(
                     ctx,
-                    'assets',
                     dates,
                     assets,
                     plugins,
@@ -110,7 +108,6 @@ const netWorthChart = {
                 this.ctxLiabilities = ctx;
                 this.chartLiabilities = chartStacked.create(
                     ctx,
-                    'liabilities',
                     dates,
                     liabilities,
                     plugins,
@@ -206,7 +203,6 @@ const netWorthChart = {
             this.ctxTotal = ctx;
             this.chartTotal = chartSingle.create(
                 ctx,
-                'net-worth',
                 dates,
                 values,
                 null,

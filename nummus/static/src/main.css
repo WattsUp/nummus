@@ -18,8 +18,10 @@
 
     body {
         --color-green: theme("colors.green.DEFAULT");
+        --color-green-600: theme("colors.green.600");
         --color-blue: theme("colors.blue.DEFAULT");
         --color-red: theme("colors.red.DEFAULT");
+        --color-red-600: theme("colors.red.600");
         --color-yellow: theme("colors.yellow.DEFAULT");
         --color-grey-500: theme("colors.grey.500");
         --color-white: theme("colors.white.DEFAULT");

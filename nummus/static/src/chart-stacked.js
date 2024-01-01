@@ -77,13 +77,12 @@ const chartStacked = {
      * Create a new chart with a multiple data sources
      *
      * @param {Object} ctx Canvas context to use
-     * @param {String} name Name of chart objects for pluginHoverLine
      * @param {Array} dates Array of dates
      * @param {Array} sources Array of sources [values0, values1, ...]
      * @param {Array} plugins Array of plugins
      * @return {Object} Chart object
      */
-    create: function(ctx, name, dates, sources, plugins) {
+    create: function(ctx, dates, sources, plugins) {
         'use strict';
         setChartDefaults();
 
@@ -105,10 +104,6 @@ const chartStacked = {
                 intersect: false,
                 mode: 'index',
                 enabled: false,
-            },
-            hoverLine: {
-                name: name,
-                monthly: monthly,
             },
         };
         if (plugins) {
