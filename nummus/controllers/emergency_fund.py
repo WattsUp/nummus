@@ -29,6 +29,7 @@ def ctx_page() -> t.DictAny:
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -8)
     start_ord = start.toordinal()
+    date_mode = "months"
 
     with p.get_session() as s:
         b = s.query(Budget).order_by(Budget.date_ord.desc()).first()
@@ -79,7 +80,8 @@ def ctx_page() -> t.DictAny:
 
     return {
         "chart": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, today_ord)],
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, today_ord)],
+            "date_mode": date_mode,
             "balances": balances,
             "target_high": target_high,
             "target_low": target_low,

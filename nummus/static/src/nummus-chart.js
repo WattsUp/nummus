@@ -100,6 +100,36 @@ const nummusChart = {
         chart.update();
     },
     /**
+     * Prepare stacked chart datasets
+     *
+     * @param {Array} sources Array of sources [{values:, color:}, ...]
+     * @return {Array} datasets
+     */
+    datasetsStacked: function(sources) {
+        'use strict';
+        const datasets = [];
+        const n = sources[0].values.length;
+        let values = new Array(n).fill(0);
+        let first = true;
+        for (const source of sources) {
+            // Skip if every value is zero
+            if (source.values.every((v) => v == 0)) continue;
+            for (let i = 0; i < n; ++i) values[i] += source.values[i];
+            datasets.push({
+                type: 'line',
+                data: [...values],
+                borderColor: source.color,
+                backgroundColor: source.color + '80',
+                borderWidth: 1,
+                pointRadius: 0,
+                hoverRadius: 0,
+                fill: first ? 'origin' : '-1',
+            });
+            first = false;
+        }
+        return datasets;
+    },
+    /**
      * Prepare pie datasets
      *
      * @param {Array} sources Array of sources [{values:, color:}, ...]

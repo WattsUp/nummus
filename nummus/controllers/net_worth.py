@@ -52,6 +52,7 @@ def ctx_chart() -> t.DictAny:
             )
         start_ord = start.toordinal()
         end_ord = end.toordinal()
+        n = end_ord - start_ord + 1
 
         query = s.query(Account)
         if category is not None:
@@ -77,13 +78,25 @@ def ctx_chart() -> t.DictAny:
                     "values": values,
                 },
             )
+        accounts = sorted(accounts, key=lambda item: -item["values"][-1])
+
+        # TODO (WattsUp): Check if n > years, months and downsample to min/avg/max
+
+        date_mode: str | None = None
+        if n > web_utils.LIMIT_TICKS_MONTHS:
+            date_mode = "months"
+        elif n > web_utils.LIMIT_TICKS_WEEKS:
+            date_mode = "weeks"
+        else:
+            date_mode = "days"
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "date_mode": date_mode,
             "total": total,
             "accounts": accounts,
         },
@@ -147,7 +160,8 @@ def dashboard() -> str:
 
     chart = {
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "date_mode": "months",
             "total": total,
         },
         "current": total[-1],

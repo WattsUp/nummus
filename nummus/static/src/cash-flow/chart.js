@@ -50,40 +50,28 @@ const cashFlowChart = {
             this.chartIncome = null;
             this.chartExpense = null;
         }
-        const datasetIncome = chartBars ?
-            {
-                label: 'Income',
-                type: 'bar',
-                data: incomes,
-                backgroundColor: getThemeColor('green'),
-            } :
-            {
-
-                label: 'Income',
-                type: 'line',
-                data: incomes,
-                borderColor: getThemeColor('green'),
-                borderWidth: 2,
-                pointRadius: 0,
-                hoverRadius: 0,
-            };
-        const datasetExpense = chartBars ?
-            {
-                label: 'Expense',
-                type: 'bar',
-                data: expenses,
-                backgroundColor: getThemeColor('red'),
-            } :
-            {
-
-                label: 'Expense',
-                type: 'line',
-                data: expenses,
-                borderColor: getThemeColor('red'),
-                borderWidth: 2,
-                pointRadius: 0,
-                hoverRadius: 0,
-            };
+        const green = getThemeColor('green');
+        const red = getThemeColor('red');
+        const datasetIncome = {
+            label: 'Income',
+            type: chartBars ? 'bar' : 'line',
+            data: incomes,
+            backgroundColor: green,
+            borderColor: green,
+            borderWidth: chartBars ? 0 : 2,
+            pointRadius: 0,
+            hoverRadius: 0,
+        };
+        const datasetExpense = {
+            label: 'Expense',
+            type: chartBars ? 'bar' : 'line',
+            data: expenses,
+            backgroundColor: red,
+            borderColor: red,
+            borderWidth: chartBars ? 0 : 2,
+            pointRadius: 0,
+            hoverRadius: 0,
+        };
 
         {
             const canvas = document.getElementById('cash-flow-chart-canvas');
@@ -99,6 +87,11 @@ const cashFlowChart = {
                 pointRadius: 0,
                 hoverRadius: 0,
                 order: -1,
+                fill: chartBars ? null : {
+                    target: 'origin',
+                    above: green + '80',
+                    below: red + '80',
+                },
             });
             if (this.chartTotal && ctx == this.chartTotal.ctx) {
                 nummusChart.update(this.chartTotal, labels, dateMode, datasets);

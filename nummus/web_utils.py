@@ -104,6 +104,9 @@ def parse_period(
     else:
         msg = f"Unknown period: {period}"
         raise exc.http.BadRequest(msg)
+    if start == end:
+        # Avoid zero length days cause it makes the chart look bad
+        end += datetime.timedelta(days=1)
     return start, end
 
 

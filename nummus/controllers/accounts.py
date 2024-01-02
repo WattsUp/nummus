@@ -135,14 +135,24 @@ def ctx_chart(acct: Account) -> t.DictAny:
 
     start_ord = start.toordinal()
     end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
     values, _ = acct.get_value(start_ord, end_ord)
+
+    date_mode: str | None = None
+    if n > web_utils.LIMIT_TICKS_MONTHS:
+        date_mode = "months"
+    elif n > web_utils.LIMIT_TICKS_WEEKS:
+        date_mode = "weeks"
+    else:
+        date_mode = "days"
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "date_mode": date_mode,
             "values": values,
         },
     }

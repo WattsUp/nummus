@@ -4,11 +4,6 @@ const netWorthChart = {
     chartLiabilities: null,
     chartPieAssets: null,
     chartPieLiabilities: null,
-    ctxTotal: null,
-    ctxAssets: null,
-    ctxLiabilities: null,
-    ctxPieAssets: null,
-    ctxPieLiabilities: null,
     /**
      * Create Net Worth Chart
      *
@@ -16,33 +11,51 @@ const netWorthChart = {
      */
     update: function(raw) {
         'use strict';
-        const dates = raw.dates;
-        const values = raw.total.map(v => Number(v));
+        const labels = raw.labels;
+        const dateMode = raw.date_mode;
+        const total = raw.total.map(v => Number(v));
         const accounts = raw.accounts.map(a => {
             a.values = a.values.map(v => Number(v));
             return a;
         });
-        accounts.sort((a, b) => {
-            return b.values[b.values.length - 1] -
-                a.values[a.values.length - 1];
-        });
 
+        const blue = getThemeColor('blue');
+        const yellow = getThemeColor('yellow');
         const width = 65;
 
         {
             const canvas = document.getElementById('total-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxTotal) {
-                chartSingle.update(this.chartTotal, dates, values);
+            const dataset = {
+                label: 'Total',
+                type: 'line',
+                data: total,
+                borderColor: getThemeColor('grey-500'),
+                borderWidth: 2,
+                pointRadius: 0,
+                hoverRadius: 0,
+                fill: {
+                    target: 'origin',
+                    above: blue + '80',
+                    below: yellow + '80',
+                },
+            };
+            if (this.chartTotal && ctx == this.chartTotal.ctx) {
+                nummusChart.update(
+                    this.chartTotal,
+                    labels,
+                    dateMode,
+                    [dataset],
+                );
             } else {
                 const plugins = [
                     [pluginFixedAxisWidth, {width: width}],
                 ];
-                this.ctxTotal = ctx;
-                this.chartTotal = chartSingle.create(
+                this.chartTotal = nummusChart.create(
                     ctx,
-                    dates,
-                    values,
+                    labels,
+                    dateMode,
+                    [dataset],
                     plugins,
                 );
             }
@@ -72,22 +85,25 @@ const netWorthChart = {
         {
             const canvas = document.getElementById('assets-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxAssets) {
-                chartStacked.update(
+            const datasets = nummusChart.datasetsStacked(assets);
+            if (this.chartAssets && ctx == this.chartAssets.ctx) {
+                nummusChart.update(
                     this.chartAssets,
-                    dates,
-                    assets,
+                    labels,
+                    dateMode,
+                    datasets,
                 );
             } else {
                 const plugins = [
                     [pluginFixedAxisWidth, {width: width}],
                 ];
-                this.ctxAssets = ctx;
-                this.chartAssets = chartStacked.create(
+                this.chartAssets = nummusChart.create(
                     ctx,
-                    dates,
-                    assets,
+                    labels,
+                    dateMode,
+                    datasets,
                     plugins,
+                    {plugins: {tooltip: {enabled: false}}},
                 );
             }
         }
@@ -95,22 +111,25 @@ const netWorthChart = {
         {
             const canvas = document.getElementById('liabilities-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxLiabilities) {
-                chartStacked.update(
+            const datasets = nummusChart.datasetsStacked(liabilities);
+            if (this.chartLiabilities && ctx == this.chartLiabilities.ctx) {
+                nummusChart.update(
                     this.chartLiabilities,
-                    dates,
-                    liabilities,
+                    labels,
+                    dateMode,
+                    datasets,
                 );
             } else {
                 const plugins = [
                     [pluginFixedAxisWidth, {width: width}],
                 ];
-                this.ctxLiabilities = ctx;
-                this.chartLiabilities = chartStacked.create(
+                this.chartLiabilities = nummusChart.create(
                     ctx,
-                    dates,
-                    liabilities,
+                    labels,
+                    dateMode,
+                    datasets,
                     plugins,
+                    {plugins: {tooltip: {enabled: false}}},
                 );
             }
         }
@@ -118,11 +137,10 @@ const netWorthChart = {
         {
             const canvas = document.getElementById('assets-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxPieAssets) {
-                chartPie.update(this.chartPieAssets, assets);
+            if (this.chartPieAssets && ctx == this.chartPieAssets.ctx) {
+                nummusChart.updatePie(this.chartPieAssets, assets);
             } else {
-                this.ctxPieAssets = ctx;
-                this.chartPieAssets = chartPie.create(ctx, assets);
+                this.chartPieAssets = nummusChart.createPie(ctx, assets);
             }
         }
 
@@ -130,11 +148,12 @@ const netWorthChart = {
             const canvas =
                 document.getElementById('liabilities-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxPieLiabilities) {
-                chartPie.update(this.chartPieLiabilities, liabilities);
+            if (this.chartPieLiabilities &&
+                ctx == this.chartPieLiabilities.ctx) {
+                nummusChart.updatePie(this.chartPieLiabilities, liabilities);
             } else {
-                this.ctxPieLiabilities = ctx;
-                this.chartPieLiabilities = chartPie.create(ctx, liabilities);
+                this.chartPieLiabilities =
+                    nummusChart.createPie(ctx, liabilities);
             }
         }
 
@@ -192,23 +211,46 @@ const netWorthChart = {
      */
     updateDashboard: function(raw) {
         'use strict';
-        const dates = raw.dates;
-        const values = raw.total.map(v => Number(v));
+        const labels = raw.labels;
+        const dateMode = raw.date_mode;
+        const total = raw.total.map(v => Number(v));
+
+        const blue = getThemeColor('blue');
+        const yellow = getThemeColor('yellow');
 
         const canvas = document.getElementById('net-worth-chart-canvas');
         const ctx = canvas.getContext('2d');
-        if (ctx == this.ctxTotal) {
-            chartSingle.update(this.chartTotal, dates, values);
+        const dataset = {
+            label: 'Total',
+            type: 'line',
+            data: total,
+            borderColor: getThemeColor('grey-500'),
+            borderWidth: 2,
+            pointRadius: 0,
+            hoverRadius: 0,
+            fill: {
+                target: 'origin',
+                above: blue + '80',
+                below: yellow + '80',
+            },
+        };
+        if (this.chartTotal && ctx == this.chartTotal.ctx) {
+            nummusChart.update(
+                this.chartTotal,
+                labels,
+                dateMode,
+                [dataset],
+            );
         } else {
-            this.ctxTotal = ctx;
-            this.chartTotal = chartSingle.create(
+            this.chartTotal = nummusChart.create(
                 ctx,
-                dates,
-                values,
+                labels,
+                dateMode,
+                [dataset],
                 null,
                 {
                     scales: {
-                        y: {ticks: {display: false}},
+                        y: {ticks: {display: false}, grid: {drawTicks: false}},
                     },
                 },
             );
