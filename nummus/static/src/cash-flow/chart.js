@@ -4,11 +4,6 @@ const cashFlowChart = {
     chartExpense: null,
     chartPieIncome: null,
     chartPieExpense: null,
-    ctxTotal: null,
-    ctxIncome: null,
-    ctxExpense: null,
-    ctxPieIncome: null,
-    ctxPieExpense: null,
     /**
      * Create Cash Flow Chart
      *
@@ -19,6 +14,7 @@ const cashFlowChart = {
         // Import data, Strings to Numbers
         const chartBars = raw.chart_bars;
         const labels = raw.labels;
+        const dateMode = raw.date_mode;
         const totals = raw.totals.map(v => Number(v));
         const incomes = raw.incomes.map(v => Number(v));
         const expenses = raw.expenses.map(v => Number(v));
@@ -30,11 +26,6 @@ const cashFlowChart = {
             a.amount = -Number(a.amount);
             return a;
         });
-        console.log(chartBars);
-        console.log(labels);
-        console.log(totals);
-        console.log(incomes);
-        console.log(expenses);
 
         // Set a color for each category
         incomeCategorized.forEach((a, i) => {
@@ -46,18 +37,121 @@ const cashFlowChart = {
             a.color = c;
         });
 
+        if (this.chartBars != chartBars) {
+            // Destroy all existing charts
+            if (this.chartTotal) this.chartTotal.destroy();
+            if (this.chartIncome) this.chartIncome.destroy();
+            if (this.chartExpense) this.chartExpense.destroy();
+
+            this.ctxTotal = null;
+            this.ctxIncome = null;
+            this.ctxExpense = null;
+            this.chartTotal = null;
+            this.chartIncome = null;
+            this.chartExpense = null;
+        }
+        const datasetIncome = chartBars ?
+            {
+                label: 'Income',
+                type: 'bar',
+                data: incomes,
+                backgroundColor: getThemeColor('green'),
+            } :
+            {
+
+                label: 'Income',
+                type: 'line',
+                data: incomes,
+                borderColor: getThemeColor('green'),
+                borderWidth: 2,
+                pointRadius: 0,
+                hoverRadius: 0,
+            };
+        const datasetExpense = chartBars ?
+            {
+                label: 'Expense',
+                type: 'bar',
+                data: expenses,
+                backgroundColor: getThemeColor('red'),
+            } :
+            {
+
+                label: 'Expense',
+                type: 'line',
+                data: expenses,
+                borderColor: getThemeColor('red'),
+                borderWidth: 2,
+                pointRadius: 0,
+                hoverRadius: 0,
+            };
 
         {
             const canvas = document.getElementById('cash-flow-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxTotal) {
-                chartSingle.update(this.chartTotal, labels, totals);
+            const datasets = chartBars ? [datasetIncome, datasetExpense] : [];
+            datasets.push({
+                label: 'Total',
+                type: 'line',
+                data: totals,
+                borderColor: getThemeColor('grey-500'),
+                borderWidth: 2,
+                borderDash: (chartBars ? [5] : [10, 0]),
+                pointRadius: 0,
+                hoverRadius: 0,
+                order: -1,
+            });
+            if (this.chartTotal && ctx == this.chartTotal.ctx) {
+                nummusChart.update(this.chartTotal, labels, dateMode, datasets);
             } else {
-                this.ctxTotal = ctx;
-                this.chartTotal = chartSingle.create(
+                this.chartTotal = nummusChart.create(
                     ctx,
                     labels,
-                    totals,
+                    dateMode,
+                    datasets,
+                    null,
+                    {scales: {x: {stacked: true}}},
+                );
+            }
+        }
+
+        const width = 65;
+
+        {
+            const canvas = document.getElementById('income-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (this.chartIncome && ctx == this.chartIncome.ctx) {
+                nummusChart.update(
+                    this.chartIncome, labels, dateMode, [datasetIncome]);
+            } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
+                this.chartIncome = nummusChart.create(
+                    ctx,
+                    labels,
+                    dateMode,
+                    [datasetIncome],
+                    plugins,
+                );
+            }
+        }
+
+        {
+            const canvas = document.getElementById('expense-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (this.chartExpense && ctx == this.chartExpense.ctx) {
+                nummusChart.update(
+                    this.chartExpense, labels, dateMode, [datasetExpense]);
+            } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
+                this.chartExpense = nummusChart.create(
+                    ctx,
+                    labels,
+                    dateMode,
+                    [datasetExpense],
+                    plugins,
                 );
             }
         }
@@ -65,22 +159,22 @@ const cashFlowChart = {
         {
             const canvas = document.getElementById('income-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxPieIncome) {
-                chartPie.update(this.chartPieIncome, incomeCategorized);
+            if (this.chartPieIncome && ctx == this.chartPieIncome.ctx) {
+                nummusChart.updatePie(this.chartPieIncome, incomeCategorized);
             } else {
-                this.ctxPieIncome = ctx;
-                this.chartPieIncome = chartPie.create(ctx, incomeCategorized);
+                this.chartPieIncome =
+                    nummusChart.createPie(ctx, incomeCategorized);
             }
         }
 
         {
             const canvas = document.getElementById('expense-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
-            if (ctx == this.ctxPieExpense) {
-                chartPie.update(this.chartPieExpense, expenseCategorized);
+            if (this.chartPieExpense && ctx == this.chartPieExpense.ctx) {
+                nummusChart.updatePie(this.chartPieExpense, expenseCategorized);
             } else {
-                this.ctxPieExpense = ctx;
-                this.chartPieExpense = chartPie.create(ctx, expenseCategorized);
+                this.chartPieExpense =
+                    nummusChart.createPie(ctx, expenseCategorized);
             }
         }
 
@@ -93,6 +187,8 @@ const cashFlowChart = {
             const breakdown = document.getElementById('expense-breakdown');
             this.createBreakdown(breakdown, expenseCategorized);
         }
+
+        this.chartBars = chartBars;
     },
     /**
      * Create breakdown table

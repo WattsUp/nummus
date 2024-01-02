@@ -133,6 +133,7 @@ def ctx_chart() -> t.DictAny:
         # else make daily
         # TODO (WattsUp): Add a previous dailys when period is months
         labels: t.Strings = []
+        date_mode: str | None = None
         incomes: t.Reals = []
         expenses: t.Reals = []
         chart_bars = False
@@ -147,6 +148,13 @@ def ctx_chart() -> t.DictAny:
         else:
             # Daily amounts
             labels = [date.isoformat() for date in utils.range_date(start_ord, end_ord)]
+            if n > web_utils.LIMIT_TICKS_MONTHS:
+                date_mode = "months"
+            elif n > web_utils.LIMIT_TICKS_WEEKS:
+                date_mode = "weeks"
+            else:
+                date_mode = "days"
+
             cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
             daily_income: t.Reals = [Decimal(0)] * n
             daily_expense: t.Reals = [Decimal(0)] * n
@@ -191,6 +199,7 @@ def ctx_chart() -> t.DictAny:
             "expense_categorized": expense_categorized,
             "chart_bars": chart_bars,
             "labels": labels,
+            "date_mode": date_mode,
             "totals": totals,
             "incomes": incomes,
             "expenses": expenses,

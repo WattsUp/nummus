@@ -19,6 +19,10 @@ LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
 LIMIT_PLOT_MONTHS = 80  # if n_days > LIMIT_PLOT_MONTHS then plot by months
 # else plot normally by days
 
+LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
+LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
+# else tick each day
+
 
 def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
     """Find the matching object by URI.
