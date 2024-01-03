@@ -6,6 +6,7 @@ from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import orm
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
@@ -68,17 +69,49 @@ class Asset(Base):
         tag: Unique tag linked across datasets
         interpolate: True will interpolate valuations with a linear function, for
             sparsely (monthly) valued assets
+        ticker: Name of exchange ticker to fetch prices for. If no ticker then
+            valuations must be manually entered
     """
 
     __table_id__ = 0x40000000
 
-    name: t.ORMStr
+    name: t.ORMStr = orm.mapped_column(unique=True)
     description: t.ORMStrOpt
     category: orm.Mapped[AssetCategory]
     unit: t.ORMStrOpt
     tag: t.ORMStrOpt
     img_suffix: t.ORMStrOpt
     interpolate: t.ORMBool = orm.mapped_column(default=False)
+    ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
+
+    # NOT ticker, since there are valid single letter tickers
+    @orm.validates("name", "description", "unit", "tag")
+    @override
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        return super().validate_strings(key, field)
+
+    @orm.validates("ticker")
+    def validate_ticker(self, key: str, field: str | None) -> str | None:
+        """Validates ticker is UPPERCASE.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+
+        Raises:
+            InvalidORMValueError if field is not uppercase.
+        """
+        if field is None or field in ["", "[blank]"]:
+            return None
+        if not field.isupper():
+            table: str = self.__tablename__
+            table = table.replace("_", " ").capitalize()
+            msg = f"{table} {key} must be uppercase"
+            raise exc.InvalidORMValueError(msg)
+        return field
 
     @property
     def image_name(self) -> str | None:

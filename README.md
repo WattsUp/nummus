@@ -24,6 +24,9 @@ List of dependencies for package to run.
   - jsmin
   - flask
   - typing-extensions
+  - pdfplumber
+  - yfinance
+  - tqdm
 
 ### Optional
 

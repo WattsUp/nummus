@@ -270,6 +270,41 @@ def import_files(
     return 0
 
 
+def update_assets(p: portfolio.Portfolio) -> int:
+    """Update asset valuations using web sources.
+
+    Args:
+        p: Working Portfolio
+
+    Returns:
+        0 on success
+        non-zero on failure
+    """
+    updated = p.update_assets()
+    if len(updated) == 0:
+        print(
+            f"{Fore.YELLOW}No assets were updated, "
+            "add a ticker to an Asset to download market data",
+        )
+        return 1
+    name_len = max(len(item[0]) for item in updated)
+    ticker_len = max(len(item[1]) for item in updated)
+    failed = False
+    for name, ticker, start, end, error in updated:
+        if start is None:
+            print(
+                f"{Fore.RED}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
+                f"failed to update. Error: {error}",
+            )
+            failed = True
+        else:
+            print(
+                f"{Fore.GREEN}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
+                f"updated from {start} to {end}",
+            )
+    return 1 if failed else 0
+
+
 # No unit test for wrapper command, too difficult to mock
 def run_web(
     p: portfolio.Portfolio,

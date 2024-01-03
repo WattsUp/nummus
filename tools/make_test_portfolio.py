@@ -265,6 +265,20 @@ def make_assets(p: Portfolio) -> t.DictInt:
             category=AssetCategory.REAL_ESTATE,
             interpolate=True,
         )
+        # Don't add AssetValuations so update-assets command can
+        sp500 = Asset(
+            name="S&P 500",
+            description="Average of the 500 largest publically traded companies",
+            category=AssetCategory.SECURITY,
+            ticker="^GSPC",
+        )
+        # Add Apple so stock splits can be tested
+        apple = Asset(
+            name="Apple Inc.",
+            description="Technology company making phones, personal computers, etc.",
+            category=AssetCategory.SECURITY,
+            ticker="AAPL",
+        )
 
         # Name: [Asset, current price, growth mean, growth stddev]
         stocks: dict[str, list[Asset | t.Real]] = {
@@ -278,6 +292,7 @@ def make_assets(p: Portfolio) -> t.DictInt:
         }
         s.add_all(v[0] for v in stocks.values())
         s.add_all(v[0] for v in real_estate.values())
+        s.add_all((sp500, apple))
         s.commit()
 
         start = datetime.date(BIRTH_YEAR, 1, 1)
@@ -338,6 +353,8 @@ def make_assets(p: Portfolio) -> t.DictInt:
         assets = {k: v[0].id_ for k, v in stocks.items()}  # type: ignore[attr-defined]
         for k, v in real_estate.items():
             assets[k] = v[0].id_  # type: ignore[attr-defined]
+        assets["S&P 500"] = sp500.id_
+        assets["Apple Inc."] = apple.id_
 
     print(f"{Fore.GREEN}Created assets")
 
@@ -1291,7 +1308,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         a_growth: Asset = s.query(Asset).where(Asset.id_ == assets["growth"]).scalar()
         a_value: Asset = s.query(Asset).where(Asset.id_ == assets["value"]).scalar()
         date_sell = next_month(
-            datetime.date.fromordinal(acct_retirement.updated_on_ord),
+            datetime.date.fromordinal(acct_retirement.updated_on_ord or 0),
         )
         date_transfer = date_sell + datetime.timedelta(days=7)
         date_sell_ord = date_sell.toordinal()
@@ -1353,6 +1370,36 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         sell_asset(a_value, asset_qty[a_value.id_][0])
         s.commit()
 
+        # Buy 1 share of AAPL on 2001-01-03 for $99.50 with a Y2K bonus
+        # World was ending, so boss gave a bonus, sure... idk lore
+        txn = Transaction(
+            account_id=acct_retirement.id_,
+            date_ord=datetime.date(1999, 12, 31).toordinal(),
+            amount=Decimal("99.50"),
+            statement="Y2K Bonus",
+        )
+        txn_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["Retirement Contributions"].id_,
+        )
+        s.add_all((txn, txn_split))
+        txn = Transaction(
+            account_id=acct_retirement.id_,
+            date_ord=datetime.date(2000, 1, 3).toordinal(),
+            amount=Decimal("-99.50"),
+            statement="Security Buy",
+        )
+        txn_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["Securities Traded"].id_,
+            asset_id=assets["Apple Inc."],
+            asset_quantity_unadjusted=1,
+        )
+        s.add_all((txn, txn_split))
+        s.commit()
+
 
 def add_interest(p: Portfolio, acct_id: int) -> None:
     """Adds dividend/interest to Account.
@@ -1365,7 +1412,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct: Account = s.query(Account).where(Account.id_ == acct_id).scalar()
-        date = datetime.date.fromordinal(acct.opened_on_ord)
+        date = datetime.date.fromordinal(acct.opened_on_ord or 0)
         if date is None:
             print(f"{Fore.RED}No transaction to generate interest on for {acct.name}")
             return
@@ -1432,7 +1479,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         acct_fund: Account = (
             s.query(Account).where(Account.id_ == acct_id_fund).scalar()
         )
-        date = datetime.date.fromordinal(acct.opened_on_ord)
+        date = datetime.date.fromordinal(acct.opened_on_ord or 0)
         if date is None:
             print(
                 f"{Fore.RED}No transaction to generate CC payments on for "
