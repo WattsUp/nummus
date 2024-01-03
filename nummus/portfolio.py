@@ -16,16 +16,14 @@ import autodict
 import sqlalchemy
 import sqlalchemy.exc
 import tqdm
-import yfinance as yf
 from sqlalchemy import orm
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import importers, models, sql, utils, version
+from nummus import importers, models, sql, version
 from nummus.models import (
     Account,
     Asset,
-    AssetValuation,
     Credentials,
     ImportedFile,
     Transaction,
@@ -717,26 +715,6 @@ class Portfolio:
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
             ids = [asset.id_ for asset in assets]
 
-            # Get first and last transaction date
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.asset_id,
-                    sqlalchemy.func.min(TransactionSplit.date_ord),
-                    sqlalchemy.func.max(TransactionSplit.date_ord),
-                )
-                .where(TransactionSplit.asset_id.in_(ids))
-                .group_by(TransactionSplit.asset_id)
-            )
-            first_txn_ords: dict[int, int] = {}
-            last_txn_ords: dict[int, int] = {}
-            for a_id, first_txn_ord, last_txn_ord in query.all():
-                a_id: int
-                first_txn_ord: int
-                last_txn_ord: int
-                first_txn_ords[a_id] = first_txn_ord
-                last_txn_ords[a_id] = last_txn_ord
-
             # Get currently held assets
             asset_qty = Account.get_asset_qty_all(s, today_ord, today_ord)
             currently_held_assets: set[int] = set()
@@ -747,39 +725,20 @@ class Portfolio:
 
             bar = tqdm.tqdm(assets)
             for asset in bar:
-                a_id = asset.id_
                 name = asset.name
                 ticker = asset.ticker or ""
                 try:
-                    first_txn_ord = first_txn_ords[a_id]
-                    last_txn_ord = last_txn_ords[a_id]
-                except KeyError:
-                    # No transactions, don't need valuations
-                    continue
-                # Safe to fetch a week before and after, can prune later
-                start_ord = first_txn_ord - utils.DAYS_IN_WEEK
-                end_ord = last_txn_ord + utils.DAYS_IN_WEEK
-
-                if a_id in currently_held_assets:
-                    end_ord = today_ord
-
-                start = datetime.date.fromordinal(start_ord)
-                end = datetime.date.fromordinal(end_ord)
-
-                yf_ticker = yf.Ticker(ticker)
-                try:
-                    raw = yf_ticker.history(
-                        start=start,
-                        end=end,
-                        actions=True,
-                        raise_errors=True,
+                    start, end = asset.update_valuations(
+                        s,
+                        through_today=asset.id_ in currently_held_assets,
                     )
-                except Exception as e:  # noqa: BLE001
-                    # yfinance raises Exception if no data found
+                except exc.NoAssetWebSourceError as e:
                     updated.append((name, ticker, None, None, str(e)))
-                    continue
+                else:
+                    if start is not None:
+                        updated.append((name, ticker, start, end, None))
+                    # start & end are None if there are no transactions for the Asset
 
-                print(raw)
-                updated.append((name, ticker, start, end, None))
+            s.commit()
 
         return updated

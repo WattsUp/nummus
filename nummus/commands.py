@@ -280,7 +280,20 @@ def update_assets(p: portfolio.Portfolio) -> int:
         0 on success
         non-zero on failure
     """
-    updated = p.update_assets()
+    # Back up Portfolio
+    _, tar_ver = p.backup()
+    success = False
+
+    try:
+        updated = p.update_assets()
+        success = True
+    finally:
+        # Restore backup if anything went really wrong
+        # Coverage gets confused with finally blocks
+        if not success:  # pragma: no cover
+            portfolio.Portfolio.restore(p, tar_ver=tar_ver)
+            print(f"{Fore.RED}Abandoned update-assets, restored from backup")
+
     if len(updated) == 0:
         print(
             f"{Fore.YELLOW}No assets were updated, "

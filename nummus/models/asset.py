@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
 from decimal import Decimal
 
 import sqlalchemy
+import yfinance as yf
 from sqlalchemy import orm
 from typing_extensions import override
 
@@ -385,3 +387,136 @@ class Asset(Base):
             n_deleted += query.delete()
 
         return n_deleted
+
+    def update_valuations(
+        self,
+        *_,
+        through_today: bool,
+    ) -> tuple[t.Date | None, t.Date | None]:
+        """Update valuations from web sources.
+
+        Does not commit changes, call s.commit() afterwards.
+
+        Args:
+            s: SQL session to use
+            through_today: True will force end date to today (for when currently
+                holding any quantity)
+
+        Returns:
+            Updated range (start date, end date)
+            Might be None if there are no Transactions for this Asset
+
+        Raises:
+            NoAssetWebSourceError if Asset has no ticker
+            AssetWebError if failed to download data
+        """
+        if self.ticker is None:
+            raise exc.NoAssetWebSourceError
+
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                sqlalchemy.func.min(TransactionSplit.date_ord),
+                sqlalchemy.func.max(TransactionSplit.date_ord),
+            )
+            .where(TransactionSplit.asset_id == self.id_)
+        )
+        start_ord, end_ord = query.one()
+        if start_ord is None or end_ord is None:
+            return None, None
+
+        start_ord = start_ord - utils.DAYS_IN_WEEK
+        end_ord = end_ord + utils.DAYS_IN_WEEK
+        if through_today:
+            today = datetime.date.today()
+            today_ord = today.toordinal()
+            end_ord = today_ord
+
+        start = datetime.date.fromordinal(start_ord)
+        end = datetime.date.fromordinal(end_ord)
+
+        yf_ticker = yf.Ticker(self.ticker)
+        try:
+            raw = yf_ticker.history(
+                start=start,
+                end=end,
+                actions=True,
+                raise_errors=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            # yfinance raises Exception if no data found
+            raise exc.AssetWebError(e) from e
+
+        # Update AssetValuations, reuse existing when possible
+        raw_close = raw["Close"]
+        n_close = len(raw_close)
+        i = 0
+        query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
+        for valuation in query.all():
+            if i >= n_close:
+                # Delete excess valuations
+                s.delete(valuation)
+                continue
+            # Pyright doesn't like the pandas dataframe typing
+            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            price: float = raw_close.iat[i]
+
+            valuation.date_ord = dt.date().toordinal()
+            valuation.value = Decimal(price)
+
+            i += 1
+
+        while i < n_close:
+            # Add any missing ones
+            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            price: float = raw_close.iat[i]
+
+            valuation = AssetValuation(
+                asset_id=self.id_,
+                date_ord=dt.date().toordinal(),
+                value=Decimal(price),
+            )
+            s.add(valuation)
+
+            i += 1
+
+        # Update AssetSplits, reuse existing when possible
+        raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
+        n_splits = len(raw_splits)
+        i = 0
+        query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
+        for split in query.all():
+            if i >= n_splits:
+                # Delete excess splits
+                s.delete(split)
+                continue
+            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
+            multiplier: float = raw_splits.iat[i]
+
+            split.date_ord = dt.date().toordinal()
+            split.multiplier = Decimal(multiplier)
+
+            i += 1
+
+        while i < n_splits:
+            # Add any missing ones
+            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
+            multiplier: float = raw_splits.iat[i]
+
+            split = AssetSplit(
+                asset_id=self.id_,
+                date_ord=dt.date().toordinal(),
+                multiplier=Decimal(multiplier),
+            )
+            s.add(split)
+
+            i += 1
+
+        # Run update_splits to fix transactions
+        self.update_splits()
+
+        return start, end

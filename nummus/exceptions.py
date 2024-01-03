@@ -91,3 +91,20 @@ class InvalidURIError(Exception):
 
 class InvalidORMValueError(Exception):
     """Error when validation fails for an ORM column."""
+
+
+class NoAssetWebSourceError(Exception):
+    """Error when attempting to update AssetValutations when Asset has no web source."""
+
+    def __init__(self) -> None:
+        """Initialize NoAssetWebSourceError."""
+        msg = "Cannot update AssetValutations without a web source, set ticker"
+        super().__init__(msg)
+
+
+class AssetWebError(Exception):
+    """Error from a web source when attempting to update AssetValutations."""
+
+    def __init__(self, e: Exception) -> None:
+        """Initialize AssetWebError."""
+        super().__init__(str(e))
