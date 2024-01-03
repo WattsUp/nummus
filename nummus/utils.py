@@ -320,6 +320,37 @@ def period_years(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     return years
 
 
+def downsample(
+    start_ord: int,
+    end_ord: int,
+    values: t.Reals,
+) -> tuple[t.Strings, t.Reals, t.Reals, t.Reals]:
+    """Downsample a list of values to min/avg/max by month.
+
+    Args:
+        start_ord: First date ordinal of period
+        end_ord: Last date ordinal of period
+        values: Daily values
+
+    Returns:
+        (labels, min, avg, max)
+    """
+    periods = period_months(start_ord, end_ord)
+    labels: t.Strings = []
+    values_min: t.Reals = []
+    values_avg: t.Reals = []
+    values_max: t.Reals = []
+
+    for period, limits in periods.items():
+        values_sliced = values[limits[0] - start_ord : limits[1] - start_ord + 1]
+        labels.append(period)
+        values_min.append(min(values_sliced))
+        values_max.append(max(values_sliced))
+        values_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+    return labels, values_min, values_avg, values_max
+
+
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     """Round a list, carrying over error such that sum(list) == sum(round_list).
 

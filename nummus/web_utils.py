@@ -15,8 +15,11 @@ if TYPE_CHECKING:
 
 MAX_IMAGE_SIZE = int(1e6)
 
+LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
+# else plot normally by days
+
 LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
-LIMIT_PLOT_MONTHS = 80  # if n_days > LIMIT_PLOT_MONTHS then plot by months
+LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
 # else plot normally by days
 
 LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st

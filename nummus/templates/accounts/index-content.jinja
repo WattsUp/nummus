@@ -26,7 +26,8 @@
     {% include "accounts/chart-data.jinja" %}
     <div class="w-full grow"
          hx-target="#txn-table"
-         hx-include="#txn-config,#txn-header">
+         hx-include="#txn-config,#txn-header"
+         hx-swap="outerHTML">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
         {% include "accounts/table-config.jinja" %}
         {% include "accounts/table-header.jinja" %}
