@@ -19,7 +19,7 @@
 <div id="txn-table"
      class="w-full flex flex-col grow min-h-[15rem]"
      hx-get="{{ url_for("transactions.table") }}"
-     hx-trigger="update-transaction from:body">
+     hx-trigger="update-transaction from:body, update-account from:body">
     {% if txn_table["transactions"] | length == 0 %}
         <div class="text-center">No matching transactions for given query filters</div>
     {% endif %}
