@@ -167,12 +167,29 @@ const netWorthChart = {
         }
 
         {
+            const breakdown = document.getElementById('assets-breakdown');
+            this.createBreakdown(breakdown, assets, false);
+        }
+
+        {
+            const breakdown = document.getElementById('liabilities-breakdown');
+            this.createBreakdown(breakdown, liabilities, true);
+        }
+
+        {
             const canvas = document.getElementById('assets-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
             if (this.chartPieAssets && ctx == this.chartPieAssets.ctx) {
                 nummusChart.updatePie(this.chartPieAssets, assets);
             } else {
-                this.chartPieAssets = nummusChart.createPie(ctx, assets);
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'assets-breakdown'}],
+                ];
+                this.chartPieAssets = nummusChart.createPie(
+                    ctx,
+                    assets,
+                    plugins,
+                );
             }
         }
 
@@ -184,19 +201,15 @@ const netWorthChart = {
                 ctx == this.chartPieLiabilities.ctx) {
                 nummusChart.updatePie(this.chartPieLiabilities, liabilities);
             } else {
-                this.chartPieLiabilities =
-                    nummusChart.createPie(ctx, liabilities);
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'liabilities-breakdown'}],
+                ];
+                this.chartPieLiabilities = nummusChart.createPie(
+                    ctx,
+                    liabilities,
+                    plugins,
+                );
             }
-        }
-
-        {
-            const breakdown = document.getElementById('assets-breakdown');
-            this.createBreakdown(breakdown, assets, false);
-        }
-
-        {
-            const breakdown = document.getElementById('liabilities-breakdown');
-            this.createBreakdown(breakdown, liabilities, true);
         }
     },
     /**

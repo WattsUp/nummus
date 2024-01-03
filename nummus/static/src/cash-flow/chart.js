@@ -150,13 +150,29 @@ const cashFlowChart = {
         }
 
         {
+            const breakdown = document.getElementById('income-breakdown');
+            this.createBreakdown(breakdown, incomeCategorized);
+        }
+
+        {
+            const breakdown = document.getElementById('expense-breakdown');
+            this.createBreakdown(breakdown, expenseCategorized);
+        }
+
+        {
             const canvas = document.getElementById('income-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
             if (this.chartPieIncome && ctx == this.chartPieIncome.ctx) {
                 nummusChart.updatePie(this.chartPieIncome, incomeCategorized);
             } else {
-                this.chartPieIncome =
-                    nummusChart.createPie(ctx, incomeCategorized);
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'income-breakdown'}],
+                ];
+                this.chartPieIncome = nummusChart.createPie(
+                    ctx,
+                    incomeCategorized,
+                    plugins,
+                );
             }
         }
 
@@ -166,19 +182,15 @@ const cashFlowChart = {
             if (this.chartPieExpense && ctx == this.chartPieExpense.ctx) {
                 nummusChart.updatePie(this.chartPieExpense, expenseCategorized);
             } else {
-                this.chartPieExpense =
-                    nummusChart.createPie(ctx, expenseCategorized);
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'expense-breakdown'}],
+                ];
+                this.chartPieExpense = nummusChart.createPie(
+                    ctx,
+                    expenseCategorized,
+                    plugins,
+                );
             }
-        }
-
-        {
-            const breakdown = document.getElementById('income-breakdown');
-            this.createBreakdown(breakdown, incomeCategorized);
-        }
-
-        {
-            const breakdown = document.getElementById('expense-breakdown');
-            this.createBreakdown(breakdown, expenseCategorized);
         }
 
         this.chartBars = chartBars;
@@ -195,9 +207,6 @@ const cashFlowChart = {
             const v = category.amount;
             // TODO (WattsUp): Make these links to filtered matching
             // transactions
-
-            // TODO (WattsUp): Synchronize hovering pie chart and breakdown
-            // on other pages too
 
             const row = document.createElement('div');
             row.classList.add('flex');
