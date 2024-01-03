@@ -139,15 +139,41 @@ def ctx_chart(acct: Account) -> t.DictAny:
 
     start_ord = start.toordinal()
     end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
     values, _ = acct.get_value(start_ord, end_ord)
+
+    labels: t.Strings = []
+    values_min: t.Reals | None = None
+    values_max: t.Reals | None = None
+    date_mode: str | None = None
+
+    if n > web_utils.LIMIT_DOWNSAMPLE:
+        # Downsample to min/avg/max by month
+        labels, values_min, values, values_max = utils.downsample(
+            start_ord,
+            end_ord,
+            values,
+        )
+        date_mode = "years"
+    else:
+        labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
+        if n > web_utils.LIMIT_TICKS_MONTHS:
+            date_mode = "months"
+        elif n > web_utils.LIMIT_TICKS_WEEKS:
+            date_mode = "weeks"
+        else:
+            date_mode = "days"
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": labels,
+            "date_mode": date_mode,
             "values": values,
+            "min": values_min,
+            "max": values_max,
         },
     }
 
@@ -203,7 +229,13 @@ def table(uri: str) -> str:
                 if opened_on_ord is None
                 else datetime.date.fromordinal(opened_on_ord)
             )
-        if PREVIOUS_PERIOD["start"] == start and PREVIOUS_PERIOD["end"] == end:
+        if (
+            PREVIOUS_PERIOD["start"] == start
+            and PREVIOUS_PERIOD["end"] == end
+            and flask.request.headers.get("Hx-Trigger") != "txn-table"
+        ):
+            # If same period and not being updated via update_transaction:
+            # don't update the chart
             return common.page(
                 "accounts/table.jinja",
                 txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),

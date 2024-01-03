@@ -174,16 +174,21 @@ class TestAccount(WebTestBase):
         accounts.PREVIOUS_PERIOD["end"] = None
 
         endpoint = f"/h/accounts/a/{acct_uri}/table"
-        result, _ = self.web_get(endpoint)
+        queries = {"period": "all"}
+        result, _ = self.web_get(endpoint, queries)
         # First different call for table should update chart as well
-        self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
+        self.assertRegex(
+            result,
+            r'<script>accountChart\.update\(.*"min": null.*\)</script>',
+        )
         m = re.search(
-            r'<script>accountChart\.update\(.*"dates": \[([^\]]+)\].*\)</script>',
+            r'<script>accountChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
         dates_s = m[1] if m else ""
         self.assertIn(today.isoformat(), dates_s)
+        self.assertIn('"date_mode": "days"', result)
         self.assertNotIn("txn-account", result)  # No account column on account page
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
@@ -191,25 +196,46 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(endpoint, queries)
         # Second call for table should not update chart as well
         self.assertNotRegex(result, r"<script>accountChart\.update\(.*\)</script>")
 
+        queries = {"period": "30-days"}
+        result, _ = self.web_get(endpoint, queries)
+        self.assertRegex(
+            result,
+            r'<script>accountChart\.update\(.*"min": null.*\)</script>',
+        )
+        self.assertIn('"date_mode": "weeks"', result)
+
         queries = {"period": "last-year"}
         result, _ = self.web_get(endpoint, queries)
+        self.assertRegex(
+            result,
+            r'<script>accountChart\.update\(.*"min": null.*\)</script>',
+        )
+        self.assertIn('"date_mode": "months"', result)
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
         self.assertNotRegex(result, r"<div .*>\$100.00</div>")
         self.assertNotRegex(result, r"<div .*>-\$10.00</div>")
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        queries = {"period": "all"}
+        queries = {"period": "5-years"}
         result, _ = self.web_get(endpoint, queries)
-        self.assertRegex(result, r"<div .*>Uncategorized</div>")
-        self.assertRegex(result, r"<div .*>\$100.00</div>")
-        self.assertRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertRegex(
+            result,
+            r'<script>accountChart\.update\(.*"min": \[.+\].*\)</script>',
+        )
+        m = re.search(
+            r'<script>accountChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        dates_s = m[1] if m else ""
+        self.assertNotIn(today.isoformat(), dates_s)
+        self.assertIn(today.isoformat()[:7], dates_s)
+        self.assertIn('"date_mode": "years"', result)
 
     def test_options(self) -> None:
         d = self._setup_portfolio()

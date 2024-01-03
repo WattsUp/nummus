@@ -164,13 +164,15 @@ function formatDateTicks(value, index, ticks) {
                     let l = labels[i];
                     let date = new Date(l);
                     // Mark each Sunday
-                    if (date.getUTCDay() == 0) t.label = l;
+                    if (date.getUTCDay() == 0) t.label = l.slice(5, 10);
                 });
                 break;
             case 'days':
+                ticks.forEach((t, i) => t.label = labels[i].slice(5, 10));
+                break;
             default:
                 ticks.forEach((t, i) => t.label = labels[i]);
-                break
+                break;
         }
     }
     return ticks[index].label;
@@ -204,8 +206,7 @@ function formatDateTicksMonths(value, index, ticks) {
         };
         ticks.forEach((t, i) => {
             let l = labels[i];
-            if (l.slice(-2) == '01') {
-                console.log(l.slice(4, 7));
+            if (l.length == 7 || l.slice(-2) == '01') {
                 t.label = months[l.slice(5, 7)];
             }
         });

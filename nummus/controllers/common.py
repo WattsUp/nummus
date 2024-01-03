@@ -173,7 +173,7 @@ def ctx_base() -> t.DictAny:
             "Instrument Transactions": None,
         },
         "Banking": {
-            "Cash Flow": None,
+            "Cash Flow": "cash_flow.page",
             "Budgeting": None,
         },
         "Investing": {

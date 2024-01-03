@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import datetime
 import mimetypes
+import re
 from typing import TYPE_CHECKING
 
 from nummus import exceptions as exc
+from nummus import utils
 
 if TYPE_CHECKING:
     import flask
@@ -14,6 +16,17 @@ if TYPE_CHECKING:
     from nummus.models import Base
 
 MAX_IMAGE_SIZE = int(1e6)
+
+LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
+# else plot normally by days
+
+LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
+LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
+# else plot normally by days
+
+LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
+LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
+# else tick each day
 
 
 def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
@@ -72,17 +85,18 @@ def parse_period(
         start_this_month = datetime.date(today.year, today.month, 1)
         end = start_this_month - datetime.timedelta(days=1)
         start = datetime.date(end.year, end.month, 1)
-    elif period == "30-days":
-        start = today - datetime.timedelta(days=30)
+    elif m_days := re.match(r"(\d+)-days", period):
+        n = int(m_days.group(1))
+        start = today - datetime.timedelta(days=n)
         end = today
-    elif period == "90-days":
-        start = today - datetime.timedelta(days=90)
+    elif m_months := re.match(r"(\d+)-months", period):
+        n = int(m_months.group(1))
+        start_this_month = datetime.date(today.year, today.month, 1)
+        start = utils.date_add_months(start_this_month, -n)
         end = today
-    elif period == "1-year":
-        start = datetime.date(today.year - 1, today.month, 1)
-        end = today
-    elif period == "5-years":
-        start = datetime.date(today.year - 5, today.month, 1)
+    elif m_years := re.match(r"(\d+)-years?", period):
+        n = int(m_years.group(1))
+        start = datetime.date(today.year - n, today.month, 1)
         end = today
     elif period == "this-year":
         start = datetime.date(today.year, 1, 1)
@@ -96,6 +110,9 @@ def parse_period(
     else:
         msg = f"Unknown period: {period}"
         raise exc.http.BadRequest(msg)
+    if start == end:
+        # Avoid zero length days cause it makes the chart look bad
+        end += datetime.timedelta(days=1)
     return start, end
 
 

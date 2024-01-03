@@ -70,6 +70,7 @@ Run `web` command to launch a website to interact with the module.
 ---
 
 ## Running Tests
+Does not test front-end at all and minimally tests web controllers. This is out of scope for the foreseeable future.
 
 Unit tests
 

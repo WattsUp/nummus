@@ -6,9 +6,10 @@
         {#<div hx-get="/h/dashboard/budget" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}
-        {#<div hx-get="/h/dashboard/cash-flow" hx-trigger="load">
+        <div hx-get="{{ url_for("cash_flow.dashboard", period="8-months") }}"
+             hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
-        </div>#}
+        </div>
         {#<div hx-get="/h/dashboard/retirement" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}

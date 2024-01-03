@@ -9,29 +9,28 @@
             Today's Balance <b>{{ current | money }}</b>
         </h2>
     </div>
-    {% with name="total" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="total-chart-canvas"></canvas>
+    </div>
     {% include "net-worth/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
-    {% with name="assets" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="assets-chart-canvas"></canvas>
+    </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
-    {% with name="liabilities" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="liabilities-chart-canvas"></canvas>
+    </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
     <div class="flex space justify-between">
         <div class="w-[49%]">
-            <canvas id="assets-pie-chart-canvas"></canvas>
+            <canvas id="assets-pie-chart-canvas" class="mb-2"></canvas>
             <div id="assets-breakdown"></div>
         </div>
         <div class="w-[49%]">
-            <canvas id="liabilities-pie-chart-canvas"></canvas>
+            <canvas id="liabilities-pie-chart-canvas" class="mb-2"></canvas>
             <div id="liabilities-breakdown"></div>
         </div>
     </div>
-    {# TODO(WattsUp): Synchronize hovering #}
     {% include "net-worth/chart-data.jinja" %}
 </section>

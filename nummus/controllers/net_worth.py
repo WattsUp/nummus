@@ -6,7 +6,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 import flask
-import sqlalchemy.exc
+import sqlalchemy
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
@@ -52,6 +52,7 @@ def ctx_chart() -> t.DictAny:
             )
         start_ord = start.toordinal()
         end_ord = end.toordinal()
+        n = end_ord - start_ord + 1
 
         query = s.query(Account)
         if category is not None:
@@ -69,7 +70,7 @@ def ctx_chart() -> t.DictAny:
 
         acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+        total: t.Reals = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
         mapping = Account.map_name(s)
 
@@ -80,14 +81,49 @@ def ctx_chart() -> t.DictAny:
                     "values": values,
                 },
             )
+        accounts = sorted(accounts, key=lambda item: -item["values"][-1])
+
+        labels: t.Strings = []
+        total_min: t.Reals | None = None
+        total_max: t.Reals | None = None
+        date_mode: str | None = None
+
+        if n > web_utils.LIMIT_DOWNSAMPLE:
+            # Downsample to min/avg/max by month
+            labels, total_min, total, total_max = utils.downsample(
+                start_ord,
+                end_ord,
+                total,
+            )
+            date_mode = "years"
+
+            for account in accounts:
+                # Don't care about min/max cause stacked chart
+                _, _, acct_values, _ = utils.downsample(
+                    start_ord,
+                    end_ord,
+                    account["values"],
+                )
+                account["values"] = acct_values
+        else:
+            labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
+            if n > web_utils.LIMIT_TICKS_MONTHS:
+                date_mode = "months"
+            elif n > web_utils.LIMIT_TICKS_WEEKS:
+                date_mode = "weeks"
+            else:
+                date_mode = "days"
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "total": total,
+            "labels": labels,
+            "date_mode": date_mode,
+            "values": total,
+            "min": total_min,
+            "max": total_max,
             "accounts": accounts,
         },
         "category": category,
@@ -142,7 +178,7 @@ def dashboard() -> str:
 
     with p.get_session() as s:
         end_ord = today_ord
-        start = utils.date_add_months(today, -6)
+        start = utils.date_add_months(today, -8)
         start_ord = start.toordinal()
         acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
 
@@ -150,7 +186,8 @@ def dashboard() -> str:
 
     chart = {
         "data": {
-            "dates": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "date_mode": "months",
             "total": total,
         },
         "current": total[-1],

@@ -26,6 +26,7 @@ class TestDashboard(WebTestBase):
         urls = [
             "/h/dashboard/net-worth",
             "/h/dashboard/emergency-fund",
+            "/h/dashboard/cash-flow?period=8-months",
         ]
         for url in urls:
             self.assertIn(f'hx-get="{url}"', result)

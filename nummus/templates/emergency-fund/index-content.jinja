@@ -27,9 +27,9 @@
             </h1>
         </div>
     </div>
-    {% with name="e-fund" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="e-fund-chart-canvas"></canvas>
+    </div>
     {% include "emergency-fund/chart-data.jinja" %}
     <div>
         {% if e_fund["delta_low"] is none %}

@@ -1,0 +1,8 @@
+{% if include_oob %}
+    {% with oob = True %}
+        {% include "cash-flow/chart-config.jinja" %}
+    {% endwith %}
+{% endif %}
+<div id="cash-flow-chart-data">
+    <script>cashFlowChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+</div>

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING
 
 from nummus.controllers import (
     accounts,
+    cash_flow,
     common,
     dashboard,
     emergency_fund,
@@ -28,6 +29,7 @@ def add_routes(app: flask.Flask) -> None:
     """
     module = [
         accounts,
+        cash_flow,
         common,
         dashboard,
         emergency_fund,

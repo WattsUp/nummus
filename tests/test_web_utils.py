@@ -4,7 +4,7 @@ import datetime
 
 import flask
 
-from nummus import models, web_utils
+from nummus import models, utils, web_utils
 from nummus.models import Account, AccountCategory, base_uri
 from tests.base import TestBase
 
@@ -41,14 +41,15 @@ class TestWebUtils(TestBase):
         today = datetime.date.today()
 
         result = web_utils.parse_period("custom", None, None)
-        self.assertEqual(result, (today, today))
+        self.assertEqual(result, (today, today + datetime.timedelta(days=1)))
 
         start = datetime.date(today.year, today.month, 4)
         end = datetime.date(today.year, today.month, 10)
         result = web_utils.parse_period("custom", start, end)
         self.assertEqual(result, (start, end))
         result = web_utils.parse_period("custom", end, start)
-        self.assertEqual(result, (end, end))
+        # Always at least 2 days long for better graphs
+        self.assertEqual(result, (end, end + datetime.timedelta(days=1)))
 
         start = datetime.date(today.year, today.month, 1)
         end = today
@@ -68,6 +69,11 @@ class TestWebUtils(TestBase):
         start = today - datetime.timedelta(days=90)
         end = today
         result = web_utils.parse_period("90-days", None, None)
+        self.assertEqual(result, (start, end))
+
+        start = utils.date_add_months(datetime.date(today.year, today.month, 1), -6)
+        end = today
+        result = web_utils.parse_period("6-months", None, None)
         self.assertEqual(result, (start, end))
 
         start = datetime.date(today.year - 1, today.month, 1)

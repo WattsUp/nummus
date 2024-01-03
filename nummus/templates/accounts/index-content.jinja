@@ -1,5 +1,6 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
+         hx-include="#txn-config,#txn-header"
          hx-trigger="update-account from:body"
          hx-target="#main"
          hx-swap="innerHTML">
@@ -20,13 +21,11 @@
             Today's Balance <b>{{ acct["value"] | money }}</b>
         </h2>
     </div>
-    {% with name="account" %}
-        {% include "shared/chart.jinja" %}
-    {% endwith %}
+    <div class="w-full h-96">
+        <canvas id="account-chart-canvas"></canvas>
+    </div>
     {% include "accounts/chart-data.jinja" %}
-    <div class="w-full grow"
-         hx-target="#txn-table"
-         hx-include="#txn-config,#txn-header">
+    <div class="w-full grow" hx-target="#txn-table" hx-swap="outerHTML">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
         {% include "accounts/table-config.jinja" %}
         {% include "accounts/table-header.jinja" %}

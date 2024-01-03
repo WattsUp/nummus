@@ -266,6 +266,92 @@ def date_add_months(date: datetime.date, months: int) -> datetime.date:
     return datetime.date(y, m, d)
 
 
+def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
+    """Split a period into months.
+
+    Args:
+        start_ord: First date ordinal of period
+        end_ord: Last date ordinal of period
+
+    Returns:
+        A dictionary of months and the ordinals that start and end them
+        dict{"2000-01": (start_ord_0, end_ord_0), "2000-02": ...}
+        Results will not fall outside of start_ord and end_ord
+    """
+    date = datetime.date.fromordinal(start_ord)
+    y = date.year
+    m = date.month
+    end = datetime.date.fromordinal(end_ord)
+    end_y = end.year
+    end_m = end.month
+    months: dict[str, tuple[int, int]] = {}
+    while y < end_y or (y == end_y and m <= end_m):
+        start_of_month = datetime.date(y, m, 1).toordinal()
+        end_of_month = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
+        months[f"{y:04}-{m:02}"] = (
+            max(start_ord, start_of_month),
+            min(end_ord, end_of_month),
+        )
+        y = y + (m // 12)
+        m = (m % 12) + 1
+    return months
+
+
+def period_years(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
+    """Split a period into years.
+
+    Args:
+        start_ord: First date ordinal of period
+        end_ord: Last date ordinal of period
+
+    Returns:
+        A dictionary of years and the ordinals that start and end them
+        dict{"2000": (start_ord_0, end_ord_0), "2001": ...}
+        Results will not fall outside of start_ord and end_ord
+    """
+    year = datetime.date.fromordinal(start_ord).year
+    end_year = datetime.date.fromordinal(end_ord).year
+    years: dict[str, tuple[int, int]] = {}
+    while year <= end_year:
+        jan_1 = datetime.date(year, 1, 1).toordinal()
+        dec_31 = datetime.date(year, 12, 31).toordinal()
+        years[str(year)] = (max(start_ord, jan_1), min(end_ord, dec_31))
+        year += 1
+    return years
+
+
+def downsample(
+    start_ord: int,
+    end_ord: int,
+    values: t.Reals,
+) -> tuple[t.Strings, t.Reals, t.Reals, t.Reals]:
+    """Downsample a list of values to min/avg/max by month.
+
+    Args:
+        start_ord: First date ordinal of period
+        end_ord: Last date ordinal of period
+        values: Daily values
+
+    Returns:
+        (labels, min, avg, max)
+    """
+    periods = period_months(start_ord, end_ord)
+    labels: t.Strings = []
+    values_min: t.Reals = []
+    values_avg: t.Reals = []
+    values_max: t.Reals = []
+
+    # TODO (WattsUp): Not a very fast algorithm especially when downsampling many
+    for period, limits in periods.items():
+        values_sliced = values[limits[0] - start_ord : limits[1] - start_ord + 1]
+        labels.append(period)
+        values_min.append(min(values_sliced))
+        values_max.append(max(values_sliced))
+        values_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+    return labels, values_min, values_avg, values_max
+
+
 def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     """Round a list, carrying over error such that sum(list) == sum(round_list).
 
@@ -287,7 +373,7 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     return l_rounded
 
 
-def integrate(deltas: list[t.Real | None]) -> t.Reals:
+def integrate(deltas: list[t.Real | None] | t.Reals) -> t.Reals:
     """Integrate a list starting.
 
     Args:
