@@ -13,7 +13,9 @@ const netWorthChart = {
         'use strict';
         const labels = raw.labels;
         const dateMode = raw.date_mode;
-        const total = raw.total.map(v => Number(v));
+        const values = raw.values.map(v => Number(v));
+        const min = raw.min && raw.min.map(v => Number(v));
+        const max = raw.max && raw.max.map(v => Number(v));
         const accounts = raw.accounts.map(a => {
             a.values = a.values.map(v => Number(v));
             return a;
@@ -26,27 +28,57 @@ const netWorthChart = {
         {
             const canvas = document.getElementById('total-chart-canvas');
             const ctx = canvas.getContext('2d');
-            const dataset = {
-                label: 'Total',
-                type: 'line',
-                data: total,
-                borderColor: getThemeColor('grey-500'),
-                borderWidth: 2,
-                pointRadius: 0,
-                hoverRadius: 0,
-                fill: {
-                    target: 'origin',
-                    above: blue + '80',
-                    below: yellow + '80',
-                },
-            };
+            const datasets = [];
+            if (min == null) {
+                const blue = getThemeColor('blue');
+                const yellow = getThemeColor('yellow');
+                datasets.push({
+                    type: 'line',
+                    data: values,
+                    borderColor: getThemeColor('grey-500'),
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    hoverRadius: 0,
+                    fill: {
+                        target: 'origin',
+                        above: blue + '80',
+                        below: yellow + '80',
+                    },
+                });
+            } else {
+                const grey = getThemeColor('grey-500');
+                // Plot average as a line and fill between min/max
+                datasets.push({
+                    label: 'Max',
+                    type: 'line',
+                    data: max,
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    hoverRadius: 0,
+                    fill: 2,
+                    backgroundColor: grey + '40',
+                });
+                datasets.push({
+                    label: 'Average',
+                    type: 'line',
+                    data: values,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    hoverRadius: 0,
+                    borderColor: grey,
+                });
+                datasets.push({
+                    label: 'Min',
+                    type: 'line',
+                    data: min,
+                    borderWidth: 0,
+                    pointRadius: 0,
+                    hoverRadius: 0,
+                });
+            }
+
             if (this.chartTotal && ctx == this.chartTotal.ctx) {
-                nummusChart.update(
-                    this.chartTotal,
-                    labels,
-                    dateMode,
-                    [dataset],
-                );
+                nummusChart.update(this.chartTotal, labels, dateMode, datasets);
             } else {
                 const plugins = [
                     [pluginFixedAxisWidth, {width: width}],
@@ -55,7 +87,7 @@ const netWorthChart = {
                     ctx,
                     labels,
                     dateMode,
-                    [dataset],
+                    datasets,
                     plugins,
                 );
             }

@@ -67,7 +67,7 @@ def ctx_chart() -> t.DictAny:
 
         acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+        total: t.Reals = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
         mapping = Account.map_name(s)
 
@@ -80,24 +80,47 @@ def ctx_chart() -> t.DictAny:
             )
         accounts = sorted(accounts, key=lambda item: -item["values"][-1])
 
-        # TODO (WattsUp): Check if n > years, months and downsample to min/avg/max
-
+        labels: t.Strings = []
+        total_min: t.Reals | None = None
+        total_max: t.Reals | None = None
         date_mode: str | None = None
-        if n > web_utils.LIMIT_TICKS_MONTHS:
-            date_mode = "months"
-        elif n > web_utils.LIMIT_TICKS_WEEKS:
-            date_mode = "weeks"
+
+        if n > web_utils.LIMIT_DOWNSAMPLE:
+            # Downsample to min/avg/max by month
+            labels, total_min, total, total_max = utils.downsample(
+                start_ord,
+                end_ord,
+                total,
+            )
+            date_mode = "years"
+
+            for account in accounts:
+                # Don't care about min/max cause stacked chart
+                _, _, acct_values, _ = utils.downsample(
+                    start_ord,
+                    end_ord,
+                    account["values"],
+                )
+                account["values"] = acct_values
         else:
-            date_mode = "days"
+            labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
+            if n > web_utils.LIMIT_TICKS_MONTHS:
+                date_mode = "months"
+            elif n > web_utils.LIMIT_TICKS_WEEKS:
+                date_mode = "weeks"
+            else:
+                date_mode = "days"
 
     return {
         "start": start,
         "end": end,
         "period": period,
         "data": {
-            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "labels": labels,
             "date_mode": date_mode,
-            "total": total,
+            "values": total,
+            "min": total_min,
+            "max": total_max,
             "accounts": accounts,
         },
         "category": category,
