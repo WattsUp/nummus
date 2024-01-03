@@ -6,6 +6,7 @@ const pluginHoverHighlight = {
     id: 'hoverHighlight',
     afterInit: function(chart) {
         const {config: {options: {plugins: {hoverHighlight}}}} = chart;
+        hoverHighlight.scroll = hoverHighlight.scroll ?? true;
         chart.hoverHighlight = hoverHighlight;
 
         document.querySelectorAll(`#${hoverHighlight.parent}>*`)
@@ -15,7 +16,7 @@ const pluginHoverHighlight = {
                     this.setHover(chart, i, true);
                 }.bind(this));
                 child.addEventListener('mouseleave', function() {
-                    child.style.fontWeight = 'unset';
+                    child.style.fontWeight = '';
                     this.setHover(chart, i, false);
                 }.bind(this));
             });
@@ -26,12 +27,13 @@ const pluginHoverHighlight = {
             `#${hoverHighlight.parent}>:nth-child(${i + 1})`);
     },
     setActive(chart, i, active) {
+        const hoverHighlight = chart.hoverHighlight;
         const child = this.getChild(chart, i);
         if (active) {
-            child.scrollIntoView();
+            if (hoverHighlight.scroll) child.scrollIntoView();
             child.style.fontWeight = 'bold';
         } else {
-            child.style.fontWeight = 'unset';
+            child.style.fontWeight = '';
         }
     },
     setHover(chart, i, active) {

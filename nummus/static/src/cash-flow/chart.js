@@ -205,8 +205,6 @@ const cashFlowChart = {
         parent.innerHTML = '';
         for (const category of categories) {
             const v = category.amount;
-            // TODO (WattsUp): Make these links to filtered matching
-            // transactions
 
             const row = document.createElement('div');
             row.classList.add('flex');
@@ -233,5 +231,74 @@ const cashFlowChart = {
 
             parent.appendChild(row);
         }
+    },
+    /**
+     * Create Emergency Fund Dashboard Chart
+     *
+     * @param {Object} raw Raw data from emergency fund controller
+     */
+    updateDashboard: function(raw) {
+        'use strict';
+        // Always chartBars
+        const labels = raw.labels;
+        const dateMode = raw.date_mode;
+        const totals = raw.totals.map(v => Number(v));
+        const incomes = raw.incomes.map(v => Number(v));
+        const expenses = raw.expenses.map(v => Number(v));
+
+        const green = getThemeColor('green');
+        const red = getThemeColor('red');
+
+        const canvas = document.getElementById('cash-flow-chart-canvas');
+        const ctx = canvas.getContext('2d');
+        const datasets = [
+            {
+                label: 'Income',
+                type: 'bar',
+                data: incomes,
+                backgroundColor: green,
+                borderWidth: 0,
+                pointRadius: 0,
+                hoverRadius: 0,
+            },
+            {
+
+                label: 'Expense',
+                type: 'bar',
+                data: expenses,
+                backgroundColor: red,
+                borderWidth: 0,
+                pointRadius: 0,
+                hoverRadius: 0,
+            },
+            {
+                label: 'Total',
+                type: 'line',
+                data: totals,
+                borderColor: getThemeColor('grey-500'),
+                borderWidth: 2,
+                borderDash: [5],
+                pointRadius: 0,
+                hoverRadius: 0,
+                order: -1,
+            },
+        ];
+        if (this.chartTotal) this.chartTotal.destroy();
+        this.chartTotal = nummusChart.create(
+            ctx,
+            labels,
+            dateMode,
+            datasets,
+            null,
+            {
+                scales: {
+                    x: {
+                        ticks: {callback: formatDateTicksMonths},
+                        stacked: true,
+                    },
+                    y: {ticks: {display: false}, grid: {drawTicks: false}},
+                },
+            },
+        );
     },
 }

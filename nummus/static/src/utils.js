@@ -206,7 +206,7 @@ function formatDateTicksMonths(value, index, ticks) {
         };
         ticks.forEach((t, i) => {
             let l = labels[i];
-            if (l.slice(-2) == '01') {
+            if (l.length == 7 || l.slice(-2) == '01') {
                 t.label = months[l.slice(5, 7)];
             }
         });

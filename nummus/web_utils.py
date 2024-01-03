@@ -3,9 +3,11 @@ from __future__ import annotations
 
 import datetime
 import mimetypes
+import re
 from typing import TYPE_CHECKING
 
 from nummus import exceptions as exc
+from nummus import utils
 
 if TYPE_CHECKING:
     import flask
@@ -83,17 +85,18 @@ def parse_period(
         start_this_month = datetime.date(today.year, today.month, 1)
         end = start_this_month - datetime.timedelta(days=1)
         start = datetime.date(end.year, end.month, 1)
-    elif period == "30-days":
-        start = today - datetime.timedelta(days=30)
+    elif m_days := re.match(r"(\d+)-days", period):
+        n = int(m_days.group(1))
+        start = today - datetime.timedelta(days=n)
         end = today
-    elif period == "90-days":
-        start = today - datetime.timedelta(days=90)
+    elif m_months := re.match(r"(\d+)-months", period):
+        n = int(m_months.group(1))
+        start_this_month = datetime.date(today.year, today.month, 1)
+        start = utils.date_add_months(start_this_month, -n)
         end = today
-    elif period == "1-year":
-        start = datetime.date(today.year - 1, today.month, 1)
-        end = today
-    elif period == "5-years":
-        start = datetime.date(today.year - 5, today.month, 1)
+    elif m_years := re.match(r"(\d+)-years?", period):
+        n = int(m_years.group(1))
+        start = datetime.date(today.year - n, today.month, 1)
         end = today
     elif period == "this-year":
         start = datetime.date(today.year, 1, 1)

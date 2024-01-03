@@ -13,26 +13,9 @@
     <div class="grow"></div>
     <select name="period"
             hx-get="{{ url_for("cash_flow.chart", category=chart["category"].name.lower() if chart["category"]) }}">
-        <option value="this-month"
-                {% if chart["period"] == "this-month" %}selected{% endif %}>This Month</option>
-        <option value="last-month"
-                {% if chart["period"] == "last-month" %}selected{% endif %}>Last Month</option>
-        <option value="30-days"
-                {% if chart["period"] == "30-days" %}selected{% endif %}>30 Days</option>
-        <option value="90-days"
-                {% if chart["period"] == "90-days" %}selected{% endif %}>90 Days</option>
-        <option value="1-year"
-                {% if chart["period"] == "1-year" %}selected{% endif %}>1 year</option>
-        <option value="5-years"
-                {% if chart["period"] == "5-years" %}selected{% endif %}>5 years</option>
-        <option value="this-year"
-                {% if chart["period"] == "this-year" %}selected{% endif %}>This Year</option>
-        <option value="last-year"
-                {% if chart["period"] == "last-year" %}selected{% endif %}>Last Year</option>
-        <option value="all" {% if chart["period"] == "all" %}selected{% endif %}>All</option>
-        <option value="custom"
-                hidden="hidden"
-                {% if chart["period"] == "custom" %}selected{% endif %}>Custom</option>
+        {% with period = chart["period"] %}
+            {% include "shared/period-options.jinja" %}
+        {% endwith %}
     </select>
     <input type="date"
            name="start"

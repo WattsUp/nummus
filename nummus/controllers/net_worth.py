@@ -175,7 +175,7 @@ def dashboard() -> str:
 
     with p.get_session() as s:
         end_ord = today_ord
-        start = utils.date_add_months(today, -6)
+        start = utils.date_add_months(today, -8)
         start_ord = start.toordinal()
         acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
 

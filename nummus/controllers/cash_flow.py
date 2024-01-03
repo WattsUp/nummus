@@ -282,9 +282,9 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    raise NotImplementedError
     return flask.render_template(
         "cash-flow/dashboard.jinja",
+        chart=ctx_chart(),
     )
 
 

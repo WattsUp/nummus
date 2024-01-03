@@ -183,7 +183,10 @@ const netWorthChart = {
                 nummusChart.updatePie(this.chartPieAssets, assets);
             } else {
                 const plugins = [
-                    [pluginHoverHighlight, {parent: 'assets-breakdown'}],
+                    [
+                        pluginHoverHighlight,
+                        {parent: 'assets-breakdown', scroll: false}
+                    ],
                 ];
                 this.chartPieAssets = nummusChart.createPie(
                     ctx,
@@ -202,7 +205,10 @@ const netWorthChart = {
                 nummusChart.updatePie(this.chartPieLiabilities, liabilities);
             } else {
                 const plugins = [
-                    [pluginHoverHighlight, {parent: 'liabilities-breakdown'}],
+                    [
+                        pluginHoverHighlight,
+                        {parent: 'liabilities-breakdown', scroll: false}
+                    ],
                 ];
                 this.chartPieLiabilities = nummusChart.createPie(
                     ctx,
