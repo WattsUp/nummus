@@ -41,9 +41,9 @@ def ctx_chart() -> t.DictAny:
 
     with p.get_session() as s:
         if start is None:
-            query = s.query(TransactionSplit)
-            query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+            query = s.query(sqlalchemy.func.min(TransactionSplit.date_ord)).where(
+                TransactionSplit.asset_id.is_(None),
+            )
             start_ord = query.scalar()
             start = (
                 datetime.date.fromordinal(start_ord)
@@ -57,13 +57,16 @@ def ctx_chart() -> t.DictAny:
         query = s.query(Account)
         if category is not None:
             query = query.where(Account.category == category)
+
         # Include account if not closed
         # Include account if most recent transaction is in period
-        ids = [
-            acct.id_
-            for acct in query.all()
-            if (not acct.closed or acct.updated_on_ord > start_ord)
-        ]
+        def include_account(acct: Account) -> bool:
+            if not acct.closed:
+                return True
+            updated_on_ord = acct.updated_on_ord
+            return updated_on_ord is not None and updated_on_ord > start_ord
+
+        ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
         acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 

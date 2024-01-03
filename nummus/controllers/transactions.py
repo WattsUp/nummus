@@ -78,12 +78,13 @@ def options(field: str) -> str:
         )
         end_ord = end.toordinal()
 
-        query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.asset_id.is_(None))
+        query = s.query(TransactionSplit).where(
+            TransactionSplit.asset_id.is_(None),
+            TransactionSplit.date_ord <= end_ord,
+        )
         if start is not None:
             start_ord = start.toordinal()
             query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
 
         search_str = args.get(f"search-{field}")
 
@@ -188,8 +189,13 @@ def ctx_table(
             args.get("start", type=datetime.date.fromisoformat),
             args.get("end", type=datetime.date.fromisoformat),
         )
-        if acct is not None:
-            start = start or datetime.date.fromordinal(acct.opened_on_ord)
+        if start is None and acct is not None:
+            opened_on_ord = acct.opened_on_ord
+            start = (
+                end
+                if opened_on_ord is None
+                else datetime.date.fromordinal(opened_on_ord)
+            )
         end_ord = end.toordinal()
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
@@ -198,13 +204,17 @@ def ctx_table(
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
 
-        query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.asset_id.is_(None))
+        query = (
+            s.query(TransactionSplit)
+            .where(
+                TransactionSplit.asset_id.is_(None),
+                TransactionSplit.date_ord <= end_ord,
+            )
+            .order_by(TransactionSplit.date_ord)
+        )
         if start is not None:
             start_ord = start.toordinal()
             query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.order_by(TransactionSplit.date_ord)
         if acct is not None:
             query = query.where(TransactionSplit.account_id == acct.id_)
 
@@ -267,9 +277,9 @@ def ctx_table(
         query_total = query.scalar() or Decimal(0)
 
         if start is None:
-            query = s.query(TransactionSplit)
-            query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+            query = s.query(sqlalchemy.func.min(TransactionSplit.date_ord)).where(
+                TransactionSplit.asset_id.is_(None),
+            )
             start_ord = query.scalar()
             start = (
                 datetime.date.fromordinal(start_ord)
@@ -383,15 +393,17 @@ def edit(uri: str) -> str | flask.Response:
                 ctx_split(t_split, accounts, categories) for t_split in splits
             ]
 
-            query = s.query(TransactionSplit.payee)
-            query = query.where(TransactionSplit.asset_id.is_(None))
+            query = s.query(TransactionSplit.payee).where(
+                TransactionSplit.asset_id.is_(None),
+            )
             payees = sorted(
                 filter(None, (item for item, in query.distinct())),
                 key=lambda item: item.lower(),
             )
 
-            query = s.query(TransactionSplit.tag)
-            query = query.where(TransactionSplit.asset_id.is_(None))
+            query = s.query(TransactionSplit.tag).where(
+                TransactionSplit.asset_id.is_(None),
+            )
             tags = sorted(
                 filter(None, (item for item, in query.distinct())),
                 key=lambda item: item.lower(),

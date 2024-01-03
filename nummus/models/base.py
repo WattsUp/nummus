@@ -114,8 +114,7 @@ class Base(orm.DeclarativeBase):
             msg = f"{cls} does not have name column"
             raise KeyError(msg)
 
-        query = s.query(cls)
-        query = query.with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]
+        query = s.query(cls).with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]
         return dict(query.all())
 
     def validate_strings(self, key: str, field: str | None) -> str | None:

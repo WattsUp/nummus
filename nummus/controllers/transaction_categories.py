@@ -175,16 +175,16 @@ def delete(uri: str) -> str | flask.Response:
             raise exc.http.Forbidden(msg)
 
         # Move all transactions to Uncategorized
-        query = s.query(TransactionCategory)
-        query = query.where(TransactionCategory.name == "Uncategorized")
+        query = s.query(TransactionCategory).where(
+            TransactionCategory.name == "Uncategorized",
+        )
         uncategorized = query.scalar()
         if uncategorized is None:  # pragma: no cover
             # Uncategorized is locked and cannot be deleted
             msg = "Could not find Uncategorized id"
             raise exc.ProtectedObjectNotFoundError(msg)
 
-        query = s.query(TransactionSplit)
-        query = query.where(TransactionSplit.category_id == cat.id_)
+        query = s.query(TransactionSplit).where(TransactionSplit.category_id == cat.id_)
         for t_split in query.all():
             t_split.category_id = uncategorized.id_
         s.delete(cat)

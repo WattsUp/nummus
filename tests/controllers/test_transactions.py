@@ -85,6 +85,11 @@ class TestTransaction(WebTestBase):
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
+        queries = {"search": payee_1, "period": "all"}
+        result, _ = self.web_get(endpoint, queries=queries)
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+
     def test_options(self) -> None:
         d = self._setup_portfolio()
 
