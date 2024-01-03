@@ -354,6 +354,91 @@ class TestUtils(TestBase):
             datetime.date(2020, 2, 29),
         )
 
+    def test_period_months(self) -> None:
+        start = datetime.date(2023, 1, 10)
+        start_ord = start.toordinal()
+        end = datetime.date(2023, 1, 28)
+        end_ord = end.toordinal()
+        target = {
+            "2023-01": (start_ord, end_ord),
+        }
+        result = utils.period_months(start_ord, end_ord)
+        self.assertEqual(result, target)
+
+        end = datetime.date(2023, 2, 14)
+        end_ord = end.toordinal()
+        target = {
+            "2023-01": (start_ord, datetime.date(2023, 1, 31).toordinal()),
+            "2023-02": (datetime.date(2023, 2, 1).toordinal(), end_ord),
+        }
+        result = utils.period_months(start_ord, end_ord)
+        self.assertEqual(result, target)
+
+    def test_period_years(self) -> None:
+        start = datetime.date(2023, 1, 10)
+        start_ord = start.toordinal()
+        end = datetime.date(2023, 1, 28)
+        end_ord = end.toordinal()
+        target = {
+            "2023": (start_ord, end_ord),
+        }
+        result = utils.period_years(start_ord, end_ord)
+        self.assertEqual(result, target)
+
+        end = datetime.date(2023, 2, 14)
+        end_ord = end.toordinal()
+        target = {
+            "2023": (start_ord, end_ord),
+        }
+        result = utils.period_years(start_ord, end_ord)
+        self.assertEqual(result, target)
+
+        end = datetime.date(2025, 2, 14)
+        end_ord = end.toordinal()
+        target = {
+            "2023": (start_ord, datetime.date(2023, 12, 31).toordinal()),
+            "2024": (
+                datetime.date(2024, 1, 1).toordinal(),
+                datetime.date(2024, 12, 31).toordinal(),
+            ),
+            "2025": (datetime.date(2025, 1, 1).toordinal(), end_ord),
+        }
+        result = utils.period_years(start_ord, end_ord)
+        self.assertEqual(result, target)
+
+    def test_downsample(self) -> None:
+        start = datetime.date(2023, 1, 10)
+        start_ord = start.toordinal()
+        end = datetime.date(2023, 1, 28)
+        end_ord = end.toordinal()
+        n = end_ord - start_ord + 1
+
+        values = [Decimal(i) for i in range(n)]
+
+        labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
+        self.assertEqual(labels, ["2023-01"])
+        self.assertEqual(r_min, [Decimal(0)])
+        self.assertEqual(r_avg, [Decimal(n - 1) / 2])
+        self.assertEqual(r_max, [Decimal(n - 1)])
+
+        start = datetime.date(2023, 1, 30)
+        start_ord = start.toordinal()
+        end = datetime.date(2023, 2, 2)
+        end_ord = end.toordinal()
+
+        values = [
+            Decimal(1),
+            Decimal(3),
+            Decimal(5),
+            Decimal(7),
+        ]
+
+        labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
+        self.assertEqual(labels, ["2023-01", "2023-02"])
+        self.assertEqual(r_min, [Decimal(1), Decimal(5)])
+        self.assertEqual(r_avg, [Decimal(2), Decimal(6)])
+        self.assertEqual(r_max, [Decimal(3), Decimal(7)])
+
     def test_round_list(self) -> None:
         n = 9
         list_ = [1 / Decimal(n) for _ in range(n)]
