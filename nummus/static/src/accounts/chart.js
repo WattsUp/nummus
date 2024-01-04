@@ -69,5 +69,23 @@ const accountChart = {
         } else {
             this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
         }
-    }
+
+        const charts = [
+            'account-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.removeDeferredChart(chart);
+        }
+    },
+    /**
+     * Defer loading of charts by drawing a spinner on all charts
+     */
+    defer: function() {
+        const charts = [
+            'account-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.addDeferredChart(chart);
+        }
+    },
 }

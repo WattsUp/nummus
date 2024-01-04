@@ -231,6 +231,17 @@ const cashFlowChart = {
 
             parent.appendChild(row);
         }
+
+        const charts = [
+            'cash-flow-chart-canvas',
+            'income-chart-canvas',
+            'expense-chart-canvas',
+            'income-pie-chart-canvas',
+            'expense-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.removeDeferredChart(chart);
+        }
     },
     /**
      * Create Emergency Fund Dashboard Chart
@@ -300,5 +311,20 @@ const cashFlowChart = {
                 },
             },
         );
+    },
+    /**
+     * Defer loading of charts by drawing a spinner on all charts
+     */
+    defer: function() {
+        const charts = [
+            'cash-flow-chart-canvas',
+            'income-chart-canvas',
+            'expense-chart-canvas',
+            'income-pie-chart-canvas',
+            'expense-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.addDeferredChart(chart);
+        }
     },
 }
