@@ -29,7 +29,7 @@ LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunda
 # else tick each day
 
 # if n_days > LIMIT_DEFER then defer response with a spinner
-LIMIT_DEFER = 400
+LIMIT_DEFER = 200
 
 
 def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
