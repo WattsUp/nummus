@@ -168,11 +168,15 @@ const netWorthChart = {
 
         {
             const breakdown = document.getElementById('assets-breakdown');
+            if (this.chartPieAssets)
+                pluginHoverHighlight.removeListeners(this.chartPieAssets);
             this.createBreakdown(breakdown, assets, false);
         }
 
         {
             const breakdown = document.getElementById('liabilities-breakdown');
+            if (this.chartPieLiabilities)
+                pluginHoverHighlight.removeListeners(this.chartPieLiabilities);
             this.createBreakdown(breakdown, liabilities, true);
         }
 
@@ -181,6 +185,7 @@ const netWorthChart = {
             const ctx = canvas.getContext('2d');
             if (this.chartPieAssets && ctx == this.chartPieAssets.ctx) {
                 nummusChart.updatePie(this.chartPieAssets, assets);
+                pluginHoverHighlight.addListeners(this.chartPieAssets);
             } else {
                 const plugins = [
                     [
@@ -203,6 +208,7 @@ const netWorthChart = {
             if (this.chartPieLiabilities &&
                 ctx == this.chartPieLiabilities.ctx) {
                 nummusChart.updatePie(this.chartPieLiabilities, liabilities);
+                pluginHoverHighlight.addListeners(this.chartPieLiabilities);
             } else {
                 const plugins = [
                     [
