@@ -245,7 +245,7 @@ const nummusChart = {
      */
     updatePie: function(chart, sources) {
         'use strict';
-        const {datasets, total} = this.datasetsPie(sources);
+        const {labels, datasets, total} = this.datasetsPie(sources);
 
         if (chart.data.datasets.length == datasets.length) {
             // Swapping same type monthly or not
@@ -255,6 +255,7 @@ const nummusChart = {
         } else {
             chart.data.datasets = datasets;
         }
+        chart.data.labels = labels;
         chart.config.options.plugins.doughnutText.text =
             formatterF0.format(total);
         chart.update();
