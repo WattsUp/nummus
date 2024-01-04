@@ -24,9 +24,9 @@ class TestDashboard(WebTestBase):
         self.assertEqual(result[-len(target) :], target)
 
         urls = [
-            "/h/dashboard/net-worth",
-            "/h/dashboard/emergency-fund",
-            "/h/dashboard/cash-flow?period=8-months",
+            "/h/dashboard/net-worth?no-defer",
+            "/h/dashboard/emergency-fund?no-defer",
+            "/h/dashboard/cash-flow?period=8-months&no-defer",
         ]
         for url in urls:
             self.assertIn(f'hx-get="{url}"', result)

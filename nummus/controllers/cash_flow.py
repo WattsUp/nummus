@@ -80,7 +80,7 @@ def ctx_chart() -> t.DictAny:
             if not acct.closed:
                 return True
             updated_on_ord = acct.updated_on_ord
-            return updated_on_ord is not None and updated_on_ord > start_ord
+            return updated_on_ord is not None and updated_on_ord >= start_ord
 
         ids = [acct.id_ for acct in query.all() if include_account(acct)]
 

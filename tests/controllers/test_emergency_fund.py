@@ -101,7 +101,8 @@ class TestEmergencyFund(WebTestBase):
 
         # No budget should not error out
         endpoint = "/h/dashboard/emergency-fund"
-        result, _ = self.web_get(endpoint)
+        queries = {"no-defer": ""}
+        result, _ = self.web_get(endpoint, queries)
         self.assertIn("No budget", result)
         self.assertRegex(
             result,
@@ -115,7 +116,7 @@ class TestEmergencyFund(WebTestBase):
             s.add(b)
             s.commit()
 
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(endpoint, queries)
         self.assertIn("increase your fund to at least $30.", result)
         self.assertRegex(
             result,
@@ -130,7 +131,7 @@ class TestEmergencyFund(WebTestBase):
                 self.fail("Account is missing")
             acct.emergency = True
             s.commit()
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(endpoint, queries)
         self.assertIn("$30 could be invested", result)
 
         # Adjust budget to be mid and add closed account
@@ -149,7 +150,7 @@ class TestEmergencyFund(WebTestBase):
             )
             s.add(acct)
             s.commit()
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(endpoint, queries)
         self.assertIn("cover 4 months of expenses.", result)
 
         # Adjust budget to be low
@@ -159,5 +160,5 @@ class TestEmergencyFund(WebTestBase):
                 self.fail("Budget is missing")
             b.amount = Decimal(-40)
             s.commit()
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(endpoint, queries)
         self.assertIn("Try to increase your fund to at least $120.", result)
