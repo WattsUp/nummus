@@ -11,6 +11,17 @@ const netWorthChart = {
      */
     update: function(raw) {
         'use strict';
+        const charts = [
+            'total-chart-canvas',
+            'assets-chart-canvas',
+            'liabilities-chart-canvas',
+            'assets-pie-chart-canvas',
+            'liabilities-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.removeDeferredChart(chart);
+        }
+
         const labels = raw.labels;
         const dateMode = raw.date_mode;
         const values = raw.values.map(v => Number(v));
@@ -305,6 +316,21 @@ const netWorthChart = {
                     },
                 },
             );
+        }
+    },
+    /**
+     * Defer loading of charts by drawing a spinner on all charts
+     */
+    defer: function() {
+        const charts = [
+            'total-chart-canvas',
+            'assets-chart-canvas',
+            'liabilities-chart-canvas',
+            'assets-pie-chart-canvas',
+            'liabilities-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.addDeferredChart(chart);
         }
     },
 }

@@ -4,5 +4,9 @@
     {% endwith %}
 {% endif %}
 <div id="net-worth-chart-data">
-    <script>netWorthChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    {% if chart["defer"] %}
+        <script>netWorthChart.defer()</script>
+    {% else %}
+        <script>netWorthChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    {% endif %}
 </div>

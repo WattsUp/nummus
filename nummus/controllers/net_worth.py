@@ -54,6 +54,16 @@ def ctx_chart() -> t.DictAny:
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
 
+        if n > web_utils.LIMIT_DEFER:
+            return {
+                "defer": True,
+                "start": start,
+                "end": end,
+                "period": period,
+                "category": category,
+                "category_type": AccountCategory,
+            }
+
         query = s.query(Account)
         if category is not None:
             query = query.where(Account.category == category)
