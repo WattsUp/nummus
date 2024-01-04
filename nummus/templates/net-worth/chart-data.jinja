@@ -4,5 +4,14 @@
     {% endwith %}
 {% endif %}
 <div id="net-worth-chart-data">
-    <script>netWorthChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    {% if chart["defer"] %}
+        <script>netWorthChart.defer()</script>
+        <div hx-get="{{ url_for("net_worth.chart") }}?no-defer"
+             hx-include="#net-worth-config"
+             hx-target="#net-worth-chart-data"
+             hx-swap="outerHTML"
+             hx-trigger="load"></div>
+    {% else %}
+        <script>netWorthChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    {% endif %}
 </div>

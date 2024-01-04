@@ -36,6 +36,7 @@ def ctx_chart() -> t.DictAny:
         args.get("end", type=datetime.date.fromisoformat),
     )
     category = args.get("category", None, type=AccountCategory)
+    no_defer = "no-defer" in args
 
     accounts: list[t.DictAny] = []
 
@@ -53,6 +54,16 @@ def ctx_chart() -> t.DictAny:
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
+
+        if n > web_utils.LIMIT_DEFER and not no_defer:
+            return {
+                "defer": True,
+                "start": start,
+                "end": end,
+                "period": period,
+                "category": category,
+                "category_type": AccountCategory,
+            }
 
         query = s.query(Account)
         if category is not None:

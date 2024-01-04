@@ -10,9 +10,9 @@
         <button class="button {{ "bg-green" if chart["category"] == cat else "hover:green" }}"
                 hx-get="{{ url_for("cash_flow.chart", category=cat.name.lower() ) }}">{{ cat.name | title }}</button>
     {% endfor %}
+    {% if chart["category"] %}<input name="category" value="{{ chart["category"].name.lower() }}" hidden>{% endif %}
     <div class="grow"></div>
-    <select name="period"
-            hx-get="{{ url_for("cash_flow.chart", category=chart["category"].name.lower() if chart["category"]) }}">
+    <select name="period" hx-get="{{ url_for("cash_flow.chart") }}">
         {% with period = chart["period"] %}
             {% include "shared/period-options.jinja" %}
         {% endwith %}
@@ -20,12 +20,12 @@
     <input type="date"
            name="start"
            value="{{ chart["start"] }}"
-           hx-get="{{ url_for("cash_flow.chart", period="custom", category=chart["category"].name.lower() if chart["category"]) }}"
+           hx-get="{{ url_for("cash_flow.chart", period="custom") }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed">
     to
     <input type="date"
            name="end"
            value="{{ chart["end"] }}"
-           hx-get="{{ url_for("cash_flow.chart", period="custom", category=chart["category"].name.lower() if chart["category"]) }}"
+           hx-get="{{ url_for("cash_flow.chart", period="custom") }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed">
 </div>

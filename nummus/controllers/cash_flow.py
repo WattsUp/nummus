@@ -43,6 +43,7 @@ def ctx_chart() -> t.DictAny:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
+    no_defer = "no-defer" in args
     category = args.get("category", None, type=AccountCategory)
 
     with p.get_session() as s:
@@ -59,17 +60,29 @@ def ctx_chart() -> t.DictAny:
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
+        if n > web_utils.LIMIT_DEFER and not no_defer:
+            return {
+                "start": start,
+                "end": end,
+                "period": period,
+                "defer": True,
+                "category": category,
+                "category_type": AccountCategory,
+            }
 
         query = s.query(Account)
         if category is not None:
             query = query.where(Account.category == category)
+
         # Include account if not closed
         # Include account if most recent transaction is in period
-        ids = [
-            acct.id_
-            for acct in query.all()
-            if (not acct.closed or acct.updated_on_ord > start_ord)
-        ]
+        def include_account(acct: Account) -> bool:
+            if not acct.closed:
+                return True
+            updated_on_ord = acct.updated_on_ord
+            return updated_on_ord is not None and updated_on_ord >= start_ord
+
+        ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
         # Categorize whole period
         query = s.query(TransactionCategory)

@@ -133,6 +133,7 @@ def ctx_chart(acct: Account) -> t.DictAny:
         start = (
             end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
         )
+    no_defer = "no-defer" in args
 
     PREVIOUS_PERIOD["start"] = start
     PREVIOUS_PERIOD["end"] = end
@@ -140,6 +141,15 @@ def ctx_chart(acct: Account) -> t.DictAny:
     start_ord = start.toordinal()
     end_ord = end.toordinal()
     n = end_ord - start_ord + 1
+
+    if n > web_utils.LIMIT_DEFER and not no_defer:
+        return {
+            "start": start,
+            "end": end,
+            "period": period,
+            "defer": True,
+        }
+
     values, _ = acct.get_value(start_ord, end_ord)
 
     labels: t.Strings = []
@@ -229,12 +239,14 @@ def table(uri: str) -> str:
                 if opened_on_ord is None
                 else datetime.date.fromordinal(opened_on_ord)
             )
+        no_defer = "no-defer" in args
         if (
             PREVIOUS_PERIOD["start"] == start
             and PREVIOUS_PERIOD["end"] == end
             and flask.request.headers.get("Hx-Trigger") != "txn-table"
+            and not no_defer
         ):
-            # If same period and not being updated via update_transaction:
+            # If same period and not being updated via update_transaction nor deferral:
             # don't update the chart
             return common.page(
                 "accounts/table.jinja",

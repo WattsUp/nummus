@@ -151,11 +151,15 @@ const cashFlowChart = {
 
         {
             const breakdown = document.getElementById('income-breakdown');
+            if (this.chartPieIncome)
+                pluginHoverHighlight.removeListeners(this.chartPieIncome);
             this.createBreakdown(breakdown, incomeCategorized);
         }
 
         {
             const breakdown = document.getElementById('expense-breakdown');
+            if (this.chartPieExpense)
+                pluginHoverHighlight.removeListeners(this.chartPieExpense);
             this.createBreakdown(breakdown, expenseCategorized);
         }
 
@@ -164,6 +168,7 @@ const cashFlowChart = {
             const ctx = canvas.getContext('2d');
             if (this.chartPieIncome && ctx == this.chartPieIncome.ctx) {
                 nummusChart.updatePie(this.chartPieIncome, incomeCategorized);
+                pluginHoverHighlight.addListeners(this.chartPieIncome);
             } else {
                 const plugins = [
                     [pluginHoverHighlight, {parent: 'income-breakdown'}],
@@ -181,6 +186,7 @@ const cashFlowChart = {
             const ctx = canvas.getContext('2d');
             if (this.chartPieExpense && ctx == this.chartPieExpense.ctx) {
                 nummusChart.updatePie(this.chartPieExpense, expenseCategorized);
+                pluginHoverHighlight.addListeners(this.chartPieExpense);
             } else {
                 const plugins = [
                     [pluginHoverHighlight, {parent: 'expense-breakdown'}],
@@ -230,6 +236,17 @@ const cashFlowChart = {
             row.appendChild(value);
 
             parent.appendChild(row);
+        }
+
+        const charts = [
+            'cash-flow-chart-canvas',
+            'income-chart-canvas',
+            'expense-chart-canvas',
+            'income-pie-chart-canvas',
+            'expense-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.removeDeferredChart(chart);
         }
     },
     /**
@@ -300,5 +317,20 @@ const cashFlowChart = {
                 },
             },
         );
+    },
+    /**
+     * Defer loading of charts by drawing a spinner on all charts
+     */
+    defer: function() {
+        const charts = [
+            'cash-flow-chart-canvas',
+            'income-chart-canvas',
+            'expense-chart-canvas',
+            'income-pie-chart-canvas',
+            'expense-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.addDeferredChart(chart);
+        }
     },
 }

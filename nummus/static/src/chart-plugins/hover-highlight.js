@@ -7,19 +7,42 @@ const pluginHoverHighlight = {
     afterInit: function(chart) {
         const {config: {options: {plugins: {hoverHighlight}}}} = chart;
         hoverHighlight.scroll = hoverHighlight.scroll ?? true;
+        hoverHighlight.listenersEnter = [];
+        hoverHighlight.listenersExit = [];
         chart.hoverHighlight = hoverHighlight;
 
+        this.addListeners(chart);
+    },
+    addListeners(chart) {
+        const hoverHighlight = chart.hoverHighlight;
+        this.removeListeners(chart);
         document.querySelectorAll(`#${hoverHighlight.parent}>*`)
             .forEach((child, i) => {
-                child.addEventListener('mouseenter', function() {
+                const enter = function() {
                     child.style.fontWeight = 'bold';
                     this.setHover(chart, i, true);
-                }.bind(this));
-                child.addEventListener('mouseleave', function() {
+                }.bind(this)
+                const exit = function() {
                     child.style.fontWeight = '';
                     this.setHover(chart, i, false);
-                }.bind(this));
+                }.bind(this)
+                child.addEventListener('mouseenter', enter);
+                child.addEventListener('mouseleave', exit);
+                hoverHighlight.listenersEnter[i] = enter;
+                hoverHighlight.listenersExit[i] = exit;
             });
+    },
+    removeListeners(chart) {
+        const hoverHighlight = chart.hoverHighlight;
+        document.querySelectorAll(`#${hoverHighlight.parent}>*`)
+            .forEach((child, i) => {
+                child.removeEventListener(
+                    'mouseenter', hoverHighlight.listenersEnter[i]);
+                child.removeEventListener(
+                    'mouseexit', hoverHighlight.listenersExit[i]);
+            });
+        hoverHighlight.listenersEnter.length = 0;
+        hoverHighlight.listenersExit.length = 0;
     },
     getChild(chart, i) {
         const hoverHighlight = chart.hoverHighlight;

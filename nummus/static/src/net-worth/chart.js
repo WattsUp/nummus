@@ -168,11 +168,15 @@ const netWorthChart = {
 
         {
             const breakdown = document.getElementById('assets-breakdown');
+            if (this.chartPieAssets)
+                pluginHoverHighlight.removeListeners(this.chartPieAssets);
             this.createBreakdown(breakdown, assets, false);
         }
 
         {
             const breakdown = document.getElementById('liabilities-breakdown');
+            if (this.chartPieLiabilities)
+                pluginHoverHighlight.removeListeners(this.chartPieLiabilities);
             this.createBreakdown(breakdown, liabilities, true);
         }
 
@@ -181,6 +185,7 @@ const netWorthChart = {
             const ctx = canvas.getContext('2d');
             if (this.chartPieAssets && ctx == this.chartPieAssets.ctx) {
                 nummusChart.updatePie(this.chartPieAssets, assets);
+                pluginHoverHighlight.addListeners(this.chartPieAssets);
             } else {
                 const plugins = [
                     [
@@ -203,6 +208,7 @@ const netWorthChart = {
             if (this.chartPieLiabilities &&
                 ctx == this.chartPieLiabilities.ctx) {
                 nummusChart.updatePie(this.chartPieLiabilities, liabilities);
+                pluginHoverHighlight.addListeners(this.chartPieLiabilities);
             } else {
                 const plugins = [
                     [
@@ -216,6 +222,17 @@ const netWorthChart = {
                     plugins,
                 );
             }
+        }
+
+        const charts = [
+            'total-chart-canvas',
+            'assets-chart-canvas',
+            'liabilities-chart-canvas',
+            'assets-pie-chart-canvas',
+            'liabilities-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.removeDeferredChart(chart);
         }
     },
     /**
@@ -305,6 +322,21 @@ const netWorthChart = {
                     },
                 },
             );
+        }
+    },
+    /**
+     * Defer loading of charts by drawing a spinner on all charts
+     */
+    defer: function() {
+        const charts = [
+            'total-chart-canvas',
+            'assets-chart-canvas',
+            'liabilities-chart-canvas',
+            'assets-pie-chart-canvas',
+            'liabilities-pie-chart-canvas',
+        ];
+        for (const chart of charts) {
+            nummusChart.addDeferredChart(chart);
         }
     },
 }
