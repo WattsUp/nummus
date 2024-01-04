@@ -300,6 +300,8 @@ def update_assets(p: portfolio.Portfolio) -> int:
             "add a ticker to an Asset to download market data",
         )
         return 1
+
+    updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
     name_len = max(len(item[0]) for item in updated)
     ticker_len = max(len(item[1]) for item in updated)
     failed = False

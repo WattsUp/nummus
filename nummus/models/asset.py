@@ -87,7 +87,8 @@ class Asset(Base):
     ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
 
     # NOT ticker, since there are valid single letter tickers
-    @orm.validates("name", "description", "unit", "tag")
+    # NOT unit, since there are valid single letter units: ea
+    @orm.validates("name", "description", "tag")
     @override
     def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
@@ -417,6 +418,9 @@ class Asset(Base):
         if s is None:
             raise exc.UnboundExecutionError
 
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
         query = (
             s.query(TransactionSplit)
             .with_entities(
@@ -432,8 +436,6 @@ class Asset(Base):
         start_ord = start_ord - utils.DAYS_IN_WEEK
         end_ord = end_ord + utils.DAYS_IN_WEEK
         if through_today:
-            today = datetime.date.today()
-            today_ord = today.toordinal()
             end_ord = today_ord
 
         start = datetime.date.fromordinal(start_ord)
@@ -441,9 +443,10 @@ class Asset(Base):
 
         yf_ticker = yf.Ticker(self.ticker)
         try:
+            # Need to fetch all the way to today to get all splits
             raw = yf_ticker.history(
                 start=start,
-                end=end,
+                end=today,
                 actions=True,
                 raise_errors=True,
             )
@@ -463,6 +466,10 @@ class Asset(Base):
                 continue
             # Pyright doesn't like the pandas dataframe typing
             dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            if dt.date() > end:
+                # Skip to end if date > end
+                i = n_close
+                continue
             price: float = raw_close.iat[i]
 
             valuation.date_ord = dt.date().toordinal()
@@ -473,6 +480,9 @@ class Asset(Base):
         while i < n_close:
             # Add any missing ones
             dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            if dt.date() > end:
+                # Skip to end if date > end
+                break
             price: float = raw_close.iat[i]
 
             valuation = AssetValuation(
