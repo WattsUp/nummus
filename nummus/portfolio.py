@@ -19,7 +19,7 @@ from sqlalchemy import orm
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import importers, models, sql, version
+from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
@@ -502,6 +502,79 @@ class Portfolio:
                 return acct.id_
         else:
             return _find(session)
+
+    def find_similar_transaction(
+        self,
+        txn: Transaction,
+        *_,
+        cache_ok: bool = True,
+        do_commit: bool = True,
+    ) -> int | None:
+        """Find the most similar Transaction.
+
+        Args:
+            txn: Transaction to compare to
+            cache_ok: If available, use Transaction.similar_txn_id
+            do_commit: If match found, set similar_txn_id and commit
+
+        Returns:
+            Most similar Transaction.id_
+        """
+        s = orm.object_session(txn)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        if cache_ok and txn.similar_txn_id is not None:
+            return txn.similar_txn_id
+
+        # Similar transaction must be within this range
+        amount_min = min(
+            txn.amount * (1 - utils.MATCH_PERCENT),
+            txn.amount - utils.MATCH_ABSOLUTE,
+        )
+        amount_max = max(
+            txn.amount * (1 + utils.MATCH_PERCENT),
+            txn.amount + utils.MATCH_ABSOLUTE,
+        )
+
+        def commit_match(matching_row: sqlalchemy.Row[tuple[int]]) -> int:
+            id_ = matching_row[0]
+            if do_commit:
+                txn.similar_txn_id = id_
+                s.commit()
+            return id_
+
+        # Check within Account first, exact matches
+        # If this matches, great, no post filtering needed
+        query = s.query(Transaction.id_).where(
+            Transaction.account_id == txn.account_id,
+            Transaction.id_ != txn.id_,
+            Transaction.locked.is_(True),
+            Transaction.amount >= amount_min,
+            Transaction.amount <= amount_max,
+            Transaction.statement == txn.statement,
+        )
+        row = query.first()
+        if row is not None:
+            return commit_match(row)
+
+        # Maybe exact statement but different account
+        query = s.query(Transaction.id_).where(
+            Transaction.id_ != txn.id_,
+            Transaction.locked.is_(True),
+            Transaction.amount >= amount_min,
+            Transaction.amount <= amount_max,
+            Transaction.statement == txn.statement,
+        )
+        # TODO (WattsUp): Order by closest price
+        row = query.first()
+        if row is not None:
+            return commit_match(row)
+
+        # No statements match, choose highest fuzzy matching statement
+        # TODO (WattsUp): get statement text for each possible and fuzzy search
+
+        return None
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.

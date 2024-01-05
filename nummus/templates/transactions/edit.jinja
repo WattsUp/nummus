@@ -1,7 +1,7 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
      hx-get="{{ url_for("common.empty") }}"
      hx-swap="innerHTML"></div>
-<div class="w-[900px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+<div class="w-[900px] h-[680px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-include="#form-txn">
     <button hx-get="{{ url_for("common.empty") }}"
             class="ml-auto px-6"
@@ -70,10 +70,30 @@
             {% endwith %}
             Add split
         </button>
+        <button hx-delete="{{ url_for("transactions.split", uri=parent["uri"]) }}?all"
+                hx-target="#txn-splits"
+                hx-include="this"
+                class="button hover:red">
+            {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+                {% include "svg/trash.svg" %}
+            {% endwith %}
+            Clear splits
+        </button>
         <button hx-get="{{ url_for("transaction_categories.overlay") }}"
                 hx-target="#overlay"
                 hx-swap="innerHTML"
                 class="button hover:blue">Edit categories</button>
+        {% if similar_uri %}
+            <button hx-get="{{ url_for("transactions.split", uri=parent["uri"], similar=similar_uri) }}"
+                    hx-target="#txn-splits"
+                    hx-include="this"
+                    class="button hover:yellow">
+                {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+                    {% include "svg/copy.svg" %}
+                {% endwith %}
+                Copy similar
+            </button>
+        {% endif %}
         <button hx-get="{{ url_for("common.empty") }}"
                 class="button hover:green ml-auto"
                 hx-swap="innerHTML"

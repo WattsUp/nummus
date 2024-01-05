@@ -68,6 +68,19 @@
         @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
     }
 
+    .button.bg-yellow {
+        @apply text-black border-yellow hover:border-yellow-400 hover:bg-yellow-400;
+    }
+
+    .button.hover\:yellow {
+        @apply hover:border-yellow-400 hover:bg-yellow-400;
+    }
+
+    .button.bg-yellow:hover svg,
+    .button.hover\:yellow:hover svg {
+        @apply fill-black;
+    }
+
     .checkbox {
         @apply cursor-pointer relative;
     }
