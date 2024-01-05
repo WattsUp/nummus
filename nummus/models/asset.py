@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from decimal import Decimal
 
 import sqlalchemy
@@ -15,6 +16,8 @@ from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
 from nummus.models.transaction import TransactionSplit
+
+_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+$")
 
 
 class AssetSplit(Base):
@@ -109,11 +112,15 @@ class Asset(Base):
         """
         if field is None or field in ["", "[blank]"]:
             return None
-        if not field.isupper():
+        if not _RE_ASSET_TICKER.match(field):
             table: str = self.__tablename__
             table = table.replace("_", " ").capitalize()
-            msg = f"{table} {key} must be uppercase"
+            msg = (
+                f"{table} {key} must be uppercase letters only, "
+                "optional ^ or $ prefix"
+            )
             raise exc.InvalidORMValueError(msg)
+
         return field
 
     @property
@@ -259,7 +266,10 @@ class Asset(Base):
         return self.get_value_all(s, start_ord, end_ord, [self.id_])[self.id_]
 
     def update_splits(self) -> None:
-        """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
+        """Recalculate adjusted TransactionSplit.asset_quantity based on all splits.
+
+        Does not commit changes, call s.commit() afterwards.
+        """
         # This function is best here but need to avoid circular imports
 
         from nummus.models import TransactionSplit
@@ -459,7 +469,7 @@ class Asset(Base):
         n_close = len(raw_close)
         i = 0
         query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
-        for valuation in query.all():
+        for valuation in query.yield_per(YIELD_PER):
             if i >= n_close:
                 # Delete excess valuations
                 s.delete(valuation)
@@ -469,6 +479,7 @@ class Asset(Base):
             if dt.date() > end:
                 # Skip to end if date > end
                 i = n_close
+                s.delete(valuation)
                 continue
             price: float = raw_close.iat[i]
 
@@ -499,7 +510,7 @@ class Asset(Base):
         n_splits = len(raw_splits)
         i = 0
         query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
-        for split in query.all():
+        for split in query.yield_per(YIELD_PER):
             if i >= n_splits:
                 # Delete excess splits
                 s.delete(split)

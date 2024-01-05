@@ -299,7 +299,7 @@ def update_assets(p: portfolio.Portfolio) -> int:
             f"{Fore.YELLOW}No assets were updated, "
             "add a ticker to an Asset to download market data",
         )
-        return 1
+        return 2
 
     updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
     name_len = max(len(item[0]) for item in updated)

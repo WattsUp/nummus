@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import secrets
 import shutil
 import string
@@ -10,6 +11,8 @@ from pathlib import Path
 
 import autodict
 import numpy as np
+import pandas as pd
+import yfinance as yf
 from sqlalchemy import orm, pool
 
 from nummus import custom_types as t
@@ -17,6 +20,57 @@ from nummus import exceptions as exc
 from nummus import sql
 from nummus.models import base_uri
 from tests import TEST_LOG
+
+
+class MockTicker:
+    def __init__(self, symbol: str) -> None:
+        self._symbol = symbol
+
+    def history(
+        self,
+        start: datetime.date,
+        end: datetime.date,
+        *_,
+        actions: bool,
+        raise_errors: bool,
+    ) -> pd.DataFrame:
+        if not actions:
+            msg = "actions must be True"
+            raise ValueError(msg)
+        if not raise_errors:
+            msg = "raise_errors must be True"
+            raise ValueError(msg)
+        if self._symbol != "BANANA":
+            msg = "BANANA: No timezone found, symbol may be delisted"
+            raise Exception(msg)  # noqa: TRY002
+
+        # Create close prices = date_ord
+        # Create a split every monday
+        dates: list[datetime.date] = []
+        close: list[float] = []
+        split: list[float] = []
+
+        dt = datetime.datetime.combine(
+            start,
+            datetime.time(tzinfo=datetime.timezone.utc),
+        )
+        while dt.date() <= end:
+            weekday = dt.weekday()
+            if weekday in [5, 6]:
+                # No valuations on weekends
+                dt += datetime.timedelta(days=1)
+                continue
+
+            dates.append(dt)
+            if weekday == 0:
+                split.append(2.0)
+            else:
+                split.append(0.0)
+            close.append(float(dt.date().toordinal()))
+
+            dt += datetime.timedelta(days=1)
+
+        return pd.DataFrame(index=dates, data={"Close": close, "Stock Splits": split})
 
 
 class TestBase(unittest.TestCase):
@@ -136,6 +190,9 @@ class TestBase(unittest.TestCase):
         self._original_sleep = time.sleep
         time.sleep = lambda *_: None
 
+        self._original_ticker = yf.Ticker
+        yf.Ticker = MockTicker
+
         self._test_start = time.perf_counter()
 
     def tearDown(self, *, clean: bool = True) -> None:
@@ -148,6 +205,7 @@ class TestBase(unittest.TestCase):
 
         # Restore sleeping
         time.sleep = self._original_sleep
+        yf.Ticker = self._original_ticker
 
     def log_speed(self, slow_duration: float, fast_duration: float) -> None:
         """Log the duration of a slow/fast A/B comparison test.

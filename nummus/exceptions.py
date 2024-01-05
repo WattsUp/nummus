@@ -21,12 +21,22 @@ if TYPE_CHECKING:
 __all__ = [
     "DatabaseError",
     "IntegrityError",
+    "MultipleResultsFound",
+    "NoResultFound",
     "UnboundExecutionError",
     "http",
     "FileAlreadyImportedError",
     "UnknownImporterError",
     "UnlockingError",
     "NotEncryptedError",
+    "ParentAttributeError",
+    "NonAssetTransactionError",
+    "ProtectedObjectNotFoundError",
+    "WrongURITypeError",
+    "InvalidURIError",
+    "InvalidORMValueError",
+    "NoAssetWebSourceError",
+    "AssetWebError",
 ]
 
 

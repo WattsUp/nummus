@@ -1,12 +1,14 @@
 [build-system]
 requires = ["setuptools", "wheel", "witch-ver"]
 
+[tool.black]
+target-version = ["py310", "py311", "py312"]
+
 [tool.codespell]
 skip = "3rd-party,dist,*.pem,*.json"
 
 [tool.coverage.run]
 command_line = "-m tests discover -s tests -t . --locals"
-#command_line = "-m tests tests.test_portfolio"
 branch = true
 source = ["nummus"]
 omit = [

@@ -753,7 +753,7 @@ class Portfolio:
                         s,
                         through_today=asset.id_ in currently_held_assets,
                     )
-                except exc.NoAssetWebSourceError as e:
+                except exc.AssetWebError as e:
                     updated.append((name, ticker, None, None, str(e)))
                 else:
                     if start is not None:
