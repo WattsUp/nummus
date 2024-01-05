@@ -116,8 +116,7 @@ class Asset(Base):
             table: str = self.__tablename__
             table = table.replace("_", " ").capitalize()
             msg = (
-                f"{table} {key} must be uppercase letters only, "
-                "optional ^ or $ prefix"
+                f"{table} {key} must be uppercase letters only, optional ^ or $ prefix"
             )
             raise exc.InvalidORMValueError(msg)
 

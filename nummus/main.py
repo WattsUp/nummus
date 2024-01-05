@@ -4,6 +4,7 @@ A personal financial information aggregator and planning tool. Collects and
 categorizes transactions, manages budgets, tracks investments, calculates net
 worth, and predicts future performance.
 """
+
 from __future__ import annotations
 
 import argparse

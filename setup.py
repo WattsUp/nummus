@@ -5,6 +5,7 @@ Typical usage:
   python setup.py install
   python setup.py test
 """
+
 from __future__ import annotations
 
 from pathlib import Path

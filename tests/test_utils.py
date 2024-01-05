@@ -78,7 +78,7 @@ class TestUtils(TestBase):
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 result = utils.get_input(prompt=prompt, secure=True, print_key=True)
 
-            self.assertEqual(fake_stdout.getvalue(), "\u26BF  " + prompt + "\n")
+            self.assertEqual(fake_stdout.getvalue(), "\u26bf  " + prompt + "\n")
             self.assertEqual(prompt_input, result)
 
             mock.builtins.input = mock_input_interrupt  # type: ignore[attr-defined]

@@ -1,4 +1,5 @@
 """Run viztracer profiler on a web call."""
+
 from __future__ import annotations
 
 import argparse

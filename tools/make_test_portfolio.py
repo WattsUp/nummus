@@ -1,4 +1,5 @@
 """Create a test Portfolio."""
+
 from __future__ import annotations
 
 import datetime
@@ -1435,8 +1436,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
 
             if avg_value < 0:
                 msg = (
-                    f"Account {acct.name} was over-drafted by {avg_value:.2f} "
-                    f"on {date}"
+                    f"Account {acct.name} was over-drafted by {avg_value:.2f} on {date}"
                 )
                 raise ValueError(msg)
 
@@ -1482,8 +1482,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         date = datetime.date.fromordinal(acct.opened_on_ord or 0)
         if date is None:
             print(
-                f"{Fore.RED}No transaction to generate CC payments on for "
-                f"{acct.name}",
+                f"{Fore.RED}No transaction to generate CC payments on for {acct.name}",
             )
             return
         end = birthday("self", FINAL_AGE)
