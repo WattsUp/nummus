@@ -1,4 +1,5 @@
 """Web server for nummus."""
+
 from __future__ import annotations
 
 import datetime

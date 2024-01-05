@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+import datetime
+import re
 from decimal import Decimal
 
 import sqlalchemy
+import yfinance as yf
 from sqlalchemy import orm
+from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
 from nummus.models.transaction import TransactionSplit
+
+_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+$")
 
 
 class AssetSplit(Base):
@@ -68,17 +74,53 @@ class Asset(Base):
         tag: Unique tag linked across datasets
         interpolate: True will interpolate valuations with a linear function, for
             sparsely (monthly) valued assets
+        ticker: Name of exchange ticker to fetch prices for. If no ticker then
+            valuations must be manually entered
     """
 
     __table_id__ = 0x40000000
 
-    name: t.ORMStr
+    name: t.ORMStr = orm.mapped_column(unique=True)
     description: t.ORMStrOpt
     category: orm.Mapped[AssetCategory]
     unit: t.ORMStrOpt
     tag: t.ORMStrOpt
     img_suffix: t.ORMStrOpt
     interpolate: t.ORMBool = orm.mapped_column(default=False)
+    ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
+
+    # NOT ticker, since there are valid single letter tickers
+    # NOT unit, since there are valid single letter units: ea
+    @orm.validates("name", "description", "tag")
+    @override
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        return super().validate_strings(key, field)
+
+    @orm.validates("ticker")
+    def validate_ticker(self, key: str, field: str | None) -> str | None:
+        """Validates ticker is UPPERCASE.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+
+        Raises:
+            InvalidORMValueError if field is not uppercase.
+        """
+        if field is None or field in ["", "[blank]"]:
+            return None
+        if not _RE_ASSET_TICKER.match(field):
+            table: str = self.__tablename__
+            table = table.replace("_", " ").capitalize()
+            msg = (
+                f"{table} {key} must be uppercase letters only, optional ^ or $ prefix"
+            )
+            raise exc.InvalidORMValueError(msg)
+
+        return field
 
     @property
     def image_name(self) -> str | None:
@@ -223,7 +265,10 @@ class Asset(Base):
         return self.get_value_all(s, start_ord, end_ord, [self.id_])[self.id_]
 
     def update_splits(self) -> None:
-        """Recalculate adjusted TransactionSplit.asset_quantity based on all splits."""
+        """Recalculate adjusted TransactionSplit.asset_quantity based on all splits.
+
+        Does not commit changes, call s.commit() afterwards.
+        """
         # This function is best here but need to avoid circular imports
 
         from nummus.models import TransactionSplit
@@ -352,3 +397,146 @@ class Asset(Base):
             n_deleted += query.delete()
 
         return n_deleted
+
+    def update_valuations(
+        self,
+        *_,
+        through_today: bool,
+    ) -> tuple[t.Date | None, t.Date | None]:
+        """Update valuations from web sources.
+
+        Does not commit changes, call s.commit() afterwards.
+
+        Args:
+            s: SQL session to use
+            through_today: True will force end date to today (for when currently
+                holding any quantity)
+
+        Returns:
+            Updated range (start date, end date)
+            Might be None if there are no Transactions for this Asset
+
+        Raises:
+            NoAssetWebSourceError if Asset has no ticker
+            AssetWebError if failed to download data
+        """
+        if self.ticker is None:
+            raise exc.NoAssetWebSourceError
+
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                sqlalchemy.func.min(TransactionSplit.date_ord),
+                sqlalchemy.func.max(TransactionSplit.date_ord),
+            )
+            .where(TransactionSplit.asset_id == self.id_)
+        )
+        start_ord, end_ord = query.one()
+        if start_ord is None or end_ord is None:
+            return None, None
+
+        start_ord = start_ord - utils.DAYS_IN_WEEK
+        end_ord = end_ord + utils.DAYS_IN_WEEK
+        if through_today:
+            end_ord = today_ord
+
+        start = datetime.date.fromordinal(start_ord)
+        end = datetime.date.fromordinal(end_ord)
+
+        yf_ticker = yf.Ticker(self.ticker)
+        try:
+            # Need to fetch all the way to today to get all splits
+            raw = yf_ticker.history(
+                start=start,
+                end=today,
+                actions=True,
+                raise_errors=True,
+            )
+        except Exception as e:  # noqa: BLE001
+            # yfinance raises Exception if no data found
+            raise exc.AssetWebError(e) from e
+
+        # Update AssetValuations, reuse existing when possible
+        raw_close = raw["Close"]
+        n_close = len(raw_close)
+        i = 0
+        query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
+        for valuation in query.yield_per(YIELD_PER):
+            if i >= n_close:
+                # Delete excess valuations
+                s.delete(valuation)
+                continue
+            # Pyright doesn't like the pandas dataframe typing
+            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            if dt.date() > end:
+                # Skip to end if date > end
+                i = n_close
+                s.delete(valuation)
+                continue
+            price: float = raw_close.iat[i]
+
+            valuation.date_ord = dt.date().toordinal()
+            valuation.value = Decimal(price)
+
+            i += 1
+
+        while i < n_close:
+            # Add any missing ones
+            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
+            if dt.date() > end:
+                # Skip to end if date > end
+                break
+            price: float = raw_close.iat[i]
+
+            valuation = AssetValuation(
+                asset_id=self.id_,
+                date_ord=dt.date().toordinal(),
+                value=Decimal(price),
+            )
+            s.add(valuation)
+
+            i += 1
+
+        # Update AssetSplits, reuse existing when possible
+        raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
+        n_splits = len(raw_splits)
+        i = 0
+        query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
+        for split in query.yield_per(YIELD_PER):
+            if i >= n_splits:
+                # Delete excess splits
+                s.delete(split)
+                continue
+            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
+            multiplier: float = raw_splits.iat[i]
+
+            split.date_ord = dt.date().toordinal()
+            split.multiplier = Decimal(multiplier)
+
+            i += 1
+
+        while i < n_splits:
+            # Add any missing ones
+            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
+            multiplier: float = raw_splits.iat[i]
+
+            split = AssetSplit(
+                asset_id=self.id_,
+                date_ord=dt.date().toordinal(),
+                multiplier=Decimal(multiplier),
+            )
+            s.add(split)
+
+            i += 1
+
+        # Run update_splits to fix transactions
+        self.update_splits()
+
+        return start, end

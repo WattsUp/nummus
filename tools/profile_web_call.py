@@ -1,4 +1,5 @@
 """Run viztracer profiler on a web call."""
+
 from __future__ import annotations
 
 import argparse
@@ -71,14 +72,18 @@ def main(command_line: t.Strings | None = None) -> int:
         "--no-call-twice",
         default=False,
         action="store_true",
-        help="default is to profile only the second of two "
-        "requests, this flag will profile the first request",
+        help=(
+            "default is to profile only the second of two "
+            "requests, this flag will profile the first request"
+        ),
     )
     parser.add_argument(
         "url",
         metavar="URL",
-        help="web URL to call. Use relative to server "
-        "such as /api/transactions?limit=500",
+        help=(
+            "web URL to call. Use relative to server "
+            "such as /api/transactions?limit=500"
+        ),
     )
 
     args = parser.parse_args(args=command_line)

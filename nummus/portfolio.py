@@ -15,6 +15,7 @@ from pathlib import Path
 import autodict
 import sqlalchemy
 import sqlalchemy.exc
+import tqdm
 from sqlalchemy import orm
 
 from nummus import custom_types as t
@@ -405,13 +406,13 @@ class Portfolio:
 
     def find_account(
         self,
-        query: int | str,
+        search: int | str,
         session: orm.Session | None = None,
     ) -> int | Account | None:
         """Find a matching Account by name, URI, institution, or ID.
 
         Args:
-            query: Search query
+            search: Search query
             session: Session to use, will return Account not id
 
         Returns:
@@ -419,54 +420,63 @@ class Portfolio:
             If session is not None: return Account object or None
         """
 
-        def _find(s: orm.Session) -> Account | None:
-            if isinstance(query, int):
-                # See if account is an ID first...
-                matches = s.query(Account).where(Account.id_ == query).all()
-                return matches[0] if len(matches) == 1 else None
+        def _find(s: orm.Session) -> int | None:
+            if isinstance(search, int):
+                # See if search is an ID first...
+                query = s.query(Account.id_).where(Account.id_ == search)
+                return search if query.count() == 1 else None
             try:
                 # See if query is an URI
-                id_ = Account.uri_to_id(query)
-                matches = s.query(Account).where(Account.id_ == id_).all()
-                if len(matches) == 1:
-                    return matches[0]
+                id_ = Account.uri_to_id(search)
             except (exc.InvalidURIError, exc.WrongURITypeError):
                 pass
+            else:
+                query = s.query(Account.id_).where(Account.id_ == id_)
+                try:
+                    return query.one()[0]
+                except (exc.NoResultFound, exc.MultipleResultsFound):
+                    pass
 
             # Maybe a number next
-            matches = s.query(Account).where(Account.number == query).all()
-            if len(matches) == 1:
-                return matches[0]
+            query = s.query(Account.id_).where(Account.number == search)
+            try:
+                return query.one()[0]
+            except (exc.NoResultFound, exc.MultipleResultsFound):
+                pass
+
+            # Maybe an institution next
+            query = s.query(Account.id_).where(Account.institution == search)
+            try:
+                return query.one()[0]
+            except (exc.NoResultFound, exc.MultipleResultsFound):
+                pass
 
             # Maybe a name next
-            matches = s.query(Account).where(Account.name == query).all()
-            if len(matches) == 1:
-                return matches[0]
+            query = s.query(Account.id_).where(Account.name == search)
+            try:
+                return query.one()[0]
+            except (exc.NoResultFound, exc.MultipleResultsFound):
+                pass
 
-            # Last chance, institution
-            matches = s.query(Account).where(Account.institution == query).all()
-            if len(matches) == 1:
-                return matches[0]
             return None
 
         if session is None:
             with self.get_session() as s:
-                acct = _find(s)
-                if acct is None:
-                    return None
-                return acct.id_
-        else:
-            return _find(session)
+                return _find(s)
+        a_id = _find(session)
+        if a_id is None:
+            return None
+        return session.query(Account).where(Account.id_ == a_id).one()
 
     def find_asset(
         self,
-        query: int | str,
+        search: int | str,
         session: orm.Session | None = None,
     ) -> int | Asset | None:
         """Find a matching Asset by name, URI, or ID.
 
         Args:
-            query: Search query
+            search: Search query
             session: Session to use, will return Asset not id
 
         Returns:
@@ -474,34 +484,46 @@ class Portfolio:
             If session is not None: return Asset object or None
         """
 
-        def _find(s: orm.Session) -> Asset | None:
-            if isinstance(query, int):
-                # See if account is an ID first...
-                matches = s.query(Asset).where(Asset.id_ == query).all()
-                return matches[0] if len(matches) == 1 else None
+        def _find(s: orm.Session) -> int | None:
+            if isinstance(search, int):
+                # See if search is an ID first...
+                query = s.query(Asset.id_).where(Asset.id_ == search)
+                return search if query.count() == 1 else None
             try:
-                # See if query is an URI
-                id_ = Asset.uri_to_id(query)
-                matches = s.query(Asset).where(Asset.id_ == id_).all()
-                if len(matches) == 1:
-                    return matches[0]
+                # See if search is an URI
+                id_ = Asset.uri_to_id(search)
             except (exc.InvalidURIError, exc.WrongURITypeError):
+                pass
+            else:
+                query = s.query(Asset.id_).where(Asset.id_ == id_)
+                try:
+                    return query.one()[0]
+                except (exc.NoResultFound, exc.MultipleResultsFound):
+                    pass
+
+            # Maybe a ticker next
+            query = s.query(Asset.id_).where(Asset.ticker == search)
+            try:
+                return query.one()[0]
+            except (exc.NoResultFound, exc.MultipleResultsFound):
                 pass
 
             # Maybe a name next
-            matches = s.query(Asset).where(Asset.name == query).all()
-            if len(matches) == 1:
-                return matches[0]
+            query = s.query(Asset.id_).where(Asset.name == search)
+            try:
+                return query.one()[0]
+            except (exc.NoResultFound, exc.MultipleResultsFound):
+                pass
+
             return None
 
         if session is None:
             with self.get_session() as s:
-                acct = _find(s)
-                if acct is None:
-                    return None
-                return acct.id_
-        else:
-            return _find(session)
+                return _find(s)
+        acct_id = _find(session)
+        if acct_id is None:
+            return None
+        return session.query(Asset).where(Asset.id_ == acct_id).one()
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.
@@ -693,3 +715,51 @@ class Portfolio:
     def ssl_key_path(self) -> Path:
         """Get path to SSL certificate key."""
         return self._path_ssl.joinpath("key.pem")
+
+    def update_assets(
+        self,
+    ) -> list[tuple[str, str, t.Date | None, t.Date | None, str | None]]:
+        """Update asset valuations using web sources.
+
+        Returns:
+            Assets that were updated
+            [
+                (name, ticker, start date, end date, error),
+                ...
+            ]
+        """
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+        updated: list[tuple[str, str, t.Date | None, t.Date | None, str | None]] = []
+
+        with self.get_session() as s:
+            assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
+            ids = [asset.id_ for asset in assets]
+
+            # Get currently held assets
+            asset_qty = Account.get_asset_qty_all(s, today_ord, today_ord)
+            currently_held_assets: set[int] = set()
+            for acct_assets in asset_qty.values():
+                for a_id, qty in acct_assets.items():
+                    if a_id in ids and qty[0] != 0:
+                        currently_held_assets.add(a_id)
+
+            bar = tqdm.tqdm(assets, desc="Updating Assets")
+            for asset in bar:
+                name = asset.name
+                ticker = asset.ticker or ""
+                try:
+                    start, end = asset.update_valuations(
+                        s,
+                        through_today=asset.id_ in currently_held_assets,
+                    )
+                except exc.AssetWebError as e:
+                    updated.append((name, ticker, None, None, str(e)))
+                else:
+                    if start is not None:
+                        updated.append((name, ticker, start, end, None))
+                    # start & end are None if there are no transactions for the Asset
+
+            s.commit()
+
+        return updated

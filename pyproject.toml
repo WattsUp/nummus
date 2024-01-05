@@ -1,6 +1,10 @@
 [build-system]
 requires = ["setuptools", "wheel", "witch-ver"]
 
+[tool.black]
+target-version = ["py310", "py311", "py312"]
+preview = true
+
 [tool.codespell]
 skip = "3rd-party,dist,*.pem,*.json"
 

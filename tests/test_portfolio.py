@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import base64
 import datetime
+import io
 import json
 import secrets
 import shutil
 import tarfile
+from unittest import mock
 
 import autodict
 import time_machine
@@ -20,6 +22,7 @@ from nummus.models import (
     Credentials,
     Transaction,
     TransactionCategory,
+    TransactionSplit,
 )
 from nummus.models.asset import AssetValuation
 from tests.base import TestBase
@@ -352,9 +355,13 @@ class TestPortfolio(TestBase):
 
         with p.get_session() as s:
             # Create assets
-            a_banana = Asset(name="BANANA", category=AssetCategory.ITEM)
-            a_apple_0 = Asset(name="APPLE", category=AssetCategory.ITEM)
-            a_apple_1 = Asset(name="APPLE", category=AssetCategory.SECURITY)
+            a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
+            a_apple_0 = Asset(name="Apple", category=AssetCategory.ITEM)
+            a_apple_1 = Asset(
+                name="Tech Company",
+                category=AssetCategory.SECURITY,
+                ticker="APPLE",
+            )
             s.add_all((a_banana, a_apple_0, a_apple_1))
             s.commit()
 
@@ -377,12 +384,12 @@ class TestPortfolio(TestBase):
             self.assertIsNone(result)
 
             # Find by name
-            result = p.find_asset("BANANA")
+            result = p.find_asset("Banana")
             self.assertEqual(result, a_banana.id_)
 
-            # More than 1 match by name
+            # Find by ticker
             result = p.find_asset("APPLE")
-            self.assertIsNone(result)
+            self.assertEqual(result, a_apple_1.id_)
 
     def test_import_file(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -774,3 +781,152 @@ class TestPortfolio(TestBase):
         with p.get_session() as s:
             n = s.query(AssetValuation).count()
             self.assertEqual(n, 1)
+
+    def test_update_assets(self) -> None:
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
+        p = portfolio.Portfolio.create(path_db)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        with p.get_session() as s:
+            categories = TransactionCategory.map_name(s)
+            categories = {v: k for k, v in categories.items()}
+
+            # Create assets
+            a = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+            a_house = Asset(name="House", category=AssetCategory.REAL_ESTATE)
+
+            acct = Account(
+                name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH,
+                closed=False,
+                emergency=False,
+            )
+
+            s.add_all((a, a_house, acct))
+            s.commit()
+
+            # Buy the house but no ticker so excluded
+            txn = Transaction(
+                account_id=acct.id_,
+                date_ord=today_ord,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_house.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            # No assets with tickers
+            with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+                result = p.update_assets()
+            fake_stderr = fake_stderr.getvalue()
+            self.assertIn("Updating Assets:", fake_stderr)
+            self.assertEqual(result, [])
+
+            a.ticker = "BANANA"
+            s.commit()
+
+            # No assets with transactions
+            with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+                result = p.update_assets()
+            fake_stderr = fake_stderr.getvalue()
+            self.assertIn("Updating Assets:", fake_stderr)
+            self.assertEqual(result, [])
+
+            # Add a transaction
+            date = datetime.date(2023, 5, 1)
+            date_ord = date.toordinal()
+            txn = Transaction(
+                account_id=acct.id_,
+                date_ord=date_ord,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+            a.update_splits()
+            s.commit()
+
+            first_valuation_date = date - datetime.timedelta(days=7)
+            with mock.patch("sys.stderr", new=io.StringIO()) as _:
+                result = p.update_assets()
+            target = [(a.name, a.ticker, first_valuation_date, today, None)]
+            self.assertEqual(result, target)
+
+            # Currently holding so should include today or Friday
+            last_weekday = today - datetime.timedelta(days=max(0, today.weekday() - 4))
+            v = (
+                s.query(AssetValuation)
+                .where(AssetValuation.asset_id == a.id_)
+                .order_by(AssetValuation.date_ord.desc())
+                .first()
+            )
+            self.assertEqual(v and v.date_ord, last_weekday.toordinal())
+
+            # Sell asset so it should not include today
+            txn = Transaction(
+                account_id=acct.id_,
+                date_ord=date_ord,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a.id_,
+                asset_quantity_unadjusted=-1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+            a.update_splits()
+            s.commit()
+
+            last_valuation_date = date + datetime.timedelta(days=7)
+            with mock.patch("sys.stderr", new=io.StringIO()) as _:
+                result = p.update_assets()
+            target = [
+                (a.name, a.ticker, first_valuation_date, last_valuation_date, None),
+            ]
+            self.assertEqual(result, target)
+
+            v = (
+                s.query(AssetValuation)
+                .where(AssetValuation.asset_id == a.id_)
+                .order_by(AssetValuation.date_ord.desc())
+                .first()
+            )
+            self.assertEqual(v and v.date_ord, last_valuation_date.toordinal())
+
+            # Bad ticker should fail nicely
+            a.ticker = "ORANGE"
+            s.commit()
+
+            with mock.patch("sys.stderr", new=io.StringIO()) as _:
+                result = p.update_assets()
+            target = [
+                (
+                    a.name,
+                    a.ticker,
+                    None,
+                    None,
+                    "BANANA: No timezone found, symbol may be delisted",
+                ),
+            ]
+            self.assertEqual(result, target)

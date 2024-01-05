@@ -345,3 +345,20 @@ class TestMain(TestBase):
             self.assertDictEqual(self._called_kwargs, {"_func": "clean"})
         finally:
             self._tear_down_commands()
+
+    def test_update_assets(self) -> None:
+        path = self._TEST_ROOT.joinpath("portfolio.db")
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            commands.create(path, None, force=False, no_encrypt=True)
+
+        try:
+            self._set_up_commands()
+
+            args = ["--portfolio", str(path), "update-assets"]
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                main.main(args)
+            self.assertEqual(len(self._called_args), 1)
+            self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+            self.assertDictEqual(self._called_kwargs, {"_func": "update_assets"})
+        finally:
+            self._tear_down_commands()

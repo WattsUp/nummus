@@ -107,7 +107,7 @@ class TestServer(TestBase):
             f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
             "serve_forever\n"
             f"{Fore.YELLOW}nummus web shutdown at "
-        )  # skip timestamp
+        )
         self.assertEqual(fake_stdout[: len(target)], target)
 
         debug = False
@@ -132,11 +132,11 @@ class TestServer(TestBase):
             f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
             f"{Fore.YELLOW}Shutting down on interrupt\n"
             f"{Fore.YELLOW}nummus web shutdown at "
-        )  # skip timestamp
+        )
         self.assertEqual(fake_stdout[: len(target)], target)
 
         # Artificially set started=True
-        s_server._stop_event.clear()  # noqa: SLF001
+        s_server._stop_event.clear()  # noqa: SLF001 # type: ignore[attr-defined]
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
 
@@ -146,7 +146,7 @@ class TestServer(TestBase):
             f"{Fore.YELLOW}Shutting down on interrupt\n"
             "stop\n"
             f"{Fore.YELLOW}nummus web shutdown at "
-        )  # skip timestamp
+        )
         self.assertEqual(fake_stdout[: len(target)], target)
 
     def test_generate_ssl_cert(self) -> None:
@@ -245,7 +245,7 @@ class TestServer(TestBase):
 
 class TestHandler(TestBase):
     def test_format_request(self) -> None:
-        h = web.Handler(None, None, None, "Not None")
+        h = web.Handler(None, None, None, rfile="")  # type: ignore[attr-defined]
 
         h.response_length = None  # type: ignore[attr-defined]
         utc_now = datetime.datetime.utcnow()
@@ -263,7 +263,7 @@ class TestHandler(TestBase):
         h.response_length = 1000
         h.time_finish = 0.3
         h.time_start = 0.1
-        h.client_address = ("127.0.0.1",)
+        h.client_address = ("127.0.0.1",)  # type: ignore[attr-defined]
         h.requestline = "GET / HTTP/1.1"
         h.code = 200
         target = (

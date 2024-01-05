@@ -1,4 +1,5 @@
 """Run tailwindcss to generate distribution CSS file."""
+
 from __future__ import annotations
 
 import subprocess
