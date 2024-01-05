@@ -269,7 +269,7 @@ def make_assets(p: Portfolio) -> t.DictInt:
         # Don't add AssetValuations so update-assets command can
         sp500 = Asset(
             name="S&P 500",
-            description="Average of the 500 largest publically traded companies",
+            description="Average of the 500 largest publicly traded companies",
             category=AssetCategory.SECURITY,
             ticker="^GSPC",
         )
