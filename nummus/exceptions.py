@@ -4,7 +4,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy.exc import DatabaseError, IntegrityError, UnboundExecutionError
+from sqlalchemy.exc import (
+    DatabaseError,
+    IntegrityError,
+    MultipleResultsFound,
+    NoResultFound,
+    UnboundExecutionError,
+)
 from werkzeug import exceptions as http
 
 if TYPE_CHECKING:

@@ -352,9 +352,13 @@ class TestPortfolio(TestBase):
 
         with p.get_session() as s:
             # Create assets
-            a_banana = Asset(name="BANANA", category=AssetCategory.ITEM)
-            a_apple_0 = Asset(name="APPLE", category=AssetCategory.ITEM)
-            a_apple_1 = Asset(name="APPLE", category=AssetCategory.SECURITY)
+            a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
+            a_apple_0 = Asset(name="Apple", category=AssetCategory.ITEM)
+            a_apple_1 = Asset(
+                name="Tech Company",
+                category=AssetCategory.SECURITY,
+                ticker="APPLE",
+            )
             s.add_all((a_banana, a_apple_0, a_apple_1))
             s.commit()
 
@@ -377,12 +381,12 @@ class TestPortfolio(TestBase):
             self.assertIsNone(result)
 
             # Find by name
-            result = p.find_asset("BANANA")
+            result = p.find_asset("Banana")
             self.assertEqual(result, a_banana.id_)
 
-            # More than 1 match by name
+            # Find by ticker
             result = p.find_asset("APPLE")
-            self.assertIsNone(result)
+            self.assertEqual(result, a_apple_1.id_)
 
     def test_import_file(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
