@@ -220,17 +220,16 @@ def ctx_assets(acct: Account) -> t.DictAny | None:
             end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
         )
 
-    PREVIOUS_PERIOD["start"] = start
-    PREVIOUS_PERIOD["end"] = end
-
     start_ord = start.toordinal()
     end_ord = end.toordinal()
 
-    asset_qtys = acct.get_asset_qty(start_ord, end_ord)
+    asset_qtys = {
+        a_id: qtys[0] for a_id, qtys in acct.get_asset_qty(end_ord, end_ord).items()
+    }
     if len(asset_qtys) == 0:
         return None  # Not an investment account
 
-    # Include assets held for only one day
+    # Include assets that are currently held or had a change in qty
     query = s.query(TransactionSplit.asset_id).where(
         TransactionSplit.account_id == acct.id_,
         TransactionSplit.date_ord <= end_ord,
@@ -240,7 +239,7 @@ def ctx_assets(acct: Account) -> t.DictAny | None:
     a_ids = {a_id for a_id, in query.distinct()}
 
     asset_qtys = {
-        a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty[0] != 0
+        a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty != 0
     }
     a_ids = set(asset_qtys.keys())
 
@@ -267,7 +266,7 @@ def ctx_assets(acct: Account) -> t.DictAny | None:
     total_value = Decimal(0)
     total_profit = Decimal(0)
     for a_id, name, category in query.yield_per(YIELD_PER):
-        end_qty = asset_qtys[a_id][-1]
+        end_qty = asset_qtys[a_id]
         end_value = end_qty * end_prices[a_id][0]
         profit = end_value  # FIX (WattsUp): Not true profit
 
@@ -295,7 +294,7 @@ def ctx_assets(acct: Account) -> t.DictAny | None:
         "uri": None,
         "category": AssetCategory.CASH,
         "name": "Cash",
-        "end_qty": cash,
+        "end_qty": None,
         "end_value": cash,
         "profit": 0,
     }
