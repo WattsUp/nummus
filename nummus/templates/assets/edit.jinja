@@ -12,7 +12,13 @@
     <form class="flex w-full gap-4 px-6 grow" id="form-asset">
         <div class="w-5/12 flex flex-col items-center">
             <hr class="w-full border-grey-200">
-            <div class="font-serif text-2xl">{{ asset["value"] | money }}</div>
+            <div class="font-serif text-2xl">
+                {% if asset["value"] < 0.1 %}
+                    {{ asset["value"] | money6 }}
+                {% else %}
+                    {{ asset["value"] | money }}
+                {% endif %}
+            </div>
             {% if asset["value_date"] %}
                 <div class="italic">as of {{ asset["value_date"] }}</div>
             {% else %}
