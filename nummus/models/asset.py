@@ -17,7 +17,7 @@ from nummus import utils
 from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
 from nummus.models.transaction import TransactionSplit
 
-_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+$")
+_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+(-[A-Z]+)?$")
 
 
 class AssetSplit(Base):

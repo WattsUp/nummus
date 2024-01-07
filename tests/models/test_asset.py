@@ -148,12 +148,22 @@ class TestAsset(TestBase):
         # Spaces are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "A B")
 
-        # Caret and dollar sign okay
+        # Caret, dollar sign, and a dash okay
         a.ticker = "^AB"
         s.commit()
 
         a.ticker = "$AB"
         s.commit()
+
+        a.ticker = "$A-B"
+        s.commit()
+
+        # Other places for these symbols are not okay
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB^")
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB$")
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB-")
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB--C")
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "-AB")
 
         # None is okay
         a.ticker = None
