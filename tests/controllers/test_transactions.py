@@ -310,13 +310,28 @@ class TestTransaction(WebTestBase):
         d = self._setup_portfolio()
 
         t_0 = d["t_0"]
+        t_1 = d["t_1"]
         payee_0 = d["payee_0"]
+        payee_1 = d["payee_1"]
         cat_0 = d["cat_0"]
+        cat_1 = d["cat_1"]
+        tag_1 = d["tag_1"]
 
         desc = self.random_string()
         tag = self.random_string()
 
+        # GET splits for t_0 by copying the similar transaction t_1
         endpoint = f"/h/transactions/t/{t_0}/split"
+        result, _ = self.web_get(endpoint + f"?similar={t_1}")
+        self.assertEqual(result.count('name="payee"'), 1)
+        self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_1}"')
+        self.assertRegex(result, r'name="description"[ \n]+value=""')
+        self.assertEqual(result.count("selected"), 1)
+        self.assertRegex(result, rf'value="{cat_1}"[ \n]+selected')
+        self.assertRegex(result, rf'name="tag"[ \n]+value="{tag_1}"')
+        self.assertRegex(result, r'name="amount"[ \n]+value="-10\.00"')
+        self.assertRegex(result, r'id="txn-remaining"[^>]+>\$110\.00<')
+
         form = {
             "payee": payee_0,
             "description": desc,
@@ -353,6 +368,24 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+selected')
         self.assertRegex(result, rf'name="tag"[ \n]+value="{tag}"')
         self.assertRegex(result, r'name="amount"[ \n]+value="100\.00"')
+        self.assertRegex(result, r'id="txn-remaining"[ \n]+hx-swap-oob="True"')
+
+        # DELETE ?all should revert to empty and Uncategorized
+        form = {
+            "payee": [payee_0, ""],
+            "description": [desc, ""],
+            "category": [cat_0, ""],
+            "tag": [tag, ""],
+            "amount": ["100", ""],
+        }
+        result, _ = self.web_delete(endpoint + "?all", data=form)
+        self.assertEqual(result.count('name="payee"'), 1)
+        self.assertRegex(result, r'name="payee"[ \n]+value=""')
+        self.assertRegex(result, r'name="description"[ \n]+value=""')
+        self.assertEqual(result.count("selected"), 1)
+        self.assertRegex(result, r'value="Uncategorized"[ \n]+selected')
+        self.assertRegex(result, r'name="tag"[ \n]+value=""')
+        self.assertRegex(result, r'name="amount"[ \n]+value=""')
         self.assertRegex(result, r'id="txn-remaining"[ \n]+hx-swap-oob="True"')
 
     def test_remaining(self) -> None:
