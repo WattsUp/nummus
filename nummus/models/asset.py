@@ -56,10 +56,16 @@ class AssetCategory(BaseEnum):
     """Categories of Assets."""
 
     CASH = 1
-    SECURITY = 2
-    REAL_ESTATE = 3
-    VEHICLE = 4
-    ITEM = 5
+
+    STOCKS = 2
+    BONDS = 3
+    COMMODITIES = 4
+    FUTURES = 5
+    CRYPTOCURRENCY = 6
+
+    REAL_ESTATE = 7
+    VEHICLE = 8
+    ITEM = 9
 
 
 class Asset(Base):

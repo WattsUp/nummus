@@ -25,7 +25,15 @@
         <canvas id="account-chart-canvas"></canvas>
     </div>
     {% include "accounts/chart-data.jinja" %}
-    <div class="w-full grow" hx-target="#txn-table" hx-swap="outerHTML">
+    {% if assets %}
+        <div class="w-full">
+            <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
+            {% include "accounts/assets.jinja" %}
+        </div>
+    {% endif %}
+    <div class="w-full flex flex-col grow"
+         hx-target="#txn-table"
+         hx-swap="outerHTML">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
         {% include "accounts/table-config.jinja" %}
         {% include "accounts/table-header.jinja" %}

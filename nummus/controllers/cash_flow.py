@@ -27,7 +27,7 @@ DEFAULT_PERIOD = "1-year"
 
 
 def ctx_chart() -> t.DictAny:
-    """Get the context to build the net worth chart.
+    """Get the context to build the cash flow chart.
 
     Returns:
         Dictionary HTML context
