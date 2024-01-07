@@ -1,9 +1,15 @@
-<div
-    class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 cursor-pointer"
-    {# hx-get="{{ url_for("asset.edit", uri=asset["uri"]) }}" #}
-    hx-target="#overlay"
-    hx-swap="innerHTML"
-    hx-include="this">
+<div class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 group"
+     {% if asset["uri"] %}style="cursor: pointer" hx-get="{{ url_for("assets.edit", uri=asset["uri"]) }}"{% endif %}
+     hx-target="#overlay"
+     hx-swap="innerHTML"
+     hx-include="this">
+    <div class="w-[2rem] min-w-[2rem] p-1 truncate flex items-center justify-center">
+        {% if asset["uri"] %}
+            {% with class="w-[20px] h-[20px] fill-black group-hover:fill-green-600" %}
+                {% include "svg/pencil.svg" %}
+            {% endwith %}
+        {% endif %}
+    </div>
     <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ asset["category"] | enum | title }}</div>
     <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">{{ asset["name"] }}</div>
     <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ asset["end_qty"] | qty }}</div>

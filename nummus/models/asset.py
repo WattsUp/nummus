@@ -89,9 +89,9 @@ class Asset(Base):
     name: t.ORMStr = orm.mapped_column(unique=True)
     description: t.ORMStrOpt
     category: orm.Mapped[AssetCategory]
-    unit: t.ORMStrOpt
-    tag: t.ORMStrOpt
-    img_suffix: t.ORMStrOpt
+    unit: t.ORMStrOpt  # TODO (WattsUp): Remove unused properties
+    tag: t.ORMStrOpt  # Remove
+    img_suffix: t.ORMStrOpt  # Remove
     interpolate: t.ORMBool = orm.mapped_column(default=False)
     ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
 

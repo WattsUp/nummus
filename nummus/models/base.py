@@ -146,7 +146,7 @@ class BaseEnum(enum.Enum):
     @classmethod
     def _missing_(cls, value: object) -> BaseEnum | None:
         if isinstance(value, str):
-            s = value.upper().strip()
+            s = value.upper().strip().replace(" ", "_")
             if s in cls._member_names_:
                 return cls[s]
             return cls._lut().get(s.lower())
