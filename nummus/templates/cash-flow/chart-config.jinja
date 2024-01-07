@@ -8,9 +8,9 @@
             hx-get="{{ url_for("cash_flow.chart", category="") }}">All</button>
     {% for cat in chart["category_type"] %}
         <button class="button {{ "bg-green" if chart["category"] == cat else "hover:green" }}"
-                hx-get="{{ url_for("cash_flow.chart", category=cat.name.lower() ) }}">{{ cat.name | title }}</button>
+                hx-get="{{ url_for("cash_flow.chart", category=cat | enum) }}">{{ cat | enum | title }}</button>
     {% endfor %}
-    {% if chart["category"] %}<input name="category" value="{{ chart["category"].name.lower() }}" hidden>{% endif %}
+    {% if chart["category"] %}<input name="category" value="{{ chart["category"] | enum }}" hidden>{% endif %}
     <div class="grow"></div>
     <select name="period" hx-get="{{ url_for("cash_flow.chart") }}">
         {% with period = chart["period"] %}

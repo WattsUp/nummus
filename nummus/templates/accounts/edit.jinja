@@ -76,9 +76,9 @@
                         <td>
                             <select class="w-full" name="category">
                                 {% for cat in account["category_type"] %}
-                                    <option value="{{ cat.name | lower }}"
+                                    <option value="{{ cat | enum }}"
                                             {% if cat == account["category"] %}selected{% endif %}>
-                                        {{ cat.name | title }}
+                                        {{ cat | enum | title }}
                                     </option>
                                 {% endfor %}
                             </select>
