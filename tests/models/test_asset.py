@@ -91,6 +91,7 @@ class TestAsset(TestBase):
             "unit": self.random_string(),
             "tag": self.random_string(),
             "img_suffix": self.random_string(),
+            "ticker": self.random_string().upper(),
         }
 
         a = Asset(**d)
@@ -133,6 +134,30 @@ class TestAsset(TestBase):
         self.assertEqual(result, [])
         result = s.query(AssetValuation).all()
         self.assertEqual(result, [])
+
+        # Short strings are bad
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "name", "ab")
+
+        # But not for ticker
+        a.ticker = "AB"
+        s.commit()
+
+        # Lower case ticker is bad
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "Ab")
+
+        # Spaces are bad
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "A B")
+
+        # Caret and dollar sign okay
+        a.ticker = "^AB"
+        s.commit()
+
+        a.ticker = "$AB"
+        s.commit()
+
+        # None is okay
+        a.ticker = None
+        s.commit()
 
     def test_add_valuations(self) -> None:
         s = self.get_session()
@@ -582,3 +607,201 @@ class TestAsset(TestBase):
         date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 3)
         s.rollback()
+
+    def test_update_valuations(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        # Create assets and accounts
+        a = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+        acct = Account(
+            name="Monkey Bank Checking",
+            institution="Monkey Bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            emergency=False,
+        )
+        t_cat = TransactionCategory(
+            name="Securities Traded",
+            group=TransactionCategoryGroup.OTHER,
+            locked=False,
+        )
+
+        # No ticker should fail
+        self.assertRaises(
+            exc.NoAssetWebSourceError,
+            a.update_valuations,
+            through_today=False,
+        )
+
+        a.ticker = "ORANGE"
+
+        # Unbound error still
+        self.assertRaises(
+            exc.UnboundExecutionError,
+            a.update_valuations,
+            through_today=False,
+        )
+
+        s.add_all((a, acct, t_cat))
+        s.commit()
+
+        # No transactions should skip updating
+        r_start, r_end = a.update_valuations(through_today=False)
+        self.assertIsNone(r_start)
+        self.assertIsNone(r_end)
+
+        # Add a transaction
+        date = datetime.date(2023, 5, 1)
+        date_ord = date.toordinal()
+        txn = Transaction(
+            account_id=acct.id_,
+            date_ord=date_ord,
+            amount=self.random_decimal(-1, 1),
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=-1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # Wrong ticker raises an error
+        self.assertRaises(
+            exc.AssetWebError,
+            a.update_valuations,
+            through_today=False,
+        )
+
+        a.ticker = "BANANA"
+        s.commit()
+
+        # Should update a week before and after and all splits
+        r_start, r_end = a.update_valuations(through_today=False)
+        s.commit()
+        self.assertEqual(r_start, date - datetime.timedelta(days=7))
+        self.assertEqual(r_end, date + datetime.timedelta(days=7))
+
+        # There are 11 weekdays within date±7days
+        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        self.assertEqual(n, 11)
+
+        # Check price is correct
+        target = Decimal(date_ord)
+        v = (
+            s.query(AssetValuation)
+            .where(
+                AssetValuation.asset_id == a.id_,
+                AssetValuation.date_ord == date_ord,
+            )
+            .one()
+        )
+        v_id = v.id_
+        self.assertEqual(v.value, target)
+
+        target = Decimal(date_ord + 1)
+        v = (
+            s.query(AssetValuation)
+            .where(
+                AssetValuation.asset_id == a.id_,
+                AssetValuation.date_ord == date_ord + 1,
+            )
+            .one()
+        )
+        self.assertEqual(v.value, target)
+
+        # Check split is correct
+        split = (
+            s.query(AssetSplit)
+            .where(
+                AssetSplit.asset_id == a.id_,
+                AssetSplit.date_ord == date_ord,
+            )
+            .one()
+        )
+        split_id = split.id_
+        self.assertEqual(split.multiplier, Decimal(2))
+
+        # Check all splits up to today got imported
+        # Every Monday so once a week
+        last_monday = today - datetime.timedelta(days=today.weekday())
+        split = (
+            s.query(AssetSplit)
+            .where(AssetSplit.asset_id == a.id_)
+            .order_by(AssetSplit.date_ord.desc())
+            .first()
+        )
+        self.assertEqual(split and split.date_ord, last_monday.toordinal())
+
+        # Number of Mondays between date and today
+        target = (today_ord - (date_ord - 7)) // 7 + 1
+        n = s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).count()
+        self.assertEqual(n, target)
+
+        # Currently holding some, download through today
+        r_start, r_end = a.update_valuations(through_today=True)
+        s.commit()
+        self.assertEqual(r_start, date - datetime.timedelta(days=7))
+        self.assertEqual(r_end, today)
+
+        # Newest AssetValuation should be today or Friday
+        last_weekday = today - datetime.timedelta(days=max(0, today.weekday() - 4))
+        v = (
+            s.query(AssetValuation)
+            .where(AssetValuation.asset_id == a.id_)
+            .order_by(AssetValuation.date_ord.desc())
+            .first()
+        )
+        self.assertEqual(v and v.date_ord, last_weekday.toordinal())
+
+        # Should have reused existing rows
+        n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+        self.assertEqual(n, 1)
+        n = s.query(AssetSplit).where(AssetSplit.id_ == split_id).count()
+        self.assertEqual(n, 1)
+
+        # Move transaction forward so it'll have to delete valuations and splits
+        date = datetime.date(2023, 10, 2)
+        date_ord = date.toordinal()
+        txn.date_ord = date_ord
+        t_split.date_ord = date_ord
+        s.commit()
+
+        r_start, r_end = a.update_valuations(through_today=False)
+        s.commit()
+        self.assertEqual(r_start, date - datetime.timedelta(days=7))
+        self.assertEqual(r_end, date + datetime.timedelta(days=7))
+
+        # There are 11 weekdays within date±7days
+        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        self.assertEqual(n, 11)
+
+        # Check split is correct
+        split = (
+            s.query(AssetSplit)
+            .where(
+                AssetSplit.asset_id == a.id_,
+                AssetSplit.date_ord == date_ord,
+            )
+            .one()
+        )
+        split_id = split.id_
+        self.assertEqual(split.multiplier, Decimal(2))
+
+        # Number of Mondays between date and today
+        target = (today_ord - (date_ord - 7)) // 7 + 1
+        n = s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).count()
+        self.assertEqual(n, target)
+
+        # Should have still reused existing rows
+        n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+        self.assertEqual(n, 1)
+        n = s.query(AssetSplit).where(AssetSplit.id_ == split_id).count()
+        self.assertEqual(n, 1)

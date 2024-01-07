@@ -5,6 +5,7 @@ Typical usage:
   python setup.py install
   python setup.py test
 """
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -30,6 +31,8 @@ required = [
     "flask<2.3,>=2",
     "typing-extensions",
     "pdfplumber",
+    "yfinance",
+    "tqdm",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

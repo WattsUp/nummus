@@ -2,6 +2,7 @@
 
 Adds custom types to typing
 """
+
 from __future__ import annotations
 
 import datetime

@@ -4,6 +4,7 @@ A personal financial information aggregator and planning tool. Collects and
 categorizes transactions, manages budgets, tracks investments, calculates net
 worth, and predicts future performance.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -123,6 +124,13 @@ calculates net worth, and predicts future performance."""
         help="do not check for already imported files",
     )
 
+    # TODO (WattsUp): Look for a home estimate API
+    _ = subparsers.add_parser(
+        "update-assets",
+        help="update valuations for assets",
+        description="Update asset valuations aka download market data for stocks",
+    )
+
     sub_web = subparsers.add_parser(
         "web",
         help="start nummus web server",
@@ -208,6 +216,8 @@ calculates net worth, and predicts future performance."""
         paths: t.Paths = args.paths
         force: bool = args.force
         return commands.import_files(p, paths=paths, force=force)
+    if cmd == "update-assets":
+        return commands.update_assets(p)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)

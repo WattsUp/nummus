@@ -1,4 +1,5 @@
 """Miscellaneous functions and classes."""
+
 from __future__ import annotations
 
 import calendar
@@ -70,7 +71,7 @@ def get_input(
             if print_key or (
                 sys.stdout.encoding and sys.stdout.encoding.lower().startswith("utf-")
             ):
-                input_ = getpass.getpass("\u26BF  " + prompt)
+                input_ = getpass.getpass("\u26bf  " + prompt)
             else:
                 input_ = getpass.getpass(prompt)
         else:

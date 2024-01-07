@@ -118,7 +118,7 @@ class Base(orm.DeclarativeBase):
         return dict(query.all())
 
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields are not empty.
+        """Validates string fields are long enough.
 
         Args:
             key: Field being updated
@@ -128,7 +128,7 @@ class Base(orm.DeclarativeBase):
             field
 
         Raises:
-            InvalidORMValueError if field is empty
+            InvalidORMValueError if field is too short
         """
         if field is None or field in ["", "[blank]"]:
             return None

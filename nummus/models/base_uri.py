@@ -1,4 +1,5 @@
 """Model Uniform Resource Identifier encoder/decoder."""
+
 from __future__ import annotations
 
 import random
