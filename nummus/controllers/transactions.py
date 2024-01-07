@@ -409,6 +409,10 @@ def edit(uri: str) -> str | flask.Response:
                 key=lambda item: item.lower(),
             )
 
+            # Run transaction
+            similar_id = p.find_similar_transaction(parent, do_commit=False)
+            similar_uri = similar_id and Transaction.id_to_uri(similar_id)
+
             return flask.render_template(
                 "transactions/edit.jinja",
                 splits=ctx_splits,
@@ -416,6 +420,7 @@ def edit(uri: str) -> str | flask.Response:
                 payees=payees,
                 categories=categories.values(),
                 tags=tags,
+                similar_uri=similar_uri,
             )
 
         try:
@@ -480,7 +485,7 @@ def edit(uri: str) -> str | flask.Response:
 
 
 def split(uri: str) -> str:
-    """PUT & DELETE /h/transactions/<uri>/split.
+    """GET, PUT & DELETE /h/transactions/<uri>/split.
 
     Args:
         uri: Transaction URI
@@ -508,6 +513,41 @@ def split(uri: str) -> str:
         category.append("Uncategorized")
         tag.append(None)
         amount.append(None)
+    elif flask.request.method == "GET":
+        # Load all splits from similar transaction
+        payee = []
+        description = []
+        category = []
+        tag = []
+        amount = []
+
+        with p.get_session() as s:
+            parent_id = Transaction.uri_to_id(flask.request.args["similar"])
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.payee,
+                    TransactionSplit.description,
+                    TransactionSplit.category_id,
+                    TransactionSplit.tag,
+                    TransactionSplit.amount,
+                )
+                .where(TransactionSplit.parent_id == parent_id)
+            )
+            for t_payee, t_desc, t_cat_id, t_tag, t_amount in query.all():
+                payee.append(t_payee)
+                description.append(t_desc)
+                category.append(categories[t_cat_id])
+                tag.append(t_tag)
+                amount.append(t_amount)
+
+    # DELETE below
+    elif "all" in flask.request.args:
+        payee = [None]
+        description = [None]
+        category = ["Uncategorized"]
+        tag = [None]
+        amount = [None]
     elif len(payee) == 1:  # pragma: no cover
         # Delete button not available when only one split
         msg = "Transaction must have at least one split"
@@ -538,7 +578,7 @@ def split(uri: str) -> str:
         categories=categories.values(),
         parent={"uri": uri},
     )
-    if flask.request.method == "DELETE":
+    if flask.request.method in ["GET", "DELETE"]:
         with p.get_session() as s:
             parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
             current = sum(filter(None, amount))
@@ -580,6 +620,6 @@ ROUTES: t.Routes = {
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),
     "/h/transactions/t/<path:uri>/edit": (edit, ["GET", "POST"]),
-    "/h/transactions/t/<path:uri>/split": (split, ["PUT", "DELETE"]),
+    "/h/transactions/t/<path:uri>/split": (split, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
 }

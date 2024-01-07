@@ -13,6 +13,13 @@ const accountChart = {
         const min = raw.min && raw.min.map(v => Number(v));
         const max = raw.max && raw.max.map(v => Number(v));
 
+        // If only single day data, duplicate for prettier charts
+        if (labels.length == 1) {
+            labels.push(labels[0]);
+            values.push(values[0]);
+            if (min) min.push(min[0]);
+            if (max) max.push(max[0]);
+        }
 
         const canvas = document.getElementById('account-chart-canvas');
         const ctx = canvas.getContext('2d');

@@ -199,6 +199,8 @@ class Transaction(Base):
     statement: t.ORMStr
     locked: t.ORMBool = orm.mapped_column(default=False)
 
+    similar_txn_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
+
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 
     @orm.validates("statement")

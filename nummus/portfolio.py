@@ -16,11 +16,12 @@ import autodict
 import sqlalchemy
 import sqlalchemy.exc
 import tqdm
+from rapidfuzz import process
 from sqlalchemy import orm
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import importers, models, sql, version
+from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
@@ -29,6 +30,7 @@ from nummus.models import (
     Transaction,
     TransactionCategory,
     TransactionSplit,
+    YIELD_PER,
 )
 
 try:
@@ -524,6 +526,153 @@ class Portfolio:
         if acct_id is None:
             return None
         return session.query(Asset).where(Asset.id_ == acct_id).one()
+
+    def find_similar_transaction(
+        self,
+        txn: Transaction,
+        *_,
+        cache_ok: bool = True,
+        do_commit: bool = True,
+    ) -> int | None:
+        """Find the most similar Transaction.
+
+        Args:
+            txn: Transaction to compare to
+            cache_ok: If available, use Transaction.similar_txn_id
+            do_commit: If match found, set similar_txn_id and commit
+
+        Returns:
+            Most similar Transaction.id_
+        """
+        s = orm.object_session(txn)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        if cache_ok and txn.similar_txn_id is not None:
+            return txn.similar_txn_id
+
+        # Similar transaction must be within this range
+        amount_min = min(
+            txn.amount * (1 - utils.MATCH_PERCENT),
+            txn.amount - utils.MATCH_ABSOLUTE,
+        )
+        amount_max = max(
+            txn.amount * (1 + utils.MATCH_PERCENT),
+            txn.amount + utils.MATCH_ABSOLUTE,
+        )
+
+        def commit_match(matching_row: int | sqlalchemy.Row[tuple[int]]) -> int:
+            id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
+            if do_commit:
+                txn.similar_txn_id = id_
+                s.commit()
+            return id_
+
+        # Convert txn.amount to the raw SQL value to make a raw query
+        amount_raw = Transaction.amount.type.process_bind_param(txn.amount)
+        sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
+
+        # Check within Account first, exact matches
+        # If this matches, great, no post filtering needed
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.account_id == txn.account_id,
+                Transaction.id_ != txn.id_,
+                Transaction.locked.is_(True),
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+                Transaction.statement == txn.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return commit_match(row)
+
+        # Maybe exact statement but different account
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.id_ != txn.id_,
+                Transaction.locked.is_(True),
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+                Transaction.statement == txn.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return commit_match(row)
+
+        # Maybe exact statement but different amount
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.id_ != txn.id_,
+                Transaction.locked.is_(True),
+                Transaction.statement == txn.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return commit_match(row)
+
+        # No statements match, choose highest fuzzy matching statement
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.id_,
+                Transaction.statement,
+            )
+            .where(
+                Transaction.id_ != txn.id_,
+                Transaction.locked.is_(True),
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+            )
+        )
+        statements: t.DictIntStr = {
+            t_id: re.sub(r"[0-9]+", "", statement).lower()
+            for t_id, statement in query.yield_per(YIELD_PER)
+        }
+        if len(statements) == 0:
+            return None
+        extracted = process.extract(
+            re.sub(r"[0-9]+", "", txn.statement).lower(),
+            statements,
+            limit=None,
+            score_cutoff=utils.SEARCH_THRESHOLD,
+        )
+        if len(extracted) == 0:
+            return None
+        matches = {t_id: score for _, score, t_id in extracted}
+
+        # Add a bonuse points for closeness in price and same account
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.id_,
+                Transaction.account_id,
+                Transaction.amount,
+            )
+            .where(Transaction.id_.in_(matches))
+        )
+        matches_bonus: dict[int, float] = {}
+        for t_id, acct_id, amount in query.yield_per(YIELD_PER):
+            # 5% off will reduce score by 5%
+            amount_diff_percent = abs(amount - txn.amount) / txn.amount
+            score = matches[t_id] * float(1 - amount_diff_percent)
+            if acct_id == txn.account_id:
+                # Extra 10 points for same account
+                score += 10
+            matches_bonus[t_id] = score
+
+        # Sort by best score and return best id
+        best_id = sorted(matches_bonus.items(), key=lambda item: -item[1])[0][0]
+        return commit_match(best_id)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.

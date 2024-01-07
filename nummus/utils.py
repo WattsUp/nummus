@@ -39,6 +39,9 @@ SECONDS_IN_MINUTE = 60
 SECONDS_IN_HOUR = 60 * SECONDS_IN_MINUTE
 SECONDS_IN_DAY = 24 * SECONDS_IN_HOUR
 
+MATCH_PERCENT = Decimal("0.05")
+MATCH_ABSOLUTE = Decimal(10)
+
 
 def camel_to_snake(s: str) -> str:
     """Transform CamelCase to snake_case."""

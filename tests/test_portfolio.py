@@ -7,6 +7,7 @@ import json
 import secrets
 import shutil
 import tarfile
+from decimal import Decimal
 from unittest import mock
 
 import autodict
@@ -930,3 +931,148 @@ class TestPortfolio(TestBase):
                 ),
             ]
             self.assertEqual(result, target)
+
+    def test_find_similar_transactions(self) -> None:
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
+        p = portfolio.Portfolio.create(path_db)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        with p.get_session() as s:
+            categories = TransactionCategory.map_name(s)
+            categories = {v: k for k, v in categories.items()}
+
+            acct_0 = Account(
+                name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH,
+                closed=False,
+                emergency=False,
+            )
+            acct_1 = Account(
+                name="Monkey Bank Credit",
+                institution="Monkey Bank",
+                category=AccountCategory.CREDIT,
+                closed=False,
+                emergency=False,
+            )
+            s.add_all((acct_0, acct_1))
+            s.commit()
+
+            txn_0 = Transaction(
+                account_id=acct_0.id_,
+                date_ord=today_ord,
+                amount=100,
+                statement="Banana Store",
+            )
+            t_split_0 = TransactionSplit(
+                amount=txn_0.amount,
+                parent=txn_0,
+                category_id=categories["Uncategorized"],
+            )
+
+            # Unbound model
+            self.assertRaises(
+                exc.UnboundExecutionError,
+                p.find_similar_transaction,
+                txn_0,
+                do_commit=False,
+            )
+
+            s.add_all((txn_0, t_split_0))
+            s.commit()
+
+            txn_1 = Transaction(
+                account_id=acct_0.id_,
+                date_ord=today_ord,
+                amount=100,
+                statement="Banana Store",
+            )
+            t_split_1 = TransactionSplit(
+                amount=txn_1.amount,
+                parent=txn_1,
+                category_id=categories["Uncategorized"],
+            )
+            s.add_all((txn_1, t_split_1))
+            s.commit()
+
+            txn_2 = Transaction(
+                account_id=acct_1.id_,
+                date_ord=today_ord,
+                amount=100,
+                statement="Banana Store",
+            )
+            t_split_2 = TransactionSplit(
+                amount=txn_2.amount,
+                parent=txn_2,
+                category_id=categories["Uncategorized"],
+            )
+            s.add_all((txn_2, t_split_2))
+            s.commit()
+
+            # None are locked so no candidates at all
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertIsNone(result)
+
+            txn_1.locked = True
+            txn_2.locked = True
+
+            # txn_0 and txn_1 have same statement and same account
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_1.id_)
+
+            # do_commit=False means it isn't cached
+            self.assertIsNone(txn_0.similar_txn_id)
+
+            # txn_1 amount is outside limits, should match txn_2
+            txn_1.amount = Decimal(10)
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_2.id_)
+
+            # txn_2 amount is outside limits but further away, should match txn_1
+            txn_2.amount = Decimal(9)
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_1.id_)
+
+            # Different statement, both outside amount range
+            txn_0.statement = "Gas station 1234"
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertIsNone(result)
+
+            # No fuzzy matches at all
+            txn_0.amount = Decimal(8)
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertIsNone(result)
+
+            # Make fuzzy close, txn_1 is same account so more points
+            txn_1.statement = "Gas station 5678"
+            txn_2.statement = "gas station 90"
+            txn_1.amount = Decimal(9)
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_1.id_)
+
+            # txn_2 is closer so more points being closer
+            txn_2.amount = Decimal(8.5)
+            txn_2.account_id = acct_0.id_
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=True)
+            self.assertEqual(result, txn_2.id_)
+            self.assertEqual(txn_0.similar_txn_id, txn_2.id_)
+
+            # Even though txn_1 is exact statement match, cache is used
+            txn_1.statement = "Gas station 1234"
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=True)
+            self.assertEqual(result, txn_2.id_)
+            self.assertEqual(txn_0.similar_txn_id, txn_2.id_)
+
+            # Force not using cache will update similar
+            result = p.find_similar_transaction(txn_0, do_commit=True, cache_ok=False)
+            self.assertEqual(result, txn_1.id_)
+            self.assertEqual(txn_0.similar_txn_id, txn_1.id_)

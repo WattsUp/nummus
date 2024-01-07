@@ -41,15 +41,14 @@ class TestWebUtils(TestBase):
         today = datetime.date.today()
 
         result = web_utils.parse_period("custom", None, None)
-        self.assertEqual(result, (today, today + datetime.timedelta(days=1)))
+        self.assertEqual(result, (today, today))
 
         start = datetime.date(today.year, today.month, 4)
         end = datetime.date(today.year, today.month, 10)
         result = web_utils.parse_period("custom", start, end)
         self.assertEqual(result, (start, end))
         result = web_utils.parse_period("custom", end, start)
-        # Always at least 2 days long for better graphs
-        self.assertEqual(result, (end, end + datetime.timedelta(days=1)))
+        self.assertEqual(result, (end, end))
 
         start = datetime.date(today.year, today.month, 1)
         end = today
