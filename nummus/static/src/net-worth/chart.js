@@ -21,6 +21,18 @@ const netWorthChart = {
             return a;
         });
 
+        // If only single day data, duplicate for prettier charts
+        if (labels.length == 1) {
+            labels.push(labels[0]);
+            values.push(values[0]);
+            if (min) min.push(min[0]);
+            if (max) max.push(max[0]);
+            for (const account of accounts) {
+                account.values.push(account.values[0]);
+            }
+        }
+
+
         const blue = getThemeColor('blue');
         const yellow = getThemeColor('yellow');
         const width = 65;
