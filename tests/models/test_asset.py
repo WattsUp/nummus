@@ -87,10 +87,7 @@ class TestAsset(TestBase):
         d = {
             "name": self.random_string(),
             "description": self.random_string(),
-            "category": AssetCategory.SECURITY,
-            "unit": self.random_string(),
-            "tag": self.random_string(),
-            "img_suffix": self.random_string(),
+            "category": AssetCategory.STOCKS,
             "ticker": self.random_string().upper(),
         }
 
@@ -101,13 +98,6 @@ class TestAsset(TestBase):
         self.assertEqual(a.name, d["name"])
         self.assertEqual(a.description, d["description"])
         self.assertEqual(a.category, d["category"])
-        self.assertEqual(a.unit, d["unit"])
-        self.assertEqual(a.tag, d["tag"])
-        self.assertEqual(a.img_suffix, d["img_suffix"])
-        self.assertEqual(a.image_name, f"{a.uri}{d['img_suffix']}")
-
-        a.img_suffix = None
-        self.assertIsNone(a.image_name)
 
         d = {
             "asset_id": a.id_,
@@ -179,10 +169,7 @@ class TestAsset(TestBase):
         d = {
             "name": self.random_string(),
             "description": self.random_string(),
-            "category": AssetCategory.SECURITY,
-            "unit": self.random_string(),
-            "tag": self.random_string(),
-            "img_suffix": self.random_string(),
+            "category": AssetCategory.STOCKS,
         }
 
         a = Asset(**d)
@@ -208,10 +195,7 @@ class TestAsset(TestBase):
         d = {
             "name": self.random_string(),
             "description": self.random_string(),
-            "category": AssetCategory.SECURITY,
-            "unit": self.random_string(),
-            "tag": self.random_string(),
-            "img_suffix": self.random_string(),
+            "category": AssetCategory.STOCKS,
         }
 
         a = Asset(**d)

@@ -19,7 +19,9 @@
 {% if include_chart_oob %}
     {% with oob = True %}
         {% include "accounts/chart-data.jinja" %}
-        {% include "accounts/assets.jinja" %}
+        {% if assets %}
+            {% include "accounts/assets.jinja" %}
+        {% endif %}
     {% endwith %}
 {% endif %}
 <div id="txn-table"

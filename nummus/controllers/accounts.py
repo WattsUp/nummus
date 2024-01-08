@@ -194,18 +194,16 @@ def ctx_chart(acct: Account) -> t.DictAny:
     }
 
 
-def ctx_assets(acct: Account) -> t.DictAny | None:
+def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
     """Get the context to build the account assets.
 
     Args:
+        s: SQL session to use
         acct: Account to generate context for
 
     Returns:
         Dictionary HTML context
     """
-    s = orm.object_session(acct)
-    if s is None:
-        raise exc.UnboundExecutionError
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
@@ -242,13 +240,6 @@ def ctx_assets(acct: Account) -> t.DictAny | None:
         a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty != 0
     }
     a_ids = set(asset_qtys.keys())
-
-    if len(a_ids) == 0:
-        return {
-            "assets": [],
-            "end_value": 0,
-            "profit": 0,
-        }
 
     end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
@@ -338,7 +329,7 @@ def page(uri: str) -> str:
             acct=ctx_account(acct),
             chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
-            assets=ctx_assets(acct),
+            assets=ctx_assets(s, acct),
         )
 
 
@@ -381,16 +372,16 @@ def table(uri: str) -> str:
             # If same period and not being updated via update_transaction nor deferral:
             # don't update the chart
             # aka if just the table changed pages or column filters
-            return common.page(
+            return flask.render_template(
                 "accounts/table.jinja",
                 txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
                 include_oob=True,
             )
-        return common.page(
+        return flask.render_template(
             "accounts/table.jinja",
             chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
-            assets=ctx_assets(acct),
+            assets=ctx_assets(s, acct),
             include_oob=True,
             include_chart_oob=True,
         )

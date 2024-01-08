@@ -10,11 +10,11 @@
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Balance Mix</div>
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Profit &amp; Loss</div>
     </div>
-    {% if assets["assets"]| length == 0 %}<div class="text-center">No assets held during this period.</div>{% endif %}
     {% for asset in assets["assets"] %}
         {% include "accounts/asset-view.jinja" %}
     {% endfor %}
-    <div class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
+    <div id="assets-total"
+         class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
         <div class="p-1 grow">Total</div>
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ assets["end_value"] | money }}</div>
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right"></div>

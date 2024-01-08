@@ -376,7 +376,7 @@ class TestCommands(TestBase):
                 closed=False,
                 emergency=False,
             )
-            asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
+            asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add_all((acct_checking, acct_invest, asset))
             s.commit()
 

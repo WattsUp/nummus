@@ -76,8 +76,6 @@ class Asset(Base):
         name: Name of Asset
         description: Description of Asset
         category: Type of Asset
-        unit: Unit name for an individual Asset (ex: shares)
-        tag: Unique tag linked across datasets
         interpolate: True will interpolate valuations with a linear function, for
             sparsely (monthly) valued assets
         ticker: Name of exchange ticker to fetch prices for. If no ticker then
@@ -89,9 +87,6 @@ class Asset(Base):
     name: t.ORMStr = orm.mapped_column(unique=True)
     description: t.ORMStrOpt
     category: orm.Mapped[AssetCategory]
-    unit: t.ORMStrOpt  # TODO (WattsUp): Remove unused properties
-    tag: t.ORMStrOpt  # Remove
-    img_suffix: t.ORMStrOpt  # Remove
     interpolate: t.ORMBool = orm.mapped_column(default=False)
     ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
 
@@ -127,14 +122,6 @@ class Asset(Base):
             raise exc.InvalidORMValueError(msg)
 
         return field
-
-    @property
-    def image_name(self) -> str | None:
-        """Get name of Asset's image, None if it doesn't exist."""
-        s = self.img_suffix
-        if s is None:
-            return None
-        return f"{self.uri}{s}"
 
     @classmethod
     def get_value_all(

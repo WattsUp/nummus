@@ -190,8 +190,18 @@ def ctx_assets(
 
     if len(a_ids) == 0:
         return {
-            "assets": [],
-            "end_value": 0,
+            "assets": [
+                {
+                    "uri": None,
+                    "category": AssetCategory.CASH,
+                    "name": "Cash",
+                    "end_qty": None,
+                    "end_value": total_value,
+                    "end_value_ratio": 1,
+                    "profit": 0,
+                },
+            ],
+            "end_value": total_value,
             "profit": 0,
         }
 
