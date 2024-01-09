@@ -44,7 +44,6 @@ def edit(uri: str) -> str | flask.Response:
             )
 
         form = flask.request.form
-        print(form)
         name = form["name"].strip()
         description = form["description"].strip()
         ticker = form["ticker"].strip()
