@@ -19,10 +19,13 @@
 {% if include_chart_oob %}
     {% with oob = True %}
         {% include "accounts/chart-data.jinja" %}
+        {% if assets %}
+            {% include "accounts/assets.jinja" %}
+        {% endif %}
     {% endwith %}
 {% endif %}
 <div id="txn-table"
-     class="w-full flex flex-col grow min-h-[15rem]"
+     class="w-full flex flex-col grow"
      hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
      hx-trigger="update-transaction from:body">
     {% if txn_table["transactions"] | length == 0 %}

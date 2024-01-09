@@ -56,7 +56,6 @@ class TestPortfolio(TestBase):
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
-        path_images = path_db.parent.joinpath("portfolio.images")
         path_importers = path_db.parent.joinpath("portfolio.importers")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
@@ -64,17 +63,13 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
-        self.assertTrue(path_images.exists(), "images does not exist")
-        self.assertTrue(path_images.is_dir(), "images is not a directory")
         self.assertTrue(path_importers.exists(), "importers does not exist")
         self.assertTrue(path_importers.is_dir(), "importers is not a directory")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
-        self.assertEqual(p.image_path, path_images)
         self.assertEqual(p.importers_path, path_importers)
         self.assertEqual(p.path, path_db)
         self.assertEqual(p.ssl_cert_path, path_ssl.joinpath("cert.pem"))
@@ -156,7 +151,6 @@ class TestPortfolio(TestBase):
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_config = path_db.with_suffix(".config")
-        path_images = path_db.parent.joinpath("portfolio.images")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         key = self.random_string()
@@ -165,13 +159,10 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
-        self.assertTrue(path_images.exists(), "images does not exist")
-        self.assertTrue(path_images.is_dir(), "images is not a directory")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_images.stat().st_mode & 0o777, 0o700)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
 
         secret = self.random_string()
@@ -360,7 +351,7 @@ class TestPortfolio(TestBase):
             a_apple_0 = Asset(name="Apple", category=AssetCategory.ITEM)
             a_apple_1 = Asset(
                 name="Tech Company",
-                category=AssetCategory.SECURITY,
+                category=AssetCategory.STOCKS,
                 ticker="APPLE",
             )
             s.add_all((a_banana, a_apple_0, a_apple_1))
@@ -426,7 +417,7 @@ class TestPortfolio(TestBase):
             # Still missing assets
             self.assertRaises(KeyError, p.import_file, path)
 
-            asset = Asset(name="BANANA", category=AssetCategory.SECURITY)
+            asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add(asset)
             s.commit()
 
@@ -624,25 +615,7 @@ class TestPortfolio(TestBase):
         path_backup_2.unlink()
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.restore, p)
 
-        # Backups should include the images and SSL certs
-        with p.get_session() as s:
-            asset = Asset(
-                name=self.random_string(),
-                category=AssetCategory.CASH,
-                img_suffix=".png",
-            )
-            s.add(asset)
-            s.commit()
-
-            if asset.image_name is None:
-                self.fail("Asset is missing image")
-            path_a_img = p.image_path.joinpath(asset.image_name)
-            path_a_img_rel = str(path_a_img.relative_to(self._TEST_ROOT))
-            a_img = self.random_string().encode()
-
-            with path_a_img.open("wb") as file:
-                file.write(a_img)
-
+        # Backups should include the SSL certs
         path_cert = p.ssl_cert_path
         path_key = p.ssl_key_path
         path_cert_rel = str(path_cert.relative_to(self._TEST_ROOT))
@@ -657,27 +630,22 @@ class TestPortfolio(TestBase):
 
         p.backup()
         with tarfile.open(path_backup_1, "r:gz") as tar:
-            buf_backup = tar.extractfile(path_a_img_rel).read()  # type: ignore[attr-defined]
-            self.assertEqual(buf_backup, a_img)
             buf_backup = tar.extractfile(path_cert_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_cert)
             buf_backup = tar.extractfile(path_key_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_key)
-        a_img = None
         buf_backup = None
 
         path_db.unlink()
         path_config.unlink()
-        path_a_img.unlink()
         path_cert.unlink()
         path_key.unlink()
 
-        # Restoring brings asset images back too
+        # Restoring brings certs back too
         portfolio.Portfolio.restore(path_db)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
-        self.assertTrue(path_a_img.exists(), "Asset image does not exist")
         self.assertTrue(path_cert.exists(), "SSL cert does not exist")
         self.assertTrue(path_key.exists(), "SSL key does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
@@ -750,12 +718,7 @@ class TestPortfolio(TestBase):
         self.assertTrue(path_backup_4.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)
 
-        # Make an asset image
-        path_a_img = p.image_path.joinpath(f"{secrets.token_hex()}.png")
-        with path_a_img.open("wb") as file:
-            file.write(self.random_string().encode())
-
-        # Clean, expect old backups and old images to be purged
+        # Clean, expect old backups to be purged
         p.clean()
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
@@ -764,8 +727,6 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
-
-        self.assertFalse(path_a_img.exists(), "Asset image does exist")
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")

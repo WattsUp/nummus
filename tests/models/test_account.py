@@ -130,7 +130,7 @@ class TestAccount(TestBase):
         for _ in range(3):
             new_asset = Asset(
                 name=self.random_string(),
-                category=AssetCategory.SECURITY,
+                category=AssetCategory.STOCKS,
             )
             assets.append(new_asset)
         t_cat = TransactionCategory(
@@ -323,7 +323,7 @@ class TestAccount(TestBase):
         for _ in range(3):
             new_asset = Asset(
                 name=self.random_string(),
-                category=AssetCategory.SECURITY,
+                category=AssetCategory.STOCKS,
             )
             assets.append(new_asset)
 

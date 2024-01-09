@@ -1,6 +1,6 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("net_worth.page") }}"
-         hx-trigger="update-account from:body"
+         hx-trigger="update-account from:body, update-asset from:body"
          hx-target="#main"
          hx-swap="innerHTML">
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
@@ -17,6 +17,9 @@
     <div class="w-full h-96">
         <canvas id="assets-chart-canvas"></canvas>
     </div>
+    {% with assets = chart["assets"] %}
+        {% include "accounts/assets.jinja" %}
+    {% endwith %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
     <div class="w-full h-96">
         <canvas id="liabilities-chart-canvas"></canvas>

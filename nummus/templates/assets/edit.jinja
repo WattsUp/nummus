@@ -8,43 +8,34 @@
             {% include "svg/x.svg" %}
         {% endwith %}
     </button>
-    <h1 class="font-serif text-4xl px-6 text-green-600">Edit account</h1>
-    <form class="flex w-full gap-4 px-6 grow" id="form-account">
+    <h1 class="font-serif text-4xl px-6 text-green-600">Edit asset</h1>
+    <form class="flex w-full gap-4 px-6 grow" id="form-asset">
         <div class="w-5/12 flex flex-col items-center">
             <hr class="w-full border-grey-200">
-            <div class="font-serif text-2xl">{{ account["value"] | money }}</div>
-            <hr class="w-full border-grey-200">
-            <div class="flex gap-4 justify-between w-full">
-                <span class="font-bold">Most recent transaction</span>
-                <span>{{ account["updated_days_ago"] | days }}
-                ago</span>
+            <div class="font-serif text-2xl">
+                {% if asset["value"] < 0.1 %}
+                    {{ asset["value"] | money6 }}
+                {% else %}
+                    {{ asset["value"] | money }}
+                {% endif %}
             </div>
-            <div class="flex gap-4 justify-between w-full">
-                <span class="font-bold">Oldest transaction</span>
-                <span>{{ account["opened_days_ago"] | days }}
-                ago</span>
-            </div>
+            {% if asset["value_date"] %}
+                <div class="italic">as of {{ asset["value_date"] }}</div>
+            {% else %}
+                <div class="italic">no valuations</div>
+            {% endif %}
             <hr class="w-full border-grey-200">
             <label class="flex gap-4 justify-between w-full checkbox">
-                <span class="font-bold">Account closed:</span>
+                <span class="font-bold">Interpolate valuations:</span>
                 <input type="checkbox"
-                       name="closed"
-                       {% if account["closed"] %}checked{% endif %}
-                       id="account-closed">
+                       name="interpolate"
+                       {% if asset["interpolate"] %}checked{% endif %}
+                       id="asset-interpolate">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
             </label>
-            <label class="flex gap-4 justify-between w-full checkbox">
-                <span class="font-bold">Included in emergency fund:</span>
-                <input type="checkbox"
-                       name="emergency"
-                       {% if account["emergency"] %}checked{% endif %}
-                       id="account-emergency">
-                {% with class = "w-5 h-5" %}
-                    {% include "svg/check.svg" %}
-                {% endwith %}
-            </label>
+            <div class="text-center italic text-sm">for sparsely valued assets like real estate</div>
         </div>
         <div class="w-7/12">
             <h1 class="font-bold">Edit details</h1>
@@ -52,32 +43,32 @@
             <table class="w-full">
                 <tbody>
                     <tr>
-                        <td>Institution</td>
+                        <td>Name</td>
+                        <td>
+                            <input class="w-full" name="name" value="{{ asset["name"] }}">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Description</td>
                         <td>
                             <input class="w-full"
-                                   name="institution"
-                                   value="{{ account["institution"] }}">
+                                   name="description"
+                                   value="{{ asset["description"] or "" }}">
                         </td>
                     </tr>
                     <tr>
-                        <td>Account Number</td>
+                        <td>Ticker</td>
                         <td>
-                            <input class="w-full" name="number" value="{{ account["number"] or "" }}">
+                            <input class="w-full" name="ticker" value="{{ asset["ticker"] or "" }}">
                         </td>
                     </tr>
                     <tr>
-                        <td>Account Name</td>
-                        <td>
-                            <input class="w-full" name="name" value="{{ account["name"] }}">
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>Account Category</td>
+                        <td>Asset Class</td>
                         <td>
                             <select class="w-full" name="category">
-                                {% for cat in account["category_type"] %}
+                                {% for cat in asset["category_type"] %}
                                     <option value="{{ cat | enum }}"
-                                            {% if cat == account["category"] %}selected{% endif %}>
+                                            {% if cat == asset["category"] %}selected{% endif %}>
                                         {{ cat | enum | title }}
                                     </option>
                                 {% endfor %}
@@ -92,9 +83,9 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
-        <button hx-post="{{ url_for("accounts.edit", uri=account["uri"]) }}"
+        <button hx-post="{{ url_for("assets.edit", uri=asset["uri"]) }}"
                 hx-target="#overlay-error"
-                hx-include="#form-account"
+                hx-include="#form-asset"
                 class="button bg-green">Save</button>
     </div>
 </div>

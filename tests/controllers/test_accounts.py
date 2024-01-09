@@ -7,6 +7,9 @@ from nummus.controllers import accounts
 from nummus.models import (
     Account,
     AccountCategory,
+    Asset,
+    AssetCategory,
+    AssetValuation,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -24,6 +27,7 @@ class TestAccount(WebTestBase):
 
         endpoint = f"/h/accounts/a/{acct_uri}/edit"
         result, _ = self.web_get(endpoint)
+        self.assertNotIn("<html", result)
         self.assertIn("Edit account", result)
 
         name = self.random_string()
@@ -164,7 +168,9 @@ class TestAccount(WebTestBase):
 
     def test_table(self) -> None:
         d = self._setup_portfolio()
+        p = self._portfolio
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct_uri = d["acct_uri"]
         t_split_0 = d["t_split_0"]
@@ -176,6 +182,7 @@ class TestAccount(WebTestBase):
         endpoint = f"/h/accounts/a/{acct_uri}/table"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries)
+        self.assertNotIn("<html", result)
         # First different call for table should update chart as well
         self.assertRegex(
             result,
@@ -195,6 +202,7 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, r"<div .*>-\$10.00</div>")
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertNotIn('id="assets"', result)  # Not an investment account
 
         result, _ = self.web_get(endpoint, queries)
         # Second call for table should not update chart as well
@@ -246,6 +254,130 @@ class TestAccount(WebTestBase):
         self.assertIn(today.isoformat()[:7], dates_s)
         self.assertIn('"date_mode": "years"', result)
 
+        # Add an asset transaction
+        with p.get_session() as s:
+            acct_id = Account.uri_to_id(acct_uri)
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            # Create assets
+            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
+
+            s.add_all((a_banana, a_house))
+            s.commit()
+
+            # Buy the house but no ticker so excluded
+            txn = Transaction(
+                account_id=acct_id,
+                date_ord=today_ord - 2,
+                amount=-10,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_house.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            a_banana_uri = a_banana.uri
+            a_house_uri = a_house.uri
+            a_house_id = a_house.id_
+
+        queries = {"period": "all"}
+        headers = {"HX-Trigger": "txn-table"}
+        result, _ = self.web_get(endpoint, queries, headers=headers)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertRegex(
+            result_assets,
+            r"(Real Estate).*(Fruit Ct\. House).*"
+            r"(1\.000000).*(\$0\.00).*(0\.00%).*(\$0\.00)[^0-9]*",
+        )
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$80\.00).*(\$0\.00)[^0-9]*")
+
+        # Add a valuation for the house with zero profit
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_house_id,
+                date_ord=today_ord - 2,
+                value=10,
+            )
+            s.add(v)
+            s.commit()
+
+        result, _ = self.web_get(endpoint, queries, headers=headers)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertRegex(
+            result_assets,
+            r"(Real Estate).*(Fruit Ct\. House).*"
+            r"(1\.000000).*(\$10\.00).*(11\.11%).*(\$10\.00)[^0-9]*",
+        )
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$10\.00)[^0-9]*")
+
+        # Sell house for $20
+        with p.get_session() as s:
+            acct_id = Account.uri_to_id(acct_uri)
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            # Buy the house but no ticker so excluded
+            txn = Transaction(
+                account_id=acct_id,
+                date_ord=today_ord - 1,
+                amount=20,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_house_id,
+                asset_quantity_unadjusted=-1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+        queries = {
+            "period": "custom",
+            "start": today.isoformat(),
+            "end": today.isoformat(),
+        }
+        result, _ = self.web_get(endpoint, queries, headers=headers)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertNotIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
+
     def test_options(self) -> None:
         d = self._setup_portfolio()
 
@@ -264,6 +396,7 @@ class TestAccount(WebTestBase):
         endpoint = f"/h/accounts/a/{acct_uri}/options/category"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
+        self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')

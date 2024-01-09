@@ -241,12 +241,12 @@ def make_assets(p: Portfolio) -> t.DictInt:
         growth = Asset(
             name="GROWTH",
             description="Growth ETF",
-            category=AssetCategory.SECURITY,
+            category=AssetCategory.STOCKS,
         )
         value = Asset(
             name="VALUE",
             description="Value ETF",
-            category=AssetCategory.SECURITY,
+            category=AssetCategory.STOCKS,
         )
         house_main = Asset(
             name="Main St. House",
@@ -270,14 +270,14 @@ def make_assets(p: Portfolio) -> t.DictInt:
         sp500 = Asset(
             name="S&P 500",
             description="Average of the 500 largest publicly traded companies",
-            category=AssetCategory.SECURITY,
+            category=AssetCategory.STOCKS,
             ticker="^GSPC",
         )
         # Add Apple so stock splits can be tested
         apple = Asset(
             name="Apple Inc.",
             description="Technology company making phones, personal computers, etc.",
-            category=AssetCategory.SECURITY,
+            category=AssetCategory.STOCKS,
             ticker="AAPL",
         )
 

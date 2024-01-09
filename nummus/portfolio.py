@@ -66,7 +66,6 @@ class Portfolio:
         self._path_db = Path(path).resolve().with_suffix(".db")
         name = self._path_db.with_suffix("").name
         self._path_config = self._path_db.with_suffix(".config")
-        self._path_images = self._path_db.parent.joinpath(f"{name}.images")
         self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
@@ -75,7 +74,6 @@ class Portfolio:
         if not self._path_config.exists():
             msg = "Portfolio configuration does not exist, cannot open database"
             raise FileNotFoundError(msg)
-        self._path_images.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
@@ -146,7 +144,6 @@ class Portfolio:
         sql.drop_session(path_db)
         name = path_db.with_suffix("").name
         path_config = path_db.with_suffix(".config")
-        path_images = path_db.parent.joinpath(f"{name}.images")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
@@ -155,7 +152,6 @@ class Portfolio:
             enc = encryption.Encryption(key)
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
-        path_images.mkdir(exist_ok=True)
         path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
         salt = secrets.token_urlsafe()
@@ -169,7 +165,6 @@ class Portfolio:
         config["cipher"] = base64.b64encode(cipher_bytes).decode()
         config.save()
         path_config.chmod(0o600)  # Only owner can read/write
-        path_images.chmod(0o700)  # Only owner can read/write
         path_ssl.chmod(0o700)  # Only owner can read/write
 
         if enc is None:
@@ -700,14 +695,6 @@ class Portfolio:
                 files.append(self.ssl_cert_path)
                 files.append(self.ssl_key_path)
 
-            # Get every image
-            with self.get_session() as s:
-                query = s.query(Asset).where(Asset.img_suffix.is_not(None))
-                for asset in query.all():
-                    # Query whole object okay, need image_name property
-                    file = self._path_images.joinpath(asset.image_name)  # type: ignore[attr-defined]
-                    files.append(file)
-
             for file in files:
                 tar.add(file, arcname=file.relative_to(parent))
             # Add a timestamp of when it was created
@@ -849,11 +836,6 @@ class Portfolio:
                 save_on_exit=False,
             )
             p._unlock()  # noqa: SLF001
-
-    @property
-    def image_path(self) -> Path:
-        """Get path to image folder."""
-        return self._path_images
 
     @property
     def ssl_cert_path(self) -> Path:

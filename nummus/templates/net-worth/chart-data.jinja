@@ -1,6 +1,11 @@
 {% if include_oob %}
     {% with oob = True %}
         {% include "net-worth/chart-config.jinja" %}
+        {% if not chart["defer"] %}
+            {% with assets = chart["assets"] %}
+                {% include "accounts/assets.jinja" %}
+            {% endwith %}
+        {% endif %}
     {% endwith %}
 {% endif %}
 <div id="net-worth-chart-data">

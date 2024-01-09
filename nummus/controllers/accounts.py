@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import flask
+import sqlalchemy
+from sqlalchemy import orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
@@ -13,8 +16,11 @@ from nummus.controllers import common, transactions
 from nummus.models import (
     Account,
     AccountCategory,
+    Asset,
+    AssetCategory,
     TransactionCategory,
     TransactionSplit,
+    YIELD_PER,
 )
 
 if TYPE_CHECKING:
@@ -188,6 +194,122 @@ def ctx_chart(acct: Account) -> t.DictAny:
     }
 
 
+def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
+    """Get the context to build the account assets.
+
+    Args:
+        s: SQL session to use
+        acct: Account to generate context for
+
+    Returns:
+        Dictionary HTML context
+    """
+    args = flask.request.args
+
+    period = args.get("period", DEFAULT_PERIOD)
+    start, end = web_utils.parse_period(
+        period,
+        args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat),
+    )
+    if start is None:
+        opened_on_ord = acct.opened_on_ord
+        start = (
+            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
+        )
+
+    start_ord = start.toordinal()
+    end_ord = end.toordinal()
+
+    asset_qtys = {
+        a_id: qtys[0] for a_id, qtys in acct.get_asset_qty(end_ord, end_ord).items()
+    }
+    if len(asset_qtys) == 0:
+        return None  # Not an investment account
+
+    # Include assets that are currently held or had a change in qty
+    query = s.query(TransactionSplit.asset_id).where(
+        TransactionSplit.account_id == acct.id_,
+        TransactionSplit.date_ord <= end_ord,
+        TransactionSplit.date_ord >= start_ord,
+        TransactionSplit.asset_id.is_not(None),
+    )
+    a_ids = {a_id for a_id, in query.distinct()}
+
+    asset_qtys = {
+        a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty != 0
+    }
+    a_ids = set(asset_qtys.keys())
+
+    end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
+
+    query = (
+        s.query(Asset)
+        .with_entities(
+            Asset.id_,
+            Asset.name,
+            Asset.category,
+        )
+        .where(Asset.id_.in_(a_ids))
+    )
+
+    assets: list[t.DictAny] = []
+    total_value = Decimal(0)
+    total_profit = Decimal(0)
+    for a_id, name, category in query.yield_per(YIELD_PER):
+        end_qty = asset_qtys[a_id]
+        end_value = end_qty * end_prices[a_id][0]
+        profit = end_value  # FIX (WattsUp): Not true profit
+
+        total_value += end_value
+        total_profit += profit
+
+        ctx_asset = {
+            "uri": Asset.id_to_uri(a_id),
+            "category": category,
+            "name": name,
+            "end_qty": end_qty,
+            "end_value": end_value,
+            "profit": profit,
+        }
+        assets.append(ctx_asset)
+
+    # Add in cash too
+    cash: t.Real = (
+        s.query(sqlalchemy.func.sum(TransactionSplit.amount))
+        .where(TransactionSplit.account_id == acct.id_)
+        .scalar()
+    )
+    total_value += cash
+    ctx_asset = {
+        "uri": None,
+        "category": AssetCategory.CASH,
+        "name": "Cash",
+        "end_qty": None,
+        "end_value": cash,
+        "profit": 0,
+    }
+    assets.append(ctx_asset)
+
+    for item in assets:
+        item["end_value_ratio"] = item["end_value"] / total_value
+
+    assets = sorted(
+        assets,
+        key=lambda item: (
+            -item["end_value"],
+            item["category"].name,
+            item["name"].lower(),
+        ),
+    )
+
+    return {
+        "assets": assets,
+        "end_value": total_value,
+        "profit": total_profit,
+    }
+
+
 def page(uri: str) -> str:
     """GET /accounts/<uri>.
 
@@ -207,6 +329,7 @@ def page(uri: str) -> str:
             acct=ctx_account(acct),
             chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+            assets=ctx_assets(s, acct),
         )
 
 
@@ -248,15 +371,17 @@ def table(uri: str) -> str:
         ):
             # If same period and not being updated via update_transaction nor deferral:
             # don't update the chart
-            return common.page(
+            # aka if just the table changed pages or column filters
+            return flask.render_template(
                 "accounts/table.jinja",
                 txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
                 include_oob=True,
             )
-        return common.page(
+        return flask.render_template(
             "accounts/table.jinja",
             chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+            assets=ctx_assets(s, acct),
             include_oob=True,
             include_chart_oob=True,
         )

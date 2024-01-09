@@ -1,0 +1,23 @@
+<div id="assets"
+     class="w-full flex flex-col max-h-[25vh] overflow-y-auto"
+     hx-swap-oob="{{ oob }}">
+    <div class="header w-full flex justify-between font-bold border-b border-b-grey-200 sticky top-0 bg-white">
+        <div class="w-[2rem] min-w-[2rem] p-1"></div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate">Class</div>
+        <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">Name</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Quantity</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Balance</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Balance Mix</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Profit &amp; Loss</div>
+    </div>
+    {% for asset in assets["assets"] %}
+        {% include "accounts/asset-view.jinja" %}
+    {% endfor %}
+    <div id="assets-total"
+         class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
+        <div class="p-1 grow">Total</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ assets["end_value"] | money }}</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right"></div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ assets["profit"] | money }}</div>
+    </div>
+</div>

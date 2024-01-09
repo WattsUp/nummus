@@ -46,7 +46,7 @@
             <div class="m-2">
                 <div class="block bg-green-800" todo="/#todo">
                     <h1 class="text-white p-1 text-xl flex justify-between">
-                        <span>{{ cat.name | capitalize }}</span><span>{{ item[0] | money }}</span>
+                        <span>{{ cat | enum | title }}</span><span>{{ item[0] | money }}</span>
                     </h1>
                 </div>
                 <div class="bg-white">

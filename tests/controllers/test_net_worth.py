@@ -6,6 +6,9 @@ import re
 from nummus.models import (
     Account,
     AccountCategory,
+    Asset,
+    AssetCategory,
+    AssetValuation,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -33,9 +36,22 @@ class TestNetWorth(WebTestBase):
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
 
+        with p.get_session() as s:
+            # Create assets
+            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
+
+            s.add_all((a_banana, a_house))
+            s.commit()
+
+            a_banana_uri = a_banana.uri
+            a_house_uri = a_house.uri
+            a_house_id = a_house.id_
+
         endpoint = "/h/net-worth/chart"
         queries = {"period": "all"}
         result, _ = self.web_get(endpoint, queries)
+        self.assertNotIn("<html", result)
         self.assertNotIn("Today's Balance", result)
         self.assertRegex(
             result,
@@ -51,6 +67,16 @@ class TestNetWorth(WebTestBase):
         dates_s = m[1] if m else ""
         self.assertIn(today.isoformat(), dates_s)
         self.assertIn('"date_mode": "days"', result)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="net-worth-chart-data"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertNotIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         queries = {"period": "30-days", "category": "credit"}
         result, _ = self.web_get(endpoint, queries)
@@ -143,7 +169,9 @@ class TestNetWorth(WebTestBase):
                 amount=txn.amount,
                 parent=txn,
                 payee=self.random_string(),
-                category_id=categories["Uncategorized"],
+                asset_id=a_house_id,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
             s.commit()
@@ -155,6 +183,21 @@ class TestNetWorth(WebTestBase):
         }
         result, _ = self.web_get(endpoint, queries)
         self.assertIn(acct_name, result)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="net-worth-chart-data"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertRegex(
+            result_assets,
+            r"(Real Estate).*(Fruit Ct\. House).*"
+            r"(1\.000000).*(\$0\.00).*(0\.00%).*(\$0\.00)[^0-9]*",
+        )
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         # But if closed and period doesn't include the transaction then ignore
         # Closed accounts have zero balance so the updated_on date is the date it became
@@ -167,6 +210,39 @@ class TestNetWorth(WebTestBase):
         result, _ = self.web_get(endpoint, queries)
         self.assertNotIn(acct_name, result)
 
+        # Add a valuation for the house with zero profit
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_house_id,
+                date_ord=today_ord - 2,
+                value=10,
+            )
+            s.add(v)
+            s.commit()
+
+        queries = {
+            "period": "custom",
+            "start": yesterday.isoformat(),
+            "end": today.isoformat(),
+        }
+        result, _ = self.web_get(endpoint, queries)
+        self.assertIn(acct_name, result)
+        # Get the asset block
+        m = re.search(r'id="assets"(.*)id="net-worth-chart-data"', result, re.S)
+        self.assertIsNotNone(m)
+        result_assets = m[1] if m else ""
+        result_assets = result_assets.replace("\n", " ")
+        result_assets, result_total = result_assets.split('id="assets-total"')
+
+        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertRegex(
+            result_assets,
+            r"(Real Estate).*(Fruit Ct\. House).*"
+            r"(1\.000000).*(\$10\.00).*(10\.00%).*(\$10\.00)[^0-9]*",
+        )
+        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$10\.00)[^0-9]*")
+
     def test_dashboard(self) -> None:
         _ = self._setup_portfolio()
         today = datetime.date.today()
@@ -174,6 +250,7 @@ class TestNetWorth(WebTestBase):
         endpoint = "/h/dashboard/net-worth"
         queries = {"no-defer": ""}
         result, _ = self.web_get(endpoint, queries)
+        self.assertNotIn("<html", result)
         self.assertRegex(
             result,
             r'<script>netWorthChart\.updateDashboard\(.*"total": \[.+\].*\)</script>',
