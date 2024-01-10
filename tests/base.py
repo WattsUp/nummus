@@ -17,7 +17,7 @@ from sqlalchemy import orm, pool
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import sql
+from nummus import global_config, sql
 from nummus.models import base_uri
 from tests import TEST_LOG
 
@@ -193,6 +193,9 @@ class TestBase(unittest.TestCase):
         yf.Ticker = MockTicker
 
         self._test_start = time.perf_counter()
+
+        # Global configuration is a constant default
+        global_config._CACHE.update(global_config._DEFAULTS)  # noqa: SLF001
 
     def tearDown(self, *, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start

@@ -117,6 +117,18 @@ Formatters
 
 ---
 
+## Configuration
+
+Most configuration is made per portfolio via the web interface
+
+There is a global config file for common user options, found at `~/.nummus/.config.ini`. Defaults are:
+```ini
+[nummus]
+secure-icon = ⚿ # Icon to print on secure CLI prompts such as unlocking password
+```
+
+---
+
 ## Versioning
 
 Versioning of this projects adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and is implemented using git tags.

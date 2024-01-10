@@ -140,6 +140,9 @@ class Portfolio:
             with path_salt.open("wb") as file:
                 file.write(enc_config)
             path_salt.chmod(0o600)  # Only owner can read/write
+        else:
+            # Remove salt if unencrypted
+            path_salt.unlink(missing_ok=True)
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
