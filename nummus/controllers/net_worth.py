@@ -88,7 +88,7 @@ def ctx_chart() -> t.DictAny:
 
         ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
+        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total: t.Reals = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
@@ -280,7 +280,7 @@ def page() -> str:
     today_ord = today.toordinal()
 
     with p.get_session() as s:
-        acct_values, _ = Account.get_value_all(s, today_ord, today_ord)
+        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
         current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",
@@ -317,7 +317,7 @@ def dashboard() -> str:
         end_ord = today_ord
         start = utils.date_add_months(today, -8)
         start_ord = start.toordinal()
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
+        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 

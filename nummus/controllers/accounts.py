@@ -47,7 +47,7 @@ def edit(uri: str) -> str | flask.Response:
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
-        values, _ = acct.get_value(today_ord, today_ord)
+        values, _, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
 
         if flask.request.method == "GET":
@@ -99,7 +99,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     today = datetime.date.today()
     today_ord = today.toordinal()
     if current_value is None:
-        values, _ = acct.get_value(today_ord, today_ord)
+        values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
 
     return {
@@ -156,11 +156,13 @@ def ctx_chart(acct: Account) -> t.DictAny:
             "defer": True,
         }
 
-    values, _ = acct.get_value(start_ord, end_ord)
+    values, profit, _ = acct.get_value(start_ord, end_ord)
 
     labels: t.Strings = []
     values_min: t.Reals | None = None
     values_max: t.Reals | None = None
+    profit_min: t.Reals | None = None
+    profit_max: t.Reals | None = None
     date_mode: str | None = None
 
     if n > web_utils.LIMIT_DOWNSAMPLE:
@@ -169,6 +171,11 @@ def ctx_chart(acct: Account) -> t.DictAny:
             start_ord,
             end_ord,
             values,
+        )
+        _, profit_min, profit, profit_max = utils.downsample(
+            start_ord,
+            end_ord,
+            profit,
         )
         date_mode = "years"
     else:
@@ -190,6 +197,9 @@ def ctx_chart(acct: Account) -> t.DictAny:
             "values": values,
             "min": values_min,
             "max": values_max,
+            "profit": profit,
+            "profit_min": profit_min,
+            "profit_max": profit_max,
         },
     }
 

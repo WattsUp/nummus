@@ -108,7 +108,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
             accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
 
         # Get all Account values
-        acct_values, _ = Account.get_value_all(s, today_ord, today_ord)
+        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
         for acct_id, values in acct_values.items():
             acct_dict = accounts[acct_id]
             v = values[0]

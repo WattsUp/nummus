@@ -87,7 +87,7 @@ class Account(Base):
         start_ord: int,
         end_ord: int,
         ids: t.Ints | set[int] | None = None,
-    ) -> tuple[t.DictIntReals, t.DictIntReals]:
+    ) -> tuple[t.DictIntReals, t.DictIntReals, t.DictIntReals]:
         """Get the value of all Accounts from start to end date.
 
         Args:
@@ -97,18 +97,34 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
+            Also returns profit & loss for each Account
             Also returns value by Assets, Accounts holding same Assets will sum
-            (dict{Account.id_: list[values]}, dict{Asset.id_: list[values]}
+            (
+                dict{Account.id_: list[values]},
+                dict{Account.id_: list[profit]},
+                dict{Asset.id_: list[values]},
+            )
         """
         n = end_ord - start_ord + 1
 
-        cash_flow_accounts: dict[int, list[t.Real | None]] = {}
+        cash_flow_accounts: dict[int, list[t.Real | None]]
         if ids is not None:
             cash_flow_accounts = {acct_id: [None] * n for acct_id in ids}
         else:
             cash_flow_accounts = {
                 acct_id: [None] * n for acct_id, in s.query(Account.id_).all()
             }
+        cost_basis_accounts: dict[int, list[t.Real | None]]
+        cost_basis_accounts = {acct_id: [None] * n for acct_id in cash_flow_accounts}
+
+        # Profit = Interest + dividends + rewards + change in asset value - fees
+        # Dividends, fees, and change in value can be assigned to an asset
+        # Change in value = current value - basis
+        # Get list of transaction categories not included in cost basis
+        query = s.query(TransactionCategory.id_).where(
+            TransactionCategory.is_profit_loss.is_(True),
+        )
+        cost_basis_skip_ids = {t_cat_id for t_cat_id, in query.all()}
 
         # Get Account cash value on start date
         query = (
@@ -137,6 +153,7 @@ class Account(Base):
                     TransactionSplit.account_id,
                     TransactionSplit.date_ord,
                     TransactionSplit.amount,
+                    TransactionSplit.category_id,
                 )
                 .where(
                     TransactionSplit.date_ord <= end_ord,
@@ -146,15 +163,22 @@ class Account(Base):
             if ids is not None:
                 query = query.where(TransactionSplit.account_id.in_(ids))
 
-            for acct_id, date_ord, amount in query.yield_per(YIELD_PER):
+            for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
                 acct_id: int
                 date_ord: int
                 amount: Decimal
+                t_cat_id: int
 
                 i = date_ord - start_ord
 
                 v = cash_flow_accounts[acct_id][i]
                 cash_flow_accounts[acct_id][i] = amount if v is None else v + amount
+
+                if t_cat_id not in cost_basis_skip_ids:
+                    v = cost_basis_accounts[acct_id][i]
+                    cost_basis_accounts[acct_id][i] = (
+                        amount if v is None else v + amount
+                    )
 
         # Get assets for all Accounts
         assets_accounts = cls.get_asset_qty_all(
@@ -184,6 +208,7 @@ class Account(Base):
 
             if len(assets) == 0:
                 acct_values[acct_id] = cash
+
                 continue
 
             summed = cash
@@ -198,9 +223,23 @@ class Account(Base):
 
             acct_values[acct_id] = summed
 
-        return acct_values, asset_values
+        acct_profit: t.DictIntReals = {}
+        for acct_id, values in acct_values.items():
+            cost_basis_flow = cost_basis_accounts[acct_id]
+            v = cost_basis_flow[0]
+            cost_basis_flow[0] = values[0] if v is None else v + values[0]
 
-    def get_value(self, start_ord: int, end_ord: int) -> tuple[t.Reals, t.DictIntReals]:
+            cost_basis = utils.integrate(cost_basis_flow)
+            profit = [v - cb for v, cb in zip(values, cost_basis, strict=True)]
+            acct_profit[acct_id] = profit
+
+        return acct_values, acct_profit, asset_values
+
+    def get_value(
+        self,
+        start_ord: int,
+        end_ord: int,
+    ) -> tuple[t.Reals, t.Reals, t.DictIntReals]:
         """Get the value of Account from start to end date.
 
         Args:
@@ -208,8 +247,10 @@ class Account(Base):
             end_ord: Last date ordinal to evaluate (inclusive)
 
         Returns:
+            Also returns profit & loss
             Also returns value by Asset
-            (list[values], dict{Asset.id_: list[values]})
+            (list[values], list[profit], dict{Asset.id_: list[values]})
+
         """
         s = orm.object_session(self)
         if s is None:
@@ -218,8 +259,8 @@ class Account(Base):
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
 
-        accts, assets = self.get_value_all(s, start_ord, end_ord, [self.id_])
-        return accts[self.id_], assets
+        accts, profit, assets = self.get_value_all(s, start_ord, end_ord, [self.id_])
+        return accts[self.id_], profit[self.id_], assets
 
     @classmethod
     def get_cash_flow_all(
