@@ -15,12 +15,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 
     from nummus import custom_types as t
-
-    try:
-        from nummus import encryption
-    except ImportError:
-        # Helpful information printed in nummus.portfolio
-        from nummus import encryption_fb as encryption
+    from nummus.encryption import EncryptionInterface
 
 try:
     # TODO(WattsUp): figure out Windows sqlcipher installation
@@ -48,7 +43,7 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
 
 def get_session(
     path: Path,
-    enc: encryption.Encryption | None = None,  # type: ignore[attr-defined]
+    enc: EncryptionInterface | None = None,  # type: ignore[attr-defined]
 ) -> orm.Session:
     """Get database session.
 
@@ -84,7 +79,7 @@ def drop_session(path: Path | None = None) -> None:
 
 def _get_engine(
     path: Path,
-    enc: encryption.Encryption | None = None,
+    enc: EncryptionInterface | None = None,
 ) -> sqlalchemy.engine.Engine:
     """Get sqlalchemy Engine to the database.
 

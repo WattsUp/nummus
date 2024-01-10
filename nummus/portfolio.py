@@ -296,11 +296,17 @@ class Portfolio:
         h = sha.hexdigest()
         if not force:
             with self.get_session() as s:
-                existing: ImportedFile | None = (
-                    s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
-                )
-                if existing is not None:
-                    date = datetime.date.fromordinal(existing.date_ord)
+                try:
+                    existing_date_ord: int = (
+                        s.query(ImportedFile.date_ord)
+                        .where(ImportedFile.hash_ == h)
+                        .one()[0]
+                    )
+                except exc.NoResultFound:
+                    # No conflicts
+                    pass
+                else:
+                    date = datetime.date.fromordinal(existing_date_ord)
                     raise exc.FileAlreadyImportedError(date, path)
 
         i = importers.get_importer(path, self._importers)
@@ -383,11 +389,8 @@ class Portfolio:
 
             # Add file hash to prevent importing again
             if force:
-                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
-                if existing is not None:
-                    s.delete(existing)
-                    s.commit()
-
+                s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
+                s.commit()
             s.add(ImportedFile(hash_=h))
             s.commit()
 
@@ -750,7 +753,7 @@ class Portfolio:
 
         # Prune unused AssetValuations
         with self.get_session() as s:
-            for asset in s.query(Asset).all():
+            for asset in s.query(Asset).yield_per(YIELD_PER):
                 asset.prune_valuations()
             s.commit()
 
