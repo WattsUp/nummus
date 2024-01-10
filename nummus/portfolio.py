@@ -11,7 +11,6 @@ import shutil
 import tarfile
 from pathlib import Path
 
-import autodict
 import sqlalchemy
 import sqlalchemy.exc
 import tqdm
@@ -25,7 +24,8 @@ from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
-    Credentials,
+    Config,
+    ConfigKey,
     ImportedFile,
     Transaction,
     TransactionCategory,
@@ -40,9 +40,7 @@ class Portfolio:
     Records include: transactions, accounts, and assets
     """
 
-    # Have a root user so that unlock can test decryption
-    _NUMMUS_ENCRYPTION_TEST_KEY = "encryption_test"
-    _NUMMUS_ENCRYPTION_TEST_VALUE = "nummus encryption test string"
+    _ENCRYPTION_TEST_VALUE = "nummus encryption test string"
 
     def __init__(self, path: str | Path, key: str | None) -> None:
         """Initialize Portfolio.
@@ -56,19 +54,14 @@ class Portfolio:
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         name = self._path_db.with_suffix("").name
-        self._path_config = self._path_db.with_suffix(".config")
         self._path_salt = self._path_db.with_suffix(".nacl")
         self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
             raise FileNotFoundError(msg)
-        if not self._path_config.exists():
-            msg = "Portfolio configuration does not exist, cannot open database"
-            raise FileNotFoundError(msg)
         self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
-        self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
 
         if key is None:
             self._enc = None
@@ -136,7 +129,6 @@ class Portfolio:
         # Drop any existing engine to database
         sql.drop_session(path_db)
         name = path_db.with_suffix("").name
-        path_config = path_db.with_suffix(".config")
         path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
@@ -152,30 +144,33 @@ class Portfolio:
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
-
-        config = autodict.JSONAutoDict(str(path_config))
-        config.clear()
-        config["version"] = str(version.__version__)
-        cipher_bytes = models.Cipher.generate().to_bytes()
-        config["cipher"] = base64.b64encode(cipher_bytes).decode()
-        config.save()
-        path_config.chmod(0o600)  # Only owner can read/write
         path_ssl.chmod(0o700)  # Only owner can read/write
 
+        cipher_bytes = models.Cipher.generate().to_bytes()
+        cipher_b64 = base64.b64encode(cipher_bytes).decode()
+
         if enc is None:
-            test_value = Portfolio._NUMMUS_ENCRYPTION_TEST_VALUE
+            test_value = Portfolio._ENCRYPTION_TEST_VALUE
         else:
-            test_value = enc.encrypt(Portfolio._NUMMUS_ENCRYPTION_TEST_VALUE)
+            test_value = enc.encrypt(Portfolio._ENCRYPTION_TEST_VALUE)
 
         with sql.get_session(path_db, enc) as s:
             models.metadata_create_all(s)
 
-            nummus_user = Credentials(
-                site=Portfolio._NUMMUS_ENCRYPTION_TEST_KEY,
-                user=Portfolio._NUMMUS_ENCRYPTION_TEST_KEY,
-                password=test_value,
+            c_version = Config(
+                key=ConfigKey.VERSION,
+                value=str(version.__version__),
             )
-            s.add(nummus_user)
+            c_enc_test = Config(
+                key=ConfigKey.ENCRYPTION_TEST,
+                value=test_value,
+            )
+            c_cipher = Config(
+                key=ConfigKey.CIPHER,
+                value=cipher_b64,
+            )
+
+            s.add_all((c_version, c_enc_test, c_cipher))
             s.commit()
         path_db.chmod(0o600)  # Only owner can read/write
 
@@ -189,41 +184,45 @@ class Portfolio:
 
         Raises:
             UnlockingError if database file fails to open
+            ProtectedObjectNotFoundError if URI cipher is missing
         """
         # Drop any open session
         sql.drop_session(self._path_db)
         try:
             with self.get_session() as s:
-                user: Credentials | None = (
-                    s.query(Credentials)
-                    .where(
-                        Credentials.site == self._NUMMUS_ENCRYPTION_TEST_KEY,
-                        Credentials.user == self._NUMMUS_ENCRYPTION_TEST_KEY,
-                    )
-                    .first()
-                )
+                try:
+                    value: str = (
+                        s.query(Config.value)
+                        .where(Config.key == ConfigKey.ENCRYPTION_TEST)
+                        .one()
+                    )[0]
+                except exc.NoResultFound as e:
+                    msg = "Config.ENCRYPTION_TEST not found"
+                    raise exc.UnlockingError(msg) from e
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e
 
-        if user is None:
-            msg = "Root password not found"
-            raise exc.UnlockingError(msg)
-
-        if self._enc is None:
-            password_decrypted = user.password
-        else:
+        if self._enc is not None:
             try:
-                password_decrypted = self._enc.decrypt_s(user.password)
+                value = self._enc.decrypt_s(value)
             except ValueError as e:
                 msg = "Failed to decrypt root password"
                 raise exc.UnlockingError(msg) from e
 
-        if password_decrypted != self._NUMMUS_ENCRYPTION_TEST_VALUE:
+        if value != self._ENCRYPTION_TEST_VALUE:
             msg = "Test value did not match"
             raise exc.UnlockingError(msg)
         # Load Cipher
-        models.load_cipher(base64.b64decode(self._config["cipher"]))
+        with self.get_session() as s:
+            try:
+                cipher_b64: str = (
+                    s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
+                )[0]
+            except exc.NoResultFound as e:
+                msg = "Config.CIPHER not found"
+                raise exc.ProtectedObjectNotFoundError(msg) from e
+            models.load_cipher(base64.b64decode(cipher_b64))
         # All good :)
 
     def get_session(self) -> orm.Session:
@@ -680,8 +679,10 @@ class Portfolio:
         path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
         with tarfile.open(path_backup, "w:gz") as tar:
-            files: t.Paths = [self._path_db, self._path_config]
+            files: t.Paths = [self._path_db]
 
+            if self._path_salt.exists():
+                files.append(self._path_salt)
             if self.ssl_cert_path.exists():
                 files.append(self.ssl_cert_path)
                 files.append(self.ssl_key_path)
@@ -822,10 +823,6 @@ class Portfolio:
 
         # Reload Portfolio
         if isinstance(p, Portfolio):
-            p._config = autodict.JSONAutoDict(  # noqa: SLF001
-                str(p._path_config),  # noqa: SLF001
-                save_on_exit=False,
-            )
             p._unlock()  # noqa: SLF001
 
     @property

@@ -3,24 +3,23 @@ from __future__ import annotations
 import base64
 import datetime
 import io
-import json
 import secrets
 import shutil
 import tarfile
 from decimal import Decimal
 from unittest import mock
 
-import autodict
 import time_machine
 
 from nummus import exceptions as exc
-from nummus import importers, models, portfolio, sql
+from nummus import importers, models, portfolio, sql, version
 from nummus.models import (
     Account,
     AccountCategory,
     Asset,
     AssetCategory,
-    Credentials,
+    Config,
+    ConfigKey,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -33,7 +32,6 @@ from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 class TestPortfolio(TestBase):
     def test_init_properties(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
 
@@ -44,19 +42,12 @@ class TestPortfolio(TestBase):
         with path_db.open("w", encoding="utf-8") as file:
             file.write("Not a db")
 
-        # Still missing config
-        self.assertRaises(FileNotFoundError, portfolio.Portfolio, path_db, None)
-
-        # Make config
-        autodict.JSONAutoDict(str(path_config)).save()
-
         # Failed to unlock
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_salt = path_db.with_suffix(".nacl")
-        path_config = path_db.with_suffix(".config")
         path_importers = path_db.parent.joinpath("portfolio.importers")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
@@ -64,13 +55,11 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_importers.exists(), "importers does not exist")
         self.assertTrue(path_importers.is_dir(), "importers is not a directory")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
         self.assertEqual(p.importers_path, path_importers)
         self.assertEqual(p.path, path_db)
@@ -79,6 +68,18 @@ class TestPortfolio(TestBase):
 
         self.assertRaises(exc.NotEncryptedError, p.encrypt, "")
         self.assertRaises(exc.NotEncryptedError, p.decrypt, "")
+
+        # Check config contains valid cipher and version
+        with p.get_session() as s:
+            value: str = (
+                s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
+            )[0]
+            models.Cipher.from_bytes(base64.b64decode(value))
+
+            value: str = (
+                s.query(Config.value).where(Config.key == ConfigKey.VERSION).one()
+            )[0]
+            self.assertEqual(value, str(version.__version__))
 
         p = None
         sql.drop_session()
@@ -94,12 +95,6 @@ class TestPortfolio(TestBase):
             "Database is unexpectedly encrypted",
         )
 
-        # Check config contains valid cipher
-        with path_config.open("r") as file:
-            j = json.load(file)
-            buf = j["cipher"]
-            models.Cipher.from_bytes(base64.b64decode(buf))
-
         # Key given to unencrypted portfolio
         self.assertRaises(
             FileNotFoundError,
@@ -114,46 +109,38 @@ class TestPortfolio(TestBase):
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            # Good, now change encryption test value
-            user = (
-                s.query(Credentials)
-                .where(
-                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                )
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = self.random_string()
+            # Good, now delete cipher
+            s.query(Config).where(Config.key == ConfigKey.CIPHER).delete()
             s.commit()
 
-        # Invalid root password
+        # Missing cipher
+        self.assertRaises(
+            exc.ProtectedObjectNotFoundError,
+            portfolio.Portfolio,
+            path_db,
+            None,
+        )
+
+        with p.get_session() as s:
+            # Good, now change encryption test value
+            c = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).one()
+            c.value = self.random_string()
+            s.commit()
+
+        # Invalid encryption test
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
         # Recreate
         path_db.unlink()
-        path_config.unlink()
 
         portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         sql.drop_session()
 
-        # Delete root
+        # Delete encryption test
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            user = (
-                s.query(Credentials)
-                .where(
-                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                )
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            s.delete(user)
+            s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
             s.commit()
 
         # Missing root password
@@ -165,7 +152,6 @@ class TestPortfolio(TestBase):
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_salt = path_db.with_suffix(".nacl")
-        path_config = path_db.with_suffix(".config")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         key = self.random_string()
@@ -174,11 +160,9 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_salt.exists(), "Salt does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
 
         secret = self.random_string()
@@ -215,17 +199,8 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
             # Good, now change encryption test value
-            user = (
-                s.query(Credentials)
-                .where(
-                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
-                )
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = p.encrypt(secrets.token_bytes())
+            c = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).one()
+            c.value = p.encrypt(secrets.token_bytes())
             s.commit()
 
         # Invalid root password
@@ -480,14 +455,11 @@ class TestPortfolio(TestBase):
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
         utc_now = datetime.datetime.now(datetime.timezone.utc)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         # Create Account
         with p.get_session() as s:
@@ -524,10 +496,6 @@ class TestPortfolio(TestBase):
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
-            with path_config.open("rb") as file:
-                buf = file.read()
-            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -569,10 +537,6 @@ class TestPortfolio(TestBase):
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
-            with path_config.open("rb") as file:
-                buf = file.read()
-            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -619,7 +583,6 @@ class TestPortfolio(TestBase):
         buf_backup = None
 
         path_db.unlink()
-        path_config.unlink()
         path_cert.unlink()
         path_key.unlink()
 
@@ -627,16 +590,35 @@ class TestPortfolio(TestBase):
         portfolio.Portfolio.restore(path_db)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_cert.exists(), "SSL cert does not exist")
         self.assertTrue(path_key.exists(), "SSL key does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+        # For encrypted portfolios, backup should include the salt
+        path_salt = path_db.with_suffix(".nacl")
+        key = self.random_string()
+        # Recreate
+        path_db.unlink()
+        p = portfolio.Portfolio.create(path_db, key)
+
+        with time_machine.travel(utc_now, tick=False):
+            result, tar_ver = p.backup()
+
+        self.assertEqual(result, path_backup_2)
+        self.assertEqual(tar_ver, 2)
+
+        self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
+        self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
+
+        with tarfile.open(path_backup_2, "r:gz") as tar:
+            buf_backup = tar.extractfile(path_salt.name).read()  # type: ignore[attr-defined]
+            with path_salt.open("rb") as file:
+                buf = file.read()
+            self.assertEqual(buf_backup, buf)
 
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_other_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
         _ = portfolio.Portfolio.create(path_other_db)
 
@@ -645,10 +627,8 @@ class TestPortfolio(TestBase):
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         # Create Account
         with p.get_session() as s:
@@ -705,10 +685,8 @@ class TestPortfolio(TestBase):
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")

@@ -12,7 +12,7 @@ class TestConfig(TestBase):
         models.metadata_create_all(s)
 
         d = {
-            "key": self.random_string(),
+            "key": config.ConfigKey.VERSION,
             "value": self.random_string(),
         }
 

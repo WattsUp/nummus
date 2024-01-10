@@ -5,7 +5,15 @@ from __future__ import annotations
 from sqlalchemy import orm
 
 from nummus import custom_types as t
-from nummus.models.base import Base
+from nummus.models.base import Base, BaseEnum
+
+
+class ConfigKey(BaseEnum):
+    """Configuration keys."""
+
+    VERSION = 1
+    ENCRYPTION_TEST = 2
+    CIPHER = 3
 
 
 class Config(Base):
@@ -18,5 +26,5 @@ class Config(Base):
 
     # No __table_id__ because this is not user accessible
 
-    key: t.ORMStr = orm.mapped_column(unique=True)
+    key: orm.Mapped[ConfigKey] = orm.mapped_column(unique=True)
     value: t.ORMStr

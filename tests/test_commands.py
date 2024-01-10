@@ -40,7 +40,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -55,7 +55,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
             # Check portfolio is unencrypted
             with path_db.open("rb") as file:
@@ -81,7 +81,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
         finally:
             mock.builtins.input = original_input  # type: ignore[attr-defined]
@@ -107,7 +107,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -127,7 +127,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -150,7 +150,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -173,7 +173,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
