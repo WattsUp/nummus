@@ -9,6 +9,7 @@ from nummus.models.asset import Asset, AssetCategory, AssetSplit, AssetValuation
 from nummus.models.base import Base, BaseEnum, YIELD_PER
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import Budget
+from nummus.models.config import Config
 from nummus.models.credentials import Credentials
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -33,6 +34,7 @@ __all__ = [
     "BaseEnum",
     "Budget",
     "Cipher",
+    "Config",
     "Credentials",
     "ImportedFile",
     "load_cipher",
@@ -53,6 +55,7 @@ _TABLES: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
     AssetSplit.__table__,
     AssetValuation.__table__,
     Budget.__table__,
+    Config.__table__,
     Credentials.__table__,
     ImportedFile.__table__,
     Transaction.__table__,

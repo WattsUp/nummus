@@ -9,6 +9,7 @@ from nummus.models import _TABLES, base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
 from nummus.models.budget import Budget
+from nummus.models.config import Config
 from nummus.models.credentials import Credentials
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -97,6 +98,7 @@ class TestBaseURI(TestBase):
         models_none = [
             AssetSplit,
             AssetValuation,
+            Config,
             ImportedFile,
         ]
         for model in models_none:
