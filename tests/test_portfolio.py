@@ -55,6 +55,7 @@ class TestPortfolio(TestBase):
 
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        path_salt = path_db.with_suffix(".nacl")
         path_config = path_db.with_suffix(".config")
         path_importers = path_db.parent.joinpath("portfolio.importers")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
@@ -62,6 +63,7 @@ class TestPortfolio(TestBase):
         # Create unencrypted portfolio
         p = portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
+        self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
         self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_importers.exists(), "importers does not exist")
         self.assertTrue(path_importers.is_dir(), "importers is not a directory")
@@ -98,17 +100,27 @@ class TestPortfolio(TestBase):
             buf = j["cipher"]
             models.Cipher.from_bytes(base64.b64decode(buf))
 
+        # Key given to unencrypted portfolio
+        self.assertRaises(
+            FileNotFoundError,
+            portfolio.Portfolio,
+            path_db,
+            self.random_string(),
+        )
+
         # Database already exists
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
 
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            # Good, now change root password
+            # Good, now change encryption test value
             user = (
                 s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
+                .where(
+                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                )
                 .first()
             )
             if user is None:
@@ -133,8 +145,10 @@ class TestPortfolio(TestBase):
         with p.get_session() as s:
             user = (
                 s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
+                .where(
+                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                )
                 .first()
             )
             if user is None:
@@ -150,14 +164,16 @@ class TestPortfolio(TestBase):
             self.skipTest("Encryption is not installed")
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        path_salt = path_db.with_suffix(".nacl")
         path_config = path_db.with_suffix(".config")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         key = self.random_string()
 
-        # Create unencrypted portfolio
+        # Create encrypted portfolio
         p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
+        self.assertTrue(path_salt.exists(), "Salt does not exist")
         self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
@@ -198,11 +214,13 @@ class TestPortfolio(TestBase):
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
-            # Good, now change root password
+            # Good, now change encryption test value
             user = (
                 s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
+                .where(
+                    Credentials.site == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                    Credentials.user == p._NUMMUS_ENCRYPTION_TEST_KEY,  # noqa: SLF001
+                )
                 .first()
             )
             if user is None:
@@ -213,61 +231,25 @@ class TestPortfolio(TestBase):
         # Invalid root password
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
-        # Recreate
-        path_db.unlink()
-        path_config.unlink()
-        portfolio.Portfolio.create(path_db, key)
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
-        sql.drop_session()
-
-        # Change root password to unencrypted
-        p = portfolio.Portfolio(path_db, key)
-        with p.get_session() as s:
-            # Good, now change root password
-            user = (
-                s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = key
-            s.commit()
-
-        # Invalid unencrypted password
-        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
-
     def test_is_encrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
 
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
 
         with path_db.open("w", encoding="utf-8") as file:
             file.write("I'm a database")
 
-        # Still missing config
-        self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
-
-        with autodict.JSONAutoDict(str(path_config)) as c:
-            c["encrypt"] = True
-
-        self.assertTrue(
-            portfolio.Portfolio.is_encrypted(path_db),
-            "Database is unexpectedly unencrypted",
-        )
-
-        with autodict.JSONAutoDict(str(path_config)) as c:
-            c["encrypt"] = False
-
         self.assertFalse(
             portfolio.Portfolio.is_encrypted(path_db),
             "Database is unexpectedly encrypted",
         )
 
-        path_db.unlink()
+        path_salt.touch()
+        self.assertTrue(
+            portfolio.Portfolio.is_encrypted(path_db),
+            "Database is unexpectedly unencrypted",
+        )
 
     def test_find_account(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")

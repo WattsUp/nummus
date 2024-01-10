@@ -114,9 +114,8 @@ class TestBase(unittest.TestCase):
         return min(max(round(Decimal(x), precision), d_low), d_high)
 
     def get_session(self) -> orm.Session:
-        config = autodict.AutoDict(encrypt=False)
         path = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        return sql.get_session(path, config)
+        return sql.get_session(path, None)
 
     @classmethod
     def _clean_test_root(cls) -> None:

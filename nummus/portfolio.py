@@ -7,7 +7,6 @@ import datetime
 import hashlib
 import io
 import re
-import secrets
 import shutil
 import tarfile
 from pathlib import Path
@@ -20,6 +19,7 @@ from rapidfuzz import process
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import encryption
 from nummus import exceptions as exc
 from nummus import importers, models, sql, utils, version
 from nummus.models import (
@@ -33,14 +33,6 @@ from nummus.models import (
     YIELD_PER,
 )
 
-try:
-    from nummus import encryption
-except ImportError:
-    print("Could not import nummus.encryption, encryption not available")
-    print("Install libsqlcipher: apt install libsqlcipher-dev")
-    print("Install encrypt extra: pip install nummus[encrypt]")
-    encryption = None
-
 
 class Portfolio:
     """A collection of financial records.
@@ -49,9 +41,8 @@ class Portfolio:
     """
 
     # Have a root user so that unlock can test decryption
-    _NUMMUS_SITE = "nummus"
-    _NUMMUS_USER = "root"
-    _NUMMUS_PASSWORD = "unencrypted database"  # noqa: S105
+    _NUMMUS_ENCRYPTION_TEST_KEY = "encryption_test"
+    _NUMMUS_ENCRYPTION_TEST_VALUE = "nummus encryption test string"
 
     def __init__(self, path: str | Path, key: str | None) -> None:
         """Initialize Portfolio.
@@ -66,6 +57,7 @@ class Portfolio:
         self._path_db = Path(path).resolve().with_suffix(".db")
         name = self._path_db.with_suffix("").name
         self._path_config = self._path_db.with_suffix(".config")
+        self._path_salt = self._path_db.with_suffix(".nacl")
         self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
@@ -80,8 +72,13 @@ class Portfolio:
 
         if key is None:
             self._enc = None
+        elif self._path_salt.exists():
+            with self._path_salt.open("rb") as file:
+                enc_config = file.read()
+            self._enc = encryption.Encryption(key, enc_config)  # type: ignore[attr-defined]
         else:
-            self._enc = encryption.Encryption(key)  # type: ignore[attr-defined]
+            msg = f"Portfolio at {self._path_db} does have salt file"
+            raise FileNotFoundError(msg)
         self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
@@ -113,12 +110,8 @@ class Portfolio:
         if not path_db.exists():
             msg = f"Database does not exist at {path_db}"
             raise FileNotFoundError(msg)
-        path_config = path_db.with_suffix(".config")
-        if not path_config.exists():
-            msg = f"Portfolio configuration does not exist, for {path_db}"
-            raise FileNotFoundError(msg)
-        with autodict.JSONAutoDict(str(path_config), save_on_exit=False) as config:
-            return config["encrypt"]
+        path_salt = path_db.with_suffix(".nacl")
+        return path_salt.exists()
 
     @staticmethod
     def create(path: str | Path, key: str | None = None) -> Portfolio:
@@ -144,23 +137,25 @@ class Portfolio:
         sql.drop_session(path_db)
         name = path_db.with_suffix("").name
         path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         enc = None
-        if encryption is not None and key is not None:
-            enc = encryption.Encryption(key)
+        enc_config = None
+        if encryption.AVAILABLE and key is not None:
+            enc, enc_config = encryption.Encryption.create(key)
+            with path_salt.open("wb") as file:
+                file.write(enc_config)
+            path_salt.chmod(0o600)  # Only owner can read/write
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
-        salt = secrets.token_urlsafe()
+
         config = autodict.JSONAutoDict(str(path_config))
         config.clear()
         config["version"] = str(version.__version__)
-        config["key_version"] = 1  # Increment if there is a breaking change
-        config["salt"] = salt
-        config["encrypt"] = enc is not None
         cipher_bytes = models.Cipher.generate().to_bytes()
         config["cipher"] = base64.b64encode(cipher_bytes).decode()
         config.save()
@@ -168,18 +163,17 @@ class Portfolio:
         path_ssl.chmod(0o700)  # Only owner can read/write
 
         if enc is None:
-            password = Portfolio._NUMMUS_PASSWORD
+            test_value = Portfolio._NUMMUS_ENCRYPTION_TEST_VALUE
         else:
-            key_salted = enc.key + salt.encode()
-            password = enc.encrypt(key_salted)
+            test_value = enc.encrypt(Portfolio._NUMMUS_ENCRYPTION_TEST_VALUE)
 
-        with sql.get_session(path_db, config, enc) as s:
+        with sql.get_session(path_db, enc) as s:
             models.metadata_create_all(s)
 
             nummus_user = Credentials(
-                site=Portfolio._NUMMUS_SITE,
-                user=Portfolio._NUMMUS_USER,
-                password=password,
+                site=Portfolio._NUMMUS_ENCRYPTION_TEST_KEY,
+                user=Portfolio._NUMMUS_ENCRYPTION_TEST_KEY,
+                password=test_value,
             )
             s.add(nummus_user)
             s.commit()
@@ -203,8 +197,8 @@ class Portfolio:
                 user: Credentials | None = (
                     s.query(Credentials)
                     .where(
-                        Credentials.site == self._NUMMUS_SITE,
-                        Credentials.user == self._NUMMUS_USER,
+                        Credentials.site == self._NUMMUS_ENCRYPTION_TEST_KEY,
+                        Credentials.user == self._NUMMUS_ENCRYPTION_TEST_KEY,
                     )
                     .first()
                 )
@@ -217,20 +211,17 @@ class Portfolio:
             raise exc.UnlockingError(msg)
 
         if self._enc is None:
-            if user.password != self._NUMMUS_PASSWORD:
-                msg = "Root password did not match"
-                raise exc.UnlockingError(msg)
+            password_decrypted = user.password
         else:
-            salt: str = self._config["salt"]
-            key_salted = self._enc.key + salt.encode()
             try:
-                password_decrypted = self._enc.decrypt(user.password)
+                password_decrypted = self._enc.decrypt_s(user.password)
             except ValueError as e:
                 msg = "Failed to decrypt root password"
                 raise exc.UnlockingError(msg) from e
-            if password_decrypted != key_salted:
-                msg = "Root user's password did not match"
-                raise exc.UnlockingError(msg)
+
+        if password_decrypted != self._NUMMUS_ENCRYPTION_TEST_VALUE:
+            msg = "Test value did not match"
+            raise exc.UnlockingError(msg)
         # Load Cipher
         models.load_cipher(base64.b64decode(self._config["cipher"]))
         # All good :)
@@ -241,7 +232,7 @@ class Portfolio:
         Returns:
             Open Session
         """
-        return sql.get_session(self._path_db, self._config, self._enc)
+        return sql.get_session(self._path_db, self._enc)
 
     def encrypt(self, secret: bytes | str) -> str:
         """Encrypt a secret using the key.
