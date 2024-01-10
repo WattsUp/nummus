@@ -15,10 +15,13 @@
                     <li class="hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full group">
                         {{ section }}
                         <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 left-0">
-                            {% for title, url in subpages.items() %}
+                            {% for title, item in subpages.items() %}
                                 <li class="border-l-green-800 border-l-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
                                     <div class="inset-0 px-2 py-1 block cursor-pointer"
-                                         hx-get="{{ url_for(url) }}">{{ title }}</div>
+                                         hx-get="{{ url_for(item[0]) }}"
+                                         {% if item[1] %}hx-target="#overlay" hx-push-url="false"{% endif %}>
+                                        {{ title }}
+                                    </div>
                                 </li>
                             {% endfor %}
                         </ul>
@@ -31,9 +34,11 @@
                     {% include "svg/menu.svg" %}
                 {% endwith %}
                 <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 right-0">
-                    {% for title, url in base["menu"].items() %}
+                    {% for title, item in base["menu"].items() %}
                         <li class="border-r-green-800 border-r-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
-                            <div class="inset-0 px-2 py-1 block" hx-get="{{ url_for(url) }}">{{ title }}</div>
+                            <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                 hx-get="{{ url_for(item[0]) }}"
+                                 {% if item[1] %}hx-target="#overlay" hx-push-url="false"{% endif %}>{{ title }}</div>
                         </li>
                     {% endfor %}
                 </ul>

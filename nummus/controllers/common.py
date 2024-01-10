@@ -165,15 +165,15 @@ def ctx_base() -> t.DictAny:
         Dictionary HTML context
     """
     # TODO(WattsUp): Implement remaining pages
-    pages: dict[str, dict[str, str | None]] = {
+    pages: dict[str, dict[str, None | tuple[str, bool]]] = {
         "Overview": {
             "Dashboard": None,
-            "Net Worth": "net_worth.page",
-            "Transactions": "transactions.page_all",
+            "Net Worth": ("net_worth.page", False),
+            "Transactions": ("transactions.page_all", False),
             "Instrument Transactions": None,
         },
         "Banking": {
-            "Cash Flow": "cash_flow.page",
+            "Cash Flow": ("cash_flow.page", False),
             "Budgeting": None,
         },
         "Investing": {
@@ -187,15 +187,16 @@ def ctx_base() -> t.DictAny:
         "Planning": {
             "Future Net Worth": None,
             "Retirement": None,
-            "Emergency Fund": "emergency_fund.page",
+            "Emergency Fund": ("emergency_fund.page", False),
             "Investment": None,
         },
     }
     for section, subpages in pages.items():
         pages[section] = {k: v for k, v in subpages.items() if v}
 
-    menu = {
+    menu: dict[str, None | tuple[str, bool]] = {
         "Logout": None,
+        "Edit Transaction Categories": ("transaction_categories.overlay", True),
     }
     return {
         "pages": {k: v for k, v in pages.items() if v},
