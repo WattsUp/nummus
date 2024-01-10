@@ -30,7 +30,7 @@ List of dependencies for package to run.
 
 ### Optional
 
-- Encryption extension
+- Encryption extension to encrypt database file. Does not encrypt SSL or importers folders
   - libsqlcipher-dev
   - sqlcipher3
   - Cipher
