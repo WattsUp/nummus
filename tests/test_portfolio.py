@@ -680,8 +680,14 @@ class TestPortfolio(TestBase):
         self.assertTrue(path_backup_4.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)
 
+        size_before = path_db.stat().st_size
+
         # Clean, expect old backups to be purged
-        p.clean()
+        r_before, r_after = p.clean()
+
+        size_after = path_db.stat().st_size
+        self.assertEqual(r_before, size_before)
+        self.assertEqual(r_after, size_after)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")

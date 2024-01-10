@@ -540,12 +540,20 @@ class TestCommands(TestBase):
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertTrue(path_backup_2.exists(), "Backup #2 does not exist")
 
+        size_before = path_db.stat().st_size
+
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.clean(p)
         self.assertEqual(rc, 0)
+        size_after = path_db.stat().st_size
+        p_change = size_before - size_after
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio cleaned\n"
+        target = (
+            f"{Fore.GREEN}Portfolio cleaned\n"
+            f"{Fore.CYAN}Portfolio was optimized by "
+            f"{p_change / 1000:.1f}KB/{p_change / 1024:.1f}KiB\n"
+        )
         self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")

@@ -734,10 +734,19 @@ class Portfolio:
                 backups.append((tar_ver, ts))
         return sorted(backups, key=lambda item: item[0])
 
-    def clean(self) -> None:
-        """Delete any unused files, creates a new backup."""
+    def clean(self) -> tuple[int, int]:
+        """Delete any unused files, creates a new backup.
+
+        Returns:
+            Size of files in bytes:
+            (portfolio before, portfolio after)
+        """
+        parent = self._path_db.parent
+        name = self._path_db.with_suffix("").name
+
         # Create a backup before optimizations
         path_backup, _ = self.backup()
+        size_before = self._path_db.stat().st_size
 
         # Prune unused AssetValuations
         with self.get_session() as s:
@@ -751,10 +760,9 @@ class Portfolio:
             s.commit()
 
         path_backup_optimized, _ = self.backup()
+        size_after = self._path_db.stat().st_size
 
         # Delete all files that start with name except the fresh backups
-        parent = self._path_db.parent
-        name = self._path_db.with_suffix("").name
         for file in parent.iterdir():
             if file in (path_backup, path_backup_optimized):
                 continue
@@ -779,6 +787,8 @@ class Portfolio:
 
         # Delete optimized backup version since that is the live version
         path_new.unlink()
+
+        return (size_before, size_after)
 
     @staticmethod
     def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
