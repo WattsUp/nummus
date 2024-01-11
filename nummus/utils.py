@@ -10,6 +10,8 @@ import sys
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from nummus import global_config
+
 if TYPE_CHECKING:
     from nummus import custom_types as t
 
@@ -68,10 +70,13 @@ def get_input(
     """
     try:
         if secure:
-            if print_key or (
-                sys.stdout.encoding and sys.stdout.encoding.lower().startswith("utf-")
+            secure_icon = global_config.get(global_config.ConfigKey.SECURE_ICON)
+            if print_key is True or (
+                print_key is None
+                and sys.stdout.encoding
+                and sys.stdout.encoding.lower().startswith("utf-")
             ):
-                input_ = getpass.getpass("\u26bf  " + prompt)
+                input_ = getpass.getpass(f"{secure_icon}  {prompt}")
             else:
                 input_ = getpass.getpass(prompt)
         else:

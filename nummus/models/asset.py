@@ -280,7 +280,7 @@ class Asset(Base):
             .order_by(AssetSplit.date_ord.desc())
         )
 
-        for s_date_ord, s_multiplier in query.all():
+        for s_date_ord, s_multiplier in query.yield_per(YIELD_PER):
             s_date_ord: int
             s_multiplier: Decimal
             # Compound splits as we go
@@ -294,7 +294,7 @@ class Asset(Base):
         )
 
         multiplier = Decimal(1)
-        for t_split in query.all():
+        for t_split in query.yield_per(YIELD_PER):
             # Query whole object okay, need to set things
             t_split: TransactionSplit
             # If txn is before the split, update the multiplier
@@ -432,6 +432,8 @@ class Asset(Base):
             .where(TransactionSplit.asset_id == self.id_)
         )
         start_ord, end_ord = query.one()
+        start_ord: int
+        end_ord: int
         if start_ord is None or end_ord is None:
             return None, None
 

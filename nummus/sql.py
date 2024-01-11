@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import hashlib
+import base64
 import sys
 from typing import TYPE_CHECKING
 
@@ -14,15 +14,8 @@ if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
-    import autodict
-
     from nummus import custom_types as t
-
-    try:
-        from nummus import encryption
-    except ImportError:
-        # Helpful information printed in nummus.portfolio
-        from nummus import encryption_fb as encryption
+    from nummus.encryption import EncryptionInterface
 
 try:
     # TODO(WattsUp): figure out Windows sqlcipher installation
@@ -50,8 +43,7 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
 
 def get_session(
     path: Path,
-    config: autodict.AutoDict,
-    enc: encryption.Encryption | None = None,  # type: ignore[attr-defined]
+    enc: EncryptionInterface | None = None,  # type: ignore[attr-defined]
 ) -> orm.Session:
     """Get database session.
 
@@ -67,7 +59,7 @@ def get_session(
         msg = "Path must not be None"
         raise ValueError(msg)
     if path not in _ENGINES:
-        _ENGINES[path] = _get_engine(path, config, enc)
+        _ENGINES[path] = _get_engine(path, enc)
 
     return orm.Session(bind=_ENGINES[path])
 
@@ -87,8 +79,7 @@ def drop_session(path: Path | None = None) -> None:
 
 def _get_engine(
     path: Path,
-    config: autodict.AutoDict,
-    enc: encryption.Encryption | None = None,
+    enc: EncryptionInterface | None = None,
 ) -> sqlalchemy.engine.Engine:
     """Get sqlalchemy Engine to the database.
 
@@ -101,11 +92,8 @@ def _get_engine(
         sqlalchemy.Engine
     """
     # Cannot support in-memory DB cause every transaction closes it
-    if config["encrypt"]:
-        if enc is None:
-            msg = "Encryption object must be provided to encrypt engine"
-            raise ValueError(msg)
-        db_key = hashlib.sha256(enc.key + config["salt"].encode()).hexdigest()
+    if enc is not None:
+        db_key = base64.urlsafe_b64encode(enc.hashed_key).decode()
         sep = "//" if path.is_absolute() else "/"
         db_path = f"sqlite+pysqlcipher://:{db_key}@{sep}{path}"
         engine = sqlalchemy.create_engine(db_path, module=sqlcipher3, **_ENGINE_ARGS)

@@ -3,8 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy.exc
-
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import budget
 from tests.base import TestBase
@@ -32,11 +31,11 @@ class TestBudget(TestBase):
 
         # Positive amounts are bad
         b.amount = Decimal(1)
-        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+        self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()
 
         # Duplicate dates are bad
         b = budget.Budget(date_ord=today_ord, amount=0)
         s.add(b)
-        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+        self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()

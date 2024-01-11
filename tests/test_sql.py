@@ -2,22 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import autodict
-from sqlalchemy import orm, schema
+from sqlalchemy import orm
 from typing_extensions import override
 
-from nummus import sql
+from nummus import encryption, sql
 from tests.base import TestBase
-
-try:
-    from nummus import encryption
-except ImportError:
-    encryption = None
 
 
 class ORMBase(orm.DeclarativeBase):
-    metadata: schema.MetaData
-
     @orm.declared_attr  # type: ignore[attr-defined]
     @override
     def __tablename__(self) -> str:
@@ -38,21 +30,19 @@ class Child(ORMBase):
 
 class TestSQL(TestBase):
     def test_get_session_unencrypted(self) -> None:
-        config = autodict.AutoDict(encrypt=False)
-
         path = None
-        self.assertRaises(ValueError, sql.get_session, path, config)
+        self.assertRaises(ValueError, sql.get_session, path)
 
         # Relative file
         path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
             Path.cwd(),
         )
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path, config)
+        s = sql.get_session(path)
         self.assertIsNotNone(s)
         self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
-        s2 = sql.get_session(path, config)
+        s2 = sql.get_session(path)
         self.assertNotEqual(s2, s)  # Different sessions
         self.assertEqual(s2.get_bind(), s.get_bind())  # But same engine
 
@@ -83,7 +73,7 @@ class TestSQL(TestBase):
         # Absolute file
         path = self._TEST_ROOT.joinpath("unencrypted.db").absolute()
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path, config)
+        s = sql.get_session(path)
         self.assertIsNotNone(s)
         self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
@@ -104,24 +94,16 @@ class TestSQL(TestBase):
         self._clean_test_root()
 
     def test_get_session_encrypted(self) -> None:
-        if encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
-        salt = self.random_string()
         key = self.random_string().encode()
-        config = autodict.AutoDict(encrypt=True, salt=salt)
-        enc = encryption.Encryption(key)
+        enc, _ = encryption.Encryption.create(key)
 
         # Relative file
         path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(Path.cwd())
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        self.assertRaises(
-            ValueError,
-            sql.get_session,
-            path,
-            config,
-        )  # No Encryption object
 
-        s = sql.get_session(path, config, enc)
+        s = sql.get_session(path, enc)
         self.assertIsNotNone(s)
         self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 
@@ -144,7 +126,7 @@ class TestSQL(TestBase):
         # Absolute file
         path = self._TEST_ROOT.joinpath("encrypted.db").absolute()
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path, config, enc)
+        s = sql.get_session(path, enc)
         self.assertIsNotNone(s)
         self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
 

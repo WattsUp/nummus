@@ -30,7 +30,7 @@ List of dependencies for package to run.
 
 ### Optional
 
-- Encryption extension
+- Encryption extension to encrypt database file. Does not encrypt SSL or importers folders
   - libsqlcipher-dev
   - sqlcipher3
   - Cipher
@@ -114,6 +114,18 @@ Formatters
 - `make_test_portfolio.py` will create a portfolio with pseudorandom data
 - `profile_web_call.py` will send a request to an endpoint with vizviewer
 - `run_tailwindcss.py` will run tailwindcss with proper arguments, add `-w` to watch and rerun on save
+
+---
+
+## Configuration
+
+Most configuration is made per portfolio via the web interface
+
+There is a global config file for common user options, found at `~/.nummus/.config.ini`. Defaults are:
+```ini
+[nummus]
+secure-icon = ⚿ # Icon to print on secure CLI prompts such as unlocking password
+```
 
 ---
 

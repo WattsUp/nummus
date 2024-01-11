@@ -7,12 +7,10 @@ import datetime
 import hashlib
 import io
 import re
-import secrets
 import shutil
 import tarfile
 from pathlib import Path
 
-import autodict
 import sqlalchemy
 import sqlalchemy.exc
 import tqdm
@@ -20,26 +18,20 @@ from rapidfuzz import process
 from sqlalchemy import orm
 
 from nummus import custom_types as t
+from nummus import encryption
 from nummus import exceptions as exc
 from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
-    Credentials,
+    Config,
+    ConfigKey,
     ImportedFile,
     Transaction,
     TransactionCategory,
     TransactionSplit,
     YIELD_PER,
 )
-
-try:
-    from nummus import encryption
-except ImportError:
-    print("Could not import nummus.encryption, encryption not available")
-    print("Install libsqlcipher: apt install libsqlcipher-dev")
-    print("Install encrypt extra: pip install nummus[encrypt]")
-    encryption = None
 
 
 class Portfolio:
@@ -48,10 +40,7 @@ class Portfolio:
     Records include: transactions, accounts, and assets
     """
 
-    # Have a root user so that unlock can test decryption
-    _NUMMUS_SITE = "nummus"
-    _NUMMUS_USER = "root"
-    _NUMMUS_PASSWORD = "unencrypted database"  # noqa: S105
+    _ENCRYPTION_TEST_VALUE = "nummus encryption test string"
 
     def __init__(self, path: str | Path, key: str | None) -> None:
         """Initialize Portfolio.
@@ -65,23 +54,24 @@ class Portfolio:
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         name = self._path_db.with_suffix("").name
-        self._path_config = self._path_db.with_suffix(".config")
+        self._path_salt = self._path_db.with_suffix(".nacl")
         self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
         self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
             raise FileNotFoundError(msg)
-        if not self._path_config.exists():
-            msg = "Portfolio configuration does not exist, cannot open database"
-            raise FileNotFoundError(msg)
         self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
         self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
-        self._config = autodict.JSONAutoDict(str(self._path_config), save_on_exit=False)
 
         if key is None:
             self._enc = None
+        elif self._path_salt.exists():
+            with self._path_salt.open("rb") as file:
+                enc_config = file.read()
+            self._enc = encryption.Encryption(key, enc_config)  # type: ignore[attr-defined]
         else:
-            self._enc = encryption.Encryption(key)  # type: ignore[attr-defined]
+            msg = f"Portfolio at {self._path_db} does have salt file"
+            raise FileNotFoundError(msg)
         self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
@@ -113,12 +103,8 @@ class Portfolio:
         if not path_db.exists():
             msg = f"Database does not exist at {path_db}"
             raise FileNotFoundError(msg)
-        path_config = path_db.with_suffix(".config")
-        if not path_config.exists():
-            msg = f"Portfolio configuration does not exist, for {path_db}"
-            raise FileNotFoundError(msg)
-        with autodict.JSONAutoDict(str(path_config), save_on_exit=False) as config:
-            return config["encrypt"]
+        path_salt = path_db.with_suffix(".nacl")
+        return path_salt.exists()
 
     @staticmethod
     def create(path: str | Path, key: str | None = None) -> Portfolio:
@@ -143,45 +129,51 @@ class Portfolio:
         # Drop any existing engine to database
         sql.drop_session(path_db)
         name = path_db.with_suffix("").name
-        path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         enc = None
-        if encryption is not None and key is not None:
-            enc = encryption.Encryption(key)
+        enc_config = None
+        if encryption.AVAILABLE and key is not None:
+            enc, enc_config = encryption.Encryption.create(key)
+            with path_salt.open("wb") as file:
+                file.write(enc_config)
+            path_salt.chmod(0o600)  # Only owner can read/write
+        else:
+            # Remove salt if unencrypted
+            path_salt.unlink(missing_ok=True)
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
         path_ssl.mkdir(exist_ok=True)
-        salt = secrets.token_urlsafe()
-        config = autodict.JSONAutoDict(str(path_config))
-        config.clear()
-        config["version"] = str(version.__version__)
-        config["key_version"] = 1  # Increment if there is a breaking change
-        config["salt"] = salt
-        config["encrypt"] = enc is not None
-        cipher_bytes = models.Cipher.generate().to_bytes()
-        config["cipher"] = base64.b64encode(cipher_bytes).decode()
-        config.save()
-        path_config.chmod(0o600)  # Only owner can read/write
         path_ssl.chmod(0o700)  # Only owner can read/write
 
-        if enc is None:
-            password = Portfolio._NUMMUS_PASSWORD
-        else:
-            key_salted = enc.key + salt.encode()
-            password = enc.encrypt(key_salted)
+        cipher_bytes = models.Cipher.generate().to_bytes()
+        cipher_b64 = base64.b64encode(cipher_bytes).decode()
 
-        with sql.get_session(path_db, config, enc) as s:
+        if enc is None:
+            test_value = Portfolio._ENCRYPTION_TEST_VALUE
+        else:
+            test_value = enc.encrypt(Portfolio._ENCRYPTION_TEST_VALUE)
+
+        with sql.get_session(path_db, enc) as s:
             models.metadata_create_all(s)
 
-            nummus_user = Credentials(
-                site=Portfolio._NUMMUS_SITE,
-                user=Portfolio._NUMMUS_USER,
-                password=password,
+            c_version = Config(
+                key=ConfigKey.VERSION,
+                value=str(version.__version__),
             )
-            s.add(nummus_user)
+            c_enc_test = Config(
+                key=ConfigKey.ENCRYPTION_TEST,
+                value=test_value,
+            )
+            c_cipher = Config(
+                key=ConfigKey.CIPHER,
+                value=cipher_b64,
+            )
+
+            s.add_all((c_version, c_enc_test, c_cipher))
             s.commit()
         path_db.chmod(0o600)  # Only owner can read/write
 
@@ -195,44 +187,45 @@ class Portfolio:
 
         Raises:
             UnlockingError if database file fails to open
+            ProtectedObjectNotFoundError if URI cipher is missing
         """
         # Drop any open session
         sql.drop_session(self._path_db)
         try:
             with self.get_session() as s:
-                user: Credentials | None = (
-                    s.query(Credentials)
-                    .where(
-                        Credentials.site == self._NUMMUS_SITE,
-                        Credentials.user == self._NUMMUS_USER,
-                    )
-                    .first()
-                )
+                try:
+                    value: str = (
+                        s.query(Config.value)
+                        .where(Config.key == ConfigKey.ENCRYPTION_TEST)
+                        .one()
+                    )[0]
+                except exc.NoResultFound as e:
+                    msg = "Config.ENCRYPTION_TEST not found"
+                    raise exc.UnlockingError(msg) from e
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e
 
-        if user is None:
-            msg = "Root password not found"
-            raise exc.UnlockingError(msg)
-
-        if self._enc is None:
-            if user.password != self._NUMMUS_PASSWORD:
-                msg = "Root password did not match"
-                raise exc.UnlockingError(msg)
-        else:
-            salt: str = self._config["salt"]
-            key_salted = self._enc.key + salt.encode()
+        if self._enc is not None:
             try:
-                password_decrypted = self._enc.decrypt(user.password)
+                value = self._enc.decrypt_s(value)
             except ValueError as e:
                 msg = "Failed to decrypt root password"
                 raise exc.UnlockingError(msg) from e
-            if password_decrypted != key_salted:
-                msg = "Root user's password did not match"
-                raise exc.UnlockingError(msg)
+
+        if value != self._ENCRYPTION_TEST_VALUE:
+            msg = "Test value did not match"
+            raise exc.UnlockingError(msg)
         # Load Cipher
-        models.load_cipher(base64.b64decode(self._config["cipher"]))
+        with self.get_session() as s:
+            try:
+                cipher_b64: str = (
+                    s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
+                )[0]
+            except exc.NoResultFound as e:
+                msg = "Config.CIPHER not found"
+                raise exc.ProtectedObjectNotFoundError(msg) from e
+            models.load_cipher(base64.b64decode(cipher_b64))
         # All good :)
 
     def get_session(self) -> orm.Session:
@@ -241,7 +234,7 @@ class Portfolio:
         Returns:
             Open Session
         """
-        return sql.get_session(self._path_db, self._config, self._enc)
+        return sql.get_session(self._path_db, self._enc)
 
     def encrypt(self, secret: bytes | str) -> str:
         """Encrypt a secret using the key.
@@ -306,11 +299,17 @@ class Portfolio:
         h = sha.hexdigest()
         if not force:
             with self.get_session() as s:
-                existing: ImportedFile | None = (
-                    s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
-                )
-                if existing is not None:
-                    date = datetime.date.fromordinal(existing.date_ord)
+                try:
+                    existing_date_ord: int = (
+                        s.query(ImportedFile.date_ord)
+                        .where(ImportedFile.hash_ == h)
+                        .one()[0]
+                    )
+                except exc.NoResultFound:
+                    # No conflicts
+                    pass
+                else:
+                    date = datetime.date.fromordinal(existing_date_ord)
                     raise exc.FileAlreadyImportedError(date, path)
 
         i = importers.get_importer(path, self._importers)
@@ -393,11 +392,8 @@ class Portfolio:
 
             # Add file hash to prevent importing again
             if force:
-                existing = s.query(ImportedFile).where(ImportedFile.hash_ == h).scalar()
-                if existing is not None:
-                    s.delete(existing)
-                    s.commit()
-
+                s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
+                s.commit()
             s.add(ImportedFile(hash_=h))
             s.commit()
 
@@ -689,8 +685,10 @@ class Portfolio:
         path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
         with tarfile.open(path_backup, "w:gz") as tar:
-            files: t.Paths = [self._path_db, self._path_config]
+            files: t.Paths = [self._path_db]
 
+            if self._path_salt.exists():
+                files.append(self._path_salt)
             if self.ssl_cert_path.exists():
                 files.append(self.ssl_cert_path)
                 files.append(self.ssl_key_path)
@@ -699,7 +697,7 @@ class Portfolio:
                 tar.add(file, arcname=file.relative_to(parent))
             # Add a timestamp of when it was created
             info = tarfile.TarInfo("_timestamp")
-            buf = datetime.datetime.utcnow().isoformat().encode()
+            buf = datetime.datetime.now(datetime.timezone.utc).isoformat().encode()
             info.size = len(buf)
             tar.addfile(info, io.BytesIO(buf))
 
@@ -742,14 +740,23 @@ class Portfolio:
                 backups.append((tar_ver, ts))
         return sorted(backups, key=lambda item: item[0])
 
-    def clean(self) -> None:
-        """Delete any unused files, creates a new backup."""
+    def clean(self) -> tuple[int, int]:
+        """Delete any unused files, creates a new backup.
+
+        Returns:
+            Size of files in bytes:
+            (portfolio before, portfolio after)
+        """
+        parent = self._path_db.parent
+        name = self._path_db.with_suffix("").name
+
         # Create a backup before optimizations
         path_backup, _ = self.backup()
+        size_before = self._path_db.stat().st_size
 
         # Prune unused AssetValuations
         with self.get_session() as s:
-            for asset in s.query(Asset).all():
+            for asset in s.query(Asset).yield_per(YIELD_PER):
                 asset.prune_valuations()
             s.commit()
 
@@ -759,10 +766,9 @@ class Portfolio:
             s.commit()
 
         path_backup_optimized, _ = self.backup()
+        size_after = self._path_db.stat().st_size
 
         # Delete all files that start with name except the fresh backups
-        parent = self._path_db.parent
-        name = self._path_db.with_suffix("").name
         for file in parent.iterdir():
             if file in (path_backup, path_backup_optimized):
                 continue
@@ -787,6 +793,8 @@ class Portfolio:
 
         # Delete optimized backup version since that is the live version
         path_new.unlink()
+
+        return (size_before, size_after)
 
     @staticmethod
     def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
@@ -831,10 +839,6 @@ class Portfolio:
 
         # Reload Portfolio
         if isinstance(p, Portfolio):
-            p._config = autodict.JSONAutoDict(  # noqa: SLF001
-                str(p._path_config),  # noqa: SLF001
-                save_on_exit=False,
-            )
             p._unlock()  # noqa: SLF001
 
     @property

@@ -137,7 +137,7 @@ class TransactionSplit(Base):
         if s is None:
             raise exc.UnboundExecutionError
         query = s.query(Transaction).where(Transaction.id_ == self.parent_id)
-        return query.scalar()  # type: ignore[attr-defined]
+        return query.one()
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:

@@ -37,6 +37,7 @@ __all__ = [
     "InvalidORMValueError",
     "NoAssetWebSourceError",
     "AssetWebError",
+    "UnknownEncryptionVersionError",
 ]
 
 
@@ -124,3 +125,12 @@ class AssetWebError(Exception):
     def __init__(self, e: Exception) -> None:
         """Initialize AssetWebError."""
         super().__init__(str(e))
+
+
+class UnknownEncryptionVersionError(Exception):
+    """Error when encryption config has an unknown version."""
+
+    def __init__(self) -> None:
+        """Initialize UnknownEncryptionVersionError."""
+        msg = "Encryption config has an unrecognized version"
+        super().__init__(msg)

@@ -207,8 +207,14 @@ def clean(p: portfolio.Portfolio) -> int:
         0 on success
         non-zero on failure
     """
-    p.clean()
+    size_before, size_after = p.clean()
     print(f"{Fore.GREEN}Portfolio cleaned")
+    p_change = size_before - size_after
+    print(
+        f"{Fore.CYAN}Portfolio was optimized by "
+        f"{p_change / 1000:.1f}KB/{p_change / 1024:.1f}KiB",
+    )
+
     return 0
 
 

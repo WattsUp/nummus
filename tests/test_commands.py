@@ -9,7 +9,7 @@ from colorama import Fore
 
 from nummus import commands
 from nummus import custom_types as t
-from nummus import portfolio
+from nummus import encryption, portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -40,7 +40,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -55,7 +55,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
             # Check portfolio is unencrypted
             with path_db.open("rb") as file:
@@ -81,14 +81,14 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
         finally:
             mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_create_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]
@@ -107,7 +107,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -127,7 +127,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -150,7 +150,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -173,7 +173,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -245,7 +245,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]
@@ -540,12 +540,20 @@ class TestCommands(TestBase):
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertTrue(path_backup_2.exists(), "Backup #2 does not exist")
 
+        size_before = path_db.stat().st_size
+
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.clean(p)
         self.assertEqual(rc, 0)
+        size_after = path_db.stat().st_size
+        p_change = size_before - size_after
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio cleaned\n"
+        target = (
+            f"{Fore.GREEN}Portfolio cleaned\n"
+            f"{Fore.CYAN}Portfolio was optimized by "
+            f"{p_change / 1000:.1f}KB/{p_change / 1024:.1f}KiB\n"
+        )
         self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")

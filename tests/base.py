@@ -17,7 +17,7 @@ from sqlalchemy import orm, pool
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import sql
+from nummus import global_config, sql
 from nummus.models import base_uri
 from tests import TEST_LOG
 
@@ -114,9 +114,8 @@ class TestBase(unittest.TestCase):
         return min(max(round(Decimal(x), precision), d_low), d_high)
 
     def get_session(self) -> orm.Session:
-        config = autodict.AutoDict(encrypt=False)
         path = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        return sql.get_session(path, config)
+        return sql.get_session(path, None)
 
     @classmethod
     def _clean_test_root(cls) -> None:
@@ -194,6 +193,9 @@ class TestBase(unittest.TestCase):
         yf.Ticker = MockTicker
 
         self._test_start = time.perf_counter()
+
+        # Global configuration is a constant default
+        global_config._CACHE.update(global_config._DEFAULTS)  # noqa: SLF001
 
     def tearDown(self, *, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start

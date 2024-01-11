@@ -11,6 +11,7 @@ from sqlalchemy import orm
 from nummus import utils
 from nummus.models.account import Account
 from nummus.models.asset import Asset
+from nummus.models.base import YIELD_PER
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
@@ -48,9 +49,8 @@ def search(
     entities.extend(getattr(cls, prop) for prop in _SEARCH_PROPERTIES[cls])
     query_unfiltered = query.with_entities(*entities)
 
-    unfiltered = query_unfiltered.all()
     strings: t.DictIntStr = {}
-    for item in unfiltered:
+    for item in query_unfiltered.yield_per(YIELD_PER):
         item_id = item[0]
         item_str = " ".join(s for s in item[1:] if s is not None)
         strings[item_id] = item_str
