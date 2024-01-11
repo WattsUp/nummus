@@ -9,7 +9,7 @@ from colorama import Fore
 
 from nummus import commands
 from nummus import custom_types as t
-from nummus import portfolio
+from nummus import encryption, portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -88,7 +88,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = original_get_pass
 
     def test_create_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]
@@ -245,7 +245,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]

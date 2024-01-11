@@ -697,7 +697,7 @@ class Portfolio:
                 tar.add(file, arcname=file.relative_to(parent))
             # Add a timestamp of when it was created
             info = tarfile.TarInfo("_timestamp")
-            buf = datetime.datetime.utcnow().isoformat().encode()
+            buf = datetime.datetime.now(datetime.timezone.utc).isoformat().encode()
             info.size = len(buf)
             tar.addfile(info, io.BytesIO(buf))
 

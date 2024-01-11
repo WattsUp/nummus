@@ -11,6 +11,7 @@ from unittest import mock
 
 import time_machine
 
+from nummus import encryption
 from nummus import exceptions as exc
 from nummus import importers, models, portfolio, sql, version
 from nummus.models import (
@@ -147,7 +148,7 @@ class TestPortfolio(TestBase):
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
@@ -595,6 +596,8 @@ class TestPortfolio(TestBase):
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
 
         # For encrypted portfolios, backup should include the salt
+        if not encryption.AVAILABLE:
+            return
         path_salt = path_db.with_suffix(".nacl")
         key = self.random_string()
         # Recreate
