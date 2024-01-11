@@ -351,6 +351,7 @@ class TestAsset(TestBase):
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
+            is_profit_loss=False,
         )
         s.add(t_cat)
         s.commit()
@@ -426,7 +427,7 @@ class TestAsset(TestBase):
         target_values = [multiplier, multiplier + 1]
         self.assertEqual(r_values, target_values)
 
-        _, r_assets = acct.get_value(yesterday_ord, today_ord)
+        _, _, r_assets = acct.get_value(yesterday_ord, today_ord)
         r_values = r_assets[a.id_]
         target_values = [value_yesterday, value_yesterday + value_today]
         self.assertEqual(r_values, target_values)
@@ -451,6 +452,7 @@ class TestAsset(TestBase):
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
+            is_profit_loss=False,
         )
 
         # Unbound to a session will raise UnboundExecutionError
@@ -622,6 +624,7 @@ class TestAsset(TestBase):
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
+            is_profit_loss=False,
         )
 
         # No ticker should fail

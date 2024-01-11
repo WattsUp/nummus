@@ -87,6 +87,7 @@ class TestUtils(TestBase):
             name="Uncategorized",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
+            is_profit_loss=False,
         )
         s.add(t_cat)
         s.commit()

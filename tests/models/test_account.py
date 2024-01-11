@@ -137,6 +137,7 @@ class TestAccount(TestBase):
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
+            is_profit_loss=False,
         )
 
         # Unbound to a session will raise UnboundExecutionError
@@ -340,54 +341,86 @@ class TestAccount(TestBase):
         s.commit()
 
         categories = TransactionCategory.add_default(s)
-        t_cat = categories["Uncategorized"]
+        categories = {name: t_cat.id_ for name, t_cat in categories.items()}
 
         target_values = [0] * 7
+        target_profit = [0] * 7
         target_assets = {}
         start = today_ord - 3
         end = today_ord + 3
 
-        r_values, r_assets = acct.get_value(start, end)
+        r_values, r_profit, r_assets = acct.get_value(start, end)
         self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end)
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end, ids=[acct.id_])
+        r_values, r_profit, r_assets = Account.get_value_all(
+            s,
+            start,
+            end,
+            ids=[acct.id_],
+        )
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end, ids=[])
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end, ids=[])
         self.assertEqual(r_values, {})
+        self.assertEqual(r_profit, {})
         self.assertEqual(r_assets, {})
 
-        # Fund account on second day
+        # Fund account on second day with interest
         t_fund = self.random_decimal(10, 100)
+        t_fund = 100
         txn = Transaction(
             account_id=acct.id_,
             date_ord=start + 1,
             amount=t_fund,
             statement=self.random_string(),
         )
-        t_split = TransactionSplit(parent=txn, amount=txn.amount, category_id=t_cat.id_)
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["Interest"],
+        )
         s.add_all((txn, t_split))
         s.commit()
 
         target_values = [0, t_fund, t_fund, t_fund, t_fund, t_fund, t_fund]
+        target_profit = [0, t_fund, t_fund, t_fund, t_fund, t_fund, t_fund]
 
-        r_values, r_assets = acct.get_value(start, end)
+        r_values, r_profit, r_assets = acct.get_value(start, end)
         self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end)
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
+        self.assertEqual(r_assets, target_assets)
+
+        # Profit on second day should be equal to interest amount
+        r_values, r_profit, r_assets = acct.get_value(start + 1, start + 1)
+        self.assertEqual(r_values, [target_values[1]])
+        self.assertEqual(r_profit, [target_profit[1]])
+        self.assertEqual(r_assets, target_assets)
+
+        # Profit on third day should be zero
+        r_values, r_profit, r_assets = acct.get_value(start + 2, start + 2)
+        self.assertEqual(r_values, [target_values[2]])
+        self.assertEqual(r_profit, [0])
         self.assertEqual(r_assets, target_assets)
 
         # Buy asset[0] on the second day
         t0 = self.random_decimal(-10, -1)
+        t0 = -10
         q0 = self.random_decimal(0, 10)
+        q0 = 1
         txn = Transaction(
             account_id=acct.id_,
             date_ord=start + 1,
@@ -399,7 +432,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[0].id_,
             asset_quantity_unadjusted=q0,
-            category_id=t_cat.id_,
+            category_id=categories["Securities Traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -413,21 +446,34 @@ class TestAccount(TestBase):
             t_fund + t0,
             t_fund + t0,
         ]
+        # Buying an asset worth zero is loss
+        target_profit = [
+            0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+        ]
         target_assets = {assets[0].id_: [0] * 7}
 
-        r_values, r_assets = acct.get_value(start, end)
+        r_values, r_profit, r_assets = acct.get_value(start, end)
         self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end)
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
         self.assertEqual(r_assets, target_assets)
 
-        # Sell asset[0] on the last day
+        # Sell asset[0] on the second to last day
         t1 = self.random_decimal(1, 10)
+        t1 = 9
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=end,
+            date_ord=end - 1,
             amount=t1,
             statement=self.random_string(),
         )
@@ -436,7 +482,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[0].id_,
             asset_quantity_unadjusted=-q0,
-            category_id=t_cat.id_,
+            category_id=categories["Securities Traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -447,21 +493,33 @@ class TestAccount(TestBase):
             t_fund + t0,
             t_fund + t0,
             t_fund + t0,
+            t_fund + t0 + t1,
+            t_fund + t0 + t1,
+        ]
+        target_profit = [
+            0,
             t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0,
+            t_fund + t0 + t1,
             t_fund + t0 + t1,
         ]
         target_assets = {assets[0].id_: [0] * 7}
 
-        r_values, r_assets = acct.get_value(start, end)
+        r_values, r_profit, r_assets = acct.get_value(start, end)
         self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end)
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
         self.assertEqual(r_assets, target_assets)
 
         # Add valuations to Asset
         prices = [self.random_decimal(1, 10) for _ in range(7)]
+        prices = list(range(7))
         for i, p in enumerate(prices):
             v = AssetValuation(
                 asset_id=assets[0].id_,
@@ -473,38 +531,101 @@ class TestAccount(TestBase):
 
         # No rounding cause UI will round anyways, and unrounded is more factual
         asset_values = [
-            p * q for p, q in zip(prices, [0, q0, q0, q0, q0, q0, 0], strict=True)
+            p * q for p, q in zip(prices, [0, q0, q0, q0, q0, 0, 0], strict=True)
         ]
         target_values = [
             c + v for c, v in zip(target_values, asset_values, strict=True)
         ]
+        target_profit = [
+            c + v for c, v in zip(target_profit, asset_values, strict=True)
+        ]
         target_assets = {assets[0].id_: asset_values}
 
-        r_values, r_assets = acct.get_value(start, end)
+        r_values, r_profit, r_assets = acct.get_value(start, end)
         self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
-        r_values, r_assets = Account.get_value_all(s, start, end)
+        r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
         self.assertEqual(r_values, {acct.id_: target_values})
+        self.assertEqual(r_profit, {acct.id_: target_profit})
+        self.assertEqual(r_assets, target_assets)
+
+        # Profit on day of asset trade should be valid too
+        r_values, r_profit, r_assets = acct.get_value(start + 1, start + 1)
+        self.assertEqual(r_values, [target_values[1]])
+        self.assertEqual(r_profit, [t_fund + t0 + asset_values[1]])
+        self.assertEqual(r_assets, {assets[0].id_: [asset_values[1]]})
+
+        # Profit on day after of asset trade should be valid too
+        r_values, r_profit, r_assets = acct.get_value(start + 2, start + 2)
+        self.assertEqual(r_values, [target_values[2]])
+        self.assertEqual(r_profit, [0])
+        self.assertEqual(r_assets, {assets[0].id_: [asset_values[2]]})
+
+        # Profit on day of asset sell should be valid too
+        r_values, r_profit, r_assets = acct.get_value(end - 1, end - 1)
+        self.assertEqual(r_values, [target_values[5]])
+        self.assertEqual(r_profit, [t1 - q0 * prices[5]])
+        self.assertEqual(r_assets, {assets[0].id_: [asset_values[5]]})
+
+        # Transactions not included in profit & loss affect value but not profit
+        t2 = self.random_decimal(1, 10)
+        txn = Transaction(
+            account_id=acct.id_,
+            date_ord=start,
+            amount=t2,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["Other Income"],
+        )
+        s.add_all((txn, t_split))
+        t3 = self.random_decimal(-10, -1)
+        txn = Transaction(
+            account_id=acct.id_,
+            date_ord=end,
+            amount=t3,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories["Groceries"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        target_values = [t + t2 for t in target_values]
+        target_values[-1] += t3
+        r_values, r_profit, r_assets = acct.get_value(start, end)
+        self.assertEqual(r_values, target_values)
+        self.assertEqual(r_profit, target_profit)
         self.assertEqual(r_assets, target_assets)
 
         # Test single value
-        r_values, r_assets = acct.get_value(today_ord, today_ord)
+        r_values, r_profit, r_assets = acct.get_value(today_ord, today_ord)
         self.assertEqual(r_values, [target_values[3]])
+        self.assertEqual(r_profit, [0])
         self.assertEqual(r_assets, {assets[0].id_: [asset_values[3]]})
 
-        r_values, r_assets = Account.get_value_all(s, today_ord, today_ord)
+        r_values, r_profit, r_assets = Account.get_value_all(s, today_ord, today_ord)
         self.assertEqual(r_values, {acct.id_: [target_values[3]]})
+        self.assertEqual(r_profit, {acct.id_: [0]})
         self.assertEqual(r_assets, {assets[0].id_: [asset_values[3]]})
 
         # Test single value
         future = end + 1
-        r_values, r_assets = acct.get_value(future, future)
+        r_values, r_profit, r_assets = acct.get_value(future, future)
         self.assertEqual(r_values, [target_values[-1]])
+        self.assertEqual(r_profit, [0])
         self.assertEqual(r_assets, {})
 
-        r_values, r_assets = Account.get_value_all(s, future, future)
+        r_values, r_profit, r_assets = Account.get_value_all(s, future, future)
         self.assertEqual(r_values, {acct.id_: [target_values[-1]]})
+        self.assertEqual(r_profit, {acct.id_: [0]})
         self.assertEqual(r_assets, {})
 
         # Create an unrelated account
@@ -520,22 +641,51 @@ class TestAccount(TestBase):
         txn = Transaction(
             account_id=acct_unrelated.id_,
             date_ord=end,
+            amount=t0,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            asset_id=assets[1].id_,
+            asset_quantity_unadjusted=q0,
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # Unchanged get value
+        r_values, r_profit, r_assets = Account.get_value_all(
+            s,
+            future,
+            future,
+            ids=[acct.id_],
+        )
+        self.assertEqual(r_values, {acct.id_: [target_values[-1]]})
+        self.assertEqual(r_profit, {acct.id_: [0]})
+        self.assertEqual(r_assets, {})
+
+        # Add a day trade
+        txn = Transaction(
+            account_id=acct_unrelated.id_,
+            date_ord=end,
             amount=t1,
             statement=self.random_string(),
         )
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            asset_id=assets[0].id_,
+            asset_id=assets[1].id_,
             asset_quantity_unadjusted=-q0,
-            category_id=t_cat.id_,
+            category_id=categories["Securities Traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
 
-        # Unchanged get value
-        r_values, r_assets = Account.get_value_all(s, future, future, ids=[acct.id_])
-        self.assertEqual(r_values, {acct.id_: [target_values[-1]]})
+        # Day trade profit should be valid
+        r_values, r_profit, r_assets = acct_unrelated.get_value(end, end)
+        self.assertEqual(r_values, [t0 + t1])
+        self.assertEqual(r_profit, [t0 + t1])
         self.assertEqual(r_assets, {})
 
     def test_get_cash_flow(self) -> None:

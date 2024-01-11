@@ -143,6 +143,26 @@ class Account(Base):
             iv: Decimal
             cash_flow_accounts[acct_id][0] = iv
 
+        # Calculate cost basis on first day
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.account_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+            )
+            .where(
+                TransactionSplit.date_ord == start_ord,
+                TransactionSplit.category_id.in_(cost_basis_skip_ids),
+            )
+            .group_by(TransactionSplit.account_id)
+        )
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
+        for acct_id, iv in query.all():
+            acct_id: int
+            iv: Decimal
+            cost_basis_accounts[acct_id][0] = -iv
+
         if start_ord != end_ord:
             # Get cash_flow on each day between start and end
             # Not Account.get_cash_flow because being categorized doesn't matter and
@@ -188,12 +208,47 @@ class Account(Base):
             list(cash_flow_accounts.keys()),
         )
 
+        # Get day one asset transactions to add to profit & loss
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.account_id,
+                TransactionSplit.asset_id,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            )
+            .where(
+                TransactionSplit.asset_id.isnot(None),
+                TransactionSplit.date_ord == start_ord,
+            )
+        )
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
+        assets_day_zero: dict[int, t.DictIntReal] = {
+            acct_id: {} for acct_id in cash_flow_accounts
+        }
+        for acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+            acct_id: int
+            a_id: int
+            qty_i: int
+            qty_f: t.Real
+            try:
+                assets_day_zero[acct_id][a_id] += qty_i + qty_f
+            except KeyError:
+                assets_day_zero[acct_id][a_id] = qty_i + qty_f
+
         # Skip assets with zero quantity
         a_ids: set[int] = set()
         for assets in assets_accounts.values():
             for a_id, qty in list(assets.items()):
                 if not any(qty):
                     # Remove asset from account
+                    assets.pop(a_id)
+                else:
+                    a_ids.add(a_id)
+        for assets in assets_day_zero.values():
+            for a_id, qty in list(assets.items()):
+                if qty == 0:
                     assets.pop(a_id)
                 else:
                     a_ids.add(a_id)
@@ -227,7 +282,13 @@ class Account(Base):
         for acct_id, values in acct_values.items():
             cost_basis_flow = cost_basis_accounts[acct_id]
             v = cost_basis_flow[0]
-            cost_basis_flow[0] = values[0] if v is None else v + values[0]
+            v = values[0] if v is None else v + values[0]
+
+            # Reduce the cost basis on day one to add the asset value to profit
+            for a_id, qty in assets_day_zero[acct_id].items():
+                v -= qty * asset_prices[a_id][0]
+
+            cost_basis_flow[0] = v
 
             cost_basis = utils.integrate(cost_basis_flow)
             profit = [v - cb for v, cb in zip(values, cost_basis, strict=True)]

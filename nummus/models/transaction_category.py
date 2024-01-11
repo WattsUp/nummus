@@ -116,7 +116,7 @@ class TransactionCategory(Base):
                 "Portfolio Management": (False, False),
                 "Retirement Contributions": (True, False),
                 "Savings": (True, False),
-                "Securities Traded": (True, False),
+                "Securities Traded": (True, True),
                 "Transfers": (True, False),
                 "Uncategorized": (True, False),
                 "Fraud": (False, False),
