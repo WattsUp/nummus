@@ -9,6 +9,7 @@ import io
 import re
 import shutil
 import tarfile
+from decimal import Decimal
 from pathlib import Path
 
 import sqlalchemy
@@ -24,6 +25,7 @@ from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
+    AssetValuation,
     Config,
     ConfigKey,
     ImportedFile,
@@ -898,3 +900,91 @@ class Portfolio:
             s.commit()
 
         return updated
+
+    def summarize(self) -> t.DictAny:
+        """Summarize Portfolio into useful information and statistics.
+
+        Returns:
+            Dictionary of statistics
+            {
+                "n_accounts": int,
+                "n_assets": int,
+                "n_transactions": int,
+                "n_valuations": int,
+                "net_worth": Real,
+                "accounts": [{ # Excludes closed
+                    "name": str,
+                    "institution": str,
+                    "category": str,
+                    "value": Real,
+                    "age": str,
+                    "profit": Real,
+                }, ...],
+                "total_asset_value": Real,
+                "assets": [{ # Excludes zero value
+                    "name": str,
+                    "description": str,
+                    "value": Real,
+                    "profit": Real,
+                    "category": str,
+                    "ticker": str | None,
+                }, ...],
+            }
+        """
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        summary: t.DictAny = {}
+        with self.get_session() as s:
+            accts = {acct.id_: acct for acct in s.query(Account).all()}
+            assets = {a.id_: a for a in s.query(Asset).all()}
+
+            summary["n_accounts"] = len(accts)
+            summary["n_transactions"] = s.query(TransactionSplit).count()
+            summary["n_assets"] = len(assets)
+            summary["n_valuations"] = s.query(AssetValuation).count()
+
+            value_accts, value_assets = Account.get_value_all(s, today_ord, today_ord)
+
+            net_worth = Decimal(0)
+            summary_accts = []
+            for acct_id, values in value_accts.items():
+                acct = accts[acct_id]
+                if acct.closed:
+                    continue
+
+                net_worth += values[0]
+                summary_accts.append({
+                    "name": acct.name,
+                    "institution": acct.institution,
+                    "category": acct.category.name.replace("_", " ").capitalize(),
+                    "value": values[0],
+                    "age": utils.format_days(
+                        today_ord - (acct.opened_on_ord or today_ord),
+                    ),
+                    "profit": 0,  # TODO (WattsUp): add real profit
+                })
+
+            summary["accounts"] = sorted(summary_accts, key=lambda item: -item["value"])
+            summary["net_worth"] = net_worth
+
+            total_asset_value = Decimal(0)
+            summary_assets = []
+            for a_id, values in value_assets.items():
+                if values[0] == 0:
+                    continue
+
+                a = assets[a_id]
+                total_asset_value += values[0]
+                summary_assets.append({
+                    "name": a.name,
+                    "description": a.description,
+                    "ticker": a.ticker,
+                    "category": a.category.name.replace("_", " ").capitalize(),
+                    "value": values[0],
+                    "profit": 0,  # TODO (WattsUp): add real profit
+                })
+            summary["assets"] = sorted(summary_assets, key=lambda item: -item["value"])
+            summary["total_asset_value"] = total_asset_value
+
+        return summary

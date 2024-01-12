@@ -327,6 +327,103 @@ def update_assets(p: portfolio.Portfolio) -> int:
     return 1 if failed else 0
 
 
+def summarize(p: portfolio.Portfolio) -> int:
+    """Print summary information and statistics on Portfolio.
+
+    Args:
+        p: Working Portfolio
+
+    Returns:
+        0 on success
+        non-zero on failure
+    """
+    stats = p.summarize()
+
+    # Accounts
+    table: list[list[str] | None] = [
+        [
+            "Name",
+            "Institution.",
+            "Cateogry",
+            ">Value",
+            ">Profit",
+            "Age",
+        ],
+        None,
+    ]
+    table.extend(
+        [
+            acct["name"],
+            acct["institution"],
+            acct["category"],
+            utils.format_financial(acct["value"]),
+            utils.format_financial(acct["profit"]),
+            acct["age"],
+        ]
+        for acct in stats["accounts"]
+    )
+    table.append(None)
+    table.append(
+        [
+            "Total",
+            "",
+            "",
+            utils.format_financial(stats["net_worth"]),
+            "",
+            "",
+        ],
+    )
+    n = stats["n_accounts"]
+    n_table = len(stats["accounts"])
+    print(f"Portfolio has {n:,} Accounts ({n_table:,} currently open)")
+    utils.print_table(table)
+
+    # Assets
+    table = [
+        [
+            "Name",
+            "Description.",
+            "Class",
+            "Ticker",
+            ">Value",
+            ">Profit",
+        ],
+        None,
+    ]
+    table.extend(
+        [
+            asset["name"],
+            asset["description"],
+            asset["category"],
+            asset["ticker"] or "",
+            utils.format_financial(asset["value"]),
+            utils.format_financial(asset["profit"]),
+        ]
+        for asset in stats["assets"]
+    )
+    table.append(None)
+    table.append(
+        [
+            "Total",
+            "",
+            "",
+            "",
+            utils.format_financial(stats["total_asset_value"]),
+            "",
+        ],
+    )
+    n = stats["n_assets"]
+    n_table = len(stats["assets"])
+    print(f"Portfolio has {n:,} Assets ({n_table:,} currently held)")
+    n = stats["n_valuations"]
+    print(f"Portfolio has {n:,} Asset Valuations")
+    utils.print_table(table)
+
+    n = stats["n_transactions"]
+    print(f"Portfolio has {n:,} Transactions")
+    return 0
+
+
 # No unit test for wrapper command, too difficult to mock
 def run_web(
     p: portfolio.Portfolio,

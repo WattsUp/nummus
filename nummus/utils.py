@@ -503,3 +503,54 @@ def interpolate_linear(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
         slope_i += 1
 
     return result
+
+
+def print_table(table: list[list[str] | None]) -> None:
+    """Pretty print tabular data.
+
+    First row is header, able to configure how columns behave
+    "<Header" will left align text, default
+    ">Header" will right align text
+    "^Header" will center align text
+    "Header." will prioritize this column for truncation with ellipsis if too long
+
+    Args:
+        table: List of table rows, None will print a horizontal line
+    """
+    if len(table) < 1:
+        msg = "Table has no rows"
+        raise ValueError(msg)
+
+    header_raw = table[0]
+    if header_raw is None:
+        msg = "First row cannot be None"
+        raise ValueError(msg)
+
+    col_widths = [0] * len(header_raw)
+    table[0] = [c.strip("<>^.") for c in header_raw]
+    for row in table:
+        if row is None:
+            continue
+        for i, cell in enumerate(row):
+            col_widths[i] = max(len(cell), col_widths[i])
+
+    formats = []
+    for cell, n in zip(header_raw, col_widths, strict=True):
+        align = cell[0]
+        align = align if align in "<>^" else ""
+        formats.append(f"{align}{n}")
+
+    # TODO (WattsUp): Add truncation
+
+    # Print the box
+    print("╭" + "┬".join("─" * n for n in col_widths) + "╮")
+    buf = "│".join(f"{c:^{n}}" for c, n in zip(table[0], col_widths, strict=True))
+    print("│" + buf + "│")
+    for row in table[1:]:
+        if row is None:
+            print("╞" + "╪".join("═" * n for n in col_widths) + "╡")
+        else:
+            buf = "│".join(f"{c:{fmt}}" for c, fmt in zip(row, formats, strict=True))
+            print("│" + buf + "│")
+
+    print("╰" + "┴".join("─" * n for n in col_widths) + "╯")
