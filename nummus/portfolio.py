@@ -929,12 +929,15 @@ class Portfolio:
                     "category": str,
                     "ticker": str | None,
                 }, ...],
+                "db_size": int, # Bytes
             }
         """
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        summary: t.DictAny = {}
+        summary: t.DictAny = {
+            "db_size": self._path_db.stat().st_size,
+        }
         with self.get_session() as s:
             accts = {acct.id_: acct for acct in s.query(Account).all()}
             assets = {a.id_: a for a in s.query(Asset).all()}

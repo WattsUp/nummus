@@ -212,7 +212,7 @@ def clean(p: portfolio.Portfolio) -> int:
     p_change = size_before - size_after
     print(
         f"{Fore.CYAN}Portfolio was optimized by "
-        f"{p_change / 1000:.1f}KB/{p_change / 1024:.1f}KiB",
+        f"{p_change / 1000:,.1f}KB/{p_change / 1024:,.1f}KiB",
     )
 
     return 0
@@ -339,6 +339,15 @@ def summarize(p: portfolio.Portfolio) -> int:
     """
     stats = p.summarize()
 
+    def is_are(i: int) -> str:
+        return "is" if i == 1 else "are"
+
+    def plural(i: int) -> str:
+        return "" if i == 1 else "s"
+
+    size: int = stats["db_size"]
+    print(f"Portfolio file size is {size/1000:,.1f}KB/{size/1024:,.1f}KiB")
+
     # Accounts
     table: list[list[str] | None] = [
         [
@@ -375,7 +384,10 @@ def summarize(p: portfolio.Portfolio) -> int:
     )
     n = stats["n_accounts"]
     n_table = len(stats["accounts"])
-    print(f"Portfolio has {n:,} Accounts ({n_table:,} currently open)")
+    print(
+        f"There {is_are(n)} {n:,} account{plural(n)}, "
+        f"{n_table:,} of which {is_are(n_table)} currently open",
+    )
     utils.print_table(table)
 
     # Assets
@@ -414,14 +426,17 @@ def summarize(p: portfolio.Portfolio) -> int:
     )
     n = stats["n_assets"]
     n_table = len(stats["assets"])
-    print(f"Portfolio has {n:,} Assets ({n_table:,} currently held)")
+    print(
+        f"There {is_are(n)} {n:,} asset{plural(n)}, "
+        f"{n_table:,} of which {is_are(n_table)} currently held",
+    )
     utils.print_table(table)
 
     n = stats["n_valuations"]
-    print(f"Portfolio has {n:,} Asset Valuations")
+    print(f"There {is_are(n)} {n:,} asset valuation{plural(n)} ")
 
     n = stats["n_transactions"]
-    print(f"Portfolio has {n:,} Transactions")
+    print(f"There {is_are(n)} {n:,} transaction{plural(n)} ")
     return 0
 
 

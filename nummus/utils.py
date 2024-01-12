@@ -536,7 +536,7 @@ def print_table(table: list[list[str] | None]) -> None:
         if row is None:
             continue
         for i, cell in enumerate(row):
-            col_widths[i] = max(len(cell), col_widths[i])
+            col_widths[i] = max(len(cell) + 1, col_widths[i])
 
     # Adjust col widths if sum is over terminal width
     margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
