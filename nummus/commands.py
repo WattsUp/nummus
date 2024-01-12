@@ -344,10 +344,10 @@ def summarize(p: portfolio.Portfolio) -> int:
         [
             "Name",
             "Institution.",
-            "Cateogry",
-            ">Value",
-            ">Profit",
-            "Age",
+            "Category",
+            ">Value/",
+            ">Profit/",
+            "Age/",
         ],
         None,
     ]
@@ -385,8 +385,8 @@ def summarize(p: portfolio.Portfolio) -> int:
             "Description.",
             "Class",
             "Ticker",
-            ">Value",
-            ">Profit",
+            ">Value/",
+            ">Profit/",
         ],
         None,
     ]
@@ -415,9 +415,10 @@ def summarize(p: portfolio.Portfolio) -> int:
     n = stats["n_assets"]
     n_table = len(stats["assets"])
     print(f"Portfolio has {n:,} Assets ({n_table:,} currently held)")
+    utils.print_table(table)
+
     n = stats["n_valuations"]
     print(f"Portfolio has {n:,} Asset Valuations")
-    utils.print_table(table)
 
     n = stats["n_transactions"]
     print(f"Portfolio has {n:,} Transactions")
