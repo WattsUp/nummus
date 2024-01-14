@@ -965,7 +965,7 @@ class Portfolio:
                     "age": utils.format_days(
                         today_ord - (acct.opened_on_ord or today_ord),
                     ),
-                    "profit": 0,  # TODO (WattsUp): add real profit
+                    "profit": Decimal(0),  # TODO (WattsUp): add real profit
                 })
 
             summary["accounts"] = sorted(summary_accts, key=lambda item: -item["value"])
@@ -985,7 +985,7 @@ class Portfolio:
                     "ticker": a.ticker,
                     "category": a.category.name.replace("_", " ").capitalize(),
                     "value": values[0],
-                    "profit": 0,  # TODO (WattsUp): add real profit
+                    "profit": Decimal(0),  # TODO (WattsUp): add real profit
                 })
             summary["assets"] = sorted(summary_assets, key=lambda item: -item["value"])
             summary["total_asset_value"] = total_asset_value

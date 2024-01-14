@@ -356,7 +356,7 @@ def summarize(p: portfolio.Portfolio) -> int:
             "Category",
             ">Value/",
             ">Profit/",
-            "Age/",
+            "^Age/",
         ],
         None,
     ]
@@ -405,7 +405,7 @@ def summarize(p: portfolio.Portfolio) -> int:
     table.extend(
         [
             asset["name"],
-            asset["description"],
+            asset["description"] or "",
             asset["category"],
             asset["ticker"] or "",
             utils.format_financial(asset["value"]),
@@ -433,10 +433,10 @@ def summarize(p: portfolio.Portfolio) -> int:
     utils.print_table(table)
 
     n = stats["n_valuations"]
-    print(f"There {is_are(n)} {n:,} asset valuation{plural(n)} ")
+    print(f"There {is_are(n)} {n:,} asset valuation{plural(n)}")
 
     n = stats["n_transactions"]
-    print(f"There {is_are(n)} {n:,} transaction{plural(n)} ")
+    print(f"There {is_are(n)} {n:,} transaction{plural(n)}")
     return 0
 
 

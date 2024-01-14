@@ -531,23 +531,31 @@ def print_table(table: list[list[str] | None]) -> None:
 
     col_widths = [0] * len(header_raw)
     table[0] = [c.strip("<>^./") for c in header_raw]
-    label_widths = [len(c) for c in table[0]]
+    label_widths = [max(4, len(c)) for c in table[0]]
     for row in table:
         if row is None:
             continue
         for i, cell in enumerate(row):
-            col_widths[i] = max(len(cell) + 1, col_widths[i])
+            col_widths[i] = max(len(cell), col_widths[i])
 
     # Adjust col widths if sum is over terminal width
     margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
     excess: t.Ints = []
+    no_extra = False
+    has_extra: list[bool] = [False] * len(header_raw)
     for i, cell in enumerate(header_raw):
         n_label = label_widths[i]
+        if not no_extra and margin > 1:
+            # If there is extra room, add some space to each column
+            col_widths[i] += 2
+            margin -= 2
+            has_extra[i] = True
         if margin < 0 and cell[-1] == ".":
             n = max(n_label, col_widths[i] + margin)
             n_trim = col_widths[i] - n
             col_widths[i] = n
             margin += n_trim
+            no_extra = True
         excess.append(0 if cell[-1] == "/" else col_widths[i] - n_label)
     while margin < 0 and any(excess):
         for i, e in enumerate(excess):
@@ -575,6 +583,9 @@ def print_table(table: list[list[str] | None]) -> None:
                 if len(cell) > col_widths[i]:
                     cell_truncated = cell[: col_widths[i] - 3]
                     formatted_row.append(cell_truncated + "...")
+                elif has_extra[i]:
+                    c = f" {cell} "
+                    formatted_row.append(f"{c:{formats[i]}}")
                 else:
                     formatted_row.append(f"{cell:{formats[i]}}")
             print("│" + "│".join(formatted_row) + "│")
