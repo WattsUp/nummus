@@ -11,6 +11,7 @@ import colorama
 import numpy as np
 from colorama import Fore
 
+from nummus import commands
 from nummus.models import (
     Account,
     AccountCategory,
@@ -360,63 +361,6 @@ def make_assets(p: Portfolio) -> t.DictInt:
     print(f"{Fore.GREEN}Created assets")
 
     return assets
-
-
-def print_stats(p: Portfolio) -> None:
-    """Print statistics on Portfolio.
-
-    Args:
-        p: Portfolio to report
-    """
-    buf: t.DictStr = {}
-    with p.get_session() as s:
-        first_txn = s.query(Transaction).order_by(Transaction.date_ord).first()
-        last_txn = s.query(Transaction).order_by(Transaction.date_ord.desc()).first()
-
-        if first_txn is None or last_txn is None:
-            print(f"{Fore.RED}No Transactions")
-            return
-
-        death_day = birthday("self", FINAL_AGE)
-        death_day_ord = death_day.toordinal()
-
-        n_accounts = s.query(Account).count()
-        buf["# of Accounts"] = str(n_accounts)
-        net_worth = 0
-        for acct in s.query(Account).all():
-            acct: Account
-            values, assets = acct.get_value(death_day_ord, death_day_ord)
-            v = values[0]
-            net_worth += v
-            buf[f"Acct '{acct.name}' final"] = f"${v:15,.3f}"
-            for asset_id, a_values in assets.items():
-                asset: Asset = s.query(Asset).where(Asset.id_ == asset_id).scalar()
-                if asset is None:
-                    msg = f"Could not find Asset {asset_id}"
-                    raise LookupError(msg)
-                v = a_values[0]
-                buf[f"  Asset '{asset.name}' final"] = f"${v:15,.3f}"
-
-        buf["Net worth final"] = f"${net_worth:15,.3f}"
-
-        n_transactions = s.query(Transaction).count()
-        buf["# of Transactions"] = str(n_transactions)
-
-        buf["First Txn"] = datetime.date.fromordinal(first_txn.date_ord).isoformat()
-        buf["Last Txn"] = datetime.date.fromordinal(last_txn.date_ord).isoformat()
-        days = last_txn.date_ord - first_txn.date_ord
-        years = days / 365.25
-        buf["# of Txn/year"] = f"{n_transactions / years:.1f}"
-
-        n_asset_valuations = s.query(AssetValuation).count()
-        buf["# of Valuations"] = str(n_asset_valuations)
-
-        buf["DB Size"] = f"{p.path.stat().st_size / 1e6:.1f}MB"
-
-        key_len = max(len(k) for k in buf) + 1
-
-        for k, v in buf.items():
-            print(f"{k:{key_len}}{v}")
 
 
 def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
@@ -1565,7 +1509,7 @@ def main() -> None:
     duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")
 
-    print_stats(p)
+    commands.summarize(p)
 
 
 if __name__ == "__main__":
