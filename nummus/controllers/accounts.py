@@ -253,6 +253,10 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
 
     end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
+    asset_profits = acct.get_profit_by_asset(start_ord, end_ord)
+
+    # Sum of profits should match final profit value, add any mismatch to cash
+
     query = (
         s.query(Asset)
         .with_entities(
@@ -269,7 +273,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
     for a_id, name, category in query.yield_per(YIELD_PER):
         end_qty = asset_qtys[a_id]
         end_value = end_qty * end_prices[a_id][0]
-        profit = end_value  # FIX (WattsUp): Not true profit
+        profit = asset_profits[a_id]
 
         total_value += end_value
         total_profit += profit

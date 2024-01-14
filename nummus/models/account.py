@@ -553,3 +553,121 @@ class Account(Base):
             raise exc.UnboundExecutionError
 
         return self.get_asset_qty_all(s, start_ord, end_ord, [self.id_])[self.id_]
+
+    @classmethod
+    def get_profit_by_asset_all(
+        cls,
+        s: orm.Session,
+        start_ord: int,
+        end_ord: int,
+        ids: t.Ints | set[int] | None = None,
+    ) -> t.DictIntReal:
+        """Get the profit of Assets on end_date since start_ord.
+
+        Args:
+            s: SQL session to use
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+            ids: Limit results to specific Accounts by ID
+
+        Returns:
+            dict{Asset.id_: profit}
+        """
+        # Get Asset quantities on start date
+        # Cannot do sql sum due to overflow fractional part
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.asset_id,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+            )
+            .where(
+                TransactionSplit.asset_id.is_not(None),
+                TransactionSplit.date_ord <= start_ord,
+            )
+        )
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
+
+        initial_qty: t.DictIntReal = {}
+        for a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+            a_id: int
+            qty_i: int
+            qty_f: Decimal
+            try:
+                initial_qty[a_id] += qty_i + qty_f
+            except KeyError:
+                initial_qty[a_id] = qty_i + qty_f
+        initial_qty = {a_id: qty for a_id, qty in initial_qty.items() if qty != 0}
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.asset_id,
+                TransactionSplit._asset_qty_int,  # noqa: SLF001
+                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.amount,
+            )
+            .where(
+                TransactionSplit.asset_id.is_not(None),
+                TransactionSplit.date_ord > start_ord,
+                TransactionSplit.date_ord <= end_ord,
+            )
+        )
+        if ids is not None:
+            query = query.where(TransactionSplit.account_id.in_(ids))
+
+        cost_basis: t.DictIntReal = {a_id: Decimal(0) for a_id in initial_qty}
+        end_qty: t.DictIntReal = dict(initial_qty)
+        for a_id, qty_i, qty_f, amount in query.yield_per(YIELD_PER):
+            a_id: int
+            qty_i: int
+            qty_f: Decimal
+            amount: Decimal
+            try:
+                end_qty[a_id] += qty_i + qty_f
+                cost_basis[a_id] += amount
+            except KeyError:
+                end_qty[a_id] = qty_i + qty_f
+                cost_basis[a_id] = amount
+        a_ids = set(end_qty)
+
+        initial_price = Asset.get_value_all(s, start_ord, start_ord, ids=a_ids)
+        end_price = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
+
+        profits: t.DictIntReal = {}
+        for a_id in a_ids:
+            i_value = initial_qty.get(a_id, 0) * initial_price[a_id][0]
+            e_value = end_qty[a_id] * end_price[a_id][0]
+
+            profit = e_value - i_value + cost_basis[a_id]
+            profits[a_id] = profit
+
+        # TODO (WattsUp): interest and fees impact profit on a per asset basis
+        print(initial_qty)
+        print(end_qty)
+        print(cost_basis)
+        print(initial_price)
+        print(end_price)
+        return profits
+
+    def get_profit_by_asset(
+        self,
+        start_ord: int,
+        end_ord: int,
+    ) -> t.DictIntReal:
+        """Get the profit of Assets on end_date since start_ord.
+
+        Args:
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            dict{Asset.id_: profit}
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        return self.get_profit_by_asset_all(s, start_ord, end_ord, [self.id_])

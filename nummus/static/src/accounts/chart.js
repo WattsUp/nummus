@@ -14,8 +14,8 @@ const accountChart = {
         const min = raw.min && raw.min.map(v => Number(v));
         const max = raw.max && raw.max.map(v => Number(v));
         const profit = raw.profit.map(v => Number(v));
-        const profitMin = raw.profitMin && raw.profitMin.map(v => Number(v));
-        const profitMax = raw.profitMax && raw.profitMax.map(v => Number(v));
+        const profitMin = raw.profit_min && raw.profit_min.map(v => Number(v));
+        const profitMax = raw.profit_max && raw.profit_max.map(v => Number(v));
 
         // If only single day data, duplicate for prettier charts
         if (labels.length == 1) {
