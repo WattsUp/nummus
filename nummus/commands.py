@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import textwrap
 from typing import TYPE_CHECKING
 
 import colorama
@@ -10,7 +11,7 @@ from colorama import Fore
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import portfolio, utils, web
+from nummus import health_checks, portfolio, utils, web
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,7 +47,7 @@ def create(
             print(
                 f"{Fore.RED}Cannot overwrite portfolio at {path_db}. Try with --force",
             )
-            return 1
+            return -1
 
     key: str | None = None
     if not no_encrypt:
@@ -60,7 +61,7 @@ def create(
         while key is None:
             key = utils.get_input("Please enter password: ", secure=True)
             if key is None:
-                return 1
+                return -1
 
             if len(key) < MIN_PASS_LEN:
                 print(f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters")
@@ -69,7 +70,7 @@ def create(
 
             repeat = utils.get_input("Please confirm password: ", secure=True)
             if repeat is None:
-                return 1
+                return -1
 
             if key != repeat:
                 print(f"{Fore.RED}Passwords must match")
@@ -191,7 +192,7 @@ def restore(
         print(f"{Fore.CYAN}Extracted backup tar.gz")
     except FileNotFoundError as e:
         print(f"{Fore.RED}{e}")
-        return 1
+        return -1
     p = unlock(path_db, path_password)
     print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
     return 0
@@ -245,7 +246,7 @@ def import_files(
         for path in paths:
             if not path.exists():
                 print(f"{Fore.RED}File does not exist: {path}")
-                return 1
+                return -1
             if path.is_dir():
                 for f in path.iterdir():
                     if f.is_file():
@@ -262,11 +263,11 @@ def import_files(
             f"{Fore.YELLOW}Delete file or run import with --force flag which "
             "may create duplicate transactions.",
         )
-        return 2
+        return -2
     except exc.UnknownImporterError as e:
         print(f"{Fore.RED}{e}")
         print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
-        return 3
+        return -3
     finally:
         # Restore backup if anything went wrong
         # Coverage gets confused with finally blocks
@@ -306,7 +307,7 @@ def update_assets(p: portfolio.Portfolio) -> int:
             f"{Fore.YELLOW}No assets were updated, "
             "add a ticker to an Asset to download market data",
         )
-        return 2
+        return -2
 
     updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
     name_len = max(len(item[0]) for item in updated)
@@ -437,6 +438,41 @@ def summarize(p: portfolio.Portfolio) -> int:
 
     n = stats["n_transactions"]
     print(f"There {is_are(n)} {n:,} transaction{plural(n)}")
+    return 0
+
+
+def health_check(p: portfolio.Portfolio) -> int:
+    """Run a comprehensive health check looking for import errors.
+
+    Args:
+        p: Working Portfolio
+
+    Returns:
+        0 on success
+        non-zero on failure
+    """
+    any_issues = False
+    any_severe_issues = False
+    for check_type in health_checks.CHECKS:
+        c = check_type()
+        c.test(p)
+        if len(c.issues) == 0:
+            print(f"{Fore.GREEN}{c.name} has no issues")
+            continue
+        any_issues = True
+        if c.is_severe:
+            any_severe_issues = True
+            print(f"{Fore.RED}{c.name}")
+        else:
+            print(f"{Fore.YELLOW}{c.name}")
+        print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
+        print(f"{Fore.RED if c.is_severe else Fore.YELLOW}  Has the following issues:")
+        for issue in c.issues:
+            print(textwrap.indent(issue, "  "))
+    if any_severe_issues:
+        return -2
+    if any_issues:
+        return -1
     return 0
 
 

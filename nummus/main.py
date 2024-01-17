@@ -137,6 +137,12 @@ calculates net worth, and predicts future performance."""
         description="Collect statistics and print a summary of the portfolio",
     )
 
+    _ = subparsers.add_parser(
+        "health",
+        help="run a health check",
+        description="Comprehensive health check looking for import issues",
+    )
+
     sub_web = subparsers.add_parser(
         "web",
         help="start nummus web server",
@@ -226,6 +232,8 @@ calculates net worth, and predicts future performance."""
         return commands.update_assets(p)
     if cmd == "summarize":
         return commands.summarize(p)
+    if cmd == "health":
+        return commands.health_check(p)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)
