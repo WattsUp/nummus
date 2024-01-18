@@ -6,6 +6,7 @@ import textwrap
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+import sqlalchemy
 from typing_extensions import override
 
 if TYPE_CHECKING:
@@ -69,7 +70,11 @@ class DatabaseIntegrity(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        self._issues = []
+        with p.get_session() as s:
+            result = s.execute(sqlalchemy.text("PRAGMA integrity_check"))
+            rows = [row for row, in result.all()]
+            if len(rows) != 1 or rows[0] != "ok":
+                self._issues.extend(rows)
 
 
 class UnbalancedTransfers(Base):
@@ -90,6 +95,8 @@ class UnbalancedTransfers(Base):
                 'Monkey Bank Savings' -$100"""),
         ]
 
+        raise NotImplementedError
+
 
 class UnbalancedCreditCardPayments(Base):
     """Checks for non-zero net credit card payments."""
@@ -103,6 +110,7 @@ class UnbalancedCreditCardPayments(Base):
     @override
     def test(self, p: portfolio.Portfolio) -> None:
         self._issues = []
+        raise NotImplementedError
 
 
 class MissingAssetValuations(Base):
@@ -115,6 +123,7 @@ class MissingAssetValuations(Base):
     @override
     def test(self, p: portfolio.Portfolio) -> None:
         self._issues = []
+        raise NotImplementedError
 
 
 class Typos(Base):
@@ -127,6 +136,7 @@ class Typos(Base):
     @override
     def test(self, p: portfolio.Portfolio) -> None:
         self._issues = []
+        raise NotImplementedError
 
 
 class UnlockedTransactions(Base):
@@ -143,14 +153,15 @@ class UnlockedTransactions(Base):
         self._issues = [
             "2024-01-01 'Monkey Bank Checking': $100 for 'Corner Store'",
         ]
+        raise NotImplementedError
 
 
 # List of all checks to test
 CHECKS: list[type[Base]] = [
     DatabaseIntegrity,
-    UnbalancedTransfers,
-    UnbalancedCreditCardPayments,
-    MissingAssetValuations,
-    Typos,
-    UnlockedTransactions,
+    # UnbalancedTransfers,
+    # UnbalancedCreditCardPayments,
+    # MissingAssetValuations,
+    # Typos,
+    # UnlockedTransactions,
 ]
