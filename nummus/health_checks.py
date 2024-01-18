@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 
+import datetime
 import textwrap
 from abc import ABC, abstractmethod
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import sqlalchemy
 from typing_extensions import override
 
+from nummus import utils
+from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+
 if TYPE_CHECKING:
     from nummus import custom_types as t
     from nummus import portfolio
+
+# TODO (WattsUp): Add a silence mechanism to hush false positives
 
 
 class Base(ABC):
@@ -88,14 +95,75 @@ class UnbalancedTransfers(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        self._issues = [
-            textwrap.dedent("""\
-            2024-01-01: Sum of transfers on this day are non-zero
-                'Monkey Bank Checking' +$100
-                'Monkey Bank Savings' -$100"""),
-        ]
+        with p.get_session() as s:
+            cat_transfers_id: int = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Transfers")
+                .one()[0]
+            )
+            accounts = Account.map_name(s)
+            acct_len = max(len(acct) for acct in accounts.values())
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.account_id,
+                    TransactionSplit.date_ord,
+                    TransactionSplit.amount,
+                )
+                .where(TransactionSplit.category_id == cat_transfers_id)
+                .order_by(TransactionSplit.date_ord)
+            )
+            current_date_ord = 0
+            total = Decimal(0)
+            current_splits: list[tuple[str, Decimal]] = []
+            for a_id, date_ord, amount in query.yield_per(YIELD_PER):
+                a_id: int
+                date_ord: int
+                amount: Decimal
+                if date_ord != current_date_ord:
+                    if total != 0:
+                        date = datetime.date.fromordinal(current_date_ord)
+                        self._issues.append(
+                            f"{date}: Sum of transfers on this day are non-zero",
+                        )
 
-        raise NotImplementedError
+                        # Remove any that are exactly equal since those are probably
+                        # balanced amoungst themselves
+                        i = 0
+                        # Do need to run len(current_splits) every time since it will
+                        # change length during iteration
+                        while i < len(current_splits):
+                            # Look for inverse amount in remaining splits
+                            v_search = -current_splits[i][1]
+                            found_any = False
+                            for ii in range(i + 1, len(current_splits)):
+                                if v_search == current_splits[ii][1]:
+                                    # If found, pop both positive and negative ones
+                                    current_splits.pop(ii)
+                                    current_splits.pop(i)
+                                    found_any = True
+                                    break
+                            # Don't increase iterater if poped any since there is a new
+                            # value at i
+                            if not found_any:
+                                i += 1
+
+                        current_splits = sorted(
+                            current_splits,
+                            key=lambda item: (item[0], item[1]),
+                        )
+                        self._issues.extend(
+                            f"  {acct:{acct_len}}: "
+                            f"{utils.format_financial(amount, plus=True):>14}"
+                            for acct, amount in current_splits
+                        )
+
+                    current_date_ord = date_ord
+                    total = Decimal(0)
+                    current_splits = []
+
+                total += amount
+                current_splits.append((accounts[a_id], amount))
 
 
 class UnbalancedCreditCardPayments(Base):
@@ -159,7 +227,7 @@ class UnlockedTransactions(Base):
 # List of all checks to test
 CHECKS: list[type[Base]] = [
     DatabaseIntegrity,
-    # UnbalancedTransfers,
+    UnbalancedTransfers,
     # UnbalancedCreditCardPayments,
     # MissingAssetValuations,
     # Typos,

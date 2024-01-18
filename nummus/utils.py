@@ -142,18 +142,21 @@ def parse_real(s: str | None) -> t.Real | None:
     return Decimal(clean)
 
 
-def format_financial(x: t.Real, precision: int = 2) -> str:
+def format_financial(x: t.Real, precision: int = 2, *_, plus: bool = False) -> str:
     """Format a number to financial notation.
 
     Args:
         x: Number to format
         precision: Number of decimals
+        plus: True will print a + for positive amounts
 
     Returns:
         x formatted similar to $1,000.00 or -$1,000.00
     """
     if x < 0:
         return f"-${-x:,.{precision}f}"
+    if plus:
+        return f"+${x:,.{precision}f}"
     return f"${x:,.{precision}f}"
 
 
