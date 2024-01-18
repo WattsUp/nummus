@@ -137,10 +137,17 @@ calculates net worth, and predicts future performance."""
         description="Collect statistics and print a summary of the portfolio",
     )
 
-    _ = subparsers.add_parser(
+    sub_health = subparsers.add_parser(
         "health",
         help="run a health check",
         description="Comprehensive health check looking for import issues",
+    )
+    sub_health.add_argument(
+        "-d",
+        "--desc",
+        default=False,
+        action="store_true",
+        help="print description of checks always",
     )
 
     sub_web = subparsers.add_parser(
@@ -233,7 +240,8 @@ calculates net worth, and predicts future performance."""
     if cmd == "summarize":
         return commands.summarize(p)
     if cmd == "health":
-        return commands.health_check(p)
+        always_descriptions: bool = args.desc
+        return commands.health_check(p, always_descriptions=always_descriptions)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)

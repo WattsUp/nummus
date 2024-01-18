@@ -41,6 +41,11 @@ class Base(ABC):
         return self._issues
 
     @property
+    def any_issues(self) -> bool:
+        """True if check found any issues."""
+        return len(self._issues) != 0
+
+    @property
     def is_severe(self) -> bool:
         """True if issues are severe."""
         return self._SEVERE

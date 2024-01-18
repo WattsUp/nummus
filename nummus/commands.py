@@ -441,11 +441,17 @@ def summarize(p: portfolio.Portfolio) -> int:
     return 0
 
 
-def health_check(p: portfolio.Portfolio) -> int:
+def health_check(
+    p: portfolio.Portfolio,
+    *_,
+    always_descriptions: bool = False,
+) -> int:
     """Run a comprehensive health check looking for import errors.
 
     Args:
         p: Working Portfolio
+        always_descriptions: True will print every check's description,
+            False will only print on failure
 
     Returns:
         0 on success
@@ -456,17 +462,18 @@ def health_check(p: portfolio.Portfolio) -> int:
     for check_type in health_checks.CHECKS:
         c = check_type()
         c.test(p)
-        if len(c.issues) == 0:
+        if not c.any_issues:
             print(f"{Fore.GREEN}{c.name} has no issues")
+            if always_descriptions:
+                print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
             continue
         any_issues = True
-        if c.is_severe:
-            any_severe_issues = True
-            print(f"{Fore.RED}{c.name}")
-        else:
-            print(f"{Fore.YELLOW}{c.name}")
+        any_severe_issues = c.is_severe or any_severe_issues
+        color = Fore.RED if c.is_severe else Fore.YELLOW
+
+        print(f"{color}{c.name}")
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
-        print(f"{Fore.RED if c.is_severe else Fore.YELLOW}  Has the following issues:")
+        print(f"{color}  Has the following issues:")
         for issue in c.issues:
             print(textwrap.indent(issue, "  "))
     if any_severe_issues:
