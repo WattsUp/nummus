@@ -55,7 +55,7 @@ class TransactionCategory(Base):
             TransactionCategoryGroup.INCOME: {
                 "Consulting": (False, False),
                 "Deposits": (False, False),
-                "Dividends Received": (False, False),
+                "Dividends Received": (False, True),
                 "Interest": (False, True),
                 "Investment Income": (False, False),
                 "Other Income": (False, False),

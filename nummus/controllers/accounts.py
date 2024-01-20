@@ -301,7 +301,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         "name": "Cash",
         "end_qty": None,
         "end_value": cash,
-        "profit": 0,
+        "profit": None,
     }
     assets.append(ctx_asset)
 

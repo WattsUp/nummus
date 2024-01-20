@@ -836,3 +836,248 @@ class TestAccount(TestBase):
         target_categories[t_cat_fund.id_][-1] += t1
         r_categories = Account.get_cash_flow_all(s, start, end)
         self.assertEqual(r_categories, target_categories)
+
+    def test_get_profit_by_asset(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        acct = Account(
+            name=self.random_string(),
+            institution=self.random_string(),
+            category=AccountCategory.INVESTMENT,
+            closed=False,
+            emergency=False,
+        )
+
+        # Unbound to a session will raise UnboundExecutionError
+        self.assertRaises(
+            exc.UnboundExecutionError,
+            acct.get_profit_by_asset,
+            today,
+            today,
+        )
+
+        s.add(acct)
+        s.commit()
+        acct_id = acct.id_
+
+        result = acct.get_profit_by_asset(today_ord, today_ord)
+        self.assertEqual(result, {})
+        result = Account.get_profit_by_asset_all(s, today_ord, today_ord)
+        self.assertEqual(result, {})
+
+        TransactionCategory.add_default(s)
+        categories = TransactionCategory.map_name(s)
+        # Reverse categories for LUT
+        categories = {v: k for k, v in categories.items()}
+
+        # Create assets
+        a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+        a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
+
+        s.add_all((a_banana, a_house))
+        s.commit()
+        a_house_id = a_house.id_
+        a_banana_id = a_banana.id_
+
+        # Buy the house
+        txn = Transaction(
+            account_id=acct_id,
+            date_ord=today_ord - 2,
+            amount=-10,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            asset_id=a_house_id,
+            asset_quantity_unadjusted=1,
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # House is worth zero so profit = -10
+        target = {a_house_id: Decimal(-10)}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord)
+        self.assertEqual(result, target)
+        # Including on the day of the transaction
+        result = acct.get_profit_by_asset(today_ord - 2, today_ord - 2)
+        self.assertEqual(result, target)
+
+        # Empty profit before the transaction
+        target = {}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord - 7)
+        self.assertEqual(result, target)
+
+        # Zero profit after the transaction
+        target = {a_house_id: Decimal(0)}
+        result = acct.get_profit_by_asset(today_ord, today_ord)
+        self.assertEqual(result, target)
+
+        # The house was worth $100
+        v = AssetValuation(
+            asset_id=a_house_id,
+            date_ord=today_ord - 7,
+            value=100,
+        )
+        s.add(v)
+        s.commit()
+
+        # House is worth 100 so profit = 90
+        target = {a_house_id: Decimal(90)}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord)
+        self.assertEqual(result, target)
+        # Including on the day of the transaction
+        result = acct.get_profit_by_asset(today_ord - 2, today_ord - 2)
+        self.assertEqual(result, target)
+
+        # Empty profit before the transaction
+        target = {}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord - 7)
+        self.assertEqual(result, target)
+
+        # Zero profit after the transaction
+        target = {a_house_id: Decimal(0)}
+        result = acct.get_profit_by_asset(today_ord, today_ord)
+        self.assertEqual(result, target)
+
+        # Sell the house on the same day for $50
+        txn = Transaction(
+            account_id=acct_id,
+            date_ord=today_ord - 2,
+            amount=50,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            asset_id=a_house_id,
+            asset_quantity_unadjusted=-1,
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        target = {a_house_id: Decimal(40)}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord)
+        self.assertEqual(result, target)
+        # Including on the day of the transaction
+        result = acct.get_profit_by_asset(today_ord - 2, today_ord - 2)
+        self.assertEqual(result, target)
+
+        # Empty profit before the transaction
+        target = {}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord - 7)
+        self.assertEqual(result, target)
+
+        # Zero profit after the transaction
+        target = {}
+        result = acct.get_profit_by_asset(today_ord, today_ord)
+        self.assertEqual(result, target)
+
+        # Buy a banana, it pays dividends that are reinvested
+        v = AssetValuation(
+            asset_id=a_banana_id,
+            date_ord=today_ord - 7,
+            value=10,
+        )
+        s.add(v)
+        s.commit()
+
+        txn = Transaction(
+            account_id=acct_id,
+            date_ord=today_ord - 2,
+            amount=-10,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            asset_id=a_banana_id,
+            asset_quantity_unadjusted=1,
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        txn = Transaction(
+            account_id=acct_id,
+            date_ord=today_ord - 1,
+            amount=0,
+            statement=self.random_string(),
+        )
+        t_split_0 = TransactionSplit(
+            amount=1,
+            parent=txn,
+            asset_id=a_banana_id,
+            asset_quantity_unadjusted=0,
+            category_id=categories["Dividends Received"],
+        )
+        t_split_1 = TransactionSplit(
+            amount=-1,
+            parent=txn,
+            asset_id=a_banana_id,
+            asset_quantity_unadjusted=Decimal("0.1"),
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split_0, t_split_1))
+        s.commit()
+
+        txn = Transaction(
+            account_id=acct_id,
+            date_ord=today_ord,
+            amount=11,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            asset_id=a_banana_id,
+            asset_quantity_unadjusted=Decimal("-1.1"),
+            category_id=categories["Securities Traded"],
+        )
+        s.add_all((txn, t_split))
+        s.commit()
+
+        # profit = just dividends = 1
+        target = {a_banana_id: Decimal(1), a_house_id: Decimal(40)}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord)
+        self.assertEqual(result, target)
+
+        # get_value profit should work for dividends as well
+        target = [
+            Decimal(0),
+            Decimal(0),
+            Decimal(0),
+            Decimal(0),
+            Decimal(0),
+            Decimal(40),
+            Decimal(41),
+            Decimal(41),
+        ]
+        _, profit, _ = acct.get_value(today_ord - 7, today_ord)
+        self.assertEqual(profit, target)
+
+        # Including on the day of the dividends
+        target = {a_banana_id: Decimal(1)}
+        result = acct.get_profit_by_asset(today_ord - 1, today_ord - 1)
+        self.assertEqual(result, target)
+
+        # get_value profit should work for dividends as well
+        target = [Decimal(1)]
+        _, profit, _ = acct.get_value(today_ord - 1, today_ord - 1)
+        self.assertEqual(profit, target)
+
+        # Empty profit before the transaction
+        target = {}
+        result = acct.get_profit_by_asset(today_ord - 7, today_ord - 7)
+        self.assertEqual(result, target)
+
+        # Zero profit after the transaction
+        target = {a_banana_id: Decimal(0)}
+        result = acct.get_profit_by_asset(today_ord, today_ord)
+        self.assertEqual(result, target)

@@ -584,7 +584,7 @@ class Account(Base):
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
-                TransactionSplit.date_ord <= start_ord,
+                TransactionSplit.date_ord < start_ord,
             )
         )
         if ids is not None:
@@ -611,7 +611,7 @@ class Account(Base):
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
-                TransactionSplit.date_ord > start_ord,
+                TransactionSplit.date_ord >= start_ord,
                 TransactionSplit.date_ord <= end_ord,
             )
         )
@@ -644,12 +644,6 @@ class Account(Base):
             profit = e_value - i_value + cost_basis[a_id]
             profits[a_id] = profit
 
-        # TODO (WattsUp): interest and fees impact profit on a per asset basis
-        print(initial_qty)
-        print(end_qty)
-        print(cost_basis)
-        print(initial_price)
-        print(end_price)
         return profits
 
     def get_profit_by_asset(

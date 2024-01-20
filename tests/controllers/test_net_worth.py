@@ -194,10 +194,10 @@ class TestNetWorth(WebTestBase):
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$0\.00).*(0\.00%).*(\$0\.00)[^0-9]*",
+            r"(1\.000000).*(\$0\.00).*(0\.00%).*(-\$10\.00)[^0-9]*",
         )
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
+        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(-\$10\.00)[^0-9]*")
 
         # But if closed and period doesn't include the transaction then ignore
         # Closed accounts have zero balance so the updated_on date is the date it became
@@ -238,10 +238,10 @@ class TestNetWorth(WebTestBase):
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$10\.00).*(10\.00%).*(\$10\.00)[^0-9]*",
+            r"(1\.000000).*(\$10\.00).*(10\.00%).*(\$0\.00)[^0-9]*",
         )
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$10\.00)[^0-9]*")
+        self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
 
     def test_dashboard(self) -> None:
         _ = self._setup_portfolio()
