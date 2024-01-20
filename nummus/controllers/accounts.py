@@ -306,7 +306,9 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
     assets.append(ctx_asset)
 
     for item in assets:
-        item["end_value_ratio"] = item["end_value"] / total_value
+        item["end_value_ratio"] = (
+            0 if total_value == 0 else item["end_value"] / total_value
+        )
 
     assets = sorted(
         assets,
