@@ -12,6 +12,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
+    YIELD_PER,
 )
 
 
@@ -184,18 +185,19 @@ def delete(uri: str) -> str | flask.Response:
             raise exc.http.Forbidden(msg)
 
         # Move all transactions to Uncategorized
-        query = s.query(TransactionCategory).where(
+        query = s.query(TransactionCategory.id_).where(
             TransactionCategory.name == "Uncategorized",
         )
-        uncategorized = query.scalar()
-        if uncategorized is None:  # pragma: no cover
+        try:
+            uncategorized_id: int = query.one()[0]
+        except exc.NoResultFound as e:  # pragma: no cover
             # Uncategorized is locked and cannot be deleted
             msg = "Could not find Uncategorized id"
-            raise exc.ProtectedObjectNotFoundError(msg)
+            raise exc.ProtectedObjectNotFoundError(msg) from e
 
         query = s.query(TransactionSplit).where(TransactionSplit.category_id == cat.id_)
-        for t_split in query.all():
-            t_split.category_id = uncategorized.id_
+        for t_split in query.yield_per(YIELD_PER):
+            t_split.category_id = uncategorized_id
         s.delete(cat)
         s.commit()
 

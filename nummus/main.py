@@ -131,6 +131,12 @@ calculates net worth, and predicts future performance."""
         description="Update asset valuations aka download market data for stocks",
     )
 
+    _ = subparsers.add_parser(
+        "summarize",
+        help="summarize portfolio",
+        description="Collect statistics and print a summary of the portfolio",
+    )
+
     sub_web = subparsers.add_parser(
         "web",
         help="start nummus web server",
@@ -218,6 +224,8 @@ calculates net worth, and predicts future performance."""
         return commands.import_files(p, paths=paths, force=force)
     if cmd == "update-assets":
         return commands.update_assets(p)
+    if cmd == "summarize":
+        return commands.summarize(p)
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)

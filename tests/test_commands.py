@@ -3,13 +3,15 @@ from __future__ import annotations
 import datetime
 import io
 import shutil
+import textwrap
+from decimal import Decimal
 from unittest import mock
 
 from colorama import Fore
 
 from nummus import commands
 from nummus import custom_types as t
-from nummus import portfolio
+from nummus import encryption, portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -40,7 +42,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -55,7 +57,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
             # Check portfolio is unencrypted
             with path_db.open("rb") as file:
@@ -81,14 +83,14 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
 
         finally:
             mock.builtins.input = original_input  # type: ignore[attr-defined]
             commands.utils.getpass.getpass = original_get_pass
 
     def test_create_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]
@@ -107,7 +109,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = mock_input
 
             path_db = self._TEST_ROOT.joinpath("portfolio.db")
-            path_config = path_db.with_suffix(".config")
+            path_salt = path_db.with_suffix(".nacl")
             path_password = self._TEST_ROOT.joinpath(".password")
             key = self.random_string()
             with path_password.open("w", encoding="utf-8") as file:
@@ -127,7 +129,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -150,7 +152,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -173,7 +175,7 @@ class TestCommands(TestBase):
             self.assertEqual(fake_stdout, target)
             self.assertEqual(rc, 0)
             self.assertTrue(path_db.exists(), "Portfolio does not exist")
-            self.assertTrue(path_config.exists(), "Config does not exist")
+            self.assertTrue(path_salt.exists(), "Salt does not exist")
 
             # Check password is correct
             portfolio.Portfolio(path_db, key)
@@ -245,7 +247,7 @@ class TestCommands(TestBase):
             commands.utils.getpass.getpass = original_get_pass
 
     def test_unlock_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         original_input = mock.builtins.input  # type: ignore[attr-defined]
@@ -540,12 +542,20 @@ class TestCommands(TestBase):
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertTrue(path_backup_2.exists(), "Backup #2 does not exist")
 
+        size_before = path_db.stat().st_size
+
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = commands.clean(p)
         self.assertEqual(rc, 0)
+        size_after = path_db.stat().st_size
+        p_change = size_before - size_after
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio cleaned\n"
+        target = (
+            f"{Fore.GREEN}Portfolio cleaned\n"
+            f"{Fore.CYAN}Portfolio was optimized by "
+            f"{p_change / 1000:.1f}KB/{p_change / 1024:.1f}KiB\n"
+        )
         self.assertEqual(fake_stdout, target)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
@@ -691,3 +701,148 @@ class TestCommands(TestBase):
             "Error: BANANA: No timezone found, symbol may be delisted"
         )
         self.assertEqual(fake_stdout[: len(target)], target)
+
+    def test_summarize(self) -> None:
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            commands.create(path_db, None, force=False, no_encrypt=True)
+        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+        p = portfolio.Portfolio(path_db, None)
+
+        original_terminal_size = shutil.get_terminal_size
+        try:
+            shutil.get_terminal_size = lambda: (80, 24)
+
+            p_dict = {
+                "n_accounts": 1,
+                "n_assets": 1,
+                "n_transactions": 1,
+                "n_valuations": 1,
+                "net_worth": Decimal(90),
+                "accounts": [
+                    {
+                        "name": "Monkey Bank Checking",
+                        "institution": "Monkey Bank",
+                        "category": "Cash",
+                        "value": Decimal(90),
+                        "age": "1 days",
+                        "profit": Decimal(0),
+                    },
+                ],
+                "total_asset_value": Decimal(14),
+                "assets": [
+                    {
+                        "name": "Apple",
+                        "description": "",
+                        "value": Decimal(14),
+                        "profit": Decimal(0),
+                        "category": "Real estate",
+                        "ticker": None,
+                    },
+                ],
+                "db_size": 1024 * 10,
+            }
+            p.summarize = lambda: p_dict
+
+            target = textwrap.dedent("""\
+            Portfolio file size is 10.2KB/10.0KiB
+            There is 1 account, 1 of which is currently open
+            ╭──────────────────────┬─────────────┬──────────┬────────┬────────┬────────╮
+            │         Name         │ Institution │ Category │ Value  │ Profit │  Age   │
+            ╞══════════════════════╪═════════════╪══════════╪════════╪════════╪════════╡
+            │ Monkey Bank Checking │ Monkey Bank │ Cash     │ $90.00 │  $0.00 │ 1 days │
+            ╞══════════════════════╪═════════════╪══════════╪════════╪════════╪════════╡
+            │ Total                │             │          │ $90.00 │        │        │
+            ╰──────────────────────┴─────────────┴──────────┴────────┴────────┴────────╯
+            There is 1 asset, 1 of which is currently held
+            ╭───────┬─────────────┬─────────────┬────────┬────────┬────────╮
+            │ Name  │ Description │    Class    │ Ticker │ Value  │ Profit │
+            ╞═══════╪═════════════╪═════════════╪════════╪════════╪════════╡
+            │ Apple │             │ Real estate │        │ $14.00 │  $0.00 │
+            ╞═══════╪═════════════╪═════════════╪════════╪════════╪════════╡
+            │ Total │             │             │        │ $14.00 │        │
+            ╰───────┴─────────────┴─────────────┴────────┴────────┴────────╯
+            There is 1 asset valuation
+            There is 1 transaction
+            """)
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                commands.summarize(p)
+            fake_stdout = fake_stdout.getvalue()
+            self.assertEqual(fake_stdout, target)
+
+            p_dict = {
+                "n_accounts": 2,
+                "n_assets": 3,
+                "n_transactions": 4,
+                "n_valuations": 5,
+                "net_worth": Decimal(90),
+                "accounts": [
+                    {
+                        "name": "Monkey Bank Checking",
+                        "institution": "Monkey Bank",
+                        "category": "Cash",
+                        "value": Decimal(90),
+                        "age": "1 days",
+                        "profit": Decimal(0),
+                    },
+                    {
+                        "name": "Monkey Bank Credit",
+                        "institution": "Monkey Bank",
+                        "category": "Credit",
+                        "value": Decimal(0),
+                        "age": "1 days",
+                        "profit": Decimal(0),
+                    },
+                ],
+                "total_asset_value": Decimal(114),
+                "assets": [
+                    {
+                        "name": "Apple",
+                        "description": "Tech company",
+                        "value": Decimal(14),
+                        "profit": Decimal(0),
+                        "category": "Real estate",
+                        "ticker": None,
+                    },
+                    {
+                        "name": "Banana",
+                        "description": None,
+                        "value": Decimal(100),
+                        "profit": Decimal(0),
+                        "category": "Stocks",
+                        "ticker": "BANANA",
+                    },
+                ],
+                "db_size": 1024 * 10,
+            }
+            p.summarize = lambda: p_dict
+
+            target = textwrap.dedent("""\
+            Portfolio file size is 10.2KB/10.0KiB
+            There are 2 accounts, 2 of which are currently open
+            ╭──────────────────────┬─────────────┬──────────┬────────┬────────┬────────╮
+            │         Name         │ Institution │ Category │ Value  │ Profit │  Age   │
+            ╞══════════════════════╪═════════════╪══════════╪════════╪════════╪════════╡
+            │ Monkey Bank Checking │ Monkey Bank │ Cash     │ $90.00 │  $0.00 │ 1 days │
+            │ Monkey Bank Credit   │ Monkey Bank │ Credit   │  $0.00 │  $0.00 │ 1 days │
+            ╞══════════════════════╪═════════════╪══════════╪════════╪════════╪════════╡
+            │ Total                │             │          │ $90.00 │        │        │
+            ╰──────────────────────┴─────────────┴──────────┴────────┴────────┴────────╯
+            There are 3 assets, 2 of which are currently held
+            ╭────────┬──────────────┬─────────────┬────────┬─────────┬────────╮
+            │  Name  │ Description  │    Class    │ Ticker │  Value  │ Profit │
+            ╞════════╪══════════════╪═════════════╪════════╪═════════╪════════╡
+            │ Apple  │ Tech company │ Real estate │        │  $14.00 │  $0.00 │
+            │ Banana │              │ Stocks      │ BANANA │ $100.00 │  $0.00 │
+            ╞════════╪══════════════╪═════════════╪════════╪═════════╪════════╡
+            │ Total  │              │             │        │ $114.00 │        │
+            ╰────────┴──────────────┴─────────────┴────────┴─────────┴────────╯
+            There are 5 asset valuations
+            There are 4 transactions
+            """)
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                commands.summarize(p)
+            fake_stdout = fake_stdout.getvalue()
+            self.assertEqual(fake_stdout, target)
+        finally:
+            shutil.get_terminal_size = original_terminal_size

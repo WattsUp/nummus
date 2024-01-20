@@ -6,9 +6,12 @@ import calendar
 import datetime
 import getpass
 import re
+import shutil
 import sys
 from decimal import Decimal
 from typing import TYPE_CHECKING
+
+from nummus import global_config
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
@@ -68,10 +71,13 @@ def get_input(
     """
     try:
         if secure:
-            if print_key or (
-                sys.stdout.encoding and sys.stdout.encoding.lower().startswith("utf-")
+            secure_icon = global_config.get(global_config.ConfigKey.SECURE_ICON)
+            if print_key is True or (
+                print_key is None
+                and sys.stdout.encoding
+                and sys.stdout.encoding.lower().startswith("utf-")
             ):
-                input_ = getpass.getpass("\u26bf  " + prompt)
+                input_ = getpass.getpass(f"{secure_icon}  {prompt}")
             else:
                 input_ = getpass.getpass(prompt)
         else:
@@ -498,3 +504,90 @@ def interpolate_linear(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
         slope_i += 1
 
     return result
+
+
+def print_table(table: list[list[str] | None]) -> None:
+    """Pretty print tabular data.
+
+    First row is header, able to configure how columns behave
+    "<Header" will left align text, default
+    ">Header" will right align text
+    "^Header" will center align text
+    "Header." will prioritize this column for truncation with ellipsis if too long
+    "Header/" will prevent this column being truncated
+
+    Args:
+        table: List of table rows, None will print a horizontal line
+    """
+    if len(table) < 1:
+        msg = "Table has no rows"
+        raise ValueError(msg)
+    table = list(table)
+
+    header_raw = table[0]
+    if header_raw is None:
+        msg = "First row cannot be None"
+        raise ValueError(msg)
+
+    col_widths = [0] * len(header_raw)
+    table[0] = [c.strip("<>^./") for c in header_raw]
+    label_widths = [max(4, len(c)) for c in table[0]]
+    for row in table:
+        if row is None:
+            continue
+        for i, cell in enumerate(row):
+            col_widths[i] = max(len(cell), col_widths[i])
+
+    # Adjust col widths if sum is over terminal width
+    margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
+    excess: t.Ints = []
+    no_extra = False
+    has_extra: list[bool] = [False] * len(header_raw)
+    for i, cell in enumerate(header_raw):
+        n_label = label_widths[i]
+        if not no_extra and margin > 1:
+            # If there is extra room, add some space to each column
+            col_widths[i] += 2
+            margin -= 2
+            has_extra[i] = True
+        if margin < 0 and cell[-1] == ".":
+            n = max(n_label, col_widths[i] + margin)
+            n_trim = col_widths[i] - n
+            col_widths[i] = n
+            margin += n_trim
+            no_extra = True
+        excess.append(0 if cell[-1] == "/" else col_widths[i] - n_label)
+    while margin < 0 and any(excess):
+        for i, e in enumerate(excess):
+            if margin < 0 and e > 0:
+                col_widths[i] -= 1
+                excess[i] -= 1
+                margin += 1
+
+    formats = []
+    for cell, n in zip(header_raw, col_widths, strict=True):
+        align = cell[0]
+        align = align if align in "<>^" else ""
+        formats.append(f"{align}{n}")
+
+    # Print the box
+    print("╭" + "┬".join("─" * n for n in col_widths) + "╮")
+    buf = "│".join(f"{c:^{n}}" for c, n in zip(table[0], col_widths, strict=True))
+    print("│" + buf + "│")
+    for row in table[1:]:
+        if row is None:
+            print("╞" + "╪".join("═" * n for n in col_widths) + "╡")
+        else:
+            formatted_row = []
+            for i, cell in enumerate(row):
+                if len(cell) > col_widths[i]:
+                    cell_truncated = cell[: col_widths[i] - 3]
+                    formatted_row.append(cell_truncated + "...")
+                elif has_extra[i]:
+                    c = f" {cell} "
+                    formatted_row.append(f"{c:{formats[i]}}")
+                else:
+                    formatted_row.append(f"{cell:{formats[i]}}")
+            print("│" + "│".join(formatted_row) + "│")
+
+    print("╰" + "┴".join("─" * n for n in col_widths) + "╯")

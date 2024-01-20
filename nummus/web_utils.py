@@ -52,10 +52,11 @@ def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
         id_ = cls.uri_to_id(uri)
     except (exc.InvalidURIError, exc.WrongURITypeError) as e:
         raise exc.http.BadRequest(str(e)) from e
-    obj = s.query(cls).where(cls.id_ == id_).scalar()
-    if obj is None:
+    try:
+        obj = s.query(cls).where(cls.id_ == id_).one()
+    except exc.NoResultFound as e:
         msg = f"{cls.__name__} {uri} not found in Portfolio"
-        raise exc.http.NotFound(msg)
+        raise exc.http.NotFound(msg) from e
     return obj
 
 

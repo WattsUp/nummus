@@ -1,8 +1,9 @@
-"""Encryption provider."""
+"""Encryption provider using AES encyrption."""
 
 from __future__ import annotations
 
 import base64
+import hashlib
 import secrets
 from typing import TYPE_CHECKING
 
@@ -10,42 +11,61 @@ import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
+from typing_extensions import override
+
+from nummus import exceptions as exc
+from nummus.encryption import base
 
 if TYPE_CHECKING:
     from Crypto.Cipher._mode_cbc import CbcMode
 
 
-class Encryption:
+class EncryptionAES(base.EncryptionInterface):
     """Encryption provider.
 
     Uses AES encryption for encryption and decryption
-
-    Attributes:
-        key: encryption key
-        salted_key: encryption key with salt
     """
 
-    def __init__(self, key: bytes | str) -> None:
-        """Initialize Encryption.
+    def __init__(self, key: bytes | str, config: bytes | str) -> None:
+        """Initialize EncryptionAES.
 
         Args:
             key: encryption key
+            config: Encryption config string
         """
-        self.key = key.encode() if isinstance(key, str) else bytes(key)
-        self.salted_key = None
+        super().__init__(key, config)
+        key = key.encode() if isinstance(key, str) else bytes(key)
+        config = config.encode() if isinstance(config, str) else bytes(config)
+        config_parts = config.split(b":")
+
+        key_version = config_parts[0]
+        if key_version != b"1":
+            raise exc.UnknownEncryptionVersionError
+        salt = config_parts[1]
+
+        self._hased_key = hashlib.sha256(key + salt).digest()
+
+    @classmethod
+    @override
+    def create(cls, key: bytes | str) -> tuple[EncryptionAES, bytes]:
+        salt = secrets.token_urlsafe(32).encode()
+        config = b":".join((b"1", salt))
+        return EncryptionAES(key, config), config
+
+    @property
+    @override
+    def hashed_key(self) -> bytes:
+        return self._hased_key
 
     def _digest_key(self) -> bytes:
         """Get digest key.
 
-        Hashes the key (with optional salt) to get a fixed length key
+        Hashes the key to get a fixed length key
 
         Returns:
             bytes hashed key
         """
-        key = self.key
-        if self.salted_key:
-            key = self.salted_key
-        return SHA256.new(key).digest()
+        return SHA256.new(self._hased_key).digest()
 
     def _get_aes(self, iv: bytes) -> CbcMode:
         """Get AES cipher from digest key and initialization vector.
@@ -58,42 +78,8 @@ class Encryption:
         """
         return AES.new(self._digest_key(), AES.MODE_CBC, iv)
 
-    def gen_salt(self, *, set_salt: bool = True) -> bytes:
-        """Generate salt to be added to key.
-
-        Args:
-            set_salt: True will set_salt after generation
-
-        Returns:
-            bytes Generated salt
-        """
-        salt = secrets.token_bytes()
-
-        if set_salt:
-            self.set_salt(salt)
-
-        return salt
-
-    def set_salt(self, salt: bytes | None = None) -> None:
-        """Set salt to be added to key.
-
-        Args:
-            salt: Salt to add
-        """
-        if salt:
-            self.salted_key = salt + self.key
-        else:
-            self.salted_key = None
-
+    @override
     def encrypt(self, secret: bytes | str) -> str:
-        """Encrypt a secret using the key.
-
-        Args:
-            secret: Object to encrypt
-
-        Returns:
-            base64 encoded encrypted object
-        """
         secret_b = secret.encode() if isinstance(secret, str) else bytes(secret)
 
         # Generate a random initialization vector
@@ -108,20 +94,10 @@ class Encryption:
         # Prepend initialization vector to encrypted secret
         data = iv + aes.encrypt(secret_b)
 
-        # Reset salt if present
-        self.set_salt()
-
         return base64.b64encode(data).decode()
 
+    @override
     def decrypt(self, enc_secret: str) -> bytes:
-        """Decrypt an encoded secret using the key.
-
-        Args:
-            enc_secret: base64 encoded encrypted object
-
-        Returns:
-            bytes decoded object
-        """
         # Un-stringify bytes
         enc_secret_b = base64.b64decode(enc_secret)
 
@@ -140,18 +116,8 @@ class Encryption:
             msg = "Invalid padding"
             raise ValueError(msg)
 
-        # Reset salt if present
-        self.set_salt()
-
         return data[:-padding]
 
+    @override
     def decrypt_s(self, enc_secret: str) -> str:
-        """Decrypt an encoded secret using the key.
-
-        Args:
-            enc_secret: base64 encoded encrypted string
-
-        Returns:
-            decoded string
-        """
         return self.decrypt(enc_secret).decode()

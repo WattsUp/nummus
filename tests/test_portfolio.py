@@ -3,29 +3,29 @@ from __future__ import annotations
 import base64
 import datetime
 import io
-import json
 import secrets
 import shutil
 import tarfile
 from decimal import Decimal
 from unittest import mock
 
-import autodict
 import time_machine
 
+from nummus import encryption
 from nummus import exceptions as exc
-from nummus import importers, models, portfolio, sql
+from nummus import importers, models, portfolio, sql, version
 from nummus.models import (
     Account,
     AccountCategory,
     Asset,
     AssetCategory,
-    Credentials,
+    AssetValuation,
+    Config,
+    ConfigKey,
     Transaction,
     TransactionCategory,
     TransactionSplit,
 )
-from nummus.models.asset import AssetValuation
 from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 
@@ -33,7 +33,6 @@ from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
 class TestPortfolio(TestBase):
     def test_init_properties(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
 
@@ -44,31 +43,24 @@ class TestPortfolio(TestBase):
         with path_db.open("w", encoding="utf-8") as file:
             file.write("Not a db")
 
-        # Still missing config
-        self.assertRaises(FileNotFoundError, portfolio.Portfolio, path_db, None)
-
-        # Make config
-        autodict.JSONAutoDict(str(path_config)).save()
-
         # Failed to unlock
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath("portfolio.importers")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         # Create unencrypted portfolio
         p = portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
+        self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
         self.assertTrue(path_importers.exists(), "importers does not exist")
         self.assertTrue(path_importers.is_dir(), "importers is not a directory")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
         self.assertEqual(p.importers_path, path_importers)
         self.assertEqual(p.path, path_db)
@@ -77,6 +69,18 @@ class TestPortfolio(TestBase):
 
         self.assertRaises(exc.NotEncryptedError, p.encrypt, "")
         self.assertRaises(exc.NotEncryptedError, p.decrypt, "")
+
+        # Check config contains valid cipher and version
+        with p.get_session() as s:
+            value: str = (
+                s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
+            )[0]
+            models.Cipher.from_bytes(base64.b64decode(value))
+
+            value: str = (
+                s.query(Config.value).where(Config.key == ConfigKey.VERSION).one()
+            )[0]
+            self.assertEqual(value, str(version.__version__))
 
         p = None
         sql.drop_session()
@@ -92,11 +96,13 @@ class TestPortfolio(TestBase):
             "Database is unexpectedly encrypted",
         )
 
-        # Check config contains valid cipher
-        with path_config.open("r") as file:
-            j = json.load(file)
-            buf = j["cipher"]
-            models.Cipher.from_bytes(base64.b64decode(buf))
+        # Key given to unencrypted portfolio
+        self.assertRaises(
+            FileNotFoundError,
+            portfolio.Portfolio,
+            path_db,
+            self.random_string(),
+        )
 
         # Database already exists
         self.assertRaises(FileExistsError, portfolio.Portfolio.create, path_db)
@@ -104,65 +110,60 @@ class TestPortfolio(TestBase):
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            # Good, now change root password
-            user = (
-                s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = self.random_string()
+            # Good, now delete cipher
+            s.query(Config).where(Config.key == ConfigKey.CIPHER).delete()
             s.commit()
 
-        # Invalid root password
+        # Missing cipher
+        self.assertRaises(
+            exc.ProtectedObjectNotFoundError,
+            portfolio.Portfolio,
+            path_db,
+            None,
+        )
+
+        with p.get_session() as s:
+            # Good, now change encryption test value
+            c = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).one()
+            c.value = self.random_string()
+            s.commit()
+
+        # Invalid encryption test
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
         # Recreate
         path_db.unlink()
-        path_config.unlink()
 
         portfolio.Portfolio.create(path_db)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         sql.drop_session()
 
-        # Delete root
+        # Delete encryption test
         p = portfolio.Portfolio(path_db, None)
         with p.get_session() as s:
-            user = (
-                s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            s.delete(user)
+            s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).delete()
             s.commit()
 
         # Missing root password
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, None)
 
     def test_create_encrypted(self) -> None:
-        if portfolio.encryption is None:
+        if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
         path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         key = self.random_string()
 
-        # Create unencrypted portfolio
+        # Create encrypted portfolio
         p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
+        self.assertTrue(path_salt.exists(), "Salt does not exist")
         self.assertTrue(path_ssl.exists(), "ssl does not exist")
         self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
 
         secret = self.random_string()
@@ -198,76 +199,33 @@ class TestPortfolio(TestBase):
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, key)
         with p.get_session() as s:
-            # Good, now change root password
-            user = (
-                s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = p.encrypt(secrets.token_bytes())
+            # Good, now change encryption test value
+            c = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).one()
+            c.value = p.encrypt(secrets.token_bytes())
             s.commit()
 
         # Invalid root password
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
-        # Recreate
-        path_db.unlink()
-        path_config.unlink()
-        portfolio.Portfolio.create(path_db, key)
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
-        sql.drop_session()
-
-        # Change root password to unencrypted
-        p = portfolio.Portfolio(path_db, key)
-        with p.get_session() as s:
-            # Good, now change root password
-            user = (
-                s.query(Credentials)
-                .where(Credentials.site == p._NUMMUS_SITE)  # noqa: SLF001
-                .where(Credentials.user == p._NUMMUS_USER)  # noqa: SLF001
-                .first()
-            )
-            if user is None:
-                self.fail("Missing nummus user")
-            user.password = key
-            s.commit()
-
-        # Invalid unencrypted password
-        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
-
     def test_is_encrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_config = path_db.with_suffix(".config")
+        path_salt = path_db.with_suffix(".nacl")
 
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
 
         with path_db.open("w", encoding="utf-8") as file:
             file.write("I'm a database")
 
-        # Still missing config
-        self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
-
-        with autodict.JSONAutoDict(str(path_config)) as c:
-            c["encrypt"] = True
-
-        self.assertTrue(
-            portfolio.Portfolio.is_encrypted(path_db),
-            "Database is unexpectedly unencrypted",
-        )
-
-        with autodict.JSONAutoDict(str(path_config)) as c:
-            c["encrypt"] = False
-
         self.assertFalse(
             portfolio.Portfolio.is_encrypted(path_db),
             "Database is unexpectedly encrypted",
         )
 
-        path_db.unlink()
+        path_salt.touch()
+        self.assertTrue(
+            portfolio.Portfolio.is_encrypted(path_db),
+            "Database is unexpectedly unencrypted",
+        )
 
     def test_find_account(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -498,14 +456,11 @@ class TestPortfolio(TestBase):
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
         utc_now = datetime.datetime.now(datetime.timezone.utc)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         # Create Account
         with p.get_session() as s:
@@ -542,10 +497,6 @@ class TestPortfolio(TestBase):
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
-            with path_config.open("rb") as file:
-                buf = file.read()
-            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -587,10 +538,6 @@ class TestPortfolio(TestBase):
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
-            buf_backup = tar.extractfile(path_config.name).read()  # type: ignore[attr-defined]
-            with path_config.open("rb") as file:
-                buf = file.read()
-            self.assertEqual(buf_backup, buf)
         buf = None
         buf_backup = None
 
@@ -637,7 +584,6 @@ class TestPortfolio(TestBase):
         buf_backup = None
 
         path_db.unlink()
-        path_config.unlink()
         path_cert.unlink()
         path_key.unlink()
 
@@ -645,16 +591,37 @@ class TestPortfolio(TestBase):
         portfolio.Portfolio.restore(path_db)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertTrue(path_cert.exists(), "SSL cert does not exist")
         self.assertTrue(path_key.exists(), "SSL key does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
+
+        # For encrypted portfolios, backup should include the salt
+        if not encryption.AVAILABLE:
+            return
+        path_salt = path_db.with_suffix(".nacl")
+        key = self.random_string()
+        # Recreate
+        path_db.unlink()
+        p = portfolio.Portfolio.create(path_db, key)
+
+        with time_machine.travel(utc_now, tick=False):
+            result, tar_ver = p.backup()
+
+        self.assertEqual(result, path_backup_2)
+        self.assertEqual(tar_ver, 2)
+
+        self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
+        self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
+
+        with tarfile.open(path_backup_2, "r:gz") as tar:
+            buf_backup = tar.extractfile(path_salt.name).read()  # type: ignore[attr-defined]
+            with path_salt.open("rb") as file:
+                buf = file.read()
+            self.assertEqual(buf_backup, buf)
 
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_other_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        path_config = path_db.with_suffix(".config")
         p = portfolio.Portfolio.create(path_db)
         _ = portfolio.Portfolio.create(path_other_db)
 
@@ -663,10 +630,8 @@ class TestPortfolio(TestBase):
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         # Create Account
         with p.get_session() as s:
@@ -718,15 +683,19 @@ class TestPortfolio(TestBase):
         self.assertTrue(path_backup_4.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_4.stat().st_mode & 0o777, 0o600)
 
+        size_before = path_db.stat().st_size
+
         # Clean, expect old backups to be purged
-        p.clean()
+        r_before, r_after = p.clean()
+
+        size_after = path_db.stat().st_size
+        self.assertEqual(r_before, size_before)
+        self.assertEqual(r_after, size_after)
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_config.exists(), "Config does not exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_config.stat().st_mode & 0o777, 0o600)
 
         self.assertTrue(path_backup_1.exists(), "Backup #1 does not exist")
         self.assertFalse(path_backup_2.exists(), "Backup #2 does exist")
@@ -1037,3 +1006,230 @@ class TestPortfolio(TestBase):
             result = p.find_similar_transaction(txn_0, do_commit=True, cache_ok=False)
             self.assertEqual(result, txn_1.id_)
             self.assertEqual(txn_0.similar_txn_id, txn_1.id_)
+
+    def test_summarize(self) -> None:
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
+        p = portfolio.Portfolio.create(path_db)
+
+        target = {
+            "n_accounts": 0,
+            "n_assets": 0,
+            "n_transactions": 0,
+            "n_valuations": 0,
+            "net_worth": Decimal(0),
+            "accounts": [],
+            "total_asset_value": Decimal(0),
+            "assets": [],
+            "db_size": path_db.stat().st_size,
+        }
+        result = p.summarize()
+        self.assertEqual(result, target)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        with p.get_session() as s:
+            categories = TransactionCategory.map_name(s)
+            categories = {v: k for k, v in categories.items()}
+
+            acct_0 = Account(
+                name="Monkey Bank Checking",
+                institution="Monkey Bank",
+                category=AccountCategory.CASH,
+                closed=False,
+                emergency=False,
+            )
+            acct_1 = Account(
+                name="Monkey Bank Credit",
+                institution="Monkey Bank",
+                category=AccountCategory.CREDIT,
+                closed=False,
+                emergency=False,
+            )
+            s.add_all((acct_0, acct_1))
+            s.commit()
+
+            acct_0_id = acct_0.id_
+            acct_1_id = acct_1.id_
+
+            a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
+            a_apple_0 = Asset(name="Apple", category=AssetCategory.REAL_ESTATE)
+            a_apple_1 = Asset(
+                name="Tech Company",
+                description="Apples and Bananas",
+                category=AssetCategory.STOCKS,
+                ticker="APPLE",
+            )
+            s.add_all((a_banana, a_apple_0, a_apple_1))
+            s.commit()
+
+            a_apple_0_id = a_apple_0.id_
+            a_apple_1_id = a_apple_1.id_
+
+            txn_0 = Transaction(
+                account_id=acct_0.id_,
+                date_ord=today_ord - 1,
+                amount=100,
+                statement="Banana Store",
+            )
+            t_split_0 = TransactionSplit(
+                amount=txn_0.amount,
+                parent=txn_0,
+                asset_id=a_apple_0.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn_0, t_split_0))
+            s.commit()
+
+            txn_1 = Transaction(
+                account_id=acct_0.id_,
+                date_ord=today_ord,
+                amount=-10,
+                statement="Banana Store",
+            )
+            t_split_1 = TransactionSplit(
+                amount=txn_1.amount,
+                parent=txn_1,
+                asset_id=a_apple_1.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn_1, t_split_1))
+            s.commit()
+
+            txn_2 = Transaction(
+                account_id=acct_0.id_,
+                date_ord=today_ord,
+                amount=-10,
+                statement="Banana Store",
+            )
+            t_split_2 = TransactionSplit(
+                amount=txn_2.amount,
+                parent=txn_2,
+                category_id=categories["Uncategorized"],
+            )
+            s.add_all((txn_2, t_split_2))
+            s.commit()
+
+            av = AssetValuation(
+                asset_id=a_apple_0.id_,
+                date_ord=today_ord - 1,
+                value=37,
+            )
+            s.add(av)
+            s.commit()
+            v_apple_0 = av.value * (t_split_0.asset_quantity or 0)
+
+            av = AssetValuation(
+                asset_id=a_apple_1.id_,
+                date_ord=today_ord - 1,
+                value=14,
+            )
+            s.add(av)
+            s.commit()
+            v_apple_1 = av.value * (t_split_1.asset_quantity or 0)
+
+        value = 100 - 10 - 10 + v_apple_0 + v_apple_1
+        target = {
+            "n_accounts": 2,
+            "n_assets": 3,
+            "n_transactions": 3,
+            "n_valuations": 2,
+            "net_worth": value,
+            "accounts": [
+                {
+                    "name": "Monkey Bank Checking",
+                    "institution": "Monkey Bank",
+                    "category": "Cash",
+                    "value": value,
+                    "age": "1 days",
+                    "profit": Decimal(0),
+                },
+                {
+                    "name": "Monkey Bank Credit",
+                    "institution": "Monkey Bank",
+                    "category": "Credit",
+                    "value": Decimal(0),
+                    "age": "0 days",
+                    "profit": Decimal(0),
+                },
+            ],
+            "total_asset_value": v_apple_0 + v_apple_1,
+            "assets": [
+                {
+                    "name": "Apple",
+                    "description": None,
+                    "value": v_apple_0,
+                    "profit": Decimal(0),
+                    "category": "Real estate",
+                    "ticker": None,
+                },
+                {
+                    "name": "Tech Company",
+                    "description": "Apples and Bananas",
+                    "value": v_apple_1,
+                    "profit": Decimal(0),
+                    "category": "Stocks",
+                    "ticker": "APPLE",
+                },
+            ],
+            "db_size": path_db.stat().st_size,
+        }
+        result = p.summarize()
+        self.assertEqual(result, target)
+
+        # Sell a_apple_1 and close credit account
+        with p.get_session() as s:
+            txn_1 = Transaction(
+                account_id=acct_0_id,
+                date_ord=today_ord,
+                amount=10,
+                statement="Banana Store",
+            )
+            t_split_1 = TransactionSplit(
+                amount=txn_1.amount,
+                parent=txn_1,
+                asset_id=a_apple_0_id,
+                asset_quantity_unadjusted=-1,
+                category_id=categories["Securities Traded"],
+            )
+            s.add_all((txn_1, t_split_1))
+            s.commit()
+
+            acct = s.query(Account).where(Account.id_ == acct_1_id).one()
+            acct.closed = True
+            s.commit()
+
+            av = AssetValuation(
+                asset_id=a_apple_1_id,
+                date_ord=today_ord,
+                value=0,
+            )
+            s.add(av)
+            s.commit()
+
+        value += 10 - v_apple_0 - v_apple_1
+        target = {
+            "n_accounts": 2,
+            "n_assets": 3,
+            "n_transactions": 4,
+            "n_valuations": 3,
+            "net_worth": value,
+            "accounts": [
+                {
+                    "name": "Monkey Bank Checking",
+                    "institution": "Monkey Bank",
+                    "category": "Cash",
+                    "value": value,
+                    "age": "1 days",
+                    "profit": Decimal(0),
+                },
+            ],
+            "total_asset_value": Decimal(0),
+            "assets": [],
+            "db_size": path_db.stat().st_size,
+        }
+        result = p.summarize()
+        self.maxDiff = None
+        self.assertEqual(result, target)

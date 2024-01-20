@@ -20,7 +20,6 @@ with Path("README.md").open(encoding="utf-8") as file:
 
 required = [
     "sqlalchemy>=2",
-    "AutoDict",
     "gevent",
     "colorama",
     "rapidfuzz",
@@ -36,7 +35,7 @@ required = [
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["coverage", "numpy", "time-machine", "tomli"],
+    "test": ["AutoDict", "coverage", "numpy", "time-machine", "tomli"],
 }
 extras_require["dev"] = extras_require["test"] + [
     "ruff",

@@ -292,7 +292,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
     cash: t.Real = (
         s.query(sqlalchemy.func.sum(TransactionSplit.amount))
         .where(TransactionSplit.account_id == acct.id_)
-        .scalar()
+        .one()[0]
     )
     total_value += cash
     ctx_asset = {

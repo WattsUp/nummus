@@ -18,6 +18,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
+    YIELD_PER,
 )
 
 if TYPE_CHECKING:
@@ -112,7 +113,7 @@ def ctx_chart() -> t.DictAny:
         expense_categorized: list[t.DictAny] = []
         total_income = Decimal(0)
         total_expense = Decimal(0)
-        for cat_id, amount in query.all():
+        for cat_id, amount in query.yield_per(YIELD_PER):
             cat_id: int
             amount: t.Real
             if cat_id in categories_income:
@@ -255,7 +256,7 @@ def sum_income_expense(
     query = query.where(TransactionSplit.date_ord >= start_ord)
     query = query.where(TransactionSplit.date_ord <= end_ord)
     query = query.group_by(TransactionSplit.category_id)
-    for cat_id, amount in query.all():
+    for cat_id, amount in query.yield_per(YIELD_PER):
         if cat_id in categories_income:
             income += amount
         elif cat_id in categories_expense:
