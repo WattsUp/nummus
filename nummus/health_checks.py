@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy
 from typing_extensions import override
 
+from nummus import exceptions as exc
 from nummus import utils
 from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
 
@@ -93,14 +94,21 @@ class UnbalancedTransfers(Base):
         If there are transfer fees, add that as a separate transaction.""")
     _SEVERE = True
 
+    _CATEGORY_NAME = "Transfers"
+
     @override
     def test(self, p: portfolio.Portfolio) -> None:
         with p.get_session() as s:
-            cat_transfers_id: int = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Transfers")
-                .one()[0]
-            )
+            try:
+                cat_transfers_id: int = (
+                    s.query(TransactionCategory.id_)
+                    .where(TransactionCategory.name == self._CATEGORY_NAME)
+                    .one()[0]
+                )
+            except exc.NoResultFound as e:
+                msg = f"Category {self._CATEGORY_NAME} not found"
+                raise exc.ProtectedObjectNotFoundError(msg) from e
+
             accounts = Account.map_name(s)
             acct_len = max(len(acct) for acct in accounts.values())
             query = (
@@ -166,7 +174,7 @@ class UnbalancedTransfers(Base):
                 current_splits.append((accounts[a_id], amount))
 
 
-class UnbalancedCreditCardPayments(Base):
+class UnbalancedCreditCardPayments(UnbalancedTransfers):
     """Checks for non-zero net credit card payments."""
 
     _NAME = "Unbalanced credit card payments"
@@ -175,10 +183,7 @@ class UnbalancedCreditCardPayments(Base):
         If there interest incurred, add that as a separate transaction.""")
     _SEVERE = True
 
-    @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        self._issues = []
-        raise NotImplementedError
+    _CATEGORY_NAME = "Credit Card Payments"
 
 
 class MissingAssetValuations(Base):
@@ -228,7 +233,7 @@ class UnlockedTransactions(Base):
 CHECKS: list[type[Base]] = [
     DatabaseIntegrity,
     UnbalancedTransfers,
-    # UnbalancedCreditCardPayments,
+    UnbalancedCreditCardPayments,
     # MissingAssetValuations,
     # Typos,
     # UnlockedTransactions,
