@@ -443,6 +443,7 @@ def summarize(p: portfolio.Portfolio) -> int:
 
 def health_check(
     p: portfolio.Portfolio,
+    limit: int = 10,
     *_,
     always_descriptions: bool = False,
 ) -> int:
@@ -450,6 +451,7 @@ def health_check(
 
     Args:
         p: Working Portfolio
+        limit: Print first n issues for each check
         always_descriptions: True will print every check's description,
             False will only print on failure
 
@@ -457,12 +459,14 @@ def health_check(
         0 on success
         non-zero on failure
     """
+    limit = max(1, limit)
     any_issues = False
     any_severe_issues = False
     for check_type in health_checks.CHECKS:
         c = check_type()
         c.test(p)
-        if not c.any_issues:
+        n_issues = len(c.issues)
+        if n_issues == 0:
             print(f"{Fore.GREEN}Check '{c.name}' has no issues")
             if always_descriptions:
                 print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
@@ -474,8 +478,13 @@ def health_check(
         print(f"{color}Check '{c.name}'")
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
         print(f"{color}  Has the following issues:")
-        for issue in c.issues:
+        for issue in c.issues[:limit]:
             print(textwrap.indent(issue, "  "))
+        if n_issues > limit:
+            print(
+                f"{Fore.MAGENTA}  And {n_issues - limit} more issues, use --limit flag"
+                " to see more",
+            )
     if any_severe_issues:
         return -2
     if any_issues:

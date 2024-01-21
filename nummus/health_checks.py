@@ -258,6 +258,7 @@ class OutlierAssetPrice(Base):
         today_ord = today.toordinal()
         with p.get_session() as s:
             assets = Asset.map_name(s)
+            asset_len = max(len(a) for a in assets.values())
 
             start_ord = (
                 s.query(sqlalchemy.func.min(TransactionSplit.date_ord))
@@ -298,22 +299,25 @@ class OutlierAssetPrice(Base):
                 v_price_high = v_price * (1 + self._RANGE)
                 if v_price is None:
                     msg = (
-                        f"{datetime.date.fromordinal(date_ord)}: "
-                        f"{assets[a_id]} has no valuations before transaction on"
+                        f"{datetime.date.fromordinal(date_ord)}:"
+                        f" {assets[a_id]:{asset_len}} has no valuations before"
+                        " transaction on"
                     )
                     self._issues.append(msg)
                 elif t_price < v_price_low:
                     msg = (
-                        f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]} was"
-                        f" bought at {utils.format_financial(t_price)} which is below"
-                        f" valuation of {utils.format_financial(v_price)}"
+                        f"{datetime.date.fromordinal(date_ord)}:"
+                        f" {assets[a_id]:{asset_len}} was traded at"
+                        f" {utils.format_financial(t_price)} which is below valuation"
+                        f" of {utils.format_financial(v_price)}"
                     )
                     self._issues.append(msg)
                 elif t_price > v_price_high:
                     msg = (
-                        f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]} was"
-                        f" bought at {utils.format_financial(t_price)} which is above"
-                        f" valuation of {utils.format_financial(v_price)}"
+                        f"{datetime.date.fromordinal(date_ord)}:"
+                        f" {assets[a_id]:{asset_len}} was bought at"
+                        f" {utils.format_financial(t_price)} which is above valuation"
+                        f" of {utils.format_financial(v_price)}"
                     )
                     self._issues.append(msg)
 
@@ -342,10 +346,32 @@ class UnlockedTransactions(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        self._issues = [
-            "2024-01-01 'Monkey Bank Checking': $100 for 'Corner Store'",
-        ]
-        raise NotImplementedError
+        with p.get_session() as s:
+            accounts = Account.map_name(s)
+            acct_len = max(len(acct) for acct in accounts.values())
+
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.date_ord,
+                    TransactionSplit.account_id,
+                    TransactionSplit.payee,
+                    TransactionSplit.amount,
+                )
+                .where(TransactionSplit.locked.is_(False))
+            )
+            for date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
+                date_ord: int
+                acct_id: int
+                payee: str
+                amount: t.Real
+
+                msg = (
+                    f"{datetime.date.fromordinal(date_ord)} -"
+                    f" {accounts[acct_id]:{acct_len}}:"
+                    f" {utils.format_financial(amount)} to {payee} is unlocked"
+                )
+                self._issues.append(msg)
 
 
 # List of all checks to test
@@ -356,8 +382,9 @@ CHECKS: list[type[Base]] = [
     MissingAssetValuations,
     OutlierAssetPrice,
     # Typos,
-    # UnlockedTransactions,
+    UnlockedTransactions,
     # Negative cash when buying assets, buying on margin needs a silence
     # Dividends and investment fees not assigned to an asset
     # Interest assigned to an asset
+    # null payee or description or uncategorized
 ]

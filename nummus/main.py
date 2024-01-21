@@ -149,6 +149,13 @@ calculates net worth, and predicts future performance."""
         action="store_true",
         help="print description of checks always",
     )
+    sub_health.add_argument(
+        "-l",
+        "--limit",
+        default=10,
+        type=int,
+        help="print the first n issues for each check",
+    )
 
     sub_web = subparsers.add_parser(
         "web",
@@ -241,7 +248,12 @@ calculates net worth, and predicts future performance."""
         return commands.summarize(p)
     if cmd == "health":
         always_descriptions: bool = args.desc
-        return commands.health_check(p, always_descriptions=always_descriptions)
+        limit: int = args.limit
+        return commands.health_check(
+            p,
+            limit=limit,
+            always_descriptions=always_descriptions,
+        )
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)
