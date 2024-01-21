@@ -463,7 +463,7 @@ def health_check(
         c = check_type()
         c.test(p)
         if not c.any_issues:
-            print(f"{Fore.GREEN}{c.name} has no issues")
+            print(f"{Fore.GREEN}Check '{c.name}' has no issues")
             if always_descriptions:
                 print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
             continue
@@ -471,7 +471,7 @@ def health_check(
         any_severe_issues = c.is_severe or any_severe_issues
         color = Fore.RED if c.is_severe else Fore.YELLOW
 
-        print(f"{color}{c.name}")
+        print(f"{color}Check '{c.name}'")
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
         print(f"{color}  Has the following issues:")
         for issue in c.issues:
