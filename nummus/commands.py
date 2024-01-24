@@ -361,7 +361,7 @@ def summarize(
             "Category",
             ">Value/",
             ">Profit/",
-            "^Age/",
+            ">Age/",
         ],
         None,
     ]

@@ -988,7 +988,14 @@ class Portfolio:
                     },
                 )
 
-            summary["accounts"] = sorted(summary_accts, key=lambda item: -item["value"])
+            summary["accounts"] = sorted(
+                summary_accts,
+                key=lambda item: (
+                    -item["value"],
+                    -item["profit"],
+                    item["name"].lower(),
+                ),
+            )
             summary["net_worth"] = net_worth
 
             profit_assets = Account.get_profit_by_asset_all(
@@ -1017,7 +1024,14 @@ class Portfolio:
                         "profit": p,
                     },
                 )
-            summary["assets"] = sorted(summary_assets, key=lambda item: -item["value"])
+            summary["assets"] = sorted(
+                summary_assets,
+                key=lambda item: (
+                    -item["value"],
+                    -item["profit"],
+                    item["name"].lower(),
+                ),
+            )
             summary["total_asset_value"] = total_asset_value
 
         return summary

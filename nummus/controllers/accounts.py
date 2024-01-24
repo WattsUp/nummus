@@ -314,7 +314,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         assets,
         key=lambda item: (
             -item["end_value"],
-            item["category"].name,
+            -item["profit"],
             item["name"].lower(),
         ),
     )

@@ -270,7 +270,7 @@ def ctx_assets(
         assets,
         key=lambda item: (
             -item["end_value"],
-            item["category"].name,
+            -item["profit"],
             item["name"].lower(),
         ),
     )
