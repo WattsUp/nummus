@@ -635,7 +635,7 @@ class TestUtils(TestBase):
             ╞═════════╪═════════╪═════════╪═════════╪═══════╪═════════╡
             │Short    │    Short│Short    │  Short  │Short  │Short    │
             ╞═════════╪═════════╪═════════╪═════════╪═══════╪═════════╡
-            │Long word│Long word│Long word│Long word│Long...│Long word│
+            │Long word│Long word│Long word│Long word│Long w…│Long word│
             ╰─────────┴─────────┴─────────┴─────────┴───────┴─────────╯
             """)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -649,9 +649,9 @@ class TestUtils(TestBase):
             ╭───────┬───────┬───────┬────────┬────┬─────────╮
             │  H1   │  H2   │  H3   │   H4   │ H5 │   H6    │
             ╞═══════╪═══════╪═══════╪════════╪════╪═════════╡
-            │Short  │  Short│Short  │ Short  │S...│Short    │
+            │Short  │  Short│Short  │ Short  │Sho…│Short    │
             ╞═══════╪═══════╪═══════╪════════╪════╪═════════╡
-            │Long...│Long...│Long...│Long ...│L...│Long word│
+            │Long w…│Long w…│Long w…│Long wo…│Lon…│Long word│
             ╰───────┴───────┴───────┴────────┴────┴─────────╯
             """)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
@@ -665,9 +665,9 @@ class TestUtils(TestBase):
             ╭────┬────┬────┬────┬────┬─────────╮
             │ H1 │ H2 │ H3 │ H4 │ H5 │   H6    │
             ╞════╪════╪════╪════╪════╪═════════╡
-            │S...│S...│S...│S...│S...│Short    │
+            │Sho…│Sho…│Sho…│Sho…│Sho…│Short    │
             ╞════╪════╪════╪════╪════╪═════════╡
-            │L...│L...│L...│L...│L...│Long word│
+            │Lon…│Lon…│Lon…│Lon…│Lon…│Long word│
             ╰────┴────┴────┴────┴────┴─────────╯
             """)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:

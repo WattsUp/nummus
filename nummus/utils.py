@@ -581,8 +581,8 @@ def print_table(table: list[list[str] | None]) -> None:
             formatted_row = []
             for i, cell in enumerate(row):
                 if len(cell) > col_widths[i]:
-                    cell_truncated = cell[: col_widths[i] - 3]
-                    formatted_row.append(cell_truncated + "...")
+                    cell_truncated = cell[: col_widths[i] - 1]
+                    formatted_row.append(cell_truncated + "…")
                 elif has_extra[i]:
                     c = f" {cell} "
                     formatted_row.append(f"{c:{formats[i]}}")
