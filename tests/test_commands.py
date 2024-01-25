@@ -742,7 +742,12 @@ class TestCommands(TestBase):
                 ],
                 "db_size": 1024 * 10,
             }
-            p.summarize = lambda: p_dict
+
+            def mock_summarize(*_, include_all: bool = False) -> t.DictAny:
+                self.assertFalse(include_all, "include_all was unexpectedly True")
+                return p_dict
+
+            p.summarize = mock_summarize
 
             target = textwrap.dedent("""\
             Portfolio file size is 10.2KB/10.0KiB
@@ -815,7 +820,6 @@ class TestCommands(TestBase):
                 ],
                 "db_size": 1024 * 10,
             }
-            p.summarize = lambda: p_dict
 
             target = textwrap.dedent("""\
             Portfolio file size is 10.2KB/10.0KiB

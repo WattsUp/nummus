@@ -950,9 +950,12 @@ class Portfolio:
             assets = {a.id_: a for a in s.query(Asset).all()}
 
             # Get the inception date
-            start_date_ord: int = s.query(
-                sqlalchemy.func.min(TransactionSplit.date_ord),
-            ).scalar()
+            start_date_ord: int = (
+                s.query(
+                    sqlalchemy.func.min(TransactionSplit.date_ord),
+                ).scalar()
+                or datetime.date(1970, 1, 1).toordinal()
+            )
 
             summary["n_accounts"] = len(accts)
             summary["n_transactions"] = s.query(TransactionSplit).count()
