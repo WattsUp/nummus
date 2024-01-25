@@ -167,6 +167,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.CASH,
             closed=False,
             emergency=True,
+            number="MB-1234",
         )
         savings = Account(
             name="Savings",
@@ -174,6 +175,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.CASH,
             closed=False,
             emergency=True,
+            number="MB-1235",
         )
         cc_0 = Account(
             name="Banana VISA",
@@ -181,6 +183,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.CREDIT,
             closed=False,
             emergency=False,
+            number="MB-1236",
         )
         cc_1 = Account(
             name="Peanut Credit",
@@ -188,6 +191,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.CREDIT,
             closed=False,
             emergency=False,
+            number="PB-1234",
         )
         mortgage = Account(
             name="Monkey Mortgage",
@@ -195,6 +199,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.MORTGAGE,
             closed=False,
             emergency=False,
+            number="MB-4234",
         )
         retirement = Account(
             name="401k",
@@ -202,6 +207,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            number="MBR-1234",
         )
         real_estate = Account(
             name="Real Estate",
@@ -382,11 +388,14 @@ def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=round(rng_uniform(Decimal(1), Decimal(10)), 2),
                 statement="Birthday money",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
+                payee="Family member",
                 category_id=categories["Other Income"].id_,
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
         s.commit()
@@ -463,11 +472,14 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord,
                     amount=paycheck,
                     statement=job,
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
+                    payee="Employer",
                     category_id=categories["Paychecks/Salary"].id_,
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
                 txn = Transaction(
@@ -475,11 +487,14 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord,
                     amount=savings,
                     statement=job,
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
+                    payee="Employer",
                     category_id=categories["Paychecks/Salary"].id_,
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
                 if retirement != 0:
@@ -488,11 +503,14 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=retirement,
                         statement=job,
+                        locked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
                         amount=txn.amount,
+                        payee="Employer",
                         category_id=categories["Retirement Contributions"].id_,
+                        description=txn.statement,
                     )
                     s.add_all((txn, txn_split))
 
@@ -555,6 +573,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=-retirement,
                         statement=job,
+                        locked=True,
                     )
                     txn_split_0 = TransactionSplit(
                         parent=txn,
@@ -562,6 +581,8 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         category_id=categories["Securities Traded"].id_,
                         asset_id=a_growth.id_,
                         asset_quantity_unadjusted=qty_growth,
+                        payee="Monkey Bank Retirement",
+                        description=txn.statement,
                     )
                     txn_split_1 = TransactionSplit(
                         parent=txn,
@@ -569,6 +590,8 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         category_id=categories["Securities Traded"].id_,
                         asset_id=a_value.id_,
                         asset_quantity_unadjusted=qty_value,
+                        payee="Monkey Bank Retirement",
+                        description=txn.statement,
                     )
                     s.add_all((txn, txn_split_0, txn_split_1))
 
@@ -664,16 +687,21 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=-(down_payment + closing_costs),
                 statement="Home closing",
+                locked=True,
             )
             txn_dp = TransactionSplit(
                 parent=txn,
                 amount=-down_payment,
                 category_id=categories["Transfers"].id_,
+                payee="Monkey Bank",
+                description="Down payment",
             )
             txn_cc = TransactionSplit(
                 parent=txn,
                 amount=-closing_costs,
                 category_id=categories["Service Charge/Fees"].id_,
+                payee="Monkey Bank",
+                description="Closing costs",
             )
             s.add_all((txn, txn_dp, txn_cc))
 
@@ -683,11 +711,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=-p,
                 statement="Home closing",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
-                category_id=categories["Securities Traded"].id_,
+                category_id=categories["Transfers"].id_,
+                payee="Monkey Bank",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -695,20 +726,24 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             txn = Transaction(
                 account_id=acct_real_estate.id_,
                 date_ord=date_ord,
-                amount=p,
+                amount=price,
                 statement="Mortgage funding",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
                 category_id=categories["Transfers"].id_,
+                payee="Previous owner",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
             txn = Transaction(
                 account_id=acct_real_estate.id_,
                 date_ord=date_ord,
-                amount=-p,
+                amount=-price,
                 statement="Home closing",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -716,6 +751,8 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 category_id=categories["Securities Traded"].id_,
                 asset_id=house.id_,
                 asset_quantity_unadjusted=1,
+                payee="Previous owner",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -749,16 +786,21 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=price - closing_costs,
                 statement="Home closing",
+                locked=True,
             )
             txn_sell = TransactionSplit(
                 parent=txn,
                 amount=price,
                 category_id=categories["Transfers"].id_,
+                payee="Next owner",
+                description="House sell",
             )
             txn_cc = TransactionSplit(
                 parent=txn,
                 amount=-closing_costs,
                 category_id=categories["Service Charge/Fees"].id_,
+                payee="Monkey Bank",
+                description="Closing costs",
             )
             s.add_all((txn, txn_sell, txn_cc))
 
@@ -768,6 +810,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=price,
                 statement="Home closing",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -775,6 +818,8 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 category_id=categories["Securities Traded"].id_,
                 asset_id=house.id_,
                 asset_quantity_unadjusted=-1,
+                payee="Monkey Bank",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
             # Sell the house
@@ -783,11 +828,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=-price,
                 statement="Transfer",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
                 category_id=categories["Transfers"].id_,
+                payee="Monkey Bank",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -798,11 +846,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord,
                     amount=balance,
                     statement="Home closing",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Securities Traded"].id_,
+                    payee="Monkey Bank",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -811,11 +862,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord,
                     amount=-balance,
                     statement="Home closing",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Securities Traded"].id_,
+                    payee="Monkey Bank",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -853,12 +907,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=-amount,
                 statement="House payment",
+                locked=True,
             )
             txn_ti = TransactionSplit(
                 parent=txn,
                 amount=-escrow,
                 category_id=categories["Service Charge/Fees"].id_,
                 description="Taxes and Insurance",
+                payee="Monkey Bank",
             )
             if p > 0:
                 txn_i = TransactionSplit(
@@ -866,12 +922,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     amount=-i,
                     category_id=categories["Rent"].id_,
                     description="Interest",
+                    payee="Monkey Bank",
                 )
                 txn_p = TransactionSplit(
                     parent=txn,
                     amount=-p,
                     category_id=categories["Transfers"].id_,
                     description="Principal",
+                    payee="Monkey Bank",
                 )
                 if balance > pmi_threshold:
                     txn_pmi = TransactionSplit(
@@ -879,6 +937,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         amount=-pmi,
                         category_id=categories["Service Change/Fees"].id_,
                         description="PMI",
+                        payee="Monkey Bank",
                     )
                     s.add_all((txn, txn_i, txn_p, txn_ti, txn_pmi))
                 else:
@@ -892,11 +951,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord,
                     amount=p,
                     statement="Principal",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Transfers"].id_,
+                    payee="Monkey Bank",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -912,11 +974,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_ord,
                 amount=-utilities,
                 statement="Utilities",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
                 category_id=categories["Utilities"].id_,
+                payee="Monkey Electric",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -934,11 +999,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     date_ord=date_ord + rng_int(1, 28),
                     amount=-repair_cost,
                     statement="Repairs",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Home Maintenance"].id_,
+                    payee="Home Depot",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -972,11 +1040,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=-rent,
                         statement="Rent",
+                        locked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
                         amount=txn.amount,
                         category_id=categories["Rent"].id_,
+                        payee="Monkey Rentals",
+                        description=txn.statement,
                     )
                     s.add_all((txn, txn_split))
 
@@ -987,11 +1058,14 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=-utilities,
                         statement="Utilities",
+                        locked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
                         amount=txn.amount,
                         category_id=categories["Utilities"].id_,
+                        payee="Monkey Electric",
+                        description=txn.statement,
                     )
                     s.add_all((txn, txn_split))
             elif age < 45:
@@ -1196,12 +1270,14 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=-amount,
                         statement=store,
+                        locked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
                         amount=txn.amount,
                         payee=store,
                         category_id=categories["Groceries"].id_,
+                        description="Groceries",
                     )
                     s.add_all((txn, txn_split))
 
@@ -1220,12 +1296,14 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
                         date_ord=date_ord,
                         amount=-amount,
                         statement=restaurant,
+                        locked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
                         amount=txn.amount,
                         payee=restaurant,
                         category_id=categories["Restaurants"].id_,
+                        description="Dining out",
                     )
                     s.add_all((txn, txn_split))
 
@@ -1275,6 +1353,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_sell_ord,
                 amount=amount,
                 statement="Security Sell",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -1282,6 +1361,8 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 category_id=categories["Securities Traded"].id_,
                 asset_id=asset.id_,
                 asset_quantity_unadjusted=-qty,
+                payee="Monkey Bank Retirement",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -1290,11 +1371,14 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_transfer_ord,
                 amount=-amount,
                 statement="Account Transfer",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
                 category_id=categories["Transfers"].id_,
+                payee="Monkey Bank Retirement",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -1303,11 +1387,14 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 date_ord=date_transfer_ord,
                 amount=amount,
                 statement="Account Transfer",
+                locked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
                 amount=txn.amount,
                 category_id=categories["Transfers"].id_,
+                payee="Monkey Bank Retirement",
+                description=txn.statement,
             )
             s.add_all((txn, txn_split))
 
@@ -1322,11 +1409,14 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             date_ord=datetime.date(1999, 12, 31).toordinal(),
             amount=Decimal("99.50"),
             statement="Y2K Bonus",
+            locked=True,
         )
         txn_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
             category_id=categories["Retirement Contributions"].id_,
+            payee="My Favorite Boss",
+            description=txn.statement,
         )
         s.add_all((txn, txn_split))
         txn = Transaction(
@@ -1334,6 +1424,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             date_ord=datetime.date(2000, 1, 3).toordinal(),
             amount=Decimal("-99.50"),
             statement="Security Buy",
+            locked=True,
         )
         txn_split = TransactionSplit(
             parent=txn,
@@ -1341,6 +1432,8 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
             category_id=categories["Securities Traded"].id_,
             asset_id=assets["Apple Inc."],
             asset_quantity_unadjusted=1,
+            payee="Monkey Bank Retirement",
+            description=txn.statement,
         )
         s.add_all((txn, txn_split))
         s.commit()
@@ -1392,12 +1485,15 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
                     account_id=acct.id_,
                     date_ord=next_date.toordinal(),
                     amount=interest,
-                    statement="Dividend/interest",
+                    statement="Interest",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Interest"].id_,
+                    payee=acct.name,
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -1454,11 +1550,14 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
                     date_ord=due_date.toordinal(),
                     amount=-balance,
                     statement="Credit Card Payment",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Credit Card Payments"].id_,
+                    payee="Monkey Bank",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
@@ -1467,11 +1566,14 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
                     date_ord=due_date.toordinal(),
                     amount=balance,
                     statement="Credit Card Payment",
+                    locked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
                     category_id=categories["Credit Card Payments"].id_,
+                    payee="Monkey Bank",
+                    description=txn.statement,
                 )
                 s.add_all((txn, txn_split))
 
