@@ -91,7 +91,7 @@ class OutlierAssetPrice(Base):
                         f" {assets[a_id]:{asset_len}} has no valuations before"
                         " transaction on"
                     )
-                    self._issues.append(msg)
+                    self._issues_raw[uri] = msg
                 elif t_price < v_price_low:
                     msg = (
                         f"{datetime.date.fromordinal(date_ord)}:"
@@ -99,7 +99,7 @@ class OutlierAssetPrice(Base):
                         f" {utils.format_financial(t_price)} which is below valuation"
                         f" of {utils.format_financial(v_price)}"
                     )
-                    self._issues.append(msg)
+                    self._issues_raw[uri] = msg
                 elif t_price > v_price_high:
                     msg = (
                         f"{datetime.date.fromordinal(date_ord)}:"
@@ -107,4 +107,4 @@ class OutlierAssetPrice(Base):
                         f" {utils.format_financial(t_price)} which is above valuation"
                         f" of {utils.format_financial(v_price)}"
                     )
-                    self._issues.append(msg)
+                    self._issues_raw[uri] = msg

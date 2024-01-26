@@ -57,11 +57,11 @@ class MissingAssetValuations(Base):
                 date_ord_v = first_valuations.get(a_id)
                 if date_ord_v is None:
                     msg = f"{assets[a_id]} has no valuations"
-                    self._issues.append(msg)
+                    self._issues_raw[uri] = msg
                 elif date_ord < date_ord_v:
                     msg = (
                         f"{assets[a_id]} has first transaction on"
                         f" {datetime.date.fromordinal(date_ord)} before first valuation"
                         f" on {datetime.date.fromordinal(date_ord_v)}"
                     )
-                    self._issues.append(msg)
+                    self._issues_raw[uri] = msg

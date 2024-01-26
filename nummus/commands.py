@@ -12,7 +12,7 @@ from colorama import Fore
 from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import health_checks, portfolio, utils, web
-from nummus.models import HealthCheckIgnore
+from nummus.models import HealthCheckIssue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -445,6 +445,7 @@ def summarize(p: portfolio.Portfolio) -> int:
 def health_check(
     p: portfolio.Portfolio,
     limit: int = 10,
+    ignores: list[str] | None = None,
     *_,
     always_descriptions: bool = False,
     no_ignores: bool = False,
@@ -455,6 +456,7 @@ def health_check(
     Args:
         p: Working Portfolio
         limit: Print first n issues for each check
+        ignores: List of issue URIs to ignore
         always_descriptions: True will print every check's description,
             False will only print on failure
         no_ignores: True will print issues that have been ignored
@@ -464,17 +466,27 @@ def health_check(
         0 on success
         non-zero on failure
     """
-    if clear_ignores:
-        with p.get_session() as s:
-            s.query(HealthCheckIgnore).delete()
-            s.commit()
+    with p.get_session() as s:
+        if clear_ignores:
+            s.query(HealthCheckIssue).delete()
+        elif ignores:
+            # Set ignore for all specified issues
+            ids = {HealthCheckIssue.uri_to_id(uri) for uri in ignores}
+            s.query(HealthCheckIssue).where(HealthCheckIssue.id_.in_(ids)).update(
+                {HealthCheckIssue.ignore: True},
+            )
+        # Remove any issues not ignored
+        s.query(HealthCheckIssue).where(HealthCheckIssue.ignore.is_(False)).delete()
+        s.commit()
 
     limit = max(1, limit)
     any_issues = False
     any_severe_issues = False
+    first_uri: str | None = None
     for check_type in health_checks.CHECKS:
         c = check_type(no_ignores=no_ignores)
         c.test(p)
+        c.commit_issues(p)
         n_issues = len(c.issues)
         if n_issues == 0:
             print(f"{Fore.GREEN}Check '{c.name}' has no issues")
@@ -488,13 +500,25 @@ def health_check(
         print(f"{color}Check '{c.name}'")
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
         print(f"{color}  Has the following issues:")
-        for issue in c.issues[:limit]:
-            print(textwrap.indent(issue, "  "))
+        i = 0
+        for uri, issue in c.issues.items():
+            first_uri = first_uri or uri
+            if i >= limit:
+                break
+            line = f"[{uri}] {issue}"
+            print(textwrap.indent(line, "  "))
+
         if n_issues > limit:
             print(
                 f"{Fore.MAGENTA}  And {n_issues - limit} more issues, use --limit flag"
                 " to see more",
             )
+    if any_issues:
+        print(f"{Fore.MAGENTA}Use web interface to fix issues")
+        print(
+            f"{Fore.MAGENTA}Or silence false positives with: nummus health -i "
+            f"{first_uri} ...",
+        )
     if any_severe_issues:
         return -2
     if any_issues:

@@ -6,15 +6,17 @@ from nummus import custom_types as t
 from nummus.models.base import Base
 
 
-class HealthCheckIgnore(Base):
-    """Health check issue suppression model.
+class HealthCheckIssue(Base):
+    """Health check issue model.
 
     Attributes:
-        check: Name of check being ignored
-        value: Value of failure being ignored
+        check: Name of check
+        value: Identifier of failure
+        ignore: True will ignore this issue
     """
 
-    # No __table_id__ because this is not user accessible
+    __table_id__ = 0x20000000
 
     check: t.ORMStr
     value: t.ORMStr
+    ignore: t.ORMBool

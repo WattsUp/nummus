@@ -116,9 +116,7 @@ class Typos(Base):
                 add(name, f"Txn category {name}", "name")
 
             words = {k: v for k, v in words.items() if k not in known}
-            words = {
-                k: v for k, v in words.items() if k.lower() in spell.unknown(words)
-            }
+            words = {k: v for k, v in words.items() if k in spell.unknown(words)}
 
             if len(words) == 0:
                 return
@@ -132,8 +130,9 @@ class Typos(Base):
                 source_len = max(source_len, len(source))
                 field_len = max(field_len, len(field))
 
-            for word, source, field in words.values():
+            for uri, item in words.items():
+                word, source, field = item
                 # Getting a suggested correction is slow and error prone,
                 # Just say if a word is outside of the dictionary
                 msg = f"{source:{source_len}} {field:{field_len}}: {word:{word_len}}"
-                self.issues.append(msg)
+                self._issues_raw[uri] = msg

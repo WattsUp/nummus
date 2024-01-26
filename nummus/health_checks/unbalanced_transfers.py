@@ -67,9 +67,9 @@ class UnbalancedTransfers(Base):
                         date = datetime.date.fromordinal(current_date_ord)
                         date_str = date.isoformat()
                         if date_str not in ignores:
-                            self._issues.append(
+                            msg_l = [
                                 f"{date}: Sum of transfers on this day are non-zero",
-                            )
+                            ]
 
                             # Remove any that are exactly equal since those are probably
                             # balanced amongst themselves
@@ -96,11 +96,12 @@ class UnbalancedTransfers(Base):
                                 current_splits,
                                 key=lambda item: (item[0], item[1]),
                             )
-                            self._issues.extend(
+                            msg_l.extend(
                                 f"  {acct:{acct_len}}: "
                                 f"{utils.format_financial(amount, plus=True):>14}"
                                 for acct, amount in current_splits
                             )
+                            self._issues_raw[date_str] = "\n".join(msg_l)
 
                     current_date_ord = date_ord
                     total = Decimal(0)

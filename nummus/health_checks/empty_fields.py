@@ -35,7 +35,7 @@ class EmptyFields(Base):
             accounts = Account.map_name(s)
 
             # List of (source, field)
-            issues: list[tuple[str, str]] = []
+            issues: list[tuple[str, str, str]] = []
 
             query = (
                 s.query(Account)
@@ -48,7 +48,7 @@ class EmptyFields(Base):
                 uri = Account.id_to_uri(acct_id)
                 if uri in ignores:
                     continue
-                issues.append((f"Account {name}", "has an empty number"))
+                issues.append((uri, f"Account {name}", "has an empty number"))
 
             query = (
                 s.query(Asset)
@@ -61,7 +61,7 @@ class EmptyFields(Base):
                 uri = Asset.id_to_uri(a_id)
                 if uri in ignores:
                     continue
-                issues.append((f"Asset {name}", "has an empty description"))
+                issues.append((uri, f"Asset {name}", "has an empty description"))
 
             txn_fields = [
                 TransactionSplit.payee,
@@ -87,7 +87,7 @@ class EmptyFields(Base):
 
                     date = datetime.date.fromordinal(date_ord)
                     source = f"{date} - {accounts[acct_id]}"
-                    issues.append((source, f"has an empty {field.key}"))
+                    issues.append((uri, source, f"has an empty {field.key}"))
 
             try:
                 t_cat_uncategorized = (
@@ -117,12 +117,12 @@ class EmptyFields(Base):
 
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
-                issues.append((source, "is uncategorized"))
+                issues.append((uri, source, "is uncategorized"))
 
             if len(issues) == 0:
                 return
 
-            source_len = max(len(item[0]) for item in issues)
-            for source, field in issues:
+            source_len = max(len(item[1]) for item in issues)
+            for uri, source, field in issues:
                 msg = f"{source:{source_len}} {field}"
-                self._issues.append(msg)
+                self._issues_raw[uri] = msg

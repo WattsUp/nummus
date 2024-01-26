@@ -59,4 +59,4 @@ class UnlockedTransactions(Base):
                     f" {accounts[acct_id]:{acct_len}}:"
                     f" {utils.format_financial(amount)} to {payee} is unlocked"
                 )
-                self._issues.append(msg)
+                self._issues_raw[uri] = msg

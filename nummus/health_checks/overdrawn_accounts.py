@@ -45,7 +45,7 @@ class OverdrawnAccounts(Base):
             accounts: t.DictIntStr = dict(query.all())  # type: ignore[attr-defined]
             acct_ids = set(accounts)
 
-            issues: list[tuple[str, str]] = []
+            issues: list[tuple[str, str, str]] = []
 
             start_ord = (
                 s.query(sqlalchemy.func.min(TransactionSplit.date_ord))
@@ -92,13 +92,13 @@ class OverdrawnAccounts(Base):
                         k = f"{uri}.{date}"
                         if k not in ignores:
                             source = f"{date} - {name}"
-                            issues.append((source, utils.format_financial(c)))
+                            issues.append((k, source, utils.format_financial(c)))
 
             if len(issues) == 0:
                 return
-            source_len = max(len(item[0]) for item in issues)
-            amount_len = max(len(item[1]) for item in issues)
+            source_len = max(len(item[1]) for item in issues)
+            amount_len = max(len(item[2]) for item in issues)
 
-            for source, amount_str in issues:
+            for uri, source, amount_str in issues:
                 msg = f"{source:{source_len}} {amount_str:>{amount_len}}"
-                self._issues.append(msg)
+                self._issues_raw[uri] = msg

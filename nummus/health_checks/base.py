@@ -5,7 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from nummus.models import HealthCheckIgnore, YIELD_PER
+from nummus.models import HealthCheckIssue, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
@@ -26,7 +26,9 @@ class Base(ABC):
             no_ignores: True will print issues that have been ignored
         """
         super().__init__()
-        self._issues: t.Strings = []
+        # Dictionary of {unique identifier: issue}
+        self._issues_raw: t.DictStr = {}
+        self._issues: t.DictStr = {}
         self._no_ignores = no_ignores
 
     @property
@@ -40,7 +42,7 @@ class Base(ABC):
         return self._DESC
 
     @property
-    def issues(self) -> t.Strings:
+    def issues(self) -> t.DictStr:
         """List of issues this check found."""
         return self._issues
 
@@ -72,14 +74,15 @@ class Base(ABC):
             values: List of issues to ignore
         """
         with p.get_session() as s:
-            query = s.query(HealthCheckIgnore.value).where(
-                HealthCheckIgnore.check == cls._NAME,
-                HealthCheckIgnore.value.in_(values),
+            query = s.query(HealthCheckIssue.value).where(
+                HealthCheckIssue.check == cls._NAME,
+                HealthCheckIssue.value.in_(values),
+                HealthCheckIssue.ignore.is_(True),
             )
             duplicates = [row[0] for row in query.yield_per(YIELD_PER)]
             values = [v for v in values if v not in duplicates]
             for v in values:
-                c = HealthCheckIgnore(check=cls._NAME, value=v)
+                c = HealthCheckIssue(check=cls._NAME, value=v, ignore=True)
                 s.add(c)
             s.commit()
 
@@ -95,7 +98,24 @@ class Base(ABC):
         if self._no_ignores:
             return []
         with p.get_session() as s:
-            query = s.query(HealthCheckIgnore.value).where(
-                HealthCheckIgnore.check == self._NAME,
+            query = s.query(HealthCheckIssue.value).where(
+                HealthCheckIssue.check == self._NAME,
+                HealthCheckIssue.ignore.is_(True),
             )
             return [row[0] for row in query.yield_per(YIELD_PER)]
+
+    def commit_issues(self, p: portfolio.Portfolio) -> None:
+        """Commit issues to Portfolio.
+
+        Args:
+            p: Portfolio to test
+        """
+        with p.get_session() as s:
+            issues: list[tuple[HealthCheckIssue, str]] = []
+            for uri, issue in self._issues_raw.items():
+                i = HealthCheckIssue(check=self._NAME, value=uri, ignore=False)
+                s.add(i)
+                issues.append((i, issue))
+
+            s.commit()
+            self._issues = {i.uri: issue for i, issue in issues}

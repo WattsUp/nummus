@@ -168,6 +168,13 @@ calculates net worth, and predicts future performance."""
         action="store_true",
         help="unignore all issues",
     )
+    sub_health.add_argument(
+        "-i",
+        "--ignore",
+        nargs="*",
+        metavar="ISSUE_URI",
+        help="ignore an issue specified by its URI",
+    )
 
     sub_web = subparsers.add_parser(
         "web",
@@ -263,9 +270,11 @@ calculates net worth, and predicts future performance."""
         always_descriptions: bool = args.desc
         no_ignores: bool = args.no_ignores
         clear_ignores: bool = args.clear_ignores
+        ignores: list[str] | None = args.ignore
         return commands.health_check(
             p,
             limit=limit,
+            ignores=ignores,
             always_descriptions=always_descriptions,
             no_ignores=no_ignores,
             clear_ignores=clear_ignores,

@@ -26,4 +26,4 @@ class DatabaseIntegrity(Base):
             result = s.execute(sqlalchemy.text("PRAGMA integrity_check"))
             rows = [row for row, in result.all()]
             if len(rows) != 1 or rows[0] != "ok":
-                self._issues.extend(rows)
+                self._issues_raw = {str(i): row for i, row in enumerate(rows)}
