@@ -1629,6 +1629,11 @@ def main() -> None:
     for name in ["checking", "savings"]:
         add_interest(p, accts[name])
 
+    values = {
+        Account.id_to_uri(accts["real_estate"]),
+    }
+    health_checks.EmptyFields.silence(p, values)
+
     duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")
 

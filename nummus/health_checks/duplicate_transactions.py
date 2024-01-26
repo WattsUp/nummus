@@ -26,6 +26,7 @@ class DuplicateTransactions(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
 
@@ -34,6 +35,7 @@ class DuplicateTransactions(Base):
             query = (
                 s.query(Transaction)
                 .with_entities(
+                    Transaction.id_,
                     Transaction.date_ord,
                     Transaction.account_id,
                     Transaction.amount,
@@ -45,10 +47,15 @@ class DuplicateTransactions(Base):
                 )
                 .having(sqlalchemy.func.count(Transaction.id_) > 1)
             )
-            for date_ord, acct_id, amount in query.yield_per(YIELD_PER):
+            for t_id, date_ord, acct_id, amount in query.yield_per(YIELD_PER):
+                t_id: int
                 date_ord: int
                 acct_id: int
                 amount: t.Real
+                uri = Transaction.id_to_uri(t_id)
+                if uri in silences:
+                    continue
+
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
                 issues.append((source, utils.format_financial(amount)))

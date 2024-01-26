@@ -30,18 +30,37 @@ class EmptyFields(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
 
             # List of (source, field)
             issues: list[tuple[str, str]] = []
 
-            query = s.query(Account.name).where(Account.number.is_(None))
-            for (name,) in query.yield_per(YIELD_PER):
+            query = (
+                s.query(Account)
+                .with_entities(Account.id_, Account.name)
+                .where(Account.number.is_(None))
+            )
+            for acct_id, name in query.yield_per(YIELD_PER):
+                acct_id: int
+                name: str
+                uri = Account.id_to_uri(acct_id)
+                if uri in silences:
+                    continue
                 issues.append((f"Account {name}", "has an empty number"))
 
-            query = s.query(Asset.name).where(Asset.description.is_(None))
-            for (name,) in query.yield_per(YIELD_PER):
+            query = (
+                s.query(Asset)
+                .with_entities(Asset.id_, Asset.name)
+                .where(Asset.description.is_(None))
+            )
+            for a_id, name in query.yield_per(YIELD_PER):
+                a_id: int
+                name: str
+                uri = Asset.id_to_uri(a_id)
+                if uri in silences:
+                    continue
                 issues.append((f"Asset {name}", "has an empty description"))
 
             txn_fields = [
@@ -52,14 +71,20 @@ class EmptyFields(Base):
                 query = (
                     s.query(TransactionSplit)
                     .with_entities(
+                        TransactionSplit.id_,
                         TransactionSplit.date_ord,
                         TransactionSplit.account_id,
                     )
                     .where(field.is_(None))
                 )
-                for date_ord, acct_id in query.yield_per(YIELD_PER):
+                for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
+                    t_id: int
                     date_ord: int
                     acct_id: int
+                    uri = TransactionSplit.id_to_uri(t_id)
+                    if uri in silences:
+                        continue
+
                     date = datetime.date.fromordinal(date_ord)
                     source = f"{date} - {accounts[acct_id]}"
                     issues.append((source, f"has an empty {field.key}"))
@@ -76,14 +101,20 @@ class EmptyFields(Base):
             query = (
                 s.query(TransactionSplit)
                 .with_entities(
+                    TransactionSplit.id_,
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                 )
                 .where(TransactionSplit.category_id == t_cat_uncategorized)
             )
-            for date_ord, acct_id in query.yield_per(YIELD_PER):
+            for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
+                t_id: int
                 date_ord: int
                 acct_id: int
+                uri = TransactionSplit.id_to_uri(t_id)
+                if uri in silences:
+                    continue
+
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
                 issues.append((source, "is uncategorized"))

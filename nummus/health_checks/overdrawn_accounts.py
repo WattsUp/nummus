@@ -27,6 +27,7 @@ class OverdrawnAccounts(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         today = datetime.date.today()
         today_ord = today.toordinal()
         with p.get_session() as s:
@@ -57,6 +58,8 @@ class OverdrawnAccounts(Base):
             n = today_ord - start_ord + 1
 
             for acct_id, name in accounts.items():
+                uri = Account.id_to_uri(acct_id)
+
                 # Get cash holdings across all time
                 cash_flow = [None] * n
                 query = (
@@ -80,13 +83,16 @@ class OverdrawnAccounts(Base):
 
                 cash = Decimal(0)
                 for i, c in enumerate(cash_flow):
+                    date_ord = start_ord + i
                     if c is None:
                         continue
                     cash += c
                     if cash < 0:
-                        date = datetime.date.fromordinal(start_ord + i)
-                        source = f"{date} - {name}"
-                        issues.append((source, utils.format_financial(c)))
+                        date = datetime.date.fromordinal(date_ord)
+                        k = f"{uri}.{date}"
+                        if k not in silences:
+                            source = f"{date} - {name}"
+                            issues.append((source, utils.format_financial(c)))
 
             if len(issues) == 0:
                 return

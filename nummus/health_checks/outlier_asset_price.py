@@ -33,6 +33,7 @@ class OutlierAssetPrice(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         today = datetime.date.today()
         today_ord = today.toordinal()
         with p.get_session() as s:
@@ -52,6 +53,7 @@ class OutlierAssetPrice(Base):
             query = (
                 s.query(TransactionSplit)
                 .with_entities(
+                    TransactionSplit.id_,
                     TransactionSplit.date_ord,
                     TransactionSplit.asset_id,
                     TransactionSplit.amount,
@@ -60,12 +62,19 @@ class OutlierAssetPrice(Base):
                 )
                 .where(TransactionSplit.asset_id.isnot(None))
             )
-            for date_ord, a_id, amount, qty_i, qty_f in query.yield_per(YIELD_PER):
+            for t_id, date_ord, a_id, amount, qty_i, qty_f in query.yield_per(
+                YIELD_PER,
+            ):
+                t_id: int
                 date_ord: int
                 a_id: int
                 amount: t.Real
                 qty_i: int
                 qty_f: t.Real
+                uri = TransactionSplit.id_to_uri(t_id)
+                if uri in silences:
+                    continue
+
                 qty = qty_i + qty_f
                 if qty == 0:
                     continue

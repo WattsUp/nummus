@@ -28,6 +28,7 @@ class UnlockedTransactions(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
             acct_len = max(len(acct) for acct in accounts.values())
@@ -35,6 +36,7 @@ class UnlockedTransactions(Base):
             query = (
                 s.query(TransactionSplit)
                 .with_entities(
+                    TransactionSplit.id_,
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                     TransactionSplit.payee,
@@ -42,11 +44,15 @@ class UnlockedTransactions(Base):
                 )
                 .where(TransactionSplit.locked.is_(False))
             )
-            for date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
+            for t_id, date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
+                t_id: int
                 date_ord: int
                 acct_id: int
                 payee: str
                 amount: t.Real
+                uri = TransactionSplit.id_to_uri(t_id)
+                if uri in silences:
+                    continue
 
                 msg = (
                     f"{datetime.date.fromordinal(date_ord)} -"

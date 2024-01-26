@@ -24,6 +24,7 @@ class MissingAssetValuations(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
+        silences = self.get_silences(p)
         with p.get_session() as s:
             assets = Asset.map_name(s)
 
@@ -49,6 +50,10 @@ class MissingAssetValuations(Base):
             first_valuations: dict[int, int] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
             for a_id, date_ord in first_date_ords.items():
+                uri = Asset.id_to_uri(a_id)
+                if uri in silences:
+                    continue
+
                 date_ord_v = first_valuations.get(a_id)
                 if date_ord_v is None:
                     msg = f"{assets[a_id]} has no valuations"
