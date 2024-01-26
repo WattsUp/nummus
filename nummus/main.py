@@ -156,6 +156,18 @@ calculates net worth, and predicts future performance."""
         type=int,
         help="print the first n issues for each check",
     )
+    sub_health.add_argument(
+        "--no-ignores",
+        default=False,
+        action="store_true",
+        help="print issues that have been ignored",
+    )
+    sub_health.add_argument(
+        "--clear-ignores",
+        default=False,
+        action="store_true",
+        help="unignore all issues",
+    )
 
     sub_web = subparsers.add_parser(
         "web",
@@ -247,12 +259,16 @@ calculates net worth, and predicts future performance."""
     if cmd == "summarize":
         return commands.summarize(p)
     if cmd == "health":
-        always_descriptions: bool = args.desc
         limit: int = args.limit
+        always_descriptions: bool = args.desc
+        no_ignores: bool = args.no_ignores
+        clear_ignores: bool = args.clear_ignores
         return commands.health_check(
             p,
             limit=limit,
             always_descriptions=always_descriptions,
+            no_ignores=no_ignores,
+            clear_ignores=clear_ignores,
         )
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"

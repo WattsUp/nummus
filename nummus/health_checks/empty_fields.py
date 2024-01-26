@@ -30,7 +30,7 @@ class EmptyFields(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
 
@@ -46,7 +46,7 @@ class EmptyFields(Base):
                 acct_id: int
                 name: str
                 uri = Account.id_to_uri(acct_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
                 issues.append((f"Account {name}", "has an empty number"))
 
@@ -59,7 +59,7 @@ class EmptyFields(Base):
                 a_id: int
                 name: str
                 uri = Asset.id_to_uri(a_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
                 issues.append((f"Asset {name}", "has an empty description"))
 
@@ -82,7 +82,7 @@ class EmptyFields(Base):
                     date_ord: int
                     acct_id: int
                     uri = TransactionSplit.id_to_uri(t_id)
-                    if uri in silences:
+                    if uri in ignores:
                         continue
 
                     date = datetime.date.fromordinal(date_ord)
@@ -112,7 +112,7 @@ class EmptyFields(Base):
                 date_ord: int
                 acct_id: int
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
 
                 date = datetime.date.fromordinal(date_ord)

@@ -11,7 +11,7 @@ from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import Budget
 from nummus.models.config import Config, ConfigKey
 from nummus.models.credentials import Credentials
-from nummus.models.health_checks import HealthCheckSilence
+from nummus.models.health_checks import HealthCheckIgnore
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import (
@@ -38,7 +38,7 @@ __all__ = [
     "Config",
     "ConfigKey",
     "Credentials",
-    "HealthCheckSilence",
+    "HealthCheckIgnore",
     "ImportedFile",
     "load_cipher",
     "Transaction",
@@ -61,7 +61,7 @@ _TABLES: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
     Config.__table__,
     Credentials.__table__,
     ImportedFile.__table__,
-    HealthCheckSilence.__table__,
+    HealthCheckIgnore.__table__,
     Transaction.__table__,
     TransactionCategory.__table__,
     TransactionSplit.__table__,

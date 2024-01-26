@@ -33,7 +33,7 @@ class OutlierAssetPrice(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         today = datetime.date.today()
         today_ord = today.toordinal()
         with p.get_session() as s:
@@ -72,7 +72,7 @@ class OutlierAssetPrice(Base):
                 qty_i: int
                 qty_f: t.Real
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
 
                 qty = qty_i + qty_f

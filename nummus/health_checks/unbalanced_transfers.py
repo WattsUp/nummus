@@ -31,7 +31,7 @@ class UnbalancedTransfers(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = [int(s) for s in self.get_silences(p)]
+        ignores = [int(s) for s in self.get_ignores(p)]
         with p.get_session() as s:
             try:
                 cat_transfers_id: int = (
@@ -66,7 +66,7 @@ class UnbalancedTransfers(Base):
                     if total != 0:
                         date = datetime.date.fromordinal(current_date_ord)
                         date_str = date.isoformat()
-                        if date_str not in silences:
+                        if date_str not in ignores:
                             self._issues.append(
                                 f"{date}: Sum of transfers on this day are non-zero",
                             )

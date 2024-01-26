@@ -1608,7 +1608,7 @@ def main() -> None:
         "Barista",
         "Y2K",
     }
-    health_checks.Typos.silence(p, words)
+    health_checks.Typos.ignore(p, words)
 
     accts = make_accounts(p)
     assets = make_assets(p)
@@ -1632,7 +1632,7 @@ def main() -> None:
     values = {
         Account.id_to_uri(accts["real_estate"]),
     }
-    health_checks.EmptyFields.silence(p, values)
+    health_checks.EmptyFields.ignore(p, values)
 
     duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")

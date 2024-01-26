@@ -43,7 +43,7 @@ class Typos(Base):
             "ATM",
             "Uncategorized",
             "Rebalance",
-            *self.get_silences(p),
+            *self.get_ignores(p),
         }
         known = {k.lower() for k in known}
 

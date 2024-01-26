@@ -5,13 +5,11 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from nummus.models import HealthCheckSilence, YIELD_PER
+from nummus.models import HealthCheckIgnore, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
     from nummus import portfolio
-
-# TODO (WattsUp): Add a silence mechanism to hush false positives
 
 
 class Base(ABC):
@@ -21,10 +19,15 @@ class Base(ABC):
     _DESC: str = ""
     _SEVERE: bool = False
 
-    def __init__(self) -> None:
-        """Initialize Base health check."""
+    def __init__(self, *_, no_ignores: bool = False) -> None:
+        """Initialize Base health check.
+
+        Args:
+            no_ignores: True will print issues that have been ignored
+        """
         super().__init__()
         self._issues: t.Strings = []
+        self._no_ignores = no_ignores
 
     @property
     def name(self) -> str:
@@ -61,37 +64,38 @@ class Base(ABC):
         raise NotImplementedError
 
     @classmethod
-    def silence(cls, p: portfolio.Portfolio, values: list[str] | set[str]) -> None:
-        """Silence false positive issues.
+    def ignore(cls, p: portfolio.Portfolio, values: list[str] | set[str]) -> None:
+        """Ignore false positive issues.
 
         Args:
             p: Portfolio to test
-            values: List of issues to silence
+            values: List of issues to ignore
         """
         with p.get_session() as s:
-            query = s.query(HealthCheckSilence.value).where(
-                HealthCheckSilence.check == cls._NAME,
-                HealthCheckSilence.value.in_(values),
+            query = s.query(HealthCheckIgnore.value).where(
+                HealthCheckIgnore.check == cls._NAME,
+                HealthCheckIgnore.value.in_(values),
             )
             duplicates = [row[0] for row in query.yield_per(YIELD_PER)]
             values = [v for v in values if v not in duplicates]
             for v in values:
-                c = HealthCheckSilence(check=cls._NAME, value=v)
+                c = HealthCheckIgnore(check=cls._NAME, value=v)
                 s.add(c)
             s.commit()
 
-    @classmethod
-    def get_silences(cls, p: portfolio.Portfolio) -> list[str]:
-        """Get list of silences for this check.
+    def get_ignores(self, p: portfolio.Portfolio) -> list[str]:
+        """Get list of ignores for this check.
 
         Args:
             p: Portfolio to test
 
         Returns:
-            List of silences, interpretation depends on specific check
+            List of ignores, interpretation depends on specific check
         """
+        if self._no_ignores:
+            return []
         with p.get_session() as s:
-            query = s.query(HealthCheckSilence.value).where(
-                HealthCheckSilence.check == cls._NAME,
+            query = s.query(HealthCheckIgnore.value).where(
+                HealthCheckIgnore.check == self._NAME,
             )
             return [row[0] for row in query.yield_per(YIELD_PER)]

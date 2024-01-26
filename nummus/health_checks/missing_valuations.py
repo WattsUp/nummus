@@ -24,7 +24,7 @@ class MissingAssetValuations(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         with p.get_session() as s:
             assets = Asset.map_name(s)
 
@@ -51,7 +51,7 @@ class MissingAssetValuations(Base):
 
             for a_id, date_ord in first_date_ords.items():
                 uri = Asset.id_to_uri(a_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
 
                 date_ord_v = first_valuations.get(a_id)

@@ -6,12 +6,12 @@ from nummus import custom_types as t
 from nummus.models.base import Base
 
 
-class HealthCheckSilence(Base):
+class HealthCheckIgnore(Base):
     """Health check issue suppression model.
 
     Attributes:
-        check: Name of check being silenced
-        value: Value of failure being silenced
+        check: Name of check being ignored
+        value: Value of failure being ignored
     """
 
     # No __table_id__ because this is not user accessible

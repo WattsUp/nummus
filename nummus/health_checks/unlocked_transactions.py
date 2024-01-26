@@ -28,7 +28,7 @@ class UnlockedTransactions(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
             acct_len = max(len(acct) for acct in accounts.values())
@@ -51,7 +51,7 @@ class UnlockedTransactions(Base):
                 payee: str
                 amount: t.Real
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
 
                 msg = (

@@ -27,7 +27,7 @@ class OverdrawnAccounts(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         today = datetime.date.today()
         today_ord = today.toordinal()
         with p.get_session() as s:
@@ -90,7 +90,7 @@ class OverdrawnAccounts(Base):
                     if cash < 0:
                         date = datetime.date.fromordinal(date_ord)
                         k = f"{uri}.{date}"
-                        if k not in silences:
+                        if k not in ignores:
                             source = f"{date} - {name}"
                             issues.append((source, utils.format_financial(c)))
 

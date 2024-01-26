@@ -26,7 +26,7 @@ class DuplicateTransactions(Base):
 
     @override
     def test(self, p: portfolio.Portfolio) -> None:
-        silences = self.get_silences(p)
+        ignores = self.get_ignores(p)
         with p.get_session() as s:
             accounts = Account.map_name(s)
 
@@ -53,7 +53,7 @@ class DuplicateTransactions(Base):
                 acct_id: int
                 amount: t.Real
                 uri = Transaction.id_to_uri(t_id)
-                if uri in silences:
+                if uri in ignores:
                     continue
 
                 date = datetime.date.fromordinal(date_ord)

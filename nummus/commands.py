@@ -12,6 +12,7 @@ from colorama import Fore
 from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import health_checks, portfolio, utils, web
+from nummus.models import HealthCheckIgnore
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -446,6 +447,8 @@ def health_check(
     limit: int = 10,
     *_,
     always_descriptions: bool = False,
+    no_ignores: bool = False,
+    clear_ignores: bool = False,
 ) -> int:
     """Run a comprehensive health check looking for import errors.
 
@@ -454,16 +457,23 @@ def health_check(
         limit: Print first n issues for each check
         always_descriptions: True will print every check's description,
             False will only print on failure
+        no_ignores: True will print issues that have been ignored
+        clear_ignores: True will unignore all issues
 
     Returns:
         0 on success
         non-zero on failure
     """
+    if clear_ignores:
+        with p.get_session() as s:
+            s.query(HealthCheckIgnore).delete()
+            s.commit()
+
     limit = max(1, limit)
     any_issues = False
     any_severe_issues = False
     for check_type in health_checks.CHECKS:
-        c = check_type()
+        c = check_type(no_ignores=no_ignores)
         c.test(p)
         n_issues = len(c.issues)
         if n_issues == 0:
