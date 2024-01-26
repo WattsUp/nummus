@@ -43,9 +43,9 @@ class Typos(Base):
             "ATM",
             "Uncategorized",
             "Rebalance",
+            *self.get_silences(p),
         }
         known = {k.lower() for k in known}
-        # TODO (WattsUp): Add mechanism to add to this known dictionary
 
         with p.get_session() as s:
             accounts = Account.map_name(s)

@@ -11,7 +11,7 @@ import colorama
 import numpy as np
 from colorama import Fore
 
-from nummus import commands
+from nummus import commands, health_checks
 from nummus.models import (
     Account,
     AccountCategory,
@@ -1588,6 +1588,27 @@ def main() -> None:
     """Main program entry."""
     start = time.perf_counter()
     p = Portfolio.create("portfolio.db")
+
+    # Add words to the dictionary
+    words = {
+        "PB",
+        "St.",
+        "Ave.",
+        "Blvd.",
+        "S&P",
+        "Italian",
+        "Chinese",
+        "Thai",
+        "Kroger",
+        "Safeway",
+        "Fred",
+        "Meyer",
+        "QFC",
+        "Walmart",
+        "Barista",
+        "Y2K",
+    }
+    health_checks.Typos.silence(p, words)
 
     accts = make_accounts(p)
     assets = make_assets(p)

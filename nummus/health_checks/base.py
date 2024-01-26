@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from nummus.models import HealthCheckSilence, YIELD_PER
+
 if TYPE_CHECKING:
     from nummus import custom_types as t
     from nummus import portfolio
@@ -57,3 +59,39 @@ class Base(ABC):
             p: Portfolio to test
         """
         raise NotImplementedError
+
+    @classmethod
+    def silence(cls, p: portfolio.Portfolio, values: list[str] | set[str]) -> None:
+        """Silence false positive issues.
+
+        Args:
+            p: Portfolio to test
+            values: List of issues to silence
+        """
+        with p.get_session() as s:
+            query = s.query(HealthCheckSilence.value).where(
+                HealthCheckSilence.check == cls._NAME,
+                HealthCheckSilence.value.in_(values),
+            )
+            duplicates = [row[0] for row in query.yield_per(YIELD_PER)]
+            values = [v for v in values if v not in duplicates]
+            for v in values:
+                c = HealthCheckSilence(check=cls._NAME, value=v)
+                s.add(c)
+            s.commit()
+
+    @classmethod
+    def get_silences(cls, p: portfolio.Portfolio) -> list[str]:
+        """Get list of silences for this check.
+
+        Args:
+            p: Portfolio to test
+
+        Returns:
+            List of silences, interpretation depends on specific check
+        """
+        with p.get_session() as s:
+            query = s.query(HealthCheckSilence.value).where(
+                HealthCheckSilence.check == cls._NAME,
+            )
+            return [row[0] for row in query.yield_per(YIELD_PER)]
