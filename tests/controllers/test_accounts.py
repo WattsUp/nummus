@@ -304,10 +304,10 @@ class TestAccount(WebTestBase):
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$0\.00).*(0\.00%).*(\$0\.00)[^0-9]*",
+            r"(1\.000000).*(\$0\.00).*(0\.00%).*(-\$10\.00)[^0-9]*",
         )
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$80\.00).*(\$0\.00)[^0-9]*")
+        self.assertRegex(result_total, r"(Total).*(\$80\.00).*(-\$10\.00)[^0-9]*")
 
         # Add a valuation for the house with zero profit
         with p.get_session() as s:
@@ -331,10 +331,10 @@ class TestAccount(WebTestBase):
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$10\.00).*(11\.11%).*(\$10\.00)[^0-9]*",
+            r"(1\.000000).*(\$10\.00).*(11\.11%).*(\$0\.00)[^0-9]*",
         )
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$10\.00)[^0-9]*")
+        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         # Sell house for $20
         with p.get_session() as s:
@@ -344,7 +344,6 @@ class TestAccount(WebTestBase):
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
-            # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct_id,
                 date_ord=today_ord - 1,

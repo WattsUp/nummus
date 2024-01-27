@@ -376,6 +376,25 @@ class TestMain(TestBase):
                 main.main(args)
             self.assertEqual(len(self._called_args), 1)
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
-            self.assertDictEqual(self._called_kwargs, {"_func": "summarize"})
+            self.assertDictEqual(
+                self._called_kwargs,
+                {
+                    "_func": "summarize",
+                    "include_all": False,
+                },
+            )
+
+            args = ["--portfolio", str(path), "summarize", "--include-all"]
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                main.main(args)
+            self.assertEqual(len(self._called_args), 1)
+            self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+            self.assertDictEqual(
+                self._called_kwargs,
+                {
+                    "_func": "summarize",
+                    "include_all": True,
+                },
+            )
         finally:
             self._tear_down_commands()

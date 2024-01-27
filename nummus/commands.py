@@ -327,17 +327,22 @@ def update_assets(p: portfolio.Portfolio) -> int:
     return 1 if failed else 0
 
 
-def summarize(p: portfolio.Portfolio) -> int:
+def summarize(
+    p: portfolio.Portfolio,
+    *_,
+    include_all: bool = False,
+) -> int:
     """Print summary information and statistics on Portfolio.
 
     Args:
         p: Working Portfolio
+        include_all: True will include all accounts and assets
 
     Returns:
         0 on success
         non-zero on failure
     """
-    stats = p.summarize()
+    stats = p.summarize(include_all=include_all)
 
     def is_are(i: int) -> str:
         return "is" if i == 1 else "are"
@@ -356,7 +361,7 @@ def summarize(p: portfolio.Portfolio) -> int:
             "Category",
             ">Value/",
             ">Profit/",
-            "^Age/",
+            ">Age/",
         ],
         None,
     ]

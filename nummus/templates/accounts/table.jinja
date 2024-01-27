@@ -25,7 +25,7 @@
     {% endwith %}
 {% endif %}
 <div id="txn-table"
-     class="w-full flex flex-col grow"
+     class="w-full flex flex-col grow min-h-[15rem]"
      hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
      hx-trigger="update-transaction from:body">
     {% if txn_table["transactions"] | length == 0 %}

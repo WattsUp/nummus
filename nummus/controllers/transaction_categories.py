@@ -78,12 +78,18 @@ def new() -> str | flask.Response:
     form = flask.request.form
     name = form["name"].strip()
     group = form.get("group", type=TransactionCategoryGroup)
+    is_profit_loss = "is-pnl" in form
 
     try:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.get_session() as s:
-            cat = TransactionCategory(name=name, group=group, locked=False)
+            cat = TransactionCategory(
+                name=name,
+                group=group,
+                locked=False,
+                is_profit_loss=is_profit_loss,
+            )
             s.add(cat)
             s.commit()
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -114,6 +120,7 @@ def edit(uri: str) -> str | flask.Response:
                 "group": cat.group,
                 "group_type": TransactionCategoryGroup,
                 "locked": cat.locked,
+                "is_profit_loss": cat.is_profit_loss,
             }
 
             return flask.render_template(
@@ -128,6 +135,7 @@ def edit(uri: str) -> str | flask.Response:
         form = flask.request.form
         name = form["name"].strip()
         group = form.get("group", type=TransactionCategoryGroup)
+        is_profit_loss = "is-pnl" in form
 
         if group is None:
             return common.error("Transaction group must not be None")
@@ -135,6 +143,7 @@ def edit(uri: str) -> str | flask.Response:
         try:
             cat.name = name
             cat.group = group
+            cat.is_profit_loss = is_profit_loss
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)

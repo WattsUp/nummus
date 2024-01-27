@@ -88,7 +88,7 @@ def ctx_chart() -> t.DictAny:
 
         ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
+        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total: t.Reals = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
@@ -137,7 +137,7 @@ def ctx_chart() -> t.DictAny:
             else:
                 date_mode = "days"
 
-        assets = ctx_assets(s, start_ord, end_ord, sum_assets_end)
+        assets = ctx_assets(s, start_ord, end_ord, sum_assets_end, ids)
 
     return {
         "start": start,
@@ -162,13 +162,19 @@ def ctx_assets(
     start_ord: int,
     end_ord: int,
     total_value: t.Real,
+    account_ids: t.Ints,
 ) -> t.DictAny:
     """Get the context to build the assets list.
 
     Returns:
         Dictionary HTML context
     """
-    account_asset_qtys = Account.get_asset_qty_all(s, end_ord, end_ord)
+    account_asset_qtys = Account.get_asset_qty_all(
+        s,
+        end_ord,
+        end_ord,
+        ids=account_ids,
+    )
     asset_qtys: t.DictIntReal = {}
     for acct_assets in account_asset_qtys.values():
         for a_id, qtys in acct_assets.items():
@@ -180,6 +186,7 @@ def ctx_assets(
         TransactionSplit.date_ord <= end_ord,
         TransactionSplit.date_ord >= start_ord,
         TransactionSplit.asset_id.is_not(None),
+        TransactionSplit.account_id.in_(account_ids),
     )
     a_ids = {a_id for a_id, in query.distinct()}
 
@@ -207,6 +214,13 @@ def ctx_assets(
 
     end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
+    asset_profits = Account.get_profit_by_asset_all(
+        s,
+        start_ord,
+        end_ord,
+        ids=account_ids,
+    )
+
     query = (
         s.query(Asset)
         .with_entities(
@@ -223,7 +237,7 @@ def ctx_assets(
     for a_id, name, category in query.yield_per(YIELD_PER):
         end_qty = asset_qtys[a_id]
         end_value = end_qty * end_prices[a_id][0]
-        profit = end_value  # FIX (WattsUp): Not true profit
+        profit = asset_profits[a_id]
 
         cash -= end_value
         total_profit += profit
@@ -256,7 +270,7 @@ def ctx_assets(
         assets,
         key=lambda item: (
             -item["end_value"],
-            item["category"].name,
+            -item["profit"],
             item["name"].lower(),
         ),
     )
@@ -280,7 +294,7 @@ def page() -> str:
     today_ord = today.toordinal()
 
     with p.get_session() as s:
-        acct_values, _ = Account.get_value_all(s, today_ord, today_ord)
+        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
         current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",
@@ -317,7 +331,7 @@ def dashboard() -> str:
         end_ord = today_ord
         start = utils.date_add_months(today, -8)
         start_ord = start.toordinal()
-        acct_values, _ = Account.get_value_all(s, start_ord, end_ord)
+        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 

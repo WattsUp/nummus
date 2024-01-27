@@ -201,6 +201,7 @@ class TestCommon(WebTestBase):
                 t_cat = TransactionCategory()
                 t_cat.group = TransactionCategoryGroup.OTHER
                 t_cat.locked = False
+                t_cat.is_profit_loss = False
 
                 with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
                     s.add(t_cat)
@@ -221,6 +222,7 @@ class TestCommon(WebTestBase):
                 t_cat.name = name
                 t_cat.group = TransactionCategoryGroup.OTHER
                 t_cat.locked = False
+                t_cat.is_profit_loss = False
                 with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
                     s.add(t_cat)
                     s.commit()

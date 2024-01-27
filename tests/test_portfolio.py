@@ -1120,6 +1120,7 @@ class TestPortfolio(TestBase):
             s.add(av)
             s.commit()
             v_apple_0 = av.value * (t_split_0.asset_quantity or 0)
+            profit_apple_0 = v_apple_0 + 100
 
             av = AssetValuation(
                 asset_id=a_apple_1.id_,
@@ -1129,6 +1130,7 @@ class TestPortfolio(TestBase):
             s.add(av)
             s.commit()
             v_apple_1 = av.value * (t_split_1.asset_quantity or 0)
+            profit_apple_1 = v_apple_1 - 10
 
         value = 100 - 10 - 10 + v_apple_0 + v_apple_1
         target = {
@@ -1144,7 +1146,7 @@ class TestPortfolio(TestBase):
                     "category": "Cash",
                     "value": value,
                     "age": "1 days",
-                    "profit": Decimal(0),
+                    "profit": profit_apple_0 + profit_apple_1,
                 },
                 {
                     "name": "Monkey Bank Credit",
@@ -1161,7 +1163,7 @@ class TestPortfolio(TestBase):
                     "name": "Apple",
                     "description": None,
                     "value": v_apple_0,
-                    "profit": Decimal(0),
+                    "profit": profit_apple_0,
                     "category": "Real estate",
                     "ticker": None,
                 },
@@ -1169,13 +1171,14 @@ class TestPortfolio(TestBase):
                     "name": "Tech Company",
                     "description": "Apples and Bananas",
                     "value": v_apple_1,
-                    "profit": Decimal(0),
+                    "profit": profit_apple_1,
                     "category": "Stocks",
                     "ticker": "APPLE",
                 },
             ],
             "db_size": path_db.stat().st_size,
         }
+        self.maxDiff = None
         result = p.summarize()
         self.assertEqual(result, target)
 
@@ -1223,7 +1226,7 @@ class TestPortfolio(TestBase):
                     "category": "Cash",
                     "value": value,
                     "age": "1 days",
-                    "profit": Decimal(0),
+                    "profit": Decimal(100),
                 },
             ],
             "total_asset_value": Decimal(0),
