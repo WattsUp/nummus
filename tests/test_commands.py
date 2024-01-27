@@ -749,7 +749,8 @@ class TestCommands(TestBase):
 
             p.summarize = mock_summarize
 
-            target = textwrap.dedent("""\
+            target = textwrap.dedent(
+                """\
             Portfolio file size is 10.2KB/10.0KiB
             There is 1 account, 1 of which is currently open
             ╭──────────────────────┬─────────────┬──────────┬────────┬────────┬────────╮
@@ -769,7 +770,8 @@ class TestCommands(TestBase):
             ╰───────┴─────────────┴─────────────┴────────┴────────┴────────╯
             There is 1 asset valuation
             There is 1 transaction
-            """)
+            """,
+            )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 commands.summarize(p)
             fake_stdout = fake_stdout.getvalue()
@@ -821,7 +823,8 @@ class TestCommands(TestBase):
                 "db_size": 1024 * 10,
             }
 
-            target = textwrap.dedent("""\
+            target = textwrap.dedent(
+                """\
             Portfolio file size is 10.2KB/10.0KiB
             There are 2 accounts, 2 of which are currently open
             ╭──────────────────────┬─────────────┬──────────┬────────┬────────┬────────╮
@@ -843,7 +846,8 @@ class TestCommands(TestBase):
             ╰────────┴──────────────┴─────────────┴────────┴─────────┴────────╯
             There are 5 asset valuations
             There are 4 transactions
-            """)
+            """,
+            )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 commands.summarize(p)
             fake_stdout = fake_stdout.getvalue()
