@@ -14,7 +14,6 @@ from nummus.models import Account, Transaction, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
-    from nummus import portfolio
 
 
 class DuplicateTransactions(Base):
@@ -25,9 +24,8 @@ class DuplicateTransactions(Base):
     _SEVERE = True
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        ignores = self.get_ignores(p)
-        with p.get_session() as s:
+    def test(self) -> None:
+        with self._p.get_session() as s:
             accounts = Account.map_name(s)
 
             issues: list[tuple[str, str, str]] = []
@@ -53,18 +51,17 @@ class DuplicateTransactions(Base):
                 acct_id: int
                 amount: t.Real
                 uri = Transaction.id_to_uri(t_id)
-                if uri in ignores:
-                    continue
 
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
                 issues.append((uri, source, utils.format_financial(amount)))
 
-            if len(issues) == 0:
-                return
-            source_len = max(len(item[1]) for item in issues)
-            amount_len = max(len(item[2]) for item in issues)
+            if len(issues) != 0:
+                source_len = max(len(item[1]) for item in issues)
+                amount_len = max(len(item[2]) for item in issues)
 
-            for uri, source, amount_str in issues:
-                msg = f"{source:{source_len}} {amount_str:>{amount_len}}"
-                self._issues_raw[uri] = msg
+                for uri, source, amount_str in issues:
+                    msg = f"{source:{source_len}} {amount_str:>{amount_len}}"
+                    self._issues_raw[uri] = msg
+
+        self._commit_issues()

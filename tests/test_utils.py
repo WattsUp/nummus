@@ -173,6 +173,8 @@ class TestUtils(TestBase):
         x = Decimal("1000.1")
         result = utils.format_financial(x)
         self.assertEqual(result, "$1,000.10")
+        result = utils.format_financial(x, plus=True)
+        self.assertEqual(result, "+$1,000.10")
 
         x = Decimal("-1000.1")
         result = utils.format_financial(x)

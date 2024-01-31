@@ -15,7 +15,6 @@ from nummus.models import Account, AccountCategory, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
-    from nummus import portfolio
 
 
 class OverdrawnAccounts(Base):
@@ -26,13 +25,12 @@ class OverdrawnAccounts(Base):
     _SEVERE = True
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        ignores = self.get_ignores(p)
+    def test(self) -> None:
         today = datetime.date.today()
         today_ord = today.toordinal()
-        with p.get_session() as s:
+        with self._p.get_session() as s:
             # Get a list of accounts subject to overdrawn so not credit and loans
-            categories = [
+            categories_exclude = [
                 AccountCategory.CREDIT,
                 AccountCategory.LOAN,
                 AccountCategory.MORTGAGE,
@@ -40,7 +38,7 @@ class OverdrawnAccounts(Base):
             query = (
                 s.query(Account)
                 .with_entities(Account.id_, Account.name)
-                .where(Account.category.not_in(categories))
+                .where(Account.category.not_in(categories_exclude))
             )
             accounts: t.DictIntStr = dict(query.all())  # type: ignore[attr-defined]
             acct_ids = set(accounts)
@@ -54,6 +52,7 @@ class OverdrawnAccounts(Base):
             )
             if start_ord is None:
                 # No asset transactions at all
+                self._commit_issues()
                 return
             n = today_ord - start_ord + 1
 
@@ -90,15 +89,15 @@ class OverdrawnAccounts(Base):
                     if cash < 0:
                         date = datetime.date.fromordinal(date_ord)
                         k = f"{uri}.{date}"
-                        if k not in ignores:
-                            source = f"{date} - {name}"
-                            issues.append((k, source, utils.format_financial(c)))
+                        source = f"{date} - {name}"
+                        issues.append((k, source, utils.format_financial(c)))
 
-            if len(issues) == 0:
-                return
-            source_len = max(len(item[1]) for item in issues)
-            amount_len = max(len(item[2]) for item in issues)
+            if len(issues) != 0:
+                source_len = max(len(item[1]) for item in issues)
+                amount_len = max(len(item[2]) for item in issues)
 
-            for uri, source, amount_str in issues:
-                msg = f"{source:{source_len}} {amount_str:>{amount_len}}"
-                self._issues_raw[uri] = msg
+                for uri, source, amount_str in issues:
+                    msg = f"{source:{source_len}} {amount_str:>{amount_len}}"
+                    self._issues_raw[uri] = msg
+
+        self._commit_issues()

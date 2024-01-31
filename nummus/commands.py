@@ -475,8 +475,6 @@ def health_check(
             s.query(HealthCheckIssue).where(HealthCheckIssue.id_.in_(ids)).update(
                 {HealthCheckIssue.ignore: True},
             )
-        # Remove any issues not ignored
-        s.query(HealthCheckIssue).where(HealthCheckIssue.ignore.is_(False)).delete()
         s.commit()
 
     limit = max(1, limit)
@@ -484,9 +482,8 @@ def health_check(
     any_severe_issues = False
     first_uri: str | None = None
     for check_type in health_checks.CHECKS:
-        c = check_type(no_ignores=no_ignores)
-        c.test(p)
-        c.commit_issues(p)
+        c = check_type(p, no_ignores=no_ignores)
+        c.test()
         n_issues = len(c.issues)
         if n_issues == 0:
             print(f"{Fore.GREEN}Check '{c.name}' has no issues")
@@ -508,6 +505,8 @@ def health_check(
             line = f"[{uri}] {issue}"
             print(textwrap.indent(line, "  "))
 
+            i += 1
+
         if n_issues > limit:
             print(
                 f"{Fore.MAGENTA}  And {n_issues - limit} more issues, use --limit flag"
@@ -516,8 +515,8 @@ def health_check(
     if any_issues:
         print(f"{Fore.MAGENTA}Use web interface to fix issues")
         print(
-            f"{Fore.MAGENTA}Or silence false positives with: nummus health -i "
-            f"{first_uri} ...",
+            f"{Fore.MAGENTA}Or silence false positives with: nummus health "
+            f"--ignore {first_uri} ...",
         )
     if any_severe_issues:
         return -2

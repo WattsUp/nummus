@@ -16,7 +16,6 @@ from nummus.models import Asset, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
-    from nummus import portfolio
 
 
 class OutlierAssetPrice(Base):
@@ -32,14 +31,10 @@ class OutlierAssetPrice(Base):
     _RANGE = Decimal("0.4")
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        ignores = self.get_ignores(p)
+    def test(self) -> None:
         today = datetime.date.today()
         today_ord = today.toordinal()
-        with p.get_session() as s:
-            assets = Asset.map_name(s)
-            asset_len = max(len(a) for a in assets.values())
-
+        with self._p.get_session() as s:
             start_ord = (
                 s.query(sqlalchemy.func.min(TransactionSplit.date_ord))
                 .where(TransactionSplit.asset_id.isnot(None))
@@ -47,7 +42,12 @@ class OutlierAssetPrice(Base):
             )
             if start_ord is None:
                 # No asset transactions at all
+                self._commit_issues()
                 return
+
+            assets = Asset.map_name(s)
+            asset_len = max(len(a) for a in assets.values())
+
             asset_valuations = Asset.get_value_all(s, start_ord, today_ord)
 
             query = (
@@ -72,8 +72,6 @@ class OutlierAssetPrice(Base):
                 qty_i: int
                 qty_f: t.Real
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in ignores:
-                    continue
 
                 qty = qty_i + qty_f
                 if qty == 0:
@@ -85,14 +83,7 @@ class OutlierAssetPrice(Base):
                 v_price = asset_valuations[a_id][date_ord - start_ord]
                 v_price_low = v_price * (1 - self._RANGE)
                 v_price_high = v_price * (1 + self._RANGE)
-                if v_price is None:
-                    msg = (
-                        f"{datetime.date.fromordinal(date_ord)}:"
-                        f" {assets[a_id]:{asset_len}} has no valuations before"
-                        " transaction on"
-                    )
-                    self._issues_raw[uri] = msg
-                elif t_price < v_price_low:
+                if t_price < v_price_low:
                     msg = (
                         f"{datetime.date.fromordinal(date_ord)}:"
                         f" {assets[a_id]:{asset_len}} was traded at"
@@ -103,8 +94,10 @@ class OutlierAssetPrice(Base):
                 elif t_price > v_price_high:
                     msg = (
                         f"{datetime.date.fromordinal(date_ord)}:"
-                        f" {assets[a_id]:{asset_len}} was bought at"
+                        f" {assets[a_id]:{asset_len}} was traded at"
                         f" {utils.format_financial(t_price)} which is above valuation"
                         f" of {utils.format_financial(v_price)}"
                     )
                     self._issues_raw[uri] = msg
+
+        self._commit_issues()

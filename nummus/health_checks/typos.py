@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import re
-from typing import TYPE_CHECKING
 
 import spellchecker
 from typing_extensions import override
@@ -18,9 +17,6 @@ from nummus.models import (
     YIELD_PER,
 )
 
-if TYPE_CHECKING:
-    from nummus import portfolio
-
 
 class Typos(Base):
     """Checks for very similar fields and common typos."""
@@ -32,7 +28,7 @@ class Typos(Base):
     _RE_WORDS = re.compile(r"[ ,/]")
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
+    def test(self) -> None:
         spell = spellchecker.SpellChecker()
         # Known correct words
         known = {
@@ -43,11 +39,10 @@ class Typos(Base):
             "ATM",
             "Uncategorized",
             "Rebalance",
-            *self.get_ignores(p),
         }
         known = {k.lower() for k in known}
 
-        with p.get_session() as s:
+        with self._p.get_session() as s:
             accounts = Account.map_name(s)
 
             # Create a dict of every word found with the first instance detected
@@ -118,21 +113,19 @@ class Typos(Base):
             words = {k: v for k, v in words.items() if k not in known}
             words = {k: v for k, v in words.items() if k in spell.unknown(words)}
 
-            if len(words) == 0:
-                return
+            if len(words) != 0:
+                source_len = 0
+                field_len = 0
 
-            word_len = 0
-            source_len = 0
-            field_len = 0
+                for _, source, field in words.values():
+                    source_len = max(source_len, len(source))
+                    field_len = max(field_len, len(field))
 
-            for word, source, field in words.values():
-                word_len = max(word_len, len(word))
-                source_len = max(source_len, len(source))
-                field_len = max(field_len, len(field))
+                for uri, item in words.items():
+                    word, source, field = item
+                    # Getting a suggested correction is slow and error prone,
+                    # Just say if a word is outside of the dictionary
+                    msg = f"{source:{source_len}} {field:{field_len}}: {word}"
+                    self._issues_raw[uri] = msg
 
-            for uri, item in words.items():
-                word, source, field = item
-                # Getting a suggested correction is slow and error prone,
-                # Just say if a word is outside of the dictionary
-                msg = f"{source:{source_len}} {field:{field_len}}: {word:{word_len}}"
-                self._issues_raw[uri] = msg
+        self._commit_issues()

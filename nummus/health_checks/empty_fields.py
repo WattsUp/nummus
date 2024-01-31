@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -17,9 +16,6 @@ from nummus.models import (
     YIELD_PER,
 )
 
-if TYPE_CHECKING:
-    from nummus import portfolio
-
 
 class EmptyFields(Base):
     """Checks for empty fields that are better when populated."""
@@ -29,9 +25,8 @@ class EmptyFields(Base):
     _SEVERE = False
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        ignores = self.get_ignores(p)
-        with p.get_session() as s:
+    def test(self) -> None:
+        with self._p.get_session() as s:
             accounts = Account.map_name(s)
 
             # List of (source, field)
@@ -46,9 +41,9 @@ class EmptyFields(Base):
                 acct_id: int
                 name: str
                 uri = Account.id_to_uri(acct_id)
-                if uri in ignores:
-                    continue
-                issues.append((uri, f"Account {name}", "has an empty number"))
+                issues.append(
+                    (f"{uri}.number", f"Account {name}", "has an empty number"),
+                )
 
             query = (
                 s.query(Asset)
@@ -59,9 +54,9 @@ class EmptyFields(Base):
                 a_id: int
                 name: str
                 uri = Asset.id_to_uri(a_id)
-                if uri in ignores:
-                    continue
-                issues.append((uri, f"Asset {name}", "has an empty description"))
+                issues.append(
+                    (f"{uri}.description", f"Asset {name}", "has an empty description"),
+                )
 
             txn_fields = [
                 TransactionSplit.payee,
@@ -82,12 +77,12 @@ class EmptyFields(Base):
                     date_ord: int
                     acct_id: int
                     uri = TransactionSplit.id_to_uri(t_id)
-                    if uri in ignores:
-                        continue
 
                     date = datetime.date.fromordinal(date_ord)
                     source = f"{date} - {accounts[acct_id]}"
-                    issues.append((uri, source, f"has an empty {field.key}"))
+                    issues.append(
+                        (f"{uri}.{field.key}", source, f"has an empty {field.key}"),
+                    )
 
             try:
                 t_cat_uncategorized = (
@@ -95,7 +90,7 @@ class EmptyFields(Base):
                     .where(TransactionCategory.name == "Uncategorized")
                     .one()[0]
                 )
-            except exc.NoResultFound as e:
+            except exc.NoResultFound as e:  # pragma: no cover
                 msg = "Category Uncategorized not found"
                 raise exc.ProtectedObjectNotFoundError(msg) from e
             query = (
@@ -112,17 +107,15 @@ class EmptyFields(Base):
                 date_ord: int
                 acct_id: int
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in ignores:
-                    continue
 
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
-                issues.append((uri, source, "is uncategorized"))
+                issues.append((f"{uri}.category", source, "is uncategorized"))
 
-            if len(issues) == 0:
-                return
+            if len(issues) != 0:
+                source_len = max(len(item[1]) for item in issues)
+                for uri, source, field in issues:
+                    msg = f"{source:{source_len}} {field}"
+                    self._issues_raw[uri] = msg
 
-            source_len = max(len(item[1]) for item in issues)
-            for uri, source, field in issues:
-                msg = f"{source:{source_len}} {field}"
-                self._issues_raw[uri] = msg
+        self._commit_issues()

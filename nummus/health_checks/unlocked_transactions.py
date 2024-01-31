@@ -14,7 +14,6 @@ from nummus.models import Account, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import custom_types as t
-    from nummus import portfolio
 
 
 class UnlockedTransactions(Base):
@@ -27,10 +26,12 @@ class UnlockedTransactions(Base):
     _SEVERE = False
 
     @override
-    def test(self, p: portfolio.Portfolio) -> None:
-        ignores = self.get_ignores(p)
-        with p.get_session() as s:
+    def test(self) -> None:
+        with self._p.get_session() as s:
             accounts = Account.map_name(s)
+            if len(accounts) == 0:
+                self._commit_issues()
+                return
             acct_len = max(len(acct) for acct in accounts.values())
 
             query = (
@@ -51,12 +52,13 @@ class UnlockedTransactions(Base):
                 payee: str
                 amount: t.Real
                 uri = TransactionSplit.id_to_uri(t_id)
-                if uri in ignores:
-                    continue
 
                 msg = (
                     f"{datetime.date.fromordinal(date_ord)} -"
                     f" {accounts[acct_id]:{acct_len}}:"
-                    f" {utils.format_financial(amount)} to {payee} is unlocked"
+                    f" {utils.format_financial(amount)} to {payee or '[blank]'} is"
+                    " unlocked"
                 )
                 self._issues_raw[uri] = msg
+
+        self._commit_issues()
