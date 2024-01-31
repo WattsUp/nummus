@@ -214,3 +214,36 @@ class TestTypos(TestBase):
         with p.get_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
+
+    def test_ignore(self) -> None:
+        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
+        p = portfolio.Portfolio.create(path_db)
+
+        c = Typos(p)
+        c.test()
+        target = {}
+        self.assertEqual(c.issues, target)
+
+        with p.get_session() as s:
+            n = s.query(HealthCheckIssue).count()
+            self.assertEqual(n, 0)
+
+            # Add a single transaction
+            categories = TransactionCategory.map_name(s)
+            categories = {v: k for k, v in categories.items()}
+
+            acct = Account(
+                name="Monkey Bannke Checking",
+                institution="Moonkey Bank",
+                category=AccountCategory.CASH,
+                closed=False,
+                emergency=False,
+            )
+            s.add(acct)
+            s.commit()
+
+        Typos.ignore(p, {"Bannke", "Moonkey"})
+        c = Typos(p)
+        c.test()
+        target = {}
+        self.assertEqual(c.issues, target)

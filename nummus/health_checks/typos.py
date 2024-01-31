@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import re
+from typing import TYPE_CHECKING
 
 import spellchecker
 from typing_extensions import override
@@ -16,6 +17,9 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    from nummus import portfolio
 
 
 class Typos(Base):
@@ -129,3 +133,10 @@ class Typos(Base):
                     self._issues_raw[uri] = msg
 
         self._commit_issues()
+
+    @override
+    @classmethod
+    def ignore(cls, p: portfolio.Portfolio, values: list[str] | set[str]) -> None:
+        # Store the lower case version
+        values = {v.lower() for v in values}
+        return super().ignore(p, values)
