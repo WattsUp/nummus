@@ -15,6 +15,7 @@ class TestTransactionCategory(TestBase):
             "name": self.random_string(),
             "group": TransactionCategoryGroup.INCOME,
             "locked": False,
+            "is_profit_loss": False,
         }
 
         t_cat = TransactionCategory(**d)
@@ -24,6 +25,7 @@ class TestTransactionCategory(TestBase):
         self.assertEqual(t_cat.name, d["name"])
         self.assertEqual(t_cat.group, d["group"])
         self.assertEqual(t_cat.locked, d["locked"])
+        self.assertEqual(t_cat.is_profit_loss, d["is_profit_loss"])
 
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "ab")
@@ -64,4 +66,4 @@ class TestTransactionCategory(TestBase):
 
         query = s.query(TransactionCategory)
         self.assertEqual(query.count(), n_income + n_expense + n_other)
-        self.assertEqual(query.count(), 63)
+        self.assertEqual(query.count(), 62)

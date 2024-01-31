@@ -24,13 +24,20 @@
     <div class="w-full h-96">
         <canvas id="account-chart-canvas"></canvas>
     </div>
-    {% include "accounts/chart-data.jinja" %}
     {% if assets %}
         <div class="w-full">
             <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
             {% include "accounts/assets.jinja" %}
         </div>
     {% endif %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Profit & Loss</h1>
+    <p class="w-full italic">
+        Profit includes change in asset value and any transaction categories marked to include, see Edit Categories.
+    </p>
+    <div class="w-full h-96">
+        <canvas id="profit-chart-canvas"></canvas>
+    </div>
+    {% include "accounts/chart-data.jinja" %}
     <div class="w-full flex flex-col grow"
          hx-target="#txn-table"
          hx-swap="outerHTML">

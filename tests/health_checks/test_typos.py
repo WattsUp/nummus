@@ -84,6 +84,7 @@ class TestTypos(TestBase):
                 name="Stonks",
                 group=TransactionCategoryGroup.OTHER,
                 locked=False,
+                is_profit_loss=True,
             )
             s.add(t_cat)
             s.commit()

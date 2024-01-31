@@ -33,6 +33,19 @@
                         </select>
                     </td>
                 </tr>
+                <tr>
+                    <td>Include in profit &amp; loss</td>
+                    <td>
+                        <label class="flex gap-4 justify-between w-full checkbox">
+                            <input type="checkbox"
+                                   name="is-pnl"
+                                   {% if category["is_profit_loss"] %}checked{% endif %}>
+                            {% with class = "w-5 h-5" %}
+                                {% include "svg/check.svg" %}
+                            {% endwith %}
+                        </label>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </form>

@@ -47,7 +47,7 @@ def edit(uri: str) -> str | flask.Response:
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
 
-        values, _ = acct.get_value(today_ord, today_ord)
+        values, _, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
 
         if flask.request.method == "GET":
@@ -99,7 +99,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     today = datetime.date.today()
     today_ord = today.toordinal()
     if current_value is None:
-        values, _ = acct.get_value(today_ord, today_ord)
+        values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
 
     return {
@@ -156,11 +156,13 @@ def ctx_chart(acct: Account) -> t.DictAny:
             "defer": True,
         }
 
-    values, _ = acct.get_value(start_ord, end_ord)
+    values, profit, _ = acct.get_value(start_ord, end_ord)
 
     labels: t.Strings = []
     values_min: t.Reals | None = None
     values_max: t.Reals | None = None
+    profit_min: t.Reals | None = None
+    profit_max: t.Reals | None = None
     date_mode: str | None = None
 
     if n > web_utils.LIMIT_DOWNSAMPLE:
@@ -169,6 +171,11 @@ def ctx_chart(acct: Account) -> t.DictAny:
             start_ord,
             end_ord,
             values,
+        )
+        _, profit_min, profit, profit_max = utils.downsample(
+            start_ord,
+            end_ord,
+            profit,
         )
         date_mode = "years"
     else:
@@ -190,6 +197,9 @@ def ctx_chart(acct: Account) -> t.DictAny:
             "values": values,
             "min": values_min,
             "max": values_max,
+            "profit": profit,
+            "profit_min": profit_min,
+            "profit_max": profit_max,
         },
     }
 
@@ -243,6 +253,10 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
 
     end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
+    asset_profits = acct.get_profit_by_asset(start_ord, end_ord)
+
+    # Sum of profits should match final profit value, add any mismatch to cash
+
     query = (
         s.query(Asset)
         .with_entities(
@@ -259,7 +273,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
     for a_id, name, category in query.yield_per(YIELD_PER):
         end_qty = asset_qtys[a_id]
         end_value = end_qty * end_prices[a_id][0]
-        profit = end_value  # FIX (WattsUp): Not true profit
+        profit = asset_profits[a_id]
 
         total_value += end_value
         total_profit += profit
@@ -287,18 +301,20 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         "name": "Cash",
         "end_qty": None,
         "end_value": cash,
-        "profit": 0,
+        "profit": None,
     }
     assets.append(ctx_asset)
 
     for item in assets:
-        item["end_value_ratio"] = item["end_value"] / total_value
+        item["end_value_ratio"] = (
+            0 if total_value == 0 else item["end_value"] / total_value
+        )
 
     assets = sorted(
         assets,
         key=lambda item: (
             -item["end_value"],
-            item["category"].name,
+            0 if item["profit"] is None else -item["profit"],
             item["name"].lower(),
         ),
     )

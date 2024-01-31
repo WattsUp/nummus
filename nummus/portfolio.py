@@ -901,8 +901,15 @@ class Portfolio:
 
         return updated
 
-    def summarize(self) -> t.DictAny:
+    def summarize(
+        self,
+        *_,
+        include_all: bool = False,
+    ) -> t.DictAny:
         """Summarize Portfolio into useful information and statistics.
+
+        Args:
+            include_all: True will include all accounts and assets
 
         Returns:
             Dictionary of statistics
@@ -942,52 +949,92 @@ class Portfolio:
             accts = {acct.id_: acct for acct in s.query(Account).all()}
             assets = {a.id_: a for a in s.query(Asset).all()}
 
+            # Get the inception date
+            start_date_ord: int = (
+                s.query(
+                    sqlalchemy.func.min(TransactionSplit.date_ord),
+                ).scalar()
+                or datetime.date(1970, 1, 1).toordinal()
+            )
+
             summary["n_accounts"] = len(accts)
             summary["n_transactions"] = s.query(TransactionSplit).count()
             summary["n_assets"] = len(assets)
             summary["n_valuations"] = s.query(AssetValuation).count()
 
-            value_accts, value_assets = Account.get_value_all(s, today_ord, today_ord)
+            value_accts, profit_accts, value_assets = Account.get_value_all(
+                s,
+                start_date_ord,
+                today_ord,
+            )
 
             net_worth = Decimal(0)
             summary_accts = []
             for acct_id, values in value_accts.items():
                 acct = accts[acct_id]
-                if acct.closed:
+                if not include_all and acct.closed:
                     continue
 
-                net_worth += values[0]
-                summary_accts.append({
-                    "name": acct.name,
-                    "institution": acct.institution,
-                    "category": acct.category.name.replace("_", " ").capitalize(),
-                    "value": values[0],
-                    "age": utils.format_days(
-                        today_ord - (acct.opened_on_ord or today_ord),
-                    ),
-                    "profit": Decimal(0),  # TODO (WattsUp): add real profit
-                })
+                p = profit_accts[acct_id][-1]
+                v = values[-1]
+                net_worth += v
+                summary_accts.append(
+                    {
+                        "name": acct.name,
+                        "institution": acct.institution,
+                        "category": acct.category.name.replace("_", " ").capitalize(),
+                        "value": v,
+                        "age": utils.format_days(
+                            today_ord - (acct.opened_on_ord or today_ord),
+                        ),
+                        "profit": p,
+                    },
+                )
 
-            summary["accounts"] = sorted(summary_accts, key=lambda item: -item["value"])
+            summary["accounts"] = sorted(
+                summary_accts,
+                key=lambda item: (
+                    -item["value"],
+                    -item["profit"],
+                    item["name"].lower(),
+                ),
+            )
             summary["net_worth"] = net_worth
+
+            profit_assets = Account.get_profit_by_asset_all(
+                s,
+                start_date_ord,
+                today_ord,
+            )
 
             total_asset_value = Decimal(0)
             summary_assets = []
             for a_id, values in value_assets.items():
-                if values[0] == 0:
+                v = values[-1]
+                if not include_all and v == 0:
                     continue
 
                 a = assets[a_id]
-                total_asset_value += values[0]
-                summary_assets.append({
-                    "name": a.name,
-                    "description": a.description,
-                    "ticker": a.ticker,
-                    "category": a.category.name.replace("_", " ").capitalize(),
-                    "value": values[0],
-                    "profit": Decimal(0),  # TODO (WattsUp): add real profit
-                })
-            summary["assets"] = sorted(summary_assets, key=lambda item: -item["value"])
+                p = profit_assets[a_id]
+                total_asset_value += v
+                summary_assets.append(
+                    {
+                        "name": a.name,
+                        "description": a.description,
+                        "ticker": a.ticker,
+                        "category": a.category.name.replace("_", " ").capitalize(),
+                        "value": v,
+                        "profit": p,
+                    },
+                )
+            summary["assets"] = sorted(
+                summary_assets,
+                key=lambda item: (
+                    -item["value"],
+                    -item["profit"],
+                    item["name"].lower(),
+                ),
+            )
             summary["total_asset_value"] = total_asset_value
 
         return summary

@@ -131,10 +131,17 @@ calculates net worth, and predicts future performance."""
         description="Update asset valuations aka download market data for stocks",
     )
 
-    _ = subparsers.add_parser(
+    sub_summarize = subparsers.add_parser(
         "summarize",
         help="summarize portfolio",
         description="Collect statistics and print a summary of the portfolio",
+    )
+    sub_summarize.add_argument(
+        "-a",
+        "--include-all",
+        default=False,
+        action="store_true",
+        help="include all accounts assets",
     )
 
     sub_health = subparsers.add_parser(
@@ -264,7 +271,11 @@ calculates net worth, and predicts future performance."""
     if cmd == "update-assets":
         return commands.update_assets(p)
     if cmd == "summarize":
-        return commands.summarize(p)
+        include_all: bool = args.include_all
+        return commands.summarize(
+            p,
+            include_all=include_all,
+        )
     if cmd == "health":
         limit: int = args.limit
         always_descriptions: bool = args.desc
