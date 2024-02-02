@@ -665,7 +665,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 pmi threshold)
             """
             date_ord = date.toordinal()
-            values, _ = acct_savings.get_value(date_ord, date_ord)
+            values, _, _ = acct_savings.get_value(date_ord, date_ord)
             closing_costs = round(price * Decimal(0.05), 2)
             max_dp = values[0] - closing_costs
             no_pmi_dp = price * Decimal(0.2)
@@ -851,7 +851,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
-                    category_id=categories["Securities Traded"].id_,
+                    category_id=categories["Transfers"].id_,
                     payee="Monkey Bank",
                     description=txn.statement,
                 )
@@ -867,7 +867,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                 txn_split = TransactionSplit(
                     parent=txn,
                     amount=txn.amount,
-                    category_id=categories["Securities Traded"].id_,
+                    category_id=categories["Transfers"].id_,
                     payee="Monkey Bank",
                     description=txn.statement,
                 )
@@ -1459,7 +1459,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
+        values, _, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
         total_interest = Decimal(0)
 
@@ -1530,7 +1530,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         a_values_end = datetime.date(BIRTH_YEAR + FINAL_AGE, 12, 31)
         a_values_start_ord = a_values_start.toordinal()
         a_values_end_ord = a_values_end.toordinal()
-        values, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
+        values, _, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
         total_payment = Decimal(0)
 

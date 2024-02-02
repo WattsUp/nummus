@@ -86,6 +86,9 @@ class Typos(Base):
                 add(name, source, "name")
                 add(description, source, "description")
 
+            # TODO (WattsUp): Since payees are very unique they are almost all
+            # misspelled. Instead of comparing to SpellChecker, compare to self looking
+            # for payees within 2 distance from each other
             txn_fields = [
                 TransactionSplit.payee,
                 TransactionSplit.description,
