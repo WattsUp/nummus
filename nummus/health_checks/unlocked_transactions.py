@@ -20,9 +20,11 @@ class UnlockedTransactions(Base):
     """Checks for unlocked transactions."""
 
     _NAME = "Unlocked transactions"
-    _DESC = textwrap.dedent("""\
+    _DESC = textwrap.dedent(
+        """\
         Locked transactions have been manually verified.
-        Any unlocked transactions should be validated and locked.""")
+        Any unlocked transactions should be validated and locked.""",
+    )
     _SEVERE = False
 
     @override

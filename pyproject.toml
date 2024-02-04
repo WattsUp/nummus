@@ -147,6 +147,7 @@ convention = "google"
     "D105",
     "D106",
     "D107",
+    "S608", # Disable possible SQL injection
 ]
 "tools/*.py" = [
     "INP001",  # Outside of a package

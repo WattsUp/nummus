@@ -22,9 +22,11 @@ class OutlierAssetPrice(Base):
     """Checks if an asset was bought/sold at an outlier price."""
 
     _NAME = "Outlier asset price"
-    _DESC = textwrap.dedent("""\
+    _DESC = textwrap.dedent(
+        """\
         Checks if an asset was bought/sold at an outlier price.
-        Most likely an issue with asset splits.""")
+        Most likely an issue with asset splits.""",
+    )
     _SEVERE = True
 
     # 50% would miss 2:1 or 1:2 splits

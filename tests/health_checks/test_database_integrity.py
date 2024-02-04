@@ -61,10 +61,12 @@ class TestDatabaseIntegrity(TestBase):
             query = "PRAGMA writable_schema = 1;"
             s.execute(sqlalchemy.text(query))
 
-            query = textwrap.dedent(f"""\
+            query = textwrap.dedent(
+                f"""\
                 UPDATE sqlite_master
                     SET sql = 'CREATE UNIQUE INDEX {index_name} ON {index_loc}'
-                    WHERE type = 'index' AND name = '{index_name}';""")  # noqa: S608
+                    WHERE type = 'index' AND name = '{index_name}';""",
+            )
             s.execute(sqlalchemy.text(query))
             s.commit()
 

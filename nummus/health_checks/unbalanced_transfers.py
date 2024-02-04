@@ -18,9 +18,11 @@ class UnbalancedTransfers(Base):
     """Checks for non-zero net transfers."""
 
     _NAME = "Unbalanced transfers"
-    _DESC = textwrap.dedent("""\
+    _DESC = textwrap.dedent(
+        """\
         Transfers move money between accounts so none should be lost.
-        If there are transfer fees, add that as a separate transaction.""")
+        If there are transfer fees, add that as a separate transaction.""",
+    )
     _SEVERE = True
 
     _CATEGORY_NAME = "Transfers"
@@ -119,9 +121,11 @@ class UnbalancedCreditCardPayments(UnbalancedTransfers):
     """Checks for non-zero net credit card payments."""
 
     _NAME = "Unbalanced credit card payments"
-    _DESC = textwrap.dedent("""\
+    _DESC = textwrap.dedent(
+        """\
         Credit card payments are transfers so none should be lost.
-        If interest was incurred, add that as a separate transaction.""")
+        If interest was incurred, add that as a separate transaction.""",
+    )
     _SEVERE = True
 
     _CATEGORY_NAME = "Credit Card Payments"
