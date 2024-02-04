@@ -42,7 +42,6 @@ def add_routes(app: flask.Flask) -> None:
     n_trim = len(__name__) + 1
     for m in module:
         routes: t.Routes = m.ROUTES
-        for url, item in routes.items():
-            controller, methods = item
+        for url, (controller, methods) in routes.items():
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
             app.add_url_rule(url, endpoint, controller, methods=methods)

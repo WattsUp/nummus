@@ -144,6 +144,45 @@ calculates net worth, and predicts future performance."""
         help="include all accounts assets",
     )
 
+    sub_health = subparsers.add_parser(
+        "health",
+        help="run a health check",
+        description="Comprehensive health check looking for import issues",
+    )
+    sub_health.add_argument(
+        "-d",
+        "--desc",
+        default=False,
+        action="store_true",
+        help="print description of checks always",
+    )
+    sub_health.add_argument(
+        "-l",
+        "--limit",
+        default=10,
+        type=int,
+        help="print the first n issues for each check",
+    )
+    sub_health.add_argument(
+        "--no-ignores",
+        default=False,
+        action="store_true",
+        help="print issues that have been ignored",
+    )
+    sub_health.add_argument(
+        "--clear-ignores",
+        default=False,
+        action="store_true",
+        help="unignore all issues",
+    )
+    sub_health.add_argument(
+        "-i",
+        "--ignore",
+        nargs="*",
+        metavar="ISSUE_URI",
+        help="ignore an issue specified by its URI",
+    )
+
     sub_web = subparsers.add_parser(
         "web",
         help="start nummus web server",
@@ -236,6 +275,20 @@ calculates net worth, and predicts future performance."""
         return commands.summarize(
             p,
             include_all=include_all,
+        )
+    if cmd == "health":
+        limit: int = args.limit
+        always_descriptions: bool = args.desc
+        no_ignores: bool = args.no_ignores
+        clear_ignores: bool = args.clear_ignores
+        ignores: list[str] | None = args.ignore
+        return commands.health_check(
+            p,
+            limit=limit,
+            ignores=ignores,
+            always_descriptions=always_descriptions,
+            no_ignores=no_ignores,
+            clear_ignores=clear_ignores,
         )
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"

@@ -31,6 +31,7 @@ required = [
     "typing-extensions",
     "pdfplumber",
     "yfinance",
+    "pyspellchecker",
     "tqdm",
 ]
 extras_require = {

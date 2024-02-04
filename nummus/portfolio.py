@@ -734,8 +734,8 @@ class Portfolio:
                 file_ts = tar.extractfile("_timestamp")
                 if file_ts is None:  # pragma: no cover
                     # Backup file should always have timestamp file
-                    msg = "timestamp file is None"
-                    raise TypeError(msg)
+                    msg = "Backup is missing timestamp"
+                    raise exc.InvalidBackupTarError(msg)
                 tar_ver = int(m[1])
                 ts = datetime.datetime.fromisoformat(file_ts.read().decode())
                 ts = ts.replace(tzinfo=datetime.timezone.utc)
@@ -837,7 +837,14 @@ class Portfolio:
 
         # tar archive preserved owner and mode so no need to set these
         with tarfile.open(path_backup, "r:gz") as tar:
-            tar.extractall(parent)
+            # Would prefer to use extractall(..., filter="data") but requires >=3.12
+            for member in tar:
+                dest = parent.joinpath(member.path).resolve()
+                if not dest.is_relative_to(parent):  # pragma: no cover
+                    # Dest should still be relative to parent else, path traversal
+                    msg = "Backup contains a file outside of destination"
+                    raise exc.InvalidBackupTarError(msg)
+                tar.extract(member, parent)
 
         # Reload Portfolio
         if isinstance(p, Portfolio):

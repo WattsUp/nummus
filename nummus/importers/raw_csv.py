@@ -57,8 +57,7 @@ class CSVTransactionImporter(TransactionImporter):
         # Check if the columns start with the expected ones
         first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")
         header = next(csv.reader(io.StringIO(first_line)))
-        for k, item in cls._COLUMNS.items():
-            required, _ = item
+        for k, (required, _) in cls._COLUMNS.items():
             if required and k not in header:
                 return False
         return True
@@ -74,8 +73,7 @@ class CSVTransactionImporter(TransactionImporter):
         transactions: TxnDicts = []
         for row in reader:
             txn: TxnDict = {}
-            for key, item in self._COLUMNS.items():
-                required, cleaner = item
+            for key, (required, cleaner) in self._COLUMNS.items():
                 value = row.get(key)
                 if value:
                     txn[key] = cleaner(value)

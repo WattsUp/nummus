@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import textwrap
 from typing import TYPE_CHECKING
 
 import colorama
@@ -10,7 +11,8 @@ from colorama import Fore
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus import portfolio, utils, web
+from nummus import health_checks, portfolio, utils, web
+from nummus.models import HealthCheckIssue
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -46,7 +48,7 @@ def create(
             print(
                 f"{Fore.RED}Cannot overwrite portfolio at {path_db}. Try with --force",
             )
-            return 1
+            return -1
 
     key: str | None = None
     if not no_encrypt:
@@ -60,7 +62,7 @@ def create(
         while key is None:
             key = utils.get_input("Please enter password: ", secure=True)
             if key is None:
-                return 1
+                return -1
 
             if len(key) < MIN_PASS_LEN:
                 print(f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters")
@@ -69,7 +71,7 @@ def create(
 
             repeat = utils.get_input("Please confirm password: ", secure=True)
             if repeat is None:
-                return 1
+                return -1
 
             if key != repeat:
                 print(f"{Fore.RED}Passwords must match")
@@ -191,7 +193,7 @@ def restore(
         print(f"{Fore.CYAN}Extracted backup tar.gz")
     except FileNotFoundError as e:
         print(f"{Fore.RED}{e}")
-        return 1
+        return -1
     p = unlock(path_db, path_password)
     print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
     return 0
@@ -245,7 +247,7 @@ def import_files(
         for path in paths:
             if not path.exists():
                 print(f"{Fore.RED}File does not exist: {path}")
-                return 1
+                return -1
             if path.is_dir():
                 for f in path.iterdir():
                     if f.is_file():
@@ -262,11 +264,11 @@ def import_files(
             f"{Fore.YELLOW}Delete file or run import with --force flag which "
             "may create duplicate transactions.",
         )
-        return 2
+        return -2
     except exc.UnknownImporterError as e:
         print(f"{Fore.RED}{e}")
         print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
-        return 3
+        return -3
     finally:
         # Restore backup if anything went wrong
         # Coverage gets confused with finally blocks
@@ -306,7 +308,7 @@ def update_assets(p: portfolio.Portfolio) -> int:
             f"{Fore.YELLOW}No assets were updated, "
             "add a ticker to an Asset to download market data",
         )
-        return 2
+        return -2
 
     updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
     name_len = max(len(item[0]) for item in updated)
@@ -442,6 +444,86 @@ def summarize(
 
     n = stats["n_transactions"]
     print(f"There {is_are(n)} {n:,} transaction{plural(n)}")
+    return 0
+
+
+def health_check(
+    p: portfolio.Portfolio,
+    limit: int = 10,
+    ignores: list[str] | None = None,
+    *_,
+    always_descriptions: bool = False,
+    no_ignores: bool = False,
+    clear_ignores: bool = False,
+) -> int:
+    """Run a comprehensive health check looking for import errors.
+
+    Args:
+        p: Working Portfolio
+        limit: Print first n issues for each check
+        ignores: List of issue URIs to ignore
+        always_descriptions: True will print every check's description,
+            False will only print on failure
+        no_ignores: True will print issues that have been ignored
+        clear_ignores: True will unignore all issues
+
+    Returns:
+        0 on success
+        non-zero on failure
+    """
+    with p.get_session() as s:
+        if clear_ignores:
+            s.query(HealthCheckIssue).delete()
+        elif ignores:
+            # Set ignore for all specified issues
+            ids = {HealthCheckIssue.uri_to_id(uri) for uri in ignores}
+            s.query(HealthCheckIssue).where(HealthCheckIssue.id_.in_(ids)).update(
+                {HealthCheckIssue.ignore: True},
+            )
+        s.commit()
+
+    limit = max(1, limit)
+    any_issues = False
+    any_severe_issues = False
+    first_uri: str | None = None
+    for check_type in health_checks.CHECKS:
+        c = check_type(p, no_ignores=no_ignores)
+        c.test()
+        n_issues = len(c.issues)
+        if n_issues == 0:
+            print(f"{Fore.GREEN}Check '{c.name}' has no issues")
+            if always_descriptions:
+                print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
+            continue
+        any_issues = True
+        any_severe_issues = c.is_severe or any_severe_issues
+        color = Fore.RED if c.is_severe else Fore.YELLOW
+
+        print(f"{color}Check '{c.name}'")
+        print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
+        print(f"{color}  Has the following issues:")
+        for i, (uri, issue) in enumerate(c.issues.items()):
+            first_uri = first_uri or uri
+            if i >= limit:
+                break
+            line = f"[{uri}] {issue}"
+            print(textwrap.indent(line, "  "))
+
+        if n_issues > limit:
+            print(
+                f"{Fore.MAGENTA}  And {n_issues - limit} more issues, use --limit flag"
+                " to see more",
+            )
+    if any_issues:
+        print(f"{Fore.MAGENTA}Use web interface to fix issues")
+        print(
+            f"{Fore.MAGENTA}Or silence false positives with: nummus health "
+            f"--ignore {first_uri} ...",
+        )
+    if any_severe_issues:
+        return -2
+    if any_issues:
+        return -1
     return 0
 
 

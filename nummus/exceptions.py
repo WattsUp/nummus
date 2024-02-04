@@ -38,6 +38,7 @@ __all__ = [
     "NoAssetWebSourceError",
     "AssetWebError",
     "UnknownEncryptionVersionError",
+    "InvalidBackupTarError",
 ]
 
 
@@ -134,3 +135,7 @@ class UnknownEncryptionVersionError(Exception):
         """Initialize UnknownEncryptionVersionError."""
         msg = "Encryption config has an unrecognized version"
         super().__init__(msg)
+
+
+class InvalidBackupTarError(Exception):
+    """Error when a backup tar does not have expected contents."""
