@@ -325,8 +325,7 @@ class Asset(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.date_ord,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.asset_quantity,
             )
             .where(TransactionSplit.asset_id == self.id_)
             .order_by(TransactionSplit.date_ord)
@@ -339,17 +338,16 @@ class Asset(Base):
                 .delete()
             )
 
-        for date_ord, qty_i, qty_f in query.yield_per(YIELD_PER):
+        for date_ord, qty in query.yield_per(YIELD_PER):
             date_ord: int
-            qty_i: int
-            qty_f: Decimal
+            qty: t.Real
 
             if current_qty == 0:
                 # Bought some, record the period when zero
                 date_ord_non_zero = date_ord
                 periods_zero.append((date_ord_zero, date_ord_non_zero))
                 date_ord_zero = None
-            current_qty += qty_i + qty_f
+            current_qty += qty
             if current_qty == 0:
                 # Went back to zero
                 date_ord_zero = date_ord

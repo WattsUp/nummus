@@ -214,8 +214,7 @@ class Account(Base):
             .with_entities(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.asset_quantity,
             )
             .where(
                 TransactionSplit.asset_id.isnot(None),
@@ -227,21 +226,20 @@ class Account(Base):
         assets_day_zero: dict[int, t.DictIntReal] = {
             acct_id: {} for acct_id in cash_flow_accounts
         }
-        for acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+        for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
-            qty_i: int
-            qty_f: t.Real
+            qty: t.Real
             try:
-                assets_day_zero[acct_id][a_id] += qty_i + qty_f
+                assets_day_zero[acct_id][a_id] += qty
             except KeyError:
-                assets_day_zero[acct_id][a_id] = qty_i + qty_f
+                assets_day_zero[acct_id][a_id] = qty
 
         # Skip assets with zero quantity
         a_ids: set[int] = set()
         for assets in assets_accounts.values():
-            for a_id, qty in list(assets.items()):
-                if not any(qty):
+            for a_id, quantities in list(assets.items()):
+                if not any(quantities):
                     # Remove asset from account
                     assets.pop(a_id)
                 else:
@@ -267,12 +265,12 @@ class Account(Base):
                 continue
 
             summed = cash
-            for a_id, qty in assets.items():
+            for a_id, quantities in assets.items():
                 price = asset_prices[a_id]
                 asset_value = asset_values[a_id]
-                for i, q in enumerate(qty):
-                    if q:
-                        v = price[i] * q
+                for i, qty in enumerate(quantities):
+                    if qty:
+                        v = price[i] * qty
                         asset_value[i] += v
                         summed[i] += v
 
@@ -434,8 +432,7 @@ class Account(Base):
             .with_entities(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.asset_quantity,
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
@@ -448,11 +445,10 @@ class Account(Base):
 
         current_acct_id: int | None = None
         iv: t.DictIntReal = {}
-        for acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+        for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
-            qty_i: int
-            qty_f: Decimal
+            qty: t.Real
             if acct_id != current_acct_id:
                 current_acct_id = acct_id
                 try:
@@ -462,9 +458,9 @@ class Account(Base):
                     iv = {}
                     iv_accounts[acct_id] = iv
             try:
-                iv[a_id] += qty_i + qty_f
+                iv[a_id] += qty
             except KeyError:
-                iv[a_id] = qty_i + qty_f
+                iv[a_id] = qty
 
         # Daily delta in qty
         deltas_accounts: dict[int, dict[int, list[t.Real | None]]] = {}
@@ -483,8 +479,7 @@ class Account(Base):
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                     TransactionSplit.asset_id,
-                    TransactionSplit._asset_qty_int,  # noqa: SLF001
-                    TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                    TransactionSplit.asset_quantity,
                 )
                 .where(
                     TransactionSplit.date_ord <= end_ord,
@@ -499,15 +494,13 @@ class Account(Base):
             current_acct_id = None
             deltas = {}
 
-            for date_ord, acct_id, a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+            for date_ord, acct_id, a_id, qty in query.yield_per(YIELD_PER):
                 date_ord: int
                 acct_id: int
                 a_id: int
-                qty_i: int
-                qty_f: Decimal
+                qty: t.Real
 
                 i = date_ord - start_ord
-                qty = qty_i + qty_f
 
                 if acct_id != current_acct_id:
                     current_acct_id = acct_id
@@ -579,8 +572,7 @@ class Account(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.asset_quantity,
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
@@ -591,22 +583,20 @@ class Account(Base):
             query = query.where(TransactionSplit.account_id.in_(ids))
 
         initial_qty: t.DictIntReal = {}
-        for a_id, qty_i, qty_f in query.yield_per(YIELD_PER):
+        for a_id, qty in query.yield_per(YIELD_PER):
             a_id: int
-            qty_i: int
-            qty_f: Decimal
+            qty: t.Real
             try:
-                initial_qty[a_id] += qty_i + qty_f
+                initial_qty[a_id] += qty
             except KeyError:
-                initial_qty[a_id] = qty_i + qty_f
+                initial_qty[a_id] = qty
         initial_qty = {a_id: qty for a_id, qty in initial_qty.items() if qty != 0}
 
         query = (
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.asset_id,
-                TransactionSplit._asset_qty_int,  # noqa: SLF001
-                TransactionSplit._asset_qty_frac,  # noqa: SLF001
+                TransactionSplit.asset_quantity,
                 TransactionSplit.amount,
             )
             .where(
@@ -620,16 +610,15 @@ class Account(Base):
 
         cost_basis: t.DictIntReal = {a_id: Decimal(0) for a_id in initial_qty}
         end_qty: t.DictIntReal = dict(initial_qty)
-        for a_id, qty_i, qty_f, amount in query.yield_per(YIELD_PER):
+        for a_id, qty, amount in query.yield_per(YIELD_PER):
             a_id: int
-            qty_i: int
-            qty_f: Decimal
+            qty: t.Real
             amount: Decimal
             try:
-                end_qty[a_id] += qty_i + qty_f
+                end_qty[a_id] += qty
                 cost_basis[a_id] += amount
             except KeyError:
-                end_qty[a_id] = qty_i + qty_f
+                end_qty[a_id] = qty
                 cost_basis[a_id] = amount
         a_ids = set(end_qty)
 

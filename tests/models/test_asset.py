@@ -724,7 +724,7 @@ class TestAsset(TestBase):
             .one()
         )
         split_id = split.id_
-        self.assertEqual(split.multiplier, Decimal(2))
+        self.assertEqual(split.multiplier, Decimal("1.1"))
 
         # Check all splits up to today got imported
         # Every Monday so once a week
@@ -790,7 +790,7 @@ class TestAsset(TestBase):
             .one()
         )
         split_id = split.id_
-        self.assertEqual(split.multiplier, Decimal(2))
+        self.assertEqual(split.multiplier, Decimal("1.1"))
 
         # Number of Mondays between date and today
         target = (today_ord - (date_ord - 7)) // 7 + 1

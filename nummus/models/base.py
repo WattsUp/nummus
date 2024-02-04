@@ -201,10 +201,10 @@ class Decimal6(types.TypeDecorator):
         return Decimal(value) * self._FACTOR_OUT
 
 
-class Decimal18(Decimal6):
-    """SQL type for fixed point numbers, stores as atto-integer."""
+class Decimal9(Decimal6):
+    """SQL type for fixed point numbers, stores as nano-integer."""
 
     cache_ok = True
 
-    _FACTOR_OUT = Decimal("1e-18")
+    _FACTOR_OUT = Decimal("1e-9")
     _FACTOR_IN = 1 / _FACTOR_OUT
