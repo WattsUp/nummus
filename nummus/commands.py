@@ -502,15 +502,12 @@ def health_check(
         print(f"{color}Check '{c.name}'")
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
         print(f"{color}  Has the following issues:")
-        i = 0
-        for uri, issue in c.issues.items():
+        for i, (uri, issue) in enumerate(c.issues.items()):
             first_uri = first_uri or uri
             if i >= limit:
                 break
             line = f"[{uri}] {issue}"
             print(textwrap.indent(line, "  "))
-
-            i += 1
 
         if n_issues > limit:
             print(

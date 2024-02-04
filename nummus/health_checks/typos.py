@@ -128,8 +128,7 @@ class Typos(Base):
                     source_len = max(source_len, len(source))
                     field_len = max(field_len, len(field))
 
-                for uri, item in words.items():
-                    word, source, field = item
+                for uri, (word, source, field) in words.items():
                     # Getting a suggested correction is slow and error prone,
                     # Just say if a word is outside of the dictionary
                     msg = f"{source:{source_len}} {field:{field_len}}: {word}"

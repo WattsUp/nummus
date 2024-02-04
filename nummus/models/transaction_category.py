@@ -123,8 +123,7 @@ class TransactionCategory(Base):
         }
 
         for group, categories in groups.items():
-            for name, item in categories.items():
-                locked, is_profit_loss = item
+            for name, (locked, is_profit_loss) in categories.items():
                 cat = TransactionCategory(
                     name=name,
                     group=group,
