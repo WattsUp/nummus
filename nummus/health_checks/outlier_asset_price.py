@@ -59,23 +59,20 @@ class OutlierAssetPrice(Base):
                     TransactionSplit.date_ord,
                     TransactionSplit.asset_id,
                     TransactionSplit.amount,
-                    TransactionSplit._asset_qty_int,  # noqa: SLF001
-                    TransactionSplit._asset_qty_frac,  # noqa:SLF001
+                    TransactionSplit.asset_quantity,
                 )
                 .where(TransactionSplit.asset_id.isnot(None))
             )
-            for t_id, date_ord, a_id, amount, qty_i, qty_f in query.yield_per(
+            for t_id, date_ord, a_id, amount, qty in query.yield_per(
                 YIELD_PER,
             ):
                 t_id: int
                 date_ord: int
                 a_id: int
                 amount: t.Real
-                qty_i: int
-                qty_f: t.Real
+                qty: t.Real
                 uri = TransactionSplit.id_to_uri(t_id)
 
-                qty = qty_i + qty_f
                 if qty == 0:
                     continue
 

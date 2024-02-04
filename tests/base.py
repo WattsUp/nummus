@@ -63,7 +63,8 @@ class MockTicker:
 
             dates.append(dt)
             if weekday == 0:
-                split.append(2.0)
+                # Doubling every week exceeded integer limits
+                split.append(1.1)
             else:
                 split.append(0.0)
             close.append(float(dt.date().toordinal()))

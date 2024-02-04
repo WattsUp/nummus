@@ -122,7 +122,7 @@ class TestTransactionSplit(TestBase):
             "category_id": t_cat.id_,
             "tag": self.random_string(),
             "asset_id": asset.id_,
-            "asset_quantity_unadjusted": self.random_decimal(-1, 1, precision=18),
+            "asset_quantity_unadjusted": self.random_decimal(-1, 1, precision=9),
             "parent": txn,
         }
 
@@ -186,7 +186,7 @@ class TestTransactionSplit(TestBase):
         categories = TransactionCategory.add_default(s)
         t_cat = categories["Uncategorized"]
 
-        qty = self.random_decimal(10, 100, precision=18)
+        qty = self.random_decimal(10, 100, precision=9)
         txn = Transaction(
             account_id=acct.id_,
             date_ord=today_ord,

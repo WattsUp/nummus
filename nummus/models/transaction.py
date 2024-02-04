@@ -8,7 +8,7 @@ from typing_extensions import override
 
 from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus.models.base import Base, Decimal6, Decimal18
+from nummus.models.base import Base, Decimal6, Decimal9
 
 
 class TransactionSplit(Base):
@@ -56,10 +56,8 @@ class TransactionSplit(Base):
     account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
-    _asset_qty_int: t.ORMIntOpt
-    _asset_qty_frac: t.ORMRealOpt = orm.mapped_column(Decimal18)
-    _asset_qty_int_unadjusted: t.ORMIntOpt
-    _asset_qty_frac_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal18)
+    asset_quantity: t.ORMRealOpt = orm.mapped_column(Decimal9)
+    _asset_qty_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal9)
 
     @orm.validates("payee", "description", "tag")
     @override
@@ -77,44 +75,23 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
     @property
-    def asset_quantity(self) -> t.Real | None:
-        """Number of units of Asset exchanged.
-
-        Positive indicates Account gained Assets (inflow), adjusted for splits.
-        """
-        if self._asset_qty_int is None or self._asset_qty_frac is None:
-            return None
-        return self._asset_qty_int + self._asset_qty_frac
-
-    @property
     def asset_quantity_unadjusted(self) -> t.Real | None:
         """Number of units of Asset exchanged.
 
         Positive indicates Account gained Assets (inflow), unadjusted for splits.
         """
-        if (
-            self._asset_qty_int_unadjusted is None
-            or self._asset_qty_frac_unadjusted is None
-        ):
-            return None
-        return self._asset_qty_int_unadjusted + self._asset_qty_frac_unadjusted
+        return self._asset_qty_unadjusted
 
     @asset_quantity_unadjusted.setter
     def asset_quantity_unadjusted(self, qty: t.Real | None) -> None:
         if qty is None:
-            self._asset_qty_int_unadjusted = None
-            self._asset_qty_frac_unadjusted = None
-            self._asset_qty_int = None
-            self._asset_qty_frac = None
+            self._asset_qty_unadjusted = None
+            self.asset_quantity = None
             return
-        i, f = divmod(qty, 1)
-        i = int(i)
-        self._asset_qty_int_unadjusted = i
-        self._asset_qty_frac_unadjusted = f
+        self._asset_qty_unadjusted = qty
 
-        # Also set the adjusted with a 1x multiplier
-        self._asset_qty_int = i
-        self._asset_qty_frac = f
+        # Also set adjusted quantity with 1x multiplier
+        self.asset_quantity = qty
 
     def adjust_asset_quantity(self, multiplier: t.Real) -> None:
         """Set adjusted asset quantity.
@@ -125,10 +102,7 @@ class TransactionSplit(Base):
         qty = self.asset_quantity_unadjusted
         if qty is None:
             raise exc.NonAssetTransactionError
-        i, f = divmod(qty * multiplier, 1)
-        i = int(i)
-        self._asset_qty_int = i
-        self._asset_qty_frac = f
+        self.asset_quantity = qty * multiplier
 
     @property
     def parent(self) -> Transaction:
