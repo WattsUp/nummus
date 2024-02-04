@@ -27,6 +27,7 @@ List of dependencies for package to run.
   - pdfplumber
   - yfinance
   - tqdm
+  - argcomplete
 
 ### Optional
 
@@ -44,6 +45,8 @@ Install module
 
 ```bash
 > python -m pip install .
+> # For autocomplete, activate completion hook
+> activate-global-python-argcomplete
 ```
 
 Install module with encryption
