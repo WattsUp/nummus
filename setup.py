@@ -33,6 +33,7 @@ required = [
     "yfinance",
     "pyspellchecker",
     "tqdm",
+    "argcomplete",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

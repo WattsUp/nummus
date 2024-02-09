@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from nummus import custom_types as t
-from nummus.models.base import Base
+from nummus.models.base import Base, ORMStr
 
 
 class Credentials(Base):
@@ -17,6 +16,6 @@ class Credentials(Base):
 
     __table_id__ = 0x60000000
 
-    site: t.ORMStr
-    user: t.ORMStr
-    password: t.ORMStr
+    site: ORMStr
+    user: ORMStr
+    password: ORMStr

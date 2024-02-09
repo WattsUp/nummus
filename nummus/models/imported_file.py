@@ -6,8 +6,7 @@ import datetime
 
 from sqlalchemy import orm
 
-from nummus import custom_types as t
-from nummus.models.base import Base
+from nummus.models.base import Base, ORMInt, ORMStr
 
 
 class ImportedFile(Base):
@@ -20,7 +19,7 @@ class ImportedFile(Base):
 
     # No __table_id__ because this is not user accessible
 
-    hash_: t.ORMStr = orm.MappedColumn(unique=True)
-    date_ord: t.ORMInt = orm.MappedColumn(
+    hash_: ORMStr = orm.MappedColumn(unique=True)
+    date_ord: ORMInt = orm.MappedColumn(
         default=lambda: datetime.date.today().toordinal(),
     )

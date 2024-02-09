@@ -1,28 +1,31 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, orm
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus.models import base
 from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 
 class Bytes:
     def __init__(self, s: str) -> None:
         self._data = s.encode(encoding="utf-8")
 
-    def __eq__(self, other: Bytes | t.Any) -> bool:
+    def __eq__(self, other: Bytes | object) -> bool:
         return isinstance(other, Bytes) and self._data == other._data
 
 
 class Parent(base.Base):
     __table_id__ = 0xF0000000
 
-    generic_column: t.ORMIntOpt
-    name: t.ORMStrOpt
+    generic_column: base.ORMIntOpt
+    name: base.ORMStrOpt
     children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
 
     @property
@@ -39,10 +42,10 @@ class Parent(base.Base):
 class Child(base.Base):
     __table_id__ = 0xE0000000
 
-    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("parent.id_"))
+    parent_id: base.ORMInt = orm.mapped_column(ForeignKey("parent.id_"))
     parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
 
-    height: t.ORMRealOpt = orm.mapped_column(base.Decimal6)
+    height: base.ORMRealOpt = orm.mapped_column(base.Decimal6)
 
 
 class TestORMBase(TestBase):
@@ -165,7 +168,7 @@ class Derived(base.BaseEnum):
     BLUE = 2
 
     @classmethod
-    def _lut(cls) -> t.Mapping[str, Derived]:
+    def _lut(cls) -> Mapping[str, Derived]:
         return {"r": cls.RED, "b": cls.BLUE}
 
 

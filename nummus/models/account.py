@@ -3,18 +3,21 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import orm
 from typing_extensions import override
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.asset import Asset
-from nummus.models.base import Base, BaseEnum, YIELD_PER
+from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr, ORMStrOpt, YIELD_PER
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 
 class AccountCategory(BaseEnum):
@@ -46,12 +49,12 @@ class Account(Base):
 
     __table_id__ = 0x10000000
 
-    name: t.ORMStr
-    number: t.ORMStrOpt
-    institution: t.ORMStr
+    name: ORMStr
+    number: ORMStrOpt
+    institution: ORMStr
     category: orm.Mapped[AccountCategory]
-    closed: t.ORMBool
-    emergency: t.ORMBool
+    closed: ORMBool
+    emergency: ORMBool
 
     @orm.validates("name", "number", "institution")
     @override
@@ -86,8 +89,12 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | set[int] | None = None,
-    ) -> tuple[t.DictIntReals, t.DictIntReals, t.DictIntReals]:
+        ids: Iterable[int] | None = None,
+    ) -> tuple[
+        dict[int, list[Decimal]],
+        dict[int, list[Decimal]],
+        dict[int, list[Decimal]],
+    ]:
         """Get the value of all Accounts from start to end date.
 
         Args:
@@ -107,14 +114,14 @@ class Account(Base):
         """
         n = end_ord - start_ord + 1
 
-        cash_flow_accounts: dict[int, list[t.Real | None]]
+        cash_flow_accounts: dict[int, list[Decimal | None]]
         if ids is not None:
             cash_flow_accounts = {acct_id: [None] * n for acct_id in ids}
         else:
             cash_flow_accounts = {
                 acct_id: [None] * n for acct_id, in s.query(Account.id_).all()
             }
-        cost_basis_accounts: dict[int, list[t.Real | None]]
+        cost_basis_accounts: dict[int, list[Decimal | None]]
         cost_basis_accounts = {acct_id: [None] * n for acct_id in cash_flow_accounts}
 
         # Profit = Interest + dividends + rewards + change in asset value - fees
@@ -223,13 +230,13 @@ class Account(Base):
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        assets_day_zero: dict[int, t.DictIntReal] = {
+        assets_day_zero: dict[int, dict[int, Decimal]] = {
             acct_id: {} for acct_id in cash_flow_accounts
         }
         for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
-            qty: t.Real
+            qty: Decimal
             try:
                 assets_day_zero[acct_id][a_id] += qty
             except KeyError:
@@ -253,8 +260,10 @@ class Account(Base):
 
         asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
 
-        acct_values: t.DictIntReals = {}
-        asset_values: t.DictIntReals = {a_id: [Decimal(0)] * n for a_id in a_ids}
+        acct_values: dict[int, list[Decimal]] = {}
+        asset_values: dict[int, list[Decimal]] = {
+            a_id: [Decimal(0)] * n for a_id in a_ids
+        }
         for acct_id, cash_flow in cash_flow_accounts.items():
             assets = assets_accounts[acct_id]
             cash = utils.integrate(cash_flow)
@@ -276,7 +285,7 @@ class Account(Base):
 
             acct_values[acct_id] = summed
 
-        acct_profit: t.DictIntReals = {}
+        acct_profit: dict[int, list[Decimal]] = {}
         for acct_id, values in acct_values.items():
             cost_basis_flow = cost_basis_accounts[acct_id]
             v = cost_basis_flow[0]
@@ -298,7 +307,7 @@ class Account(Base):
         self,
         start_ord: int,
         end_ord: int,
-    ) -> tuple[t.Reals, t.Reals, t.DictIntReals]:
+    ) -> tuple[list[Decimal], list[Decimal], dict[int, list[Decimal]]]:
         """Get the value of Account from start to end date.
 
         Args:
@@ -327,8 +336,8 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | set[int] | None = None,
-    ) -> t.DictIntReals:
+        ids: Iterable[int] | None = None,
+    ) -> dict[int, list[Decimal]]:
         """Get the cash flow of all Accounts from start to end date by category.
 
         Does not separate results by account.
@@ -344,7 +353,7 @@ class Account(Base):
         """
         n = end_ord - start_ord + 1
 
-        categories: t.DictIntReals = {
+        categories: dict[int, list[Decimal]] = {
             cat_id: [Decimal(0)] * n
             for cat_id, in s.query(TransactionCategory.id_).all()
         }
@@ -378,7 +387,7 @@ class Account(Base):
         self,
         start_ord: int,
         end_ord: int,
-    ) -> t.DictIntReals:
+    ) -> dict[int, list[Decimal]]:
         """Get the cash flow of Account from start to end date by category.
 
         Results are not integrated, i.e. inflow[3] = 10 means $10 was made on the
@@ -404,8 +413,8 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | set[int] | None = None,
-    ) -> dict[int, t.DictIntReals]:
+        ids: Iterable[int] | None = None,
+    ) -> dict[int, dict[int, list[Decimal]]]:
         """Get the quantity of Assets held from start to end date.
 
         Args:
@@ -419,7 +428,7 @@ class Account(Base):
         """
         n = end_ord - start_ord + 1
 
-        iv_accounts: dict[int, t.DictIntReal] = {}
+        iv_accounts: dict[int, dict[int, Decimal]] = {}
         if ids is not None:
             iv_accounts = {acct_id: {} for acct_id in ids}
         else:
@@ -444,11 +453,11 @@ class Account(Base):
             query = query.where(TransactionSplit.account_id.in_(ids))
 
         current_acct_id: int | None = None
-        iv: t.DictIntReal = {}
+        iv: dict[int, Decimal] = {}
         for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
-            qty: t.Real
+            qty: Decimal
             if acct_id != current_acct_id:
                 current_acct_id = acct_id
                 try:
@@ -463,9 +472,9 @@ class Account(Base):
                 iv[a_id] = qty
 
         # Daily delta in qty
-        deltas_accounts: dict[int, dict[int, list[t.Real | None]]] = {}
+        deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = {}
         for acct_id, iv in iv_accounts.items():
-            deltas: dict[int, list[t.Real | None]] = {}
+            deltas: dict[int, list[Decimal | None]] = {}
             for a_id, v in iv.items():
                 deltas[a_id] = [None] * n
                 deltas[a_id][0] = v
@@ -498,7 +507,7 @@ class Account(Base):
                 date_ord: int
                 acct_id: int
                 a_id: int
-                qty: t.Real
+                qty: Decimal
 
                 i = date_ord - start_ord
 
@@ -518,9 +527,9 @@ class Account(Base):
                     deltas[a_id][i] = qty
 
         # Integrate deltas
-        qty_accounts: dict[int, t.DictIntReals] = {}
+        qty_accounts: dict[int, dict[int, list[Decimal]]] = {}
         for acct_id, deltas in deltas_accounts.items():
-            qty_assets: t.DictIntReals = {}
+            qty_assets: dict[int, list[Decimal]] = {}
             for a_id, delta in deltas.items():
                 qty_assets[a_id] = utils.integrate(delta)
             qty_accounts[acct_id] = qty_assets
@@ -531,7 +540,7 @@ class Account(Base):
         self,
         start_ord: int,
         end_ord: int,
-    ) -> t.DictIntReals:
+    ) -> dict[int, list[Decimal]]:
         """Get the quantity of Assets held from start to end date.
 
         Args:
@@ -553,8 +562,8 @@ class Account(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | set[int] | None = None,
-    ) -> t.DictIntReal:
+        ids: Iterable[int] | None = None,
+    ) -> dict[int, Decimal]:
         """Get the profit of Assets on end_date since start_ord.
 
         Args:
@@ -582,10 +591,10 @@ class Account(Base):
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        initial_qty: t.DictIntReal = {}
+        initial_qty: dict[int, Decimal] = {}
         for a_id, qty in query.yield_per(YIELD_PER):
             a_id: int
-            qty: t.Real
+            qty: Decimal
             try:
                 initial_qty[a_id] += qty
             except KeyError:
@@ -608,11 +617,11 @@ class Account(Base):
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        cost_basis: t.DictIntReal = {a_id: Decimal(0) for a_id in initial_qty}
-        end_qty: t.DictIntReal = dict(initial_qty)
+        cost_basis: dict[int, Decimal] = {a_id: Decimal(0) for a_id in initial_qty}
+        end_qty: dict[int, Decimal] = dict(initial_qty)
         for a_id, qty, amount in query.yield_per(YIELD_PER):
             a_id: int
-            qty: t.Real
+            qty: Decimal
             amount: Decimal
             try:
                 end_qty[a_id] += qty
@@ -625,7 +634,7 @@ class Account(Base):
         initial_price = Asset.get_value_all(s, start_ord, start_ord, ids=a_ids)
         end_price = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
-        profits: t.DictIntReal = {}
+        profits: dict[int, Decimal] = {}
         for a_id in a_ids:
             i_value = initial_qty.get(a_id, 0) * initial_price[a_id][0]
             e_value = end_qty[a_id] * end_price[a_id][0]
@@ -639,7 +648,7 @@ class Account(Base):
         self,
         start_ord: int,
         end_ord: int,
-    ) -> t.DictIntReal:
+    ) -> dict[int, Decimal]:
         """Get the profit of Assets on end_date since start_ord.
 
         Args:

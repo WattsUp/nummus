@@ -18,7 +18,6 @@ import tqdm
 from rapidfuzz import process
 from sqlalchemy import orm
 
-from nummus import custom_types as t
 from nummus import encryption
 from nummus import exceptions as exc
 from nummus import importers, models, sql, utils, version
@@ -324,8 +323,8 @@ class Portfolio:
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
             # Cache a mapping from account/asset name to the ID
-            acct_mapping: t.DictInt = {}
-            asset_mapping: t.DictInt = {}
+            acct_mapping: dict[str, int] = {}
+            asset_mapping: dict[str, int] = {}
             txns: list[tuple[Transaction, TransactionSplit]] = []
             txns_raw = i.run()
             if not txns_raw:
@@ -627,7 +626,7 @@ class Portfolio:
                 Transaction.amount <= amount_max,
             )
         )
-        statements: t.DictIntStr = {
+        statements: dict[int, str] = {
             t_id: re.sub(r"[0-9]+", "", statement).lower()
             for t_id, statement in query.yield_per(YIELD_PER)
         }
@@ -687,7 +686,7 @@ class Portfolio:
         path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
 
         with tarfile.open(path_backup, "w:gz") as tar:
-            files: t.Paths = [self._path_db]
+            files: list[Path] = [self._path_db]
 
             if self._path_salt.exists():
                 files.append(self._path_salt)
@@ -862,19 +861,41 @@ class Portfolio:
 
     def update_assets(
         self,
-    ) -> list[tuple[str, str, t.Date | None, t.Date | None, str | None]]:
+    ) -> list[
+        tuple[
+            str,
+            str,
+            datetime.date | None,
+            datetime.date | None,
+            str | None,
+        ]
+    ]:
         """Update asset valuations using web sources.
 
         Returns:
             Assets that were updated
             [
-                (name, ticker, start date, end date, error),
+                (
+                    name,
+                    ticker,
+                    start date,
+                    end date,
+                    error,
+                ),
                 ...
             ]
         """
         today = datetime.date.today()
         today_ord = today.toordinal()
-        updated: list[tuple[str, str, t.Date | None, t.Date | None, str | None]] = []
+        updated: list[
+            tuple[
+                str,
+                str,
+                datetime.date | None,
+                datetime.date | None,
+                str | None,
+            ]
+        ] = []
 
         with self.get_session() as s:
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
@@ -912,7 +933,7 @@ class Portfolio:
         self,
         *_,
         include_all: bool = False,
-    ) -> t.DictAny:
+    ) -> dict[str, object]:
         """Summarize Portfolio into useful information and statistics.
 
         Args:
@@ -925,21 +946,21 @@ class Portfolio:
                 "n_assets": int,
                 "n_transactions": int,
                 "n_valuations": int,
-                "net_worth": Real,
+                "net_worth": Decimal,
                 "accounts": [{ # Excludes closed
                     "name": str,
                     "institution": str,
                     "category": str,
-                    "value": Real,
+                    "value": Decimal,
                     "age": str,
-                    "profit": Real,
+                    "profit": Decimal,
                 }, ...],
-                "total_asset_value": Real,
+                "total_asset_value": Decimal,
                 "assets": [{ # Excludes zero value
                     "name": str,
                     "description": str,
-                    "value": Real,
-                    "profit": Real,
+                    "value": Decimal,
+                    "profit": Decimal,
                     "category": str,
                     "ticker": str | None,
                 }, ...],
@@ -949,7 +970,7 @@ class Portfolio:
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        summary: t.DictAny = {
+        summary: dict[str, object] = {
             "db_size": self._path_db.stat().st_size,
         }
         with self.get_session() as s:

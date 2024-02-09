@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from nummus.controllers import common
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 
 def page_home() -> str:
@@ -19,7 +19,7 @@ def page_home() -> str:
     return common.page("index-content.jinja")
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/": (page_home, ["GET"]),
     "/index": (page_home, ["GET"]),
 }

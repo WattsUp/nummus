@@ -9,12 +9,8 @@ import re
 import shutil
 import sys
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 from nummus import global_config
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
@@ -122,7 +118,7 @@ def confirm(
         print()
 
 
-def parse_real(s: str | None) -> t.Real | None:
+def parse_real(s: str | None) -> Decimal | None:
     """Parse a string into a real number.
 
     Args:
@@ -142,7 +138,7 @@ def parse_real(s: str | None) -> t.Real | None:
     return Decimal(clean)
 
 
-def format_financial(x: t.Real, precision: int = 2, *_, plus: bool = False) -> str:
+def format_financial(x: Decimal, precision: int = 2, *_, plus: bool = False) -> str:
     """Format a number to financial notation.
 
     Args:
@@ -177,7 +173,7 @@ def parse_bool(s: str) -> bool | None:
     return s.lower() in ["true", "t", "1"]
 
 
-def format_days(days: int, labels: t.Strings | None = None) -> str:
+def format_days(days: int, labels: list[str] | None = None) -> str:
     """Format number of days to days, weeks, months, or years.
 
     Args:
@@ -205,8 +201,8 @@ def format_days(days: int, labels: t.Strings | None = None) -> str:
 
 def format_seconds(
     seconds: float,
-    labels: t.Strings | None = None,
-    labels_days: t.Strings | None = None,
+    labels: list[str] | None = None,
+    labels_days: list[str] | None = None,
 ) -> str:
     """Format number of seconds to seconds, minutes, or hours.
 
@@ -238,11 +234,11 @@ def format_seconds(
 
 
 def range_date(
-    start: t.Date | int,
-    end: t.Date | int,
+    start: datetime.date | int,
+    end: datetime.date | int,
     *_,
     include_end: bool = True,
-) -> t.Dates:
+) -> list[datetime.date]:
     """Create a range of dates from start to end.
 
     Args:
@@ -336,8 +332,8 @@ def period_years(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
 def downsample(
     start_ord: int,
     end_ord: int,
-    values: t.Reals,
-) -> tuple[t.Strings, t.Reals, t.Reals, t.Reals]:
+    values: list[Decimal],
+) -> tuple[list[str], list[Decimal], list[Decimal], list[Decimal]]:
     """Downsample a list of values to min/avg/max by month.
 
     Args:
@@ -349,10 +345,10 @@ def downsample(
         (labels, min, avg, max)
     """
     periods = period_months(start_ord, end_ord)
-    labels: t.Strings = []
-    values_min: t.Reals = []
-    values_avg: t.Reals = []
-    values_max: t.Reals = []
+    labels: list[str] = []
+    values_min: list[Decimal] = []
+    values_avg: list[Decimal] = []
+    values_max: list[Decimal] = []
 
     # TODO (WattsUp): Not a very fast algorithm especially when downsampling many
     for period, limits in periods.items():
@@ -365,7 +361,7 @@ def downsample(
     return labels, values_min, values_avg, values_max
 
 
-def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
+def round_list(list_: list[Decimal], precision: int = 6) -> list[Decimal]:
     """Round a list, carrying over error such that sum(list) == sum(round_list).
 
     Args:
@@ -376,7 +372,7 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
         List with rounded elements
     """
     residual = Decimal(0)
-    l_rounded: t.Reals = []
+    l_rounded: list[Decimal] = []
     for item in list_:
         v = item + residual
         v_round = round(v, precision)
@@ -386,7 +382,7 @@ def round_list(list_: t.Reals, precision: int = 6) -> t.Reals:
     return l_rounded
 
 
-def integrate(deltas: list[t.Real | None] | t.Reals) -> t.Reals:
+def integrate(deltas: list[Decimal | None] | list[Decimal]) -> list[Decimal]:
     """Integrate a list starting.
 
     Args:
@@ -411,7 +407,7 @@ def integrate(deltas: list[t.Real | None] | t.Reals) -> t.Reals:
     return result
 
 
-def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
+def interpolate_step(values: list[tuple[int, Decimal]], n: int) -> list[Decimal]:
     """Interpolate a list of (index, value)s using a step function.
 
     Indices can be outside of [0, n)
@@ -445,7 +441,7 @@ def interpolate_step(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
     return result
 
 
-def interpolate_linear(values: list[tuple[int, t.Real]], n: int) -> t.Reals:
+def interpolate_linear(values: list[tuple[int, Decimal]], n: int) -> list[Decimal]:
     """Interpolate a list of (index, value)s using a linear function.
 
     Indices can be outside of [0, n) to interpolate on the boundary
@@ -543,7 +539,7 @@ def print_table(table: list[list[str] | None]) -> None:
 
     # Adjust col widths if sum is over terminal width
     margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
-    excess: t.Ints = []
+    excess: list[int] = []
     no_extra = False
     has_extra: list[bool] = [False] * len(header_raw)
     for i, cell in enumerate(header_raw):

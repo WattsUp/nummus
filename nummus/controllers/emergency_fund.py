@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
@@ -13,10 +13,10 @@ from nummus.controllers import common
 from nummus.models import Account, Budget
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 
-def ctx_page() -> t.DictAny:
+def ctx_page() -> dict[str, object]:
     """Get the context to build the emergency fund page.
 
     Returns:
@@ -47,7 +47,14 @@ def ctx_page() -> t.DictAny:
         else:
             balances = [sum(x) for x in zip(*acct_values.values(), strict=True)]
 
-        acct_info: t.DictAny = {}
+        class AccountContext(TypedDict):
+            """Type definition for Account context."""
+
+            name: str
+            institution: str
+            balance: Decimal
+
+        acct_info: dict[str, AccountContext] = {}
         for acct in accts:
             if acct.closed:
                 continue
@@ -121,7 +128,7 @@ def dashboard() -> str:
     )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/emergency-fund": (page, ["GET"]),
     "/h/dashboard/emergency-fund": (dashboard, ["GET"]),
 }

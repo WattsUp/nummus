@@ -34,7 +34,10 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
-        queries = {"account": "Non selected", "period": "all"}
+        queries: dict[str, str | list[str]] = {
+            "account": "Non selected",
+            "period": "all",
+        }
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)

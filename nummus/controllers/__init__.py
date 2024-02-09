@@ -19,7 +19,7 @@ from nummus.controllers import (
 if TYPE_CHECKING:
     import flask
 
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 
 def add_routes(app: flask.Flask) -> None:
@@ -41,7 +41,7 @@ def add_routes(app: flask.Flask) -> None:
     ]
     n_trim = len(__name__) + 1
     for m in module:
-        routes: t.Routes = m.ROUTES
+        routes: Routes = m.ROUTES
         for url, (controller, methods) in routes.items():
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
             app.add_url_rule(url, endpoint, controller, methods=methods)

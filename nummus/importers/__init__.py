@@ -11,9 +11,9 @@ from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 from nummus.importers.raw_csv import CSVTransactionImporter
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
-    from nummus import custom_types as t
 
 __all__ = [
     "TransactionImporter",
@@ -23,7 +23,7 @@ __all__ = [
 ]
 
 
-def get_importers(extra: Path | None) -> t.Sequence[type[TransactionImporter]]:
+def get_importers(extra: Path | None) -> Sequence[type[TransactionImporter]]:
     """Get a list of importers from a directory.
 
     Args:
@@ -64,7 +64,7 @@ def get_importers(extra: Path | None) -> t.Sequence[type[TransactionImporter]]:
 
 def get_importer(
     path: Path,
-    available: t.Sequence[type[TransactionImporter]],
+    available: Sequence[type[TransactionImporter]],
 ) -> TransactionImporter | None:
     """Get the best importer for a file.
 
@@ -78,7 +78,7 @@ def get_importer(
     suffix = path.suffix.lower()
 
     buf: bytes | None = None
-    buf_pdf: t.Strings | None = None
+    buf_pdf: list[str] | None = None
     if suffix == ".pdf":
         buf_pdf = []
         with pdfplumber.open(path) as pdf:

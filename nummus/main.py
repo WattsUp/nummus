@@ -5,17 +5,20 @@ categorizes transactions, manages budgets, tracks investments, calculates net
 worth, and predicts future performance.
 """
 
+# PYTHON_ARGCOMPLETE_OK
+
 from __future__ import annotations
 
 import argparse
 import sys
 from pathlib import Path
 
-from nummus import custom_types as t
+import argcomplete
+
 from nummus import version
 
 
-def main(command_line: t.Strings | None = None) -> int:
+def main(command_line: list[str] | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -220,6 +223,7 @@ calculates net worth, and predicts future performance."""
         help=argparse.SUPPRESS,
     )
 
+    argcomplete.autocomplete(parser)
     args = parser.parse_args(args=command_line)
 
     path_db: Path = args.portfolio
@@ -265,7 +269,7 @@ calculates net worth, and predicts future performance."""
     if cmd == "clean":
         return commands.clean(p)
     if cmd == "import":
-        paths: t.Paths = args.paths
+        paths: list[Path] = args.paths
         force: bool = args.force
         return commands.import_files(p, paths=paths, force=force)
     if cmd == "update-assets":

@@ -10,9 +10,7 @@ from unittest import mock
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import commands
-from nummus import custom_types as t
-from nummus import encryption, health_checks, portfolio
+from nummus import commands, encryption, health_checks, portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -31,7 +29,7 @@ class TestCommands(TestBase):
         original_input = mock.builtins.input  # type: ignore[attr-defined]
         original_get_pass = commands.utils.getpass.getpass
 
-        queue: t.Strings = []
+        queue: list[str] = []
 
         def mock_input(to_print: str) -> str:
             print(to_print)
@@ -745,7 +743,7 @@ class TestCommands(TestBase):
                 "db_size": 1024 * 10,
             }
 
-            def mock_summarize(*_, include_all: bool = False) -> t.DictAny:
+            def mock_summarize(*_, include_all: bool = False) -> dict[str, object]:
                 self.assertFalse(include_all, "include_all was unexpectedly True")
                 return p_dict
 

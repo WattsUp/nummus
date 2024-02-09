@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 import colorama
 from colorama import Fore
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import health_checks, portfolio, utils, web
 from nummus.models import HealthCheckIssue
@@ -222,7 +221,7 @@ def clean(p: portfolio.Portfolio) -> int:
 
 def import_files(
     p: portfolio.Portfolio,
-    paths: t.Paths,
+    paths: list[Path],
     *_,
     force: bool = False,
 ) -> int:

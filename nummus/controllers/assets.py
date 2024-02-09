@@ -16,7 +16,7 @@ from nummus.models.asset import AssetValuation
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
@@ -67,7 +67,7 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-asset")
 
 
-def ctx_asset(s: orm.Session, asset: Asset) -> t.DictAny:
+def ctx_asset(s: orm.Session, asset: Asset) -> dict[str, object]:
     """Get the context to build the asset details.
 
     Args:
@@ -103,6 +103,6 @@ def ctx_asset(s: orm.Session, asset: Asset) -> t.DictAny:
     }
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/h/assets/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }

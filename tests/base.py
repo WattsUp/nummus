@@ -8,6 +8,7 @@ import time
 import unittest
 from decimal import Decimal
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import autodict
 import numpy as np
@@ -15,11 +16,13 @@ import pandas as pd
 import yfinance as yf
 from sqlalchemy import orm, pool
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import global_config, sql
 from nummus.models import base_uri
 from tests import TEST_LOG
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class MockTicker:
@@ -95,10 +98,10 @@ class TestBase(unittest.TestCase):
     @classmethod
     def random_decimal(
         cls,
-        low: str | float | t.Real,
-        high: str | float | t.Real,
+        low: str | float | Decimal,
+        high: str | float | Decimal,
         precision: int = 6,
-    ) -> t.Real:
+    ) -> Decimal:
         """Generate a random decimal from a uniform distribution.
 
         Args:
@@ -125,8 +128,8 @@ class TestBase(unittest.TestCase):
 
     def assertEqualWithinError(  # noqa: N802
         self,
-        real: t.Any,
-        target: t.Any,
+        real: object,
+        target: object,
         threshold: float,
         msg: str | None = None,
     ) -> None:
@@ -140,20 +143,23 @@ class TestBase(unittest.TestCase):
         """
         self.assertIsNotNone(real)
         if isinstance(target, dict):
-            self.assertIsInstance(real, dict, msg)
+            if not isinstance(real, dict):
+                self.fail(msg)
             self.assertEqual(real.keys(), target.keys(), msg)
             for k, t_v in target.items():
                 r_v = real[k]
                 self.assertEqualWithinError(r_v, t_v, threshold, msg=f"Key: {k}")
             return
         if isinstance(target, list):
-            self.assertIsInstance(real, list, msg)
+            if not isinstance(real, list):
+                self.fail(msg)
             self.assertEqual(len(real), len(target), msg)
             for t_v, r_v in zip(target, real, strict=True):
                 self.assertEqualWithinError(r_v, t_v, threshold, msg)
             return
         if isinstance(target, int | float):
-            self.assertIsInstance(real, int | float, msg)
+            if not isinstance(real, int | float):
+                self.fail(msg)
             error = np.abs(real if target == 0 else (real / target - 1))
             self.assertLessEqual(error, threshold, msg)
         else:
@@ -163,9 +169,9 @@ class TestBase(unittest.TestCase):
     def assertHTTPRaises(  # noqa: N802
         self,
         rc: int,
-        func: t.Callable,
-        *args: t.Any,
-        **kwargs: t.Any,
+        func: Callable,
+        *args: object,
+        **kwargs: object,
     ) -> None:
         """Test function raises ProblemException with the matching HTTP return code.
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -22,12 +22,14 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from collections.abc import Iterable
+
+    from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "1-year"
 
 
-def ctx_chart() -> t.DictAny:
+def ctx_chart() -> dict[str, object]:
     """Get the context to build the cash flow chart.
 
     Returns:
@@ -92,13 +94,19 @@ def ctx_chart() -> t.DictAny:
             TransactionCategory.name,
             TransactionCategory.group,
         )
-        categories_income: t.DictIntStr = {}
-        categories_expense: t.DictIntStr = {}
+        categories_income: dict[int, str] = {}
+        categories_expense: dict[int, str] = {}
         for cat_id, name, group in query.all():
             if group == TransactionCategoryGroup.INCOME:
                 categories_income[cat_id] = name
             elif group == TransactionCategoryGroup.EXPENSE:
                 categories_expense[cat_id] = name
+
+        class CategoryContext(TypedDict):
+            """Type definition for category context."""
+
+            name: str
+            amount: Decimal
 
         query = s.query(TransactionSplit)
         query = query.with_entities(
@@ -109,13 +117,13 @@ def ctx_chart() -> t.DictAny:
         query = query.where(TransactionSplit.date_ord >= start_ord)
         query = query.where(TransactionSplit.date_ord <= end_ord)
         query = query.group_by(TransactionSplit.category_id)
-        income_categorized: list[t.DictAny] = []
-        expense_categorized: list[t.DictAny] = []
+        income_categorized: list[CategoryContext] = []
+        expense_categorized: list[CategoryContext] = []
         total_income = Decimal(0)
         total_expense = Decimal(0)
         for cat_id, amount in query.yield_per(YIELD_PER):
             cat_id: int
-            amount: t.Real
+            amount: Decimal
             if cat_id in categories_income:
                 income_categorized.append(
                     {
@@ -146,10 +154,10 @@ def ctx_chart() -> t.DictAny:
         # elif n > 80, sum by months and make bars
         # else make daily
         # TODO (WattsUp): Add a previous dailys when period is months
-        labels: t.Strings = []
+        labels: list[str] = []
         date_mode: str | None = None
-        incomes: t.Reals = []
-        expenses: t.Reals = []
+        incomes: list[Decimal] = []
+        expenses: list[Decimal] = []
         chart_bars = False
 
         periods: dict[str, tuple[int, int]] | None = None
@@ -170,10 +178,10 @@ def ctx_chart() -> t.DictAny:
                 date_mode = "days"
 
             cash_flow = Account.get_cash_flow_all(s, start_ord, end_ord, ids=ids)
-            daily_income: t.Reals = [Decimal(0)] * n
-            daily_expense: t.Reals = [Decimal(0)] * n
+            daily_income: list[Decimal] = [Decimal(0)] * n
+            daily_expense: list[Decimal] = [Decimal(0)] * n
             for cat_id, dailys in cash_flow.items():
-                add_to: t.Reals | None = None
+                add_to: list[Decimal] | None = None
                 if cat_id in categories_income:
                     add_to = daily_income
                 elif cat_id in categories_expense:
@@ -227,10 +235,10 @@ def sum_income_expense(
     s: orm.Session,
     start_ord: int,
     end_ord: int,
-    ids: t.Ints | set[int],
+    ids: Iterable[int],
     categories_income: set[int],
     categories_expense: set[int],
-) -> tuple[t.Real, t.Real]:
+) -> tuple[Decimal, Decimal]:
     """Sum income and expense from start to end.
 
     Args:
@@ -302,7 +310,7 @@ def dashboard() -> str:
     )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/cash-flow": (page, ["GET"]),
     "/h/cash-flow/chart": (chart, ["GET"]),
     "/h/dashboard/cash-flow": (dashboard, ["GET"]),

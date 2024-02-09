@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -24,7 +24,7 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
@@ -86,7 +86,10 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-account")
 
 
-def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny:
+def ctx_account(
+    acct: Account,
+    current_value: Decimal | None = None,
+) -> dict[str, object]:
     """Get the context to build the account details.
 
     Args:
@@ -117,7 +120,7 @@ def ctx_account(acct: Account, current_value: t.Real | None = None) -> t.DictAny
     }
 
 
-def ctx_chart(acct: Account) -> t.DictAny:
+def ctx_chart(acct: Account) -> dict[str, object]:
     """Get the context to build the account chart.
 
     Args:
@@ -158,11 +161,11 @@ def ctx_chart(acct: Account) -> t.DictAny:
 
     values, profit, _ = acct.get_value(start_ord, end_ord)
 
-    labels: t.Strings = []
-    values_min: t.Reals | None = None
-    values_max: t.Reals | None = None
-    profit_min: t.Reals | None = None
-    profit_max: t.Reals | None = None
+    labels: list[str] = []
+    values_min: list[Decimal] | None = None
+    values_max: list[Decimal] | None = None
+    profit_min: list[Decimal] | None = None
+    profit_max: list[Decimal] | None = None
     date_mode: str | None = None
 
     if n > web_utils.LIMIT_DOWNSAMPLE:
@@ -204,7 +207,7 @@ def ctx_chart(acct: Account) -> t.DictAny:
     }
 
 
-def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
+def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     """Get the context to build the account assets.
 
     Args:
@@ -267,7 +270,18 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         .where(Asset.id_.in_(a_ids))
     )
 
-    assets: list[t.DictAny] = []
+    class AssetContext(TypedDict):
+        """Type definition for Asset context."""
+
+        uri: str | None
+        category: AssetCategory
+        name: str
+        end_qty: Decimal | None
+        end_value: Decimal
+        end_value_ratio: Decimal
+        profit: Decimal | None
+
+    assets: list[AssetContext] = []
     total_value = Decimal(0)
     total_profit = Decimal(0)
     for a_id, name, category in query.yield_per(YIELD_PER):
@@ -278,18 +292,19 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         total_value += end_value
         total_profit += profit
 
-        ctx_asset = {
+        ctx_asset: AssetContext = {
             "uri": Asset.id_to_uri(a_id),
             "category": category,
             "name": name,
             "end_qty": end_qty,
             "end_value": end_value,
+            "end_value_ratio": Decimal(0),
             "profit": profit,
         }
         assets.append(ctx_asset)
 
     # Add in cash too
-    cash: t.Real = (
+    cash: Decimal = (
         s.query(sqlalchemy.func.sum(TransactionSplit.amount))
         .where(TransactionSplit.account_id == acct.id_)
         .one()[0]
@@ -301,13 +316,14 @@ def ctx_assets(s: orm.Session, acct: Account) -> t.DictAny | None:
         "name": "Cash",
         "end_qty": None,
         "end_value": cash,
+        "end_value_ratio": Decimal(0),
         "profit": None,
     }
     assets.append(ctx_asset)
 
     for item in assets:
         item["end_value_ratio"] = (
-            0 if total_value == 0 else item["end_value"] / total_value
+            Decimal(0) if total_value == 0 else item["end_value"] / total_value
         )
 
     assets = sorted(
@@ -460,7 +476,7 @@ def options(uri: str, field: str) -> str:
         )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/a/<path:uri>/table": (table, ["GET"]),
     "/h/accounts/a/<path:uri>/options/<path:field>": (options, ["GET"]),

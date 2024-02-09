@@ -15,10 +15,9 @@ from nummus.models.base import YIELD_PER
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
     from nummus.models.base import Base
 
-_SEARCH_PROPERTIES: dict[type[Base], t.Strings] = {
+_SEARCH_PROPERTIES: dict[type[Base], list[str]] = {
     Account: ["name", "institution"],
     Asset: ["name", "description", "unit", "tag"],
     TransactionSplit: ["payee", "description", "tag"],
@@ -49,7 +48,7 @@ def search(
     entities.extend(getattr(cls, prop) for prop in _SEARCH_PROPERTIES[cls])
     query_unfiltered = query.with_entities(*entities)
 
-    strings: t.DictIntStr = {}
+    strings: dict[int, str] = {}
     for item in query_unfiltered.yield_per(YIELD_PER):
         item_id = item[0]
         item_str = " ".join(s for s in item[1:] if s is not None)
@@ -61,12 +60,12 @@ def search(
         limit=None,
         processor=lambda s: s.lower(),
     )
-    matching_ids: t.Ints = [
+    matching_ids: list[int] = [
         i for _, score, i in extracted if score > utils.SEARCH_THRESHOLD
     ]
     if len(matching_ids) == 0:
         # Include poor matches to return something
-        matching_ids: t.Ints = [i for _, _, i in extracted[:5]]
+        matching_ids: list[int] = [i for _, _, i in extracted[:5]]
 
     return query.session.query(cls).where(cls.id_.in_(matching_ids))
 

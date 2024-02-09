@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -14,8 +14,8 @@ import sqlalchemy.exc
 from nummus.models import Account, AccountCategory, Transaction
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
     from nummus import portfolio
+    from nummus.controllers.base import Routes
 
 
 def sidebar() -> str:
@@ -31,7 +31,7 @@ def sidebar() -> str:
     )
 
 
-def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
+def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
     """Get the context to build the sidebar.
 
     Args:
@@ -59,17 +59,28 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
         AccountCategory.OTHER,
     ]
 
-    categories_total: dict[AccountCategory, t.Real] = {
+    class AccountContext(TypedDict):
+        """Type definition for Account context."""
+
+        uri: str | None
+        name: str
+        institution: str
+        category: AccountCategory
+        closed: bool
+        updated_days_ago: int
+        value: Decimal
+
+    categories_total: dict[AccountCategory, Decimal] = {
         cat: Decimal(0) for cat in sorted_categories
     }
-    categories: dict[AccountCategory, list[t.DictAny]] = {
+    categories: dict[AccountCategory, list[AccountContext]] = {
         cat: [] for cat in sorted_categories
     }
 
     n_closed = 0
     with p.get_session() as s:
         # Get basic info
-        accounts: dict[int, t.DictAny] = {}
+        accounts: dict[int, AccountContext] = {}
         query = s.query(Account).with_entities(
             Account.id_,
             Account.name,
@@ -89,6 +100,8 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
                 "institution": institution,
                 "category": category,
                 "closed": closed,
+                "updated_days_ago": 0,
+                "value": Decimal(0),
             }
             if closed:
                 n_closed += 1
@@ -158,7 +171,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> t.DictAny:
     }
 
 
-def ctx_base() -> t.DictAny:
+def ctx_base() -> dict[str, object]:
     """Get the context to build the base page.
 
     Returns:
@@ -215,7 +228,7 @@ def empty() -> str:
 
 def overlay_swap(
     content: str | None = None,
-    event: str | t.Strings | None = None,
+    event: str | list[str] | None = None,
 ) -> flask.Response:
     """Create a response to close the overlay and trigger listeners.
 
@@ -276,7 +289,7 @@ def error(e: str | Exception) -> str:
     return flask.render_template("shared/error.jinja", error=str(e))
 
 
-def page(content_template: str, **context: t.Any) -> str:
+def page(content_template: str, **context: object) -> str:
     """Render a page with a given content template.
 
     Args:
@@ -298,7 +311,7 @@ def page(content_template: str, **context: t.Any) -> str:
     )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
     "/h/empty": (empty, ["GET"]),
 }
