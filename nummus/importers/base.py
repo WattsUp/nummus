@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
 from abc import ABC, abstractmethod
+from decimal import Decimal
 
-from nummus import custom_types as t
-
-TxnDict = dict[str, str | t.Real | t.Date | t.Any]
+TxnDict = dict[str, str | Decimal | datetime.date | object]
 TxnDicts = list[TxnDict]
 
 
@@ -16,7 +16,7 @@ class TransactionImporter(ABC):
     def __init__(
         self,
         buf: bytes | None = None,
-        buf_pdf: t.Strings | None = None,
+        buf_pdf: list[str] | None = None,
     ) -> None:
         """Initialize Transaction Importer.
 
@@ -40,7 +40,7 @@ class TransactionImporter(ABC):
         cls,
         suffix: str,
         buf: bytes | None,
-        buf_pdf: t.Strings | None,
+        buf_pdf: list[str] | None,
     ) -> bool:  # pragma: no cover
         """Test if file is importable for this Importer.
 

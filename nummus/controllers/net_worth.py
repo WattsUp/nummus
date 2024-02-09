@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -22,12 +22,12 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "90-days"
 
 
-def ctx_chart() -> t.DictAny:
+def ctx_chart() -> dict[str, object]:
     """Get the context to build the net worth chart.
 
     Returns:
@@ -47,7 +47,13 @@ def ctx_chart() -> t.DictAny:
     category = args.get("category", None, type=AccountCategory)
     no_defer = "no-defer" in args
 
-    accounts: list[t.DictAny] = []
+    class AccountContext(TypedDict):
+        """Type definition for Account context."""
+
+        name: str
+        values: list[Decimal]
+
+    accounts: list[AccountContext] = []
 
     with p.get_session() as s:
         if start is None:
@@ -90,7 +96,9 @@ def ctx_chart() -> t.DictAny:
 
         acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
-        total: t.Reals = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+        total: list[Decimal] = [
+            sum(item) for item in zip(*acct_values.values(), strict=True)
+        ]
 
         mapping = Account.map_name(s)
 
@@ -106,9 +114,9 @@ def ctx_chart() -> t.DictAny:
             sum_assets_end += max(0, values[-1])
         accounts = sorted(accounts, key=lambda item: -item["values"][-1])
 
-        labels: t.Strings = []
-        total_min: t.Reals | None = None
-        total_max: t.Reals | None = None
+        labels: list[str] = []
+        total_min: list[Decimal] | None = None
+        total_max: list[Decimal] | None = None
         date_mode: str | None = None
 
         if n > web_utils.LIMIT_DOWNSAMPLE:
@@ -161,10 +169,17 @@ def ctx_assets(
     s: orm.Session,
     start_ord: int,
     end_ord: int,
-    total_value: t.Real,
-    account_ids: t.Ints,
-) -> t.DictAny:
+    total_value: Decimal,
+    account_ids: list[int],
+) -> dict[str, object]:
     """Get the context to build the assets list.
+
+    Args:
+        s: SQL session to use
+        start_ord: First date ordinal to evaluate
+        end_ord: Last date ordinal to evaluate (inclusive)
+        total_value: Sum of all assets to compute value in cash
+        account_ids: Limit results to specific Accounts by ID
 
     Returns:
         Dictionary HTML context
@@ -175,7 +190,7 @@ def ctx_assets(
         end_ord,
         ids=account_ids,
     )
-    asset_qtys: t.DictIntReal = {}
+    asset_qtys: dict[int, Decimal] = {}
     for acct_assets in account_asset_qtys.values():
         for a_id, qtys in acct_assets.items():
             v = asset_qtys.get(a_id, Decimal(0))
@@ -231,7 +246,18 @@ def ctx_assets(
         .where(Asset.id_.in_(a_ids))
     )
 
-    assets: list[t.DictAny] = []
+    class AssetContext(TypedDict):
+        """Type definition for Asset context."""
+
+        uri: str | None
+        category: AssetCategory
+        name: str
+        end_qty: Decimal | None
+        end_value: Decimal
+        end_value_ratio: Decimal
+        profit: Decimal
+
+    assets: list[AssetContext] = []
     cash = total_value
     total_profit = Decimal(0)
     for a_id, name, category in query.yield_per(YIELD_PER):
@@ -242,12 +268,13 @@ def ctx_assets(
         cash -= end_value
         total_profit += profit
 
-        ctx_asset = {
+        ctx_asset: AssetContext = {
             "uri": Asset.id_to_uri(a_id),
             "category": category,
             "name": name,
             "end_qty": end_qty,
             "end_value": end_value,
+            "end_value_ratio": Decimal(0),
             "profit": profit,
         }
         assets.append(ctx_asset)
@@ -259,7 +286,8 @@ def ctx_assets(
         "name": "Cash",
         "end_qty": None,
         "end_value": cash,
-        "profit": 0,
+        "end_value_ratio": Decimal(0),
+        "profit": Decimal(0),
     }
     assets.append(ctx_asset)
 
@@ -349,7 +377,7 @@ def dashboard() -> str:
     )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/net-worth": (page, ["GET"]),
     "/h/net-worth/chart": (chart, ["GET"]),
     "/h/dashboard/net-worth": (dashboard, ["GET"]),

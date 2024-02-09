@@ -14,7 +14,6 @@ import autodict
 import flask
 import flask.testing
 
-from nummus import custom_types as t
 from nummus import portfolio, sql, web
 from nummus.models import (
     Account,
@@ -36,7 +35,9 @@ if TYPE_CHECKING:
 
 _RE_URI = re.compile(r"^[0-9a-f]{8}$")
 
-ResultType = t.DictAny | str | bytes
+ResultType = dict[str, object] | str | bytes
+Tree = dict[str, "TreeNode"]
+TreeNode = Tree | tuple[str, Tree] | object
 
 HTTP_CODE_OK = 200
 HTTP_CODE_BAD_REQUEST = 400
@@ -49,13 +50,19 @@ class WebTestBase(TestBase):
         Args:
             s: String to test
         """
-        tags: t.Strings = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
-        tree: t.DictAny = {"__parent__": (None, None)}
+        tags: list[str] = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
+
+        tree: Tree = {"__parent__": (None, None)}
         current_node = tree
         for tag in tags:
+            if not isinstance(current_node, dict):
+                self.fail("current_node is not a dictionary")
             if tag[0] == "/":
                 # Close tag
-                current_tag, parent = current_node.pop("__parent__")
+                item = current_node.pop("__parent__")
+                if not isinstance(item, tuple):
+                    self.fail("__parent__ is not a tuple")
+                current_tag, parent = item
                 current_node = parent
                 self.assertEqual(current_tag, tag[1:])
             elif tag in ["link", "meta", "path", "input", "hr"]:
@@ -66,13 +73,18 @@ class WebTestBase(TestBase):
                 current_node = current_node[tag]
 
         # Got back up to the root element
-        tag, parent = current_node.pop("__parent__")
+        if not isinstance(current_node, dict):
+            self.fail("current_node is not a dictionary")
+        item = current_node.pop("__parent__")
+        if not isinstance(item, tuple):
+            self.fail("__parent__ is not a tuple")
+        tag, parent = item
         self.assertIn(tag, [None, "html"])  # <html> might not be closed
         if parent is not None:
-            parent: t.DictAny
+            parent: dict[str, object]
             self.assertEqual(parent.keys(), {"__parent__", "html"})
 
-    def _setup_portfolio(self) -> t.DictStr:
+    def _setup_portfolio(self) -> dict[str, str]:
         """Create accounts and transactions to test with.
 
         Returns:
@@ -208,9 +220,9 @@ class WebTestBase(TestBase):
     def setUp(self, **_) -> None:
         self._original_render_template = flask.render_template
 
-        self._called_context: t.DictAny = {}
+        self._called_context: dict[str, object] = {}
 
-        def render_template(path: str, **context: t.DictAny) -> str:
+        def render_template(path: str, **context: dict[str, object]) -> str:
             self._called_context.clear()
             self._called_context.update(**context)
             return self._original_render_template(path, **context)
@@ -245,10 +257,10 @@ class WebTestBase(TestBase):
         self,
         method: str,
         endpoint: str,
-        queries: t.DictAny | None = None,
+        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
         rc: int = HTTP_CODE_OK,
-        **kwargs: t.Any,
-    ) -> tuple[str, t.DictStr]:
+        **kwargs: object,
+    ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP request.
 
         Args:
@@ -280,10 +292,20 @@ class WebTestBase(TestBase):
                 warnings.simplefilter("ignore")
                 start = time.perf_counter()
                 if rc == HTTP_CODE_OK:
-                    response = self._client.open(url, **kwargs)
+                    response = self._client.open(
+                        url,
+                        buffered=False,
+                        follow_redirects=False,
+                        **kwargs,
+                    )
                 else:
                     with mock.patch("sys.stderr", new=io.StringIO()) as _:
-                        response = self._client.open(url, **kwargs)
+                        response = self._client.open(
+                            url,
+                            buffered=False,
+                            follow_redirects=False,
+                            **kwargs,
+                        )
             duration = time.perf_counter() - start
             self.assertEqual(response.status_code, rc, msg=response.text)
             self.assertEqual(response.content_type, "text/html; charset=utf-8")
@@ -318,10 +340,10 @@ class WebTestBase(TestBase):
     def web_get(
         self,
         endpoint: str,
-        queries: t.DictAny | None = None,
+        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
         rc: int = HTTP_CODE_OK,
-        **kwargs: t.Any,
-    ) -> tuple[str, t.DictStr]:
+        **kwargs: object,
+    ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP GET request.
 
         Args:
@@ -345,10 +367,10 @@ class WebTestBase(TestBase):
     def web_put(
         self,
         endpoint: str,
-        queries: t.DictAny | None = None,
+        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
         rc: int = HTTP_CODE_OK,
-        **kwargs: t.Any,
-    ) -> tuple[str, t.DictStr]:
+        **kwargs: object,
+    ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP PUT request.
 
         Args:
@@ -372,10 +394,10 @@ class WebTestBase(TestBase):
     def web_post(
         self,
         endpoint: str,
-        queries: t.DictAny | None = None,
+        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
         rc: int = HTTP_CODE_OK,
-        **kwargs: t.Any,
-    ) -> tuple[str, t.DictStr]:
+        **kwargs: object,
+    ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP POST request.
 
         Args:
@@ -399,10 +421,10 @@ class WebTestBase(TestBase):
     def web_delete(
         self,
         endpoint: str,
-        queries: t.DictAny | None = None,
+        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
         rc: int = HTTP_CODE_OK,
-        **kwargs: t.Any,
-    ) -> tuple[str, t.DictStr]:
+        **kwargs: object,
+    ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP DELETE request.
 
         Args:

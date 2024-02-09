@@ -2,13 +2,28 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import sqlalchemy
 from sqlalchemy import event, ForeignKey, orm
 from typing_extensions import override
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
-from nummus.models.base import Base, Decimal6, Decimal9
+from nummus.models.base import (
+    Base,
+    Decimal6,
+    Decimal9,
+    ORMBool,
+    ORMInt,
+    ORMIntOpt,
+    ORMReal,
+    ORMRealOpt,
+    ORMStr,
+    ORMStrOpt,
+)
+
+if TYPE_CHECKING:
+    from decimal import Decimal
 
 
 class TransactionSplit(Base):
@@ -37,27 +52,27 @@ class TransactionSplit(Base):
 
     __table_id__ = 0x80000000
 
-    amount: t.ORMReal = orm.mapped_column(
+    amount: ORMReal = orm.mapped_column(
         Decimal6,
         sqlalchemy.CheckConstraint(
             "amount != 0",
             "transaction_split.amount must be non-zero",
         ),
     )
-    payee: t.ORMStrOpt
-    description: t.ORMStrOpt
-    tag: t.ORMStrOpt
+    payee: ORMStrOpt
+    description: ORMStrOpt
+    tag: ORMStrOpt
 
-    category_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
+    category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
-    parent_id: t.ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
-    date_ord: t.ORMInt
-    locked: t.ORMBool
-    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
+    parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
+    date_ord: ORMInt
+    locked: ORMBool
+    account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
-    asset_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
-    asset_quantity: t.ORMRealOpt = orm.mapped_column(Decimal9)
-    _asset_qty_unadjusted: t.ORMRealOpt = orm.mapped_column(Decimal9)
+    asset_id: ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
+    asset_quantity: ORMRealOpt = orm.mapped_column(Decimal9)
+    _asset_qty_unadjusted: ORMRealOpt = orm.mapped_column(Decimal9)
 
     @orm.validates("payee", "description", "tag")
     @override
@@ -65,7 +80,7 @@ class TransactionSplit(Base):
         return super().validate_strings(key, field)
 
     @override
-    def __setattr__(self, name: str, value: t.Any) -> None:
+    def __setattr__(self, name: str, value: object) -> None:
         if name in ["parent_id", "date", "locked", "account_id"]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
@@ -75,7 +90,7 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
     @property
-    def asset_quantity_unadjusted(self) -> t.Real | None:
+    def asset_quantity_unadjusted(self) -> Decimal | None:
         """Number of units of Asset exchanged.
 
         Positive indicates Account gained Assets (inflow), unadjusted for splits.
@@ -83,7 +98,7 @@ class TransactionSplit(Base):
         return self._asset_qty_unadjusted
 
     @asset_quantity_unadjusted.setter
-    def asset_quantity_unadjusted(self, qty: t.Real | None) -> None:
+    def asset_quantity_unadjusted(self, qty: Decimal | None) -> None:
         if qty is None:
             self._asset_qty_unadjusted = None
             self.asset_quantity = None
@@ -93,7 +108,7 @@ class TransactionSplit(Base):
         # Also set adjusted quantity with 1x multiplier
         self.asset_quantity = qty
 
-    def adjust_asset_quantity(self, multiplier: t.Real) -> None:
+    def adjust_asset_quantity(self, multiplier: Decimal) -> None:
         """Set adjusted asset quantity.
 
         Args:
@@ -166,14 +181,14 @@ class Transaction(Base):
 
     __table_id__ = 0x90000000
 
-    account_id: t.ORMInt = orm.mapped_column(ForeignKey("account.id_"))
+    account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
-    date_ord: t.ORMInt
-    amount: t.ORMReal = orm.mapped_column(Decimal6)
-    statement: t.ORMStr
-    locked: t.ORMBool = orm.mapped_column(default=False)
+    date_ord: ORMInt
+    amount: ORMReal = orm.mapped_column(Decimal6)
+    statement: ORMStr
+    locked: ORMBool = orm.mapped_column(default=False)
 
-    similar_txn_id: t.ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
+    similar_txn_id: ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
 
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 

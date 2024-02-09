@@ -5,8 +5,7 @@ from __future__ import annotations
 from sqlalchemy import orm
 from typing_extensions import override
 
-from nummus import custom_types as t
-from nummus.models.base import Base, BaseEnum
+from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -30,10 +29,10 @@ class TransactionCategory(Base):
 
     __table_id__ = 0x70000000
 
-    name: t.ORMStr = orm.mapped_column(unique=True)
+    name: ORMStr = orm.mapped_column(unique=True)
     group: orm.Mapped[TransactionCategoryGroup]
-    locked: t.ORMBool
-    is_profit_loss: t.ORMBool
+    locked: ORMBool
+    is_profit_loss: ORMBool
 
     @orm.validates("name")
     @override

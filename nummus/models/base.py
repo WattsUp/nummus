@@ -4,17 +4,30 @@ from __future__ import annotations
 
 import enum
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from sqlalchemy import orm, types
 from typing_extensions import override
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models import base_uri
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
+
 # Yield per instead of fetch all is faster
 YIELD_PER = 100
+
+ORMBool = orm.Mapped[bool]
+ORMBoolOpt = orm.Mapped[bool | None]
+ORMInt = orm.Mapped[int]
+ORMIntOpt = orm.Mapped[int | None]
+ORMStr = orm.Mapped[str]
+ORMStrOpt = orm.Mapped[str | None]
+ORMReal = orm.Mapped[Decimal]
+ORMRealOpt = orm.Mapped[Decimal | None]
 
 
 class Base(orm.DeclarativeBase):
@@ -32,7 +45,7 @@ class Base(orm.DeclarativeBase):
 
     __table_id__: int
 
-    id_: t.ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
+    id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
     @classmethod
     def id_to_uri(cls, id_: int) -> str:
@@ -75,7 +88,7 @@ class Base(orm.DeclarativeBase):
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
-    def __eq__(self, other: Base | t.Any) -> bool:
+    def __eq__(self, other: Base | object) -> bool:
         """Test equality by URI.
 
         Args:
@@ -86,7 +99,7 @@ class Base(orm.DeclarativeBase):
         """
         return isinstance(other, Base) and self.uri == other.uri
 
-    def __ne__(self, other: Base | t.Any) -> bool:
+    def __ne__(self, other: Base | object) -> bool:
         """Test inequality by URI.
 
         Args:
@@ -98,7 +111,7 @@ class Base(orm.DeclarativeBase):
         return not isinstance(other, Base) or self.uri != other.uri
 
     @classmethod
-    def map_name(cls, s: orm.Session) -> t.DictIntStr:
+    def map_name(cls, s: orm.Session) -> dict[int, str]:
         """Mapping between id and names.
 
         Args:
@@ -153,7 +166,7 @@ class BaseEnum(enum.Enum):
         return super()._missing_(value)
 
     @classmethod
-    def _lut(cls) -> t.Mapping[str, BaseEnum]:
+    def _lut(cls) -> Mapping[str, BaseEnum]:
         """Look up table, mapping of strings to matching Enums.
 
         Returns:
@@ -173,7 +186,7 @@ class Decimal6(types.TypeDecorator):
     _FACTOR_IN = 1 / _FACTOR_OUT
 
     @override
-    def process_bind_param(self, value: t.Real | None, *_) -> int | None:
+    def process_bind_param(self, value: Decimal | None, *_) -> int | None:
         """Receive a bound parameter value to be converted.
 
         Args:
@@ -187,7 +200,7 @@ class Decimal6(types.TypeDecorator):
         return int(value * self._FACTOR_IN)
 
     @override
-    def process_result_value(self, value: int | None, *_) -> t.Real | None:
+    def process_result_value(self, value: int | None, *_) -> Decimal | None:
         """Receive a result-row column value to be converted.
 
         Args:

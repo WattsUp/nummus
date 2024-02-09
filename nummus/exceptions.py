@@ -15,8 +15,8 @@ from werkzeug import exceptions as http
 
 if TYPE_CHECKING:
     import datetime
+    from pathlib import Path
 
-    from nummus import custom_types as t
 
 __all__ = [
     "DatabaseError",
@@ -45,7 +45,7 @@ __all__ = [
 class FileAlreadyImportedError(Exception):
     """Error when a file has already been imported."""
 
-    def __init__(self, date: datetime.date, path: t.Path) -> None:
+    def __init__(self, date: datetime.date, path: Path) -> None:
         """Initialize FileAlreadyImportedError.
 
         Args:
@@ -59,7 +59,7 @@ class FileAlreadyImportedError(Exception):
 class UnknownImporterError(Exception):
     """Error when a file does not match any importer."""
 
-    def __init__(self, path: t.Path) -> None:
+    def __init__(self, path: Path) -> None:
         """Initialize UnknownImporterError.
 
         Args:

@@ -6,9 +6,7 @@ import subprocess
 from pathlib import Path
 from unittest import mock
 
-from nummus import commands
-from nummus import custom_types as t
-from nummus import main, portfolio, version
+from nummus import commands, main, portfolio, version
 from tests.base import TestBase
 
 
@@ -24,10 +22,10 @@ class TestMain(TestBase):
             if callable(value) and value.__module__.startswith("nummus"):
                 self._original_commands[name] = value
 
-        self._called_args: t.Strings = []
-        self._called_kwargs: t.DictAny = {}
+        self._called_args: list[str] = []
+        self._called_kwargs: dict[str, object] = {}
 
-        def check_call(*args: t.Any, **kwargs: t.Any) -> None:
+        def check_call(*args: str, **kwargs: object) -> None:
             self._called_args.clear()
             self._called_args.extend(args)
             self._called_kwargs.clear()

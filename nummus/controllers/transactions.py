@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
 from rapidfuzz import process
 from sqlalchemy import orm
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
@@ -22,6 +22,18 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+
+if TYPE_CHECKING:
+    from nummus.controllers.base import Routes
+
+
+class _OptionContex(TypedDict):
+    """Type definition for option context."""
+
+    name: str
+    checked: bool
+    hidden: bool
+    score: int
 
 
 def page_all() -> str:
@@ -99,9 +111,9 @@ def options(field: str) -> str:
 def ctx_options(
     query: orm.Query,
     field: str,
-    id_mapping: t.DictIntStr | None = None,
+    id_mapping: dict[int, str] | None = None,
     search_str: str | None = None,
-) -> list[t.DictAny]:
+) -> list[_OptionContex]:
     """Get the context to build the options for table.
 
     Args:
@@ -115,8 +127,8 @@ def ctx_options(
     """
     query = query.order_by(None)
     args = flask.request.args
-    selected: t.Strings = args.getlist(field)
-    options_: list[dict[str, str | int | bool]] = []
+    selected: list[str] = args.getlist(field)
+    options_: list[_OptionContex] = []
     entities = {
         "account": TransactionSplit.account_id,
         "payee": TransactionSplit.payee,
@@ -127,7 +139,7 @@ def ctx_options(
         if id_ is None:
             continue
         name = id_mapping[id_] if id_mapping else id_
-        item = {
+        item: _OptionContex = {
             "name": name,
             "checked": name in selected,
             "hidden": False,
@@ -164,7 +176,7 @@ def ctx_options(
 def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
-) -> t.DictAny:
+) -> dict[str, object]:
     """Get the context to build the transaction table.
 
     Args:
@@ -287,7 +299,7 @@ def ctx_table(
                 else datetime.date(1970, 1, 1)
             )
 
-        transactions: list[t.DictAny] = []
+        transactions: list[dict[str, object]] = []
         for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
             t_split_ctx = ctx_split(t_split, accounts, categories)
@@ -329,9 +341,9 @@ def ctx_table(
 
 def ctx_split(
     t_split: TransactionSplit,
-    accounts: t.DictIntStr,
-    categories: t.DictIntStr,
-) -> t.DictAny:
+    accounts: dict[int, str],
+    categories: dict[int, str],
+) -> dict[str, object]:
     """Get the context to build the transaction edit dialog.
 
     Args:
@@ -389,7 +401,7 @@ def edit(uri: str) -> str | flask.Response:
 
             splits = parent.splits
 
-            ctx_splits: list[t.DictStr] = [
+            ctx_splits: list[dict[str, object]] = [
                 ctx_split(t_split, accounts, categories) for t_split in splits
             ]
 
@@ -505,7 +517,7 @@ def split(uri: str) -> str:
     description: list[str | None] = list(form.getlist("description"))
     category: list[str] = form.getlist("category")
     tag: list[str | None] = list(form.getlist("tag"))
-    amount: list[t.Real | None] = list(form.getlist("amount", utils.parse_real))
+    amount: list[Decimal | None] = list(form.getlist("amount", utils.parse_real))
 
     if flask.request.method == "PUT":
         payee.append(None)
@@ -561,7 +573,7 @@ def split(uri: str) -> str:
         tag.pop(i)
         amount.pop(i)
 
-    ctx_splits: list[t.DictAny] = []
+    ctx_splits: list[dict[str, object]] = []
     for i in range(len(payee)):
         item = {
             "payee": payee[i],
@@ -615,7 +627,7 @@ def remaining(uri: str) -> str:
         )
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/options/<path:field>": (options, ["GET"]),

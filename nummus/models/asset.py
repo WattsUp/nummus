@@ -5,17 +5,30 @@ from __future__ import annotations
 import datetime
 import re
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import yfinance as yf
 from sqlalchemy import orm
 from typing_extensions import override
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.models.base import Base, BaseEnum, Decimal6, YIELD_PER
+from nummus.models.base import (
+    Base,
+    BaseEnum,
+    Decimal6,
+    ORMBool,
+    ORMInt,
+    ORMReal,
+    ORMStr,
+    ORMStrOpt,
+    YIELD_PER,
+)
 from nummus.models.transaction import TransactionSplit
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 _RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+(-[A-Z]+)?$")
 
@@ -31,9 +44,9 @@ class AssetSplit(Base):
 
     # No __table_id__ because this is not user accessible
 
-    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
-    multiplier: t.ORMReal = orm.mapped_column(Decimal6)
-    date_ord: t.ORMInt
+    asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
+    multiplier: ORMReal = orm.mapped_column(Decimal6)
+    date_ord: ORMInt
 
 
 class AssetValuation(Base):
@@ -47,9 +60,9 @@ class AssetValuation(Base):
 
     # No __table_id__ because this is not user accessible
 
-    asset_id: t.ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
-    value: t.ORMReal = orm.mapped_column(Decimal6)
-    date_ord: t.ORMInt
+    asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
+    value: ORMReal = orm.mapped_column(Decimal6)
+    date_ord: ORMInt
 
 
 class AssetCategory(BaseEnum):
@@ -84,11 +97,11 @@ class Asset(Base):
 
     __table_id__ = 0x40000000
 
-    name: t.ORMStr = orm.mapped_column(unique=True)
-    description: t.ORMStrOpt
+    name: ORMStr = orm.mapped_column(unique=True)
+    description: ORMStrOpt
     category: orm.Mapped[AssetCategory]
-    interpolate: t.ORMBool = orm.mapped_column(default=False)
-    ticker: t.ORMStrOpt = orm.mapped_column(unique=True)
+    interpolate: ORMBool = orm.mapped_column(default=False)
+    ticker: ORMStrOpt = orm.mapped_column(unique=True)
 
     # NOT ticker, since there are valid single letter tickers
     # NOT unit, since there are valid single letter units: ea
@@ -129,8 +142,8 @@ class Asset(Base):
         s: orm.Session,
         start_ord: int,
         end_ord: int,
-        ids: t.Ints | set[int] | None = None,
-    ) -> t.DictIntReals:
+        ids: Iterable[int] | None = None,
+    ) -> dict[int, list[Decimal]]:
         """Get the value of all Assets from start to end date.
 
         Args:
@@ -145,7 +158,7 @@ class Asset(Base):
         n = end_ord - start_ord + 1
 
         # Get a list of valuations (date offset, value) for each Asset
-        valuations_assets: dict[int, list[tuple[int, t.Real]]] = {}
+        valuations_assets: dict[int, list[tuple[int, Decimal]]] = {}
         interpolated_assets: set[int] = set()
         query = s.query(Asset).with_entities(Asset.id_, Asset.interpolate)
         if ids is not None:
@@ -228,7 +241,7 @@ class Asset(Base):
             i = date_ord - start_ord
             valuations_assets[a_id].append((i, v))
 
-        assets_values: t.DictIntReals = {}
+        assets_values: dict[int, list[Decimal]] = {}
         for a_id, valuations in valuations_assets.items():
             valuations_sorted = sorted(valuations, key=lambda item: item[0])
             if a_id in interpolated_assets:
@@ -238,7 +251,7 @@ class Asset(Base):
 
         return assets_values
 
-    def get_value(self, start_ord: int, end_ord: int) -> t.Reals:
+    def get_value(self, start_ord: int, end_ord: int) -> list[Decimal]:
         """Get the value of Asset from start to end date.
 
         Args:
@@ -271,7 +284,7 @@ class Asset(Base):
             raise exc.UnboundExecutionError
 
         multiplier = Decimal(1)
-        splits: list[tuple[int, t.Real]] = []
+        splits: list[tuple[int, Decimal]] = []
 
         query = (
             s.query(AssetSplit)
@@ -340,7 +353,7 @@ class Asset(Base):
 
         for date_ord, qty in query.yield_per(YIELD_PER):
             date_ord: int
-            qty: t.Real
+            qty: Decimal
 
             if current_qty == 0:
                 # Bought some, record the period when zero
@@ -393,7 +406,7 @@ class Asset(Base):
         self,
         *_,
         through_today: bool,
-    ) -> tuple[t.Date | None, t.Date | None]:
+    ) -> tuple[datetime.date | None, datetime.date | None]:
         """Update valuations from web sources.
 
         Does not commit changes, call s.commit() afterwards.

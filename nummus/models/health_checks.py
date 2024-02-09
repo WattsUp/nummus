@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from nummus import custom_types as t
-from nummus.models.base import Base
+from nummus.models.base import Base, ORMBool, ORMStr
 
 
 class HealthCheckIssue(Base):
@@ -17,6 +16,6 @@ class HealthCheckIssue(Base):
 
     __table_id__ = 0x20000000
 
-    check: t.ORMStr
-    value: t.ORMStr
-    ignore: t.ORMBool
+    check: ORMStr
+    value: ORMStr
+    ignore: ORMBool

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from nummus import custom_types as t
 from nummus import importers
 from nummus.importers import base
 from tests import base as test_base
@@ -12,7 +11,7 @@ class Derived(base.TransactionImporter):
         cls,
         suffix: str,
         buf: bytes | None,
-        buf_pdf: t.Strings | None,
+        buf_pdf: list[str] | None,
     ) -> bool:
         _ = suffix
         _ = buf

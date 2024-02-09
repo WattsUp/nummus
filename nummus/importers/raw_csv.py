@@ -6,15 +6,11 @@ import csv
 import datetime
 import io
 import types
-from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class CSVTransactionImporter(TransactionImporter):
@@ -46,7 +42,7 @@ class CSVTransactionImporter(TransactionImporter):
         cls,
         suffix: str,
         buf: bytes | None,
-        buf_pdf: t.Strings | None,
+        buf_pdf: list[str] | None,
     ) -> bool:
         if suffix != ".csv":
             return False

@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import orm
 
-from nummus import custom_types as t
-from nummus.models.base import Base, BaseEnum
+from nummus.models.base import Base, BaseEnum, ORMStr
 
 
 class ConfigKey(BaseEnum):
@@ -27,4 +26,4 @@ class Config(Base):
     # No __table_id__ because this is not user accessible
 
     key: orm.Mapped[ConfigKey] = orm.mapped_column(unique=True)
-    value: t.ORMStr
+    value: ORMStr

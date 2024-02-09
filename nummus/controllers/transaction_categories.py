@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING, TypedDict
+
 import flask
 
-from nummus import custom_types as t
 from nummus import exceptions as exc
 from nummus import portfolio, web_utils
 from nummus.controllers import common
@@ -14,6 +15,9 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    from nummus.controllers.base import Routes
 
 
 def overlay() -> str:
@@ -25,13 +29,20 @@ def overlay() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
+    class CategoryContext(TypedDict):
+        """Type definition for category context."""
+
+        uri: str | None
+        name: str
+        locked: bool
+
     with p.get_session() as s:
-        income: list[t.DictAny] = []
-        expense: list[t.DictAny] = []
-        other: list[t.DictAny] = []
+        income: list[CategoryContext] = []
+        expense: list[CategoryContext] = []
+        other: list[CategoryContext] = []
 
         for cat in s.query(TransactionCategory).all():
-            cat_d: t.DictAny = {
+            cat_d: CategoryContext = {
                 "uri": cat.uri,
                 "name": cat.name,
                 "locked": cat.locked,
@@ -50,7 +61,7 @@ def overlay() -> str:
         expense = sorted(expense, key=lambda cat: cat["name"])
         other = sorted(other, key=lambda cat: cat["name"])
 
-        ctx: t.DictAny = {"Income": income, "Expense": expense, "Other": other}
+        ctx = {"Income": income, "Expense": expense, "Other": other}
 
     return flask.render_template(
         "transaction_categories/table.jinja",
@@ -65,7 +76,7 @@ def new() -> str | flask.Response:
         string HTML response
     """
     if flask.request.method == "GET":
-        ctx: t.DictAny = {
+        ctx: dict[str, object] = {
             "uri": None,
             "name": None,
             "group": None,
@@ -114,7 +125,7 @@ def edit(uri: str) -> str | flask.Response:
         cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
 
         if flask.request.method == "GET":
-            ctx: t.DictAny = {
+            ctx: dict[str, object] = {
                 "uri": uri,
                 "name": cat.name,
                 "group": cat.group,
@@ -167,7 +178,7 @@ def delete(uri: str) -> str | flask.Response:
         cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
 
         if flask.request.method == "GET":
-            ctx: t.DictAny = {
+            ctx: dict[str, object] = {
                 "uri": uri,
                 "name": cat.name,
                 "group": cat.group,
@@ -204,7 +215,7 @@ def delete(uri: str) -> str | flask.Response:
         return common.overlay_swap(overlay(), event="update-transaction")
 
 
-ROUTES: t.Routes = {
+ROUTES: Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
     "/h/txn-categories/c/<path:uri>/edit": (edit, ["GET", "POST"]),

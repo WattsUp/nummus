@@ -14,7 +14,6 @@ if TYPE_CHECKING:
     import sqlite3
     from pathlib import Path
 
-    from nummus import custom_types as t
     from nummus.encryption import EncryptionInterface
 
 try:
@@ -26,7 +25,7 @@ except ImportError:
 # Cache engines so recomputing db_key is avoided
 _ENGINES: dict[Path, sqlalchemy.engine.Engine] = {}
 
-_ENGINE_ARGS: t.DictAny = {}
+_ENGINE_ARGS: dict[str, object] = {}
 
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")

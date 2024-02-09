@@ -5,8 +5,7 @@ from __future__ import annotations
 import sqlalchemy
 from sqlalchemy import orm
 
-from nummus import custom_types as t
-from nummus.models.base import Base, Decimal6
+from nummus.models.base import Base, Decimal6, ORMInt, ORMReal
 
 
 class Budget(Base):
@@ -20,8 +19,8 @@ class Budget(Base):
 
     __table_id__ = 0x50000000
 
-    date_ord: t.ORMInt = orm.mapped_column(unique=True)
-    amount: t.ORMReal = orm.mapped_column(
+    date_ord: ORMInt = orm.mapped_column(unique=True)
+    amount: ORMReal = orm.mapped_column(
         Decimal6,
         sqlalchemy.CheckConstraint(
             "amount <= 0",
