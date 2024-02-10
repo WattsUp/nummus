@@ -160,7 +160,7 @@ class TestORMBase(TestBase):
         result = parent.validate_strings(key, field)
         self.assertEqual(result, field)
 
-        self.assertRaises(exc.InvalidORMValueError, parent.validate_strings, key, "ab")
+        self.assertRaises(exc.InvalidORMValueError, parent.validate_strings, key, "a")
 
 
 class Derived(base.BaseEnum):

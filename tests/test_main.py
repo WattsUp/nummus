@@ -212,7 +212,7 @@ class TestMain(TestBase):
             self.assertDictEqual(
                 self._called_kwargs,
                 {
-                    "_func": "run_web",
+                    "_func": "web",
                     "host": "127.0.0.1",
                     "port": 8080,
                     "debug": is_dev,
@@ -226,7 +226,7 @@ class TestMain(TestBase):
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
                 self._called_kwargs,
-                {"_func": "run_web", "host": "127.0.0.1", "port": 8080, "debug": True},
+                {"_func": "web", "host": "127.0.0.1", "port": 8080, "debug": True},
             )
 
             host = "192.168.1.2"
@@ -247,7 +247,7 @@ class TestMain(TestBase):
             self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
             self.assertDictEqual(
                 self._called_kwargs,
-                {"_func": "run_web", "host": host, "port": port, "debug": False},
+                {"_func": "web", "host": host, "port": port, "debug": False},
             )
         finally:
             self._tear_down_commands()

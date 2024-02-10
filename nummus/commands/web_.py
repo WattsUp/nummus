@@ -4,14 +4,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus import web
+from nummus import web as web_
 
 if TYPE_CHECKING:
     from nummus import portfolio
 
 
 # No unit test for wrapper command, too difficult to mock
-def run_web(
+def web(
     p: portfolio.Portfolio,
     host: str,
     port: int,
@@ -30,6 +30,6 @@ def run_web(
         0 on success
         non-zero on failure
     """
-    s = web.Server(p, host, port, debug=debug)
+    s = web_.Server(p, host, port, debug=debug)
     s.run()
     return 0

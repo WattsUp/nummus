@@ -260,7 +260,7 @@ calculates net worth, and predicts future performance."""
         host: str = args.host
         port: int = args.port
         debug: bool = args.debug
-        return commands.run_web(p, host=host, port=port, debug=debug)
+        return commands.web(p, host=host, port=port, debug=debug)
     if cmd == "unlock":
         # Already unlocked
         return 0

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 
 from nummus import portfolio, utils
-from nummus.commands.unlock import unlock
+from nummus.commands.unlock_ import unlock
 
 if TYPE_CHECKING:
     from pathlib import Path

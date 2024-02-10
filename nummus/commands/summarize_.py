@@ -52,11 +52,12 @@ class _Summary(TypedDict):
     db_size: int
 
 
+# Don't need to cover the integration
 def summarize(
     p: portfolio.Portfolio,
     *_,
     include_all: bool = False,
-) -> int:
+) -> int:  # pragma: no cover
     """Print summary information and statistics on Portfolio.
 
     Args:
@@ -66,6 +67,25 @@ def summarize(
     Returns:
         0 on success
         non-zero on failure
+    """
+    summary = _get_summary(p, include_all=include_all)
+    _print_summary(summary)
+    return 0
+
+
+def _get_summary(
+    p: portfolio.Portfolio,
+    *_,
+    include_all: bool = False,
+) -> _Summary:
+    """Summarize Portfolio into useful information and statistics.
+
+    Args:
+        p: Working Portfolio
+        include_all: True will include all accounts and assets
+
+    Returns:
+        Dictionary of statistics
     """
     today = datetime.date.today()
     today_ord = today.toordinal()
@@ -159,7 +179,7 @@ def summarize(
                 item["name"].lower(),
             ),
         )
-    summary: _Summary = {
+    return {
         "n_accounts": n_accounts,
         "n_assets": n_assets,
         "n_transactions": n_transactions,
@@ -170,9 +190,6 @@ def summarize(
         "assets": summary_assets,
         "db_size": p.path.stat().st_size,
     }
-
-    _print_summary(summary)
-    return 0
 
 
 def _print_summary(summary: _Summary) -> None:

@@ -208,10 +208,10 @@ class TestTransaction(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Transaction split missing properties", result)
 
-        form = {"date": today, "payee": "ab", "amount": "100"}
+        form = {"date": today, "payee": "a", "amount": "100"}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn(
-            "Transaction split payee must be at least 3 characters long",
+            "Transaction split payee must be at least 2 characters long",
             result,
         )
 

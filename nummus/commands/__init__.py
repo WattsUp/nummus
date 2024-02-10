@@ -4,15 +4,15 @@ from __future__ import annotations
 
 import colorama
 
-from nummus.commands.backup import backup, restore
-from nummus.commands.clean import clean
-from nummus.commands.create import create
-from nummus.commands.health_check import health_check
-from nummus.commands.import_files import import_files
-from nummus.commands.summarize import summarize
-from nummus.commands.unlock import unlock
-from nummus.commands.update_assets import update_assets
-from nummus.commands.web import run_web
+from nummus.commands.backup_ import backup, restore
+from nummus.commands.clean_ import clean
+from nummus.commands.create_ import create
+from nummus.commands.health_check_ import health_check
+from nummus.commands.import_files_ import import_files
+from nummus.commands.summarize_ import summarize
+from nummus.commands.unlock_ import unlock
+from nummus.commands.update_assets_ import update_assets
+from nummus.commands.web_ import web
 
 colorama.init(autoreset=True)
 
@@ -27,5 +27,5 @@ __all__ = [
     "summarize",
     "unlock",
     "update_assets",
-    "run_web",
+    "web",
 ]

@@ -85,8 +85,8 @@ class TestTransactionCategory(WebTestBase):
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.group, TransactionCategoryGroup.OTHER)
 
-        e_str = "Transaction category name must be at least 3 characters long"
-        form = {"name": "ab", "group": "other"}
+        e_str = "Transaction category name must be at least 2 characters long"
+        form = {"name": "a", "group": "other"}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn(e_str, result)
 
