@@ -9,7 +9,6 @@ import io
 import re
 import shutil
 import tarfile
-from decimal import Decimal
 from pathlib import Path
 
 import sqlalchemy
@@ -24,7 +23,6 @@ from nummus import importers, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
-    AssetValuation,
     Config,
     ConfigKey,
     ImportedFile,
@@ -928,142 +926,3 @@ class Portfolio:
             s.commit()
 
         return updated
-
-    def summarize(
-        self,
-        *_,
-        include_all: bool = False,
-    ) -> dict[str, object]:
-        """Summarize Portfolio into useful information and statistics.
-
-        Args:
-            include_all: True will include all accounts and assets
-
-        Returns:
-            Dictionary of statistics
-            {
-                "n_accounts": int,
-                "n_assets": int,
-                "n_transactions": int,
-                "n_valuations": int,
-                "net_worth": Decimal,
-                "accounts": [{ # Excludes closed
-                    "name": str,
-                    "institution": str,
-                    "category": str,
-                    "value": Decimal,
-                    "age": str,
-                    "profit": Decimal,
-                }, ...],
-                "total_asset_value": Decimal,
-                "assets": [{ # Excludes zero value
-                    "name": str,
-                    "description": str,
-                    "value": Decimal,
-                    "profit": Decimal,
-                    "category": str,
-                    "ticker": str | None,
-                }, ...],
-                "db_size": int, # Bytes
-            }
-        """
-        # TODO(WattsUp): Create TypedDict for return type
-        today = datetime.date.today()
-        today_ord = today.toordinal()
-
-        summary: dict[str, object] = {
-            "db_size": self._path_db.stat().st_size,
-        }
-        with self.get_session() as s:
-            accts = {acct.id_: acct for acct in s.query(Account).all()}
-            assets = {a.id_: a for a in s.query(Asset).all()}
-
-            # Get the inception date
-            start_date_ord: int = (
-                s.query(
-                    sqlalchemy.func.min(TransactionSplit.date_ord),
-                ).scalar()
-                or datetime.date(1970, 1, 1).toordinal()
-            )
-
-            summary["n_accounts"] = len(accts)
-            summary["n_transactions"] = s.query(TransactionSplit).count()
-            summary["n_assets"] = len(assets)
-            summary["n_valuations"] = s.query(AssetValuation).count()
-
-            value_accts, profit_accts, value_assets = Account.get_value_all(
-                s,
-                start_date_ord,
-                today_ord,
-            )
-
-            net_worth = Decimal(0)
-            summary_accts = []
-            for acct_id, values in value_accts.items():
-                acct = accts[acct_id]
-                if not include_all and acct.closed:
-                    continue
-
-                p = profit_accts[acct_id][-1]
-                v = values[-1]
-                net_worth += v
-                summary_accts.append(
-                    {
-                        "name": acct.name,
-                        "institution": acct.institution,
-                        "category": acct.category.name.replace("_", " ").capitalize(),
-                        "value": v,
-                        "age": utils.format_days(
-                            today_ord - (acct.opened_on_ord or today_ord),
-                        ),
-                        "profit": p,
-                    },
-                )
-
-            summary["accounts"] = sorted(
-                summary_accts,
-                key=lambda item: (
-                    -item["value"],
-                    -item["profit"],
-                    item["name"].lower(),
-                ),
-            )
-            summary["net_worth"] = net_worth
-
-            profit_assets = Account.get_profit_by_asset_all(
-                s,
-                start_date_ord,
-                today_ord,
-            )
-
-            total_asset_value = Decimal(0)
-            summary_assets = []
-            for a_id, values in value_assets.items():
-                v = values[-1]
-                if not include_all and v == 0:
-                    continue
-
-                a = assets[a_id]
-                p = profit_assets[a_id]
-                total_asset_value += v
-                summary_assets.append(
-                    {
-                        "name": a.name,
-                        "description": a.description,
-                        "ticker": a.ticker,
-                        "category": a.category.name.replace("_", " ").capitalize(),
-                        "value": v,
-                        "profit": p,
-                    },
-                )
-            summary["assets"] = sorted(
-                summary_assets,
-                key=lambda item: (
-                    -item["value"],
-                    -item["profit"],
-                    item["name"].lower(),
-                ),
-            )
-            summary["total_asset_value"] = total_asset_value
-
-        return summary
