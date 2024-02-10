@@ -10,6 +10,7 @@ worth, and predicts future performance.
 from __future__ import annotations
 
 import argparse
+import datetime
 import sys
 from pathlib import Path
 
@@ -186,6 +187,30 @@ calculates net worth, and predicts future performance."""
         help="ignore an issue specified by its URI",
     )
 
+    sub_export = subparsers.add_parser(
+        "export",
+        help="export transactions to a CSV",
+        description="Export all transactions within a date to CSV",
+    )
+    sub_export.add_argument(
+        "--start",
+        metavar="YYYY-MM-DD",
+        type=datetime.date.fromisoformat,
+        help="date of first transaction to export",
+    )
+    sub_export.add_argument(
+        "--end",
+        metavar="YYYY-MM-DD",
+        type=datetime.date.fromisoformat,
+        help="date of last transaction to export",
+    )
+    sub_export.add_argument(
+        "csv_path",
+        metavar="CSV_PATH",
+        type=Path,
+        help="path to CSV file to export",
+    )
+
     sub_web = subparsers.add_parser(
         "web",
         help="start nummus web server",
@@ -294,6 +319,17 @@ calculates net worth, and predicts future performance."""
             no_ignores=no_ignores,
             clear_ignores=clear_ignores,
         )
+    if cmd == "export":
+        csv_path: Path = args.csv_path
+        start: datetime.date | None = args.start
+        end: datetime.date | None = args.end
+        return commands.export(
+            p,
+            path=csv_path,
+            start=start,
+            end=end,
+        )
+
     else:  # noqa: RET505, pragma: no cover
         msg = f"Unknown command '{cmd}'"
         raise ValueError(msg)
