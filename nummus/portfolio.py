@@ -967,6 +967,7 @@ class Portfolio:
                 "db_size": int, # Bytes
             }
         """
+        # TODO(WattsUp): Create TypedDict for return type
         today = datetime.date.today()
         today_ord = today.toordinal()
 
