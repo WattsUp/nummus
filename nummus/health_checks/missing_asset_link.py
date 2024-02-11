@@ -12,7 +12,7 @@ from nummus.health_checks.base import Base
 from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from decimal import Decimal
 
 
 class MissingAssetLink(Base):
@@ -62,7 +62,7 @@ class MissingAssetLink(Base):
                 date_ord: int
                 acct_id: int
                 cat_id: int
-                amount: t.Real
+                amount: Decimal
                 uri = TransactionSplit.id_to_uri(t_id)
 
                 msg = (
@@ -93,7 +93,7 @@ class MissingAssetLink(Base):
                 date_ord: int
                 acct_id: int
                 cat_id: int
-                amount: t.Real
+                amount: Decimal
                 uri = TransactionSplit.id_to_uri(t_id)
 
                 msg = (

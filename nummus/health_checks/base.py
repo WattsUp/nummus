@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from nummus.models import HealthCheckIssue, YIELD_PER
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
     from nummus import portfolio
 
 
@@ -28,8 +27,8 @@ class Base(ABC):
         """
         super().__init__()
         # Dictionary of {unique identifier: issue}
-        self._issues_raw: t.DictStr = {}
-        self._issues: t.DictStr = {}
+        self._issues_raw: dict[str, str] = {}
+        self._issues: dict[str, str] = {}
         self._no_ignores = no_ignores
         self._p = p
 
@@ -52,7 +51,7 @@ class Base(ABC):
         return self._DESC
 
     @property
-    def issues(self) -> t.DictStr:
+    def issues(self) -> dict[str, str]:
         """List of issues this check found."""
         return self._issues
 

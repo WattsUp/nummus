@@ -13,7 +13,7 @@ from nummus.health_checks.base import Base
 from nummus.models import Account, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from decimal import Decimal
 
 
 class UnlockedTransactions(Base):
@@ -52,7 +52,7 @@ class UnlockedTransactions(Base):
                 date_ord: int
                 acct_id: int
                 payee: str
-                amount: t.Real
+                amount: Decimal
                 uri = TransactionSplit.id_to_uri(t_id)
 
                 msg = (

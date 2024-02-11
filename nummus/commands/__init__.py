@@ -2,32 +2,41 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import colorama
 
-from nummus.commands.backup_ import backup, restore
-from nummus.commands.clean_ import clean
-from nummus.commands.create_ import create
-from nummus.commands.export_ import export
-from nummus.commands.health_check_ import health_check
-from nummus.commands.import_files_ import import_files
-from nummus.commands.summarize_ import summarize
-from nummus.commands.unlock_ import unlock
-from nummus.commands.update_assets_ import update_assets
-from nummus.commands.web_ import web
+from nummus.commands.backup import Backup, Restore
+from nummus.commands.clean import Clean
+from nummus.commands.create import Create
+from nummus.commands.export import Export
+from nummus.commands.health_check import Health
+from nummus.commands.import_files import Import
+from nummus.commands.summarize import Summarize
+from nummus.commands.unlock import Unlock
+from nummus.commands.update_assets import UpdateAssets
+from nummus.commands.web import Web
+
+if TYPE_CHECKING:
+    from nummus.commands.base import Base
+
 
 colorama.init(autoreset=True)
 
 
-__all__ = [
-    "backup",
-    "restore",
-    "clean",
-    "create",
-    "export",
-    "health_check",
-    "import_files",
-    "summarize",
-    "unlock",
-    "update_assets",
-    "web",
-]
+COMMANDS: dict[str, type[Base]] = {
+    cls.NAME: cls
+    for cls in [
+        Create,
+        Web,
+        Unlock,
+        Backup,
+        Restore,
+        Clean,
+        Import,
+        Export,
+        UpdateAssets,
+        Health,
+        Summarize,
+    ]
+}

@@ -1,0 +1,158 @@
+"""Export transactions to CSV."""
+
+from __future__ import annotations
+
+import csv
+import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import tqdm
+from typing_extensions import override
+
+from nummus import utils
+from nummus.commands.base import Base
+from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+
+if TYPE_CHECKING:
+    import argparse
+    import io
+
+    from sqlalchemy import orm
+
+
+class Export(Base):
+    """Export transactions."""
+
+    NAME = "export"
+    HELP = "export transactions to a CSV"
+    DESCRIPTION = "Export all transactions within a date to CSV"
+
+    def __init__(
+        self,
+        path_db: Path,
+        path_password: Path | None,
+        csv_path: Path,
+        start: datetime.date | None,
+        end: datetime.date | None,
+    ) -> None:
+        """Initize export command.
+
+        Args:
+            path_db: Path to Portfolio DB
+            path_password: Path to password file, None will prompt when necessary
+            csv_path: Path to CSV output
+            start: Start date to filter transactions
+            end: End date to filter transactions
+        """
+        super().__init__(path_db, path_password)
+        self._csv_path = csv_path
+        self._start = start
+        self._end = end
+
+    @override
+    @classmethod
+    def setup_args(cls, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument(
+            "--start",
+            metavar="YYYY-MM-DD",
+            type=datetime.date.fromisoformat,
+            help="date of first transaction to export",
+        )
+        parser.add_argument(
+            "--end",
+            metavar="YYYY-MM-DD",
+            type=datetime.date.fromisoformat,
+            help="date of last transaction to export",
+        )
+        parser.add_argument(
+            "csv_path",
+            metavar="CSV_PATH",
+            type=Path,
+            help="path to CSV file to export",
+        )
+
+    @override
+    def run(self) -> int:
+        if self._p is None:
+            return 1
+
+        with self._p.get_session() as s:
+            query = (
+                s.query(TransactionSplit)
+                .where(
+                    TransactionSplit.asset_id.is_(None),
+                )
+                .with_entities(TransactionSplit.amount)
+            )
+            if self._start is not None:
+                query = query.where(
+                    TransactionSplit.date_ord >= self._start.toordinal(),
+                )
+            if self._end is not None:
+                query = query.where(
+                    TransactionSplit.date_ord <= self._end.toordinal(),
+                )
+
+            with self._csv_path.open("w", encoding="utf-8") as file:
+                write_csv(file, query)
+        return 0
+
+
+def write_csv(
+    file: io.TextIOBase,
+    transactions_query: orm.Query[TransactionSplit],
+) -> None:
+    """Write transactions to CSV file.
+
+    Args:
+        file: Destination file to write to
+        transactions_query: ORM query to obtain TransactionSplits
+    """
+    s = transactions_query.session
+    accounts = Account.map_name(s)
+    categories = TransactionCategory.map_name(s)
+
+    query = transactions_query.with_entities(
+        TransactionSplit.date_ord,
+        TransactionSplit.account_id,
+        TransactionSplit.payee,
+        TransactionSplit.description,
+        TransactionSplit.category_id,
+        TransactionSplit.tag,
+        TransactionSplit.amount,
+    ).order_by(TransactionSplit.date_ord)
+    n = query.count()
+
+    header = [
+        "Date",
+        "Account",
+        "Payee",
+        "Description",
+        "Category",
+        "Tag",
+        "Amount",
+    ]
+    lines: list[list[str]] = []
+    for (
+        date,
+        acct_id,
+        payee,
+        description,
+        t_cat_id,
+        tag,
+        amount,
+    ) in tqdm.tqdm(query.yield_per(YIELD_PER), total=n, desc="Exporting"):
+        lines.append([
+            datetime.date.fromordinal(date).isoformat(),
+            accounts[acct_id],
+            payee,
+            description,
+            categories[t_cat_id],
+            tag,
+            utils.format_financial(amount),
+        ])
+
+    writer = csv.writer(file)
+    writer.writerow(header)
+    writer.writerows(lines)
