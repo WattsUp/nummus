@@ -8,9 +8,7 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import health_checks
 from nummus.commands.base import Base
-from nummus.models import HealthCheckIssue
 
 if TYPE_CHECKING:
     import argparse
@@ -93,6 +91,10 @@ class Health(Base):
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus import health_checks
+        from nummus.models import HealthCheckIssue
+
         if self._p is None:  # pragma: no cover
             return 1
         with self._p.get_session() as s:

@@ -7,12 +7,11 @@ from typing import TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus import exceptions as exc
-from nummus import portfolio, utils
-
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
+
+    from nummus.portfolio import Portfolio
 
 
 class Base(ABC):
@@ -37,9 +36,11 @@ class Base(ABC):
             do_unlock: True will unlock portfolio, False will not
         """
         super().__init__()
+        # defer for faster time to main
+
         self._path_db = path_db
         self._path_password = path_password
-        self._p: portfolio.Portfolio | None = None
+        self._p: Portfolio | None = None
         if do_unlock:
             self._p = unlock(path_db, path_password)
 
@@ -67,7 +68,7 @@ class Base(ABC):
 def unlock(
     path_db: Path,
     path_password: Path | None,
-) -> portfolio.Portfolio | None:
+) -> Portfolio | None:
     """Unlock an existing Portfolio.
 
     Args:
@@ -77,6 +78,10 @@ def unlock(
     Returns:
         Unlocked Portfolio or None if unlocking failed
     """
+    # defer for faster time to main
+    from nummus import exceptions as exc
+    from nummus import portfolio, utils
+
     if not path_db.exists():
         print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
         return None

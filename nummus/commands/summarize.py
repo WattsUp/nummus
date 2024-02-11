@@ -6,12 +6,9 @@ import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
-import sqlalchemy
 from typing_extensions import override
 
-from nummus import utils
 from nummus.commands.base import Base
-from nummus.models import Account, Asset, AssetValuation, TransactionSplit
 
 if TYPE_CHECKING:
     import argparse
@@ -105,6 +102,12 @@ class Summarize(Base):
         Returns:
             Dictionary of statistics
         """
+        # Defer for faster time to main
+        import sqlalchemy
+
+        from nummus import utils
+        from nummus.models import Account, Asset, AssetValuation, TransactionSplit
+
         if self._p is None:  # pragma: no cover
             msg = "Portfolio is None"
             raise ValueError(msg)
@@ -219,6 +222,8 @@ class Summarize(Base):
         Args:
             summary: Summary dictionary
         """
+        # Defer for faster time to main
+        from nummus import utils
 
         def is_are(i: int) -> str:
             return "is" if i == 1 else "are"

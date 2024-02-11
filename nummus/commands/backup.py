@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import portfolio, utils
 from nummus.commands.base import Base, unlock
 
 if TYPE_CHECKING:
@@ -99,6 +98,9 @@ class Restore(Base):
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus import portfolio, utils
+
         try:
             if self._list_ver:
                 backups = portfolio.Portfolio.backups(self._path_db)

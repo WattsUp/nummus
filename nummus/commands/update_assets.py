@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import portfolio
 from nummus.commands.base import Base
 
 if TYPE_CHECKING:
@@ -43,6 +42,9 @@ class UpdateAssets(Base):
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus import portfolio
+
         if self._p is None:  # pragma: no cover
             return 1
         # Back up Portfolio

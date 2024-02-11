@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 from typing_extensions import override
 
 from nummus import version
-from nummus import web as web_
 from nummus.commands.base import Base
 
 if TYPE_CHECKING:
@@ -83,8 +82,11 @@ class Web(Base):  # pragma: no cover
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus import web
+
         if self._p is None:
             return 1
-        s = web_.Server(self._p, self._host, self._port, debug=self._debug)
+        s = web.Server(self._p, self._host, self._port, debug=self._debug)
         s.run()
         return 0

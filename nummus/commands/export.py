@@ -7,18 +7,17 @@ import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import tqdm
 from typing_extensions import override
 
-from nummus import utils
 from nummus.commands.base import Base
-from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
     import argparse
     import io
 
     from sqlalchemy import orm
+
+    from nummus.models import TransactionSplit
 
 
 class Export(Base):
@@ -74,6 +73,9 @@ class Export(Base):
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus.models import TransactionSplit
+
         if self._p is None:  # pragma: no cover
             return 1
 
@@ -109,6 +111,12 @@ def write_csv(
         file: Destination file to write to
         transactions_query: ORM query to obtain TransactionSplits
     """
+    # Defer for faster time to main
+    import tqdm
+
+    from nummus import utils
+    from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+
     s = transactions_query.session
     accounts = Account.map_name(s)
     categories = TransactionCategory.map_name(s)

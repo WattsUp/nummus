@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import portfolio, utils
 from nummus.commands.base import Base
 
 if TYPE_CHECKING:
@@ -63,6 +62,9 @@ class Create(Base):
 
     @override
     def run(self) -> int:
+        # Defer for faster time to main
+        from nummus import portfolio, utils
+
         if self._path_db.exists():
             if self._force:
                 self._path_db.unlink()
