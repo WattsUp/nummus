@@ -50,7 +50,7 @@ class TestAccount(TestBase):
         self.assertIsNone(acct.updated_on_ord)
 
         # Short strings are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, acct, "name", "ab")
+        self.assertRaises(exc.InvalidORMValueError, setattr, acct, "name", "a")
 
     def test_add_transactions(self) -> None:
         s = self.get_session()

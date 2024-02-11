@@ -13,7 +13,7 @@ from nummus.health_checks.base import Base
 from nummus.models import Account, Transaction, YIELD_PER
 
 if TYPE_CHECKING:
-    from nummus import custom_types as t
+    from decimal import Decimal
 
 
 class DuplicateTransactions(Base):
@@ -49,7 +49,7 @@ class DuplicateTransactions(Base):
                 t_id: int
                 date_ord: int
                 acct_id: int
-                amount: t.Real
+                amount: Decimal
                 uri = Transaction.id_to_uri(t_id)
 
                 date = datetime.date.fromordinal(date_ord)

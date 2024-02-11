@@ -553,7 +553,6 @@ class TestUtils(TestBase):
         self.assertEqual(result, target)
 
     def test_print_table(self) -> None:
-        self.maxDiff = None
         table: list[list[str] | None] = []
         self.assertRaises(ValueError, utils.print_table, table)
 

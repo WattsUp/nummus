@@ -17,7 +17,7 @@ _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
 _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 
-MIN_STR_LEN = 3
+MIN_STR_LEN = 2
 SEARCH_THRESHOLD = 60
 
 THRESHOLD_MONTHS = 12 * 1.5

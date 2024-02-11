@@ -28,7 +28,7 @@ class TestTransactionCategory(TestBase):
         self.assertEqual(t_cat.is_profit_loss, d["is_profit_loss"])
 
         # Short strings are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "ab")
+        self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "b")
 
     def test_add_default(self) -> None:
         s = self.get_session()

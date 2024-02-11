@@ -5,7 +5,6 @@ from __future__ import annotations
 import datetime
 import textwrap
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import sqlalchemy
 from typing_extensions import override
@@ -13,9 +12,6 @@ from typing_extensions import override
 from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Asset, TransactionSplit, YIELD_PER
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class OutlierAssetPrice(Base):
@@ -69,8 +65,8 @@ class OutlierAssetPrice(Base):
                 t_id: int
                 date_ord: int
                 a_id: int
-                amount: t.Real
-                qty: t.Real
+                amount: Decimal
+                qty: Decimal
                 uri = TransactionSplit.id_to_uri(t_id)
 
                 if qty == 0:

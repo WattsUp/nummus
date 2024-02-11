@@ -126,7 +126,7 @@ class TestAsset(TestBase):
         self.assertEqual(result, [])
 
         # Short strings are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "name", "ab")
+        self.assertRaises(exc.InvalidORMValueError, setattr, a, "name", "a")
 
         # But not for ticker
         a.ticker = "AB"

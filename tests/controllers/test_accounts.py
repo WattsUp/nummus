@@ -70,12 +70,12 @@ class TestAccount(WebTestBase):
 
         form = {
             "institution": institution,
-            "name": "ab",
+            "name": "a",
             "category": "credit",
             "number": "",
         }
         result, _ = self.web_post(endpoint, data=form)
-        e_str = "Account name must be at least 3 characters long"
+        e_str = "Account name must be at least 2 characters long"
         self.assertIn(e_str, result)
         with p.get_session() as s:
             acct = s.query(Account).first()

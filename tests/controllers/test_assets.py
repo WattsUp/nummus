@@ -57,14 +57,14 @@ class TestAsset(WebTestBase):
             self.assertTrue(a.interpolate)
 
         form = {
-            "name": "ab",
+            "name": "a",
             "description": description,
             "category": "real estate",
             "interpolate": "",
             "ticker": ticker,
         }
         result, _ = self.web_post(endpoint, data=form)
-        e_str = "Asset name must be at least 3 characters long"
+        e_str = "Asset name must be at least 2 characters long"
         self.assertIn(e_str, result)
 
         form = {

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
 
 import sqlalchemy
 from typing_extensions import override
@@ -12,9 +11,6 @@ from typing_extensions import override
 from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Account, AccountCategory, TransactionSplit, YIELD_PER
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class OverdrawnAccounts(Base):
@@ -40,7 +36,7 @@ class OverdrawnAccounts(Base):
                 .with_entities(Account.id_, Account.name)
                 .where(Account.category.not_in(categories_exclude))
             )
-            accounts: t.DictIntStr = dict(query.all())  # type: ignore[attr-defined]
+            accounts: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
             acct_ids = set(accounts)
 
             issues: list[tuple[str, str, str]] = []
