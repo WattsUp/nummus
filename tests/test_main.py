@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import functools
 import io
 import subprocess
@@ -469,6 +470,68 @@ class TestMain(TestBase):
                     "always_descriptions": False,
                     "no_ignores": True,
                     "clear_ignores": True,
+                },
+            )
+
+        finally:
+            self._tear_down_commands()
+
+    def test_export(self) -> None:
+        path = self._TEST_ROOT.joinpath("portfolio.db")
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            commands.create(path, None, force=False, no_encrypt=True)
+        path_export = path.with_suffix(".csv")
+
+        try:
+            self._set_up_commands()
+
+            args = ["--portfolio", str(path), "export"]
+            with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+                self.assertRaises(SystemExit, main.main, args)
+            fake_stderr = fake_stderr.getvalue()
+            self.assertIn(
+                "the following arguments are required: CSV_PATH",
+                fake_stderr,
+            )
+
+            args = ["--portfolio", str(path), "export", str(path_export)]
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                main.main(args)
+            self.assertEqual(len(self._called_args), 1)
+            self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+            self.assertDictEqual(
+                self._called_kwargs,
+                {
+                    "_func": "export",
+                    "path": path_export,
+                    "start": None,
+                    "end": None,
+                },
+            )
+
+            today = datetime.date.today()
+            start = today - datetime.timedelta(days=90)
+            args = [
+                "--portfolio",
+                str(path),
+                "export",
+                str(path_export),
+                "--start",
+                start.isoformat(),
+                "--end",
+                today.isoformat(),
+            ]
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                main.main(args)
+            self.assertEqual(len(self._called_args), 1)
+            self.assertIsInstance(self._called_args[0], portfolio.Portfolio)
+            self.assertDictEqual(
+                self._called_kwargs,
+                {
+                    "_func": "export",
+                    "path": path_export,
+                    "start": start,
+                    "end": today,
                 },
             )
 

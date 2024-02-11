@@ -197,7 +197,6 @@ class TestSummarize(TestBase):
             ],
             "db_size": path_db.stat().st_size,
         }
-        self.maxDiff = None
         result = summarize_._get_summary(p)  # noqa: SLF001
         self.assertEqual(result, target)
 
@@ -253,7 +252,6 @@ class TestSummarize(TestBase):
             "db_size": path_db.stat().st_size,
         }
         result = summarize_._get_summary(p)  # noqa: SLF001
-        self.maxDiff = None
         self.assertEqual(result, target)
 
     def test_print_summary(self) -> None:
