@@ -7,16 +7,16 @@ from colorama import Fore
 from typing_extensions import override
 
 from nummus import health_checks, portfolio
-from nummus.commands import create_, health_check_
+from nummus.commands import create, health
 from nummus.models import HealthCheckIssue
 from tests.base import TestBase
 
 
-class TestHealthCheck(TestBase):
-    def test_health_check(self) -> None:
+class TestHealth(TestBase):
+    def test_health(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
@@ -37,16 +37,20 @@ class TestHealthCheck(TestBase):
         try:
             health_checks.CHECKS = [MockCheck]
 
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p)
+                rc = c.run()
             self.assertEqual(rc, 0)
 
             fake_stdout = fake_stdout.getvalue()
             target = f"{Fore.GREEN}Check 'Mock Check' has no issues\n"
             self.assertEqual(fake_stdout, target)
 
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None, always_descriptions=True)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p, always_descriptions=True)
+                rc = c.run()
             self.assertEqual(rc, 0)
 
             desc = f"{Fore.CYAN}    This description spans\n    TWO lines\n"
@@ -57,8 +61,10 @@ class TestHealthCheck(TestBase):
             d["0"] = "Missing important information\nincluding this"
             d["1"] = "Missing some info"
 
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None, limit=0)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p, limit=0)
+                rc = c.run()
             self.assertNotEqual(rc, 0)
 
             with p.get_session() as s:
@@ -86,8 +92,10 @@ class TestHealthCheck(TestBase):
 
             d.pop("1")
 
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None, ignores=[uri_0])
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p, ignores=[uri_0])
+                rc = c.run()
             self.assertEqual(rc, 0)
 
             with p.get_session() as s:
@@ -101,8 +109,10 @@ class TestHealthCheck(TestBase):
             self.assertEqual(fake_stdout, target)
 
             MockCheck._SEVERE = True  # noqa: SLF001
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None, no_ignores=True)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p, no_ignores=True)
+                rc = c.run()
             self.assertNotEqual(rc, 0)
 
             with p.get_session() as s:
@@ -124,8 +134,10 @@ class TestHealthCheck(TestBase):
             )
             self.assertEqual(fake_stdout, target)
 
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None, clear_ignores=True)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p, clear_ignores=True)
+                rc = c.run()
             self.assertNotEqual(rc, 0)
 
             with p.get_session() as s:
@@ -149,8 +161,10 @@ class TestHealthCheck(TestBase):
 
             # Solving the issue should get rid of the Ignore
             d.pop("0")
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = health.Health(path_db, None)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                rc = health_check_.health_check(p)
+                rc = c.run()
             self.assertEqual(rc, 0)
 
             with p.get_session() as s:

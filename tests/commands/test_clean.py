@@ -6,7 +6,7 @@ from unittest import mock
 from colorama import Fore
 
 from nummus import portfolio
-from nummus.commands import clean_, create_
+from nummus.commands import clean, create
 from tests.base import TestBase
 
 
@@ -16,7 +16,7 @@ class TestClean(TestBase):
         path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
         path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
@@ -28,8 +28,10 @@ class TestClean(TestBase):
 
         size_before = path_db.stat().st_size
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = clean.Clean(path_db, None)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = clean_.clean(p)
+            rc = c.run()
         self.assertEqual(rc, 0)
         size_after = path_db.stat().st_size
         p_change = size_before - size_after

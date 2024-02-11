@@ -7,7 +7,7 @@ from unittest import mock
 from colorama import Fore
 
 from nummus import portfolio
-from nummus.commands import create_, update_assets_
+from nummus.commands import create, update_assets
 from nummus.models import (
     Account,
     AccountCategory,
@@ -24,7 +24,7 @@ class TestUpdateAssets(TestBase):
     def test_update_assets(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
@@ -71,11 +71,13 @@ class TestUpdateAssets(TestBase):
             s.commit()
 
         first_valuation_date = date - datetime.timedelta(days=7)
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = update_assets.UpdateAssets(path_db, None)
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("sys.stderr", new=io.StringIO()) as _,
         ):
-            rc = update_assets_.update_assets(p)
+            rc = c.run()
 
         self.assertNotEqual(rc, 0)
 
@@ -88,11 +90,13 @@ class TestUpdateAssets(TestBase):
             a.ticker = "BANANA"
             s.commit()
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = update_assets.UpdateAssets(path_db, None)
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("sys.stderr", new=io.StringIO()) as _,
         ):
-            rc = update_assets_.update_assets(p)
+            rc = c.run()
 
         self.assertEqual(rc, 0)
 
@@ -126,11 +130,13 @@ class TestUpdateAssets(TestBase):
             a.update_splits()
             s.commit()
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = update_assets.UpdateAssets(path_db, None)
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("sys.stderr", new=io.StringIO()) as _,
         ):
-            rc = update_assets_.update_assets(p)
+            rc = c.run()
 
         self.assertEqual(rc, 0)
 
@@ -147,11 +153,13 @@ class TestUpdateAssets(TestBase):
             a.ticker = "ORANGE"
             s.commit()
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = update_assets.UpdateAssets(path_db, None)
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("sys.stderr", new=io.StringIO()) as _,
         ):
-            rc = update_assets_.update_assets(p)
+            rc = c.run()
 
         self.assertNotEqual(rc, 0)
 

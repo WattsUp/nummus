@@ -10,7 +10,7 @@ from nummus.commands.backup import Backup, Restore
 from nummus.commands.clean import Clean
 from nummus.commands.create import Create
 from nummus.commands.export import Export
-from nummus.commands.health_check import Health
+from nummus.commands.health import Health
 from nummus.commands.import_files import Import
 from nummus.commands.summarize import Summarize
 from nummus.commands.unlock import Unlock

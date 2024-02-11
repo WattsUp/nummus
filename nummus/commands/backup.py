@@ -9,7 +9,7 @@ from colorama import Fore
 from typing_extensions import override
 
 from nummus import portfolio, utils
-from nummus.commands.base import Base
+from nummus.commands.base import Base, unlock
 
 if TYPE_CHECKING:
     import argparse
@@ -44,7 +44,7 @@ class Backup(Base):
 
     @override
     def run(self) -> int:
-        if self._p is None:
+        if self._p is None:  # pragma: no cover
             return 1
         backup_tar, _ = self._p.backup()
         print(f"{Fore.GREEN}Portfolio backed up to {backup_tar}")
@@ -122,6 +122,6 @@ class Restore(Base):
         except FileNotFoundError as e:
             print(f"{Fore.RED}{e}")
             return -1
-        p = self._unlock(self._path_db, self._path_password)
+        p = unlock(self._path_db, self._path_password)
         print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
         return 0

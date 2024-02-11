@@ -8,16 +8,16 @@ from unittest import mock
 from colorama import Fore
 
 from nummus import portfolio
-from nummus.commands import create_, import_files_
+from nummus.commands import create, import_files
 from nummus.models import Account, AccountCategory, Asset, AssetCategory, Transaction
 from tests.base import TestBase
 
 
-class TestimportFiles(TestBase):
-    def test_import_files(self) -> None:
+class TestImport(TestBase):
+    def test_import(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         p = portfolio.Portfolio(path_db, None)
 
         # Create Accounts and Assets
@@ -56,8 +56,10 @@ class TestimportFiles(TestBase):
 
         # Try importing with a missing file, should restore from backup
         paths = [file_a, file_missing]
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = import_files.Import(path_db, None, paths)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = import_files_.import_files(p, paths)
+            rc = c.run()
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -74,8 +76,10 @@ class TestimportFiles(TestBase):
 
         # Try importing with a bad file, should restore from backup
         paths = [file_a, file_c]
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = import_files.Import(path_db, None, paths)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = import_files_.import_files(p, paths)
+            rc = c.run()
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -96,8 +100,10 @@ class TestimportFiles(TestBase):
 
         # Valid import with directories
         paths = [file_a, file_dir]
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = import_files.Import(path_db, None, paths)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = import_files_.import_files(p, paths)
+            rc = c.run()
         self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -111,8 +117,10 @@ class TestimportFiles(TestBase):
 
         # Import same files again, should fail
         paths = [file_a, file_c]
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = import_files.Import(path_db, None, paths)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = import_files_.import_files(p, paths)
+            rc = c.run()
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()

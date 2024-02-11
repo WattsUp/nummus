@@ -6,7 +6,7 @@ import io
 from unittest import mock
 
 from nummus import portfolio
-from nummus.commands import create_, export_
+from nummus.commands import create, export
 from nummus.models import (
     Account,
     AccountCategory,
@@ -24,7 +24,7 @@ class TestExport(TestBase):
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_csv = path_db.with_suffix(".csv")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertFalse(path_csv.exists(), "CSV file does exist")
         p = portfolio.Portfolio(path_db, None)
@@ -39,8 +39,10 @@ class TestExport(TestBase):
             "Amount",
         ]
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = export.Export(path_db, None, path_csv, start=None, end=None)
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            rc = export_.export(p, path_csv, start=None, end=None)
+            rc = c.run()
         self.assertEqual(rc, 0)
         self.assertTrue(path_csv.exists(), "CSV file does not exist")
         with path_csv.open("r", encoding="utf-8") as file:
@@ -127,8 +129,10 @@ class TestExport(TestBase):
             s.add_all((txn_2, t_split_2))
             s.commit()
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = export.Export(path_db, None, path_csv, start=None, end=None)
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            rc = export_.export(p, path_csv, start=None, end=None)
+            rc = c.run()
         self.assertEqual(rc, 0)
         self.assertTrue(path_csv.exists(), "CSV file does not exist")
         with path_csv.open("r", encoding="utf-8") as file:
@@ -158,8 +162,10 @@ class TestExport(TestBase):
             ]
             self.assertEqual(rows, target)
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = export.Export(path_db, None, path_csv, start=today, end=today)
         with mock.patch("sys.stderr", new=io.StringIO()) as _:
-            rc = export_.export(p, path_csv, start=today, end=today)
+            rc = c.run()
         self.assertEqual(rc, 0)
         self.assertTrue(path_csv.exists(), "CSV file does not exist")
         with path_csv.open("r", encoding="utf-8") as file:

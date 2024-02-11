@@ -91,7 +91,7 @@ class Summarize(Base):
 
     @override
     def run(self) -> int:
-        if self._p is None:
+        if self._p is None:  # pragma: no cover
             return 1
         summary = self._get_summary()
         self._print_summary(summary)
@@ -105,7 +105,7 @@ class Summarize(Base):
         Returns:
             Dictionary of statistics
         """
-        if self._p is None:
+        if self._p is None:  # pragma: no cover
             msg = "Portfolio is None"
             raise ValueError(msg)
 

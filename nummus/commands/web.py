@@ -15,7 +15,8 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
-class Web(Base):
+# web is difficult to mock, and just a wrapper command
+class Web(Base):  # pragma: no cover
     """Web server for nummus."""
 
     NAME = "web"

@@ -8,7 +8,7 @@ from decimal import Decimal
 from unittest import mock
 
 from nummus import portfolio
-from nummus.commands import create_, summarize_
+from nummus.commands import create, summarize
 from nummus.models import (
     Account,
     AccountCategory,
@@ -26,7 +26,7 @@ class TestSummarize(TestBase):
     def test_summarize(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
@@ -41,7 +41,9 @@ class TestSummarize(TestBase):
             "assets": [],
             "db_size": path_db.stat().st_size,
         }
-        result = summarize_._get_summary(p)  # noqa: SLF001
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = summarize.Summarize(path_db, None)
+        result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
         today = datetime.date.today()
@@ -197,7 +199,9 @@ class TestSummarize(TestBase):
             ],
             "db_size": path_db.stat().st_size,
         }
-        result = summarize_._get_summary(p)  # noqa: SLF001
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = summarize.Summarize(path_db, None)
+        result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
         # Sell a_apple_1 and close credit account
@@ -251,13 +255,15 @@ class TestSummarize(TestBase):
             "assets": [],
             "db_size": path_db.stat().st_size,
         }
-        result = summarize_._get_summary(p)  # noqa: SLF001
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = summarize.Summarize(path_db, None)
+        result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
     def test_print_summary(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
 
         original_terminal_size = shutil.get_terminal_size
@@ -293,7 +299,7 @@ class TestSummarize(TestBase):
                 ],
                 "db_size": 1024 * 10,
             }
-            p_dict: summarize_._Summary
+            p_dict: summarize._Summary
 
             target = textwrap.dedent(
                 """\
@@ -318,8 +324,11 @@ class TestSummarize(TestBase):
             There is 1 transaction
             """,
             )
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = summarize.Summarize(path_db, None)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                summarize_._print_summary(p_dict)  # noqa: SLF001
+                c._get_summary = lambda: p_dict  # noqa: SLF001
+                c.run()
             fake_stdout = fake_stdout.getvalue()
             self.assertEqual(fake_stdout, target)
 
@@ -394,8 +403,11 @@ class TestSummarize(TestBase):
             There are 4 transactions
             """,
             )
+            with mock.patch("sys.stdout", new=io.StringIO()) as _:
+                c = summarize.Summarize(path_db, None)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                summarize_._print_summary(p_dict)  # noqa: SLF001
+                c._get_summary = lambda: p_dict  # noqa: SLF001
+                c.run()
             fake_stdout = fake_stdout.getvalue()
             self.assertEqual(fake_stdout, target)
         finally:

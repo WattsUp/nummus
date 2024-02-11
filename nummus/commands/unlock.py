@@ -41,6 +41,6 @@ class Unlock(Base):
 
     @override
     def run(self) -> int:
-        if self._p is None:
+        if self._p is None:  # pragma: no cover
             return 1
         return 0

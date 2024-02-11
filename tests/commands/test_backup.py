@@ -5,8 +5,7 @@ from unittest import mock
 
 from colorama import Fore
 
-from nummus import portfolio
-from nummus.commands import backup_, create_
+from nummus.commands import backup, create
 from tests.base import TestBase
 
 
@@ -15,20 +14,22 @@ class TestBackUp(TestBase):
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_backup = path_db.with_suffix(".backup1.tar.gz")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create_.create(path_db, None, force=False, no_encrypt=True)
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        p = portfolio.Portfolio(path_db, None)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = backup_.restore(path_db, None, list_ver=True)
+            c = backup.Restore(path_db, None, list_ver=True)
+            rc = c.run()
         self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.RED}No backups found, run nummus backup"
         self.assertEqual(fake_stdout[: len(target)], target)
 
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            c = backup.Backup(path_db, None)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = backup_.backup(p)
+            rc = c.run()
         self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -41,7 +42,8 @@ class TestBackUp(TestBase):
         self.assertFalse(path_db.exists(), "Portfolio does exist")
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = backup_.restore(path_db, None, list_ver=True)
+            c = backup.Restore(path_db, None, list_ver=True)
+            rc = c.run()
         self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -49,7 +51,8 @@ class TestBackUp(TestBase):
         self.assertEqual(fake_stdout[: len(target)], target)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = backup_.restore(path_db, None)
+            c = backup.Restore(path_db, None)
+            rc = c.run()
         self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
@@ -64,7 +67,8 @@ class TestBackUp(TestBase):
 
         path_backup.unlink()
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = backup_.restore(path_db, None, tar_ver=1)
+            c = backup.Restore(path_db, None, tar_ver=1)
+            rc = c.run()
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
