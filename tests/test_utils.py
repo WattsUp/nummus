@@ -552,6 +552,151 @@ class TestUtils(TestBase):
         result = utils.interpolate_linear(values, n)
         self.assertEqual(result, target)
 
+    def test_twrr(self) -> None:
+        n = 5
+        values = [Decimal(0)] * n
+        profit = [Decimal(0)] * n
+        target = [Decimal(0)] * n
+
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Still no profit, no profit percent
+        values = [
+            Decimal(0),
+            Decimal(10),
+            Decimal(10),
+            Decimal(10),
+            Decimal(0),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Profit on buy day
+        values = [
+            Decimal(0),
+            Decimal(11),
+            Decimal(11),
+            Decimal(11),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+        ]
+        target = [
+            Decimal(0),
+            Decimal("0.1"),
+            Decimal("0.1"),
+            Decimal("0.1"),
+            Decimal("0.1"),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Profit on buy and sell day
+        values = [
+            Decimal(0),
+            Decimal(11),
+            Decimal(11),
+            Decimal(11),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(12),
+        ]
+        target = [
+            Decimal(0),
+            Decimal("0.1"),
+            Decimal("0.1"),
+            Decimal("0.1"),
+            Decimal("1.2"),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+        result = utils.twrr(values[1:], profit[1:])
+        self.assertEqual(result, target[1:])
+
+        values = [
+            Decimal(10),
+            Decimal(21),
+            Decimal(42),
+            Decimal(42),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(22),
+            Decimal(22),
+            Decimal(22),
+        ]
+        target = [
+            Decimal(0),
+            Decimal("0.1"),
+            Decimal("1.2"),
+            Decimal("1.2"),
+            Decimal("1.2"),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+        values = [
+            Decimal(10),
+            Decimal(11),
+            Decimal(12),
+            Decimal(13),
+            Decimal(14),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(4),
+        ]
+        target = [
+            Decimal(0),
+            Decimal("0.1"),
+            Decimal("0.2"),
+            Decimal("0.3"),
+            Decimal("0.4"),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+        values = [
+            # Buy 100 shares at $100
+            Decimal(10000),
+            # Buy 100 more at $500
+            Decimal(100000),
+            # Sell 100 at $50
+            Decimal(5000),
+            # Returns to $100
+            Decimal(10000),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(40000),
+            Decimal(-50000),
+            Decimal(-45000),
+        ]
+        target = [
+            Decimal(0),
+            Decimal(4),
+            Decimal(-0.5),
+            Decimal(0),
+        ]
+        result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
     def test_print_table(self) -> None:
         table: list[list[str] | None] = []
         self.assertRaises(ValueError, utils.print_table, table)

@@ -505,6 +505,39 @@ def interpolate_linear(values: list[tuple[int, Decimal]], n: int) -> list[Decima
     return result
 
 
+def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
+    """Compute the Time-Weighted Rate of Return.
+
+    Args:
+        values: Daily value of portfolio
+        profit: Daily profit of portfolio
+
+    Returns:
+        List of profit ratio [-1, inf) for each day
+    """
+    n = len(values)
+    current_ratio = Decimal(1)
+    current_return = current_ratio - 1
+
+    daily_returns: list[Decimal] = [Decimal(0)] * n
+    prev_value = Decimal(0)
+    prev_profit = Decimal(0)
+    for i, (v, p) in enumerate(zip(values, profit, strict=True)):
+        daily_profit = p - prev_profit
+        cost_basis = v - daily_profit if prev_value == 0 else prev_value
+
+        if cost_basis != 0:
+            current_ratio = current_ratio * (1 + daily_profit / cost_basis)
+            current_return = current_ratio - 1
+
+        daily_returns[i] = current_return
+
+        prev_profit = p
+        prev_value = v
+
+    return daily_returns
+
+
 def print_table(table: list[list[str] | None]) -> None:
     """Pretty print tabular data.
 
