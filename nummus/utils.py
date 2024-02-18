@@ -10,6 +10,8 @@ import shutil
 import sys
 from decimal import Decimal
 
+import numpy_financial as npf
+
 from nummus import global_config
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
@@ -536,6 +538,34 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
         prev_value = v
 
     return daily_returns
+
+
+def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
+    """Compute the Money-Weighted Rate of Return.
+
+    Args:
+        values: Daily value of portfolio
+        profit: Daily profit of portfolio
+
+    Returns:
+        Annual profit ratio [-1, inf), rounded to 6 decimals due to float conversion
+    """
+    if not any(values):
+        return Decimal(0)
+    n = len(values)
+
+    cash_flows: list[Decimal] = [Decimal(0)] * n
+    prev_value = Decimal(0)
+    prev_profit = Decimal(0)
+    for i, (v, p) in enumerate(zip(values, profit, strict=True)):
+        cash_flows[i] = (prev_value - prev_profit) - (v - p)
+
+        prev_profit = p
+        prev_value = v
+    cash_flows[-1] += values[-1]
+
+    irr_daily = npf.irr(cash_flows)
+    return round(Decimal(irr_daily * DAYS_IN_YEAR), 6)
 
 
 def print_table(table: list[list[str] | None]) -> None:

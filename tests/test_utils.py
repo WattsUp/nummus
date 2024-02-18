@@ -7,6 +7,8 @@ import textwrap
 from decimal import Decimal
 from unittest import mock
 
+import numpy_financial as npf
+
 from nummus import utils
 from tests.base import TestBase
 
@@ -695,6 +697,154 @@ class TestUtils(TestBase):
             Decimal(0),
         ]
         result = utils.twrr(values, profit)
+        self.assertEqual(result, target)
+
+    def test_mwrr(self) -> None:
+        n = 5
+        values = [Decimal(0)] * n
+        profit = [Decimal(0)] * n
+        target = Decimal(0)
+
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Still no profit, no profit percent
+        values = [
+            Decimal(0),
+            Decimal(10),
+            Decimal(10),
+            Decimal(10),
+            Decimal(0),
+        ]
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Profit on buy day
+        values = [
+            Decimal(0),
+            Decimal(11),
+            Decimal(11),
+            Decimal(11),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+        ]
+        cash_flows = [
+            Decimal(0),
+            Decimal(-10),
+            Decimal(0),
+            Decimal(0),
+            Decimal(11),
+        ]
+        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        # Profit on buy and sell day
+        values = [
+            Decimal(0),
+            Decimal(11),
+            Decimal(11),
+            Decimal(11),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(1),
+            Decimal(1),
+            Decimal(12),
+        ]
+        cash_flows = [
+            Decimal(0),
+            Decimal(-10),
+            Decimal(0),
+            Decimal(0),
+            Decimal(22),
+        ]
+        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        values = [
+            Decimal(10),
+            Decimal(21),
+            Decimal(42),
+            Decimal(42),
+            Decimal(0),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(22),
+            Decimal(22),
+            Decimal(22),
+        ]
+        cash_flows = [
+            Decimal(-10),
+            Decimal(-10),
+            Decimal(0),
+            Decimal(0),
+            Decimal(42),
+        ]
+        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        values = [
+            Decimal(10),
+            Decimal(11),
+            Decimal(12),
+            Decimal(13),
+            Decimal(14),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(1),
+            Decimal(2),
+            Decimal(3),
+            Decimal(4),
+        ]
+        cash_flows = [
+            Decimal(-10),
+            Decimal(0),
+            Decimal(0),
+            Decimal(0),
+            Decimal(14),
+        ]
+        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        result = utils.mwrr(values, profit)
+        self.assertEqual(result, target)
+
+        values = [
+            # Buy 100 shares at $100
+            Decimal(10000),
+            # Buy 100 more at $500
+            Decimal(100000),
+            # Sell 100 at $50
+            Decimal(5000),
+            # Returns to $100
+            Decimal(10000),
+        ]
+        profit = [
+            Decimal(0),
+            Decimal(40000),
+            Decimal(-50000),
+            Decimal(-45000),
+        ]
+        cash_flows = [
+            Decimal(-10000),
+            Decimal(-50000),
+            Decimal(5000),
+            Decimal(10000),
+        ]
+        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
     def test_print_table(self) -> None:
