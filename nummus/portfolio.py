@@ -179,6 +179,7 @@ class Portfolio:
         p = Portfolio(path_db, key)
         with p.get_session() as s:
             TransactionCategory.add_default(s)
+            Asset.add_indices(s)
         return p
 
     def _unlock(self) -> None:

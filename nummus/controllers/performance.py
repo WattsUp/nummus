@@ -11,7 +11,7 @@ import sqlalchemy
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
-from nummus.models import Account, AccountCategory, TransactionSplit
+from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -102,6 +102,8 @@ def ctx_chart() -> dict[str, object]:
         ]
         twrr = utils.twrr(total, total_profit)
 
+        index_twrr = Asset.index_twrr(s, "S&P 500", start_ord, end_ord)
+
         mapping = Account.map_name(s)
 
         sum_cash_flow = Decimal(0)
@@ -113,7 +115,9 @@ def ctx_chart() -> dict[str, object]:
             v_end = values[-1]
             profit = profits[-1]
             cash_flow = (v_end - v_initial) - profit
-            mwrr = utils.mwrr(values, profits)
+            # TODO (WattsUp): Change mwrr to compute on a monthly basis
+            # Too slow mwrr = utils.mwrr(values, profits)
+            mwrr = Decimal(0)
             accounts.append(
                 {
                     "name": mapping[acct_id],
@@ -130,6 +134,8 @@ def ctx_chart() -> dict[str, object]:
         labels: list[str] = []
         twrr_min: list[Decimal] | None = None
         twrr_max: list[Decimal] | None = None
+        index_twrr_min: list[Decimal] | None = None
+        index_twrr_max: list[Decimal] | None = None
         date_mode: str | None = None
 
         if n > web_utils.LIMIT_DOWNSAMPLE:
@@ -138,6 +144,11 @@ def ctx_chart() -> dict[str, object]:
                 start_ord,
                 end_ord,
                 twrr,
+            )
+            _, index_twrr_min, index_twrr, index_twrr_max = utils.downsample(
+                start_ord,
+                end_ord,
+                index_twrr,
             )
             date_mode = "years"
         else:
@@ -159,6 +170,9 @@ def ctx_chart() -> dict[str, object]:
             "values": twrr,
             "min": twrr_min,
             "max": twrr_max,
+            "index": index_twrr,
+            "index_min": index_twrr_min,
+            "index_max": index_twrr_max,
         },
         "total": total[-1],
         "cash_flow": sum_cash_flow,

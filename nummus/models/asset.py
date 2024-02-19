@@ -75,10 +75,11 @@ class AssetCategory(BaseEnum):
     COMMODITIES = 4
     FUTURES = 5
     CRYPTOCURRENCY = 6
+    INDEX = 7
 
-    REAL_ESTATE = 7
-    VEHICLE = 8
-    ITEM = 9
+    REAL_ESTATE = 8
+    VEHICLE = 9
+    ITEM = 10
 
 
 class Asset(Base):
@@ -326,6 +327,9 @@ class Asset(Base):
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
+        if self.category == AssetCategory.INDEX:
+            # If asset is an INDEX, do not prune
+            return 0
 
         # Date when quantity is zero
         date_ord_zero: int | None = None
@@ -434,14 +438,16 @@ class Asset(Base):
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                sqlalchemy.func.min(TransactionSplit.date_ord),
-                sqlalchemy.func.max(TransactionSplit.date_ord),
-            )
-            .where(TransactionSplit.asset_id == self.id_)
+        query = s.query(TransactionSplit).with_entities(
+            sqlalchemy.func.min(TransactionSplit.date_ord),
+            sqlalchemy.func.max(TransactionSplit.date_ord),
         )
+        # If asset is an INDEX, look at all transactions
+        if self.category == AssetCategory.INDEX:
+            query = query.where(TransactionSplit.asset_id.isnot(None))
+            through_today = True
+        else:
+            query = query.where(TransactionSplit.asset_id == self.id_)
         start_ord, end_ord = query.one()
         start_ord: int
         end_ord: int
@@ -546,3 +552,53 @@ class Asset(Base):
         self.update_splits()
 
         return start, end
+
+    @classmethod
+    def index_twrr(
+        cls,
+        s: orm.Session,
+        name: str,
+        start_ord: int,
+        end_ord: int,
+    ) -> list[Decimal]:
+        """Get the TWRR for an index from start to end date.
+
+        Args:
+            s: SQL session to use
+            name: Name of index
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            list[price ratios]
+        """
+        try:
+            a_id = s.query(Asset.id_).where(Asset.name == name).one()[0]
+        except exc.NoResultFound as e:  # pragma: no cover
+            msg = f"Could not find asset index {name}"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        values = cls.get_value_all(s, start_ord, end_ord, ids=[a_id])[a_id]
+        cost_basis = values[0]
+        return utils.twrr(values, [v - cost_basis for v in values])
+
+    @classmethod
+    def add_indices(cls, s: orm.Session) -> None:
+        """Add Asset indices used for performance comparison.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            list[price ratios]
+        """
+        a = Asset(
+            name="S&P 500",
+            description="A stock market index tracking the stock performance of "
+            "500 of the largest companies listed on stock exchanges in the United "
+            "States",
+            category=AssetCategory.INDEX,
+            interpolate=False,
+            ticker="^GSPC",
+        )
+        s.add(a)
+        s.commit()

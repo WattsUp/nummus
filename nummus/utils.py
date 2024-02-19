@@ -526,7 +526,11 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
     prev_profit = Decimal(0)
     for i, (v, p) in enumerate(zip(values, profit, strict=True)):
         daily_profit = p - prev_profit
-        cost_basis = v - daily_profit if prev_value == 0 else prev_value
+        cash_flow = (v - p) - (prev_value - prev_profit)
+        # Profit probably came from funding not previous value
+        cost_basis = (
+            v - daily_profit if (prev_value == 0 or cash_flow > 0) else prev_value
+        )
 
         if cost_basis != 0:
             current_ratio = current_ratio * (1 + daily_profit / cost_basis)
