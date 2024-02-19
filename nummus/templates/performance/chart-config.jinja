@@ -1,0 +1,25 @@
+<div id="performance-config"
+     class="w-full flex justify-end gap-1 font-serif"
+     hx-swap-oob="{{ oob }}"
+     hx-include="#performance-config"
+     hx-target="#performance-chart-data"
+     hx-swap="outerHTML">
+    TODO Account selector
+    <div class="grow"></div>
+    <select name="period" hx-get="{{ url_for("performance.chart") }}">
+        {% with period = chart["period"] %}
+            {% include "shared/period-options.jinja" %}
+        {% endwith %}
+    </select>
+    <input type="date"
+           name="start"
+           value="{{ chart["start"] }}"
+           hx-get="{{ url_for("performance.chart", period="custom") }}"
+           hx-trigger="blur changed,keyup[keyCode==13] changed">
+    to
+    <input type="date"
+           name="end"
+           value="{{ chart["end"] }}"
+           hx-get="{{ url_for("performance.chart", period="custom") }}"
+           hx-trigger="blur changed,keyup[keyCode==13] changed">
+</div>

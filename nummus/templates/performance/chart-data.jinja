@@ -1,0 +1,17 @@
+{% if include_oob %}
+    {% with oob = True %}
+        {% include "performance/chart-config.jinja" %}
+    {% endwith %}
+{% endif %}
+<div id="performance-chart-data">
+    {% if chart["defer"] %}
+        <script>performanceChart.defer()</script>
+        <div hx-get="{{ url_for("performance.chart") }}?no-defer"
+             hx-include="#performance-config"
+             hx-target="#performance-chart-data"
+             hx-swap="outerHTML"
+             hx-trigger="load"></div>
+    {% else %}
+        <script>performanceChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    {% endif %}
+</div>

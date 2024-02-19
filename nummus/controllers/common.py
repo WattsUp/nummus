@@ -193,7 +193,7 @@ def ctx_base() -> dict[str, object]:
             "Holdings": None,
             "Instrument Transactions": None,
             "Balances": None,
-            "Performance": None,
+            "Performance": ("performance.page", False),
             "Allocation": None,
             "US Sectors": None,
         },

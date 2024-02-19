@@ -1,0 +1,14 @@
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
+         hx-get="{{ url_for("performance.page") }}"
+         hx-trigger="update-account from:body, update-asset from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Performance</h1>
+    <div class="w-full flex text-lg">Time-Weighted Return Rate versus US Stocks (S&amp;P 500)</div>
+    <div class="w-full h-96">
+        <canvas id="performance-chart-canvas"></canvas>
+    </div>
+    {% include "performance/chart-config.jinja" %}
+    TODO account breakdown
+    {% include "performance/chart-data.jinja" %}
+</section>

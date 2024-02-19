@@ -132,6 +132,26 @@ function formatMoneyTicks(value, index, ticks) {
     return ticks[index].label;
 }
 
+/**
+ * Format ticks as percent
+ *
+ * @param {Number} value Value of current tick
+ * @param {Number} index Index of current tick
+ * @param {Object} ticks Array of all ticks
+ * @return {String} Label for current tick
+ */
+function formatPercentTicks(value, index, ticks) {
+    'use strict';
+    if (index == 0) {
+        const step = Math.abs(ticks[0].value - ticks[1].value);
+        const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
+        ticks.forEach((t) => {
+            t.label = `${t.value.toFixed(0)}%`;
+        });
+    }
+    return ticks[index].label;
+}
+
 
 /**
  * Format ticks as date
