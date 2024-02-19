@@ -5,6 +5,7 @@
      hx-target="#performance-chart-data"
      hx-swap="outerHTML">
     TODO Account selector
+    TODO Index selector
     <div class="grow"></div>
     <select name="period" hx-get="{{ url_for("performance.chart") }}">
         {% with period = chart["period"] %}

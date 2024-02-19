@@ -1,6 +1,11 @@
 {% if include_oob %}
     {% with oob = True %}
         {% include "performance/chart-config.jinja" %}
+        {% if not chart["defer"] %}
+            {% with accounts = chart["accounts"] %}
+                {% include "performance/accounts.jinja" %}
+            {% endwith %}
+        {% endif %}
     {% endwith %}
 {% endif %}
 <div id="performance-chart-data">

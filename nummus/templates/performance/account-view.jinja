@@ -1,0 +1,9 @@
+<div id="account-{{ account["uri"] }}"
+     class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100">
+    <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">{{ account["name"] }}</div>
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ account["initial"] | money }}</div>
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ account["cash_flow"] | money }}</div>
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ account["end"] | money }}</div>
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ account["profit"] | money }}</div>
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ account["mwrr"] | percent }}</div>
+</div>

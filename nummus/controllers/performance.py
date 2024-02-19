@@ -42,6 +42,7 @@ def ctx_chart() -> dict[str, object]:
         """Type definition for Account context."""
 
         name: str
+        uri: str
         initial: Decimal
         end: Decimal
         profit: Decimal
@@ -101,6 +102,7 @@ def ctx_chart() -> dict[str, object]:
             sum(item) for item in zip(*acct_profits.values(), strict=True)
         ]
         twrr = utils.twrr(total, total_profit)
+        mwrr = Decimal(0)
 
         index_twrr = Asset.index_twrr(s, "S&P 500", start_ord, end_ord)
 
@@ -117,15 +119,15 @@ def ctx_chart() -> dict[str, object]:
             cash_flow = (v_end - v_initial) - profit
             # TODO (WattsUp): Change mwrr to compute on a monthly basis
             # Too slow mwrr = utils.mwrr(values, profits)
-            mwrr = Decimal(0)
             accounts.append(
                 {
                     "name": mapping[acct_id],
+                    "uri": Account.id_to_uri(acct_id),
                     "initial": v_initial,
                     "end": v_end,
                     "profit": profit,
                     "cash_flow": cash_flow,
-                    "mwrr": mwrr,
+                    "mwrr": Decimal(0),
                 },
             )
             sum_cash_flow += cash_flow
@@ -174,10 +176,14 @@ def ctx_chart() -> dict[str, object]:
             "index_min": index_twrr_min,
             "index_max": index_twrr_max,
         },
-        "total": total[-1],
-        "cash_flow": sum_cash_flow,
-        "profit": total_profit[-1],
-        "accounts": accounts,
+        "accounts": {
+            "initial": total[0],
+            "end": total[-1],
+            "cash_flow": sum_cash_flow,
+            "profit": total_profit[-1],
+            "mwrr": mwrr,
+            "accounts": accounts,
+        },
     }
 
 

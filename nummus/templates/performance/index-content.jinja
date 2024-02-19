@@ -9,6 +9,9 @@
         <canvas id="performance-chart-canvas"></canvas>
     </div>
     {% include "performance/chart-config.jinja" %}
-    TODO account breakdown
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Accounts</h1>
+    {% with accounts = chart["accounts"], defer=chart["defer"] %}
+        {% include "performance/accounts.jinja" %}
+    {% endwith %}
     {% include "performance/chart-data.jinja" %}
 </section>
