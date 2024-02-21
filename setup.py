@@ -34,7 +34,7 @@ required = [
     "pyspellchecker",
     "tqdm",
     "argcomplete",
-    "numpy-financial",
+    "scipy",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

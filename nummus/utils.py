@@ -10,7 +10,7 @@ import shutil
 import sys
 from decimal import Decimal
 
-import numpy_financial as npf
+from scipy import optimize
 
 from nummus import global_config
 
@@ -558,18 +558,32 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
         return Decimal(0)
     n = len(values)
 
-    cash_flows: list[Decimal] = [Decimal(0)] * n
-    prev_value = Decimal(0)
-    prev_profit = Decimal(0)
+    cash_flows: dict[int, float] = {}
+    prev_cost_basis = Decimal(0)
     for i, (v, p) in enumerate(zip(values, profit, strict=True)):
-        cash_flows[i] = (prev_value - prev_profit) - (v - p)
+        cost_basis = v - p
+        cash_flow = prev_cost_basis - cost_basis
+        if cash_flow != 0:
+            cash_flows[i] = float(cash_flow)
 
-        prev_profit = p
-        prev_value = v
-    cash_flows[-1] += values[-1]
+        prev_cost_basis = cost_basis
+    cash_flows[n - 1] = float(values[-1]) + cash_flows.get(n - 1, 0)
 
-    irr_daily = npf.irr(cash_flows)
-    return round(Decimal(irr_daily * DAYS_IN_YEAR), 6)
+    cost_basis = values[-1] - profit[-1]
+
+    def xnpv(r: float, cfs: dict[int, float]) -> float:
+        if r <= 0:
+            return float("inf")
+        return sum((cf / r ** (i / DAYS_IN_YEAR) for i, cf in cfs.items()))
+
+    try:
+        result = optimize.newton(lambda r: xnpv(r, cash_flows), 1.0)
+    except RuntimeError:
+        result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
+    if not isinstance(result, float):
+        msg = f"Optimize result was {type(result)} not float"
+        raise TypeError(msg)
+    return round(Decimal(result - 1), 6)
 
 
 def print_table(table: list[list[str] | None]) -> None:

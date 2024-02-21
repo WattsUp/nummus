@@ -102,7 +102,7 @@ def ctx_chart() -> dict[str, object]:
             sum(item) for item in zip(*acct_profits.values(), strict=True)
         ]
         twrr = utils.twrr(total, total_profit)
-        mwrr = Decimal(0)
+        mwrr = utils.mwrr(total, total_profit)
 
         index_twrr = Asset.index_twrr(s, "S&P 500", start_ord, end_ord)
 
@@ -113,7 +113,7 @@ def ctx_chart() -> dict[str, object]:
         for acct_id, values in acct_values.items():
             profits = acct_profits[acct_id]
 
-            v_initial = values[0]
+            v_initial = values[0] - profits[0]
             v_end = values[-1]
             profit = profits[-1]
             cash_flow = (v_end - v_initial) - profit
@@ -127,7 +127,7 @@ def ctx_chart() -> dict[str, object]:
                     "end": v_end,
                     "profit": profit,
                     "cash_flow": cash_flow,
-                    "mwrr": Decimal(0),
+                    "mwrr": utils.mwrr(values, profits),
                 },
             )
             sum_cash_flow += cash_flow
