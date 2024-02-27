@@ -79,6 +79,11 @@ class TransactionSplit(Base):
     def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
 
+    @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
+    @override
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return super().validate_decimals(key, field)
+
     @override
     def __setattr__(self, name: str, value: object) -> None:
         if name in ["parent_id", "date", "locked", "account_id"]:
@@ -196,3 +201,8 @@ class Transaction(Base):
     @override
     def validate_strings(self, key: str, field: str | None) -> str | None:
         return super().validate_strings(key, field)
+
+    @orm.validates("amount")
+    @override
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return super().validate_decimals(key, field)

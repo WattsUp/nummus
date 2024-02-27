@@ -325,8 +325,8 @@ class TestAsset(TestBase):
         today_ord = today.toordinal()
         yesterday_ord = today_ord - 1
 
-        multiplier_0 = round(self.random_decimal(1, 10))
-        multiplier_1 = round(self.random_decimal(1, 10))
+        multiplier_0 = 10
+        multiplier_1 = 7
         multiplier = multiplier_0 * multiplier_1
         value_today = self.random_decimal(1, 10)
         value_yesterday = value_today * multiplier
@@ -364,20 +364,6 @@ class TestAsset(TestBase):
         s.add(v)
         s.commit()
 
-        # Multiple splits that need be included on the first valuation
-        split_0 = AssetSplit(
-            asset_id=a.id_,
-            date_ord=today_ord,
-            multiplier=multiplier_0,
-        )
-        split_1 = AssetSplit(
-            asset_id=a.id_,
-            date_ord=today_ord,
-            multiplier=multiplier_1,
-        )
-        s.add_all((split_0, split_1))
-        s.commit()
-
         # Splits are done after hours
         # A split on today means trading occurs at yesterday / multiplier pricing
         txn_0 = Transaction(
@@ -410,6 +396,35 @@ class TestAsset(TestBase):
         )
         s.add_all((txn_1, t_split_1))
 
+        s.commit()
+
+        # Do split updates
+        a.update_splits()
+        s.commit()
+
+        self.assertEqual(t_split_0.asset_quantity_unadjusted, 1)
+        self.assertEqual(t_split_1.asset_quantity_unadjusted, 1)
+
+        self.assertEqual(t_split_0.asset_quantity, 1)
+        self.assertEqual(t_split_1.asset_quantity, 1)
+
+        r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
+        r_values = r_assets[a.id_]
+        target_values = [1, 2]
+        self.assertEqual(r_values, target_values)
+
+        # Multiple splits that need be included on the first valuation
+        split_0 = AssetSplit(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            multiplier=multiplier_0,
+        )
+        split_1 = AssetSplit(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            multiplier=multiplier_1,
+        )
+        s.add_all((split_0, split_1))
         s.commit()
 
         # Do split updates
