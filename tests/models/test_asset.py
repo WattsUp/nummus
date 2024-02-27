@@ -432,6 +432,88 @@ class TestAsset(TestBase):
         target_values = [value_yesterday, value_yesterday + value_today]
         self.assertEqual(r_values, target_values)
 
+        # Non-integer splits should preserve summing to zero
+        txn_0 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord - 7,
+            amount=10,
+            statement=self.random_string(),
+        )
+        qty = Decimal("1.234567891")
+        t_split_0 = TransactionSplit(
+            amount=txn_0.amount,
+            parent=txn_0,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=qty,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_0, t_split_0))
+        s.commit()
+        self.assertEqual(t_split_0.asset_quantity_unadjusted, qty)
+
+        qty_1 = -qty / 2
+        txn_1 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord - 6,
+            amount=10,
+            statement=self.random_string(),
+        )
+        t_split_1 = TransactionSplit(
+            amount=txn_1.amount,
+            parent=txn_1,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=qty_1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_1, t_split_1))
+        s.commit()
+        qty_1 = t_split_1.asset_quantity_unadjusted or 0
+
+        txn_1 = Transaction(
+            account_id=acct.id_,
+            date_ord=today_ord - 6,
+            amount=10,
+            statement=self.random_string(),
+        )
+        t_split_1 = TransactionSplit(
+            amount=txn_1.amount,
+            parent=txn_1,
+            asset_id=a.id_,
+            asset_quantity_unadjusted=-qty - qty_1,
+            category_id=t_cat.id_,
+        )
+        s.add_all((txn_1, t_split_1))
+        s.commit()
+
+        # Do split updates
+        a.update_splits()
+        s.commit()
+
+        r_assets = acct.get_asset_qty(today_ord - 7, today_ord - 6)
+        r_values = r_assets[a.id_]
+        target_values = [qty * multiplier, 0]
+        self.assertEqual(r_values, target_values)
+
+        # Add non-integer split
+        multiplier_2 = Decimal(1000) / 1281
+        split_2 = AssetSplit(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            multiplier=multiplier_2,
+        )
+        s.add(split_2)
+        s.commit()
+        multiplier_2 = split_2.multiplier
+
+        # Do split updates
+        a.update_splits()
+        s.commit()
+
+        r_assets = acct.get_asset_qty(today_ord - 7, today_ord - 6)
+        r_values = r_assets[a.id_]
+        target_values = [round(qty * multiplier * multiplier_2, 9), 0]
+        self.assertEqual(r_values, target_values)
+
     def test_prune_valuations(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
