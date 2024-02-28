@@ -435,41 +435,34 @@ class Account(Base):
             iv_accounts = {acct_id: {} for acct_id, in s.query(Account.id_).all()}
 
         # Get Asset quantities on start date
-        # Cannot do sql sum due to overflow fractional part
         query = (
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
-                TransactionSplit.asset_quantity,
+                sqlalchemy.func.sum(TransactionSplit.asset_quantity),
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
                 TransactionSplit.date_ord <= start_ord,
             )
-            .order_by(TransactionSplit.account_id)
+            .group_by(
+                TransactionSplit.account_id,
+                TransactionSplit.asset_id,
+            )
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        current_acct_id: int | None = None
-        iv: dict[int, Decimal] = {}
         for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
             qty: Decimal
-            if acct_id != current_acct_id:
-                current_acct_id = acct_id
-                try:
-                    iv = iv_accounts[acct_id]
-                except KeyError:  # pragma: no cover
-                    # Should not happen cause iv_accounts is initialized with all
-                    iv = {}
-                    iv_accounts[acct_id] = iv
             try:
-                iv[a_id] += qty
-            except KeyError:
-                iv[a_id] = qty
+                iv_accounts[acct_id][a_id] = qty
+            except KeyError:  # pragma: no cover
+                # All accounts already created in iv_accounts
+                iv_accounts[acct_id] = {a_id: qty}
 
         # Daily delta in qty
         deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = {}
@@ -576,30 +569,24 @@ class Account(Base):
             dict{Asset.id_: profit}
         """
         # Get Asset quantities on start date
-        # Cannot do sql sum due to overflow fractional part
         query = (
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.asset_id,
-                TransactionSplit.asset_quantity,
+                sqlalchemy.func.sum(TransactionSplit.asset_quantity),
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
                 TransactionSplit.date_ord < start_ord,
             )
+            .group_by(TransactionSplit.asset_id)
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        initial_qty: dict[int, Decimal] = {}
-        for a_id, qty in query.yield_per(YIELD_PER):
-            a_id: int
-            qty: Decimal
-            try:
-                initial_qty[a_id] += qty
-            except KeyError:
-                initial_qty[a_id] = qty
-        initial_qty = {a_id: qty for a_id, qty in initial_qty.items() if qty != 0}
+        initial_qty: dict[int, Decimal] = {
+            a_id: qty for a_id, qty in query.yield_per(YIELD_PER) if qty != 0
+        }
 
         query = (
             s.query(TransactionSplit)

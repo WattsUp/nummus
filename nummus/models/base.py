@@ -152,6 +152,19 @@ class Base(orm.DeclarativeBase):
             raise exc.InvalidORMValueError(msg)
         return field
 
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        """Validates decimals are truncated to their SQL precision.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
+        # Call truncate using the proper Decimal precision
+        return getattr(self.__class__, key).type.truncate(field)
+
 
 class BaseEnum(enum.Enum):
     """Enum class with a parser."""
@@ -212,6 +225,20 @@ class Decimal6(types.TypeDecorator):
         if value is None:
             return None
         return Decimal(value) * self._FACTOR_OUT
+
+    @classmethod
+    def truncate(cls, value: Decimal | None) -> Decimal | None:
+        """Truncate a decimal to the specified precision.
+
+        Args:
+            value: Value to truncate
+
+        Returns:
+            Decimal -> SQL integer -> Decimal
+        """
+        if value is None:
+            return None
+        return Decimal(int(value * cls._FACTOR_IN)) * cls._FACTOR_OUT
 
 
 class Decimal9(Decimal6):

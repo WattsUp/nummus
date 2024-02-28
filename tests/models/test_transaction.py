@@ -16,6 +16,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+from nummus.models.base import Decimal9
 from tests.base import TestBase
 
 
@@ -208,7 +209,7 @@ class TestTransactionSplit(TestBase):
         multiplier = self.random_decimal(1, 10)
         t_split.adjust_asset_quantity(multiplier)
         self.assertEqual(t_split.asset_quantity_unadjusted, qty)
-        self.assertEqual(t_split.asset_quantity, qty * multiplier)
+        self.assertEqual(t_split.asset_quantity, Decimal9.truncate(qty * multiplier))
 
         t_split.asset_quantity_unadjusted = None
         s.commit()
