@@ -151,15 +151,17 @@ def write_csv(
         tag,
         amount,
     ) in tqdm.tqdm(query.yield_per(YIELD_PER), total=n, desc="Exporting"):
-        lines.append([
-            datetime.date.fromordinal(date).isoformat(),
-            accounts[acct_id],
-            payee,
-            description,
-            categories[t_cat_id],
-            tag,
-            utils.format_financial(amount),
-        ])
+        lines.append(
+            [
+                datetime.date.fromordinal(date).isoformat(),
+                accounts[acct_id],
+                payee,
+                description,
+                categories[t_cat_id],
+                tag,
+                utils.format_financial(amount),
+            ],
+        )
 
     writer = csv.writer(file)
     writer.writerow(header)

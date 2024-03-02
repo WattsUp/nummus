@@ -48,6 +48,11 @@ class AssetSplit(Base):
     multiplier: ORMReal = orm.mapped_column(Decimal6)
     date_ord: ORMInt
 
+    @orm.validates("multiplier")
+    @override
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return super().validate_decimals(key, field)
+
 
 class AssetValuation(Base):
     """Asset Valuation model for storing a value of an asset on a specific date.
@@ -63,6 +68,11 @@ class AssetValuation(Base):
     asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: ORMReal = orm.mapped_column(Decimal6)
     date_ord: ORMInt
+
+    @orm.validates("value")
+    @override
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return super().validate_decimals(key, field)
 
 
 class AssetCategory(BaseEnum):
@@ -300,21 +310,36 @@ class Asset(Base):
             # Compound splits as we go
             multiplier = multiplier * s_multiplier
             splits.append((s_date_ord, multiplier))
+        splits.reverse()
+        try:
+            multiplier = splits[0][1]
+        except IndexError:
+            multiplier = Decimal(1)
 
         query = (
             s.query(TransactionSplit)
             .where(TransactionSplit.asset_id == self.id_)
-            .order_by(TransactionSplit.date_ord.desc())
+            .order_by(TransactionSplit.date_ord)
         )
 
-        multiplier = Decimal(1)
+        sum_unadjusted = Decimal(0)
+        sum_adjusted = Decimal(0)
         for t_split in query.yield_per(YIELD_PER):
             # Query whole object okay, need to set things
             t_split: TransactionSplit
-            # If txn is before the split, update the multiplier
-            while len(splits) >= 1 and t_split.date_ord < splits[0][0]:
-                multiplier = splits.pop(0)[1]
+            # If txn is on/after the split, update the multiplier
+            while len(splits) >= 1 and t_split.date_ord >= splits[0][0]:
+                splits.pop(0)
+                try:
+                    multiplier = splits[0][1]
+                except IndexError:
+                    multiplier = Decimal(1)
             t_split.adjust_asset_quantity(multiplier)
+            sum_unadjusted += t_split.asset_quantity_unadjusted or Decimal(0)
+            sum_adjusted += t_split.asset_quantity or Decimal(0)
+            if sum_unadjusted == 0:
+                # sum_adjusted is an error term, use to make sum of adjusted zero out
+                t_split.asset_quantity = (t_split.asset_quantity or 0) - sum_adjusted
 
     def prune_valuations(self) -> int:
         """Remove valuations that are not needed due to zero quantity being held.
