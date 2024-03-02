@@ -340,6 +340,8 @@ class Asset(Base):
             if sum_unadjusted == 0:
                 # sum_adjusted is an error term, use to make sum of adjusted zero out
                 t_split.asset_quantity = (t_split.asset_quantity or 0) - sum_adjusted
+                # Zero out error term since it has been dealt with
+                sum_adjusted = 0
 
     def prune_valuations(self) -> int:
         """Remove valuations that are not needed due to zero quantity being held.
