@@ -117,8 +117,6 @@ def ctx_chart() -> dict[str, object]:
             v_end = values[-1]
             profit = profits[-1]
             cash_flow = (v_end - v_initial) - profit
-            # TODO (WattsUp): Change mwrr to compute on a monthly basis
-            # Too slow mwrr = utils.mwrr(values, profits)
             accounts.append(
                 {
                     "name": mapping[acct_id],

@@ -8,6 +8,7 @@ import getpass
 import re
 import shutil
 import sys
+import warnings
 from decimal import Decimal
 
 from scipy import optimize
@@ -577,7 +578,11 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
         return sum((cf / r ** (i / DAYS_IN_YEAR) for i, cf in cfs.items()))
 
     try:
-        result = optimize.newton(lambda r: xnpv(r, cash_flows), 1.0)
+        # Could try to go to very large rates but will fail to converge
+        # Ignore them and let brentq fix the failed convergence
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            result = optimize.newton(lambda r: xnpv(r, cash_flows), 1.0)
     except RuntimeError:
         result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
     if not isinstance(result, float):
