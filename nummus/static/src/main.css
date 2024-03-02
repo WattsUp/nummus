@@ -205,6 +205,23 @@
             transform: rotate(360deg);
         }
     }
+
+    .tooltip {
+        @apply relative inline-block underline decoration-dotted;
+    }
+
+    .tooltip-text {
+        @apply invisible w-32 bg-grey-800 text-white text-center rounded p-1 absolute z-10 opacity-0 transition-opacity;
+        @apply right-[110%];
+    }
+
+    .tooltip-text::after {
+        @apply content-[""] absolute top-1/2 left-full border-4 border-solid border-l-grey-800;
+    }
+
+    .tooltip:hover .tooltip-text {
+        @apply visible opacity-100;
+    }
 }
 
 @font-face {

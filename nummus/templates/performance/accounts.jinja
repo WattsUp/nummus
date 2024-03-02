@@ -7,7 +7,10 @@
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Cash Flow</div>
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Balance</div>
         <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Profit &amp; Loss</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">MWRR p.a.</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 text-right tooltip">
+            MWRR p.a.
+            <span class="tooltip-text w-64 right-[80%] after:top-1/4">Money-Weighted Return Rate per annum</span>
+        </div>
     </div>
     {% if not defer %}
         {% for account in accounts["accounts"] %}

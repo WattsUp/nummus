@@ -74,7 +74,7 @@
                     <tr>
                         <td>Account Category</td>
                         <td>
-                            <select class="w-full" name="category">
+                            <select class="w-full" name="category" autocomplete="off">
                                 {% for cat in account["category_type"] %}
                                     <option value="{{ cat | enum }}"
                                             {% if cat == account["category"] %}selected{% endif %}>

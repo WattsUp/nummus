@@ -8,7 +8,8 @@
            class="mr-8 grow"
            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
     <select name="period"
-            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
+            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
+            autocomplete="off">
         {% with period = txn_table["period"] %}
             {% include "shared/period-options.jinja" %}
         {% endwith %}

@@ -12,7 +12,9 @@
     {% endfor %}
     {% if chart["category"] %}<input name="category" value="{{ chart["category"] | enum }}" hidden>{% endif %}
     <div class="grow"></div>
-    <select name="period" hx-get="{{ url_for("net_worth.chart") }}">
+    <select name="period"
+            hx-get="{{ url_for("net_worth.chart") }}"
+            autocomplete="off">
         {% with period = chart["period"] %}
             {% include "shared/period-options.jinja" %}
         {% endwith %}

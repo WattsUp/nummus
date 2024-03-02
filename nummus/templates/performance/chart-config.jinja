@@ -7,7 +7,9 @@
     TODO Account selector
     TODO Index selector
     <div class="grow"></div>
-    <select name="period" hx-get="{{ url_for("performance.chart") }}">
+    <select name="period"
+            hx-get="{{ url_for("performance.chart") }}"
+            autocomplete="off">
         {% with period = chart["period"] %}
             {% include "shared/period-options.jinja" %}
         {% endwith %}
