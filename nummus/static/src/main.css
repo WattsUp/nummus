@@ -9,7 +9,7 @@
 
     input,
     select {
-        @apply h-[1.75rem] border px-1;
+        @apply h-[1.75rem] border px-1 bg-transparent;
     }
 
     svg {

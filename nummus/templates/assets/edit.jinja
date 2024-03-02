@@ -30,7 +30,8 @@
                 <input type="checkbox"
                        name="interpolate"
                        {% if asset["interpolate"] %}checked{% endif %}
-                       id="asset-interpolate">
+                       id="asset-interpolate"
+                       autocomplete="off">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
@@ -45,7 +46,10 @@
                     <tr>
                         <td>Name</td>
                         <td>
-                            <input class="w-full" name="name" value="{{ asset["name"] }}">
+                            <input class="w-full"
+                                   name="name"
+                                   value="{{ asset["name"] }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>
@@ -53,13 +57,17 @@
                         <td>
                             <input class="w-full"
                                    name="description"
-                                   value="{{ asset["description"] or "" }}">
+                                   value="{{ asset["description"] or "" }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>
                         <td>Ticker</td>
                         <td>
-                            <input class="w-full" name="ticker" value="{{ asset["ticker"] or "" }}">
+                            <input class="w-full"
+                                   name="ticker"
+                                   value="{{ asset["ticker"] or "" }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>

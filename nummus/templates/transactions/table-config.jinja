@@ -6,7 +6,8 @@
            value="{{ txn_table["search"] }}"
            placeholder="Search Transactions"
            class="mr-8 grow"
-           hx-get="{{ url_for("transactions.table") }}">
+           hx-get="{{ url_for("transactions.table") }}"
+           autocomplete="off">
     <select name="period"
             hx-get="{{ url_for("transactions.table") }}"
             autocomplete="off">
@@ -19,14 +20,16 @@
            name="start"
            value="{{ txn_table["start"] }}"
            hx-get="{{ url_for("transactions.table", period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
     to
     <input id="txn-config-end"
            type="date"
            name="end"
            value="{{ txn_table["end"] }}"
            hx-get="{{ url_for("transactions.table", period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
 </div>
 <div id="txn-paging"
      class="flex w-full justify-end my-1"

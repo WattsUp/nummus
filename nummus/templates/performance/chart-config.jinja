@@ -18,11 +18,13 @@
            name="start"
            value="{{ chart["start"] }}"
            hx-get="{{ url_for("performance.chart", period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
     to
     <input type="date"
            name="end"
            value="{{ chart["end"] }}"
            hx-get="{{ url_for("performance.chart", period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
 </div>
