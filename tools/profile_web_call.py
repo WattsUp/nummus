@@ -15,9 +15,8 @@ import colorama
 import viztracer
 from colorama import Fore
 
-from nummus import commands
-from nummus import custom_types as t
 from nummus import web
+from nummus.commands.base import unlock
 
 if TYPE_CHECKING:
     import werkzeug
@@ -25,7 +24,7 @@ if TYPE_CHECKING:
 colorama.init(autoreset=True)
 
 
-def main(command_line: t.Strings | None = None) -> int:
+def main(command_line: list[str] | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -95,7 +94,7 @@ def main(command_line: t.Strings | None = None) -> int:
     url: str = args.url
     no_call_twice: bool = args.no_call_twice
 
-    p = commands.unlock(path_db=path_db, path_password=path_password)
+    p = unlock(path_db=path_db, path_password=path_password)
     if p is None:
         return 1
 

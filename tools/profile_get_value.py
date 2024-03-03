@@ -7,20 +7,20 @@ import datetime
 import sys
 import time
 from pathlib import Path
+from typing import TypedDict
 
 import colorama
 import sqlalchemy
 import viztracer
 from colorama import Fore
 
-from nummus import commands
-from nummus import custom_types as t
+from nummus.commands.base import unlock
 from nummus.models import Account, Asset, AssetValuation, TransactionSplit
 
 colorama.init(autoreset=True)
 
 
-def main(command_line: t.Strings | None = None) -> int:
+def main(command_line: list[str] | None = None) -> int:
     """Main program entry.
 
     Args:
@@ -63,7 +63,7 @@ def main(command_line: t.Strings | None = None) -> int:
     path_password: Path = args.pass_file
     output_file: Path = args.output_file
 
-    p = commands.unlock(path_db=path_db, path_password=path_password)
+    p = unlock(path_db=path_db, path_password=path_password)
     if p is None:
         return 1
 
@@ -97,7 +97,14 @@ def main(command_line: t.Strings | None = None) -> int:
         t_duration = time.perf_counter() - t_start
         print(f"All accounts {t_duration*1000:6.1f}ms (sans profiler)")
 
-        durations: list[t.DictAny] = []
+        class DurationResult(TypedDict):
+            name: str
+            uri: str
+            n: int
+            single: float
+            all: float
+
+        durations: list[DurationResult] = []
 
         accounts = s.query(Account).all()
         for acct in accounts:
@@ -149,7 +156,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['n']:5} transactions",
             )
 
-        durations: list[t.DictAny] = []
+        durations = []
 
         accounts = s.query(Account).all()
         for acct in accounts:
@@ -206,7 +213,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['n']:5} transactions",
             )
 
-        durations: list[t.DictAny] = []
+        durations = []
 
         accounts = s.query(Account).all()
         for acct in accounts:
@@ -264,7 +271,7 @@ def main(command_line: t.Strings | None = None) -> int:
                 f"{item['n']:5} transactions",
             )
 
-        durations: list[t.DictAny] = []
+        durations = []
 
         assets = s.query(Asset).all()
         for asset in assets:

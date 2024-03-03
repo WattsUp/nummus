@@ -42,7 +42,7 @@ def main() -> None:
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ) as p:
-        stdout: io.BytesIO = p.stdout
+        stdout: io.BytesIO = p.stdout  # type: ignore[attr-defined]
         try:
             buf = ""
             while p.poll() is None:
