@@ -12,6 +12,7 @@ import sqlalchemy
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
+from nummus.models.asset import AssetCategory
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -37,6 +38,7 @@ def ctx_chart() -> dict[str, object]:
         args.get("end", type=datetime.date.fromisoformat),
     )
     no_defer = "no-defer" in args
+    index = args.get("index", "S&P 500")
 
     class AccountContext(TypedDict):
         """Type definition for Account context."""
@@ -68,12 +70,21 @@ def ctx_chart() -> dict[str, object]:
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
 
+        query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
+        indices = {name: False for name, in query.all()}
+        indices[index] = True
+        index_description = (
+            s.query(Asset.description).where(Asset.name == index).scalar()
+        )
+
         if n > web_utils.LIMIT_DEFER and not no_defer:
             return {
                 "defer": True,
                 "start": start,
                 "end": end,
                 "period": period,
+                "indices": indices,
+                "index_description": index_description,
             }
 
         query = s.query(Account).where(Account.id_.in_(acct_ids))
@@ -104,7 +115,7 @@ def ctx_chart() -> dict[str, object]:
         twrr = utils.twrr(total, total_profit)
         mwrr = utils.mwrr(total, total_profit)
 
-        index_twrr = Asset.index_twrr(s, "S&P 500", start_ord, end_ord)
+        index_twrr = Asset.index_twrr(s, index, start_ord, end_ord)
 
         mapping = Account.map_name(s)
 
@@ -182,6 +193,8 @@ def ctx_chart() -> dict[str, object]:
             "mwrr": mwrr,
             "accounts": accounts,
         },
+        "indices": indices,
+        "index_description": index_description,
     }
 
 

@@ -30,7 +30,7 @@ from nummus.models.transaction import TransactionSplit
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+(-[A-Z]+)?$")
+_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z][A-Z0-9.]*(-[A-Z]+)?$")
 
 
 class AssetSplit(Base):
@@ -122,7 +122,7 @@ class Asset(Base):
         return super().validate_strings(key, field)
 
     @orm.validates("ticker")
-    def validate_ticker(self, key: str, field: str | None) -> str | None:
+    def validate_ticker(self, _: str, field: str | None) -> str | None:
         """Validates ticker is UPPERCASE.
 
         Args:
@@ -138,10 +138,9 @@ class Asset(Base):
         if field is None or field in ["", "[blank]"]:
             return None
         if not _RE_ASSET_TICKER.match(field):
-            table: str = self.__tablename__
-            table = table.replace("_", " ").capitalize()
             msg = (
-                f"{table} {key} must be uppercase letters only, optional ^ or $ prefix"
+                "Asset ticker must be uppercase letters and numbers only, "
+                "optional ^ or $ prefix"
             )
             raise exc.InvalidORMValueError(msg)
 
@@ -618,14 +617,46 @@ class Asset(Base):
         Returns:
             list[price ratios]
         """
-        a = Asset(
-            name="S&P 500",
-            description="A stock market index tracking the stock performance of "
-            "500 of the largest companies listed on stock exchanges in the United "
-            "States",
-            category=AssetCategory.INDEX,
-            interpolate=False,
-            ticker="^GSPC",
-        )
-        s.add(a)
+        indices: dict[str, dict[str, str]] = {
+            "^GSPC": {
+                "name": "S&P 500",
+                "description": "A stock market index tracking the stock performance of "
+                "500 of the largest companies listed on stock exchanges in the United "
+                "States",
+            },
+            "^DJI": {
+                "name": "Dow Jones Industrial Average",
+                "description": "A stock market index tracking the stock performance of "
+                "30 prominent companies listed on stock exchanges in the United States",
+            },
+            "^BUK100P": {
+                "name": "Cboe UK 100",
+                "description": "A stock market index tracking the stock performance of "
+                "100 of the largest companies listed on stock exchanges in the United "
+                "Kingdom",
+            },
+            "^N225": {
+                "name": "Nikkel Index",
+                "description": "A stock market index for the Tokyo Stock Exchange",
+            },
+            "^N100": {
+                "name": "Euronext 100 Index",
+                "description": "A stock market index tracking the stock performance of "
+                "100 of the largest companies listed on Euronext",
+            },
+            "^HSI": {
+                "name": "Hang Seng Index",
+                "description": "A freefloat-adjusted market-capitalization-weighted "
+                "stock-market index in Hong Kong",
+            },
+        }
+        for ticker, item in indices.items():
+            a = Asset(
+                name=item["name"],
+                description=item["description"],
+                category=AssetCategory.INDEX,
+                interpolate=False,
+                ticker=ticker,
+            )
+            s.add(a)
         s.commit()

@@ -211,12 +211,11 @@
     }
 
     .tooltip-text {
-        @apply invisible w-32 bg-grey-800 text-white text-center rounded p-1 absolute z-10 opacity-0 transition-opacity;
-        @apply right-[110%];
+        @apply invisible w-64 bg-grey-800 text-white text-center rounded p-1 absolute z-10 opacity-0 transition-opacity;
     }
 
     .tooltip-text::after {
-        @apply content-[""] absolute top-1/2 left-full border-4 border-solid border-l-grey-800;
+        @apply content-[""] absolute top-1/2 border-4 border-solid border-transparent;
     }
 
     .tooltip:hover .tooltip-text {
