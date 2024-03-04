@@ -133,6 +133,11 @@ const performanceChart = {
                             callback: formatPercentTicks,
                             precision: 0,
                         },
+                        grid: {
+                            color: (ctx) =>
+                                (ctx.tick.value == 0 ? 'black' :
+                                                       'rgba(0,0,0,0.1)'),
+                        },
                     },
                 },
                 plugins: {

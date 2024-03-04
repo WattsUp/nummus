@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-def page_home() -> str:
+def page() -> str:
     """GET /.
 
     Returns:
@@ -20,6 +20,6 @@ def page_home() -> str:
 
 
 ROUTES: Routes = {
-    "/": (page_home, ["GET"]),
-    "/index": (page_home, ["GET"]),
+    "/": (page, ["GET"]),
+    "/index": (page, ["GET"]),
 }

@@ -4,7 +4,7 @@ from tests.controllers.base import WebTestBase
 
 
 class TestDashboard(WebTestBase):
-    def test_page_home(self) -> None:
+    def test_page(self) -> None:
         endpoint = "/"
         result, _ = self.web_get(endpoint)
         target = '<!DOCTYPE html>\n<html lang="en-US">'

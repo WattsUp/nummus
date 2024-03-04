@@ -180,7 +180,7 @@ def ctx_base() -> dict[str, object]:
     # TODO(WattsUp): Implement remaining pages
     pages: dict[str, dict[str, None | tuple[str, bool]]] = {
         "Overview": {
-            "Dashboard": None,
+            "Dashboard": ("dashboard.page", False),
             "Net Worth": ("net_worth.page", False),
             "Transactions": ("transactions.page_all", False),
             "Instrument Transactions": None,
