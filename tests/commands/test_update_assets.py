@@ -31,6 +31,10 @@ class TestUpdateAssets(TestBase):
         today = datetime.date.today()
 
         with p.get_session() as s:
+            # Delete index assets
+            s.query(Asset).delete()
+            s.commit()
+
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
 
@@ -82,8 +86,11 @@ class TestUpdateAssets(TestBase):
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.YELLOW}No assets were updated"
-        self.assertEqual(fake_stdout[: len(target)], target)
+        target = (
+            f"{Fore.YELLOW}No assets were updated, "
+            "add a ticker to an Asset to download market data\n"
+        )
+        self.assertEqual(fake_stdout, target)
 
         with p.get_session() as s:
             a = s.query(Asset).where(Asset.id_ == a_id).one()
@@ -103,9 +110,9 @@ class TestUpdateAssets(TestBase):
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.GREEN}Asset Banana Inc. (BANANA) updated from "
-            f"{first_valuation_date} to {today}"
+            f"{first_valuation_date} to {today}\n"
         )
-        self.assertEqual(fake_stdout[: len(target)], target)
+        self.assertEqual(fake_stdout, target)
 
         # Sell asset so it should not include today
         last_valuation_date = date + datetime.timedelta(days=7)
@@ -143,9 +150,9 @@ class TestUpdateAssets(TestBase):
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.GREEN}Asset Banana Inc. (BANANA) updated from "
-            f"{first_valuation_date} to {last_valuation_date}"
+            f"{first_valuation_date} to {last_valuation_date}\n"
         )
-        self.assertEqual(fake_stdout[: len(target)], target)
+        self.assertEqual(fake_stdout, target)
 
         # Have a bad ticker
         with p.get_session() as s:
@@ -166,6 +173,6 @@ class TestUpdateAssets(TestBase):
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.RED}Asset Banana Inc. (ORANGE) failed to update. "
-            "Error: BANANA: No timezone found, symbol may be delisted"
+            "Error: BANANA: No timezone found, symbol may be delisted\n"
         )
-        self.assertEqual(fake_stdout[: len(target)], target)
+        self.assertEqual(fake_stdout, target)

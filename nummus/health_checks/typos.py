@@ -13,6 +13,7 @@ from nummus.health_checks.base import Base
 from nummus.models import (
     Account,
     Asset,
+    AssetCategory,
     TransactionCategory,
     TransactionSplit,
     YIELD_PER,
@@ -75,9 +76,13 @@ class Typos(Base):
                 add(name, source, "name")
                 add(institution, source, "institution")
 
-            query = s.query(Asset).with_entities(
-                Asset.name,
-                Asset.description,
+            query = (
+                s.query(Asset)
+                .with_entities(
+                    Asset.name,
+                    Asset.description,
+                )
+                .where(Asset.category != AssetCategory.INDEX)
             )
             for name, description in query.yield_per(YIELD_PER):
                 name: str

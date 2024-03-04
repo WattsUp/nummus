@@ -16,6 +16,10 @@ class TestAsset(WebTestBase):
         name = self.random_string()
 
         with p.get_session() as s:
+            # Delete index assets
+            s.query(Asset).delete()
+            s.commit()
+
             a = Asset(
                 name=name,
                 category=AssetCategory.STOCKS,

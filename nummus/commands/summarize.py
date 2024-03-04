@@ -106,7 +106,13 @@ class Summarize(Base):
         import sqlalchemy
 
         from nummus import utils
-        from nummus.models import Account, Asset, AssetValuation, TransactionSplit
+        from nummus.models import (
+            Account,
+            Asset,
+            AssetCategory,
+            AssetValuation,
+            TransactionSplit,
+        )
 
         if self._p is None:  # pragma: no cover
             msg = "Portfolio is None"
@@ -117,7 +123,12 @@ class Summarize(Base):
 
         with self._p.get_session() as s:
             accts = {acct.id_: acct for acct in s.query(Account).all()}
-            assets = {a.id_: a for a in s.query(Asset).all()}
+            assets = {
+                a.id_: a
+                for a in s.query(Asset)
+                .where(Asset.category != AssetCategory.INDEX)
+                .all()
+            }
 
             # Get the inception date
             start_date_ord: int = (

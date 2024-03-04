@@ -722,9 +722,9 @@ class TestUtils(TestBase):
         # Profit on buy day
         values = [
             Decimal(0),
-            Decimal(11),
-            Decimal(11),
-            Decimal(11),
+            Decimal(101),
+            Decimal(101),
+            Decimal(101),
             Decimal(0),
         ]
         profit = [
@@ -736,21 +736,21 @@ class TestUtils(TestBase):
         ]
         cash_flows = [
             Decimal(0),
-            Decimal(-10),
+            Decimal(-100),
             Decimal(0),
             Decimal(0),
-            Decimal(11),
+            Decimal(101),
         ]
-        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
         # Profit on buy and sell day
         values = [
             Decimal(0),
-            Decimal(11),
-            Decimal(11),
-            Decimal(11),
+            Decimal(101),
+            Decimal(101),
+            Decimal(101),
             Decimal(0),
         ]
         profit = [
@@ -758,50 +758,50 @@ class TestUtils(TestBase):
             Decimal(1),
             Decimal(1),
             Decimal(1),
-            Decimal(12),
+            Decimal(2),
         ]
         cash_flows = [
             Decimal(0),
-            Decimal(-10),
+            Decimal(-100),
             Decimal(0),
             Decimal(0),
-            Decimal(22),
+            Decimal(102),
         ]
-        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
         values = [
-            Decimal(10),
-            Decimal(21),
-            Decimal(42),
-            Decimal(42),
+            Decimal(100),
+            Decimal(201),
+            Decimal(202),
+            Decimal(202),
             Decimal(0),
         ]
         profit = [
             Decimal(0),
             Decimal(1),
-            Decimal(22),
-            Decimal(22),
-            Decimal(22),
+            Decimal(2),
+            Decimal(2),
+            Decimal(2),
         ]
         cash_flows = [
-            Decimal(-10),
-            Decimal(-10),
+            Decimal(-100),
+            Decimal(-100),
             Decimal(0),
             Decimal(0),
-            Decimal(42),
+            Decimal(202),
         ]
-        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
         values = [
-            Decimal(10),
-            Decimal(11),
-            Decimal(12),
-            Decimal(13),
-            Decimal(14),
+            Decimal(100),
+            Decimal(101),
+            Decimal(102),
+            Decimal(103),
+            Decimal(104),
         ]
         profit = [
             Decimal(0),
@@ -811,13 +811,13 @@ class TestUtils(TestBase):
             Decimal(4),
         ]
         cash_flows = [
-            Decimal(-10),
+            Decimal(-100),
             Decimal(0),
             Decimal(0),
             Decimal(0),
-            Decimal(14),
+            Decimal(104),
         ]
-        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
@@ -843,7 +843,7 @@ class TestUtils(TestBase):
             Decimal(5000),
             Decimal(10000),
         ]
-        target = round(Decimal(npf.irr(cash_flows) * 365.25), 6)
+        target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 

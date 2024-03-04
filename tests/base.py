@@ -74,7 +74,7 @@ class MockTicker:
 
             dt += datetime.timedelta(days=1)
 
-        return pd.DataFrame(index=dates, data={"Close": close, "Stock Splits": split})
+        return pd.DataFrame(index=dates, data={"Close": close, "Stock Splits": split})  # type: ignore[attr-defined]
 
 
 class TestBase(unittest.TestCase):

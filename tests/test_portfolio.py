@@ -721,6 +721,10 @@ class TestPortfolio(TestBase):
         today_ord = today.toordinal()
 
         with p.get_session() as s:
+            # Delete index assets
+            s.query(Asset).delete()
+            s.commit()
+
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
 

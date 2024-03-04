@@ -29,7 +29,7 @@ class EmptyFields(Base):
         with self._p.get_session() as s:
             accounts = Account.map_name(s)
 
-            # List of (source, field)
+            # List of (uri, source, field)
             issues: list[tuple[str, str, str]] = []
 
             query = (

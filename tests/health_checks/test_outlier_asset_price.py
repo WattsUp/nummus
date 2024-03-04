@@ -159,7 +159,7 @@ class TestOutlierAssetPrice(TestBase):
             s.add(a_split)
             s.commit()
 
-            a = s.query(Asset).one()
+            a = s.query(Asset).where(Asset.id_ == a_id).one()
             a.update_splits()
             s.commit()
 

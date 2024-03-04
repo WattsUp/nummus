@@ -526,11 +526,7 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
     prev_profit = Decimal(0)
     for i, (v, p) in enumerate(zip(values, profit, strict=True)):
         daily_profit = p - prev_profit
-        cash_flow = (v - p) - (prev_value - prev_profit)
-        # Profit probably came from funding not previous value
-        cost_basis = (
-            v - daily_profit if (prev_value == 0 or cash_flow > 0) else prev_value
-        )
+        cost_basis = v - daily_profit if prev_value == 0 else prev_value
 
         if cost_basis != 0:
             current_ratio = current_ratio * (1 + daily_profit / cost_basis)
@@ -577,7 +573,8 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
         return sum((cf / r ** (i / DAYS_IN_YEAR) for i, cf in cfs.items()))
 
     result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
-    if not isinstance(result, float):
+    if not isinstance(result, float):  # pragma: no cover
+        # Don't need to test type protection
         msg = f"Optimize result was {type(result)} not float"
         raise TypeError(msg)
     return round(Decimal(result - 1), 6)
