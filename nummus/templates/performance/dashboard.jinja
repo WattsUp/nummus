@@ -11,14 +11,14 @@
     </div>
     <div class="flex relative pl-1 border-l-4 border-blue group/row">
         <div class="truncate grow">Portfolio</div>
-        <div class="min-w-[4rem] text-right font-bold text-{{ data["twrr"] | pnl_color }}">{{ data["twrr"] | percent }}</div>
+        <div class="min-w-[4rem] text-right text-{{ data["twrr"] | pnl_color }}">{{ data["twrr"] | percent }}</div>
         <div class="absolute left-0 bottom-0 h-0.5 bg-blue transition-[width] duration-500 w-0 group-hover/row:w-full"></div>
     </div>
     <div class="w-full grow overflow-y-auto">
         {% for index, twrr in data["indices"].items() %}
             <div class="flex relative pl-1 border-l-4 border-yellow group/row">
                 <div class="truncate grow">{{ index }}</div>
-                <div class="min-w-[4rem] text-right font-bold text-{{ twrr | pnl_color }}">{{ twrr | percent }}</div>
+                <div class="min-w-[4rem] text-right text-{{ twrr | pnl_color }}">{{ twrr | percent }}</div>
                 <div class="absolute left-0 bottom-0 h-0.5 bg-yellow transition-[width] duration-500 w-0 group-hover/row:w-full"></div>
             </div>
         {% endfor %}

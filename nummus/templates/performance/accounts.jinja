@@ -26,8 +26,12 @@
             <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["initial"] | money }}</div>
             <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["cash_flow"] | money }}</div>
             <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["end"] | money }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["profit"] | money }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["mwrr"] | percent }}</div>
+            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["profit"] | pnl_color }}">
+                {{ accounts["profit"] | money }}
+            </div>
+            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["mwrr"] | pnl_color }}">
+                {{ accounts["mwrr"] | percent }}
+            </div>
         {% endif %}
     </div>
 </div>
