@@ -193,6 +193,9 @@ class Server:
         self._app.jinja_env.filters["qty"] = lambda x: f"{x:,.6f}"
         self._app.jinja_env.filters["percent"] = lambda x: f"{x * 100:5.2f}%"
         self._app.jinja_env.filters["enum"] = lambda x: x.name.replace("_", " ")
+        self._app.jinja_env.filters["pnl_color"] = lambda x: (
+            "green" if x > 0 else ("red" if x < 0 else "black")
+        )
 
         if not p.ssl_cert_path.exists():
             print(

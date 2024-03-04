@@ -97,13 +97,13 @@ def ctx_chart() -> dict[str, object]:
             updated_on_ord = acct.updated_on_ord
             return updated_on_ord is not None and updated_on_ord > start_ord
 
-        ids = [acct.id_ for acct in query.all() if include_account(acct)]
+        acct_ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
         acct_values, acct_profits, _ = Account.get_value_all(
             s,
             start_ord,
             end_ord,
-            ids=ids,
+            ids=acct_ids,
         )
 
         total: list[Decimal] = [
@@ -229,7 +229,46 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    raise NotImplementedError
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
+        end = datetime.date.today()
+        start = end - datetime.timedelta(days=90)
+        start_ord = start.toordinal()
+        end_ord = end.toordinal()
+
+        indices: dict[str, Decimal] = {}
+        query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
+        for (name,) in query.all():
+            twrr = Asset.index_twrr(s, name, start_ord, end_ord)
+            indices[name] = twrr[-1]
+
+        acct_values, acct_profits, _ = Account.get_value_all(
+            s,
+            start_ord,
+            end_ord,
+            ids=acct_ids,
+        )
+
+        total: list[Decimal] = [
+            sum(item) for item in zip(*acct_values.values(), strict=True)
+        ]
+        total_profit: list[Decimal] = [
+            sum(item) for item in zip(*acct_profits.values(), strict=True)
+        ]
+        twrr = utils.twrr(total, total_profit)
+
+        ctx = {
+            "profit": total_profit[-1],
+            "twrr": twrr[-1],
+            "indices": indices,
+        }
+    return flask.render_template(
+        "performance/dashboard.jinja",
+        data=ctx,
+    )
 
 
 ROUTES: Routes = {
