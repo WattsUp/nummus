@@ -650,3 +650,17 @@ class Account(Base):
             raise exc.UnboundExecutionError
 
         return self.get_profit_by_asset_all(s, start_ord, end_ord, [self.id_])
+
+    @classmethod
+    def ids(cls, s: orm.Session, category: AccountCategory) -> set[int]:
+        """Get Account ids for a specific category.
+
+        Args:
+            s: SQL session to use
+            category: AccountCategory to filter
+
+        Returns:
+            set{Account.id_}
+        """
+        query = s.query(Account.id_).where(Account.category == category)
+        return {acct_id for acct_id, in query.all()}

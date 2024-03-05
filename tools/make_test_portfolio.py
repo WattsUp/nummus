@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import time
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TypeVar
 
 import colorama
 import numpy as np
@@ -25,9 +25,6 @@ from nummus.models import (
 )
 from nummus.portfolio import Portfolio
 
-if TYPE_CHECKING:
-    from nummus import custom_types as t
-
 colorama.init(autoreset=True)
 
 RNG = np.random.default_rng()
@@ -35,10 +32,10 @@ NO_RNG = False
 
 
 def rng_uniform(
-    low: t.Real | float,
-    high: t.Real | float,
+    low: Decimal | float,
+    high: Decimal | float,
     precision: int = 6,
-) -> t.Real:
+) -> Decimal:
     """Return a number from a uniform distribution.
 
     Args:
@@ -72,10 +69,10 @@ def rng_int(low: int, high: int) -> int:
 
 
 def rng_normal(
-    loc: t.Real | float,
-    scale: t.Real | float,
+    loc: Decimal | float,
+    scale: Decimal | float,
     precision: int = 6,
-) -> t.Real:
+) -> Decimal:
     """Return a number from a normal distribution.
 
     Args:
@@ -91,7 +88,10 @@ def rng_normal(
     return round(Decimal(RNG.normal(float(loc), float(scale))), precision)
 
 
-def rng_choice(choices: list[t.Any]) -> t.Any:
+T = TypeVar("T")
+
+
+def rng_choice(choices: list[T]) -> T:
     """Return an random selection from a list of choices.
 
     Args:
@@ -102,21 +102,23 @@ def rng_choice(choices: list[t.Any]) -> t.Any:
     """
     if NO_RNG:
         return choices[0]
-    return RNG.choice(choices)
+    return RNG.choice(choices)  # type: ignore[attr-defined]
 
 
 FINAL_AGE = 80
 # Base prices on real US prices
 BIRTH_YEAR = 1940
 
-BIRTHDAYS: t.DictDate = {"self": datetime.date.today().replace(year=BIRTH_YEAR)}
+BIRTHDAYS: dict[str, datetime.date] = {
+    "self": datetime.date.today().replace(year=BIRTH_YEAR),
+}
 
-INTEREST_RATES: t.DictIntReal = {
+INTEREST_RATES: dict[int, Decimal] = {
     y: 10 ** rng_uniform(Decimal(-3), Decimal(-1.3))
     for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
 }
 
-INFLATION_RATES: t.DictIntReal = {
+INFLATION_RATES: dict[int, Decimal] = {
     y: rng_normal(Decimal(0.0376), Decimal(0.0278))
     for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
 }
@@ -150,7 +152,7 @@ def next_month(date: datetime.date) -> datetime.date:
     return datetime.date(y + m // 12, m % 12 + 1, 1)
 
 
-def make_accounts(p: Portfolio) -> t.DictInt:
+def make_accounts(p: Portfolio) -> dict[str, int]:
     """Create accounts.
 
     Args:
@@ -159,7 +161,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
     Returns:
         Dict{account name: id}
     """
-    accounts: t.DictInt = {}
+    accounts: dict[str, int] = {}
     with p.get_session() as s:
         checking = Account(
             name="Checking",
@@ -234,7 +236,7 @@ def make_accounts(p: Portfolio) -> t.DictInt:
     return accounts
 
 
-def make_assets(p: Portfolio) -> t.DictInt:
+def make_assets(p: Portfolio) -> dict[str, int]:
     """Create assets to buy and sell.
 
     Args:
@@ -243,7 +245,7 @@ def make_assets(p: Portfolio) -> t.DictInt:
     Returns:
         Dict{asset name: id}
     """
-    assets: t.DictInt = {}
+    assets: dict[str, int] = {}
     with p.get_session() as s:
         growth = Asset(
             name="GROWTH",
@@ -275,10 +277,10 @@ def make_assets(p: Portfolio) -> t.DictInt:
         )
         # Don't add AssetValuations so update-assets command can
         sp500 = Asset(
-            name="S&P 500",
+            name="S&P 500 ETF",
             description="Average of the 500 largest publicly traded companies",
             category=AssetCategory.STOCKS,
-            ticker="^GSPC",
+            ticker="SPY",
         )
         # Add Apple so stock splits can be tested
         apple = Asset(
@@ -289,11 +291,11 @@ def make_assets(p: Portfolio) -> t.DictInt:
         )
 
         # Name: [Asset, current price, growth mean, growth stddev]
-        stocks: dict[str, list[Asset | t.Real]] = {
+        stocks: dict[str, list[Asset | Decimal]] = {
             "growth": [growth, Decimal(100), Decimal(0.07), Decimal(0.2)],
             "value": [value, Decimal(100), Decimal(0.05), Decimal(0.05)],
         }
-        real_estate: dict[str, list[Asset | t.Real]] = {
+        real_estate: dict[str, list[Asset | Decimal]] = {
             "house_main": [house_main, Decimal(1.5e3), Decimal(0.05), Decimal(0.02)],
             "house_second": [house_second, Decimal(3e3), Decimal(0.06), Decimal(0.02)],
             "house_third": [house_third, Decimal(5e3), Decimal(0.07), Decimal(0.02)],
@@ -369,7 +371,7 @@ def make_assets(p: Portfolio) -> t.DictInt:
     return assets
 
 
-def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
+def generate_early_savings(p: Portfolio, accts: dict[str, int]) -> None:
     """Generate early savings transactions, namely birthday money.
 
     Args:
@@ -402,7 +404,11 @@ def generate_early_savings(p: Portfolio, accts: t.DictInt) -> None:
     print(f"{Fore.GREEN}Generated early savings")
 
 
-def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
+def generate_income(
+    p: Portfolio,
+    accts: dict[str, int],
+    assets: dict[str, int],
+) -> None:
     """Generate income from working, stopping at retirement.
 
     Args:
@@ -457,7 +463,7 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
                     return date + datetime.timedelta(days=1)
                 return date
 
-            dates: t.Dates = []
+            dates: list[datetime.date] = []
             for m in range(12):
                 date_0 = datetime.date(BIRTH_YEAR + age, m + 1, 5)
                 date_1 = datetime.date(BIRTH_YEAR + age, m + 1, 20)
@@ -604,7 +610,11 @@ def generate_income(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
     print(f"{Fore.GREEN}Generated income")
 
 
-def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
+def generate_housing(
+    p: Portfolio,
+    accts: dict[str, int],
+    assets: dict[str, int],
+) -> None:
     """Generate housing payments.
 
     Args:
@@ -651,8 +661,8 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         def buy_house(
             date: datetime.date,
             house: Asset,
-            price: t.Real,
-        ) -> tuple[t.Real, t.Real, t.Real, t.Real, t.Real]:
+            price: Decimal,
+        ) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal]:
             """Add transactions to buy a house.
 
             Args:
@@ -766,8 +776,8 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         def sell_house(
             date: datetime.date,
             house: Asset,
-            price: t.Real,
-            balance: t.Real,
+            price: Decimal,
+            balance: Decimal,
         ) -> None:
             """Add transactions to sell a house.
 
@@ -878,13 +888,13 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
         def monthly_payment(
             date: datetime.date,
-            balance: t.Real,
-            rate: t.Real,
-            payment: t.Real,
-            escrow: t.Real,
-            pmi: t.Real,
-            pmi_threshold: t.Real,
-        ) -> t.Real:
+            balance: Decimal,
+            rate: Decimal,
+            payment: Decimal,
+            escrow: Decimal,
+            pmi: Decimal,
+            pmi_threshold: Decimal,
+        ) -> Decimal:
             """Add monthly payment transactions.
 
             Args:
@@ -1024,7 +1034,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
         pmi_th = Decimal(0)
 
         for age in range(18, FINAL_AGE + 1):
-            dates: t.Dates = []
+            dates: list[datetime.date] = []
             year = BIRTH_YEAR + age
             for m in range(12):
                 date = datetime.date(year, m + 1, 1)
@@ -1175,7 +1185,7 @@ def generate_housing(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
     print(f"{Fore.GREEN}Generated housing")
 
 
-def generate_food(p: Portfolio, accts: t.DictInt) -> None:
+def generate_food(p: Portfolio, accts: dict[str, int]) -> None:
     """Generate food payments.
 
     Args:
@@ -1191,7 +1201,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
         acct_cc_1: Account = (
             s.query(Account).where(Account.id_ == accts["cc_1"]).scalar()
         )
-        grocery_stores: t.Strings = [
+        grocery_stores: list[str] = [
             "Walmart",
             "Grocery Outlet",
             "Safeway",
@@ -1199,7 +1209,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
             "QFC",
             "Kroger",
         ]
-        restaurants: t.Strings = [
+        restaurants: list[str] = [
             "Pizza Palace",
             "Fine Dining R Us",
             "Italian Garden",
@@ -1226,7 +1236,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
         restaurant_plates = 1
 
         for age in range(18, FINAL_AGE + 1):
-            dates: t.Dates = []
+            dates: list[datetime.date] = []
             year = BIRTH_YEAR + age
             for m in range(12):
                 # Groceries twice a month
@@ -1282,7 +1292,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
                     s.add_all((txn, txn_split))
 
             # Go out to restaurants
-            dates: t.Dates = []
+            dates: list[datetime.date] = []
             for m in range(12):
                 days = RNG.choice(range(1, 29), restaurant_freq, replace=False)
                 for day in days:
@@ -1311,7 +1321,7 @@ def generate_food(p: Portfolio, accts: t.DictInt) -> None:
     print(f"{Fore.GREEN}Generated food")
 
 
-def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
+def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) -> None:
     """Perform retirement changeover.
 
     Args:
@@ -1339,7 +1349,7 @@ def add_retirement(p: Portfolio, accts: t.DictInt, assets: t.DictInt) -> None:
 
         asset_qty = acct_retirement.get_asset_qty(date_sell_ord, date_sell_ord)
 
-        def sell_asset(asset: Asset, qty: t.Real) -> None:
+        def sell_asset(asset: Asset, qty: Decimal) -> None:
             """Add transactions to sell an Asset.
 
             Args:
@@ -1637,7 +1647,7 @@ def main() -> None:
     duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")
 
-    commands.summarize(p)
+    commands.Summarize(p.path, None)
 
 
 if __name__ == "__main__":

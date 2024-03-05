@@ -2,7 +2,7 @@
 *.code-workspace
 .vscode
 .venv*
-.env
+.env*
 
 # Build artifacts
 __pycache__

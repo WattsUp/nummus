@@ -30,7 +30,7 @@ from nummus.models.transaction import TransactionSplit
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z]+(-[A-Z]+)?$")
+_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z][A-Z0-9.]*(-[A-Z]+)?$")
 
 
 class AssetSplit(Base):
@@ -85,10 +85,11 @@ class AssetCategory(BaseEnum):
     COMMODITIES = 4
     FUTURES = 5
     CRYPTOCURRENCY = 6
+    INDEX = 7
 
-    REAL_ESTATE = 7
-    VEHICLE = 8
-    ITEM = 9
+    REAL_ESTATE = 8
+    VEHICLE = 9
+    ITEM = 10
 
 
 class Asset(Base):
@@ -121,7 +122,7 @@ class Asset(Base):
         return super().validate_strings(key, field)
 
     @orm.validates("ticker")
-    def validate_ticker(self, key: str, field: str | None) -> str | None:
+    def validate_ticker(self, _: str, field: str | None) -> str | None:
         """Validates ticker is UPPERCASE.
 
         Args:
@@ -137,10 +138,9 @@ class Asset(Base):
         if field is None or field in ["", "[blank]"]:
             return None
         if not _RE_ASSET_TICKER.match(field):
-            table: str = self.__tablename__
-            table = table.replace("_", " ").capitalize()
             msg = (
-                f"{table} {key} must be uppercase letters only, optional ^ or $ prefix"
+                "Asset ticker must be uppercase letters and numbers only, "
+                "optional ^ or $ prefix"
             )
             raise exc.InvalidORMValueError(msg)
 
@@ -339,6 +339,8 @@ class Asset(Base):
             if sum_unadjusted == 0:
                 # sum_adjusted is an error term, use to make sum of adjusted zero out
                 t_split.asset_quantity = (t_split.asset_quantity or 0) - sum_adjusted
+                # Zero out error term since it has been dealt with
+                sum_adjusted = 0
 
     def prune_valuations(self) -> int:
         """Remove valuations that are not needed due to zero quantity being held.
@@ -351,6 +353,9 @@ class Asset(Base):
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
+        if self.category == AssetCategory.INDEX:
+            # If asset is an INDEX, do not prune
+            return 0
 
         # Date when quantity is zero
         date_ord_zero: int | None = None
@@ -459,14 +464,16 @@ class Asset(Base):
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                sqlalchemy.func.min(TransactionSplit.date_ord),
-                sqlalchemy.func.max(TransactionSplit.date_ord),
-            )
-            .where(TransactionSplit.asset_id == self.id_)
+        query = s.query(TransactionSplit).with_entities(
+            sqlalchemy.func.min(TransactionSplit.date_ord),
+            sqlalchemy.func.max(TransactionSplit.date_ord),
         )
+        # If asset is an INDEX, look at all transactions
+        if self.category == AssetCategory.INDEX:
+            query = query.where(TransactionSplit.asset_id.isnot(None))
+            through_today = True
+        else:
+            query = query.where(TransactionSplit.asset_id == self.id_)
         start_ord, end_ord = query.one()
         start_ord: int
         end_ord: int
@@ -571,3 +578,85 @@ class Asset(Base):
         self.update_splits()
 
         return start, end
+
+    @classmethod
+    def index_twrr(
+        cls,
+        s: orm.Session,
+        name: str,
+        start_ord: int,
+        end_ord: int,
+    ) -> list[Decimal]:
+        """Get the TWRR for an index from start to end date.
+
+        Args:
+            s: SQL session to use
+            name: Name of index
+            start_ord: First date ordinal to evaluate
+            end_ord: Last date ordinal to evaluate (inclusive)
+
+        Returns:
+            list[price ratios]
+        """
+        try:
+            a_id = s.query(Asset.id_).where(Asset.name == name).one()[0]
+        except exc.NoResultFound as e:  # pragma: no cover
+            msg = f"Could not find asset index {name}"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        values = cls.get_value_all(s, start_ord, end_ord, ids=[a_id])[a_id]
+        cost_basis = values[0]
+        return utils.twrr(values, [v - cost_basis for v in values])
+
+    @classmethod
+    def add_indices(cls, s: orm.Session) -> None:
+        """Add Asset indices used for performance comparison.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            list[price ratios]
+        """
+        indices: dict[str, dict[str, str]] = {
+            "^GSPC": {
+                "name": "S&P 500",
+                "description": "A stock market index tracking the stock performance of "
+                "500 of the largest companies listed on stock exchanges in the United "
+                "States",
+            },
+            "^DJI": {
+                "name": "Dow Jones Industrial Average",
+                "description": "A stock market index tracking the stock performance of "
+                "30 prominent companies listed on stock exchanges in the United States",
+            },
+            "^BUK100P": {
+                "name": "Cboe UK 100",
+                "description": "A stock market index tracking the stock performance of "
+                "100 of the largest companies listed on stock exchanges in the United "
+                "Kingdom",
+            },
+            "^N225": {
+                "name": "Nikkel Index",
+                "description": "A stock market index for the Tokyo Stock Exchange",
+            },
+            "^N100": {
+                "name": "Euronext 100 Index",
+                "description": "A stock market index tracking the stock performance of "
+                "100 of the largest companies listed on Euronext",
+            },
+            "^HSI": {
+                "name": "Hang Seng Index",
+                "description": "A freefloat-adjusted market-capitalization-weighted "
+                "stock-market index in Hong Kong",
+            },
+        }
+        for ticker, item in indices.items():
+            a = Asset(
+                name=item["name"],
+                description=item["description"],
+                category=AssetCategory.INDEX,
+                interpolate=False,
+                ticker=ticker,
+            )
+            s.add(a)
+        s.commit()

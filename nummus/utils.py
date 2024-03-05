@@ -10,6 +10,8 @@ import shutil
 import sys
 from decimal import Decimal
 
+from scipy import optimize
+
 from nummus import global_config
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
@@ -503,6 +505,80 @@ def interpolate_linear(values: list[tuple[int, Decimal]], n: int) -> list[Decima
         slope_i += 1
 
     return result
+
+
+def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
+    """Compute the Time-Weighted Rate of Return.
+
+    Args:
+        values: Daily value of portfolio
+        profit: Daily profit of portfolio
+
+    Returns:
+        List of profit ratio [-1, inf) for each day
+    """
+    n = len(values)
+    current_ratio = Decimal(1)
+    current_return = current_ratio - 1
+
+    daily_returns: list[Decimal] = [Decimal(0)] * n
+    prev_value = Decimal(0)
+    prev_profit = Decimal(0)
+    for i, (v, p) in enumerate(zip(values, profit, strict=True)):
+        daily_profit = p - prev_profit
+        cost_basis = v - daily_profit if prev_value == 0 else prev_value
+
+        if cost_basis != 0:
+            current_ratio = current_ratio * (1 + daily_profit / cost_basis)
+            current_return = current_ratio - 1
+
+        daily_returns[i] = current_return
+
+        prev_profit = p
+        prev_value = v
+
+    return daily_returns
+
+
+def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
+    """Compute the Money-Weighted Rate of Return.
+
+    Args:
+        values: Daily value of portfolio
+        profit: Daily profit of portfolio
+
+    Returns:
+        Annual profit ratio [-1, inf), rounded to 6 decimals due to float conversion
+    """
+    if not any(values):
+        return Decimal(0)
+    n = len(values)
+
+    cash_flows: dict[int, float] = {}
+    prev_cost_basis = Decimal(0)
+    for i, (v, p) in enumerate(zip(values, profit, strict=True)):
+        cost_basis = v - p
+        cash_flow = prev_cost_basis - cost_basis
+        if cash_flow != 0:
+            cash_flows[i] = float(cash_flow)
+
+        prev_cost_basis = cost_basis
+    cash_flows[n - 1] = float(values[-1]) + cash_flows.get(n - 1, 0)
+    if len(cash_flows) == 1:
+        r = profit[-1] / (values[-1] - profit[-1]) + 1
+        return round(r ** Decimal(DAYS_IN_YEAR) - 1, 6)
+
+    def xnpv(r: float, cfs: dict[int, float]) -> float:
+        if r <= 0:
+            return float("inf")
+        return sum((cf / r ** (i / DAYS_IN_YEAR) for i, cf in cfs.items()))
+
+    result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
+    if not isinstance(result, float):  # pragma: no cover
+        # Don't need to test type protection
+        msg = f"Optimize result was {type(result)} not float"
+        raise TypeError(msg)
+    return round(Decimal(result - 1), 6)
 
 
 def print_table(table: list[list[str] | None]) -> None:

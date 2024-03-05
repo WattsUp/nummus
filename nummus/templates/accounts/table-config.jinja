@@ -6,9 +6,11 @@
            value="{{ txn_table["search"] }}"
            placeholder="Search Transactions"
            class="mr-8 grow"
-           hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
+           hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
+           autocomplete="off">
     <select name="period"
-            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}">
+            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
+            autocomplete="off">
         {% with period = txn_table["period"] %}
             {% include "shared/period-options.jinja" %}
         {% endwith %}
@@ -17,13 +19,15 @@
            name="start"
            value="{{ txn_table["start"] }}"
            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
     to
     <input type="date"
            name="end"
            value="{{ txn_table["end"] }}"
            hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], period="custom") }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed">
+           hx-trigger="blur changed,keyup[keyCode==13] changed"
+           autocomplete="off">
 </div>
 <div id="txn-paging"
      class="flex w-full justify-end my-1"

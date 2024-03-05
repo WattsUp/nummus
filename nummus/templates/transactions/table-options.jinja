@@ -6,7 +6,8 @@
        hx-get="{{ url_for("transactions.options", field=name) }}"
        hx-target="#txn-{{ name }}"
        hx-swap="innerHTML"
-       hx-trigger="keyup changed delay:250ms">
+       hx-trigger="keyup changed delay:250ms"
+       autocomplete="off">
 <div class="options overflow-y-scroll overflow-x-hidden h-60 pr-1">
     {% for option in options %}
         <label class="flex w-full checkbox {{ "hidden" if option["hidden"] }}">
@@ -14,7 +15,8 @@
                    name="{{ name }}"
                    value="{{ option["name"] }}"
                    {% if option["checked"] %}checked{% endif %}
-                   hx-get="{{ url_for("transactions.table", period="custom") }}">
+                   hx-get="{{ url_for("transactions.table", period="custom") }}"
+                   autocomplete="off">
             {% with class = "w-5 h-5" %}
                 {% include "svg/check.svg" %}
             {% endwith %}

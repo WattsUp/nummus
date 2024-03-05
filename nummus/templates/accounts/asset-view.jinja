@@ -18,7 +18,7 @@
     </div>
     <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ asset["end_value"] | money }}</div>
     <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ asset["end_value_ratio"] | percent }}</div>
-    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">
+    <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ asset["profit"] | pnl_color }}">
         {% if asset["profit"] is not none %}{{ asset["profit"] | money }}{% endif %}
     </div>
 </div>

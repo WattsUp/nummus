@@ -1,0 +1,21 @@
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
+         hx-get="{{ url_for("performance.page") }}"
+         hx-trigger="update-account from:body, update-asset from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Performance</h1>
+    <div class="w-full text-lg">
+        <span class="underline decoration-2 decoration-dotted decoration-blue">Time-Weighted Return Rate</span>
+        versus
+        <span class="underline decoration-2 decoration-dotted decoration-yellow">Market Indices</span>
+    </div>
+    <div class="w-full h-96">
+        <canvas id="performance-chart-canvas"></canvas>
+    </div>
+    {% include "performance/chart-config.jinja" %}
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Accounts</h1>
+    {% with accounts = chart["accounts"], defer=chart["defer"] %}
+        {% include "performance/accounts.jinja" %}
+    {% endwith %}
+    {% include "performance/chart-data.jinja" %}
+</section>

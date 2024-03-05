@@ -24,7 +24,11 @@
                 <tr>
                     <td>Date</td>
                     <td>
-                        <input class="w-full" name="date" type="date" value="{{ parent["date"] }}">
+                        <input class="w-full"
+                               name="date"
+                               type="date"
+                               value="{{ parent["date"] }}"
+                               autocomplete="off">
                     </td>
                     <td class="w-8"></td>
                     <td>Total Amount</td>
@@ -39,7 +43,8 @@
                         <label class="checkbox">
                             <input type="checkbox"
                                    name="locked"
-                                   {% if parent["locked"] %}checked{% endif %}>
+                                   {% if parent["locked"] %}checked{% endif %}
+                                   autocomplete="off">
                             {% with class = "w-6 h-6" %}
                                 {% include "svg/lock.svg" %}
                             {% endwith %}

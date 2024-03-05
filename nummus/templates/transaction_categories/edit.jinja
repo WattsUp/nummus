@@ -17,13 +17,16 @@
                 <tr>
                     <td>Category Name</td>
                     <td>
-                        <input name="name" value="{{ category["name"] or "" }}" class="w-full">
+                        <input name="name"
+                               value="{{ category["name"] or "" }}"
+                               class="w-full"
+                               autocomplete="off">
                     </td>
                 </tr>
                 <tr>
                     <td>Group</td>
                     <td>
-                        <select name="group">
+                        <select name="group" autocomplete="off">
                             {% for group in category["group_type"] %}
                                 <option value="{{ group | enum }}"
                                         {% if group == category["group"] %}selected{% endif %}>
@@ -39,7 +42,8 @@
                         <label class="flex gap-4 justify-between w-full checkbox">
                             <input type="checkbox"
                                    name="is-pnl"
-                                   {% if category["is_profit_loss"] %}checked{% endif %}>
+                                   {% if category["is_profit_loss"] %}checked{% endif %}
+                                   autocomplete="off">
                             {% with class = "w-5 h-5" %}
                                 {% include "svg/check.svg" %}
                             {% endwith %}

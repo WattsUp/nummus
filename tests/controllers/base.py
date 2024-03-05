@@ -102,6 +102,7 @@ class WebTestBase(TestBase):
                 "tag_1": Tag for transaction 1
             }
         """
+        self._clear_portfolio()
         p = self._portfolio
 
         today = datetime.date.today()
@@ -185,6 +186,25 @@ class WebTestBase(TestBase):
             "tag_1": tag_1,
         }
 
+    def _clear_portfolio(self) -> None:
+        """Clear all content from portfolio."""
+        # Clean portfolio
+        # In order of deletion, so children models first
+        models = [
+            AssetValuation,
+            Budget,
+            Credentials,
+            TransactionSplit,
+            Transaction,
+            Asset,
+            Account,
+        ]
+        with self._portfolio.get_session() as s:
+            for model in models:
+                for instance in s.query(model).all():
+                    s.delete(instance)
+                s.commit()
+
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -234,23 +254,7 @@ class WebTestBase(TestBase):
     def tearDown(self, **_) -> None:
         flask.render_template = self._original_render_template
 
-        # Clean portfolio
-        # In order of deletion, so children models first
-        models = [
-            AssetValuation,
-            Budget,
-            Credentials,
-            TransactionSplit,
-            Transaction,
-            Asset,
-            Account,
-        ]
-        with self._portfolio.get_session() as s:
-            for model in models:
-                for instance in s.query(model).all():
-                    s.delete(instance)
-                s.commit()
-
+        self._clear_portfolio()
         super().tearDown(clean=False)
 
     def web_open(

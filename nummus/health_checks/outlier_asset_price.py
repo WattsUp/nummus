@@ -43,8 +43,10 @@ class OutlierAssetPrice(Base):
                 self._commit_issues()
                 return
 
+            # List of (uri, source, field)
+            issues: list[tuple[str, str, str]] = []
+
             assets = Asset.map_name(s)
-            asset_len = max(len(a) for a in assets.values())
 
             asset_valuations = Asset.get_value_all(s, start_ord, today_ord)
 
@@ -79,20 +81,27 @@ class OutlierAssetPrice(Base):
                 v_price_low = v_price * (1 - self._RANGE)
                 v_price_high = v_price * (1 + self._RANGE)
                 if t_price < v_price_low:
-                    msg = (
-                        f"{datetime.date.fromordinal(date_ord)}:"
-                        f" {assets[a_id]:{asset_len}} was traded at"
-                        f" {utils.format_financial(t_price)} which is below valuation"
-                        f" of {utils.format_financial(v_price)}"
+                    issues.append(
+                        (
+                            uri,
+                            f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
+                            f"was traded at {utils.format_financial(t_price)} which is "
+                            f"below valuation of {utils.format_financial(v_price)}",
+                        ),
                     )
-                    self._issues_raw[uri] = msg
                 elif t_price > v_price_high:
-                    msg = (
-                        f"{datetime.date.fromordinal(date_ord)}:"
-                        f" {assets[a_id]:{asset_len}} was traded at"
-                        f" {utils.format_financial(t_price)} which is above valuation"
-                        f" of {utils.format_financial(v_price)}"
+                    issues.append(
+                        (
+                            uri,
+                            f"{datetime.date.fromordinal(date_ord)}: {assets[a_id]}",
+                            f"was traded at {utils.format_financial(t_price)} which is "
+                            f"above valuation of {utils.format_financial(v_price)}",
+                        ),
                     )
+            if len(issues) != 0:
+                source_len = max(len(item[1]) for item in issues)
+                for uri, source, field in issues:
+                    msg = f"{source:{source_len}} {field}"
                     self._issues_raw[uri] = msg
 
         self._commit_issues()

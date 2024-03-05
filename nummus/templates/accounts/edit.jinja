@@ -30,7 +30,8 @@
                 <input type="checkbox"
                        name="closed"
                        {% if account["closed"] %}checked{% endif %}
-                       id="account-closed">
+                       id="account-closed"
+                       autocomplete="off">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
@@ -40,7 +41,8 @@
                 <input type="checkbox"
                        name="emergency"
                        {% if account["emergency"] %}checked{% endif %}
-                       id="account-emergency">
+                       id="account-emergency"
+                       autocomplete="off">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
                 {% endwith %}
@@ -56,25 +58,32 @@
                         <td>
                             <input class="w-full"
                                    name="institution"
-                                   value="{{ account["institution"] }}">
+                                   value="{{ account["institution"] }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>
                         <td>Account Number</td>
                         <td>
-                            <input class="w-full" name="number" value="{{ account["number"] or "" }}">
+                            <input class="w-full"
+                                   name="number"
+                                   value="{{ account["number"] or "" }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>
                         <td>Account Name</td>
                         <td>
-                            <input class="w-full" name="name" value="{{ account["name"] }}">
+                            <input class="w-full"
+                                   name="name"
+                                   value="{{ account["name"] }}"
+                                   autocomplete="off">
                         </td>
                     </tr>
                     <tr>
                         <td>Account Category</td>
                         <td>
-                            <select class="w-full" name="category">
+                            <select class="w-full" name="category" autocomplete="off">
                                 {% for cat in account["category_type"] %}
                                     <option value="{{ cat | enum }}"
                                             {% if cat == account["category"] %}selected{% endif %}>

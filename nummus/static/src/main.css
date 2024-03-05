@@ -9,7 +9,7 @@
 
     input,
     select {
-        @apply h-[1.75rem] border px-1;
+        @apply h-[1.75rem] border px-1 bg-transparent;
     }
 
     svg {
@@ -204,6 +204,22 @@
         100% {
             transform: rotate(360deg);
         }
+    }
+
+    .tooltip {
+        @apply relative inline-block underline decoration-dotted;
+    }
+
+    .tooltip-text {
+        @apply invisible w-64 bg-grey-800 text-white text-center rounded p-1 absolute z-10 opacity-0 transition-opacity;
+    }
+
+    .tooltip-text::after {
+        @apply content-[""] absolute top-1/2 border-4 border-solid border-transparent;
+    }
+
+    .tooltip:hover .tooltip-text {
+        @apply visible opacity-100;
     }
 }
 

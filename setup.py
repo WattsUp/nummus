@@ -34,10 +34,18 @@ required = [
     "pyspellchecker",
     "tqdm",
     "argcomplete",
+    "scipy",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
-    "test": ["AutoDict", "coverage", "numpy", "time-machine", "tomli"],
+    "test": [
+        "AutoDict",
+        "coverage",
+        "numpy",
+        "time-machine",
+        "tomli",
+        "numpy-financial",
+    ],
 }
 extras_require["dev"] = extras_require["test"] + [
     "ruff",
