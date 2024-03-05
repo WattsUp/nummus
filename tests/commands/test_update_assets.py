@@ -173,6 +173,6 @@ class TestUpdateAssets(TestBase):
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.RED}Asset Banana Inc. (ORANGE) failed to update. "
-            "Error: BANANA: No timezone found, symbol may be delisted\n"
+            "Error: ORANGE: No timezone found, symbol may be delisted\n"
         )
         self.assertEqual(fake_stdout, target)

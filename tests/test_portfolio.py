@@ -861,7 +861,7 @@ class TestPortfolio(TestBase):
                     a.ticker,
                     None,
                     None,
-                    "BANANA: No timezone found, symbol may be delisted",
+                    "ORANGE: No timezone found, symbol may be delisted",
                 ),
             ]
             self.assertEqual(result, target)

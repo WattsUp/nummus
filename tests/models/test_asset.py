@@ -701,6 +701,25 @@ class TestAsset(TestBase):
         self.assertEqual(date_ord, today_ord + 3)
         s.rollback()
 
+        # Indices should not be pruned
+        a = Asset(name="Banana Index", category=AssetCategory.INDEX)
+        s.add(a)
+        s.commit()
+        for i in range(-3, 3 + 1):
+            av = AssetValuation(
+                asset_id=a.id_,
+                date_ord=today_ord + i,
+                value=self.random_decimal(-1, 1),
+            )
+            s.add(av)
+        s.commit()
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 0)
+
+        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        self.assertEqual(n, 7)
+
     def test_update_valuations(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
@@ -899,3 +918,60 @@ class TestAsset(TestBase):
         self.assertEqual(n, 1)
         n = s.query(AssetSplit).where(AssetSplit.id_ == split_id).count()
         self.assertEqual(n, 1)
+
+        # Add index which should be updated through today
+        a = Asset(name="Banana Index", category=AssetCategory.INDEX, ticker="^BANANA")
+        s.add(a)
+        s.commit()
+
+        r_start, r_end = a.update_valuations(through_today=False)
+        s.commit()
+        self.assertEqual(r_start, date - datetime.timedelta(days=7))
+        self.assertEqual(r_end, today)
+
+    def test_index_twrr(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        # Add index which should be updated through today
+        a = Asset(name="Banana Index", category=AssetCategory.INDEX, ticker="^BANANA")
+        s.add(a)
+        s.commit()
+
+        av = AssetValuation(
+            asset_id=a.id_,
+            date_ord=today_ord - 1,
+            value=Decimal(1),
+        )
+        s.add(av)
+        av = AssetValuation(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            value=Decimal(2),
+        )
+        s.add(av)
+        s.commit()
+
+        target = [
+            Decimal(0),
+            Decimal(0),
+            Decimal(1),
+        ]
+        result = Asset.index_twrr(s, "Banana Index", today_ord - 2, today_ord)
+        self.assertEqual(result, target)
+
+    def test_add_indices(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        Asset.add_indices(s)
+
+        n = s.query(Asset).count()
+        self.assertEqual(n, 6)
+
+        # They should all be indices
+        n = s.query(Asset).where(Asset.category == AssetCategory.INDEX).count()
+        self.assertEqual(n, 6)

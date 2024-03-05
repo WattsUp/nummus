@@ -52,6 +52,11 @@ class TestAccount(TestBase):
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, acct, "name", "a")
 
+        ids = Account.ids(s, AccountCategory.CASH)
+        self.assertEqual(ids, {acct.id_})
+        ids = Account.ids(s, AccountCategory.CREDIT)
+        self.assertEqual(ids, set())
+
     def test_add_transactions(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)

@@ -108,10 +108,10 @@ def ctx_chart() -> dict[str, object]:
 
         total: list[Decimal] = [
             sum(item) for item in zip(*acct_values.values(), strict=True)
-        ]
+        ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
             sum(item) for item in zip(*acct_profits.values(), strict=True)
-        ]
+        ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
         mwrr = utils.mwrr(total, total_profit)
 
@@ -238,6 +238,7 @@ def dashboard() -> str:
         start = end - datetime.timedelta(days=90)
         start_ord = start.toordinal()
         end_ord = end.toordinal()
+        n = end_ord - start_ord + 1
 
         indices: dict[str, Decimal] = {}
         query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
@@ -254,10 +255,10 @@ def dashboard() -> str:
 
         total: list[Decimal] = [
             sum(item) for item in zip(*acct_values.values(), strict=True)
-        ]
+        ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
             sum(item) for item in zip(*acct_profits.values(), strict=True)
-        ]
+        ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
 
         ctx = {

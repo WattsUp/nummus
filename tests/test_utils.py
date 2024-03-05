@@ -719,6 +719,18 @@ class TestUtils(TestBase):
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
+        values = [Decimal(101)]
+        profit = [Decimal(1)]
+        result = utils.mwrr(values, profit)
+        target = round(Decimal((101 / 100) ** 365.25) - 1, 6)
+        self.assertEqual(result, target)
+
+        values = [Decimal(20)]
+        profit = [Decimal(-100)]
+        result = utils.mwrr(values, profit)
+        target = Decimal(-1)
+        self.assertEqual(result, target)
+
         # Profit on buy day
         values = [
             Decimal(0),

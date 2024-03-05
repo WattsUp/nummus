@@ -564,8 +564,9 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
 
         prev_cost_basis = cost_basis
     cash_flows[n - 1] = float(values[-1]) + cash_flows.get(n - 1, 0)
-
-    cost_basis = values[-1] - profit[-1]
+    if len(cash_flows) == 1:
+        r = profit[-1] / (values[-1] - profit[-1]) + 1
+        return round(r ** Decimal(DAYS_IN_YEAR) - 1, 6)
 
     def xnpv(r: float, cfs: dict[int, float]) -> float:
         if r <= 0:
