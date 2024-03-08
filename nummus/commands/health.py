@@ -61,6 +61,7 @@ class Health(Base):
             default=False,
             action="store_true",
             help="print description of checks always",
+            dest="always_descriptions",
         )
         parser.add_argument(
             "-l",
@@ -87,6 +88,7 @@ class Health(Base):
             nargs="*",
             metavar="ISSUE_URI",
             help="ignore an issue specified by its URI",
+            dest="ignores",
         )
 
     @override
