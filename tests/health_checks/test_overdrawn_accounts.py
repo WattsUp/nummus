@@ -53,7 +53,6 @@ class TestOverdrawnAccounts(TestBase):
             s.add_all((acct_checking, acct_credit))
             s.commit()
             acct_checking_id = acct_checking.id_
-            acct_checking_uri = acct_checking.uri
             acct_credit_id = acct_credit.id_
 
             txn = Transaction(
@@ -94,7 +93,7 @@ class TestOverdrawnAccounts(TestBase):
 
             i = s.query(HealthCheckIssue).one()
             self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, f"{acct_checking_uri}.{today}")
+            self.assertEqual(i.value, f"{acct_checking_id}.{today_ord}")
             uri = i.uri
 
         target = {

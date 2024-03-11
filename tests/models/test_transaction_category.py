@@ -66,4 +66,4 @@ class TestTransactionCategory(TestBase):
 
         query = s.query(TransactionCategory)
         self.assertEqual(query.count(), n_income + n_expense + n_other)
-        self.assertEqual(query.count(), 62)
+        self.assertEqual(query.count(), 61)
