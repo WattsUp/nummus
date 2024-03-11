@@ -70,7 +70,10 @@ class EmptyFields(Base):
                         TransactionSplit.date_ord,
                         TransactionSplit.account_id,
                     )
-                    .where(field.is_(None))
+                    .where(
+                        field.is_(None),
+                        TransactionSplit.asset_id.is_(None),
+                    )
                 )
                 for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
                     t_id: int

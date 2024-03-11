@@ -404,18 +404,18 @@ class Asset(Base):
             trim_start: int | None = None
             trim_end: int | None = None
             if date_ord_sell is not None:
-                # Get date of oldest valuation after the sell
+                # Get date of oldest valuation after or on the sell
                 query = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
-                    AssetValuation.date_ord > date_ord_sell,
+                    AssetValuation.date_ord >= date_ord_sell,
                 )
                 trim_start = query.scalar()
 
             if date_ord_buy is not None:
-                # Get date of most recent valuation before the buy
+                # Get date of most recent valuation or on before the buy
                 query = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
-                    AssetValuation.date_ord < date_ord_buy,
+                    AssetValuation.date_ord <= date_ord_buy,
                 )
                 trim_end = query.scalar()
 

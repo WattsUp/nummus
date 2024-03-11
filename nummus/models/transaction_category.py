@@ -117,7 +117,6 @@ class TransactionCategory(Base):
                 "Transfers": (True, False),
                 "Uncategorized": (True, False),
                 "Fraud": (False, False),
-                "Loans": (False, False),
             },
         }
 
