@@ -6,21 +6,18 @@ import datetime
 import re
 from typing import TYPE_CHECKING
 
-import spellchecker
+import sqlalchemy
 from typing_extensions import override
 
+from nummus import utils
 from nummus.health_checks.base import Base
-from nummus.models import (
-    Account,
-    Asset,
-    AssetCategory,
-    TransactionCategory,
-    TransactionSplit,
-    YIELD_PER,
-)
+from nummus.models import Account, Asset, AssetCategory, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import portfolio
+
+# If a non-unique word has a bunch of instances, it is probably not spelled wrong
+_LIMIT_FREQUENCY = 10
 
 
 class Typos(Base):
@@ -34,7 +31,6 @@ class Typos(Base):
 
     @override
     def test(self) -> None:
-        spell = spellchecker.SpellChecker()
         # Known correct words
         known = {
             "401k",
@@ -49,20 +45,36 @@ class Typos(Base):
 
         with self._p.get_session() as s:
             accounts = Account.map_name(s)
+            issues: dict[str, tuple[str, str, str]] = {}
 
             # Create a dict of every word found with the first instance detected
             # Dictionary {word.lower(): (word, source, field)}
             words: dict[str, tuple[str, str, str]] = {}
+            frequency: dict[str, int] = {}
+            proper_nouns: set[str] = set()
 
-            def add(s: str | None, source: str, field: str) -> None:
+            def add(s: str | None, source: str, field: str, count: int) -> None:
                 if s is None:
                     return
-                for token in self._RE_WORDS.split(s):
-                    if not token:
-                        continue
-                    token_l = token.lower()
-                    if token_l not in words:
-                        words[token_l] = (token, source, field)
+                if s not in words:
+                    words[s] = (s, source, field)
+                    frequency[s] = 0
+                frequency[s] += count
+
+            def check_duplicates() -> None:
+                words_dedupe = utils.dedupe(words.keys())
+                for word, item in words.items():
+                    if word in words_dedupe:
+                        proper_nouns.add(word)
+                    elif frequency[word] < _LIMIT_FREQUENCY:
+                        issues[word] = item
+                words.clear()
+                frequency.clear()
+
+            for name in accounts.values():
+                source = f"Account {name}"
+                add(name, source, "name", 1)
+            check_duplicates()
 
             query = s.query(Account).with_entities(
                 Account.id_,
@@ -73,30 +85,18 @@ class Typos(Base):
                 institution: str
                 name = accounts[acct_id]
                 source = f"Account {name}"
-                add(name, source, "name")
-                add(institution, source, "institution")
+                add(institution, source, "institution", 1)
+            check_duplicates()
 
-            query = (
-                s.query(Asset)
-                .with_entities(
-                    Asset.name,
-                    Asset.description,
-                )
-                .where(Asset.category != AssetCategory.INDEX)
-            )
-            for name, description in query.yield_per(YIELD_PER):
+            query = s.query(Asset.name).where(Asset.category != AssetCategory.INDEX)
+            for (name,) in query.yield_per(YIELD_PER):
                 name: str
-                description: str
                 source = f"Asset {name}"
-                add(name, source, "name")
-                add(description, source, "description")
+                add(name, source, "name", 1)
+            check_duplicates()
 
-            # TODO (WattsUp): Since payees are very unique they are almost all
-            # misspelled. Instead of comparing to SpellChecker, compare to self looking
-            # for payees within 2 distance from each other
             txn_fields = [
                 TransactionSplit.payee,
-                TransactionSplit.description,
                 TransactionSplit.tag,
             ]
             for field in txn_fields:
@@ -106,34 +106,30 @@ class Typos(Base):
                         TransactionSplit.date_ord,
                         TransactionSplit.account_id,
                         field,
+                        sqlalchemy.func.count(),
                     )
                     .group_by(field)
                 )
-                for date_ord, acct_id, value in query.yield_per(YIELD_PER):
+                for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
                     date_ord: int
                     acct_id: int
                     value: str
                     date = datetime.date.fromordinal(date_ord)
                     source = f"{date} - {accounts[acct_id]}"
-                    add(value, source, field.key)
+                    add(value, source, field.key, count)
+                check_duplicates()
 
-            query = s.query(TransactionCategory.name)
-            for (name,) in query.yield_per(YIELD_PER):
-                name: str
-                add(name, f"Txn category {name}", "name")
+            # TODO (WattsUp): Add check spelling of descriptions
 
-            words = {k: v for k, v in words.items() if k not in known}
-            words = {k: v for k, v in words.items() if k in spell.unknown(words)}
-
-            if len(words) != 0:
+            if len(issues) != 0:
                 source_len = 0
                 field_len = 0
 
-                for _, source, field in words.values():
+                for _, source, field in issues.values():
                     source_len = max(source_len, len(source))
                     field_len = max(field_len, len(field))
 
-                for uri, (word, source, field) in words.items():
+                for uri, (word, source, field) in issues.items():
                     # Getting a suggested correction is slow and error prone,
                     # Just say if a word is outside of the dictionary
                     msg = f"{source:{source_len}} {field:{field_len}}: {word}"

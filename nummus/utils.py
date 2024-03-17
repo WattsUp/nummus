@@ -9,10 +9,16 @@ import re
 import shutil
 import sys
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
+from rapidfuzz import process
 from scipy import optimize
 
 from nummus import global_config
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
@@ -21,6 +27,7 @@ _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 
 MIN_STR_LEN = 2
 SEARCH_THRESHOLD = 60
+DUPLICATE_THRESHOLD = 90
 
 THRESHOLD_MONTHS = 12 * 1.5
 THRESHOLD_WEEKS = 4 * 2
@@ -666,3 +673,29 @@ def print_table(table: list[list[str] | None]) -> None:
             print("│" + "│".join(formatted_row) + "│")
 
     print("╰" + "┴".join("─" * n for n in col_widths) + "╯")
+
+
+def dedupe(strings: Iterable[str]) -> set[str]:
+    """Deduplicate a set of strings using fuzzy matching.
+
+    Args:
+        strings: Set of strings that contains duplicates
+
+    Returns:
+        Set of strings without similar items
+    """
+    strings = set(strings)
+    unique: set[str] = set()
+
+    for s in strings:
+        extracted = process.extract(
+            s,
+            strings,
+            limit=None,
+            processor=lambda s: s.lower(),
+            score_cutoff=DUPLICATE_THRESHOLD,
+        )
+        if len(extracted) == 1:
+            unique.add(s)
+
+    return unique
