@@ -27,7 +27,7 @@ _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
 
 MIN_STR_LEN = 2
 SEARCH_THRESHOLD = 60
-DUPLICATE_THRESHOLD = 90
+DUPLICATE_THRESHOLD = 80
 
 THRESHOLD_MONTHS = 12 * 1.5
 THRESHOLD_WEEKS = 4 * 2
@@ -697,5 +697,15 @@ def dedupe(strings: Iterable[str]) -> set[str]:
         )
         if len(extracted) == 1:
             unique.add(s)
+        else:
+            # Add the first result as the canonical entry
+            extracted = sorted(
+                extracted,
+                key=lambda item: (
+                    len(item[0]),
+                    item[0].lower(),
+                ),
+            )
+            unique.add(extracted[0][0])
 
     return unique
