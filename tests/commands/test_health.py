@@ -39,7 +39,16 @@ class TestHealth(TestBase):
             health_checks.CHECKS = [MockCheck]
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -49,7 +58,16 @@ class TestHealth(TestBase):
             self.assertEqual(fake_stdout, target)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, always_descriptions=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=True,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -63,7 +81,16 @@ class TestHealth(TestBase):
             d["1"] = "Missing some info"
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, limit=0)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=0,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -94,7 +121,16 @@ class TestHealth(TestBase):
             d.pop("1")
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, ignores=[uri_0])
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=[uri_0],
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -111,7 +147,16 @@ class TestHealth(TestBase):
 
             MockCheck._SEVERE = True  # noqa: SLF001
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, no_ignores=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=True,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -136,7 +181,16 @@ class TestHealth(TestBase):
             self.assertEqual(fake_stdout, target)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, clear_ignores=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=True,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -163,7 +217,16 @@ class TestHealth(TestBase):
             # Solving the issue should get rid of the Ignore
             d.pop("0")
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)

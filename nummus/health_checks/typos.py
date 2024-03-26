@@ -33,7 +33,7 @@ class Typos(Base):
     def __init__(
         self,
         p: portfolio.Portfolio,
-        *_,
+        *,
         no_ignores: bool = False,
         no_description_typos: bool = False,
     ) -> None:
@@ -44,7 +44,7 @@ class Typos(Base):
             no_ignores: True will print issues that have been ignored
             no_description_typos: True will not check descriptions for typos
         """
-        super().__init__(p, *_, no_ignores=no_ignores)
+        super().__init__(p, no_ignores=no_ignores)
         self._no_description_typos = no_description_typos
 
     @override

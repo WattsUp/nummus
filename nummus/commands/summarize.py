@@ -62,8 +62,8 @@ class Summarize(Base):
         self,
         path_db: Path,
         path_password: Path | None,
-        *_,
-        include_all: bool = False,
+        *,
+        include_all: bool,
     ) -> None:
         """Initize summarize command.
 

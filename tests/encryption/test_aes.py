@@ -16,7 +16,7 @@ else:
 
 
 class TestEncryption(TestBase):
-    def setUp(self, *_, clean: bool = True) -> None:
+    def setUp(self, *, clean: bool = True) -> None:
         super().setUp(clean=clean)
         if NO_ENCRYPTION:
             self.skipTest("Encryption is not installed")

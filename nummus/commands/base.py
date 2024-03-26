@@ -25,7 +25,7 @@ class Base(ABC):
         self,
         path_db: Path,
         path_password: Path | None,
-        *_,
+        *,
         do_unlock: bool = True,
     ) -> None:
         """Initize base command.

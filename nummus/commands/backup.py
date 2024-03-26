@@ -61,9 +61,9 @@ class Restore(Base):
         self,
         path_db: Path,
         path_password: Path | None,
-        tar_ver: int | None = None,
-        *_,
-        list_ver: bool = False,
+        tar_ver: int | None,
+        *,
+        list_ver: bool,
     ) -> None:
         """Initize restore command.
 

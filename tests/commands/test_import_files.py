@@ -58,7 +58,7 @@ class TestImport(TestBase):
         # Try importing with a missing file, should restore from backup
         paths = [file_a, file_missing]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)
@@ -78,7 +78,7 @@ class TestImport(TestBase):
         # Try importing with a bad file, should restore from backup
         paths = [file_a, file_c]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)
@@ -102,7 +102,7 @@ class TestImport(TestBase):
         # Valid import with directories
         paths = [file_a, file_dir]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertEqual(rc, 0)
@@ -119,7 +119,7 @@ class TestImport(TestBase):
         # Import same files again, should fail
         paths = [file_a, file_c]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)

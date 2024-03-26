@@ -279,7 +279,7 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    def import_file(self, path: Path, *_, force: bool = False) -> None:
+    def import_file(self, path: Path, *, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
         Args:
@@ -521,7 +521,7 @@ class Portfolio:
     def find_similar_transaction(
         self,
         txn: Transaction,
-        *_,
+        *,
         cache_ok: bool = True,
         do_commit: bool = True,
     ) -> int | None:
@@ -914,7 +914,6 @@ class Portfolio:
                 ticker = asset.ticker or ""
                 try:
                     start, end = asset.update_valuations(
-                        s,
                         through_today=asset.id_ in currently_held_assets,
                     )
                 except exc.AssetWebError as e:

@@ -19,7 +19,7 @@ class TestBackUp(TestBase):
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=True)
+            c = backup.Restore(path_db, None, list_ver=True, tar_ver=None)
             rc = c.run()
         self.assertEqual(rc, 0)
 
@@ -43,7 +43,7 @@ class TestBackUp(TestBase):
         self.assertFalse(path_db.exists(), "Portfolio does exist")
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=True)
+            c = backup.Restore(path_db, None, list_ver=True, tar_ver=None)
             rc = c.run()
         self.assertEqual(rc, 0)
 
@@ -52,7 +52,7 @@ class TestBackUp(TestBase):
         self.assertEqual(fake_stdout[: len(target)], target)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None)
+            c = backup.Restore(path_db, None, list_ver=False, tar_ver=None)
             rc = c.run()
         self.assertEqual(rc, 0)
 
@@ -68,7 +68,7 @@ class TestBackUp(TestBase):
 
         path_backup.unlink()
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, tar_ver=1)
+            c = backup.Restore(path_db, None, list_ver=False, tar_ver=1)
             rc = c.run()
         self.assertNotEqual(rc, 0)
 

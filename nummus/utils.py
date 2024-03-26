@@ -147,7 +147,7 @@ def parse_real(s: str | None) -> Decimal | None:
     return Decimal(clean)
 
 
-def format_financial(x: Decimal, precision: int = 2, *_, plus: bool = False) -> str:
+def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> str:
     """Format a number to financial notation.
 
     Args:
@@ -245,7 +245,7 @@ def format_seconds(
 def range_date(
     start: datetime.date | int,
     end: datetime.date | int,
-    *_,
+    *,
     include_end: bool = True,
 ) -> list[datetime.date]:
     """Create a range of dates from start to end.

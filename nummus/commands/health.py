@@ -26,13 +26,13 @@ class Health(Base):
         self,
         path_db: Path,
         path_password: Path | None,
-        limit: int = 10,
-        ignores: list[str] | None = None,
-        *_,
-        always_descriptions: bool = False,
-        no_ignores: bool = False,
-        clear_ignores: bool = False,
-        no_description_typos: bool = False,
+        limit: int,
+        ignores: list[str] | None,
+        *,
+        always_descriptions: bool,
+        no_ignores: bool,
+        clear_ignores: bool,
+        no_description_typos: bool,
     ) -> None:
         """Initize health check command.
 

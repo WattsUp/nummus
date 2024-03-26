@@ -43,7 +43,7 @@ class TestSummarize(TestBase):
             "db_size": path_db.stat().st_size,
         }
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = summarize.Summarize(path_db, None)
+            c = summarize.Summarize(path_db, None, include_all=False)
         result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
@@ -201,7 +201,7 @@ class TestSummarize(TestBase):
             "db_size": path_db.stat().st_size,
         }
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = summarize.Summarize(path_db, None)
+            c = summarize.Summarize(path_db, None, include_all=False)
         result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
@@ -257,7 +257,7 @@ class TestSummarize(TestBase):
             "db_size": path_db.stat().st_size,
         }
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = summarize.Summarize(path_db, None)
+            c = summarize.Summarize(path_db, None, include_all=False)
         result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
@@ -326,7 +326,7 @@ class TestSummarize(TestBase):
             """,
             )
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = summarize.Summarize(path_db, None)
+                c = summarize.Summarize(path_db, None, include_all=False)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 c._get_summary = lambda: p_dict  # noqa: SLF001
                 c.run()
@@ -405,7 +405,7 @@ class TestSummarize(TestBase):
             """,
             )
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = summarize.Summarize(path_db, None)
+                c = summarize.Summarize(path_db, None, include_all=False)
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 c._get_summary = lambda: p_dict  # noqa: SLF001
                 c.run()

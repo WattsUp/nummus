@@ -434,7 +434,7 @@ class Asset(Base):
 
     def update_valuations(
         self,
-        *_,
+        *,
         through_today: bool,
     ) -> tuple[datetime.date | None, datetime.date | None]:
         """Update valuations from web sources.
@@ -442,7 +442,6 @@ class Asset(Base):
         Does not commit changes, call s.commit() afterwards.
 
         Args:
-            s: SQL session to use
             through_today: True will force end date to today (for when currently
                 holding any quantity)
 

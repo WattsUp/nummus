@@ -27,8 +27,8 @@ class Import(Base):
         path_db: Path,
         path_password: Path | None,
         paths: list[Path],
-        *_,
-        force: bool = False,
+        *,
+        force: bool,
     ) -> None:
         """Initize import command.
 
