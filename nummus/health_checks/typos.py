@@ -195,7 +195,6 @@ class Typos(Base):
         if self._no_description_typos:
             # Do commit and find issues as normal but hide the ones for description
             # If remove before, any ignores for descriptions are removed as well
-            self._issues = {}
             self._issues = {
                 uri: issue
                 for uri, issue in self._issues.items()

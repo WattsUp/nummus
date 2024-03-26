@@ -124,14 +124,11 @@ class Health(Base):
         any_severe_issues = False
         first_uri: str | None = None
         for check_type in health_checks.CHECKS:
-            if check_type == health_checks.Typos:
-                c = check_type(
-                    self._p,
-                    no_ignores=self._no_ignores,
-                    no_description_typos=self._no_description_typos,
-                )
-            else:
-                c = check_type(self._p, no_ignores=self._no_ignores)
+            c = check_type(
+                self._p,
+                no_ignores=self._no_ignores,
+                no_description_typos=self._no_description_typos,
+            )
             c.test()
             n_issues = len(c.issues)
             if n_issues == 0:

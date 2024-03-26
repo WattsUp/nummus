@@ -13,7 +13,6 @@ from nummus.models import (
     HealthCheckIssue,
     Transaction,
     TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
 )
 from tests.base import TestBase
@@ -40,66 +39,99 @@ class TestTypos(TestBase):
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
 
-            acct = Account(
+            acct_0 = Account(
                 name="Monkey Bannke Checking",
                 institution="Moonkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
             )
-            s.add(acct)
+            s.add(acct_0)
             s.commit()
-            acct_id = acct.id_
+            acct_id_0 = acct_0.id_
+
+            acct_1 = Account(
+                name="Monkey Bannke Savings",
+                institution="Moonkey Bannke",
+                category=AccountCategory.CASH,
+                closed=False,
+                emergency=False,
+            )
+            s.add(acct_1)
+            s.commit()
+            acct_id_1 = acct_1.id_
 
             a = Asset(
                 name="Bananana Inc.",
                 category=AssetCategory.STOCKS,
                 interpolate=False,
-                description="Technologie/Stuff",
+                description="Technologie//Stuff",
             )
             s.add(a)
             s.commit()
             a_id = a.id_
 
-            amount = self.random_decimal(-1, 1)
-            txn = Transaction(
-                account_id=acct_id,
+            amount_0 = self.random_decimal(-1, 1)
+            txn_0 = Transaction(
+                account_id=acct_id_0,
                 date_ord=today_ord,
-                amount=amount,
+                amount=amount_0,
                 statement=self.random_string(),
             )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
+            t_split_0 = TransactionSplit(
+                amount=txn_0.amount,
+                parent=txn_0,
                 category_id=categories["Uncategorized"],
                 payee="Grocery Storre",
-                description="Applesandbananas",
-                tag="Froooot/",
+                description="$ 5 Applesandbananas",
+                tag="Fruit",
             )
-            s.add_all((txn, t_split))
+            s.add_all((txn_0, t_split_0))
             s.commit()
-            t_id = t_split.id_
+            t_id_0 = t_split_0.id_
 
-            t_cat = TransactionCategory(
-                name="Stonks",
-                group=TransactionCategoryGroup.OTHER,
-                locked=False,
-                is_profit_loss=True,
+            amount_1 = self.random_decimal(-1, 1)
+            txn_1 = Transaction(
+                account_id=acct_id_1,
+                date_ord=today_ord,
+                amount=amount_1,
+                statement=self.random_string(),
             )
-            s.add(t_cat)
+            t_split_1 = TransactionSplit(
+                amount=txn_1.amount,
+                parent=txn_1,
+                category_id=categories["Uncategorized"],
+                payee="Grocery Store",
+                tag="Fruiit",
+            )
+            s.add_all((txn_1, t_split_1))
             s.commit()
-            t_cat_id = t_cat.id_
+            t_id_1 = t_split_1.id_
+
+        c = Typos(p, no_description_typos=True)
+        c.test()
+
+        with p.get_session() as s:
+            # Ignore description typos but issue still exists
+            n = s.query(HealthCheckIssue).count()
+            self.assertEqual(n, 5)
+
+            n = len(c.issues)
+            self.assertEqual(n, 3)
 
         c = Typos(p)
         c.test()
 
         with p.get_session() as s:
             n = s.query(HealthCheckIssue).count()
-            self.assertEqual(n, 8)
+            self.assertEqual(n, 5)
+
+            n = len(c.issues)
+            self.assertEqual(n, 5)
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "bannke")
+                .where(HealthCheckIssue.value == "Moonkey Bannke")
                 .one()
             )
             self.assertEqual(i.check, c.name)
@@ -107,7 +139,7 @@ class TestTypos(TestBase):
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "moonkey")
+                .where(HealthCheckIssue.value == "Grocery Storre")
                 .one()
             )
             self.assertEqual(i.check, c.name)
@@ -115,7 +147,7 @@ class TestTypos(TestBase):
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "bananana")
+                .where(HealthCheckIssue.value == "Fruiit")
                 .one()
             )
             self.assertEqual(i.check, c.name)
@@ -123,7 +155,7 @@ class TestTypos(TestBase):
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "technologie")
+                .where(HealthCheckIssue.value == "applesandbananas")
                 .one()
             )
             self.assertEqual(i.check, c.name)
@@ -131,53 +163,33 @@ class TestTypos(TestBase):
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "storre")
+                .where(HealthCheckIssue.value == "technologie")
                 .one()
             )
             self.assertEqual(i.check, c.name)
             uri_4 = i.uri
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "applesandbananas")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            uri_5 = i.uri
-
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "froooot")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            uri_6 = i.uri
-
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == "stonks")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            uri_7 = i.uri
-
         target = {
-            uri_0: "Account Monkey Bannke Checking      name       : Bannke",
-            uri_1: "Account Monkey Bannke Checking      institution: Moonkey",
-            uri_2: "Asset Bananana Inc.                 name       : Bananana",
-            uri_3: "Asset Bananana Inc.                 description: Technologie",
-            uri_4: f"{today} - Monkey Bannke Checking payee      : Storre",
-            uri_5: f"{today} - Monkey Bannke Checking description: Applesandbananas",
-            uri_6: f"{today} - Monkey Bannke Checking tag        : Froooot",
-            uri_7: "Txn category Stonks                 name       : Stonks",
+            uri_0: "Account Monkey Bannke Savings       institution: Moonkey Bannke",
+            uri_1: f"{today} - Monkey Bannke Checking payee      : Grocery Storre",
+            uri_2: f"{today} - Monkey Bannke Savings  tag        : Fruiit",
+            uri_3: f"{today} - Monkey Bannke Checking description: applesandbananas",
+            uri_4: "Asset Bananana Inc.                 description: technologie",
         }
         self.assertEqual(c.issues, target)
 
         # Solve all issues
         with p.get_session() as s:
-            s.query(Account).where(Account.id_ == acct_id).update(
+            s.query(Account).where(Account.id_ == acct_id_0).update(
                 {
                     "name": "Monkey Bank Checking",
+                    "institution": "Monkey Bank",
+                },
+            )
+
+            s.query(Account).where(Account.id_ == acct_id_1).update(
+                {
+                    "name": "Monkey Bank Savings",
                     "institution": "Monkey Bank",
                 },
             )
@@ -185,25 +197,24 @@ class TestTypos(TestBase):
             s.query(Asset).where(Asset.id_ == a_id).update(
                 {
                     "name": "Banana Inc.",
-                    "description": "Technology/Stuff",
+                    "description": None,
                 },
             )
 
-            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
+            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id_0).update(
                 {
                     "payee": "Grocery Store",
+                    "description": "Apples and Bananas",
+                },
+            )
+
+            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id_1).update(
+                {
                     "description": "Apples and Bananas",
                     "tag": None,
                 },
             )
 
-            s.query(TransactionCategory).where(
-                TransactionCategory.id_ == t_cat_id,
-            ).update(
-                {
-                    "name": "Stocks",
-                },
-            )
             s.commit()
 
         c = Typos(p)
