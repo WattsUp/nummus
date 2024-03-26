@@ -33,7 +33,7 @@ class MockTicker:
         self,
         start: datetime.date,
         end: datetime.date,
-        *_,
+        *,
         actions: bool,
         raise_errors: bool,
     ) -> pd.DataFrame:

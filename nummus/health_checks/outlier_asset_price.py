@@ -59,6 +59,10 @@ class OutlierAssetPrice(Base):
                     TransactionSplit.amount,
                     TransactionSplit.asset_quantity,
                 )
+                .order_by(
+                    TransactionSplit.asset_id,
+                    TransactionSplit.date_ord,
+                )
                 .where(TransactionSplit.asset_id.isnot(None))
             )
             for t_id, date_ord, a_id, amount, qty in query.yield_per(

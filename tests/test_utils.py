@@ -998,3 +998,49 @@ class TestUtils(TestBase):
             self.assertEqual(fake_stdout, target)
         finally:
             shutil.get_terminal_size = original_terminal_size
+
+    def test_dedupe(self) -> None:
+        # Set without duplicates not changed
+        items = {
+            "Apple",
+            "Banana",
+            "Strawberry",
+        }
+        target = items
+        result = utils.dedupe(items)
+        self.assertEqual(result, target)
+
+        items = {
+            "Apple",
+            "Banana",
+            "Bananas",
+            "Strawberry",
+        }
+        target = {
+            "Apple",
+            "Banana",
+            "Strawberry",
+        }
+        result = utils.dedupe(items)
+        self.assertEqual(result, target)
+
+        items = {
+            "Apple",
+            "Banana",
+            "Bananas",
+            "Strawberry",
+            "Mango",
+            "Mengo",
+            "A bunch of chocolate pies",
+            "A bunch of chocolate cake",
+            "A bunch of chocolate tart",
+        }
+        target = {
+            "Apple",
+            "Banana",
+            "Strawberry",
+            "Mango",
+            "A bunch of chocolate cake",
+        }
+        result = utils.dedupe(items)
+        self.assertEqual(result, target)

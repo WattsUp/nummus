@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import io
 from unittest import mock
 
@@ -38,7 +39,16 @@ class TestHealth(TestBase):
             health_checks.CHECKS = [MockCheck]
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -48,7 +58,16 @@ class TestHealth(TestBase):
             self.assertEqual(fake_stdout, target)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, always_descriptions=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=True,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -62,7 +81,16 @@ class TestHealth(TestBase):
             d["1"] = "Missing some info"
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, limit=0)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=0,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -93,7 +121,16 @@ class TestHealth(TestBase):
             d.pop("1")
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, ignores=[uri_0])
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=[uri_0],
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -110,7 +147,16 @@ class TestHealth(TestBase):
 
             MockCheck._SEVERE = True  # noqa: SLF001
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, no_ignores=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=True,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -135,7 +181,16 @@ class TestHealth(TestBase):
             self.assertEqual(fake_stdout, target)
 
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None, clear_ignores=True)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=True,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertNotEqual(rc, 0)
@@ -162,7 +217,16 @@ class TestHealth(TestBase):
             # Solving the issue should get rid of the Ignore
             d.pop("0")
             with mock.patch("sys.stdout", new=io.StringIO()) as _:
-                c = health.Health(path_db, None)
+                c = health.Health(
+                    path_db,
+                    None,
+                    limit=10,
+                    ignores=None,
+                    always_descriptions=False,
+                    no_ignores=False,
+                    clear_ignores=False,
+                    no_description_typos=False,
+                )
             with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
                 rc = c.run()
             self.assertEqual(rc, 0)
@@ -176,3 +240,36 @@ class TestHealth(TestBase):
             self.assertEqual(fake_stdout, target)
         finally:
             health_checks.CHECKS = original_checks
+
+    def test_args(self) -> None:
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
+        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(
+            dest="cmd",
+            metavar="<command>",
+            required=True,
+        )
+
+        cmd_class = health.Health
+        sub = subparsers.add_parser(
+            cmd_class.NAME,
+            help=cmd_class.HELP,
+            description=cmd_class.DESCRIPTION,
+        )
+        cmd_class.setup_args(sub)
+
+        command_line = [cmd_class.NAME]
+        args = parser.parse_args(args=command_line)
+        args_d = vars(args)
+        args_d["path_db"] = path_db
+        args_d["path_password"] = None
+        cmd: str = args_d.pop("cmd")
+        self.assertEqual(cmd, cmd_class.NAME)
+
+        # Make sure all args from parse_args are given to constructor
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            cmd_class(**args_d)

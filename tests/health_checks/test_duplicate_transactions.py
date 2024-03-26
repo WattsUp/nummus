@@ -49,11 +49,12 @@ class TestDuplicateTransactions(TestBase):
             acct_id = acct.id_
 
             amount = self.random_decimal(-1, 1)
+            statement = self.random_string()
             txn = Transaction(
                 account_id=acct_id,
                 date_ord=today_ord,
                 amount=amount,
-                statement=self.random_string(),
+                statement=statement,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
@@ -63,7 +64,6 @@ class TestDuplicateTransactions(TestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-            txn_uri = txn.uri
             txn_id = txn.id_
 
         c = DuplicateTransactions(p)
@@ -80,7 +80,7 @@ class TestDuplicateTransactions(TestBase):
                 account_id=acct_id,
                 date_ord=today_ord,
                 amount=amount,
-                statement=self.random_string(),
+                statement=statement,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
@@ -96,10 +96,11 @@ class TestDuplicateTransactions(TestBase):
         with p.get_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
+            amount_raw = Transaction.amount.type.process_bind_param(amount)
 
             i = s.query(HealthCheckIssue).one()
             self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, txn_uri)
+            self.assertEqual(i.value, f"{acct_id}.{today_ord}.{amount_raw}")
             uri = i.uri
 
         target = {

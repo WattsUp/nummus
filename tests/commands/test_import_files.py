@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import datetime
 import io
 import shutil
@@ -57,7 +58,7 @@ class TestImport(TestBase):
         # Try importing with a missing file, should restore from backup
         paths = [file_a, file_missing]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)
@@ -77,7 +78,7 @@ class TestImport(TestBase):
         # Try importing with a bad file, should restore from backup
         paths = [file_a, file_c]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)
@@ -101,7 +102,7 @@ class TestImport(TestBase):
         # Valid import with directories
         paths = [file_a, file_dir]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertEqual(rc, 0)
@@ -118,7 +119,7 @@ class TestImport(TestBase):
         # Import same files again, should fail
         paths = [file_a, file_c]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = import_files.Import(path_db, None, paths)
+            c = import_files.Import(path_db, None, paths, force=False)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             rc = c.run()
         self.assertNotEqual(rc, 0)
@@ -132,3 +133,36 @@ class TestImport(TestBase):
             f"{Fore.RED}Abandoned import, restored from backup\n"
         )
         self.assertEqual(fake_stdout, target)
+
+    def test_args(self) -> None:
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            create.Create(path_db, None, force=False, no_encrypt=True).run()
+        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+
+        parser = argparse.ArgumentParser()
+        subparsers = parser.add_subparsers(
+            dest="cmd",
+            metavar="<command>",
+            required=True,
+        )
+
+        cmd_class = import_files.Import
+        sub = subparsers.add_parser(
+            cmd_class.NAME,
+            help=cmd_class.HELP,
+            description=cmd_class.DESCRIPTION,
+        )
+        cmd_class.setup_args(sub)
+
+        command_line = [cmd_class.NAME, str(path_db.with_suffix(".csv"))]
+        args = parser.parse_args(args=command_line)
+        args_d = vars(args)
+        args_d["path_db"] = path_db
+        args_d["path_password"] = None
+        cmd: str = args_d.pop("cmd")
+        self.assertEqual(cmd, cmd_class.NAME)
+
+        # Make sure all args from parse_args are given to constructor
+        with mock.patch("sys.stdout", new=io.StringIO()) as _:
+            cmd_class(**args_d)

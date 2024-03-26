@@ -53,8 +53,6 @@ class OverdrawnAccounts(Base):
             n = today_ord - start_ord + 1
 
             for acct_id, name in accounts.items():
-                uri = Account.id_to_uri(acct_id)
-
                 # Get cash holdings across all time
                 cash_flow = [None] * n
                 query = (
@@ -84,9 +82,9 @@ class OverdrawnAccounts(Base):
                     cash += c
                     if cash < 0:
                         date = datetime.date.fromordinal(date_ord)
-                        k = f"{uri}.{date}"
+                        uri = f"{acct_id}.{date_ord}"
                         source = f"{date} - {name}"
-                        issues.append((k, source, utils.format_financial(c)))
+                        issues.append((uri, source, utils.format_financial(cash)))
 
             if len(issues) != 0:
                 source_len = max(len(item[1]) for item in issues)

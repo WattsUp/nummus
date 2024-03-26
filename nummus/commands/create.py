@@ -28,7 +28,7 @@ class Create(Base):
         self,
         path_db: Path,
         path_password: Path | None,
-        *_,
+        *,
         force: bool,
         no_encrypt: bool,
     ) -> None:

@@ -404,18 +404,18 @@ class Asset(Base):
             trim_start: int | None = None
             trim_end: int | None = None
             if date_ord_sell is not None:
-                # Get date of oldest valuation after the sell
+                # Get date of oldest valuation after or on the sell
                 query = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
-                    AssetValuation.date_ord > date_ord_sell,
+                    AssetValuation.date_ord >= date_ord_sell,
                 )
                 trim_start = query.scalar()
 
             if date_ord_buy is not None:
-                # Get date of most recent valuation before the buy
+                # Get date of most recent valuation or on before the buy
                 query = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
-                    AssetValuation.date_ord < date_ord_buy,
+                    AssetValuation.date_ord <= date_ord_buy,
                 )
                 trim_end = query.scalar()
 
@@ -434,7 +434,7 @@ class Asset(Base):
 
     def update_valuations(
         self,
-        *_,
+        *,
         through_today: bool,
     ) -> tuple[datetime.date | None, datetime.date | None]:
         """Update valuations from web sources.
@@ -442,7 +442,6 @@ class Asset(Base):
         Does not commit changes, call s.commit() afterwards.
 
         Args:
-            s: SQL session to use
             through_today: True will force end date to today (for when currently
                 holding any quantity)
 

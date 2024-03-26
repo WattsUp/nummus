@@ -582,10 +582,10 @@ class TestAsset(TestBase):
         n = s.query(AssetValuation).count()
         self.assertEqual(n, 7)
 
-        # Add a transaction on today
+        # Add a transaction before first day
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date_ord=today_ord - 4,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -599,16 +599,29 @@ class TestAsset(TestBase):
         s.add_all((txn_0, t_split_0))
         s.commit()
 
+        # None to delete
         n_deleted = a.prune_valuations()
-        self.assertEqual(n_deleted, 2)
+        self.assertEqual(n_deleted, 0)
 
-        # Should be left with one valuation before and all after
+        txn_0.date_ord = today_ord
+        t_split_0.date_ord = today_ord
+        s.commit()
+
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 3)
+
+        # Should be left with one valuation on and all after
         n = s.query(AssetValuation).count()
-        self.assertEqual(n, 5)
+        self.assertEqual(n, 4)
         date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
-        self.assertEqual(date_ord, today_ord - 1)
+        self.assertEqual(date_ord, today_ord)
         date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 3)
+
+        # None to delete
+        n_deleted = a.prune_valuations()
+        self.assertEqual(n_deleted, 0)
+
         s.rollback()
 
         # Add sell some today
@@ -646,15 +659,15 @@ class TestAsset(TestBase):
         s.commit()
 
         n_deleted = a.prune_valuations()
-        self.assertEqual(n_deleted, 3)
+        self.assertEqual(n_deleted, 5)
 
-        # Should be left with one valuation before and one after
+        # Should be left with one valuation on and one after
         n = s.query(AssetValuation).count()
-        self.assertEqual(n, 4)
+        self.assertEqual(n, 2)
         date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
-        self.assertEqual(date_ord, today_ord - 1)
+        self.assertEqual(date_ord, today_ord)
         date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
-        self.assertEqual(date_ord, today_ord + 2)
+        self.assertEqual(date_ord, today_ord + 1)
         s.rollback()
 
         # Buy and sell some on the last day
@@ -690,13 +703,13 @@ class TestAsset(TestBase):
         s.commit()
 
         n_deleted = a.prune_valuations()
-        self.assertEqual(n_deleted, 2)
+        self.assertEqual(n_deleted, 4)
 
-        # Should be left with one valuation before and all after
+        # Should be left with one valuation on, one after, and on last
         n = s.query(AssetValuation).count()
-        self.assertEqual(n, 5)
+        self.assertEqual(n, 3)
         date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
-        self.assertEqual(date_ord, today_ord - 1)
+        self.assertEqual(date_ord, today_ord)
         date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 3)
         s.rollback()

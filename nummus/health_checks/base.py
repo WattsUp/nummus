@@ -18,12 +18,19 @@ class Base(ABC):
     _DESC: str = ""
     _SEVERE: bool = False
 
-    def __init__(self, p: portfolio.Portfolio, *_, no_ignores: bool = False) -> None:
+    def __init__(
+        self,
+        p: portfolio.Portfolio,
+        *,
+        no_ignores: bool = False,
+        **_,
+    ) -> None:
         """Initialize Base health check.
 
         Args:
             p: Portfolio to test
             no_ignores: True will print issues that have been ignored
+            all other arguments ignored
         """
         super().__init__()
         # Dictionary of {unique identifier: issue}
