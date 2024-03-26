@@ -32,6 +32,7 @@ class Health(Base):
         always_descriptions: bool = False,
         no_ignores: bool = False,
         clear_ignores: bool = False,
+        no_description_typos: bool = False,
     ) -> None:
         """Initize health check command.
 
@@ -44,6 +45,7 @@ class Health(Base):
                 False will only print on failure
             no_ignores: True will print issues that have been ignored
             clear_ignores: True will unignore all issues
+            no_description_typos: True will not check descriptions for typos
         """
         super().__init__(path_db, path_password)
         self._limit = limit
@@ -51,6 +53,7 @@ class Health(Base):
         self._always_descriptions = always_descriptions
         self._no_ignores = no_ignores
         self._clear_ignores = clear_ignores
+        self._no_description_typos = no_description_typos
 
     @override
     @classmethod
@@ -81,6 +84,12 @@ class Health(Base):
             default=False,
             action="store_true",
             help="unignore all issues",
+        )
+        parser.add_argument(
+            "--no-description-typos",
+            default=False,
+            action="store_true",
+            help="do not check descriptions for typos",
         )
         parser.add_argument(
             "-i",
@@ -115,7 +124,14 @@ class Health(Base):
         any_severe_issues = False
         first_uri: str | None = None
         for check_type in health_checks.CHECKS:
-            c = check_type(self._p, no_ignores=self._no_ignores)
+            if check_type == health_checks.Typos:
+                c = check_type(
+                    self._p,
+                    no_ignores=self._no_ignores,
+                    no_description_typos=self._no_description_typos,
+                )
+            else:
+                c = check_type(self._p, no_ignores=self._no_ignores)
             c.test()
             n_issues = len(c.issues)
             if n_issues == 0:

@@ -4,8 +4,10 @@ from __future__ import annotations
 
 import datetime
 import re
+import string
 from typing import TYPE_CHECKING
 
+import spellchecker
 import sqlalchemy
 from typing_extensions import override
 
@@ -16,7 +18,6 @@ from nummus.models import Account, Asset, AssetCategory, TransactionSplit, YIELD
 if TYPE_CHECKING:
     from nummus import portfolio
 
-# If a non-unique word has a bunch of instances, it is probably not spelled wrong
 _LIMIT_FREQUENCY = 10
 
 
@@ -27,34 +28,51 @@ class Typos(Base):
     _DESC = "Checks for very similar fields and common typos."
     _SEVERE = False
 
-    _RE_WORDS = re.compile(r"[ ,/]")
+    _RE_WORDS = re.compile(r"[ .,/()\[\]\-#:&!+?%'\";]")
+
+    def __init__(
+        self,
+        p: portfolio.Portfolio,
+        *_,
+        no_ignores: bool = False,
+        no_description_typos: bool = False,
+    ) -> None:
+        """Initialize Base health check.
+
+        Args:
+            p: Portfolio to test
+            no_ignores: True will print issues that have been ignored
+            no_description_typos: True will not check descriptions for typos
+        """
+        super().__init__(p, *_, no_ignores=no_ignores)
+        self._no_description_typos = no_description_typos
 
     @override
     def test(self) -> None:
-        # Known correct words
-        known = {
-            "401k",
-            "etc.",
-            "Inc.",
-            "ETF",
-            "ATM",
-            "Uncategorized",
-            "Rebalance",
-        }
-        known = {k.lower() for k in known}
+        spell = spellchecker.SpellChecker()
 
         with self._p.get_session() as s:
             accounts = Account.map_name(s)
+            assets = Asset.map_name(s)
             issues: dict[str, tuple[str, str, str]] = {}
 
             # Create a dict of every word found with the first instance detected
             # Dictionary {word.lower(): (word, source, field)}
             words: dict[str, tuple[str, str, str]] = {}
             frequency: dict[str, int] = {}
-            proper_nouns: set[str] = set()
+            proper_nouns: set[str] = {*accounts.values(), *assets.values()}
 
-            def add(s: str | None, source: str, field: str, count: int) -> None:
-                if s is None:
+            def add(s: str, source: str, field: str, count: int) -> None:
+                if not s:
+                    return
+                try:
+                    float(s)
+                except ValueError:
+                    pass
+                else:
+                    # Skip numbers
+                    return
+                if s in string.punctuation:
                     return
                 if s not in words:
                     words[s] = (s, source, field)
@@ -64,17 +82,10 @@ class Typos(Base):
             def check_duplicates() -> None:
                 words_dedupe = utils.dedupe(words.keys())
                 for word, item in words.items():
-                    if word in words_dedupe:
-                        proper_nouns.add(word)
-                    elif frequency[word] < _LIMIT_FREQUENCY:
+                    if word not in words_dedupe and frequency[word] < _LIMIT_FREQUENCY:
                         issues[word] = item
                 words.clear()
                 frequency.clear()
-
-            for name in accounts.values():
-                source = f"Account {name}"
-                add(name, source, "name", 1)
-            check_duplicates()
 
             query = s.query(Account).with_entities(
                 Account.id_,
@@ -86,13 +97,7 @@ class Typos(Base):
                 name = accounts[acct_id]
                 source = f"Account {name}"
                 add(institution, source, "institution", 1)
-            check_duplicates()
-
-            query = s.query(Asset.name).where(Asset.category != AssetCategory.INDEX)
-            for (name,) in query.yield_per(YIELD_PER):
-                name: str
-                source = f"Asset {name}"
-                add(name, source, "name", 1)
+                proper_nouns.add(institution)
             check_duplicates()
 
             txn_fields = [
@@ -113,13 +118,63 @@ class Typos(Base):
                 for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
                     date_ord: int
                     acct_id: int
-                    value: str
+                    value: str | None
+                    if value is None:
+                        continue
                     date = datetime.date.fromordinal(date_ord)
                     source = f"{date} - {accounts[acct_id]}"
                     add(value, source, field.key, count)
+                    proper_nouns.add(value)
                 check_duplicates()
 
-            # TODO (WattsUp): Add check spelling of descriptions
+            re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns)})\b")
+
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.date_ord,
+                    TransactionSplit.account_id,
+                    TransactionSplit.description,
+                    sqlalchemy.func.count(),
+                )
+                .group_by(TransactionSplit.description)
+            )
+            for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
+                date_ord: int
+                acct_id: int
+                value: str | None
+                if value is None:
+                    continue
+                date = datetime.date.fromordinal(date_ord)
+                source = f"{date} - {accounts[acct_id]}"
+                cleaned = re_cleaner.sub("", value).lower()
+                for word in self._RE_WORDS.split(cleaned):
+                    add(word, source, "description", count)
+
+            query = (
+                s.query(Asset)
+                .with_entities(
+                    Asset.id_,
+                    Asset.description,
+                )
+                .where(Asset.category != AssetCategory.INDEX)
+            )
+            for a_id, value in query.yield_per(YIELD_PER):
+                a_id: int
+                value: str | None
+                if value is None:
+                    continue
+                source = f"Asset {assets[a_id]}"
+                cleaned = re_cleaner.sub("", value).lower()
+                for word in self._RE_WORDS.split(cleaned):
+                    add(word, source, "description", 1)
+
+            words = {
+                k: v
+                for k, v in words.items()
+                if k not in spell.word_frequency.dictionary
+            }
+            issues.update(words)
 
             if len(issues) != 0:
                 source_len = 0
@@ -137,9 +192,12 @@ class Typos(Base):
 
         self._commit_issues()
 
-    @override
-    @classmethod
-    def ignore(cls, p: portfolio.Portfolio, values: list[str] | set[str]) -> None:
-        # Store the lower case version
-        values = {v.lower() for v in values}
-        return super().ignore(p, values)
+        if self._no_description_typos:
+            # Do commit and find issues as normal but hide the ones for description
+            # If remove before, any ignores for descriptions are removed as well
+            self._issues = {}
+            self._issues = {
+                uri: issue
+                for uri, issue in self._issues.items()
+                if "description:" not in issue
+            }
