@@ -127,7 +127,14 @@ class Typos(Base):
                     proper_nouns.add(value)
                 check_duplicates()
 
-            re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns)})\b")
+            # Escape words and sort to replace longest words first
+            # So long words aren't partially replaced if they contain a short word
+            proper_nouns_re = [
+                re.escape(word)
+                for word in sorted(proper_nouns, key=lambda x: len(x), reverse=True)
+            ]
+            # Remove proper nouns indicated by word boundary or space at end
+            re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")
 
             query = (
                 s.query(TransactionSplit)
