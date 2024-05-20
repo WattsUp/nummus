@@ -18,7 +18,9 @@
     <datalist id="tags">
         {% for item in tags %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
     </datalist>
-    <form class="flex flex-col w-full px-6 grow" id="form-txn">
+    <form class="flex flex-col w-full px-6 grow"
+          id="form-txn"
+          onkeydown="return event.key != 'Enter';">
         <table class="w-full">
             <tbody>
                 <tr>
