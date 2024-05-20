@@ -307,7 +307,7 @@ def ctx_table(
 
             transactions.append(t_split_ctx)
 
-        offset_last = max(0, (count // page_len) * page_len)
+        offset_last = max(0, int((count - 1) // page_len) * page_len)
 
         return {
             "uri": None if acct is None else acct.uri,
