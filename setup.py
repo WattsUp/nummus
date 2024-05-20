@@ -66,7 +66,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     license="MIT",
     packages=setuptools.find_packages(include=[module_folder, f"{module_folder}.*"]),
-    package_data={module_folder: []},
+    package_data={
+        module_folder: [
+            "templates/**/*",
+            "static/**/*",
+        ],
+    },
     install_requires=required,
     extras_require=extras_require,
     test_suite="tests",
