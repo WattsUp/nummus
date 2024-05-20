@@ -27,7 +27,7 @@ class CSVTransactionImporter(TransactionImporter):
             "date": (True, datetime.date.fromisoformat),
             "amount": (True, utils.parse_real),
             "payee": (True, str),
-            "description": (True, str),
+            "description": (False, str),
             "category": (False, str),
             "subcategory": (False, str),
             "tag": (False, str),
@@ -76,6 +76,13 @@ class CSVTransactionImporter(TransactionImporter):
                 elif required:
                     msg = f"CSV is missing column: {key}"
                     raise KeyError(msg)
-            txn["statement"] = txn["description"]
+            statement = txn.get("description")
+            if statement is None:
+                if "asset" in txn:
+                    statement = f"Asset transaction {txn['asset']}"
+                else:
+                    msg = "CSV is missing description for non-asset transaction"
+                    raise KeyError(msg)
+            txn["statement"] = statement
             transactions.append(txn)
         return transactions

@@ -39,7 +39,7 @@ class Import(Base):
             force: True will not check for already imported files
         """
         super().__init__(path_db, path_password)
-        self._paths = paths
+        self._paths = [path.expanduser() for path in paths]
         self._force = force
 
     @override
@@ -73,6 +73,8 @@ class Import(Base):
 
         count = 0
 
+        path_debug = self._p.path.with_suffix(".importer_debug")
+
         try:
             for path in self._paths:
                 if not path.exists():
@@ -81,10 +83,10 @@ class Import(Base):
                 if path.is_dir():
                     for f in path.iterdir():
                         if f.is_file():
-                            self._p.import_file(f, force=self._force)
+                            self._p.import_file(f, path_debug, force=self._force)
                             count += 1
                 else:
-                    self._p.import_file(path, force=self._force)
+                    self._p.import_file(path, path_debug, force=self._force)
                     count += 1
 
             success = True
@@ -105,5 +107,7 @@ class Import(Base):
             if not success:  # pragma: no cover
                 portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
                 print(f"{Fore.RED}Abandoned import, restored from backup")
+                if path_debug.exists():
+                    print(f"{Fore.YELLOW}Raw imported file may help at {path_debug}")
         print(f"{Fore.GREEN}Imported {count} files")
         return 0

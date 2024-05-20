@@ -69,6 +69,23 @@ class UnknownImporterError(Exception):
         super().__init__(msg)
 
 
+class EmptyImportError(Exception):
+    """Error when a file does not return any transactions."""
+
+    def __init__(self, path: Path, importer: object) -> None:
+        """Initialize EmptyImportError.
+
+        Args:
+            path: Path to empty file
+            importer: Importer used on file
+        """
+        msg = (
+            f"No transactions imported for {path} using importer "
+            f"{importer.__class__.__name__}"
+        )
+        super().__init__(msg)
+
+
 class UnlockingError(Exception):
     """Error when portfolio fails to unlock."""
 

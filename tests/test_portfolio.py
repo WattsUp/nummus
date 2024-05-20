@@ -345,13 +345,19 @@ class TestPortfolio(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
+        path_debug = path_db.with_suffix(".importer_debug")
+
         # Fail to import non-importable file
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        self.assertRaises(exc.UnknownImporterError, p.import_file, path)
+        self.assertRaises(exc.UnknownImporterError, p.import_file, path, path_debug)
+        self.assertTrue(path_debug.exists(), "Debug file unexpectedly does not exists")
+        path_debug.unlink()
 
         # Fail to match Accounts and Assets
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
-        self.assertRaises(KeyError, p.import_file, path)
+        self.assertRaises(KeyError, p.import_file, path, path_debug)
+        self.assertTrue(path_debug.exists(), "Debug file unexpectedly does not exists")
+        path_debug.unlink()
 
         with p.get_session() as s:
             # Create accounts
@@ -373,14 +379,20 @@ class TestPortfolio(TestBase):
             s.commit()
 
             # Still missing assets
-            self.assertRaises(KeyError, p.import_file, path)
+            self.assertRaises(KeyError, p.import_file, path, path_debug)
+            self.assertTrue(
+                path_debug.exists(),
+                "Debug file unexpectedly does not exists",
+            )
+            path_debug.unlink()
 
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add(asset)
             s.commit()
 
             # We good now
-            p.import_file(path)
+            p.import_file(path, path_debug)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             transactions = s.query(Transaction).all()
 
@@ -436,14 +448,22 @@ class TestPortfolio(TestBase):
                         self.assertEqual(r_v, test_value)
 
             # Fail to import file again
-            self.assertRaises(exc.FileAlreadyImportedError, p.import_file, path)
+            self.assertRaises(
+                exc.FileAlreadyImportedError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # But it will work with force
-            p.import_file(path, force=True)
+            p.import_file(path, path_debug, force=True)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # Fine importing with force when not required
             path = self._DATA_ROOT.joinpath("transactions_required.csv")
-            p.import_file(path, force=True)
+            p.import_file(path, path_debug, force=True)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # Install importer that returns empty list
             shutil.copyfile(
@@ -452,7 +472,7 @@ class TestPortfolio(TestBase):
             )
             p._importers = importers.get_importers(p._path_importers)  # noqa: SLF001
             path = self._DATA_ROOT.joinpath("banana_bank_statement.pdf")
-            self.assertRaises(TypeError, p.import_file, path)
+            self.assertRaises(exc.EmptyImportError, p.import_file, path, path_debug)
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")

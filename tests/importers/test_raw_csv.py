@@ -50,8 +50,7 @@ TRANSACTIONS_EXTRAS = [
         "date": datetime.date(2023, 1, 3),
         "amount": Decimal("-900.0"),
         "payee": "Monkey Investments",
-        "description": "Security Exchange",
-        "statement": "Security Exchange",
+        "statement": "Asset transaction BANANA",
         "category": "Securities Traded",
         "asset": "BANANA",
         "asset_quantity": Decimal("32.1234"),
@@ -106,6 +105,12 @@ class TestCSVTransactionImporter(base.TestBase):
         self.assertRaises(ValueError, i.run)
 
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
+        with path.open("rb") as file:
+            buf = file.read()
+        i = raw_csv.CSVTransactionImporter(buf=buf)
+        self.assertRaises(KeyError, i.run)
+
+        path = self._DATA_ROOT.joinpath("transactions_lacking_desc.csv")
         with path.open("rb") as file:
             buf = file.read()
         i = raw_csv.CSVTransactionImporter(buf=buf)

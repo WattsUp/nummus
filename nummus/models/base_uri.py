@@ -243,4 +243,10 @@ def uri_to_id(uri: str) -> int:
     if len(uri) != URI_BYTES:
         msg = f"URI is not {URI_BYTES} bytes long: {uri}"
         raise exc.InvalidURIError(msg)
-    return _CIPHER.decode(int(uri, 16))
+    try:
+        uri_int = int(uri, 16)
+    except ValueError as e:
+        msg = f"URI is not a hex number: {uri}"
+        raise exc.InvalidURIError(msg) from e
+    else:
+        return _CIPHER.decode(uri_int)

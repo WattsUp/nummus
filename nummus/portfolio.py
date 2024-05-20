@@ -279,11 +279,12 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    def import_file(self, path: Path, *, force: bool = False) -> None:
+    def import_file(self, path: Path, path_debug: Path, *, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
         Args:
             path: Path to file to import
+            path_debug: Path to temporary debug file
             force: True will not check for already imported files
 
         Raises:
@@ -312,7 +313,7 @@ class Portfolio:
                     date = datetime.date.fromordinal(existing_date_ord)
                     raise exc.FileAlreadyImportedError(date, path)
 
-        i = importers.get_importer(path, self._importers)
+        i = importers.get_importer(path, path_debug, self._importers)
         if i is None:
             raise exc.UnknownImporterError(path)
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
@@ -327,8 +328,7 @@ class Portfolio:
             txns: list[tuple[Transaction, TransactionSplit]] = []
             txns_raw = i.run()
             if not txns_raw:
-                msg = f"Importer returned no transactions, ctx={ctx}"
-                raise TypeError(msg)
+                raise exc.EmptyImportError(path, i)
             for d in txns_raw:
                 # Create a single split for each transaction
                 category_s = d.pop("category", "Uncategorized")
@@ -396,6 +396,9 @@ class Portfolio:
                 s.commit()
             s.add(ImportedFile(hash_=h))
             s.commit()
+
+        # If successful, delete the temp file
+        path_debug.unlink()
 
     def find_account(
         self,
