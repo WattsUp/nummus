@@ -236,10 +236,14 @@ def ctx_table(
         options_category = ctx_options(query, "category", categories)
         options_tag = ctx_options(query, "tag")
 
-        selected_accounts = args.getlist("account")
-        selected_payees = args.getlist("payee")
-        selected_categories = args.getlist("category")
-        selected_tags = args.getlist("tag")
+        def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
+            options_flat = [option["name"] for option in options]
+            return [item for item in selected if item in options_flat]
+
+        selected_accounts = merge(options_account, args.getlist("account"))
+        selected_payees = merge(options_payee, args.getlist("payee"))
+        selected_categories = merge(options_category, args.getlist("category"))
+        selected_tags = merge(options_tag, args.getlist("tag"))
 
         if acct is None and len(selected_accounts) != 0:
             ids = [

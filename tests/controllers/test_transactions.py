@@ -20,7 +20,9 @@ class TestTransaction(WebTestBase):
 
     def test_table(self) -> None:
         d = self._setup_portfolio()
+        today = datetime.date.today()
 
+        acct = d["acct"]
         payee_0 = d["payee_0"]
         payee_1 = d["payee_1"]
         t_split_0 = d["t_split_0"]
@@ -35,8 +37,26 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
 
         queries: dict[str, str | list[str]] = {
-            "account": "Non selected",
+            "account": "None selected",
             "period": "all",
+        }
+        result, _ = self.web_get(endpoint, queries=queries)
+        self.assertNotIn("No matching transactions for given query filters", result)
+
+        queries: dict[str, str | list[str]] = {
+            "account": acct,
+            "period": "all",
+        }
+        result, _ = self.web_get(endpoint, queries=queries)
+        self.assertNotIn("No matching transactions for given query filters", result)
+
+        # If a filter is not an option, ignore
+        long_ago = today - datetime.timedelta(days=400)
+        queries = {
+            "account": "None selected",
+            "period": "custom",
+            "start": long_ago.isoformat(),
+            "end": long_ago.isoformat(),
         }
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
