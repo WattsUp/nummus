@@ -34,6 +34,25 @@ const nummusChart = {
                         if (context.parsed.y != null)
                             label += formatterF2.format(context.parsed.y);
                         return label;
+                    },
+                    labelColor: function(context) {
+                        const dataset = context.dataset;
+                        let color = {
+                            borderColor: dataset.borderColor,
+                            backgroundColor: dataset.backgroundColor,
+                            borderWidth: dataset.borderWidth,
+                        };
+                        // Only do this if only one dataset, if multiple,
+                        // default is fine
+                        if (context.chart.data.datasets.length != 1)
+                            return color;
+                        if (dataset.fill && dataset.fill.above &&
+                            dataset.fill.below) {
+                            color.backgroundColor = (context.raw >= 0) ?
+                                dataset.fill.above :
+                                dataset.fill.below;
+                        }
+                        return color;
                     }
                 },
             },

@@ -33,8 +33,6 @@ const netWorthChart = {
         }
 
 
-        const blue = getThemeColor('blue');
-        const yellow = getThemeColor('yellow');
         const width = 65;
 
         {
