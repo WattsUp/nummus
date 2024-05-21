@@ -6,52 +6,92 @@ from decimal import Decimal
 from nummus.importers import raw_csv
 from tests import base
 
-# Other unit tests use the file transactions_extras.csv
-TRANSACTIONS_EXTRAS = [
+# Other unit tests use the files, share target
+TRANSACTIONS_REQUIRED = [
     {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 1),
         "amount": Decimal("1000.0"),
-        "payee": "Employer",
-        "description": "Paycheck",
         "statement": "Paycheck",
-        "category": "Paychecks/Salary",
     },
     {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
         "amount": Decimal("-12.34"),
-        "payee": "Monkey Store",
-        "description": "Banana",
         "statement": "Banana",
-        "category": "Groceries",
-        "tag": "Fruit",
     },
     {
         "account": "Monkey Bank Checking",
         "date": datetime.date(2023, 1, 2),
         "amount": Decimal("-900.0"),
-        "payee": "Monkey Investments",
-        "description": "Account Transfer",
         "statement": "Account Transfer",
-        "category": "Transfers",
     },
     {
         "account": "Monkey Investments",
         "date": datetime.date(2023, 1, 2),
         "amount": Decimal("900.0"),
+        "statement": "Account Transfer",
+    },
+]
+
+TRANSACTIONS_EXTRAS: raw_csv.TxnDicts = [
+    {
+        "account": "Monkey Bank Checking",
+        "date": datetime.date(2023, 1, 1),
+        "amount": Decimal("1000.0"),
+        "statement": "Paycheck",
+        "payee": "Employer",
+        "description": "Paycheck",
+        "category": "Paychecks/Salary",
+        "tag": None,
+        "asset": None,
+        "asset_quantity": None,
+    },
+    {
+        "account": "Monkey Bank Checking",
+        "date": datetime.date(2023, 1, 2),
+        "amount": Decimal("-12.34"),
+        "statement": "Banana",
+        "payee": "Monkey Store",
+        "description": "Banana",
+        "category": "Groceries",
+        "tag": "Fruit",
+        "asset": None,
+        "asset_quantity": None,
+    },
+    {
+        "account": "Monkey Bank Checking",
+        "date": datetime.date(2023, 1, 2),
+        "amount": Decimal("-900.0"),
+        "statement": "Account Transfer",
         "payee": "Monkey Investments",
         "description": "Account Transfer",
-        "statement": "Account Transfer",
         "category": "Transfers",
+        "tag": None,
+        "asset": None,
+        "asset_quantity": None,
+    },
+    {
+        "account": "Monkey Investments",
+        "date": datetime.date(2023, 1, 2),
+        "amount": Decimal("900.0"),
+        "statement": "Account Transfer",
+        "payee": "Monkey Investments",
+        "description": "Account Transfer",
+        "category": "Transfers",
+        "tag": None,
+        "asset": None,
+        "asset_quantity": None,
     },
     {
         "account": "Monkey Investments",
         "date": datetime.date(2023, 1, 3),
         "amount": Decimal("-900.0"),
+        "statement": "",
         "payee": "Monkey Investments",
-        "statement": "Asset transaction BANANA",
+        "description": None,
         "category": "Securities Traded",
+        "tag": None,
         "asset": "BANANA",
         "asset_quantity": Decimal("32.1234"),
     },
@@ -59,10 +99,11 @@ TRANSACTIONS_EXTRAS = [
         "account": "Monkey Investments",
         "date": datetime.date(2023, 2, 1),
         "amount": Decimal("1234.56"),
+        "statement": "Profit Maker",
         "payee": "Monkey Investments",
         "description": "Profit Maker",
-        "statement": "Profit Maker",
         "category": "Securities Traded",
+        "tag": None,
         "asset": "BANANA",
         "asset_quantity": Decimal("-32.1234"),
     },
@@ -110,70 +151,44 @@ class TestCSVTransactionImporter(base.TestBase):
         i = raw_csv.CSVTransactionImporter(buf=buf)
         self.assertRaises(KeyError, i.run)
 
-        path = self._DATA_ROOT.joinpath("transactions_lacking_desc.csv")
-        with path.open("rb") as file:
-            buf = file.read()
-        i = raw_csv.CSVTransactionImporter(buf=buf)
-        self.assertRaises(KeyError, i.run)
-
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
         with path.open("rb") as file:
             buf = file.read()
         i = raw_csv.CSVTransactionImporter(buf=buf)
-        target = [
-            {
-                "account": "Monkey Bank Checking",
-                "date": datetime.date(2023, 1, 1),
-                "amount": Decimal("1000.0"),
-                "payee": "Employer",
-                "description": "Paycheck",
-                "statement": "Paycheck",
-            },
-            {
-                "account": "Monkey Bank Checking",
-                "date": datetime.date(2023, 1, 2),
-                "amount": Decimal("-12.34"),
-                "payee": "Monkey Store",
-                "description": "Banana",
-                "statement": "Banana",
-            },
-            {
-                "account": "Monkey Bank Checking",
-                "date": datetime.date(2023, 1, 2),
-                "amount": Decimal("-900.0"),
-                "payee": "Monkey Investments",
-                "description": "Account Transfer",
-                "statement": "Account Transfer",
-            },
-            {
-                "account": "Monkey Investments",
-                "date": datetime.date(2023, 1, 2),
-                "amount": Decimal("900.0"),
-                "payee": "Monkey Investments",
-                "description": "Account Transfer",
-                "statement": "Account Transfer",
-            },
-        ]
+        target = TRANSACTIONS_REQUIRED
         result = i.run()
         self.assertEqual(len(result), len(target))
         for tgt, res in zip(target, result, strict=True):
+            res_d = dict(res)  # Convert type so items can be popped
             for k, t_v in tgt.items():
-                r_v = res.pop(k)
-                self.assertEqual(r_v, t_v)
-            # No remaining items
-            self.assertEqual(len(res), 0)
+                r_v = res_d.pop(k)
+                self.assertEqual(r_v, t_v, f"{k} unexpectedly differs")
+            self.assertTrue(
+                all(item is None for item in res_d.values()),
+                f"Not all remaining items are None: {res_d}",
+            )
 
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
         with path.open("rb") as file:
             buf = file.read()
         i = raw_csv.CSVTransactionImporter(buf=buf)
         target = TRANSACTIONS_EXTRAS
-
         result = i.run()
         self.assertEqual(len(result), len(target))
         for tgt, res in zip(target, result, strict=True):
+            res_d = dict(res)  # Convert type so items can be popped
             for k, t_v in tgt.items():
-                r_v = res.pop(k)
-                self.assertEqual(r_v, t_v)
-            # No remaining items
-            self.assertEqual(len(res), 0, msg=f"Extra keys: {list(res.keys())}")
+                r_v = res_d.pop(k)
+                self.assertEqual(r_v, t_v, f"{k} unexpectedly differs")
+            self.assertEqual(
+                len(res_d),
+                0,
+                f"Not all fields are covered by TRANSACTIONS_EXTRAS: {res}",
+            )
+
+        buf = (
+            b"Account,Date,Amount,Statement\n"
+            b"Monkey Bank Checking,2023-01-01,,Paycheck"
+        )
+        i = raw_csv.CSVTransactionImporter(buf=buf)
+        self.assertRaises(ValueError, i.run)

@@ -398,54 +398,34 @@ class TestPortfolio(TestBase):
 
             target = TRANSACTIONS_EXTRAS
             self.assertEqual(len(transactions), len(target))
-            split_properties = [
-                "payee",
-                "description",
-                "category",
-                "tag",
-                "asset",
-                "asset_quantity",
-                "asset_id",
-            ]
             for tgt, res in zip(target, transactions, strict=True):
+                if tgt["account"] == "Monkey Bank Checking":
+                    tgt_acct_id = acct_checking.id_
+                else:
+                    tgt_acct_id = acct_invest.id_
+                self.assertEqual(res.account_id, tgt_acct_id)
+                self.assertEqual(res.date_ord, tgt["date"].toordinal())
+                self.assertEqual(res.amount, tgt["amount"])
+                statement = tgt["statement"] or "Asset Transaction BANANA"
+                self.assertEqual(res.statement, statement)
+
                 self.assertEqual(len(res.splits), 1)
                 r_split = res.splits[0]
-                for k, t_v in tgt.items():
-                    prop = k
-                    test_value = t_v
-                    # Fix test value for linked properties
-                    if k == "asset":
-                        prop = "asset_id"
-                        test_value = asset.id_
-                    elif k == "account":
-                        prop = "account_id"
-                        if t_v == "Monkey Bank Checking":
-                            test_value = acct_checking.id_
-                        else:
-                            test_value = acct_invest.id_
-                    elif k == "date":
-                        prop = "date_ord"
-                        test_value = t_v.toordinal()
-
-                    if prop == "category":
-                        cat_id = r_split.category_id
-                        r_v = (
-                            s.query(TransactionCategory)
-                            .where(TransactionCategory.id_ == cat_id)
-                            .first()
-                        )
-                        if r_v is None:
-                            self.fail(f"Missing category: {cat_id}")
-                        self.assertEqual(r_v.name, test_value)
-                    elif prop in split_properties:
-                        r_v = getattr(r_split, prop)
-                        self.assertEqual(r_v, test_value)
-                    elif prop == "amount":
-                        self.assertEqual(res.amount, test_value)
-                        self.assertEqual(r_split.amount, test_value)
-                    else:
-                        r_v = getattr(res, prop)
-                        self.assertEqual(r_v, test_value)
+                self.assertEqual(r_split.amount, tgt["amount"])
+                self.assertEqual(r_split.description, tgt["description"])
+                cat_id = (
+                    s.query(TransactionCategory.id_)
+                    .where(
+                        TransactionCategory.name
+                        == (tgt["category"] or "Uncategorized"),
+                    )
+                    .one()[0]
+                )
+                self.assertEqual(r_split.category_id, cat_id)
+                self.assertEqual(r_split.tag, tgt["tag"])
+                asset_id = asset.id_ if tgt["asset"] else None
+                self.assertEqual(r_split.asset_id, asset_id)
+                self.assertEqual(r_split.asset_quantity, tgt["asset_quantity"])
 
             # Fail to import file again
             self.assertRaises(

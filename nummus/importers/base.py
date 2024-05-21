@@ -2,11 +2,32 @@
 
 from __future__ import annotations
 
-import datetime
 from abc import ABC, abstractmethod
-from decimal import Decimal
+from typing import TYPE_CHECKING, TypedDict
 
-TxnDict = dict[str, str | Decimal | datetime.date | object]
+if TYPE_CHECKING:
+    import datetime
+    from decimal import Decimal
+
+
+class TxnDict(TypedDict):
+    """Type definition for imported transaction."""
+
+    # Importers must import at least these items
+    account: str
+    date: datetime.date
+    amount: Decimal
+    statement: str
+
+    # Importers may import these items
+    payee: str | None
+    description: str | None
+    category: str | None
+    tag: str | None
+    asset: str | None
+    asset_quantity: Decimal | None
+
+
 TxnDicts = list[TxnDict]
 
 
