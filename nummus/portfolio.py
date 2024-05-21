@@ -8,6 +8,7 @@ import hashlib
 import io
 import re
 import shutil
+import sys
 import tarfile
 from pathlib import Path
 
@@ -839,14 +840,25 @@ class Portfolio:
                 if member not in member_paths:
                     msg = f"Backup is missing required file: {member}"
                     raise exc.InvalidBackupTarError(msg)
-            # Would prefer to use extractall(..., filter="data") but requires >=3.12
             for member in members:
+                if member.path == "_timestamp":
+                    continue
                 dest = parent.joinpath(member.path).resolve()
                 if not dest.is_relative_to(parent):
                     # Dest should still be relative to parent else, path traversal
                     msg = "Backup contains a file outside of destination"
                     raise exc.InvalidBackupTarError(msg)
-                tar.extract(member, parent)
+
+                if (
+                    (3, 10, 12) <= sys.version_info < (3, 11)
+                    or (3, 11, 4) <= sys.version_info < (3, 12)
+                    or (3, 12) <= sys.version_info < (3, 14)
+                ):  # pragma: no cover
+                    # These versions add filter parameter
+                    # Don't care which one gets covered
+                    tar.extract(member, parent, filter="data")
+                else:  # pragma: no cover
+                    tar.extract(member, parent)
 
         # Reload Portfolio
         if isinstance(p, Portfolio):

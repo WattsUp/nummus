@@ -537,6 +537,8 @@ class TestPortfolio(TestBase):
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
+        path_timestamp = path_db.with_name("_timestamp")
+        self.assertFalse(path_timestamp.exists(), "_timestamp unexpectedly exists")
 
         buf = None
         buf_backup = None
