@@ -48,10 +48,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           # pyright needs the dependencies installed
-          python -m pip install -e .
-          python -m pip install pyright
+          sudo apt-get install -y libsqlcipher-dev || (sudo apt-get update && sudo apt-get install -y libsqlcipher-dev)
+          python -m pip install --upgrade pip
+          python -m pip install -e .[dev,encrypt]
       - name: Run pyright
         run: |
           pyright .
