@@ -64,12 +64,14 @@ def get_importers(extra: Path | None) -> Sequence[type[TransactionImporter]]:
 
 def get_importer(
     path: Path,
+    path_debug: Path,
     available: Sequence[type[TransactionImporter]],
 ) -> TransactionImporter | None:
     """Get the best importer for a file.
 
     Args:
         path: Path to file
+        path_debug: Path to temporary debug file
         available: Available importers for portfolio
 
     Returns:
@@ -84,9 +86,13 @@ def get_importer(
         with pdfplumber.open(path) as pdf:
             pages = [page.extract_text() for page in pdf.pages]
             buf_pdf = [page for page in pages if page]
+        with path_debug.open("w", encoding="utf-8") as file:
+            file.write("\n--- [Page Boundary] ---\n".join(buf_pdf))
     else:
         with path.open("rb") as file:
             buf = file.read()
+        with path_debug.open("wb") as file:
+            file.write(buf)
 
     for i in available:
         if i.is_importable(suffix, buf=buf, buf_pdf=buf_pdf):

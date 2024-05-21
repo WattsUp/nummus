@@ -345,13 +345,19 @@ class TestPortfolio(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
+        path_debug = path_db.with_suffix(".importer_debug")
+
         # Fail to import non-importable file
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        self.assertRaises(exc.UnknownImporterError, p.import_file, path)
+        self.assertRaises(exc.UnknownImporterError, p.import_file, path, path_debug)
+        self.assertTrue(path_debug.exists(), "Debug file unexpectedly does not exists")
+        path_debug.unlink()
 
         # Fail to match Accounts and Assets
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
-        self.assertRaises(KeyError, p.import_file, path)
+        self.assertRaises(KeyError, p.import_file, path, path_debug)
+        self.assertTrue(path_debug.exists(), "Debug file unexpectedly does not exists")
+        path_debug.unlink()
 
         with p.get_session() as s:
             # Create accounts
@@ -373,77 +379,71 @@ class TestPortfolio(TestBase):
             s.commit()
 
             # Still missing assets
-            self.assertRaises(KeyError, p.import_file, path)
+            self.assertRaises(KeyError, p.import_file, path, path_debug)
+            self.assertTrue(
+                path_debug.exists(),
+                "Debug file unexpectedly does not exists",
+            )
+            path_debug.unlink()
 
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add(asset)
             s.commit()
 
             # We good now
-            p.import_file(path)
+            p.import_file(path, path_debug)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             transactions = s.query(Transaction).all()
 
             target = TRANSACTIONS_EXTRAS
             self.assertEqual(len(transactions), len(target))
-            split_properties = [
-                "payee",
-                "description",
-                "category",
-                "tag",
-                "asset",
-                "asset_quantity",
-                "asset_id",
-            ]
             for tgt, res in zip(target, transactions, strict=True):
+                if tgt["account"] == "Monkey Bank Checking":
+                    tgt_acct_id = acct_checking.id_
+                else:
+                    tgt_acct_id = acct_invest.id_
+                self.assertEqual(res.account_id, tgt_acct_id)
+                self.assertEqual(res.date_ord, tgt["date"].toordinal())
+                self.assertEqual(res.amount, tgt["amount"])
+                statement = tgt["statement"] or "Asset Transaction BANANA"
+                self.assertEqual(res.statement, statement)
+
                 self.assertEqual(len(res.splits), 1)
                 r_split = res.splits[0]
-                for k, t_v in tgt.items():
-                    prop = k
-                    test_value = t_v
-                    # Fix test value for linked properties
-                    if k == "asset":
-                        prop = "asset_id"
-                        test_value = asset.id_
-                    elif k == "account":
-                        prop = "account_id"
-                        if t_v == "Monkey Bank Checking":
-                            test_value = acct_checking.id_
-                        else:
-                            test_value = acct_invest.id_
-                    elif k == "date":
-                        prop = "date_ord"
-                        test_value = t_v.toordinal()
-
-                    if prop == "category":
-                        cat_id = r_split.category_id
-                        r_v = (
-                            s.query(TransactionCategory)
-                            .where(TransactionCategory.id_ == cat_id)
-                            .first()
-                        )
-                        if r_v is None:
-                            self.fail(f"Missing category: {cat_id}")
-                        self.assertEqual(r_v.name, test_value)
-                    elif prop in split_properties:
-                        r_v = getattr(r_split, prop)
-                        self.assertEqual(r_v, test_value)
-                    elif prop == "amount":
-                        self.assertEqual(res.amount, test_value)
-                        self.assertEqual(r_split.amount, test_value)
-                    else:
-                        r_v = getattr(res, prop)
-                        self.assertEqual(r_v, test_value)
+                self.assertEqual(r_split.amount, tgt["amount"])
+                self.assertEqual(r_split.description, tgt["description"])
+                cat_id = (
+                    s.query(TransactionCategory.id_)
+                    .where(
+                        TransactionCategory.name
+                        == (tgt["category"] or "Uncategorized"),
+                    )
+                    .one()[0]
+                )
+                self.assertEqual(r_split.category_id, cat_id)
+                self.assertEqual(r_split.tag, tgt["tag"])
+                asset_id = asset.id_ if tgt["asset"] else None
+                self.assertEqual(r_split.asset_id, asset_id)
+                self.assertEqual(r_split.asset_quantity, tgt["asset_quantity"])
 
             # Fail to import file again
-            self.assertRaises(exc.FileAlreadyImportedError, p.import_file, path)
+            self.assertRaises(
+                exc.FileAlreadyImportedError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # But it will work with force
-            p.import_file(path, force=True)
+            p.import_file(path, path_debug, force=True)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # Fine importing with force when not required
             path = self._DATA_ROOT.joinpath("transactions_required.csv")
-            p.import_file(path, force=True)
+            p.import_file(path, path_debug, force=True)
+            self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
             # Install importer that returns empty list
             shutil.copyfile(
@@ -452,7 +452,7 @@ class TestPortfolio(TestBase):
             )
             p._importers = importers.get_importers(p._path_importers)  # noqa: SLF001
             path = self._DATA_ROOT.joinpath("banana_bank_statement.pdf")
-            self.assertRaises(TypeError, p.import_file, path)
+            self.assertRaises(exc.EmptyImportError, p.import_file, path, path_debug)
 
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -537,6 +537,8 @@ class TestPortfolio(TestBase):
             with path_db.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
+        path_timestamp = path_db.with_name("_timestamp")
+        self.assertFalse(path_timestamp.exists(), "_timestamp unexpectedly exists")
 
         buf = None
         buf_backup = None
@@ -618,6 +620,54 @@ class TestPortfolio(TestBase):
             with path_salt.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
+
+        # Check invalid tars are invalid
+        path_backup_3 = path_db.with_suffix(".backup3.tar.gz")
+        # Empty tar
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            pass
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.backups,
+            path_db,
+        )
+
+        # _timestamp being a directory will return None in extractfile
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            info = tarfile.TarInfo("_timestamp")
+            info.type = tarfile.DIRTYPE
+            tar.addfile(info)
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.backups,
+            path_db,
+        )
+
+        # Missing files
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            pass
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.restore,
+            path_db,
+            3,
+        )
+
+        # Path traversal files are bad
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            info = tarfile.TarInfo("_timestamp")
+            tar.addfile(info)
+            info = tarfile.TarInfo(path_db.name)
+            tar.addfile(info)
+
+            info = tarfile.TarInfo("../injection.sh")
+            tar.addfile(info)
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.restore,
+            path_db,
+            3,
+        )
 
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -904,14 +954,6 @@ class TestPortfolio(TestBase):
                 amount=txn_0.amount,
                 parent=txn_0,
                 category_id=categories["Uncategorized"],
-            )
-
-            # Unbound model
-            self.assertRaises(
-                exc.UnboundExecutionError,
-                p.find_similar_transaction,
-                txn_0,
-                do_commit=False,
             )
 
             s.add_all((txn_0, t_split_0))

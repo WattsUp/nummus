@@ -27,6 +27,7 @@ __all__ = [
     "http",
     "FileAlreadyImportedError",
     "UnknownImporterError",
+    "EmptyImportError",
     "UnlockingError",
     "NotEncryptedError",
     "ParentAttributeError",
@@ -66,6 +67,23 @@ class UnknownImporterError(Exception):
             path: Path to unknown file
         """
         msg = f"Unknown importer for {path}"
+        super().__init__(msg)
+
+
+class EmptyImportError(Exception):
+    """Error when a file does not return any transactions."""
+
+    def __init__(self, path: Path, importer: object) -> None:
+        """Initialize EmptyImportError.
+
+        Args:
+            path: Path to empty file
+            importer: Importer used on file
+        """
+        msg = (
+            f"No transactions imported for {path} using importer "
+            f"{importer.__class__.__name__}"
+        )
         super().__init__(msg)
 
 

@@ -48,9 +48,9 @@ extras_require = {
     ],
 }
 extras_require["dev"] = extras_require["test"] + [
-    "ruff",
+    "ruff>=0.4.4",
     "codespell",
-    "witch-ver",
+    "witch-ver>=0.5.2",
     "black",
     "isort",
     "viztracer",
@@ -66,7 +66,12 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     license="MIT",
     packages=setuptools.find_packages(include=[module_folder, f"{module_folder}.*"]),
-    package_data={module_folder: []},
+    package_data={
+        module_folder: [
+            "templates/**/*",
+            "static/**/*",
+        ],
+    },
     install_requires=required,
     extras_require=extras_require,
     test_suite="tests",

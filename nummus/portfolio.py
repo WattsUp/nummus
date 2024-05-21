@@ -8,11 +8,11 @@ import hashlib
 import io
 import re
 import shutil
+import sys
 import tarfile
 from pathlib import Path
 
 import sqlalchemy
-import sqlalchemy.exc
 import tqdm
 from rapidfuzz import process
 from sqlalchemy import orm
@@ -279,11 +279,12 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
-    def import_file(self, path: Path, *, force: bool = False) -> None:
+    def import_file(self, path: Path, path_debug: Path, *, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
         Args:
             path: Path to file to import
+            path_debug: Path to temporary debug file
             force: True will not check for already imported files
 
         Raises:
@@ -312,7 +313,7 @@ class Portfolio:
                     date = datetime.date.fromordinal(existing_date_ord)
                     raise exc.FileAlreadyImportedError(date, path)
 
-        i = importers.get_importer(path, self._importers)
+        i = importers.get_importer(path, path_debug, self._importers)
         if i is None:
             raise exc.UnknownImporterError(path)
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
@@ -323,39 +324,13 @@ class Portfolio:
             }
             # Cache a mapping from account/asset name to the ID
             acct_mapping: dict[str, int] = {}
-            asset_mapping: dict[str, int] = {}
-            txns: list[tuple[Transaction, TransactionSplit]] = []
+            asset_mapping: dict[str, tuple[int, str]] = {}
             txns_raw = i.run()
             if not txns_raw:
-                msg = f"Importer returned no transactions, ctx={ctx}"
-                raise TypeError(msg)
+                raise exc.EmptyImportError(path, i)
             for d in txns_raw:
                 # Create a single split for each transaction
-                category_s = d.pop("category", "Uncategorized")
-                if not isinstance(category_s, str):  # pragma: no cover
-                    # Don't need to test debug code
-                    msg = f"Category is not a string, ctx={ctx}"
-                    raise TypeError(msg)
-                date = d.pop("date")
-                if not isinstance(date, datetime.date):  # pragma: no cover
-                    # Don't need to test debug code
-                    msg = f"Date is not a datetime.date, ctx={ctx}"
-                    raise TypeError(msg)
-                d["date_ord"] = date.toordinal()
-                d_split: importers.TxnDict = {
-                    "amount": d["amount"],  # Both split and parent have amount
-                    "payee": d.pop("payee", None),
-                    "description": d.pop("description", None),
-                    "category_id": categories[category_s].id_,
-                    "tag": d.pop("tag", None),
-                    "asset_quantity_unadjusted": d.pop("asset_quantity", None),
-                }
-
-                acct_raw = d.pop("account")
-                if not isinstance(acct_raw, str):  # pragma: no cover
-                    # Don't need to test debug code
-                    msg = f"Account is not a string, ctx={ctx}"
-                    raise TypeError(msg)
+                acct_raw = d["account"]
                 acct_id = acct_mapping.get(acct_raw)
                 if acct_id is None:
                     acct = self.find_account(acct_raw, session=s)
@@ -364,29 +339,41 @@ class Portfolio:
                         raise KeyError(msg)
                     acct_id = acct.id_
                     acct_mapping[acct_raw] = acct_id
-                d["account_id"] = acct_id
 
-                asset_raw = d.pop("asset", None)
-                if asset_raw is not None:
-                    if not isinstance(asset_raw, str):  # pragma: no cover
-                        # Don't need to test debug code
-                        msg = f"Asset is not a string, ctx={ctx}"
-                        raise TypeError(msg)
+                statement = d["statement"]
+
+                asset_raw = d["asset"]
+                asset_id: int | None = None
+                if asset_raw:
                     # Find its ID
-                    asset_id = asset_mapping.get(asset_raw)
-                    if asset_id is None:
+                    try:
+                        asset_id, asset_name = asset_mapping[asset_raw]
+                    except KeyError as e:
                         asset = self.find_asset(asset_raw, session=s)
                         if not isinstance(asset, Asset):
                             msg = f"Could not find Asset by '{asset_raw}', ctx={ctx}"
-                            raise KeyError(msg)
+                            raise KeyError(msg) from e
                         asset_id = asset.id_
-                        asset_mapping[asset_raw] = asset_id
-                    d_split["asset_id"] = asset_id
+                        asset_name = asset.name
+                        asset_mapping[asset_raw] = (asset_id, asset_name)
+                    if not statement:
+                        statement = f"Asset Transaction {asset_name}"
 
-                txns.append((Transaction(**d), TransactionSplit(**d_split)))
-
-            # All good, add transactions and commit
-            for txn, t_split in txns:
+                txn = Transaction(
+                    account_id=acct_id,
+                    amount=d["amount"],
+                    date_ord=d["date"].toordinal(),
+                    statement=statement,
+                )
+                t_split = TransactionSplit(
+                    amount=d["amount"],
+                    payee=d["payee"],
+                    description=d["description"],
+                    tag=d["tag"],
+                    category_id=categories[d["category"] or "Uncategorized"].id_,
+                    asset_id=asset_id,
+                    asset_quantity=d["asset_quantity"],
+                )
                 t_split.parent = txn
                 s.add_all((txn, t_split))
 
@@ -396,6 +383,9 @@ class Portfolio:
                 s.commit()
             s.add(ImportedFile(hash_=h))
             s.commit()
+
+        # If successful, delete the temp file
+        path_debug.unlink()
 
     def find_account(
         self,
@@ -729,8 +719,13 @@ class Portfolio:
                 continue
             # tar archive preserved owner and mode so no need to set these
             with tarfile.open(file, "r:gz") as tar:
-                file_ts = tar.extractfile("_timestamp")
-                if file_ts is None:  # pragma: no cover
+                try:
+                    file_ts = tar.extractfile("_timestamp")
+                except KeyError as e:
+                    # Backup file should always have timestamp file
+                    msg = "Backup is missing timestamp"
+                    raise exc.InvalidBackupTarError(msg) from e
+                if file_ts is None:
                     # Backup file should always have timestamp file
                     msg = "Backup is missing timestamp"
                     raise exc.InvalidBackupTarError(msg)
@@ -835,14 +830,35 @@ class Portfolio:
 
         # tar archive preserved owner and mode so no need to set these
         with tarfile.open(path_backup, "r:gz") as tar:
-            # Would prefer to use extractall(..., filter="data") but requires >=3.12
-            for member in tar:
+            required = {
+                "_timestamp",
+                re.sub(r"\.backup\d+.tar.gz$", ".db", path_backup.name),
+            }
+            members = tar.getmembers()
+            member_paths = [member.path for member in members]
+            for member in required:
+                if member not in member_paths:
+                    msg = f"Backup is missing required file: {member}"
+                    raise exc.InvalidBackupTarError(msg)
+            for member in members:
+                if member.path == "_timestamp":
+                    continue
                 dest = parent.joinpath(member.path).resolve()
-                if not dest.is_relative_to(parent):  # pragma: no cover
+                if not dest.is_relative_to(parent):
                     # Dest should still be relative to parent else, path traversal
                     msg = "Backup contains a file outside of destination"
                     raise exc.InvalidBackupTarError(msg)
-                tar.extract(member, parent)
+
+                if (
+                    (3, 10, 12) <= sys.version_info < (3, 11)
+                    or (3, 11, 4) <= sys.version_info < (3, 12)
+                    or (3, 12) <= sys.version_info < (3, 14)
+                ):  # pragma: no cover
+                    # These versions add filter parameter
+                    # Don't care which one gets covered
+                    tar.extract(member, parent, filter="data")
+                else:  # pragma: no cover
+                    tar.extract(member, parent)
 
         # Reload Portfolio
         if isinstance(p, Portfolio):

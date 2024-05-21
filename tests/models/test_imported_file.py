@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import datetime
 
-import sqlalchemy.exc
-
+from nummus import exceptions as exc
 from nummus import models
 from nummus.models import imported_file
 from tests.base import TestBase
@@ -32,5 +31,5 @@ class TestImportedFile(TestBase):
         # Duplicate hash_ are bad
         f = imported_file.ImportedFile(date_ord=today_ord + 1, hash_=d["hash_"])
         s.add(f)
-        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+        self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()

@@ -38,6 +38,7 @@ class TestCSVTransactionImporter(test_base.TestBase):
         self.assertEqual(i._buf_pdf, buf_pdf)  # noqa: SLF001
 
     def test_get_importer(self) -> None:
+        path_debug = self._TEST_ROOT.joinpath("portfolio.importer_debug")
         available = importers.get_importers(None)
         files = {
             "transactions_required.csv": importers.CSVTransactionImporter,
@@ -47,11 +48,16 @@ class TestCSVTransactionImporter(test_base.TestBase):
         }
         for f, cls in files.items():
             path = self._DATA_ROOT.joinpath(f)
-            i = importers.get_importer(path, available)
+            i = importers.get_importer(path, path_debug, available)
             if cls is None:
-                self.assertIsNone(i)
+                self.assertIsNone(i, f"{f} did not return None")
             else:
-                self.assertIsInstance(i, cls)
+                self.assertIsInstance(i, cls, f"{f} did not return {cls}")
+            self.assertTrue(
+                path_debug.exists(),
+                "Debug file unexpectedly does not exists",
+            )
+            path_debug.unlink()
 
     def test_get_importers(self) -> None:
         target = (importers.CSVTransactionImporter,)

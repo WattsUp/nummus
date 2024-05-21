@@ -136,3 +136,15 @@ class TestBaseURI(TestBase):
         ct_hex = ct.to_bytes(base_uri.ID_BYTES, base_uri._ORDER).hex()  # noqa: SLF001
         uri = base_uri.id_to_uri(pt)
         self.assertEqual(uri, ct_hex)
+
+    def test_uri_to_id(self) -> None:
+        uri = "A" * (base_uri.URI_BYTES - 1)
+        self.assertRaises(exc.InvalidURIError, base_uri.uri_to_id, uri)
+
+        uri = "Z" * base_uri.URI_BYTES
+        self.assertRaises(exc.InvalidURIError, base_uri.uri_to_id, uri)
+
+        id_ = 0
+        uri = base_uri.id_to_uri(id_)
+        result = base_uri.uri_to_id(uri)
+        self.assertEqual(result, id_)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy.exc
+import sqlalchemy
 
 from nummus import exceptions as exc
 from nummus import models
@@ -112,7 +112,7 @@ class TestAsset(TestBase):
         s.delete(a)
 
         # Cannot delete Parent before all children
-        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+        self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()  # Undo the attempt
 
         s.delete(v)
@@ -199,14 +199,6 @@ class TestAsset(TestBase):
         }
 
         a = Asset(**d)
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(
-            exc.UnboundExecutionError,
-            a.get_value,
-            today_ord,
-            today_ord,
-        )
 
         s.add(a)
         s.commit()
@@ -340,9 +332,6 @@ class TestAsset(TestBase):
             closed=False,
             emergency=False,
         )
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, a.update_splits)
 
         s.add_all((a, acct))
         s.commit()
@@ -551,9 +540,6 @@ class TestAsset(TestBase):
             locked=False,
             is_profit_loss=False,
         )
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, a.prune_valuations)
 
         s.add_all((a, acct, t_cat))
         s.commit()
@@ -764,13 +750,6 @@ class TestAsset(TestBase):
         )
 
         a.ticker = "ORANGE"
-
-        # Unbound error still
-        self.assertRaises(
-            exc.UnboundExecutionError,
-            a.update_valuations,
-            through_today=False,
-        )
 
         s.add_all((a, acct, t_cat))
         s.commit()

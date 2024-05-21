@@ -20,6 +20,7 @@ class TestImport(TestBase):
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             create.Create(path_db, None, force=False, no_encrypt=True).run()
         p = portfolio.Portfolio(path_db, None)
+        path_debug = path_db.with_suffix(".importer_debug")
 
         # Create Accounts and Assets
         with p.get_session() as s:
@@ -88,6 +89,7 @@ class TestImport(TestBase):
             f"{Fore.RED}Unknown importer for {file_c}\n"
             f"{Fore.YELLOW}Create a custom importer in {p.importers_path}\n"
             f"{Fore.RED}Abandoned import, restored from backup\n"
+            f"{Fore.YELLOW}Raw imported file may help at {path_debug}\n"
         )
         self.assertEqual(fake_stdout, target)
 

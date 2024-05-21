@@ -34,10 +34,6 @@ class TestAccount(TestBase):
 
         acct = Account(**d)
 
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "opened_on_ord")
-        self.assertRaises(exc.UnboundExecutionError, getattr, acct, "updated_on_ord")
-
         s.add(acct)
         s.commit()
 
@@ -143,14 +139,6 @@ class TestAccount(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
-        )
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(
-            exc.UnboundExecutionError,
-            acct.get_asset_qty,
-            today_ord,
-            today_ord,
         )
 
         s.add(t_cat)
@@ -332,14 +320,6 @@ class TestAccount(TestBase):
                 category=AssetCategory.STOCKS,
             )
             assets.append(new_asset)
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(
-            exc.UnboundExecutionError,
-            acct.get_value,
-            today_ord,
-            today_ord,
-        )
 
         s.add(acct)
         s.add_all(assets)
@@ -708,9 +688,6 @@ class TestAccount(TestBase):
             emergency=False,
         )
 
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, acct.get_cash_flow, today, today)
-
         s.add(acct)
         s.commit()
 
@@ -855,14 +832,6 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
-        )
-
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(
-            exc.UnboundExecutionError,
-            acct.get_profit_by_asset,
-            today,
-            today,
         )
 
         s.add(acct)

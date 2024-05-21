@@ -496,7 +496,7 @@ class Asset(Base):
                 actions=True,
                 raise_errors=True,
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
 

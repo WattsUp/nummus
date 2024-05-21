@@ -5,7 +5,6 @@ from __future__ import annotations
 import csv
 import datetime
 import io
-import types
 
 from typing_extensions import override
 
@@ -20,21 +19,6 @@ class CSVTransactionImporter(TransactionImporter):
 
     Other columns are allowed
     """
-
-    _COLUMNS = types.MappingProxyType(
-        {
-            "account": (True, str),
-            "date": (True, datetime.date.fromisoformat),
-            "amount": (True, utils.parse_real),
-            "payee": (True, str),
-            "description": (True, str),
-            "category": (False, str),
-            "subcategory": (False, str),
-            "tag": (False, str),
-            "asset": (False, str),
-            "asset_quantity": (False, utils.parse_real),
-        },
-    )
 
     @classmethod
     @override
@@ -53,10 +37,15 @@ class CSVTransactionImporter(TransactionImporter):
         # Check if the columns start with the expected ones
         first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")
         header = next(csv.reader(io.StringIO(first_line)))
-        for k, (required, _) in cls._COLUMNS.items():
-            if required and k not in header:
-                return False
-        return True
+        required = {
+            "account",
+            "amount",
+            "date",
+            "statement",
+        }
+        if required.issubset(header):
+            return True
+        return False
 
     @override
     def run(self) -> TxnDicts:
@@ -68,14 +57,24 @@ class CSVTransactionImporter(TransactionImporter):
         reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))
         transactions: TxnDicts = []
         for row in reader:
-            txn: TxnDict = {}
-            for key, (required, cleaner) in self._COLUMNS.items():
-                value = row.get(key)
-                if value:
-                    txn[key] = cleaner(value)
-                elif required:
-                    msg = f"CSV is missing column: {key}"
-                    raise KeyError(msg)
-            txn["statement"] = txn["description"]
+            row: dict[str, str]
+
+            amount = utils.parse_real(row["amount"])
+            if amount is None:
+                msg = f"Amount column did not import a number: {row}"
+                raise ValueError(msg)
+
+            txn: TxnDict = {
+                "account": row["account"],
+                "date": datetime.date.fromisoformat(row["date"]),
+                "amount": amount,
+                "statement": row["statement"],
+                "payee": row.get("payee") or None,
+                "description": row.get("description") or None,
+                "category": row.get("category") or None,
+                "tag": row.get("tag") or None,
+                "asset": row.get("asset") or None,
+                "asset_quantity": utils.parse_real(row.get("asset_quantity")),
+            }
             transactions.append(txn)
         return transactions

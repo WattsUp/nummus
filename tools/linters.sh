@@ -1,5 +1,5 @@
 #!/bin/sh
 # Run every linter
-ruff .
+ruff check .
 djlint .
 codespell .

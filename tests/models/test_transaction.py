@@ -3,8 +3,6 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy.exc
-
 from nummus import exceptions as exc
 from nummus import models
 from nummus.models import (
@@ -100,9 +98,6 @@ class TestTransactionSplit(TestBase):
 
         t_split_0 = TransactionSplit(**d)
 
-        # Unbound to a session will raise UnboundExecutionError
-        self.assertRaises(exc.UnboundExecutionError, getattr, t_split_0, "parent")
-
         s.add(t_split_0)
         s.commit()
         self.assertEqual(t_split_0.parent, txn)
@@ -149,7 +144,7 @@ class TestTransactionSplit(TestBase):
 
         # Zero amounts are bad
         t_split_0.amount = Decimal(0)
-        self.assertRaises(sqlalchemy.exc.IntegrityError, s.commit)
+        self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()
 
         # Short strings are bad

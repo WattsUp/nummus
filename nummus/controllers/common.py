@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
-import sqlalchemy.exc
 
+from nummus import exceptions as exc
 from nummus.models import Account, AccountCategory, Transaction
 
 if TYPE_CHECKING:
@@ -262,7 +262,7 @@ def error(e: str | Exception) -> str:
     Returns:
         HTML string response
     """
-    if isinstance(e, sqlalchemy.exc.IntegrityError):
+    if isinstance(e, exc.IntegrityError):
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
         m = re.match(r"([\w ]+) constraint failed: (\w+).(\w+)(.*)", orig)

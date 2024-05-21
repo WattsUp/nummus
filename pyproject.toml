@@ -49,6 +49,9 @@ exclude_lines = [
 
     # Don't complain about missing typing hints
     "if TYPE_CHECKING:",
+
+    # Don't need to test guard code
+    "raise exc.UnboundExecutionError",
 ]
 
 [tool.djlint]

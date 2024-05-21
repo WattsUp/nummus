@@ -53,15 +53,6 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Description</td>
-                        <td>
-                            <input class="w-full"
-                                   name="description"
-                                   value="{{ asset["description"] or "" }}"
-                                   autocomplete="off">
-                        </td>
-                    </tr>
-                    <tr>
                         <td>Ticker</td>
                         <td>
                             <input class="w-full"
@@ -82,6 +73,15 @@
                                 {% endfor %}
                             </select>
                         </td>
+                    </tr>
+                    <tr>
+                        <td class="h-[30px]">Description</td>
+                        <td rowspan="2">
+                            <textarea class="w-full h-64" name="description" autocomplete="off">{{ asset["description"] or "" }}</textarea>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
                     </tr>
                 </tbody>
             </table>
