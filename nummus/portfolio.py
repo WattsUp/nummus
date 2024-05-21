@@ -12,7 +12,6 @@ import tarfile
 from pathlib import Path
 
 import sqlalchemy
-import sqlalchemy.exc
 import tqdm
 from rapidfuzz import process
 from sqlalchemy import orm
@@ -719,8 +718,13 @@ class Portfolio:
                 continue
             # tar archive preserved owner and mode so no need to set these
             with tarfile.open(file, "r:gz") as tar:
-                file_ts = tar.extractfile("_timestamp")
-                if file_ts is None:  # pragma: no cover
+                try:
+                    file_ts = tar.extractfile("_timestamp")
+                except KeyError as e:
+                    # Backup file should always have timestamp file
+                    msg = "Backup is missing timestamp"
+                    raise exc.InvalidBackupTarError(msg) from e
+                if file_ts is None:
                     # Backup file should always have timestamp file
                     msg = "Backup is missing timestamp"
                     raise exc.InvalidBackupTarError(msg)
@@ -825,10 +829,20 @@ class Portfolio:
 
         # tar archive preserved owner and mode so no need to set these
         with tarfile.open(path_backup, "r:gz") as tar:
+            required = {
+                "_timestamp",
+                re.sub(r"\.backup\d+.tar.gz$", ".db", path_backup.name),
+            }
+            members = tar.getmembers()
+            member_paths = [member.path for member in members]
+            for member in required:
+                if member not in member_paths:
+                    msg = f"Backup is missing required file: {member}"
+                    raise exc.InvalidBackupTarError(msg)
             # Would prefer to use extractall(..., filter="data") but requires >=3.12
-            for member in tar:
+            for member in members:
                 dest = parent.joinpath(member.path).resolve()
-                if not dest.is_relative_to(parent):  # pragma: no cover
+                if not dest.is_relative_to(parent):
                     # Dest should still be relative to parent else, path traversal
                     msg = "Backup contains a file outside of destination"
                     raise exc.InvalidBackupTarError(msg)

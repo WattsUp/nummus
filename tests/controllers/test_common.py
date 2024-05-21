@@ -3,9 +3,8 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy.exc
-
 from nummus import controllers
+from nummus import exceptions as exc
 from nummus.controllers import common
 from nummus.models import (
     Account,
@@ -203,10 +202,10 @@ class TestCommon(WebTestBase):
                 t_cat.locked = False
                 t_cat.is_profit_loss = False
 
-                with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+                with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
                     s.commit()
-                e: sqlalchemy.exc.IntegrityError = cm.exception
+                e: exc.IntegrityError = cm.exception
                 e_str = "Transaction category name must not be empty"
                 html = common.error(e)
                 self.assertValidHTML(html)
@@ -223,10 +222,10 @@ class TestCommon(WebTestBase):
                 t_cat.group = TransactionCategoryGroup.OTHER
                 t_cat.locked = False
                 t_cat.is_profit_loss = False
-                with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+                with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
                     s.commit()
-                e: sqlalchemy.exc.IntegrityError = cm.exception
+                e: exc.IntegrityError = cm.exception
                 e_str = "Transaction category name must be unique"
                 html = common.error(e)
                 self.assertValidHTML(html)
@@ -236,10 +235,10 @@ class TestCommon(WebTestBase):
                 b = Budget()
                 b.date_ord = today_ord
                 b.amount = Decimal(1)
-                with self.assertRaises(sqlalchemy.exc.IntegrityError) as cm:
+                with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(b)
                     s.commit()
-                e: sqlalchemy.exc.IntegrityError = cm.exception
+                e: exc.IntegrityError = cm.exception
                 e_str = "Budget amount must be zero or negative"
                 html = common.error(e)
                 self.assertValidHTML(html)

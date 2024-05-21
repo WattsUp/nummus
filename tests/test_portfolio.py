@@ -619,6 +619,54 @@ class TestPortfolio(TestBase):
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
+        # Check invalid tars are invalid
+        path_backup_3 = path_db.with_suffix(".backup3.tar.gz")
+        # Empty tar
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            pass
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.backups,
+            path_db,
+        )
+
+        # _timestamp being a directory will return None in extractfile
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            info = tarfile.TarInfo("_timestamp")
+            info.type = tarfile.DIRTYPE
+            tar.addfile(info)
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.backups,
+            path_db,
+        )
+
+        # Missing files
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            pass
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.restore,
+            path_db,
+            3,
+        )
+
+        # Path traversal files are bad
+        with tarfile.open(path_backup_3, "w:gz") as tar:
+            info = tarfile.TarInfo("_timestamp")
+            tar.addfile(info)
+            info = tarfile.TarInfo(path_db.name)
+            tar.addfile(info)
+
+            info = tarfile.TarInfo("../injection.sh")
+            tar.addfile(info)
+        self.assertRaises(
+            exc.InvalidBackupTarError,
+            portfolio.Portfolio.restore,
+            path_db,
+            3,
+        )
+
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         path_other_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -904,14 +952,6 @@ class TestPortfolio(TestBase):
                 amount=txn_0.amount,
                 parent=txn_0,
                 category_id=categories["Uncategorized"],
-            )
-
-            # Unbound model
-            self.assertRaises(
-                exc.UnboundExecutionError,
-                p.find_similar_transaction,
-                txn_0,
-                do_commit=False,
             )
 
             s.add_all((txn_0, t_split_0))

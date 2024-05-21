@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+import re
+from pathlib import Path
 from types import ModuleType
 
 from nummus import exceptions as exc
@@ -36,3 +38,36 @@ class TestExceptions(TestBase):
             # the specific exception
             self.assertEqual(obj.__base__, Exception)
         self.assertEqual(set(exc.__all__), exceptions)
+
+    def test_all_used(self) -> None:
+        # Coverage doesn't check if each Exception is used
+        # See if every exception is tested by looking for the test case
+        target = {
+            "IntegrityError",  # sqlalchemy error raised when a constraint fails
+        }
+        for k in dir(exc):
+            if k[0] == "_":
+                continue
+            obj = getattr(exc, k)
+            if not inspect.isclass(obj):
+                continue
+            if isinstance(obj, ModuleType):
+                continue
+
+            self.assertTrue(
+                issubclass(obj, Exception),
+                f"{obj} is not subclass of Exception",
+            )
+            if obj.__module__ != exc.__name__:
+                continue
+            target.add(k)
+
+        result = set()
+        folder = Path(__file__).parent
+        re_raises = re.compile(r"^ *self\.assertRaises\([ \n]*exc\.(\w+),", re.M)
+        for path in folder.glob("**/test_*.py"):
+            with path.open(encoding="utf-8") as file:
+                buf = file.read()
+            result.update(re_raises.findall(buf))
+
+        self.assertEqual(result, target)
