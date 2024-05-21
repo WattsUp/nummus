@@ -32,7 +32,7 @@ jobs:
           python -m pip install ruff
       - name: Run ruff
         run: |
-          ruff .
+          ruff check .
   formatting:
     runs-on: ubuntu-latest
     strategy:

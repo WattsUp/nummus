@@ -48,9 +48,9 @@ extras_require = {
     ],
 }
 extras_require["dev"] = extras_require["test"] + [
-    "ruff",
+    "ruff>=0.4.4",
     "codespell",
-    "witch-ver",
+    "witch-ver>=0.5.2",
     "black",
     "isort",
     "viztracer",
