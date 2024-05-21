@@ -62,7 +62,7 @@ class TransactionImporter(ABC):
         suffix: str,
         buf: bytes | None,
         buf_pdf: list[str] | None,
-    ) -> bool:  # pragma: no cover
+    ) -> bool:
         """Test if file is importable for this Importer.
 
         Args:
@@ -77,7 +77,7 @@ class TransactionImporter(ABC):
         raise NotImplementedError(msg)
 
     @abstractmethod
-    def run(self) -> TxnDicts:  # pragma: no cover
+    def run(self) -> TxnDicts:
         """Run importer.
 
         Returns:

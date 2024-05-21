@@ -3,3 +3,4 @@
 ruff check .
 djlint .
 codespell .
+pyright .
