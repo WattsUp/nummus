@@ -73,8 +73,7 @@ class TransactionImporter(ABC):
         Returns:
             True if file is importable
         """
-        msg = f"Method not implemented for {cls}"
-        raise NotImplementedError(msg)
+        raise NotImplementedError
 
     @abstractmethod
     def run(self) -> TxnDicts:
@@ -85,5 +84,4 @@ class TransactionImporter(ABC):
             properties. Accounts, Assets, and TransactionCategories referred to by
             name since ID is unknown here.
         """
-        msg = f"Method not implemented for {self.__class__}"
-        raise NotImplementedError(msg)
+        raise NotImplementedError

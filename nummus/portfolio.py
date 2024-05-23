@@ -550,7 +550,7 @@ class Portfolio:
             return id_
 
         # Convert txn.amount to the raw SQL value to make a raw query
-        amount_raw = Transaction.amount.type.process_bind_param(txn.amount)
+        amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
         sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
 
         # Check within Account first, exact matches

@@ -47,7 +47,8 @@ def edit(uri: str) -> str | flask.Response:
         name = form["name"].strip()
         description = form["description"].strip()
         ticker = form["ticker"].strip()
-        category = form.get("category", type=AssetCategory)
+        category_s = form.get("category")
+        category = AssetCategory(category_s) if category_s else None
         interpolate = "interpolate" in form
 
         if category is None:

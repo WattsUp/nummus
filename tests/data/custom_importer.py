@@ -2,12 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from nummus.importers import base
-
-if TYPE_CHECKING:
-    from nummus import custom_types as t
 
 
 class BananaBankImporter(base.TransactionImporter):
@@ -16,7 +11,7 @@ class BananaBankImporter(base.TransactionImporter):
         cls,
         suffix: str,
         buf: bytes | None,
-        buf_pdf: t.Strings | None,
+        buf_pdf: list[str] | None,
     ) -> bool:
         _ = buf
         _ = buf_pdf
