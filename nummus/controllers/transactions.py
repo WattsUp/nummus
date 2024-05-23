@@ -557,6 +557,10 @@ def split(uri: str) -> str:
                 tag.append(t_tag)
                 amount.append(t_amount)
 
+            # Update the amount of the first split to be the proper sum
+            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
+            amount[0] = parent.amount - sum(filter(None, amount[1:]))
+
     # DELETE below
     elif "all" in flask.request.args:
         payee = [None]
