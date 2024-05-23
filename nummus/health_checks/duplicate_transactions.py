@@ -50,7 +50,7 @@ class DuplicateTransactions(Base):
                 date_ord: int
                 acct_id: int
                 amount: Decimal
-                amount_raw = Transaction.amount.type.process_bind_param(amount)
+                amount_raw = Transaction.amount.type.process_bind_param(amount, None)
                 # Create a robust uri for this duplicate
                 uri = f"{acct_id}.{date_ord}.{amount_raw}"
 

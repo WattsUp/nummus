@@ -96,7 +96,7 @@ class TestDuplicateTransactions(TestBase):
         with p.get_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
-            amount_raw = Transaction.amount.type.process_bind_param(amount)
+            amount_raw = Transaction.amount.type.process_bind_param(amount, None)
 
             i = s.query(HealthCheckIssue).one()
             self.assertEqual(i.check, c.name)

@@ -62,7 +62,7 @@ class TransactionImporter(ABC):
         suffix: str,
         buf: bytes | None,
         buf_pdf: list[str] | None,
-    ) -> bool:  # pragma: no cover
+    ) -> bool:
         """Test if file is importable for this Importer.
 
         Args:
@@ -73,11 +73,10 @@ class TransactionImporter(ABC):
         Returns:
             True if file is importable
         """
-        msg = f"Method not implemented for {cls}"
-        raise NotImplementedError(msg)
+        raise NotImplementedError
 
     @abstractmethod
-    def run(self) -> TxnDicts:  # pragma: no cover
+    def run(self) -> TxnDicts:
         """Run importer.
 
         Returns:
@@ -85,5 +84,4 @@ class TransactionImporter(ABC):
             properties. Accounts, Assets, and TransactionCategories referred to by
             name since ID is unknown here.
         """
-        msg = f"Method not implemented for {self.__class__}"
-        raise NotImplementedError(msg)
+        raise NotImplementedError

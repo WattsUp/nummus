@@ -60,7 +60,8 @@ def edit(uri: str) -> str | flask.Response:
         institution = form["institution"].strip()
         name = form["name"].strip()
         number = form["number"].strip()
-        category = form.get("category", type=AccountCategory)
+        category_s = form.get("category")
+        category = AccountCategory(category_s) if category_s else None
         closed = "closed" in form
         emergency = "emergency" in form
 

@@ -1647,7 +1647,7 @@ def main() -> None:
     duration = time.perf_counter() - start
     print(f"{Fore.CYAN}Portfolio generation took {duration:.1f}s")
 
-    commands.Summarize(p.path, None)
+    commands.Summarize(p.path, None, include_all=False)
 
 
 if __name__ == "__main__":

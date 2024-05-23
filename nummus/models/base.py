@@ -6,6 +6,7 @@ import enum
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import sqlalchemy
 from sqlalchemy import orm, types
 from typing_extensions import override
 
@@ -199,11 +200,16 @@ class Decimal6(types.TypeDecorator):
     _FACTOR_IN = 1 / _FACTOR_OUT
 
     @override
-    def process_bind_param(self, value: Decimal | None, *_) -> int | None:
+    def process_bind_param(
+        self,
+        value: Decimal | None,
+        dialect: sqlalchemy.Dialect,
+    ) -> int | None:
         """Receive a bound parameter value to be converted.
 
         Args:
             value: Python side value to convert
+            dialect: Dialect to use
 
         Returns:
             SQL side representation of value
@@ -213,11 +219,16 @@ class Decimal6(types.TypeDecorator):
         return int(value * self._FACTOR_IN)
 
     @override
-    def process_result_value(self, value: int | None, *_) -> Decimal | None:
+    def process_result_value(
+        self,
+        value: int | None,
+        dialect: sqlalchemy.Dialect,
+    ) -> Decimal | None:
         """Receive a result-row column value to be converted.
 
         Args:
             value: SQL side value to convert
+            dialect: Dialect to use
 
         Returns:
             Python side representation of value

@@ -145,7 +145,8 @@ def edit(uri: str) -> str | flask.Response:
 
         form = flask.request.form
         name = form["name"].strip()
-        group = form.get("group", type=TransactionCategoryGroup)
+        group_s = form.get("group")
+        group = TransactionCategoryGroup(group_s) if group_s else None
         is_profit_loss = "is-pnl" in form
 
         if group is None:
