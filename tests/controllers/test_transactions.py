@@ -352,8 +352,9 @@ class TestTransaction(WebTestBase):
         self.assertEqual(result.count("selected"), 1)
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+selected')
         self.assertRegex(result, rf'name="tag"[ \n]+value="{tag_1}"')
-        self.assertRegex(result, r'name="amount"[ \n]+value="-10\.00"')
-        self.assertRegex(result, r'id="txn-remaining"[^>]+>\$110\.00<')
+        # t_1 is -10 but it should adjust the amount to match t_0
+        self.assertRegex(result, r'name="amount"[ \n]+value="100\.00"')
+        self.assertRegex(result, r'id="txn-remaining"[^>]+>\$0\.00<')
 
         form = {
             "payee": payee_0,
