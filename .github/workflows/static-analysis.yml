@@ -54,7 +54,7 @@ jobs:
           python -m pip install -e .[dev,encrypt]
       - name: Run pyright
         run: |
-          pyright .
+          pyright
   formatting:
     runs-on: ubuntu-latest
     strategy:
