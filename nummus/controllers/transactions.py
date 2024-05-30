@@ -44,6 +44,7 @@ def page_all() -> str:
     """
     return common.page(
         "transactions/index-content.jinja",
+        title="Transactions | nummus",
         txn_table=ctx_table(),
     )
 

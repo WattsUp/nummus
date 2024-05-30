@@ -359,6 +359,7 @@ def page(uri: str) -> str:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
         return common.page(
             "accounts/index-content.jinja",
+            title=f"Account {acct.name} | nummus",
             acct=ctx_account(acct),
             chart=ctx_chart(acct),
             txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),

@@ -16,7 +16,7 @@ def page() -> str:
     Returns:
         string HTML response
     """
-    return common.page("index-content.jinja")
+    return common.page("index-content.jinja", title="Dashboard | nummus")
 
 
 ROUTES: Routes = {

@@ -281,6 +281,7 @@ def page() -> str:
     """
     return common.page(
         "cash-flow/index-content.jinja",
+        title="Cash Flow | nummus",
         chart=ctx_chart(),
     )
 
