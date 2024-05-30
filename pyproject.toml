@@ -7,7 +7,9 @@ preview = true
 
 [tool.codespell]
 skip = "3rd-party,dist,*.pem,*.json"
-exclude-file = ".codespellignorelines"
+ignore-words-list = [
+    "assertIn",
+]
 
 [tool.coverage.run]
 command_line = "-m tests discover -s tests -t . --locals"
