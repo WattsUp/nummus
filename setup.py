@@ -49,7 +49,7 @@ extras_require = {
 }
 extras_require["dev"] = extras_require["test"] + [
     "ruff>=0.4.4",
-    "codespell",
+    "codespell>=2.3.0",
     "witch-ver>=0.5.2",
     "black",
     "isort",

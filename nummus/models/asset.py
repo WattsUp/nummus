@@ -643,7 +643,7 @@ class Asset(Base):
                 "description": "A stock market index tracking the stock performance of "
                 "100 of the largest companies listed on Euronext",
             },
-            "^HSI": {
+            "^HSI": {  # codespell:ignore
                 "name": "Hang Seng Index",
                 "description": "A freefloat-adjusted market-capitalization-weighted "
                 "stock-market index in Hong Kong",

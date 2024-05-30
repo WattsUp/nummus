@@ -326,6 +326,7 @@ def page() -> str:
         current = sum(item[0] for item in acct_values.values())
     return common.page(
         "net-worth/index-content.jinja",
+        title="Net Worth | nummus",
         chart=ctx_chart(),
         current=current,
     )

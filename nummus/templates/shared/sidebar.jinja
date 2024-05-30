@@ -9,11 +9,12 @@
         </div>
     </div>
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
-        <div class="block m-2 cursor-pointer"
-             hx-get="{{ url_for("net_worth.page") }}"
-             hx-target="#main"
-             hx-swap="innerHTML"
-             hx-push-url="true">
+        <a class="block m-2 cursor-pointer"
+           href="{{ url_for("net_worth.page") }}"
+           hx-get="{{ url_for("net_worth.page") }}"
+           hx-target="#main"
+           hx-swap="innerHTML"
+           hx-push-url="true">
             <div class="bg-green-800">
                 <h1 class="text-white p-1 text-2xl flex justify-between">
                     <span>Net Worth</span>
@@ -35,7 +36,7 @@
                          style="width: {{ sidebar["liabilities-w"] }}%"></div>
                 </div>
             </div>
-        </div>
+        </a>
         {% if sidebar["include_closed"] %}
             <button class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900"
                     hx-get="{{ url_for("common.sidebar", closed="excluded") }}">
@@ -61,11 +62,12 @@
                                     {% include "svg/pencil.svg" %}
                                 {% endwith %}
                             </div>
-                            <div class="cursor-pointer"
-                                 hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
-                                 hx-target="#main"
-                                 hx-swap="innerHTML"
-                                 hx-push-url="true">
+                            <a class="cursor-pointer"
+                               href="{{ url_for("accounts.page", uri=acct["uri"]) }}"
+                               hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
+                               hx-target="#main"
+                               hx-swap="innerHTML"
+                               hx-push-url="true">
                                 <h1 class="flex gap-4 justify-between text-lg leading-tight">
                                     <span class="truncate pl-6 pr-1">{{ acct["institution"] }}</span>
                                     <span>{{ acct["value"] | money }}</span>
@@ -76,7 +78,7 @@
                                         {{ acct["updated_days_ago"] | days }}
                                     ago</span>
                                 </h2>
-                            </div>
+                            </a>
                         </div>
                     {% endfor %}
                 </div>

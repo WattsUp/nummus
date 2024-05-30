@@ -1,8 +1,9 @@
-<div class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem] h-[20rem]"
-     hx-target="#main"
-     hx-swap="innerHTML"
-     hx-push-url="true"
-     hx-get="{{ url_for("cash_flow.page") }}">
+<a class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem] h-[20rem]"
+   href="{{ url_for("cash_flow.page") }}"
+   hx-get="{{ url_for("cash_flow.page") }}"
+   hx-target="#main"
+   hx-swap="innerHTML"
+   hx-push-url="true">
     <div class="w-full flex space-between">
         <h1 class="text-xl align-left w-full font-serif text-green-600 group-hover:underline group-hover:after:content-['»']">
             Cash Flow
@@ -14,4 +15,4 @@
     <div id="cash-flow-chart-data">
         <script>cashFlowChart.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>
     </div>
-</div>
+</a>

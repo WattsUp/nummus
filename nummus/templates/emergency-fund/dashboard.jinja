@@ -1,8 +1,9 @@
-<div class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem] h-[20rem]"
-     hx-target="#main"
-     hx-swap="innerHTML"
-     hx-push-url="true"
-     hx-get="{{ url_for("emergency_fund.page") }}">
+<a class="bg-white p-2 cursor-pointer group flex flex-col min-h-[20rem] h-[20rem]"
+   href="{{ url_for("emergency_fund.page") }}"
+   hx-get="{{ url_for("emergency_fund.page") }}"
+   hx-target="#main"
+   hx-swap="innerHTML"
+   hx-push-url="true">
     <div class="w-full flex space-between">
         <h1 class="text-xl align-left w-full font-serif text-green-600 group-hover:underline group-hover:after:content-['»']">
             Emergency Fund
@@ -27,4 +28,4 @@
             <p>You should be able to cover {{ e_fund["months"] }} months of expenses.</p>
         {% endif %}
     </div>
-</div>
+</a>

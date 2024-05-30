@@ -112,6 +112,7 @@ def page() -> str:
     """
     return common.page(
         "emergency-fund/index-content.jinja",
+        title="Emergency Fund | nummus",
         e_fund=ctx_page(),
     )
 

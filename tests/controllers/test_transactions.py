@@ -28,6 +28,7 @@ class TestTransaction(WebTestBase):
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
         cat_0 = d["cat_0"]
+        cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
         endpoint = "/h/transactions/table"
@@ -35,6 +36,7 @@ class TestTransaction(WebTestBase):
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(result, r"<title>Transactions This Month \| nummus</title>")
 
         queries: dict[str, str | list[str]] = {
             "account": "None selected",
@@ -42,6 +44,7 @@ class TestTransaction(WebTestBase):
         }
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotIn("No matching transactions for given query filters", result)
+        self.assertRegex(result, r"<title>Transactions All \| nummus</title>")
 
         queries: dict[str, str | list[str]] = {
             "account": acct,
@@ -49,6 +52,7 @@ class TestTransaction(WebTestBase):
         }
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotIn("No matching transactions for given query filters", result)
+        self.assertRegex(result, rf"<title>Transactions All, {acct} \| nummus</title>")
 
         # If a filter is not an option, ignore
         long_ago = today - datetime.timedelta(days=400)
@@ -61,57 +65,117 @@ class TestTransaction(WebTestBase):
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
+        self.assertRegex(
+            result,
+            rf"<title>Transactions {long_ago} to {long_ago} \| nummus</title>",
+        )
 
         queries = {"payee": payee_0}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions This Month, {payee_0} \| nummus</title>",
+        )
 
         queries = {"payee": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
+        self.assertRegex(
+            result,
+            r"<title>Transactions This Month \| nummus</title>",
+        )
 
         queries = {"payee": ["[blank]", payee_1]}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions This Month, {payee_1} \| nummus</title>",
+        )
 
         queries = {"category": cat_0}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions This Month, {cat_0} \| nummus</title>",
+        )
 
         queries = {"tag": tag_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
+        )
 
         queries = {"tag": "[blank]"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
+        self.assertRegex(
+            result,
+            r"<title>Transactions This Month \| nummus</title>",
+        )
 
         queries = {"tag": ["[blank]", tag_1]}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
+        )
 
         queries = {"locked": "true"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            r"<title>Transactions This Month, Locked \| nummus</title>",
+        )
 
         queries = {"search": payee_1}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf'<title>Transactions This Month, "{payee_1}" \| nummus</title>',
+        )
 
         queries = {"search": payee_1, "period": "all"}
         result, _ = self.web_get(endpoint, queries=queries)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf'<title>Transactions All, "{payee_1}" \| nummus</title>',
+        )
+
+        queries = {
+            "period": "all",
+            "tag": tag_1,
+            "category": cat_1,
+            "locked": "true",
+            "payee": payee_1,
+        }
+        result, _ = self.web_get(endpoint, queries=queries)
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            rf"<title>Transactions All, {payee_1}, {cat_1}, & 2 Filters "
+            r"\| nummus</title>",
+        )
 
     def test_options(self) -> None:
         d = self._setup_portfolio()

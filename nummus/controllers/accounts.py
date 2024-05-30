@@ -357,23 +357,26 @@ def page(uri: str) -> str:
 
     with p.get_session() as s:
         acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
+        txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
+        title = f"Account {acct.name}," + title.removeprefix("Transactions")
         return common.page(
             "accounts/index-content.jinja",
+            title=title,
             acct=ctx_account(acct),
             chart=ctx_chart(acct),
-            txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+            txn_table=txn_table,
             assets=ctx_assets(s, acct),
         )
 
 
-def table(uri: str) -> str:
+def table(uri: str) -> flask.Response:
     """GET /h/accounts/a/<uri>/table.
 
     Args:
         uri: Account URI
 
     Returns:
-        string HTML response
+        HTML response
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -396,6 +399,7 @@ def table(uri: str) -> str:
                 else datetime.date.fromordinal(opened_on_ord)
             )
         no_defer = "no-defer" in args
+        txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
         if (
             PREVIOUS_PERIOD["start"] == start
             and PREVIOUS_PERIOD["end"] == end
@@ -405,19 +409,33 @@ def table(uri: str) -> str:
             # If same period and not being updated via update_transaction nor deferral:
             # don't update the chart
             # aka if just the table changed pages or column filters
-            return flask.render_template(
+            html_table = flask.render_template(
                 "accounts/table.jinja",
-                txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
+                txn_table=txn_table,
                 include_oob=True,
             )
-        return flask.render_template(
-            "accounts/table.jinja",
-            chart=ctx_chart(acct),
-            txn_table=transactions.ctx_table(acct, DEFAULT_PERIOD),
-            assets=ctx_assets(s, acct),
-            include_oob=True,
-            include_chart_oob=True,
-        )
+        else:
+            html_table = flask.render_template(
+                "accounts/table.jinja",
+                chart=ctx_chart(acct),
+                txn_table=txn_table,
+                assets=ctx_assets(s, acct),
+                include_oob=True,
+                include_chart_oob=True,
+            )
+        title = f"Account {acct.name}," + title.removeprefix("Transactions")
+        html_title = f"<title>{title}</title>\n"
+        html = html_title + html_table
+        response = flask.make_response(html)
+        args = dict(flask.request.args)
+        if not no_defer:
+            response.headers["HX-Push-Url"] = flask.url_for(
+                "accounts.page",
+                _external=False,
+                uri=uri,
+                **args,
+            )
+        return response
 
 
 def options(uri: str, field: str) -> str:

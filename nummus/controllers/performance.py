@@ -206,6 +206,7 @@ def page() -> str:
     """
     return common.page(
         "performance/index-content.jinja",
+        title="Performance | nummus",
         chart=ctx_chart(),
     )
 

@@ -289,18 +289,23 @@ def error(e: str | Exception) -> str:
     return flask.render_template("shared/error.jinja", error=str(e))
 
 
-def page(content_template: str, **context: object) -> str:
+def page(content_template: str, title: str, **context: object) -> str:
     """Render a page with a given content template.
 
     Args:
         content_template: Path to content template
+        title: Title of the page
         context: context passed to render_template
     """
     if flask.request.headers.get("Hx-Request", "false") == "true":
         # Send just the content
-        return flask.render_template(content_template, **context)
+        html_title = f"<title>{title}</title>\n"
+        return html_title + flask.render_template(content_template, **context)
     return flask.render_template_string(
         f"""{{% extends "shared/base.jinja" %}}
+{{% block title %}}
+{title}
+{{% endblock title %}}
 {{% block content %}}
 {{% include "{content_template}" %}}
 {{% endblock content %}}

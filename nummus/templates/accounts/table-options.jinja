@@ -16,7 +16,7 @@
                        name="{{ name }}"
                        value="{{ option["name"] }}"
                        {% if option["checked"] %}checked{% endif %}
-                       hx-get="{{ url_for("accounts.table", uri=txn_table["uri"], period="custom") }}"
+                       hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}"
                        autocomplete="off">
                 {% with class = "w-5 h-5" %}
                     {% include "svg/check.svg" %}
