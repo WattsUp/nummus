@@ -42,24 +42,35 @@ def page_all() -> str:
     Returns:
         string HTML response
     """
+    txn_table, title = ctx_table()
     return common.page(
         "transactions/index-content.jinja",
-        title="Transactions | nummus",
-        txn_table=ctx_table(),
+        title=title,
+        txn_table=txn_table,
     )
 
 
-def table() -> str:
+def table() -> flask.Response:
     """GET /h/transactions/table.
 
     Returns:
-        string HTML response
+        HTML response with url set
     """
-    return flask.render_template(
+    txn_table, title = ctx_table()
+    html_title = f"<title>{title}</title>\n"
+    html = html_title + flask.render_template(
         "transactions/table.jinja",
-        txn_table=ctx_table(),
+        txn_table=txn_table,
         include_oob=True,
     )
+    response = flask.make_response(html)
+    args = dict(flask.request.args)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "transactions.page_all",
+        _external=False,
+        **args,
+    )
+    return response
 
 
 def options(field: str) -> str:
@@ -177,7 +188,7 @@ def ctx_options(
 def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
-) -> dict[str, object]:
+) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
 
     Args:
@@ -185,7 +196,7 @@ def ctx_table(
         default_period: Default period to use if no period given
 
     Returns:
-        Dictionary HTML context
+        Dictionary HTML context, title of page
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -314,6 +325,30 @@ def ctx_table(
 
         offset_last = max(0, int((count - 1) // page_len) * page_len)
 
+        if period == "custom":
+            title = f"{start} to {end}"
+        else:
+            title = period.replace("-", " ").title()
+        # Add filter if used
+        filters = [
+            *selected_accounts,
+            *selected_payees,
+            *selected_categories,
+            *selected_tags,
+        ]
+        if locked is not None:
+            filters.append("Locked" if locked else "Unlocked")
+        if search_str:
+            filters.append(f'"{search_str}"')
+        n_filters = len(filters)
+        if n_filters > 0:
+            n_included = 2
+            title += ", " + ", ".join(filters[:n_included])
+            if n_filters > n_included:
+                title += f", & {n_filters-n_included} Filters"
+
+        title = f"Transactions {title} | nummus"
+
         return {
             "uri": None if acct is None else acct.uri,
             "transactions": transactions,
@@ -341,7 +376,7 @@ def ctx_table(
             "any-filters-payee": len(selected_payees) > 0,
             "any-filters-category": len(selected_categories) > 0,
             "any-filters-tag": len(selected_tags) > 0,
-        }
+        }, title
 
 
 def ctx_split(
