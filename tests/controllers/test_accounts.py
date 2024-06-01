@@ -294,7 +294,7 @@ class TestAccount(WebTestBase):
         headers = {"HX-Trigger": "txn-table"}
         result, _ = self.web_get(endpoint, queries, headers=headers)
         # Get the asset block
-        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
         result_assets = m[1] if m else ""
         result_assets = result_assets.replace("\n", " ")
@@ -321,7 +321,7 @@ class TestAccount(WebTestBase):
 
         result, _ = self.web_get(endpoint, queries, headers=headers)
         # Get the asset block
-        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
         result_assets = m[1] if m else ""
         result_assets = result_assets.replace("\n", " ")
@@ -367,7 +367,7 @@ class TestAccount(WebTestBase):
         }
         result, _ = self.web_get(endpoint, queries, headers=headers)
         # Get the asset block
-        m = re.search(r'id="assets"(.*)id="txn-table"', result, re.S)
+        m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
         result_assets = m[1] if m else ""
         result_assets = result_assets.replace("\n", " ")

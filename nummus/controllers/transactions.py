@@ -47,6 +47,7 @@ def page_all() -> str:
         "transactions/index-content.jinja",
         title=title,
         txn_table=txn_table,
+        controller="transactions",
     )
 
 
@@ -62,6 +63,7 @@ def table() -> flask.Response:
         "transactions/table.jinja",
         txn_table=txn_table,
         include_oob=True,
+        controller="transactions",
     )
     response = flask.make_response(html)
     args = dict(flask.request.args)
@@ -117,6 +119,7 @@ def options(field: str) -> str:
             options=ctx_options(query, field, id_mapping, search_str=search_str),
             name=field,
             search_str=search_str,
+            controller="transactions",
         )
 
 

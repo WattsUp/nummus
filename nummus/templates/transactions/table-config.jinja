@@ -5,10 +5,10 @@
            value="{{ txn_table["search"] }}"
            placeholder="Search Transactions"
            class="mr-8 grow"
-           hx-get="{{ url_for("transactions.table") }}"
+           hx-get="{{ url_for(controller + ".table", **url_args) }}"
            autocomplete="off">
     <select name="period"
-            hx-get="{{ url_for("transactions.table") }}"
+            hx-get="{{ url_for(controller + ".table", **url_args) }}"
             autocomplete="off">
         {% with period = txn_table["period"] %}
             {% include "shared/period-options.jinja" %}
@@ -18,7 +18,7 @@
            type="date"
            name="start"
            value="{{ txn_table["start"] }}"
-           hx-get="{{ url_for("transactions.table", period="custom") }}"
+           hx-get="{{ url_for(controller + ".table", period="custom", **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
@@ -26,48 +26,7 @@
            type="date"
            name="end"
            value="{{ txn_table["end"] }}"
-           hx-get="{{ url_for("transactions.table", period="custom") }}"
+           hx-get="{{ url_for(controller + ".table", period="custom", **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
-</div>
-<div id="txn-paging"
-     class="flex w-full justify-end my-1"
-     hx-swap-oob="{{ oob }}">
-    <button class="button hover:red mr-1"
-            hx-get="{{ url_for("transactions.table", search="") }}"
-            hx-include="#txn-config">Clear Filters</button>
-    <button class="button hover:blue mr-1"
-            hx-get="{{ url_for("transaction_categories.overlay") }}"
-            hx-target="#overlay"
-            hx-swap="innerHTML">Edit categories</button>
-    <button class="button hover:green mr-auto"
-            hx-get="{{ url_for("transactions.table", period="90-days", locked=False) }}"
-            hx-include="this">Recent & Unlocked</button>
-    <button hx-get="{{ url_for("transactions.table", offset=txn_table["offset_first"]) }}">
-        {% with class="w-[24px] h-[24px] hover:fill-green" %}
-            {% include "svg/arrow-first.svg" %}
-        {% endwith %}
-    </button>
-    <button hx-get="{{ url_for("transactions.table", offset=txn_table["offset_prev"]) }}">
-        {% with class="w-[24px] h-[24px] hover:fill-green" %}
-            {% include "svg/arrow-left.svg" %}
-        {% endwith %}
-    </button>
-    <span class="w-40 text-center">
-        {{ txn_table["i_first"] }}
-        -
-        {{ txn_table["i_last"] }}
-        of
-        {{ txn_table["count"] }}
-    </span>
-    <button hx-get="{{ url_for("transactions.table", offset=txn_table["offset_next"]) }}">
-        {% with class="w-[24px] h-[24px] hover:fill-green" %}
-            {% include "svg/arrow-right.svg" %}
-        {% endwith %}
-    </button>
-    <button hx-get="{{ url_for("transactions.table", offset=txn_table["offset_last"]) }}">
-        {% with class="w-[24px] h-[24px] hover:fill-green" %}
-            {% include "svg/arrow-last.svg" %}
-        {% endwith %}
-    </button>
 </div>

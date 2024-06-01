@@ -42,8 +42,9 @@
          hx-target="#txn-table"
          hx-swap="outerHTML">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
-        {% include "accounts/table-config.jinja" %}
-        {% include "accounts/table-header.jinja" %}
-        {% include "accounts/table.jinja" %}
+        {% include "transactions/table-config.jinja" %}
+        {% include "transactions/table-paging.jinja" %}
+        {% include "transactions/table-header.jinja" %}
+        {% include "transactions/table.jinja" %}
     </div>
 </section>

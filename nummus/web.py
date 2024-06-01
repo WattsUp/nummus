@@ -163,7 +163,12 @@ class Server:
             print(f"{Fore.MAGENTA}Running in debug mode")
 
         # Inject common variables into templates
-        self._app.context_processor(lambda: {"version": version.__version__})
+        self._app.context_processor(
+            lambda: {
+                "version": version.__version__,
+                "url_args": {},
+            },
+        )
 
         # Setup environment and static file bundles
         env_assets = flask_assets.Environment(self._app)
