@@ -317,7 +317,10 @@ class Asset(Base):
 
         query = (
             s.query(TransactionSplit)
-            .where(TransactionSplit.asset_id == self.id_)
+            .where(
+                TransactionSplit.asset_id == self.id_,
+                TransactionSplit._asset_qty_unadjusted.isnot(None),  # noqa: SLF001
+            )
             .order_by(TransactionSplit.date_ord)
         )
 
