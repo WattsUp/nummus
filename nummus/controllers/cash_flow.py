@@ -286,17 +286,27 @@ def page() -> str:
     )
 
 
-def chart() -> str:
+def chart() -> flask.Response:
     """GET /h/cash-flow/chart.
 
     Returns:
         string HTML response
     """
-    return flask.render_template(
+    html = flask.render_template(
         "cash-flow/chart-data.jinja",
         chart=ctx_chart(),
         include_oob=True,
     )
+    response = flask.make_response(html)
+    args = dict(flask.request.args)
+    no_defer = "no-defer" in args
+    if not no_defer:
+        response.headers["HX-Push-Url"] = flask.url_for(
+            "cash_flow.page",
+            _external=False,
+            **args,
+        )
+    return response
 
 
 def dashboard() -> str:
