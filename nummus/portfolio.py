@@ -325,7 +325,11 @@ class Portfolio:
             # Cache a mapping from account/asset name to the ID
             acct_mapping: dict[str, int] = {}
             asset_mapping: dict[str, tuple[int, str]] = {}
-            txns_raw = i.run()
+            try:
+                txns_raw = i.run()
+            except Exception as e:
+                msg = f"Importer failed, ctx={ctx}"
+                raise ValueError(msg) from e
             if not txns_raw:
                 raise exc.EmptyImportError(path, i)
             for d in txns_raw:
