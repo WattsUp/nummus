@@ -48,7 +48,6 @@ def ctx_chart() -> dict[str, object]:
         args.get("end", type=datetime.date.fromisoformat),
     )
     no_defer = "no-defer" in args
-    category = args.get("category", None, type=AccountCategory)
 
     with p.get_session() as s:
         if start is None:
@@ -72,13 +71,10 @@ def ctx_chart() -> dict[str, object]:
                 "end": end,
                 "period": period,
                 "defer": True,
-                "category": category,
                 "category_type": AccountCategory,
             }
 
         query = s.query(Account)
-        if category is not None:
-            query = query.where(Account.category == category)
 
         # Include account if not closed
         # Include account if most recent transaction is in period
@@ -229,7 +225,6 @@ def ctx_chart() -> dict[str, object]:
             "incomes": incomes,
             "expenses": expenses,
         },
-        "category": category,
         "category_type": AccountCategory,
     }
 
@@ -307,7 +302,7 @@ def table() -> flask.Response:
         args.get("end", type=datetime.date.fromisoformat),
     )
     no_defer = "no-defer" in args
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
     start = txn_table["start"]
     title = "Cash Flow," + title.removeprefix("Transactions")
     html = f"<title>{title}</title>\n" + flask.render_template(
@@ -357,10 +352,18 @@ def options(field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        transaction_ids = None
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
+
+            query = s.query(TransactionCategory)
+            query = query.with_entities(TransactionCategory.id_)
+            query = query.where(
+                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+            )
+            transaction_ids = {row[0] for row in query.all()}
 
         period = args.get("period", "this-month")
         start, end = web_utils.parse_period(
@@ -377,6 +380,8 @@ def options(field: str) -> str:
         if start is not None:
             start_ord = start.toordinal()
             query = query.where(TransactionSplit.date_ord >= start_ord)
+        if transaction_ids is not None:
+            query = query.where(TransactionSplit.category_id.in_(transaction_ids))
 
         search_str = args.get(f"search-{field}")
 

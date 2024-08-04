@@ -329,7 +329,7 @@ class Portfolio:
                 txns_raw = i.run()
             except Exception as e:
                 msg = f"Importer failed, ctx={ctx}"
-                raise ValueError(msg) from e
+                raise exc.FailedImportError(path, i) from e
             if not txns_raw:
                 raise exc.EmptyImportError(path, i)
             for d in txns_raw:

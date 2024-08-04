@@ -423,5 +423,5 @@ class TestAccount(WebTestBase):
         self.assertNotIn("checked", result)
         # Check sorting
         i_blank = result.find("[blank]")
-        i_0 = result.find(tag_1)
+        i_1 = result.find(tag_1)
         self.assertLess(i_blank, i_1)

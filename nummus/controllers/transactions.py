@@ -20,6 +20,7 @@ from nummus.models import (
     search,
     Transaction,
     TransactionCategory,
+    TransactionCategoryGroup,
     TransactionSplit,
 )
 
@@ -191,12 +192,15 @@ def ctx_options(
 def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
+    *,
+    no_other_group: bool = False,
 ) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
 
     Args:
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
+        no_other_group: True to exclude transactions in the OTHER group
 
     Returns:
         Dictionary HTML context, title of page
@@ -227,6 +231,15 @@ def ctx_table(
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
 
+        transaction_ids = None
+        if no_other_group:
+            query = s.query(TransactionCategory)
+            query = query.with_entities(TransactionCategory.id_)
+            query = query.where(
+                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+            )
+            transaction_ids = {row[0] for row in query.all()}
+
         page_len = 25
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
@@ -244,6 +257,8 @@ def ctx_table(
             query = query.where(TransactionSplit.date_ord >= start_ord)
         if acct is not None:
             query = query.where(TransactionSplit.account_id == acct.id_)
+        if transaction_ids is not None:
+            query = query.where(TransactionSplit.category_id.in_(transaction_ids))
 
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
