@@ -53,7 +53,8 @@ const pluginHoverHighlight = {
         const hoverHighlight = chart.hoverHighlight;
         const child = this.getChild(chart, i);
         if (active) {
-            if (hoverHighlight.scroll) child.scrollIntoView();
+            if (hoverHighlight.scroll)
+                child.scrollIntoView({block: 'nearest', inline: 'nearest'});
             child.style.fontWeight = 'bold';
         } else {
             child.style.fontWeight = '';
