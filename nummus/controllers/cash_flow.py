@@ -47,7 +47,6 @@ def ctx_chart() -> dict[str, object]:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    no_defer = "no-defer" in args
 
     with p.get_session() as s:
         if start is None:
@@ -65,14 +64,6 @@ def ctx_chart() -> dict[str, object]:
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
-        if n > web_utils.LIMIT_DEFER and not no_defer:
-            return {
-                "start": start,
-                "end": end,
-                "period": period,
-                "defer": True,
-                "category_type": AccountCategory,
-            }
 
         query = s.query(Account)
 
@@ -277,7 +268,7 @@ def page() -> str:
     Returns:
         string HTML response
     """
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
     title = "Cash Flow," + title.removeprefix("Transactions")
     return common.page(
         "cash-flow/index-content.jinja",
@@ -301,7 +292,6 @@ def table() -> flask.Response:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    no_defer = "no-defer" in args
     txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
     start = txn_table["start"]
     title = "Cash Flow," + title.removeprefix("Transactions")
@@ -315,11 +305,12 @@ def table() -> flask.Response:
         PREVIOUS_PERIOD["start"] == start
         and PREVIOUS_PERIOD["end"] == end
         and flask.request.headers.get("Hx-Trigger") != "txn-table"
-        and not no_defer
     ):
-        # If same period and not being updated via update_transaction nor deferral:
+        # If same period and not being updated via update_transaction:
         # don't update the chart
         # aka if just the table changed pages or column filters
+        # TODO (WattsUp): use client side mechanism to determine when to send a new
+        # chart
         html += flask.render_template(
             "cash-flow/chart-data.jinja",
             oob=True,
@@ -327,12 +318,11 @@ def table() -> flask.Response:
         )
     response = flask.make_response(html)
     args = dict(flask.request.args)
-    if not no_defer:
-        response.headers["HX-Push-Url"] = flask.url_for(
-            "cash_flow.page",
-            _external=False,
-            **args,
-        )
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "cash_flow.page",
+        _external=False,
+        **args,
+    )
     return response
 
 

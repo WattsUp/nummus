@@ -6,6 +6,7 @@
            placeholder="Search Transactions"
            class="mr-8 grow"
            hx-get="{{ url_for(controller + ".table", **url_args) }}"
+           hx-indicator="unset"
            autocomplete="off">
     <select name="period"
             hx-get="{{ url_for(controller + ".table", **url_args) }}"

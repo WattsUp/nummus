@@ -3,7 +3,8 @@
      hx-swap-oob="{{ oob }}"
      hx-include="#net-worth-config"
      hx-target="#net-worth-chart-data"
-     hx-swap="outerHTML">
+     hx-swap="outerHTML"
+     hx-indicator=".spinner">
     <button class="button {{ "hover:green" if chart["category"] else "bg-green" }}"
             hx-get="{{ url_for("net_worth.chart", category="") }}">All</button>
     {% for cat in chart["category_type"] %}

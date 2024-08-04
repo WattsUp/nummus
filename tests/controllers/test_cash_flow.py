@@ -26,6 +26,7 @@ class TestCashFlow(WebTestBase):
             result,
             r'<script>cashFlowChart\.update\(.*"totals": \[.+\].*\)</script>',
         )
+        self.assertNotIn("Uncategorized", result)
 
     def test_table(self) -> None:
         p = self._portfolio

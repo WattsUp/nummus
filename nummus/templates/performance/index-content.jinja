@@ -9,12 +9,13 @@
         versus
         <span class="underline decoration-2 decoration-dotted decoration-yellow">Market Indices</span>
     </div>
-    <div class="w-full h-96">
+    <div class="w-full h-96 relative">
         <canvas id="performance-chart-canvas"></canvas>
+        {% include "shared/spinner.jinja" %}
     </div>
     {% include "performance/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Accounts</h1>
-    {% with accounts = chart["accounts"], defer=chart["defer"] %}
+    {% with accounts = chart["accounts"] %}
         {% include "performance/accounts.jinja" %}
     {% endwith %}
     {% include "performance/chart-data.jinja" %}

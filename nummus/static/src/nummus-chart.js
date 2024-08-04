@@ -279,45 +279,4 @@ const nummusChart = {
             formatterF0.format(total);
         chart.update();
     },
-    /**
-     * Add deferred chart spinner
-     *
-     * @param {String} canvas ID of chart canvas
-     */
-    addDeferredChart: function(canvas) {
-        this.removeDeferredChart(canvas);
-
-        const e = document.getElementById(canvas);
-        e.parentNode.style.position = 'relative';
-
-        // Create a overlay div
-        const overlay = document.createElement('div');
-        overlay.id = `${canvas}-spinner`;
-        overlay.style.inset = '0';
-        overlay.style.position = 'absolute';
-        overlay.style.display = 'flex';
-
-        // Add spinner parent
-        const spinner = document.createElement('div');
-        spinner.classList.add('lds-roller');
-        spinner.style.margin = 'auto';
-        overlay.appendChild(spinner);
-
-        // Add spinner dots
-        for (let i = 0; i < 8; ++i) {
-            const dot = document.createElement('div');
-            spinner.appendChild(dot);
-        }
-
-        e.parentNode.appendChild(overlay);
-    },
-    /**
-     * Remove deferred chart spinner
-     *
-     * @param {String} canvas ID of chart canvas
-     */
-    removeDeferredChart: function(canvas) {
-        const overlay = document.getElementById(`${canvas}-spinner`);
-        if (overlay) overlay.remove();
-    },
 };

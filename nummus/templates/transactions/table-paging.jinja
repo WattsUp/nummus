@@ -1,6 +1,7 @@
 <div id="txn-paging"
      class="flex w-full justify-end my-1"
-     hx-swap-oob="{{ oob }}">
+     hx-swap-oob="{{ oob }}"
+     hx-indicator="unset">
     {{ uri }}
     <button class="button hover:red mr-1"
             hx-get="{{ url_for(controller + ".table", search="", **url_args) }}"
@@ -9,9 +10,13 @@
             hx-get="{{ url_for("transaction_categories.overlay") }}"
             hx-target="#overlay"
             hx-swap="innerHTML">Edit categories</button>
-    <button class="button hover:green mr-auto"
-            hx-get="{{ url_for(controller + ".table", period="90-days", locked=False, **url_args) }}"
-            hx-include="this">Recent & Unlocked</button>
+    {% if not no_recent %}
+        <button class="button hover:green"
+                hx-get="{{ url_for(controller + ".table", period="90-days", locked=False, **url_args) }}"
+                hx-include="this"
+                hx-indicator=".spinner">Recent & Unlocked</button>
+    {% endif %}
+    <div class="mr-auto"></div>
     <button hx-get="{{ url_for(controller + ".table", offset=txn_table["offset_first"], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-first.svg" %}

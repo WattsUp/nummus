@@ -1,12 +1,3 @@
 <div id="cash-flow-chart-data" hx-swap-oob="{{ oob }}">
-    {% if chart["defer"] %}
-        <script>cashFlowChart.defer()</script>
-        <div hx-get="{{ url_for("cash_flow.table") }}?no-defer"
-             hx-include="#txn-config"
-             hx-target="#txn-table"
-             hx-swap="outerHTML"
-             hx-trigger="load"></div>
-    {% else %}
-        <script>cashFlowChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
-    {% endif %}
+    <script>cashFlowChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
 </div>

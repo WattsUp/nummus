@@ -143,7 +143,6 @@ def ctx_chart(acct: Account) -> dict[str, object]:
         start = (
             end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
         )
-    no_defer = "no-defer" in args
 
     PREVIOUS_PERIOD["start"] = start
     PREVIOUS_PERIOD["end"] = end
@@ -151,14 +150,6 @@ def ctx_chart(acct: Account) -> dict[str, object]:
     start_ord = start.toordinal()
     end_ord = end.toordinal()
     n = end_ord - start_ord + 1
-
-    if n > web_utils.LIMIT_DEFER and not no_defer:
-        return {
-            "start": start,
-            "end": end,
-            "period": period,
-            "defer": True,
-        }
 
     values, profit, _ = acct.get_value(start_ord, end_ord)
 
@@ -401,7 +392,6 @@ def table(uri: str) -> flask.Response:
                 if opened_on_ord is None
                 else datetime.date.fromordinal(opened_on_ord)
             )
-        no_defer = "no-defer" in args
         txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
         title = f"Account {acct.name}," + title.removeprefix("Transactions")
         html = f"<title>{title}</title>\n" + flask.render_template(
@@ -416,16 +406,15 @@ def table(uri: str) -> flask.Response:
             PREVIOUS_PERIOD["start"] == start
             and PREVIOUS_PERIOD["end"] == end
             and flask.request.headers.get("Hx-Trigger") != "txn-table"
-            and not no_defer
         ):
-            # If same period and not being updated via update_transaction nor deferral:
+            # If same period and not being updated via update_transaction:
             # don't update the chart
             # aka if just the table changed pages or column filters
             html += flask.render_template(
                 "accounts/chart-data.jinja",
                 oob=True,
                 chart=ctx_chart(acct),
-                uri=uri,
+                url_args={"uri": uri},
             )
             ctx = ctx_assets(s, acct)
             if ctx:
@@ -436,13 +425,12 @@ def table(uri: str) -> flask.Response:
                 )
         response = flask.make_response(html)
         args = dict(flask.request.args)
-        if not no_defer:
-            response.headers["HX-Push-Url"] = flask.url_for(
-                "accounts.page",
-                _external=False,
-                uri=uri,
-                **args,
-            )
+        response.headers["HX-Push-Url"] = flask.url_for(
+            "accounts.page",
+            _external=False,
+            uri=uri,
+            **args,
+        )
         return response
 
 

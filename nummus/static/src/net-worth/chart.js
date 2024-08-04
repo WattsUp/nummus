@@ -233,17 +233,6 @@ const netWorthChart = {
                 );
             }
         }
-
-        const charts = [
-            'total-chart-canvas',
-            'assets-chart-canvas',
-            'liabilities-chart-canvas',
-            'assets-pie-chart-canvas',
-            'liabilities-pie-chart-canvas',
-        ];
-        for (const chart of charts) {
-            nummusChart.removeDeferredChart(chart);
-        }
     },
     /**
      * Create breakdown table
@@ -332,21 +321,6 @@ const netWorthChart = {
                     },
                 },
             );
-        }
-    },
-    /**
-     * Defer loading of charts by drawing a spinner on all charts
-     */
-    defer: function() {
-        const charts = [
-            'total-chart-canvas',
-            'assets-chart-canvas',
-            'liabilities-chart-canvas',
-            'assets-pie-chart-canvas',
-            'liabilities-pie-chart-canvas',
-        ];
-        for (const chart of charts) {
-            nummusChart.addDeferredChart(chart);
         }
     },
 }
