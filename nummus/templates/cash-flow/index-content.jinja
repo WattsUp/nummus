@@ -1,5 +1,6 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("cash_flow.page") }}"
+         hx-include="#txn-config,#txn-header"
          hx-trigger="update-account from:body"
          hx-target="#main"
          hx-swap="innerHTML">
@@ -7,7 +8,6 @@
     <div class="w-full h-96">
         <canvas id="cash-flow-chart-canvas"></canvas>
     </div>
-    {% include "cash-flow/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Income</h1>
     <div class="flex w-full max-h-[16rem] items-center">
         <div class="h-full w-1/4 mr-1 flex items-center">
@@ -33,4 +33,13 @@
         </div>
     </div>
     {% include "cash-flow/chart-data.jinja" %}
+    <div class="w-full flex flex-col grow"
+         hx-target="#txn-table"
+         hx-swap="outerHTML">
+        <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
+        {% include "transactions/table-config.jinja" %}
+        {% include "transactions/table-paging.jinja" %}
+        {% include "transactions/table-header.jinja" %}
+        {% include "transactions/table.jinja" %}
+    </div>
 </section>

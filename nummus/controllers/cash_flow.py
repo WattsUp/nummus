@@ -11,7 +11,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import portfolio, utils, web_utils
-from nummus.controllers import common
+from nummus.controllers import common, transactions
 from nummus.models import (
     Account,
     AccountCategory,
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "1-year"
+PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
 def ctx_chart() -> dict[str, object]:
@@ -60,6 +61,8 @@ def ctx_chart() -> dict[str, object]:
                 if start_ord
                 else datetime.date(1970, 1, 1)
             )
+        PREVIOUS_PERIOD["start"] = start
+        PREVIOUS_PERIOD["end"] = end
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
@@ -279,27 +282,56 @@ def page() -> str:
     Returns:
         string HTML response
     """
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD)
+    title = "Cash Flow," + title.removeprefix("Transactions")
     return common.page(
         "cash-flow/index-content.jinja",
-        title="Cash Flow | nummus",
+        title=title,
         chart=ctx_chart(),
+        txn_table=txn_table,
+        controller="cash_flow",
     )
 
 
-def chart() -> flask.Response:
-    """GET /h/cash-flow/chart.
+def table() -> flask.Response:
+    """GET /h/cash-flow/table.
 
     Returns:
-        string HTML response
+        HTML response
     """
-    html = flask.render_template(
-        "cash-flow/chart-data.jinja",
-        chart=ctx_chart(),
-        include_oob=True,
+    args = flask.request.args
+    period = args.get("period", DEFAULT_PERIOD)
+    start, end = web_utils.parse_period(
+        period,
+        args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat),
     )
+    no_defer = "no-defer" in args
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD)
+    start = txn_table["start"]
+    title = "Cash Flow," + title.removeprefix("Transactions")
+    html = f"<title>{title}</title>\n" + flask.render_template(
+        "transactions/table.jinja",
+        txn_table=txn_table,
+        include_oob=True,
+        controller="cash_flow",
+    )
+    if not (
+        PREVIOUS_PERIOD["start"] == start
+        and PREVIOUS_PERIOD["end"] == end
+        and flask.request.headers.get("Hx-Trigger") != "txn-table"
+        and not no_defer
+    ):
+        # If same period and not being updated via update_transaction nor deferral:
+        # don't update the chart
+        # aka if just the table changed pages or column filters
+        html += flask.render_template(
+            "cash-flow/chart-data.jinja",
+            oob=True,
+            chart=ctx_chart(),
+        )
     response = flask.make_response(html)
     args = dict(flask.request.args)
-    no_defer = "no-defer" in args
     if not no_defer:
         response.headers["HX-Push-Url"] = flask.url_for(
             "cash_flow.page",
@@ -307,6 +339,58 @@ def chart() -> flask.Response:
             **args,
         )
     return response
+
+
+def options(field: str) -> str:
+    """GET /h/cash-flow/options/<field>.
+
+    Args:
+        field: Name of field to get options for
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        args = flask.request.args
+
+        id_mapping = None
+        if field == "account":
+            id_mapping = Account.map_name(s)
+        elif field == "category":
+            id_mapping = TransactionCategory.map_name(s)
+
+        period = args.get("period", "this-month")
+        start, end = web_utils.parse_period(
+            period,
+            args.get("start", type=datetime.date.fromisoformat),
+            args.get("end", type=datetime.date.fromisoformat),
+        )
+        end_ord = end.toordinal()
+
+        query = s.query(TransactionSplit).where(
+            TransactionSplit.asset_id.is_(None),
+            TransactionSplit.date_ord <= end_ord,
+        )
+        if start is not None:
+            start_ord = start.toordinal()
+            query = query.where(TransactionSplit.date_ord >= start_ord)
+
+        search_str = args.get(f"search-{field}")
+
+        return flask.render_template(
+            "transactions/table-options.jinja",
+            options=transactions.ctx_options(
+                query,
+                field,
+                id_mapping,
+                search_str=search_str,
+            ),
+            name=field,
+            controller="cash_flow",
+        )
 
 
 def dashboard() -> str:
@@ -323,6 +407,7 @@ def dashboard() -> str:
 
 ROUTES: Routes = {
     "/cash-flow": (page, ["GET"]),
-    "/h/cash-flow/chart": (chart, ["GET"]),
+    "/h/cash-flow/table": (table, ["GET"]),
+    "/h/cash-flow/options/<path:field>": (options, ["GET"]),
     "/h/dashboard/cash-flow": (dashboard, ["GET"]),
 }

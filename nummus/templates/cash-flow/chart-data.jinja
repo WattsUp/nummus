@@ -1,14 +1,9 @@
-{% if include_oob %}
-    {% with oob = True %}
-        {% include "cash-flow/chart-config.jinja" %}
-    {% endwith %}
-{% endif %}
-<div id="cash-flow-chart-data">
+<div id="cash-flow-chart-data" hx-swap-oob="{{ oob }}">
     {% if chart["defer"] %}
         <script>cashFlowChart.defer()</script>
-        <div hx-get="{{ url_for("cash_flow.chart") }}?no-defer"
-             hx-include="#cash-flow-config"
-             hx-target="#cash-flow-chart-data"
+        <div hx-get="{{ url_for("cash_flow.table") }}?no-defer"
+             hx-include="#txn-config"
+             hx-target="#txn-table"
              hx-swap="outerHTML"
              hx-trigger="load"></div>
     {% else %}

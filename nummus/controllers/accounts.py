@@ -447,7 +447,7 @@ def table(uri: str) -> flask.Response:
 
 
 def options(uri: str, field: str) -> str:
-    """GET /h/accounts/a/<uri>/options/<field>/.
+    """GET /h/accounts/a/<uri>/options/<field>.
 
     Args:
         uri: Account URI
