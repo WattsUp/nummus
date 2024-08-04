@@ -156,7 +156,7 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        queries = {"period": "last-year", "no-defer": ""}
+        queries = {"period": "last-year"}
         result, _ = self.web_get(endpoint, queries, headers=headers)
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
@@ -218,15 +218,6 @@ class TestAccount(WebTestBase):
 
         queries = {"period": "last-year"}
         result, _ = self.web_get(endpoint, queries)
-        self.assertNotRegex(
-            result,
-            r'<script>accountChart\.update\(.*"min": null.*\)</script>',
-        )
-        self.assertIn("no-defer", result)
-        self.assertIn("<script>accountChart.defer()</script>", result)
-
-        queries = {"period": "last-year", "no-defer": ""}
-        result, _ = self.web_get(endpoint, queries)
         self.assertRegex(
             result,
             r'<script>accountChart\.update\(.*"min": null.*\)</script>',
@@ -238,7 +229,7 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        queries = {"period": "5-years", "no-defer": ""}
+        queries = {"period": "5-years"}
         result, _ = self.web_get(endpoint, queries)
         self.assertRegex(
             result,

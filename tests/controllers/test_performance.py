@@ -216,16 +216,6 @@ class TestPerformance(WebTestBase):
         # For long periods, downsample to min/avg/max
         queries = {"period": "5-years"}
         result, _ = self.web_get(endpoint, queries)
-        self.assertNotRegex(
-            result,
-            r"<script>performanceChart\.update\(.*"
-            r'index": \[.+\].*"min": \[.+\].*\)</script>',
-        )
-        self.assertIn("no-defer", result)
-        self.assertIn("<script>performanceChart.defer()</script>", result)
-
-        queries = {"period": "5-years", "no-defer": ""}
-        result, _ = self.web_get(endpoint, queries)
         self.assertRegex(
             result,
             r"<script>performanceChart\.update\(.*"
@@ -429,8 +419,7 @@ class TestPerformance(WebTestBase):
             ]
 
         endpoint = "/h/dashboard/performance"
-        queries = {"no-defer": ""}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint)
         self.assertNotIn("<html", result)
         result = result.replace("\n", " ")
         self.assertRegex(

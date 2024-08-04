@@ -18,9 +18,8 @@ class TestCashFlow(WebTestBase):
         _ = self._setup_portfolio()
 
         endpoint = "/cash-flow"
-        queries = {"no-defer": ""}
         headers = {"Hx-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, queries, headers=headers)
+        result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("income-pie-chart-canvas", result)
         self.assertRegex(
             result,
@@ -86,16 +85,6 @@ class TestCashFlow(WebTestBase):
         # For long periods, downsample to min/avg/max
         queries = {"period": "5-years"}
         result, _ = self.web_get(endpoint, queries)
-        self.assertNotRegex(
-            result,
-            r"<script>cashFlowChart\.update\(.*"
-            r'"chart_bars": true.*"totals": \[.+\].*\)</script>',
-        )
-        self.assertIn("no-defer", result)
-        self.assertIn("<script>cashFlowChart.defer()</script>", result)
-
-        queries = {"period": "5-years", "no-defer": ""}
-        result, _ = self.web_get(endpoint, queries)
         self.assertRegex(
             result,
             r"<script>cashFlowChart\.update\(.*"
@@ -141,7 +130,7 @@ class TestCashFlow(WebTestBase):
         self.assertIn("Groceries", result)
         self.assertNotIn("Uncategorized", result)
 
-        queries = {"period": "1-year", "no-defer": ""}
+        queries = {"period": "1-year"}
         result, _ = self.web_get(endpoint, queries)
         self.assertIn("Interest", result)
         self.assertIn("Groceries", result)
@@ -251,7 +240,7 @@ class TestCashFlow(WebTestBase):
         today = datetime.date.today()
 
         endpoint = "/h/dashboard/cash-flow"
-        queries = {"period": "8-months", "no-defer": ""}
+        queries = {"period": "8-months"}
         result, _ = self.web_get(endpoint, queries)
         self.assertRegex(
             result,
