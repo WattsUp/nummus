@@ -43,9 +43,7 @@ class CSVTransactionImporter(TransactionImporter):
             "date",
             "statement",
         }
-        if required.issubset(header):
-            return True
-        return False
+        return required.issubset(header)
 
     @override
     def run(self) -> TxnDicts:

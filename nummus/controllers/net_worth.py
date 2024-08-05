@@ -86,7 +86,7 @@ def ctx_chart() -> dict[str, object]:
         acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ]
 
         mapping = Account.map_name(s)

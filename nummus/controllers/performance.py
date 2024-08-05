@@ -96,10 +96,10 @@ def ctx_chart() -> dict[str, object]:
         )
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
-            sum(item) for item in zip(*acct_profits.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
         ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
         mwrr = utils.mwrr(total, total_profit)
@@ -244,10 +244,10 @@ def dashboard() -> str:
         )
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
-            sum(item) for item in zip(*acct_profits.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
         ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
 
