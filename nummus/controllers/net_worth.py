@@ -45,7 +45,6 @@ def ctx_chart() -> dict[str, object]:
         args.get("end", type=datetime.date.fromisoformat),
     )
     category = args.get("category", None, type=AccountCategory)
-    no_defer = "no-defer" in args
 
     class AccountContext(TypedDict):
         """Type definition for Account context."""
@@ -70,16 +69,6 @@ def ctx_chart() -> dict[str, object]:
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
 
-        if n > web_utils.LIMIT_DEFER and not no_defer:
-            return {
-                "defer": True,
-                "start": start,
-                "end": end,
-                "period": period,
-                "category": category,
-                "category_type": AccountCategory,
-            }
-
         query = s.query(Account)
         if category is not None:
             query = query.where(Account.category == category)
@@ -97,7 +86,7 @@ def ctx_chart() -> dict[str, object]:
         acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ]
 
         mapping = Account.map_name(s)

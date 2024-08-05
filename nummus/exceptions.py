@@ -28,6 +28,7 @@ __all__ = [
     "FileAlreadyImportedError",
     "UnknownImporterError",
     "EmptyImportError",
+    "FailedImportError",
     "UnlockingError",
     "NotEncryptedError",
     "ParentAttributeError",
@@ -84,6 +85,20 @@ class EmptyImportError(Exception):
             f"No transactions imported for {path} using importer "
             f"{importer.__class__.__name__}"
         )
+        super().__init__(msg)
+
+
+class FailedImportError(Exception):
+    """Error when a importer fails to import a file."""
+
+    def __init__(self, path: Path, importer: object) -> None:
+        """Initialize EmptyImportError.
+
+        Args:
+            path: Path to empty file
+            importer: Importer used on file
+        """
+        msg = f"{importer.__class__.__name__} failed to import {path}"
         super().__init__(msg)
 
 

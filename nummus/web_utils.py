@@ -29,9 +29,6 @@ LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the
 LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
 # else tick each day
 
-# if n_days > LIMIT_DEFER then defer response with a spinner
-LIMIT_DEFER = 200
-
 
 def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
     """Find the matching object by URI.

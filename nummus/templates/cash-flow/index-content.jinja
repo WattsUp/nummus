@@ -1,15 +1,16 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("cash_flow.page") }}"
+         hx-include="#txn-config,#txn-header"
          hx-trigger="update-account from:body"
          hx-target="#main"
          hx-swap="innerHTML">
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Cash Flow</h1>
-    <div class="w-full h-96">
+    <div class="w-full h-96 relative">
         <canvas id="cash-flow-chart-canvas"></canvas>
+        {% include "shared/spinner.jinja" %}
     </div>
-    {% include "cash-flow/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Income</h1>
-    <div class="flex w-full max-h-[16rem] items-center">
+    <div class="flex w-full max-h-[16rem] items-center relative">
         <div class="h-full w-1/4 mr-1 flex items-center">
             <canvas id="income-pie-chart-canvas"></canvas>
         </div>
@@ -19,9 +20,10 @@
         <div class="h-full grow">
             <canvas id="income-chart-canvas"></canvas>
         </div>
+        {% include "shared/spinner.jinja" %}
     </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Expense</h1>
-    <div class="flex w-full max-h-[16rem] items-center">
+    <div class="flex w-full max-h-[16rem] items-center relative">
         <div class="h-full w-1/4 mr-1 flex items-center">
             <canvas id="expense-pie-chart-canvas"></canvas>
         </div>
@@ -31,6 +33,19 @@
         <div class="h-full grow">
             <canvas id="expense-chart-canvas"></canvas>
         </div>
+        {% include "shared/spinner.jinja" %}
     </div>
     {% include "cash-flow/chart-data.jinja" %}
+    <div class="w-full flex flex-col grow"
+         hx-target="#txn-table"
+         hx-swap="outerHTML"
+         hx-indicator=".spinner">
+        <h1 class="text-3xl align-left w-full font-serif text-green-600">Transactions</h1>
+        {% include "transactions/table-config.jinja" %}
+        {% with no_recent=true %}
+            {% include "transactions/table-paging.jinja" %}
+        {% endwith %}
+        {% include "transactions/table-header.jinja" %}
+        {% include "transactions/table.jinja" %}
+    </div>
 </section>

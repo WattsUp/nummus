@@ -11,8 +11,8 @@ from tests.base import TestBase
 class TestMain(TestBase):
     def test_entrypoints(self) -> None:
         # Check can execute entrypoint
-        with subprocess.Popen(
-            ["nummus", "--version"],  # noqa: S603, S607
+        with subprocess.Popen(  # noqa: S603
+            ["nummus", "--version"],  # noqa: S607
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         ) as process:

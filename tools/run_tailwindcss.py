@@ -37,8 +37,8 @@ def main() -> None:
         "--minify",
     ]
     args.extend(sys.argv[1:])
-    with subprocess.Popen(
-        args,  # noqa: S603
+    with subprocess.Popen(  # noqa: S603
+        args,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
     ) as p:

@@ -445,6 +445,14 @@ class TestPortfolio(TestBase):
             p.import_file(path, path_debug, force=True)
             self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
+            # Fine importing with force when not required
+            path = self._DATA_ROOT.joinpath("transactions_corrupt.csv")
+            self.assertRaises(exc.FailedImportError, p.import_file, path, path_debug)
+            self.assertTrue(
+                path_debug.exists(),
+                "Debug file unexpectedly does not exists",
+            )
+
             # Install importer that returns empty list
             shutil.copyfile(
                 self._DATA_ROOT.joinpath("custom_importer.py"),

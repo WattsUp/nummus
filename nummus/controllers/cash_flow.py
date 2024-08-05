@@ -11,7 +11,7 @@ import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import portfolio, utils, web_utils
-from nummus.controllers import common
+from nummus.controllers import common, transactions
 from nummus.models import (
     Account,
     AccountCategory,
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "1-year"
+PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
 def ctx_chart() -> dict[str, object]:
@@ -46,8 +47,6 @@ def ctx_chart() -> dict[str, object]:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    no_defer = "no-defer" in args
-    category = args.get("category", None, type=AccountCategory)
 
     with p.get_session() as s:
         if start is None:
@@ -60,22 +59,13 @@ def ctx_chart() -> dict[str, object]:
                 if start_ord
                 else datetime.date(1970, 1, 1)
             )
+        PREVIOUS_PERIOD["start"] = start
+        PREVIOUS_PERIOD["end"] = end
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
-        if n > web_utils.LIMIT_DEFER and not no_defer:
-            return {
-                "start": start,
-                "end": end,
-                "period": period,
-                "defer": True,
-                "category": category,
-                "category_type": AccountCategory,
-            }
 
         query = s.query(Account)
-        if category is not None:
-            query = query.where(Account.category == category)
 
         # Include account if not closed
         # Include account if most recent transaction is in period
@@ -226,7 +216,6 @@ def ctx_chart() -> dict[str, object]:
             "incomes": incomes,
             "expenses": expenses,
         },
-        "category": category,
         "category_type": AccountCategory,
     }
 
@@ -279,24 +268,124 @@ def page() -> str:
     Returns:
         string HTML response
     """
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    title = "Cash Flow," + title.removeprefix("Transactions")
     return common.page(
         "cash-flow/index-content.jinja",
-        title="Cash Flow | nummus",
+        title=title,
         chart=ctx_chart(),
+        txn_table=txn_table,
+        controller="cash_flow",
     )
 
 
-def chart() -> str:
-    """GET /h/cash-flow/chart.
+def table() -> flask.Response:
+    """GET /h/cash-flow/table.
+
+    Returns:
+        HTML response
+    """
+    args = flask.request.args
+    period = args.get("period", DEFAULT_PERIOD)
+    start, end = web_utils.parse_period(
+        period,
+        args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat),
+    )
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    start = txn_table["start"]
+    title = "Cash Flow," + title.removeprefix("Transactions")
+    html = f"<title>{title}</title>\n" + flask.render_template(
+        "transactions/table.jinja",
+        txn_table=txn_table,
+        include_oob=True,
+        controller="cash_flow",
+    )
+    if not (
+        PREVIOUS_PERIOD["start"] == start
+        and PREVIOUS_PERIOD["end"] == end
+        and flask.request.headers.get("Hx-Trigger") != "txn-table"
+    ):
+        # If same period and not being updated via update_transaction:
+        # don't update the chart
+        # aka if just the table changed pages or column filters
+        # TODO (WattsUp): use client side mechanism to determine when to send a new
+        # chart
+        html += flask.render_template(
+            "cash-flow/chart-data.jinja",
+            oob=True,
+            chart=ctx_chart(),
+        )
+    response = flask.make_response(html)
+    args = dict(flask.request.args)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "cash_flow.page",
+        _external=False,
+        **args,
+    )
+    return response
+
+
+def options(field: str) -> str:
+    """GET /h/cash-flow/options/<field>.
+
+    Args:
+        field: Name of field to get options for
 
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "cash-flow/chart-data.jinja",
-        chart=ctx_chart(),
-        include_oob=True,
-    )
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        args = flask.request.args
+
+        id_mapping = None
+        transaction_ids = None
+        if field == "account":
+            id_mapping = Account.map_name(s)
+        elif field == "category":
+            id_mapping = TransactionCategory.map_name(s)
+
+            query = s.query(TransactionCategory)
+            query = query.with_entities(TransactionCategory.id_)
+            query = query.where(
+                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+            )
+            transaction_ids = {row[0] for row in query.all()}
+
+        period = args.get("period", "this-month")
+        start, end = web_utils.parse_period(
+            period,
+            args.get("start", type=datetime.date.fromisoformat),
+            args.get("end", type=datetime.date.fromisoformat),
+        )
+        end_ord = end.toordinal()
+
+        query = s.query(TransactionSplit).where(
+            TransactionSplit.asset_id.is_(None),
+            TransactionSplit.date_ord <= end_ord,
+        )
+        if start is not None:
+            start_ord = start.toordinal()
+            query = query.where(TransactionSplit.date_ord >= start_ord)
+        if transaction_ids is not None:
+            query = query.where(TransactionSplit.category_id.in_(transaction_ids))
+
+        search_str = args.get(f"search-{field}")
+
+        return flask.render_template(
+            "transactions/table-options.jinja",
+            options=transactions.ctx_options(
+                query,
+                field,
+                id_mapping,
+                search_str=search_str,
+            ),
+            name=field,
+            controller="cash_flow",
+        )
 
 
 def dashboard() -> str:
@@ -313,6 +402,7 @@ def dashboard() -> str:
 
 ROUTES: Routes = {
     "/cash-flow": (page, ["GET"]),
-    "/h/cash-flow/chart": (chart, ["GET"]),
+    "/h/cash-flow/table": (table, ["GET"]),
+    "/h/cash-flow/options/<path:field>": (options, ["GET"]),
     "/h/dashboard/cash-flow": (dashboard, ["GET"]),
 }

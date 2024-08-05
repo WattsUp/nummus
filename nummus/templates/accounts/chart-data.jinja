@@ -1,12 +1,3 @@
 <div id="account-chart-data" hx-swap-oob="{{ oob }}">
-    {% if chart["defer"] %}
-        <script>accountChart.defer()</script>
-        <div hx-get="{{ url_for("accounts.table", uri=txn_table["uri"]) }}?no-defer"
-             hx-include="#txn-config"
-             hx-target="#txn-table"
-             hx-swap="outerHTML"
-             hx-trigger="load"></div>
-    {% else %}
-        <script>accountChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
-    {% endif %}
+    <script>accountChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
 </div>

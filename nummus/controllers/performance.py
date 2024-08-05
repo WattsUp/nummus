@@ -37,7 +37,6 @@ def ctx_chart() -> dict[str, object]:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    no_defer = "no-defer" in args
     index = args.get("index", "S&P 500")
 
     class AccountContext(TypedDict):
@@ -77,16 +76,6 @@ def ctx_chart() -> dict[str, object]:
             s.query(Asset.description).where(Asset.name == index).scalar()
         )
 
-        if n > web_utils.LIMIT_DEFER and not no_defer:
-            return {
-                "defer": True,
-                "start": start,
-                "end": end,
-                "period": period,
-                "indices": indices,
-                "index_description": index_description,
-            }
-
         query = s.query(Account).where(Account.id_.in_(acct_ids))
 
         # Include account if not closed
@@ -107,10 +96,10 @@ def ctx_chart() -> dict[str, object]:
         )
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
-            sum(item) for item in zip(*acct_profits.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
         ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
         mwrr = utils.mwrr(total, total_profit)
@@ -255,10 +244,10 @@ def dashboard() -> str:
         )
 
         total: list[Decimal] = [
-            sum(item) for item in zip(*acct_values.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
         ] or [Decimal(0)] * n
         total_profit: list[Decimal] = [
-            sum(item) for item in zip(*acct_profits.values(), strict=True)
+            Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
         ] or [Decimal(0)] * n
         twrr = utils.twrr(total, total_profit)
 

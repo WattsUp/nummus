@@ -81,9 +81,14 @@ class Typos(Base):
 
             def check_duplicates() -> None:
                 words_dedupe = utils.dedupe(words.keys())
-                for word, item in words.items():
-                    if word not in words_dedupe and frequency[word] < _LIMIT_FREQUENCY:
-                        issues[word] = item
+                issues.update(
+                    {
+                        word: item
+                        for word, item in words.items()
+                        if word not in words_dedupe
+                        and frequency[word] < _LIMIT_FREQUENCY
+                    },
+                )
                 words.clear()
                 frequency.clear()
 

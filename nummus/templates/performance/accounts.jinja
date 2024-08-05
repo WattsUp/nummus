@@ -14,24 +14,20 @@
             </div>
         </div>
     </div>
-    {% if not defer %}
-        {% for account in accounts["accounts"] %}
-            {% include "performance/account-view.jinja" %}
-        {% endfor %}
-    {% endif %}
+    {% for account in accounts["accounts"] %}
+        {% include "performance/account-view.jinja" %}
+    {% endfor %}
     <div id="accounts-total"
          class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
         <div class="p-1 grow">Total</div>
-        {% if not defer %}
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["initial"] | money }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["cash_flow"] | money }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["end"] | money }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["profit"] | pnl_color }}">
-                {{ accounts["profit"] | money }}
-            </div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["mwrr"] | pnl_color }}">
-                {{ accounts["mwrr"] | percent }}
-            </div>
-        {% endif %}
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["initial"] | money }}</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["cash_flow"] | money }}</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["end"] | money }}</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["profit"] | pnl_color }}">
+            {{ accounts["profit"] | money }}
+        </div>
+        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["mwrr"] | pnl_color }}">
+            {{ accounts["mwrr"] | percent }}
+        </div>
     </div>
 </div>

@@ -1,0 +1,47 @@
+<div id="txn-paging"
+     class="flex w-full justify-end my-1"
+     hx-swap-oob="{{ oob }}"
+     hx-indicator="unset">
+    {{ uri }}
+    <button class="button hover:red mr-1"
+            hx-get="{{ url_for(controller + ".table", search="", **url_args) }}"
+            hx-include="#txn-config">Clear Filters</button>
+    <button class="button hover:blue mr-1"
+            hx-get="{{ url_for("transaction_categories.overlay") }}"
+            hx-target="#overlay"
+            hx-swap="innerHTML">Edit categories</button>
+    {% if not no_recent %}
+        <button class="button hover:green"
+                hx-get="{{ url_for(controller + ".table", period="90-days", locked=False, **url_args) }}"
+                hx-include="this"
+                hx-indicator=".spinner">Recent & Unlocked</button>
+    {% endif %}
+    <div class="mr-auto"></div>
+    <button hx-get="{{ url_for(controller + ".table", offset=txn_table["offset_first"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-first.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for(controller + ".table", offset=txn_table["offset_prev"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-left.svg" %}
+        {% endwith %}
+    </button>
+    <span class="w-40 text-center">
+        {{ txn_table["i_first"] }}
+        -
+        {{ txn_table["i_last"] }}
+        of
+        {{ txn_table["count"] }}
+    </span>
+    <button hx-get="{{ url_for(controller + ".table", offset=txn_table["offset_next"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-right.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for(controller + ".table", offset=txn_table["offset_last"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-last.svg" %}
+        {% endwith %}
+    </button>
+</div>

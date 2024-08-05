@@ -9,13 +9,15 @@
             Today's Balance <b>{{ current | money }}</b>
         </h2>
     </div>
-    <div class="w-full h-96">
+    <div class="w-full h-96 relative">
         <canvas id="total-chart-canvas"></canvas>
+        {% include "shared/spinner.jinja" %}
     </div>
     {% include "net-worth/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
-    <div class="w-full h-96">
+    <div class="w-full h-96 relative">
         <canvas id="assets-chart-canvas"></canvas>
+        {% include "shared/spinner.jinja" %}
     </div>
     {% with assets = chart["assets"] %}
         {% include "accounts/assets.jinja" %}
@@ -25,7 +27,7 @@
         <canvas id="liabilities-chart-canvas"></canvas>
     </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
-    <div class="flex space justify-between">
+    <div class="flex space justify-between relative">
         <div class="w-[49%]">
             <canvas id="assets-pie-chart-canvas" class="mb-2"></canvas>
             <div id="assets-breakdown"></div>
@@ -34,6 +36,7 @@
             <canvas id="liabilities-pie-chart-canvas" class="mb-2"></canvas>
             <div id="liabilities-breakdown"></div>
         </div>
+        {% include "shared/spinner.jinja" %}
     </div>
     {% include "net-worth/chart-data.jinja" %}
 </section>

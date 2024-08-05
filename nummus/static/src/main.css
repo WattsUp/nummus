@@ -207,6 +207,18 @@
         }
     }
 
+    .spinner {
+        @apply hidden inset-0 absolute bg-white bg-opacity-50;
+    }
+
+    .htmx-request .spinner {
+        @apply flex;
+    }
+
+    .htmx-request.spinner {
+        @apply flex;
+    }
+
     .tooltip {
         @apply relative inline-block underline decoration-dotted;
     }
