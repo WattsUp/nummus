@@ -9,7 +9,7 @@ from tests.controllers.base import WebTestBase
 
 class TestTransaction(WebTestBase):
     def test_page_all(self) -> None:
-        endpoint = "/transactions"
+        endpoint = "transactions.page_all"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn('id="txn-config"', result)
@@ -31,26 +31,22 @@ class TestTransaction(WebTestBase):
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
-        endpoint = "/h/transactions/table"
+        endpoint = "transactions.table"
         result, _ = self.web_get(endpoint)
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(result, r"<title>Transactions This Month \| nummus</title>")
 
-        queries: dict[str, str | list[str]] = {
-            "account": "None selected",
-            "period": "all",
-        }
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all", "account": "None selected"}),
+        )
         self.assertNotIn("No matching transactions for given query filters", result)
         self.assertRegex(result, r"<title>Transactions All \| nummus</title>")
 
-        queries: dict[str, str | list[str]] = {
-            "account": acct,
-            "period": "all",
-        }
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all", "account": acct}),
+        )
         self.assertNotIn("No matching transactions for given query filters", result)
         self.assertRegex(result, rf"<title>Transactions All, {acct} \| nummus</title>")
 
@@ -62,7 +58,7 @@ class TestTransaction(WebTestBase):
             "start": long_ago.isoformat(),
             "end": long_ago.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
         self.assertRegex(
@@ -70,8 +66,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions {long_ago} to {long_ago} \| nummus</title>",
         )
 
-        queries = {"payee": payee_0}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"payee": payee_0}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
@@ -79,8 +76,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions This Month, {payee_0} \| nummus</title>",
         )
 
-        queries = {"payee": "[blank]"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"payee": "[blank]"}),
+        )
         self.assertNotRegex(result, r'<div id="txn-[a-f0-9]{8}"')
         self.assertIn("No matching transactions for given query filters", result)
         self.assertRegex(
@@ -88,8 +86,9 @@ class TestTransaction(WebTestBase):
             r"<title>Transactions This Month \| nummus</title>",
         )
 
-        queries = {"payee": ["[blank]", payee_1]}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"payee": ["[blank]", payee_1]}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -97,8 +96,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions This Month, {payee_1} \| nummus</title>",
         )
 
-        queries = {"category": cat_0}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"category": cat_0}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
@@ -106,8 +106,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions This Month, {cat_0} \| nummus</title>",
         )
 
-        queries = {"tag": tag_1}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"tag": tag_1}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -115,8 +116,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
         )
 
-        queries = {"tag": "[blank]"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"tag": "[blank]"}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
@@ -124,8 +126,9 @@ class TestTransaction(WebTestBase):
             r"<title>Transactions This Month \| nummus</title>",
         )
 
-        queries = {"tag": ["[blank]", tag_1]}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"tag": ["[blank]", tag_1]}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
@@ -134,8 +137,9 @@ class TestTransaction(WebTestBase):
             rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
         )
 
-        queries = {"locked": "true"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"locked": True}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -143,8 +147,9 @@ class TestTransaction(WebTestBase):
             r"<title>Transactions This Month, Locked \| nummus</title>",
         )
 
-        queries = {"search": payee_1}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"search": payee_1}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -152,8 +157,9 @@ class TestTransaction(WebTestBase):
             rf'<title>Transactions This Month, "{payee_1}" \| nummus</title>',
         )
 
-        queries = {"search": payee_1, "period": "all"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"search": payee_1, "period": "all"}),
+        )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -168,7 +174,7 @@ class TestTransaction(WebTestBase):
             "locked": "true",
             "payee": payee_1,
         }
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
@@ -187,15 +193,17 @@ class TestTransaction(WebTestBase):
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
-        endpoint = "/h/transactions/options/account"
-        result, _ = self.web_get(endpoint)
+        endpoint = "transactions.table_options"
+        result, _ = self.web_get(
+            (endpoint, {"field": "account"}),
+        )
         self.assertEqual(result.count("span"), 2)
         self.assertRegex(result, rf'value="{acct}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
 
-        endpoint = "/h/transactions/options/category"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "category", "period": "all"}),
+        )
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
@@ -205,8 +213,9 @@ class TestTransaction(WebTestBase):
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
-        queries = {"category": cat_1}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "category", "category": cat_1}),
+        )
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
@@ -215,8 +224,9 @@ class TestTransaction(WebTestBase):
         i_1 = result.find(cat_1)
         self.assertLess(i_1, i_0)
 
-        endpoint = "/h/transactions/options/tag"
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(
+            (endpoint, {"field": "tag"}),
+        )
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
@@ -226,8 +236,9 @@ class TestTransaction(WebTestBase):
         i_0 = result.find(tag_1)
         self.assertLess(i_blank, i_1)
 
-        endpoint = "/h/transactions/options/payee"
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(
+            (endpoint, {"field": "payee"}),
+        )
         self.assertEqual(result.count("span"), 6)
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
@@ -240,8 +251,9 @@ class TestTransaction(WebTestBase):
         self.assertLess(i_blank, i_0)
         self.assertLess(i_0, i_1)
 
-        queries = {"payee": payee_1}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "payee", "payee": payee_1}),
+        )
         self.assertEqual(result.count("span"), 6)
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{payee_0}"[ \n]+hx-get')
@@ -254,7 +266,9 @@ class TestTransaction(WebTestBase):
         self.assertLess(i_1, i_0)
 
         queries = {"payee": [payee_0, payee_1], "search-payee": payee_0}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "payee", **queries}),
+        )
         self.assertEqual(len(re.findall(r"<label.*>", result)), 3)
         self.assertEqual(len(re.findall(r"<label.*hidden.*>", result)), 2)
         self.assertRegex(result, rf'value="{payee_0}"[ \n]+checked[ \n]+hx-get')
@@ -270,30 +284,28 @@ class TestTransaction(WebTestBase):
         cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
 
-        endpoint = f"/h/transactions/t/{t_split_0}/edit"
-        result, _ = self.web_get(endpoint)
+        endpoint = "transactions.edit"
+        result, _ = self.web_get((endpoint, {"uri": t_split_0}))
         self.assertEqual(result.count('name="payee"'), 1)
 
-        endpoint = f"/h/transactions/t/{t_0}/edit"
-
         form = {}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction date must not be empty", result)
 
         form = {"date": today, "amount": ""}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Non-zero remaining amount to be assigned", result)
 
         form = {"date": today, "amount": "100"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction must have at least one split", result)
 
         form = {"date": today, "payee": "", "amount": "100"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction split missing properties", result)
 
         form = {"date": today, "payee": "a", "amount": "100"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn(
             "Transaction split payee must be at least 2 characters long",
             result,
@@ -308,7 +320,7 @@ class TestTransaction(WebTestBase):
             "tag": ["", ""],
             "amount": ["100", ""],
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction split amount must not be empty", result)
 
         # Add split
@@ -324,7 +336,7 @@ class TestTransaction(WebTestBase):
             "tag": ["", ""],
             "amount": ["20", "80"],
         }
-        result, headers = self.web_post(endpoint, data=form)
+        result, headers = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -369,7 +381,7 @@ class TestTransaction(WebTestBase):
             "tag": "",
             "amount": "100",
         }
-        result, headers = self.web_post(endpoint, data=form)
+        result, headers = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -408,8 +420,8 @@ class TestTransaction(WebTestBase):
         tag = self.random_string()
 
         # GET splits for t_0 by copying the similar transaction t_1
-        endpoint = f"/h/transactions/t/{t_0}/split"
-        result, _ = self.web_get(endpoint + f"?similar={t_1}")
+        endpoint = "transactions.split"
+        result, _ = self.web_get((endpoint, {"uri": t_0, "similar": t_1}))
         self.assertEqual(result.count('name="payee"'), 1)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_1}"')
         self.assertRegex(result, r'name="description"[ \n]+value=""')
@@ -427,7 +439,7 @@ class TestTransaction(WebTestBase):
             "tag": tag,
             "amount": "100",
         }
-        result, _ = self.web_put(endpoint, data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertEqual(result.count('name="payee"'), 2)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
         self.assertRegex(result, r'name="payee"[ \n]+value=""')
@@ -448,7 +460,7 @@ class TestTransaction(WebTestBase):
             "tag": [tag, ""],
             "amount": ["100", ""],
         }
-        result, _ = self.web_delete(endpoint + "?index=2", data=form)
+        result, _ = self.web_delete((endpoint, {"uri": t_0, "index": 2}), data=form)
         self.assertEqual(result.count('name="payee"'), 1)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
         self.assertRegex(result, rf'name="description"[ \n]+value="{desc}"')
@@ -466,7 +478,7 @@ class TestTransaction(WebTestBase):
             "tag": [tag, ""],
             "amount": ["100", ""],
         }
-        result, _ = self.web_delete(endpoint + "?all", data=form)
+        result, _ = self.web_delete((endpoint, {"uri": t_0, "all": True}), data=form)
         self.assertEqual(result.count('name="payee"'), 1)
         self.assertRegex(result, r'name="payee"[ \n]+value=""')
         self.assertRegex(result, r'name="description"[ \n]+value=""')
@@ -481,11 +493,11 @@ class TestTransaction(WebTestBase):
 
         t_0 = d["t_0"]
 
-        endpoint = f"/h/transactions/t/{t_0}/remaining"
+        endpoint = "transactions.remaining"
         form = {"amount": "100"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn(">$0.00</div>", result)
 
         form = {"amount": ["20", "20.001"]}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn(">$60.00</div>", result)

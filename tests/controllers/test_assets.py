@@ -31,8 +31,9 @@ class TestAsset(WebTestBase):
             a_id = a.id_
             a_uri = a.uri
 
-        endpoint = f"/h/assets/a/{a_uri}/edit"
-        result, _ = self.web_get(endpoint)
+        endpoint = "assets.edit"
+        url = endpoint, {"uri": a_uri}
+        result, _ = self.web_get(url)
         self.assertNotIn("<html", result)
         self.assertIn("Edit asset", result)
         self.assertIn("0.000000", result)
@@ -48,7 +49,7 @@ class TestAsset(WebTestBase):
             "interpolate": "",
             "ticker": ticker,
         }
-        result, headers = self.web_post(endpoint, data=form)
+        result, headers = self.web_post(url, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-asset")
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
@@ -67,7 +68,7 @@ class TestAsset(WebTestBase):
             "interpolate": "",
             "ticker": ticker,
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         e_str = "Asset name must be at least 2 characters long"
         self.assertIn(e_str, result)
 
@@ -78,7 +79,7 @@ class TestAsset(WebTestBase):
             "interpolate": "",
             "ticker": ticker,
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         e_str = "Asset category must not be None"
         self.assertIn(e_str, result)
 
@@ -92,7 +93,6 @@ class TestAsset(WebTestBase):
             s.add(v)
             s.commit()
 
-        endpoint = f"/h/assets/a/{a_uri}/edit"
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(url)
         self.assertIn("10.00", result)
         self.assertIn(f"as of {today}", result)

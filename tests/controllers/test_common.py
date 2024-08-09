@@ -20,11 +20,11 @@ from tests.controllers.base import WebTestBase
 
 class TestCommon(WebTestBase):
     def test_sidebar(self) -> None:
-        endpoint = "/h/sidebar"
+        endpoint = "common.sidebar"
         result, _ = self.web_get(endpoint)
         self.assertIn("Click to show", result)
 
-        result, _ = self.web_get(endpoint, queries={"closed": "included"})
+        result, _ = self.web_get((endpoint, {"closed": "included"}))
         self.assertIn("Click to hide", result)
 
     def test_ctx_sidebar(self) -> None:
