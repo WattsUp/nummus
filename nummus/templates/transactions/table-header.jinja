@@ -18,23 +18,40 @@
             </div>
         </div>
     {% endif %}
-    <div class="w-[{{ 10 if no_account_column else 8 }}rem] min-w-[{{ 10 if no_account_column else 8 }}rem] p-1 flex items-center relative group">
-        Payee
-        <div id="txn-icon-payee">
-            {% with any_filters = txn_table["any-filters-payee"] %}
-                {% include "transactions/table-options-icon.jinja" %}
-            {% endwith %}
+    {% if asset_transactions %}
+        <div class="w-[8rem] min-w-[8rem] p-1 flex items-center relative group grow">
+            Asset
+            <div id="txn-icon-asset">
+                {% with any_filters = txn_table["any-filters-asset"] %}
+                    {% include "transactions/table-options-icon.jinja" %}
+                {% endwith %}
+            </div>
+            <div id="txn-asset"
+                 class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
+                {% with options = txn_table["options-asset"], name="asset" %}
+                    {% include "transactions/table-options.jinja" %}
+                {% endwith %}
+            </div>
         </div>
-        <div id="txn-payee"
-             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
-            {% with options = txn_table["options-payee"], name="payee" %}
-                {% include "transactions/table-options.jinja" %}
-            {% endwith %}
+    {% else %}
+        <div class="w-[{{ 10 if no_account_column else 8 }}rem] min-w-[{{ 10 if no_account_column else 8 }}rem] p-1 flex items-center relative group">
+            Payee
+            <div id="txn-icon-payee">
+                {% with any_filters = txn_table["any-filters-payee"] %}
+                    {% include "transactions/table-options-icon.jinja" %}
+                {% endwith %}
+            </div>
+            <div id="txn-payee"
+                 class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
+                {% with options = txn_table["options-payee"], name="payee" %}
+                    {% include "transactions/table-options.jinja" %}
+                {% endwith %}
+            </div>
         </div>
-    </div>
-    <div class="w-[{{ 10 if no_account_column else 8 }}rem] min-w-[{{ 10 if no_account_column else 8 }}rem] p-1 grow">
-        Description
-    </div>
+        <div class="w-[{{ 10 if no_account_column else 8 }}rem] min-w-[{{ 10 if no_account_column else 8 }}rem] p-1 grow">
+            Description
+        </div>
+    {% endif %}
     <div class="w-[{{ 10 if no_account_column else 8 }}rem] min-w-[{{ 10 if no_account_column else 8 }}rem] p-1 flex items-center relative group">
         Category
         <div id="txn-icon-category">
@@ -49,20 +66,28 @@
             {% endwith %}
         </div>
     </div>
-    <div class="w-[{{ 10 if no_account_column else 6 }}rem] min-w-[{{ 10 if no_account_column else 6 }}rem] p-1 flex items-center relative group">
-        Tag
-        <div id="txn-icon-tag">
-            {% with any_filters = txn_table["any-filters-tag"] %}
-                {% include "transactions/table-options-icon.jinja" %}
-            {% endwith %}
+    {% if not asset_transactions %}
+        <div class="w-[{{ 10 if no_account_column else 6 }}rem] min-w-[{{ 10 if no_account_column else 6 }}rem] p-1 flex items-center relative group">
+            Tag
+            <div id="txn-icon-tag">
+                {% with any_filters = txn_table["any-filters-tag"] %}
+                    {% include "transactions/table-options-icon.jinja" %}
+                {% endwith %}
+            </div>
+            <div id="txn-tag"
+                 class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
+                {% with options = txn_table["options-tag"], name="tag" %}
+                    {% include "transactions/table-options.jinja" %}
+                {% endwith %}
+            </div>
         </div>
-        <div id="txn-tag"
-             class="absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden group-hover:block">
-            {% with options = txn_table["options-tag"], name="tag" %}
-                {% include "transactions/table-options.jinja" %}
-            {% endwith %}
-        </div>
-    </div>
+    {% else %}
+        {# TODO (WattsUp): Add tooltip explaining price and quantity adjustments due to splits #}
+        <div class="w-[8rem] min-w-[8rem] p-1 text-right">Price</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 text-right">Quantity</div>
+    {% endif %}
     <div class="w-[7rem] min-w-[7rem] p-1 text-right">Amount</div>
-    {% include "transactions/table-locked.jinja" %}
+    {% if not asset_transactions %}
+        {% include "transactions/table-locked.jinja" %}
+    {% endif %}
 </div>

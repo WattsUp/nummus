@@ -4,7 +4,14 @@
         {% include "transactions/table-paging.jinja" %}
         {% include "transactions/table-locked.jinja" %}
     {% endwith %}
-    {% for name in ["account", "payee", "category", "tag"] if (name != "account" or not no_account_column) %}
+    {% if asset_transactions %}
+        {% set columns = ["account", "asset", "category"] %}
+    {% elif no_account_column %}
+        {% set columns = ["payee", "category", "tag"] %}
+    {% else %}
+        {% set columns = ["account", "payee", "category", "tag"] %}
+    {% endif %}
+    {% for name in columns %}
         <div id="txn-icon-{{ name }}" hx-swap-oob="insideHTML">
             {% with any_filters = txn_table["any-filters-" + name] %}
                 {% include "transactions/table-options-icon.jinja" %}

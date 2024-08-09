@@ -1,13 +1,15 @@
 <div id="txn-config"
      class="w-full flex justify-end gap-1 font-serif"
      hx-swap-oob="{{ oob }}">
-    <input name="search"
-           value="{{ txn_table["search"] }}"
-           placeholder="Search Transactions"
-           class="mr-8 grow"
-           hx-get="{{ url_for(endpoint, **url_args) }}"
-           hx-indicator="unset"
-           autocomplete="off">
+    {% if not asset_transactions %}
+        <input name="search"
+               value="{{ txn_table["search"] }}"
+               placeholder="Search Transactions"
+               class="mr-8 grow"
+               hx-get="{{ url_for(endpoint, **url_args) }}"
+               hx-indicator="unset"
+               autocomplete="off">
+    {% endif %}
     <select name="period"
             hx-get="{{ url_for(endpoint, **url_args) }}"
             autocomplete="off">

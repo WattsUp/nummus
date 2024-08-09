@@ -16,6 +16,7 @@ from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import (
     Account,
+    Asset,
     paginate,
     search,
     Transaction,
@@ -96,6 +97,8 @@ def table_options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
+        elif field == "asset":
+            id_mapping = Asset.map_name(s)
 
         query, _, _, _ = table_unfiltered_query(s)
 
@@ -136,6 +139,7 @@ def ctx_options(
         "payee": TransactionSplit.payee,
         "category": TransactionSplit.category_id,
         "tag": TransactionSplit.tag,
+        "asset": TransactionSplit.asset_id,
     }
     for (id_,) in query.with_entities(entities[field]).distinct():
         if id_ is None:
@@ -275,6 +279,7 @@ def ctx_table(
 
         accounts = Account.map_name(s)
         categories = TransactionCategory.map_name(s)
+        assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
             s,
@@ -289,6 +294,7 @@ def ctx_table(
         options_payee = ctx_options(query, "payee")
         options_category = ctx_options(query, "category", categories)
         options_tag = ctx_options(query, "tag")
+        options_asset = ctx_options(query, "asset", assets)
 
         def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
             options_flat = [option["name"] for option in options]
@@ -298,6 +304,7 @@ def ctx_table(
         selected_payees = merge(options_payee, args.getlist("payee"))
         selected_categories = merge(options_category, args.getlist("category"))
         selected_tags = merge(options_tag, args.getlist("tag"))
+        selected_assets = merge(options_asset, args.getlist("asset"))
 
         if acct is None and len(selected_accounts) != 0:
             ids = [
@@ -335,6 +342,12 @@ def ctx_table(
             except ValueError:
                 query = query.where(TransactionSplit.tag.in_(selected_tags))
 
+        if len(selected_assets) != 0:
+            ids = [
+                asset_id for asset_id, name in assets.items() if name in selected_assets
+            ]
+            query = query.where(TransactionSplit.asset_id.in_(ids))
+
         if locked is not None:
             query = query.where(TransactionSplit.locked == locked)
 
@@ -360,7 +373,7 @@ def ctx_table(
         transactions: list[dict[str, object]] = []
         for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
-            t_split_ctx = ctx_split(t_split, accounts, categories)
+            t_split_ctx = ctx_split(t_split, accounts, categories, assets)
             page_total += t_split.amount
 
             transactions.append(t_split_ctx)
@@ -414,10 +427,12 @@ def ctx_table(
             "options-payee": options_payee,
             "options-category": options_category,
             "options-tag": options_tag,
+            "options-asset": options_asset,
             "any-filters-account": len(selected_accounts) > 0,
             "any-filters-payee": len(selected_payees) > 0,
             "any-filters-category": len(selected_categories) > 0,
             "any-filters-tag": len(selected_tags) > 0,
+            "any-filters-asset": len(selected_assets) > 0,
         }, title
 
 
@@ -425,6 +440,7 @@ def ctx_split(
     t_split: TransactionSplit,
     accounts: dict[int, str],
     categories: dict[int, str],
+    assets: dict[int, str],
 ) -> dict[str, object]:
     """Get the context to build the transaction edit dialog.
 
@@ -432,10 +448,12 @@ def ctx_split(
         t_split: TransactionSplit to build context for
         accounts: Dict {id: account name}
         categories: Dict {id: category name}
+        assets: Dict {id: asset name}
 
     Returns:
         Dictionary HTML context
     """
+    qty = t_split.asset_quantity or 0
     return {
         "uri": t_split.uri,
         "date": datetime.date.fromordinal(t_split.date_ord),
@@ -446,6 +464,9 @@ def ctx_split(
         "tag": t_split.tag,
         "amount": t_split.amount,
         "locked": t_split.locked,
+        "asset_name": assets[t_split.asset_id] if t_split.asset_id else None,
+        "asset_price": abs(t_split.amount / qty) if qty else None,
+        "asset_quantity": qty,
     }
 
 
@@ -468,6 +489,7 @@ def edit(uri: str) -> str | flask.Response:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
         categories = TransactionCategory.map_name(s)
+        assets = Asset.map_name(s)
 
         if flask.request.method == "GET":
             accounts = Account.map_name(s)
@@ -484,7 +506,7 @@ def edit(uri: str) -> str | flask.Response:
             splits = parent.splits
 
             ctx_splits: list[dict[str, object]] = [
-                ctx_split(t_split, accounts, categories) for t_split in splits
+                ctx_split(t_split, accounts, categories, assets) for t_split in splits
             ]
 
             query = s.query(TransactionSplit.payee).where(

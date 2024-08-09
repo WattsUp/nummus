@@ -34,6 +34,8 @@ def page_transactions() -> str:
         title=title,
         txn_table=txn_table,
         endpoint="assets.txns",
+        no_recent=True,
+        asset_transactions=True,
     )
 
 
@@ -50,6 +52,8 @@ def txns() -> flask.Response:
         txn_table=txn_table,
         include_oob=True,
         endpoint="assets.txns",
+        no_recent=True,
+        asset_transactions=True,
     )
     response = flask.make_response(html)
     args = dict(flask.request.args)
@@ -82,6 +86,8 @@ def txns_options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
+        elif field == "asset":
+            id_mapping = Asset.map_name(s)
 
         query, _, _, _ = transactions.table_unfiltered_query(s, asset_transactions=True)
 
@@ -97,7 +103,7 @@ def txns_options(field: str) -> str:
             ),
             name=field,
             search_str=search_str,
-            endpoint="transactions.table",
+            endpoint="assets.txns",
         )
 
 
