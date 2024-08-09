@@ -3,7 +3,7 @@
        placeholder="Search..."
        name="search-{{ name }}"
        value="{{ search_str }}"
-       hx-get="{{ url_for(controller + ".options", field=name, **url_args) }}"
+       hx-get="{{ url_for(endpoint + "_options", field=name, **url_args) }}"
        hx-target="#txn-{{ name }}"
        hx-swap="innerHTML"
        hx-trigger="keyup changed delay:250ms"
@@ -15,7 +15,7 @@
                    name="{{ name }}"
                    value="{{ option["name"] }}"
                    {% if option["checked"] %}checked{% endif %}
-                   hx-get="{{ url_for(controller + ".table", **url_args) }}"
+                   hx-get="{{ url_for(endpoint, **url_args) }}"
                    autocomplete="off">
             {% with class = "w-5 h-5" %}
                 {% include "svg/check.svg" %}

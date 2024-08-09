@@ -275,12 +275,12 @@ def page() -> str:
         title=title,
         chart=ctx_chart(),
         txn_table=txn_table,
-        controller="cash_flow",
+        endpoint="cash_flow.txns",
     )
 
 
-def table() -> flask.Response:
-    """GET /h/cash-flow/table.
+def txns() -> flask.Response:
+    """GET /h/cash-flow/txns.
 
     Returns:
         HTML response
@@ -299,7 +299,7 @@ def table() -> flask.Response:
         "transactions/table.jinja",
         txn_table=txn_table,
         include_oob=True,
-        controller="cash_flow",
+        endpoint="cash_flow.txns",
     )
     if not (
         PREVIOUS_PERIOD["start"] == start
@@ -326,8 +326,8 @@ def table() -> flask.Response:
     return response
 
 
-def options(field: str) -> str:
-    """GET /h/cash-flow/options/<field>.
+def txns_options(field: str) -> str:
+    """GET /h/cash-flow/txns-options/<field>.
 
     Args:
         field: Name of field to get options for
@@ -342,36 +342,12 @@ def options(field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
-        transaction_ids = None
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
 
-            query = s.query(TransactionCategory)
-            query = query.with_entities(TransactionCategory.id_)
-            query = query.where(
-                TransactionCategory.group != TransactionCategoryGroup.OTHER,
-            )
-            transaction_ids = {row[0] for row in query.all()}
-
-        period = args.get("period", "this-month")
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
-        end_ord = end.toordinal()
-
-        query = s.query(TransactionSplit).where(
-            TransactionSplit.asset_id.is_(None),
-            TransactionSplit.date_ord <= end_ord,
-        )
-        if start is not None:
-            start_ord = start.toordinal()
-            query = query.where(TransactionSplit.date_ord >= start_ord)
-        if transaction_ids is not None:
-            query = query.where(TransactionSplit.category_id.in_(transaction_ids))
+        query, _, _, _ = transactions.table_unfiltered_query(s, no_other_group=True)
 
         search_str = args.get(f"search-{field}")
 
@@ -384,7 +360,7 @@ def options(field: str) -> str:
                 search_str=search_str,
             ),
             name=field,
-            controller="cash_flow",
+            endpoint="cash_flow.txns",
         )
 
 
@@ -402,7 +378,7 @@ def dashboard() -> str:
 
 ROUTES: Routes = {
     "/cash-flow": (page, ["GET"]),
-    "/h/cash-flow/table": (table, ["GET"]),
-    "/h/cash-flow/options/<path:field>": (options, ["GET"]),
+    "/h/cash-flow/txns": (txns, ["GET"]),
+    "/h/cash-flow/txns-options/<path:field>": (txns_options, ["GET"]),
     "/h/dashboard/cash-flow": (dashboard, ["GET"]),
 }

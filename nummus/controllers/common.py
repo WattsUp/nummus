@@ -183,7 +183,7 @@ def ctx_base() -> dict[str, object]:
             "Dashboard": ("dashboard.page", False),
             "Net Worth": ("net_worth.page", False),
             "Transactions": ("transactions.page_all", False),
-            "Instrument Transactions": None,
+            "Asset Transactions": ("assets.page_transactions", False),
         },
         "Banking": {
             "Cash Flow": ("cash_flow.page", False),
@@ -191,7 +191,7 @@ def ctx_base() -> dict[str, object]:
         },
         "Investing": {
             "Holdings": None,
-            "Instrument Transactions": None,
+            "Asset Transactions": ("assets.page_transactions", False),
             "Balances": None,
             "Performance": ("performance.page", False),
             "Allocation": None,

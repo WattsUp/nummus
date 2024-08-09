@@ -357,14 +357,14 @@ def page(uri: str) -> str:
             chart=ctx_chart(acct),
             txn_table=txn_table,
             assets=ctx_assets(s, acct),
-            controller="accounts",
+            endpoint="accounts.txns",
             url_args={"uri": uri},
             no_account_column=True,
         )
 
 
-def table(uri: str) -> flask.Response:
-    """GET /h/accounts/a/<uri>/table.
+def txns(uri: str) -> flask.Response:
+    """GET /h/accounts/a/<uri>/txns.
 
     Args:
         uri: Account URI
@@ -398,7 +398,7 @@ def table(uri: str) -> flask.Response:
             "transactions/table.jinja",
             txn_table=txn_table,
             include_oob=True,
-            controller="accounts",
+            endpoint="accounts.txns",
             url_args={"uri": uri},
             no_account_column=True,
         )
@@ -434,8 +434,8 @@ def table(uri: str) -> flask.Response:
         return response
 
 
-def options(uri: str, field: str) -> str:
-    """GET /h/accounts/a/<uri>/options/<field>.
+def txns_options(uri: str, field: str) -> str:
+    """GET /h/accounts/a/<uri>/txn-options/<field>.
 
     Args:
         uri: Account URI
@@ -458,22 +458,7 @@ def options(uri: str, field: str) -> str:
         if field == "category":
             id_mapping = TransactionCategory.map_name(s)
 
-        period = args.get("period", "this-month")
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
-        end_ord = end.toordinal()
-
-        query = s.query(TransactionSplit).where(
-            TransactionSplit.asset_id.is_(None),
-            TransactionSplit.date_ord <= end_ord,
-            TransactionSplit.account_id == acct.id_,
-        )
-        if start is not None:
-            start_ord = start.toordinal()
-            query = query.where(TransactionSplit.date_ord >= start_ord)
+        query, _, _, _ = transactions.table_unfiltered_query(s, acct=acct)
 
         search_str = args.get(f"search-{field}")
 
@@ -488,7 +473,7 @@ def options(uri: str, field: str) -> str:
             txn_table={"uri": uri},
             name=field,
             search_str=search_str,
-            controller="accounts",
+            endpoint="accounts.txns",
             url_args={"uri": uri},
             no_account_column=True,
         )
@@ -496,7 +481,7 @@ def options(uri: str, field: str) -> str:
 
 ROUTES: Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
-    "/h/accounts/a/<path:uri>/table": (table, ["GET"]),
-    "/h/accounts/a/<path:uri>/options/<path:field>": (options, ["GET"]),
+    "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
+    "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
     "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
 }
