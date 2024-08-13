@@ -82,9 +82,13 @@
             </div>
         </div>
     {% else %}
-        {# TODO (WattsUp): Add tooltip explaining price and quantity adjustments due to splits #}
         <div class="w-[8rem] min-w-[8rem] p-1 text-right">Price</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 text-right">Quantity</div>
+        <div class="w-[8rem] min-w-[8rem] p-1 text-right tooltip">
+            Quantity
+            <div class="tooltip-text right-[60%] top-0  after:left-full after:border-l-grey-800 after:-mt-[4px] font-normal w-60">
+                Quantity adjusted for splits
+            </div>
+        </div>
     {% endif %}
     <div class="w-[7rem] min-w-[7rem] p-1 text-right">Amount</div>
     {% if not asset_transactions %}
