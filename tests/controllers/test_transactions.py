@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import re
+import urllib.parse
 
 from nummus.models import Transaction, TransactionCategory
 from tests.controllers.base import WebTestBase
@@ -86,7 +87,7 @@ class TestTransaction(WebTestBase):
             r"<title>Transactions This Month \| nummus</title>",
         )
 
-        result, _ = self.web_get(
+        result, headers = self.web_get(
             (endpoint, {"payee": ["[blank]", payee_1]}),
         )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
@@ -94,6 +95,10 @@ class TestTransaction(WebTestBase):
         self.assertRegex(
             result,
             rf"<title>Transactions This Month, {payee_1} \| nummus</title>",
+        )
+        self.assertEqual(
+            headers["HX-Push-Url"].split("?")[1],
+            f"payee={urllib.parse.quote('[blank]')}&payee={payee_1}",
         )
 
         result, _ = self.web_get(

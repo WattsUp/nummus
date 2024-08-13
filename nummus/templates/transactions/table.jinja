@@ -5,7 +5,7 @@
         {% include "transactions/table-locked.jinja" %}
     {% endwith %}
     {% if asset_transactions %}
-        {% set columns = ["account", "asset", "category"] %}
+        {% set columns = ["account", "asset"] %}
     {% elif no_account_column %}
         {% set columns = ["payee", "category", "tag"] %}
     {% else %}

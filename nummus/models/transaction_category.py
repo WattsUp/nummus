@@ -50,6 +50,7 @@ class TransactionCategory(Base):
             Dictionary {name: category}
         """
         d: dict[str, TransactionCategory] = {}
+        # Dictionary {group: {name: (locked, is_profit_loss)}}
         groups = {
             TransactionCategoryGroup.INCOME: {
                 "Consulting": (False, False),

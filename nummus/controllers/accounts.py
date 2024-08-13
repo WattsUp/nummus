@@ -424,9 +424,12 @@ def txns(uri: str) -> flask.Response:
                     assets=ctx,
                 )
         response = flask.make_response(html)
-        args = dict(flask.request.args)
+        args = dict(flask.request.args.lists())
         response.headers["HX-Push-Url"] = flask.url_for(
             "accounts.page",
+            _anchor=None,
+            _method=None,
+            _scheme=None,
             _external=False,
             uri=uri,
             **args,

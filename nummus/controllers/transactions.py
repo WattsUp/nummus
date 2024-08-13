@@ -68,9 +68,12 @@ def table() -> flask.Response:
         endpoint="transactions.table",
     )
     response = flask.make_response(html)
-    args = dict(flask.request.args)
+    args = dict(flask.request.args.lists())
     response.headers["HX-Push-Url"] = flask.url_for(
         "transactions.page_all",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
         _external=False,
         **args,
     )
@@ -217,20 +220,27 @@ def table_unfiltered_query(
 
     transaction_ids = None
     if no_other_group:
-        query = s.query(TransactionCategory)
-        query = query.with_entities(TransactionCategory.id_)
-        query = query.where(
-            TransactionCategory.group != TransactionCategoryGroup.OTHER,
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(TransactionCategory.id_)
+            .where(
+                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+            )
         )
         transaction_ids = {row[0] for row in query.all()}
+    securities_traded_id = (
+        s.query(TransactionCategory.id_)
+        .where(TransactionCategory.name == "Securities Traded")
+        .one()[0]
+    )
 
     query = (
         s.query(TransactionSplit)
         .where(
             (
-                TransactionSplit.asset_id.is_not(None)
+                TransactionSplit.category_id == securities_traded_id
                 if asset_transactions
-                else TransactionSplit.asset_id.is_(None)
+                else TransactionSplit.category_id != securities_traded_id
             ),
             TransactionSplit.date_ord <= end_ord,
         )

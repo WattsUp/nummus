@@ -10,7 +10,7 @@ import flask
 from nummus import exceptions as exc
 from nummus import portfolio, web_utils
 from nummus.controllers import common, transactions
-from nummus.models import Account, Asset, AssetCategory, TransactionCategory
+from nummus.models import Account, Asset, AssetCategory
 from nummus.models.asset import AssetValuation
 
 if TYPE_CHECKING:
@@ -56,9 +56,12 @@ def txns() -> flask.Response:
         asset_transactions=True,
     )
     response = flask.make_response(html)
-    args = dict(flask.request.args)
+    args = dict(flask.request.args.lists())
     response.headers["HX-Push-Url"] = flask.url_for(
         "assets.page_transactions",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
         _external=False,
         **args,
     )
@@ -84,8 +87,6 @@ def txns_options(field: str) -> str:
         id_mapping = None
         if field == "account":
             id_mapping = Account.map_name(s)
-        elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
         elif field == "asset":
             id_mapping = Asset.map_name(s)
 
