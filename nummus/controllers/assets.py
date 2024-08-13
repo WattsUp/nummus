@@ -18,9 +18,6 @@ if TYPE_CHECKING:
 
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "90-days"
-PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
-
 
 def page_transactions() -> str:
     """GET /assets/transactions.
@@ -89,6 +86,9 @@ def txns_options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "asset":
             id_mapping = Asset.map_name(s)
+        else:
+            msg = f"Unexpected txns options: {field}"
+            raise exc.http.BadRequest(msg)
 
         query, _, _, _ = transactions.table_unfiltered_query(s, asset_transactions=True)
 

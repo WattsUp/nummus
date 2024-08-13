@@ -4,8 +4,15 @@ import datetime
 import re
 import urllib.parse
 
-from nummus.models import Transaction, TransactionCategory
-from tests.controllers.base import WebTestBase
+from nummus.models import (
+    Account,
+    Asset,
+    AssetCategory,
+    Transaction,
+    TransactionCategory,
+    TransactionSplit,
+)
+from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
 class TestTransaction(WebTestBase):
@@ -20,10 +27,13 @@ class TestTransaction(WebTestBase):
         self.assertIn("No matching transactions for given query filters", result)
 
     def test_table(self) -> None:
+        p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
+        today_ord = today.toordinal()
 
         acct = d["acct"]
+        acct_uri = d["acct_uri"]
         payee_0 = d["payee_0"]
         payee_1 = d["payee_1"]
         t_split_0 = d["t_split_0"]
@@ -181,12 +191,53 @@ class TestTransaction(WebTestBase):
         }
         result, _ = self.web_get((endpoint, queries))
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
-        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"[^>]*hx-get[^>]*>')
         self.assertRegex(
             result,
             rf"<title>Transactions All, {payee_1}, {cat_1}, & 2 Filters "
             r"\| nummus</title>",
         )
+
+        # Add dividend transaction
+        with p.get_session() as s:
+            acct_id = Account.uri_to_id(acct_uri)
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            # Create assets
+            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+
+            s.add(a_banana)
+            s.commit()
+
+            txn = Transaction(
+                account_id=acct_id,
+                date_ord=today_ord,
+                amount=10,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_banana.id_,
+                asset_quantity_unadjusted=1,
+                category_id=categories["Dividends Received"],
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            t_split_2 = t_split.uri
+        queries = {
+            "period": "all",
+            "category": "Dividends Received",
+        }
+        result, _ = self.web_get((endpoint, queries))
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_2}"')
+        # Can't edit asset transactions
+        self.assertNotRegex(result, rf'<div id="txn-{t_split_2}"[^>]*hx-get[^>]*>')
 
     def test_options(self) -> None:
         d = self._setup_portfolio()
@@ -277,6 +328,11 @@ class TestTransaction(WebTestBase):
         self.assertEqual(len(re.findall(r"<label.*>", result)), 3)
         self.assertEqual(len(re.findall(r"<label.*hidden.*>", result)), 2)
         self.assertRegex(result, rf'value="{payee_0}"[ \n]+checked[ \n]+hx-get')
+
+        result, _ = self.web_get(
+            (endpoint, {"field": "unknown"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )
 
     def test_edit(self) -> None:
         p = self._portfolio

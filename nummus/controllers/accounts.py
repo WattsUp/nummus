@@ -460,6 +460,9 @@ def txns_options(uri: str, field: str) -> str:
             raise exc.http.BadRequest(msg)
         if field == "category":
             id_mapping = TransactionCategory.map_name(s)
+        elif field not in {"payee", "tag"}:
+            msg = f"Unexpected txns options: {field}"
+            raise exc.http.BadRequest(msg)
 
         query, _, _, _ = transactions.table_unfiltered_query(s, acct=acct)
 

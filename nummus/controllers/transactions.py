@@ -100,8 +100,9 @@ def table_options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
-        elif field == "asset":
-            id_mapping = Asset.map_name(s)
+        elif field not in {"payee", "tag"}:
+            msg = f"Unexpected txns options: {field}"
+            raise exc.http.BadRequest(msg)
 
         query, _, _, _ = table_unfiltered_query(s)
 

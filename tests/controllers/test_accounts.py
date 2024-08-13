@@ -441,3 +441,8 @@ class TestAccount(WebTestBase):
         i_blank = result.find("[blank]")
         i_1 = result.find(tag_1)
         self.assertLess(i_blank, i_1)
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "unknown"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )

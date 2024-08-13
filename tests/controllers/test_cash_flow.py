@@ -10,7 +10,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import WebTestBase
+from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
 class TestCashFlow(WebTestBase):
@@ -243,6 +243,11 @@ class TestCashFlow(WebTestBase):
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
         self.assertNotRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
+
+        result, _ = self.web_get(
+            (endpoint, {"field": "unknown"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )
 
     def test_dashboard(self) -> None:
         _ = self._setup_portfolio()

@@ -10,6 +10,7 @@ import flask
 import sqlalchemy
 from sqlalchemy import orm
 
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common, transactions
 from nummus.models import (
@@ -349,6 +350,9 @@ def txns_options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
+        elif field not in {"payee", "tag"}:
+            msg = f"Unexpected txns options: {field}"
+            raise exc.http.BadRequest(msg)
 
         query, _, _, _ = transactions.table_unfiltered_query(s, no_other_group=True)
 
