@@ -11,7 +11,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
-from tests.controllers.base import WebTestBase
+from tests.controllers.base import HTTP_CODE_FORBIDDEN, WebTestBase
 
 
 class TestTransactionCategory(WebTestBase):
@@ -21,7 +21,7 @@ class TestTransactionCategory(WebTestBase):
         with p.get_session() as s:
             n = s.query(TransactionCategory).count()
 
-        endpoint = "/h/txn-categories"
+        endpoint = "transaction_categories.overlay"
         result, _ = self.web_get(endpoint)
         self.assertEqual(len(re.findall(r'<div id="category-[a-f0-9]{8}"', result)), n)
         self.assertIn("Edit transaction categories", result)
@@ -32,7 +32,7 @@ class TestTransactionCategory(WebTestBase):
         with p.get_session() as s:
             n_before = s.query(TransactionCategory).count()
 
-        endpoint = "/h/txn-categories/new"
+        endpoint = "transaction_categories.new"
         result, _ = self.web_get(endpoint)
         self.assertNotIn("Delete", result)
 
@@ -65,13 +65,14 @@ class TestTransactionCategory(WebTestBase):
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/c/{t_cat_uri}/edit"
-        result, _ = self.web_get(endpoint)
+        endpoint = "transaction_categories.edit"
+        url = endpoint, {"uri": t_cat_uri}
+        result, _ = self.web_get(url)
         self.assertIn("Delete", result)
 
         name = self.random_string()
         form = {"name": name, "group": "other"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
         with p.get_session() as s:
@@ -87,12 +88,12 @@ class TestTransactionCategory(WebTestBase):
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         self.assertIn(e_str, result)
 
         e_str = "Transaction group must not be None"
         form = {"name": "ab", "group": ""}
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         self.assertIn(e_str, result)
 
         with p.get_session() as s:
@@ -103,9 +104,9 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/c/{t_cat_uri}/edit"
+        url = endpoint, {"uri": t_cat_uri}
         form = {"name": "abc", "group": "other"}
-        self.web_post(endpoint, rc=403, data=form)
+        self.web_post(url, rc=HTTP_CODE_FORBIDDEN, data=form)
 
     def test_delete(self) -> None:
         p = self._portfolio
@@ -149,11 +150,12 @@ class TestTransactionCategory(WebTestBase):
 
             t_split_id = t_split.id_
 
-        endpoint = f"/h/txn-categories/c/{t_cat_uri}/delete"
-        result, _ = self.web_get(endpoint)
+        endpoint = "transaction_categories.delete"
+        url = endpoint, {"uri": t_cat_uri}
+        result, _ = self.web_get(url)
         self.assertIn("Are you sure you want to delete this category?", result)
 
-        result, _ = self.web_post(endpoint)
+        result, _ = self.web_post(url)
         self.assertIn("Edit transaction categories", result)
 
         with p.get_session() as s:
@@ -177,5 +179,5 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             t_cat_uri = t_cat.uri
 
-        endpoint = f"/h/txn-categories/c/{t_cat_uri}/delete"
-        self.web_post(endpoint, rc=403)
+        url = endpoint, {"uri": t_cat_uri}
+        self.web_post(url, rc=HTTP_CODE_FORBIDDEN)

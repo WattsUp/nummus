@@ -38,9 +38,11 @@ _RE_URI = re.compile(r"^[0-9a-f]{8}$")
 ResultType = dict[str, object] | str | bytes
 Tree = dict[str, "TreeNode"]
 TreeNode = Tree | tuple[str, Tree] | object
+Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 HTTP_CODE_OK = 200
 HTTP_CODE_BAD_REQUEST = 400
+HTTP_CODE_FORBIDDEN = 403
 
 
 class WebTestBase(TestBase):
@@ -260,8 +262,8 @@ class WebTestBase(TestBase):
     def web_open(
         self,
         method: str,
-        endpoint: str,
-        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
+        endpoint: str | tuple[str, Queries],
+        *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
     ) -> tuple[str, dict[str, str]]:
@@ -269,25 +271,48 @@ class WebTestBase(TestBase):
 
         Args:
             method: HTTP method to use
-            endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through
-            urllib.parse.quote
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
         Returns:
             (response.text, headers)
         """
-        if queries is None or len(queries) < 1:
-            url = endpoint
+        if isinstance(endpoint, str):
+            url_args = {}
         else:
-            queries_flat = []
-            for k, v in queries.items():
-                v_list = [v] if isinstance(v, str) else v
-                queries_flat.extend(
-                    f"{k}={urllib.parse.quote(str(vv))}" for vv in v_list
+            endpoint, url_args = endpoint
+        with self._flask_app.app_context(), self._flask_app.test_request_context():
+            url = flask.url_for(
+                endpoint,
+                _anchor=None,
+                _method=None,
+                _scheme=None,
+                _external=False,
+                **url_args,
+            )
+            clean_args = {
+                k: (
+                    "<values>"
+                    if isinstance(v, list)
+                    else (
+                        "{uri}"
+                        if isinstance(v, str) and _RE_URI.match(v)
+                        else "<value>"
+                    )
                 )
-            url = f"{endpoint}?{'&'.join(queries_flat)}"
+                for k, v in url_args.items()
+            }
+            clean_url = urllib.parse.unquote(
+                flask.url_for(
+                    endpoint,
+                    _anchor=None,
+                    _method=None,
+                    _scheme=None,
+                    _external=False,
+                    **clean_args,
+                ),
+            )
 
         kwargs["method"] = method
         response: werkzeug.test.TestResponse | None = None
@@ -315,21 +340,9 @@ class WebTestBase(TestBase):
             self.assertEqual(response.content_type, "text/html; charset=utf-8")
 
             with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-                # Replace uri with {accountURI, assetURI, ...}
-                parts = []
-                for p in endpoint.split("/"):
-                    if _RE_URI.match(p):
-                        parts.append("{uri}")
-                    else:
-                        parts.append(p)
-                endpoint = "/".join(parts)
-                k = f"{method:6} {endpoint}"
-                if queries:
-                    queries_flat = [f"{k}=<value>" for k in queries]
-                    k += f"?{'&'.join(queries_flat)}"
-                if k not in d["web_latency"]:
-                    d["web_latency"][k] = []
-                d["web_latency"][k].append(duration)
+                if clean_url not in d["web_latency"]:
+                    d["web_latency"][clean_url] = []
+                d["web_latency"][clean_url].append(duration)
 
             # Fairly loose cause jinja and sql caching will save time
             self.assertLessEqual(duration, 0.5)  # All responses faster than 500ms
@@ -343,17 +356,15 @@ class WebTestBase(TestBase):
 
     def web_get(
         self,
-        endpoint: str,
-        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
+        endpoint: str | tuple[str, Queries],
+        *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
     ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP GET request.
 
         Args:
-            endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through
-            urllib.parse.quote
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
@@ -363,24 +374,21 @@ class WebTestBase(TestBase):
         return self.web_open(
             "GET",
             endpoint,
-            queries,
             rc=rc,
             **kwargs,
         )
 
     def web_put(
         self,
-        endpoint: str,
-        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
+        endpoint: str | tuple[str, Queries],
+        *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
     ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP PUT request.
 
         Args:
-            endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through
-            urllib.parse.quote
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
@@ -390,24 +398,21 @@ class WebTestBase(TestBase):
         return self.web_open(
             "PUT",
             endpoint,
-            queries,
             rc=rc,
             **kwargs,
         )
 
     def web_post(
         self,
-        endpoint: str,
-        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
+        endpoint: str | tuple[str, Queries],
+        *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
     ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP POST request.
 
         Args:
-            endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through
-            urllib.parse.quote
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
@@ -417,24 +422,21 @@ class WebTestBase(TestBase):
         return self.web_open(
             "POST",
             endpoint,
-            queries,
             rc=rc,
             **kwargs,
         )
 
     def web_delete(
         self,
-        endpoint: str,
-        queries: dict[str, str] | dict[str, str | list[str]] | None = None,
+        endpoint: str | tuple[str, Queries],
+        *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
     ) -> tuple[str, dict[str, str]]:
         """Run a test HTTP DELETE request.
 
         Args:
-            endpoint: URL endpoint to test
-            queries: Dictionary of queries to append, will run through
-            urllib.parse.quote
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
             kwargs: Passed to client.get
 
@@ -444,7 +446,6 @@ class WebTestBase(TestBase):
         return self.web_open(
             "DELETE",
             endpoint,
-            queries,
             rc=rc,
             **kwargs,
         )

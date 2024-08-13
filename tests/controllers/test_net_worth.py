@@ -20,7 +20,7 @@ class TestNetWorth(WebTestBase):
     def test_page(self) -> None:
         _ = self._setup_portfolio()
 
-        endpoint = "/net-worth"
+        endpoint = "net_worth.page"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Today's Balance <b>$90.00</b>", result)
@@ -48,9 +48,10 @@ class TestNetWorth(WebTestBase):
             a_house_uri = a_house.uri
             a_house_id = a_house.id_
 
-        endpoint = "/h/net-worth/chart"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "net_worth.chart"
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn("<html", result)
         self.assertNotIn("Today's Balance", result)
         self.assertRegex(
@@ -78,8 +79,9 @@ class TestNetWorth(WebTestBase):
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
-        queries = {"period": "30-days", "category": "credit"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "30-days", "category": "credit"}),
+        )
         self.assertRegex(
             result,
             r"<script>netWorthChart\.update\(.*"
@@ -87,13 +89,15 @@ class TestNetWorth(WebTestBase):
         )
         self.assertIn('"date_mode": "weeks"', result)
 
-        queries = {"period": "90-days", "category": "credit"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "90-days", "category": "credit"}),
+        )
         self.assertIn('"date_mode": "months"', result)
 
         # For long periods, downsample to min/avg/max
-        queries = {"period": "5-years"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "5-years"}),
+        )
         self.assertRegex(
             result,
             r"<script>netWorthChart\.update\(.*"
@@ -123,8 +127,9 @@ class TestNetWorth(WebTestBase):
             s.commit()
             acct_id = a.id_
 
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn(acct_name, result)
 
         # With a Transaction, the closed account should show up
@@ -171,7 +176,7 @@ class TestNetWorth(WebTestBase):
             "start": yesterday.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertIn(acct_name, result)
         # Get the asset block
         m = re.search(r'id="assets"(.*)id="net-worth-chart-data"', result, re.S)
@@ -197,7 +202,7 @@ class TestNetWorth(WebTestBase):
             "start": today.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertNotIn(acct_name, result)
 
         # Add a valuation for the house with zero profit
@@ -215,7 +220,7 @@ class TestNetWorth(WebTestBase):
             "start": yesterday.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertIn(acct_name, result)
         # Get the asset block
         m = re.search(r'id="assets"(.*)id="net-worth-chart-data"', result, re.S)
@@ -237,7 +242,7 @@ class TestNetWorth(WebTestBase):
         _ = self._setup_portfolio()
         today = datetime.date.today()
 
-        endpoint = "/h/dashboard/net-worth"
+        endpoint = "net_worth.dashboard"
         result, _ = self.web_get(endpoint)
         self.assertNotIn("<html", result)
         self.assertRegex(

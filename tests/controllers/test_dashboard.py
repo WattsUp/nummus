@@ -5,7 +5,7 @@ from tests.controllers.base import WebTestBase
 
 class TestDashboard(WebTestBase):
     def test_page(self) -> None:
-        endpoint = "/"
+        endpoint = "dashboard.page"
         result, _ = self.web_get(endpoint)
         target = '<!DOCTYPE html>\n<html lang="en-US">'
         self.assertEqual(result[: len(target)], target)

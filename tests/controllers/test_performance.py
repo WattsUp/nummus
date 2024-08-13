@@ -24,7 +24,7 @@ class TestPerformance(WebTestBase):
         with p.get_session() as s:
             Asset.add_indices(s)
 
-        endpoint = "/performance"
+        endpoint = "performance.page"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         result = result.replace("\n", " ")
@@ -105,9 +105,10 @@ class TestPerformance(WebTestBase):
 
             a_house_id = a_house.id_
 
-        endpoint = "/h/performance/chart"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "performance.chart"
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn("<html", result)
         self.assertRegex(
             result,
@@ -181,8 +182,9 @@ class TestPerformance(WebTestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-        queries = {"period": "30-days"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "30-days"}),
+        )
         self.assertRegex(
             result,
             r"<script>performanceChart\.update\(.*"
@@ -200,8 +202,9 @@ class TestPerformance(WebTestBase):
         twrr[-1] = Decimal("0.01")
         self.assertEqual(index_s, ", ".join(f'"{v}"' for v in twrr))
 
-        queries = {"period": "90-days", "index": "Dow Jones Industrial Average"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "90-days", "index": "Dow Jones Industrial Average"}),
+        )
         self.assertIn('"date_mode": "months"', result)
         m = re.search(
             r"<script>performanceChart\.update\(.*"
@@ -214,8 +217,9 @@ class TestPerformance(WebTestBase):
         self.assertEqual(index_s, ", ".join(f'"{v}"' for v in twrr))
 
         # For long periods, downsample to min/avg/max
-        queries = {"period": "5-years"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "5-years"}),
+        )
         self.assertRegex(
             result,
             r"<script>performanceChart\.update\(.*"
@@ -246,8 +250,9 @@ class TestPerformance(WebTestBase):
             acct_id_1 = acct.id_
             acct_uri_1 = acct.uri
 
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn(acct_name_1, result)
 
         # With a Transaction, the closed account should show up
@@ -294,7 +299,7 @@ class TestPerformance(WebTestBase):
             "start": yesterday.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertIn(acct_name_1, result)
         # Get the asset block
         m = re.search(r'id="accounts"(.*)id="performance-chart-data"', result, re.S)
@@ -328,7 +333,7 @@ class TestPerformance(WebTestBase):
             "start": today.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertNotIn(acct_name_1, result)
 
     def test_dashboard(self) -> None:
@@ -418,7 +423,7 @@ class TestPerformance(WebTestBase):
                 .all()
             ]
 
-        endpoint = "/h/dashboard/performance"
+        endpoint = "performance.dashboard"
         result, _ = self.web_get(endpoint)
         self.assertNotIn("<html", result)
         result = result.replace("\n", " ")

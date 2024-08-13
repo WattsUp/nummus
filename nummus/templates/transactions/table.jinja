@@ -4,7 +4,14 @@
         {% include "transactions/table-paging.jinja" %}
         {% include "transactions/table-locked.jinja" %}
     {% endwith %}
-    {% for name in ["account", "payee", "category", "tag"] if (name != "account" or not no_account_column) %}
+    {% if asset_transactions %}
+        {% set columns = ["account", "asset"] %}
+    {% elif no_account_column %}
+        {% set columns = ["payee", "category", "tag"] %}
+    {% else %}
+        {% set columns = ["account", "payee", "category", "tag"] %}
+    {% endif %}
+    {% for name in columns %}
         <div id="txn-icon-{{ name }}" hx-swap-oob="insideHTML">
             {% with any_filters = txn_table["any-filters-" + name] %}
                 {% include "transactions/table-options-icon.jinja" %}
@@ -19,7 +26,7 @@
 {% endif %}
 <div id="txn-table"
      class="w-full flex flex-col grow min-h-[15rem]"
-     hx-get="{{ url_for(controller + ".table", **url_args) }}"
+     hx-get="{{ url_for(endpoint, **url_args) }}"
      hx-trigger="update-transaction from:body, update-account from:body">
     {% if txn_table["transactions"] | length == 0 %}
         <div class="text-center">No matching transactions for given query filters</div>

@@ -25,8 +25,9 @@ class TestAccount(WebTestBase):
         acct_uri = d["acct_uri"]
         cat_1 = d["cat_1"]
 
-        endpoint = f"/h/accounts/a/{acct_uri}/edit"
-        result, _ = self.web_get(endpoint)
+        endpoint = "accounts.edit"
+        url = endpoint, {"uri": acct_uri}
+        result, _ = self.web_get(url)
         self.assertNotIn("<html", result)
         self.assertIn("Edit account", result)
 
@@ -39,7 +40,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "emergency": "",
         }
-        result, headers = self.web_post(endpoint, data=form)
+        result, headers = self.web_post(url, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-account")
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
@@ -59,7 +60,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "closed": "",
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         e_str = "Cannot close Account with non-zero balance"
         self.assertIn(e_str, result)
         with p.get_session() as s:
@@ -74,7 +75,7 @@ class TestAccount(WebTestBase):
             "category": "credit",
             "number": "",
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         e_str = "Account name must be at least 2 characters long"
         self.assertIn(e_str, result)
         with p.get_session() as s:
@@ -89,7 +90,7 @@ class TestAccount(WebTestBase):
             "category": "",
             "number": "",
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         e_str = "Account category must not be None"
         self.assertIn(e_str, result)
 
@@ -129,7 +130,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "closed": "",
         }
-        result, _ = self.web_post(endpoint, data=form)
+        result, _ = self.web_post(url, data=form)
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
             acct = s.query(Account).first()
@@ -145,9 +146,12 @@ class TestAccount(WebTestBase):
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
 
-        endpoint = f"/accounts/{acct_uri}"
+        endpoint = "accounts.page"
         headers = {"Hx-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri}),
+            headers=headers,
+        )
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
@@ -156,8 +160,10 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        queries = {"period": "last-year"}
-        result, _ = self.web_get(endpoint, queries, headers=headers)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "last-year"}),
+            headers=headers,
+        )
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
@@ -166,7 +172,7 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-    def test_table(self) -> None:
+    def test_txns(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
@@ -179,9 +185,10 @@ class TestAccount(WebTestBase):
         accounts.PREVIOUS_PERIOD["start"] = None
         accounts.PREVIOUS_PERIOD["end"] = None
 
-        endpoint = f"/h/accounts/a/{acct_uri}/table"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "accounts.txns"
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "all"}),
+        )
         self.assertNotIn("<html", result)
         # First different call for table should update chart as well
         self.assertRegex(
@@ -204,20 +211,24 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
         self.assertNotIn('id="assets"', result)  # Not an investment account
 
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "all"}),
+        )
         # Second call for table should not update chart as well
         self.assertNotRegex(result, r"<script>accountChart\.update\(.*\)</script>")
 
-        queries = {"period": "30-days"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "30-days"}),
+        )
         self.assertRegex(
             result,
             r'<script>accountChart\.update\(.*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "weeks"', result)
 
-        queries = {"period": "last-year"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "last-year"}),
+        )
         self.assertRegex(
             result,
             r'<script>accountChart\.update\(.*"min": null.*\)</script>',
@@ -229,8 +240,9 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        queries = {"period": "5-years"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "5-years"}),
+        )
         self.assertRegex(
             result,
             r'<script>accountChart\.update\(.*"min": \[.+\].*\)</script>',
@@ -281,9 +293,11 @@ class TestAccount(WebTestBase):
             a_house_uri = a_house.uri
             a_house_id = a_house.id_
 
-        queries = {"period": "all"}
         headers = {"HX-Trigger": "txn-table"}
-        result, _ = self.web_get(endpoint, queries, headers=headers)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "all"}),
+            headers=headers,
+        )
         # Get the asset block
         m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
@@ -310,7 +324,10 @@ class TestAccount(WebTestBase):
             s.add(v)
             s.commit()
 
-        result, _ = self.web_get(endpoint, queries, headers=headers)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "all"}),
+            headers=headers,
+        )
         # Get the asset block
         m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
@@ -356,7 +373,10 @@ class TestAccount(WebTestBase):
             "start": today.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries, headers=headers)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, **queries}),
+            headers=headers,
+        )
         # Get the asset block
         m = re.search(r'id="assets"(.*)', result, re.S)
         self.assertIsNotNone(m)
@@ -368,7 +388,7 @@ class TestAccount(WebTestBase):
         self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
 
-    def test_options(self) -> None:
+    def test_txns_options(self) -> None:
         d = self._setup_portfolio()
 
         acct_uri = d["acct_uri"]
@@ -380,12 +400,15 @@ class TestAccount(WebTestBase):
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
-        endpoint = f"/h/accounts/a/{acct_uri}/options/account"
-        self.web_get(endpoint, rc=HTTP_CODE_BAD_REQUEST)
+        endpoint = "accounts.txns_options"
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "account"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )
 
-        endpoint = f"/h/accounts/a/{acct_uri}/options/category"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "category", "period": "all"}),
+        )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
@@ -396,8 +419,9 @@ class TestAccount(WebTestBase):
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
-        queries = {"category": cat_1}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "category", "category": cat_1}),
+        )
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
@@ -406,8 +430,9 @@ class TestAccount(WebTestBase):
         i_1 = result.find(cat_1)
         self.assertLess(i_1, i_0)
 
-        endpoint = f"/h/accounts/a/{acct_uri}/options/tag"
-        result, _ = self.web_get(endpoint)
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "tag"}),
+        )
         self.assertEqual(result.count("span"), 4)
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
@@ -416,3 +441,8 @@ class TestAccount(WebTestBase):
         i_blank = result.find("[blank]")
         i_1 = result.find(tag_1)
         self.assertLess(i_blank, i_1)
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "field": "unknown"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )

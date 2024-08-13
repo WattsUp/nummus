@@ -18,7 +18,7 @@ class TestEmergencyFund(WebTestBase):
         acct_name = d["acct"]
 
         # No budget should not error out
-        endpoint = "/emergency-fund"
+        endpoint = "emergency_fund.page"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("No budget", result)
@@ -100,9 +100,8 @@ class TestEmergencyFund(WebTestBase):
         today_ord = today.toordinal()
 
         # No budget should not error out
-        endpoint = "/h/dashboard/emergency-fund"
-        queries = {"no-defer": ""}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "emergency_fund.dashboard"
+        result, _ = self.web_get(endpoint)
         self.assertIn("No budget", result)
         self.assertRegex(
             result,
@@ -116,7 +115,7 @@ class TestEmergencyFund(WebTestBase):
             s.add(b)
             s.commit()
 
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint)
         self.assertIn("increase your fund to at least $30.", result)
         self.assertRegex(
             result,
@@ -131,7 +130,7 @@ class TestEmergencyFund(WebTestBase):
                 self.fail("Account is missing")
             acct.emergency = True
             s.commit()
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint)
         self.assertIn("$30 could be invested", result)
 
         # Adjust budget to be mid and add closed account
@@ -150,7 +149,7 @@ class TestEmergencyFund(WebTestBase):
             )
             s.add(acct)
             s.commit()
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint)
         self.assertIn("cover 4 months of expenses.", result)
 
         # Adjust budget to be low
@@ -160,5 +159,5 @@ class TestEmergencyFund(WebTestBase):
                 self.fail("Budget is missing")
             b.amount = Decimal(-40)
             s.commit()
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(endpoint)
         self.assertIn("Try to increase your fund to at least $120.", result)

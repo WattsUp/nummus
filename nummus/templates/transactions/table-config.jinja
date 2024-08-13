@@ -1,15 +1,17 @@
 <div id="txn-config"
      class="w-full flex justify-end gap-1 font-serif"
      hx-swap-oob="{{ oob }}">
-    <input name="search"
-           value="{{ txn_table["search"] }}"
-           placeholder="Search Transactions"
-           class="mr-8 grow"
-           hx-get="{{ url_for(controller + ".table", **url_args) }}"
-           hx-indicator="unset"
-           autocomplete="off">
+    {% if not asset_transactions %}
+        <input name="search"
+               value="{{ txn_table["search"] }}"
+               placeholder="Search Transactions"
+               class="mr-8 grow"
+               hx-get="{{ url_for(endpoint, **url_args) }}"
+               hx-indicator="unset"
+               autocomplete="off">
+    {% endif %}
     <select name="period"
-            hx-get="{{ url_for(controller + ".table", **url_args) }}"
+            hx-get="{{ url_for(endpoint, **url_args) }}"
             autocomplete="off">
         {% with period = txn_table["period"] %}
             {% include "shared/period-options.jinja" %}
@@ -19,7 +21,7 @@
            type="date"
            name="start"
            value="{{ txn_table["start"] }}"
-           hx-get="{{ url_for(controller + ".table", period="custom", **url_args) }}"
+           hx-get="{{ url_for(endpoint, period="custom", **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
@@ -27,7 +29,7 @@
            type="date"
            name="end"
            value="{{ txn_table["end"] }}"
-           hx-get="{{ url_for(controller + ".table", period="custom", **url_args) }}"
+           hx-get="{{ url_for(endpoint, period="custom", **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
 </div>

@@ -16,6 +16,7 @@ from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import (
     Account,
+    Asset,
     paginate,
     search,
     Transaction,
@@ -48,7 +49,7 @@ def page_all() -> str:
         "transactions/index-content.jinja",
         title=title,
         txn_table=txn_table,
-        controller="transactions",
+        endpoint="transactions.table",
     )
 
 
@@ -64,19 +65,22 @@ def table() -> flask.Response:
         "transactions/table.jinja",
         txn_table=txn_table,
         include_oob=True,
-        controller="transactions",
+        endpoint="transactions.table",
     )
     response = flask.make_response(html)
-    args = dict(flask.request.args)
+    args = dict(flask.request.args.lists())
     response.headers["HX-Push-Url"] = flask.url_for(
         "transactions.page_all",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
         _external=False,
         **args,
     )
     return response
 
 
-def options(field: str) -> str:
+def table_options(field: str) -> str:
     """GET /h/transactions/options/<field>.
 
     Args:
@@ -96,22 +100,11 @@ def options(field: str) -> str:
             id_mapping = Account.map_name(s)
         elif field == "category":
             id_mapping = TransactionCategory.map_name(s)
+        elif field not in {"payee", "tag"}:
+            msg = f"Unexpected txns options: {field}"
+            raise exc.http.BadRequest(msg)
 
-        period = args.get("period", "this-month")
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
-        end_ord = end.toordinal()
-
-        query = s.query(TransactionSplit).where(
-            TransactionSplit.asset_id.is_(None),
-            TransactionSplit.date_ord <= end_ord,
-        )
-        if start is not None:
-            start_ord = start.toordinal()
-            query = query.where(TransactionSplit.date_ord >= start_ord)
+        query, _, _, _ = table_unfiltered_query(s)
 
         search_str = args.get(f"search-{field}")
 
@@ -120,7 +113,7 @@ def options(field: str) -> str:
             options=ctx_options(query, field, id_mapping, search_str=search_str),
             name=field,
             search_str=search_str,
-            controller="transactions",
+            endpoint="transactions.table",
         )
 
 
@@ -150,6 +143,7 @@ def ctx_options(
         "payee": TransactionSplit.payee,
         "category": TransactionSplit.category_id,
         "tag": TransactionSplit.tag,
+        "asset": TransactionSplit.asset_id,
     }
     for (id_,) in query.with_entities(entities[field]).distinct():
         if id_ is None:
@@ -189,11 +183,87 @@ def ctx_options(
     )
 
 
+def table_unfiltered_query(
+    s: orm.Session,
+    acct: Account | None = None,
+    default_period: str = "this-month",
+    *,
+    no_other_group: bool = False,
+    asset_transactions: bool = False,
+) -> tuple[orm.Query, str, datetime.date | None, datetime.date]:
+    """Create transactions table query without any column filters.
+
+    Args:
+        s: SQL session to use
+        acct: Account to get transactions for, None will use filter queries
+        default_period: Default period to use if no period given
+        no_other_group: True to exclude transactions in the OTHER group
+        asset_transactions: True will only get transactions with assets,
+            False will only get transactions without assets
+
+    Returns:
+        (SQL query, period string, start date or None, end date)
+    """
+    args = flask.request.args
+
+    period = args.get("period", default_period)
+    start, end = web_utils.parse_period(
+        period,
+        args.get("start", type=datetime.date.fromisoformat),
+        args.get("end", type=datetime.date.fromisoformat),
+    )
+    if start is None and acct is not None:
+        opened_on_ord = acct.opened_on_ord
+        start = (
+            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
+        )
+    end_ord = end.toordinal()
+
+    transaction_ids = None
+    if no_other_group:
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(TransactionCategory.id_)
+            .where(
+                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+            )
+        )
+        transaction_ids = {row[0] for row in query.all()}
+    securities_traded_id = (
+        s.query(TransactionCategory.id_)
+        .where(TransactionCategory.name == "Securities Traded")
+        .one()[0]
+    )
+
+    query = (
+        s.query(TransactionSplit)
+        .where(
+            (
+                TransactionSplit.category_id == securities_traded_id
+                if asset_transactions
+                else TransactionSplit.category_id != securities_traded_id
+            ),
+            TransactionSplit.date_ord <= end_ord,
+        )
+        .order_by(TransactionSplit.date_ord)
+    )
+    if start is not None:
+        start_ord = start.toordinal()
+        query = query.where(TransactionSplit.date_ord >= start_ord)
+    if acct is not None:
+        query = query.where(TransactionSplit.account_id == acct.id_)
+    if transaction_ids is not None:
+        query = query.where(TransactionSplit.category_id.in_(transaction_ids))
+
+    return query, period, start, end
+
+
 def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
     *,
     no_other_group: bool = False,
+    asset_transactions: bool = False,
 ) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
 
@@ -201,6 +271,8 @@ def ctx_table(
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
         no_other_group: True to exclude transactions in the OTHER group
+        asset_transactions: True will only get transactions with assets,
+            False will only get transactions without assets
 
     Returns:
         Dictionary HTML context, title of page
@@ -210,61 +282,30 @@ def ctx_table(
 
     with p.get_session() as s:
         args = flask.request.args
-
-        accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name(s)
-
-        period = args.get("period", default_period)
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
-        if start is None and acct is not None:
-            opened_on_ord = acct.opened_on_ord
-            start = (
-                end
-                if opened_on_ord is None
-                else datetime.date.fromordinal(opened_on_ord)
-            )
-        end_ord = end.toordinal()
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
-
-        transaction_ids = None
-        if no_other_group:
-            query = s.query(TransactionCategory)
-            query = query.with_entities(TransactionCategory.id_)
-            query = query.where(
-                TransactionCategory.group != TransactionCategoryGroup.OTHER,
-            )
-            transaction_ids = {row[0] for row in query.all()}
-
         page_len = 25
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
 
-        query = (
-            s.query(TransactionSplit)
-            .where(
-                TransactionSplit.asset_id.is_(None),
-                TransactionSplit.date_ord <= end_ord,
-            )
-            .order_by(TransactionSplit.date_ord)
+        accounts = Account.map_name(s)
+        categories = TransactionCategory.map_name(s)
+        assets = Asset.map_name(s)
+
+        query, period, start, end = table_unfiltered_query(
+            s,
+            acct,
+            default_period,
+            no_other_group=no_other_group,
+            asset_transactions=asset_transactions,
         )
-        if start is not None:
-            start_ord = start.toordinal()
-            query = query.where(TransactionSplit.date_ord >= start_ord)
-        if acct is not None:
-            query = query.where(TransactionSplit.account_id == acct.id_)
-        if transaction_ids is not None:
-            query = query.where(TransactionSplit.category_id.in_(transaction_ids))
 
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
         options_payee = ctx_options(query, "payee")
         options_category = ctx_options(query, "category", categories)
         options_tag = ctx_options(query, "tag")
+        options_asset = ctx_options(query, "asset", assets)
 
         def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
             options_flat = [option["name"] for option in options]
@@ -274,6 +315,7 @@ def ctx_table(
         selected_payees = merge(options_payee, args.getlist("payee"))
         selected_categories = merge(options_category, args.getlist("category"))
         selected_tags = merge(options_tag, args.getlist("tag"))
+        selected_assets = merge(options_asset, args.getlist("asset"))
 
         if acct is None and len(selected_accounts) != 0:
             ids = [
@@ -311,6 +353,12 @@ def ctx_table(
             except ValueError:
                 query = query.where(TransactionSplit.tag.in_(selected_tags))
 
+        if len(selected_assets) != 0:
+            ids = [
+                asset_id for asset_id, name in assets.items() if name in selected_assets
+            ]
+            query = query.where(TransactionSplit.asset_id.in_(ids))
+
         if locked is not None:
             query = query.where(TransactionSplit.locked == locked)
 
@@ -336,7 +384,7 @@ def ctx_table(
         transactions: list[dict[str, object]] = []
         for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
-            t_split_ctx = ctx_split(t_split, accounts, categories)
+            t_split_ctx = ctx_split(t_split, accounts, categories, assets)
             page_total += t_split.amount
 
             transactions.append(t_split_ctx)
@@ -390,10 +438,12 @@ def ctx_table(
             "options-payee": options_payee,
             "options-category": options_category,
             "options-tag": options_tag,
+            "options-asset": options_asset,
             "any-filters-account": len(selected_accounts) > 0,
             "any-filters-payee": len(selected_payees) > 0,
             "any-filters-category": len(selected_categories) > 0,
             "any-filters-tag": len(selected_tags) > 0,
+            "any-filters-asset": len(selected_assets) > 0,
         }, title
 
 
@@ -401,6 +451,7 @@ def ctx_split(
     t_split: TransactionSplit,
     accounts: dict[int, str],
     categories: dict[int, str],
+    assets: dict[int, str],
 ) -> dict[str, object]:
     """Get the context to build the transaction edit dialog.
 
@@ -408,10 +459,12 @@ def ctx_split(
         t_split: TransactionSplit to build context for
         accounts: Dict {id: account name}
         categories: Dict {id: category name}
+        assets: Dict {id: asset name}
 
     Returns:
         Dictionary HTML context
     """
+    qty = t_split.asset_quantity or 0
     return {
         "uri": t_split.uri,
         "date": datetime.date.fromordinal(t_split.date_ord),
@@ -422,6 +475,9 @@ def ctx_split(
         "tag": t_split.tag,
         "amount": t_split.amount,
         "locked": t_split.locked,
+        "asset_name": assets[t_split.asset_id] if t_split.asset_id else None,
+        "asset_price": abs(t_split.amount / qty) if qty else None,
+        "asset_quantity": qty,
     }
 
 
@@ -444,6 +500,7 @@ def edit(uri: str) -> str | flask.Response:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
         categories = TransactionCategory.map_name(s)
+        assets = Asset.map_name(s)
 
         if flask.request.method == "GET":
             accounts = Account.map_name(s)
@@ -460,7 +517,7 @@ def edit(uri: str) -> str | flask.Response:
             splits = parent.splits
 
             ctx_splits: list[dict[str, object]] = [
-                ctx_split(t_split, accounts, categories) for t_split in splits
+                ctx_split(t_split, accounts, categories, assets) for t_split in splits
             ]
 
             query = s.query(TransactionSplit.payee).where(
@@ -692,7 +749,7 @@ def remaining(uri: str) -> str:
 ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
-    "/h/transactions/options/<path:field>": (options, ["GET"]),
+    "/h/transactions/options/<path:field>": (table_options, ["GET"]),
     "/h/transactions/t/<path:uri>/edit": (edit, ["GET", "POST"]),
     "/h/transactions/t/<path:uri>/split": (split, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),

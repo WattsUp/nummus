@@ -10,14 +10,14 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import WebTestBase
+from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
 class TestCashFlow(WebTestBase):
     def test_page(self) -> None:
         _ = self._setup_portfolio()
 
-        endpoint = "/cash-flow"
+        endpoint = "cash_flow.page"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("income-pie-chart-canvas", result)
@@ -27,7 +27,7 @@ class TestCashFlow(WebTestBase):
         )
         self.assertNotIn("Uncategorized", result)
 
-    def test_table(self) -> None:
+    def test_txns(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
@@ -39,9 +39,10 @@ class TestCashFlow(WebTestBase):
         t_split_1 = d["t_split_1"]
         cat_0 = d["cat_0"]
 
-        endpoint = "/h/cash-flow/table"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "cash_flow.txns"
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn("income-pie-chart-canvas", result)
         self.assertRegex(
             result,
@@ -63,12 +64,15 @@ class TestCashFlow(WebTestBase):
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
 
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         # Second call for table should not update chart as well
         self.assertNotRegex(result, r"<script>cashFlowChart\.update\(.*\)</script>")
 
-        queries = {"period": "30-days", "account": "None selected"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "30-days", "account": "None selected"}),
+        )
         self.assertRegex(
             result,
             r"<script>cashFlowChart\.update\(.*"
@@ -78,13 +82,15 @@ class TestCashFlow(WebTestBase):
         self.assertNotIn("No matching transactions for given query filters", result)
         self.assertRegex(result, r"<title>Cash Flow, 30 Days \| nummus</title>")
 
-        queries = {"period": "90-days"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "90-days"}),
+        )
         self.assertIn('"date_mode": "months"', result)
 
         # For long periods, downsample to min/avg/max
-        queries = {"period": "5-years"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "5-years"}),
+        )
         self.assertRegex(
             result,
             r"<script>cashFlowChart\.update\(.*"
@@ -124,14 +130,16 @@ class TestCashFlow(WebTestBase):
             s.add_all((txn, t_split))
             s.commit()
 
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertIn("Interest", result)
         self.assertIn("Groceries", result)
         self.assertNotIn("Uncategorized", result)
 
-        queries = {"period": "1-year"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "1-year"}),
+        )
         self.assertIn("Interest", result)
         self.assertIn("Groceries", result)
         self.assertNotIn("Uncategorized", result)
@@ -150,8 +158,9 @@ class TestCashFlow(WebTestBase):
             s.commit()
             acct_id = a.id_
 
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get(
+            (endpoint, {"period": "all"}),
+        )
         self.assertNotIn(t_cat, result)
 
         # With a Transaction, the closed account should show up
@@ -181,7 +190,7 @@ class TestCashFlow(WebTestBase):
             "start": yesterday.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertIn(t_cat, result)
 
         # But if closed and period doesn't include the transaction then ignore
@@ -190,10 +199,10 @@ class TestCashFlow(WebTestBase):
             "start": today.isoformat(),
             "end": today.isoformat(),
         }
-        result, _ = self.web_get(endpoint, queries)
+        result, _ = self.web_get((endpoint, queries))
         self.assertNotIn(t_cat, result)
 
-    def test_options(self) -> None:
+    def test_txns_options(self) -> None:
         d = self._setup_portfolio()
 
         acct = d["acct"]
@@ -204,44 +213,50 @@ class TestCashFlow(WebTestBase):
         cat_0 = d["cat_0"]
         tag_1 = d["tag_1"]
 
-        endpoint = "/h/cash-flow/options/account"
-        result, _ = self.web_get(endpoint)
+        endpoint = "cash_flow.txns_options"
+        result, _ = self.web_get(
+            (endpoint, {"field": "account"}),
+        )
         self.assertEqual(result.count("span"), 2)
         self.assertRegex(result, rf'value="{acct}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
 
-        endpoint = "/h/cash-flow/options/category"
-        queries = {"period": "all"}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "category", "period": "all"}),
+        )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 2)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         self.assertNotIn("Uncategorized", result)
 
-        queries = {"category": cat_0}
-        result, _ = self.web_get(endpoint, queries=queries)
+        result, _ = self.web_get(
+            (endpoint, {"field": "category", "category": cat_0}),
+        )
         self.assertEqual(result.count("span"), 2)
         self.assertRegex(result, rf'value="{cat_0}"[ \n]+checked[ \n]+hx-get')
 
-        endpoint = "/h/cash-flow/options/tag"
-        result, _ = self.web_get(endpoint)
-        self.assertEqual(result.count("span"), 4)
+        result, _ = self.web_get(
+            (endpoint, {"field": "tag"}),
+        )
+        self.assertEqual(result.count("span"), 2)
         self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
-        self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
+        self.assertNotRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
-        # Check sorting
-        i_blank = result.find("[blank]")
-        i_1 = result.find(tag_1)
-        self.assertLess(i_blank, i_1)
+
+        result, _ = self.web_get(
+            (endpoint, {"field": "unknown"}),
+            rc=HTTP_CODE_BAD_REQUEST,
+        )
 
     def test_dashboard(self) -> None:
         _ = self._setup_portfolio()
         today = datetime.date.today()
 
-        endpoint = "/h/dashboard/cash-flow"
-        queries = {"period": "8-months"}
-        result, _ = self.web_get(endpoint, queries)
+        endpoint = "cash_flow.dashboard"
+        result, _ = self.web_get(
+            (endpoint, {"period": "8-months"}),
+        )
         self.assertRegex(
             result,
             r'<script>cashFlowChart\.updateDashboard\(.*"totals": \[.+\].*\)</script>',
