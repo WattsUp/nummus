@@ -6,6 +6,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 import flask
+from sqlalchemy import orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, web_utils
@@ -14,9 +15,30 @@ from nummus.models import Account, Asset, AssetCategory
 from nummus.models.asset import AssetValuation
 
 if TYPE_CHECKING:
-    from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
+
+
+def page(uri: str) -> str:
+    """GET /assets/<uri>.
+
+    Args:
+        uri: Asset URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        title = f"Asset {asset.name}"
+        return common.page(
+            "assets/index-content.jinja",
+            title=title,
+            asset=ctx_asset(asset),
+        )
 
 
 def page_transactions() -> str:
@@ -126,7 +148,7 @@ def edit(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             return flask.render_template(
                 "assets/edit.jinja",
-                asset=ctx_asset(s, asset),
+                asset=ctx_asset(asset),
             )
 
         form = flask.request.form
@@ -154,16 +176,18 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-asset")
 
 
-def ctx_asset(s: orm.Session, asset: Asset) -> dict[str, object]:
+def ctx_asset(asset: Asset) -> dict[str, object]:
     """Get the context to build the asset details.
 
     Args:
-        s: SQL session to use
         asset: Asset to generate context for
 
     Returns:
         Dictionary HTML context
     """
+    s = orm.object_session(asset)
+    if s is None:
+        raise exc.UnboundExecutionError
     valuation = (
         s.query(AssetValuation)
         .where(AssetValuation.asset_id == asset.id_)
@@ -190,7 +214,13 @@ def ctx_asset(s: orm.Session, asset: Asset) -> dict[str, object]:
     }
 
 
+# TODO (WattsUp): Add valuation and profit chart
+# TODO (WattsUp): Add valuations table
+# TODO (WattsUp): Add valuations editor
+
+
 ROUTES: Routes = {
+    "/assets/<path:uri>": (page, ["GET"]),
     "/assets/transactions": (page_transactions, ["GET"]),
     "/h/assets/txns": (txns, ["GET"]),
     "/h/assets/txns-options/<path:field>": (txns_options, ["GET"]),

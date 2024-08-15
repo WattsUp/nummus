@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 
 __all__ = [
+    "DuplicateURLError",
     "DatabaseError",
     "IntegrityError",
     "MultipleResultsFound",
@@ -42,6 +43,20 @@ __all__ = [
     "UnknownEncryptionVersionError",
     "InvalidBackupTarError",
 ]
+
+
+class DuplicateURLError(Exception):
+    """Error when a URL already exists with a endpoint."""
+
+    def __init__(self, url: str, endpoint: str) -> None:
+        """Initialize DuplicateURLError.
+
+        Args:
+            url: Duplicate URL
+            endpoint: Attempted endpoint
+        """
+        msg = f"Already have a route on {url}, cannot add {endpoint}"
+        super().__init__(msg)
 
 
 class FileAlreadyImportedError(Exception):

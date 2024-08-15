@@ -105,6 +105,7 @@ def ctx_account(
     if current_value is None:
         values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
+    updated_on_ord = acct.updated_on_ord or today_ord
 
     return {
         "uri": acct.uri,
@@ -114,9 +115,10 @@ def ctx_account(
         "category": acct.category,
         "category_type": AccountCategory,
         "value": current_value,
+        "updated_on": datetime.date.fromordinal(updated_on_ord),
         "closed": acct.closed,
         "emergency": acct.emergency,
-        "updated_days_ago": today_ord - (acct.updated_on_ord or today_ord),
+        "updated_days_ago": today_ord - updated_on_ord,
         "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),
     }
 

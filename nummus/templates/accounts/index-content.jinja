@@ -4,22 +4,25 @@
          hx-trigger="update-account from:body, update-asset from:body"
          hx-target="#main"
          hx-swap="innerHTML">
-    <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
-        {{ acct["institution"] }}
-        <div class="w-[20px] group cursor-pointer"
-             hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
-             hx-target="#overlay"
-             hx-swap="innerHTML">
-            {% with class="fill-green-600 transition-colors group-hover:fill-black" %}
-                {% include "svg/pencil.svg" %}
-            {% endwith %}
+    <div class="w-full flex justify-between">
+        <div>
+            <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
+                {{ acct["name"] }}
+                <div class="w-[20px] group cursor-pointer"
+                     hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
+                     hx-target="#overlay"
+                     hx-swap="innerHTML">
+                    {% with class="fill-green-600 transition-colors group-hover:fill-black" %}
+                        {% include "svg/pencil.svg" %}
+                    {% endwith %}
+                </div>
+            </h1>
+            <h2 class="italic">{{ acct["institution"] }}</h2>
         </div>
-    </h1>
-    <div class="w-full flex text-lg">
-        <h2>{{ acct["name"] }}</h2>
-        <h2 class="ml-auto">
-            Today's Balance <b>{{ acct["value"] | money }}</b>
-        </h2>
+        <div class="ml-12 whitespace-nowrap">
+            <h1 class="text-3xl font-serif text-green-600 text-right">{{ acct["value"] | money }}</h1>
+            <h2 class="w-full text-center italic">last transaction {{ acct["updated_on"] }}</h2>
+        </div>
     </div>
     <div class="w-full h-96 relative">
         <canvas id="account-chart-canvas"></canvas>

@@ -58,7 +58,7 @@
                                  hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
-                                {% with class="fill-white transition-colors group-hover/navitem:fill-black" %}
+                                {% with class="fill-transparent transition-colors group-hover/navitem:fill-black" %}
                                     {% include "svg/pencil.svg" %}
                                 {% endwith %}
                             </div>

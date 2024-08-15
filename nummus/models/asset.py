@@ -111,6 +111,8 @@ class Asset(Base):
     name: ORMStr = orm.mapped_column(unique=True)
     description: ORMStrOpt
     category: orm.Mapped[AssetCategory]
+    # TODO (WattsUp): Auto detect interpolate based on minimum valuation date spacing
+    # Update during update-assets
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
 
