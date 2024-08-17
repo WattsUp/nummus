@@ -19,6 +19,7 @@ from nummus.models import (
     Account,
     AccountCategory,
     Asset,
+    AssetCategory,
     AssetValuation,
     Budget,
     Credentials,
@@ -91,8 +92,8 @@ class WebTestBase(TestBase):
 
         Returns:
             {
-                "acct": Account name,
-                "acct_uri": URI for Account,
+                "acct": Account name
+                "acct_uri": URI for Account
                 "t_0": URI for transaction 0
                 "t_split_0": URI for split 0
                 "t_1": URI for transaction 1
@@ -102,6 +103,10 @@ class WebTestBase(TestBase):
                 "cat_0": Payee for transaction 0
                 "cat_1": Payee for transaction 1
                 "tag_1": Tag for transaction 1
+                "a_0": Asset 0 name,
+                "a_uri_0": URI for Asset 0
+                "a_1": Asset 1 name,
+                "a_uri_1": URI for Asset 1
             }
         """
         self._clear_portfolio()
@@ -174,6 +179,16 @@ class WebTestBase(TestBase):
             t_1_uri = txn.uri
             t_split_1_uri = t_split.uri
 
+            a_name_0 = "Banana Inc."
+            a_0 = Asset(name=a_name_0, category=AssetCategory.ITEM)
+            a_name_1 = "Fruit Ct. House"
+            a_1 = Asset(name=a_name_1, category=AssetCategory.REAL_ESTATE)
+
+            s.add_all((a_0, a_1))
+            s.commit()
+            a_uri_0 = a_0.uri
+            a_uri_1 = a_1.uri
+
         return {
             "acct": acct_name,
             "acct_uri": acct_uri,
@@ -186,6 +201,10 @@ class WebTestBase(TestBase):
             "cat_0": cat_0,
             "cat_1": cat_1,
             "tag_1": tag_1,
+            "a_0": a_name_0,
+            "a_uri_0": a_uri_0,
+            "a_1": a_name_1,
+            "a_uri_1": a_uri_1,
         }
 
     def _clear_portfolio(self) -> None:

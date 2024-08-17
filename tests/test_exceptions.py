@@ -62,7 +62,9 @@ class TestExceptions(TestBase):
                 continue
             target.add(k)
 
-        result = set()
+        result = {
+            "DuplicateURLError",  # DuplicateURLError only raised with bad endpoints
+        }
         folder = Path(__file__).parent
         re_raises = re.compile(r"^ *self\.assertRaises\([ \n]*exc\.(\w+),", re.M)
         for path in folder.glob("**/test_*.py"):

@@ -1,0 +1,16 @@
+{% if val_table["editable"] %}
+    <div id="val-{{ val["uri"] }}"
+         class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 cursor-pointer"
+         hx-get="{{ url_for("assets.edit_valuation", uri=val["uri"]) }}"
+         hx-target="#overlay"
+         hx-swap="innerHTML"
+         hx-include="this">
+        {% block row %}
+            <div class="w-[6rem] min-w-[6rem] p-1 grow">{{ val["date"] }}</div>
+            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ val["value"] | money }}</div>
+        {% endblock row %}
+    </div>
+{% else %}
+    <div id="val-{{ val["uri"] }}"
+         class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100">{{ self.row() }}</div>
+{% endif %}

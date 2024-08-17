@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus import exceptions as exc
 from nummus.controllers import (
     accounts,
     assets,
@@ -42,8 +43,12 @@ def add_routes(app: flask.Flask) -> None:
         transaction_categories,
     ]
     n_trim = len(__name__) + 1
+    urls: set[str] = set()
     for m in module:
         routes: Routes = m.ROUTES
         for url, (controller, methods) in routes.items():
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
+            if url in urls:  # pragma: no cover
+                raise exc.DuplicateURLError(url, endpoint)
+            urls.add(url)
             app.add_url_rule(url, endpoint, controller, methods=methods)
