@@ -7,7 +7,6 @@ from nummus.models import (
     Account,
     AccountCategory,
     Asset,
-    AssetCategory,
     AssetValuation,
     Transaction,
     TransactionCategory,
@@ -31,22 +30,15 @@ class TestNetWorth(WebTestBase):
 
     def test_chart(self) -> None:
         p = self._portfolio
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         today = datetime.date.today()
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
 
-        with p.get_session() as s:
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
+        a_uri_0 = d["a_uri_0"]
+        a_uri_1 = d["a_uri_1"]
 
-            s.add_all((a_banana, a_house))
-            s.commit()
-
-            a_banana_uri = a_banana.uri
-            a_house_uri = a_house.uri
-            a_house_id = a_house.id_
+        a_id_1 = Asset.uri_to_id(a_uri_1)
 
         endpoint = "net_worth.chart"
         result, _ = self.web_get(
@@ -75,8 +67,8 @@ class TestNetWorth(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertNotIn(f'id="asset-{a_house_uri}"', result_assets)
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         result, _ = self.web_get(
@@ -164,7 +156,7 @@ class TestNetWorth(WebTestBase):
                 amount=txn.amount,
                 parent=txn,
                 payee=self.random_string(),
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
@@ -185,13 +177,13 @@ class TestNetWorth(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
             r"(1\.000000).*(\$0\.00).*(0\.00%).*(-\$10\.00)[^0-9]*",
         )
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$90\.00).*(-\$10\.00)[^0-9]*")
 
         # But if closed and period doesn't include the transaction then ignore
@@ -208,7 +200,7 @@ class TestNetWorth(WebTestBase):
         # Add a valuation for the house with zero profit
         with p.get_session() as s:
             v = AssetValuation(
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 date_ord=today_ord - 2,
                 value=10,
             )
@@ -229,13 +221,13 @@ class TestNetWorth(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
             r"(1\.000000).*(\$10\.00).*(10\.00%).*(\$0\.00)[^0-9]*",
         )
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
 
     def test_dashboard(self) -> None:

@@ -48,7 +48,7 @@ __all__ = [
 class DuplicateURLError(Exception):
     """Error when a URL already exists with a endpoint."""
 
-    def __init__(self, url: str, endpoint: str) -> None:
+    def __init__(self, url: str, endpoint: str) -> None:  # pragma: no cover
         """Initialize DuplicateURLError.
 
         Args:

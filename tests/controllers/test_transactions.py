@@ -7,7 +7,6 @@ import urllib.parse
 from nummus.models import (
     Account,
     Asset,
-    AssetCategory,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -41,6 +40,7 @@ class TestTransaction(WebTestBase):
         cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
+        a_uri_0 = d["a_uri_0"]
 
         endpoint = "transactions.table"
         result, _ = self.web_get(endpoint)
@@ -201,16 +201,11 @@ class TestTransaction(WebTestBase):
         # Add dividend transaction
         with p.get_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
+            a_id_0 = Asset.uri_to_id(a_uri_0)
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-
-            s.add(a_banana)
-            s.commit()
 
             txn = Transaction(
                 account_id=acct_id,
@@ -221,7 +216,7 @@ class TestTransaction(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_banana.id_,
+                asset_id=a_id_0,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Dividends Received"],
             )

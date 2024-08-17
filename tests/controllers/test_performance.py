@@ -39,10 +39,14 @@ class TestPerformance(WebTestBase):
 
     def test_chart(self) -> None:
         p = self._portfolio
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         today = datetime.date.today()
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
+
+        a_uri_1 = d["a_uri_1"]
+
+        a_id_1 = Asset.uri_to_id(a_uri_1)
 
         acct_name_0 = "Monkey Bank Investing"
         with p.get_session() as s:
@@ -63,13 +67,6 @@ class TestPerformance(WebTestBase):
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
-
-            s.add_all((a_banana, a_house))
-            s.commit()
 
             # Add funding
             txn = Transaction(
@@ -96,14 +93,12 @@ class TestPerformance(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house.id_,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
             s.commit()
-
-            a_house_id = a_house.id_
 
         endpoint = "performance.chart"
         result, _ = self.web_get(
@@ -142,7 +137,7 @@ class TestPerformance(WebTestBase):
 
         with p.get_session() as s:
             av = AssetValuation(
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 date_ord=today_ord - 100,
                 value=1000,
             )
@@ -175,7 +170,7 @@ class TestPerformance(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=-1,
                 category_id=categories["Securities Traded"],
             )
@@ -287,7 +282,7 @@ class TestPerformance(WebTestBase):
                 amount=txn.amount,
                 parent=txn,
                 payee=self.random_string(),
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
@@ -338,9 +333,13 @@ class TestPerformance(WebTestBase):
 
     def test_dashboard(self) -> None:
         p = self._portfolio
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         today = datetime.date.today()
         today_ord = today.toordinal()
+
+        a_uri_1 = d["a_uri_1"]
+
+        a_id_1 = Asset.uri_to_id(a_uri_1)
 
         acct_name_0 = "Monkey Bank Investing"
         with p.get_session() as s:
@@ -360,13 +359,6 @@ class TestPerformance(WebTestBase):
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
-
-            s.add_all((a_banana, a_house))
-            s.commit()
 
             # Add funding
             txn = Transaction(
@@ -393,7 +385,7 @@ class TestPerformance(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house.id_,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )

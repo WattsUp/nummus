@@ -45,8 +45,16 @@ class AssetSplit(Base):
     # No __table_id__ because this is not user accessible
 
     asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
-    multiplier: ORMReal = orm.mapped_column(Decimal6)
+    multiplier: ORMReal = orm.mapped_column(
+        Decimal6,
+        sqlalchemy.CheckConstraint(
+            "multiplier > 0",
+            "asset_split.multiplier must be positive",
+        ),
+    )
     date_ord: ORMInt
+
+    __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("multiplier")
     @override
@@ -64,11 +72,19 @@ class AssetValuation(Base):
     """
 
     # No __table_id__ because this is not user accessible
-    __table_id__ = 0x50000000
+    __table_id__ = 0x30000000
 
     asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
-    value: ORMReal = orm.mapped_column(Decimal6)
     date_ord: ORMInt
+    value: ORMReal = orm.mapped_column(
+        Decimal6,
+        sqlalchemy.CheckConstraint(
+            "value >= 0",
+            "asset_valuation.value must be zero or positive",
+        ),
+    )
+
+    __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("value")
     @override
@@ -480,8 +496,8 @@ class Asset(Base):
         else:
             query = query.where(TransactionSplit.asset_id == self.id_)
         start_ord, end_ord = query.one()
-        start_ord: int
-        end_ord: int
+        start_ord: int | None
+        end_ord: int | None
         if start_ord is None or end_ord is None:
             return None, None
 
@@ -506,78 +522,51 @@ class Asset(Base):
             # yfinance raises Exception if no data found
             raise exc.AssetWebError(e) from e
 
-        # Update AssetValuations, reuse existing when possible
-        raw_close = raw["Close"]
-        n_close = len(raw_close)
-        i = 0
+        valuations: dict[int, float] = {
+            k.to_pydatetime().date().toordinal(): v for k, v in raw["Close"].items()  # type: ignore[attr-defined]
+        }
+        valuations = {k: v for k, v in valuations.items() if start_ord <= k <= end_ord}
         query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
         for valuation in query.yield_per(YIELD_PER):
-            if i >= n_close:
+            date_ord = valuation.date_ord
+            value = valuations.pop(date_ord, None)
+            if value is None:
                 # Delete excess valuations
                 s.delete(valuation)
-                continue
-            # Pyright doesn't like the pandas dataframe typing
-            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
-            if dt.date() > end:
-                # Skip to end if date > end
-                i = n_close
-                s.delete(valuation)
-                continue
-            price: float = raw_close.iat[i]
+            else:
+                valuation.value = Decimal(value)
 
-            valuation.date_ord = dt.date().toordinal()
-            valuation.value = Decimal(price)
-
-            i += 1
-
-        while i < n_close:
-            # Add any missing ones
-            dt: datetime.datetime = raw_close.index[i].to_pydatetime()  # type: ignore[attr-defined]
-            if dt.date() > end:
-                # Skip to end if date > end
-                break
-            price: float = raw_close.iat[i]
-
+        # Add any missing ones
+        for date_ord, value in valuations.items():
             valuation = AssetValuation(
                 asset_id=self.id_,
-                date_ord=dt.date().toordinal(),
-                value=Decimal(price),
+                date_ord=date_ord,
+                value=Decimal(value),
             )
             s.add(valuation)
 
-            i += 1
-
-        # Update AssetSplits, reuse existing when possible
         raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
-        n_splits = len(raw_splits)
-        i = 0
+        splits: dict[int, float] = {
+            k.to_pydatetime().date().toordinal(): v for k, v in raw_splits.items()  # type: ignore[attr-defined]
+        }
         query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
         for split in query.yield_per(YIELD_PER):
-            if i >= n_splits:
+            date_ord = split.date_ord
+            multiplier = splits.pop(date_ord, None)
+            if multiplier is None:
                 # Delete excess splits
                 s.delete(split)
-                continue
-            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
-            multiplier: float = raw_splits.iat[i]
+            else:
+                split.multiplier = Decimal(multiplier)
 
-            split.date_ord = dt.date().toordinal()
-            split.multiplier = Decimal(multiplier)
-
-            i += 1
-
-        while i < n_splits:
-            # Add any missing ones
-            dt: datetime.datetime = raw_splits.index[i].to_pydatetime()
-            multiplier: float = raw_splits.iat[i]
-
+        # Add any missing ones
+        for date_ord, multiplier in splits.items():
             split = AssetSplit(
                 asset_id=self.id_,
-                date_ord=dt.date().toordinal(),
+                date_ord=date_ord,
                 multiplier=Decimal(multiplier),
             )
             s.add(split)
-
-            i += 1
 
         # Run update_splits to fix transactions
         self.update_splits()

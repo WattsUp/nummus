@@ -21,7 +21,13 @@
         </div>
         <div class="ml-12 whitespace-nowrap">
             <h1 class="text-3xl font-serif text-green-600 text-right">{{ asset["value"] | money }}</h1>
-            <h2 class="w-full text-center italic">as of {{ asset["value_date"] }}</h2>
+            <h2 class="w-full text-center italic">
+                {% if asset["value_date"] %}
+                    as of {{ asset["value_date"] }}
+                {% else %}
+                    no valuations
+                {% endif %}
+            </h2>
         </div>
     </div>
     <div class="w-full h-96 relative">

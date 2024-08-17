@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 
 from nummus.models import (
     Account,
@@ -113,6 +114,50 @@ class TestAsset(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("No matching transactions", result)
 
+    def test_page(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        a_0 = d["a_0"]
+        a_uri_0 = d["a_uri_0"]
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        endpoint = "assets.page"
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0}),
+            headers=headers,
+        )
+        self.assertIn(a_0, result)
+        self.assertRegex(result, r"<h1 .*>\$0.00</h1>")
+        self.assertRegex(result, r"<h2 .*>[ \n]*no valuations[ \n]*</h2>")
+        self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+        self.assertIn("No matching valuations for given query filters", result)
+
+        # Add valuation
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_id_0,
+                value=100,
+                date_ord=today_ord,
+            )
+            s.add(v)
+            s.commit()
+            v_uri = v.uri
+
+        endpoint = "assets.page"
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0}),
+            headers=headers,
+        )
+        self.assertRegex(result, r"<h1 .*>\$100.00</h1>")
+        self.assertRegex(result, rf"<h2 .*>[ \n]*as of {today}[ \n]*</h2>")
+        self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+
     def test_txns(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
@@ -120,25 +165,20 @@ class TestAsset(WebTestBase):
         today_ord = today.toordinal()
 
         acct_uri = d["acct_uri"]
+        a_1 = d["a_1"]
+        a_uri_0 = d["a_uri_0"]
+        a_uri_1 = d["a_uri_1"]
 
         # Add dividend transaction
         with p.get_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
+            a_id_0 = Asset.uri_to_id(a_uri_0)
+            a_id_1 = Asset.uri_to_id(a_uri_1)
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
-
-            s.add_all((a_banana, a_house))
-            s.commit()
-            a_house_name = a_house.name
-            a_house_id = a_house.id_
-
-            # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct_id,
                 date_ord=today_ord,
@@ -148,14 +188,14 @@ class TestAsset(WebTestBase):
             t_split_2 = TransactionSplit(
                 amount=10,
                 parent=txn,
-                asset_id=a_banana.id_,
+                asset_id=a_id_0,
                 asset_quantity_unadjusted=0,
                 category_id=categories["Dividends Received"],
             )
             t_split_3 = TransactionSplit(
                 amount=-10,
                 parent=txn,
-                asset_id=a_banana.id_,
+                asset_id=a_id_0,
                 asset_quantity_unadjusted=2,
                 category_id=categories["Securities Traded"],
             )
@@ -184,7 +224,7 @@ class TestAsset(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
@@ -194,7 +234,7 @@ class TestAsset(WebTestBase):
             t_split_4 = t_split.uri
 
         result, _ = self.web_get(
-            (endpoint, {"period": "30-days", "asset": a_house_name}),
+            (endpoint, {"period": "30-days", "asset": a_1}),
         )
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, r"<div .*>1.000000</div>")
@@ -209,25 +249,17 @@ class TestAsset(WebTestBase):
 
         acct = d["acct"]
         acct_uri = d["acct_uri"]
-        d["payee_0"]
-        d["payee_1"]
-        d["t_split_0"]
-        d["t_split_1"]
+        a_uri_0 = d["a_uri_0"]
+        a_0 = d["a_0"]
 
         # Add dividend transaction
         with p.get_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
+            a_id_0 = Asset.uri_to_id(a_uri_0)
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_banana_name = a_banana.name
-
-            s.add(a_banana)
-            s.commit()
 
             # Buy the house but no ticker so excluded
             txn = Transaction(
@@ -239,14 +271,14 @@ class TestAsset(WebTestBase):
             t_split_2 = TransactionSplit(
                 amount=10,
                 parent=txn,
-                asset_id=a_banana.id_,
+                asset_id=a_id_0,
                 asset_quantity_unadjusted=0,
                 category_id=categories["Dividends Received"],
             )
             t_split_3 = TransactionSplit(
                 amount=-10,
                 parent=txn,
-                asset_id=a_banana.id_,
+                asset_id=a_id_0,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
@@ -268,10 +300,244 @@ class TestAsset(WebTestBase):
             (endpoint, {"field": "asset"}),
         )
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{a_banana_name}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{a_0}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
 
         result, _ = self.web_get(
             (endpoint, {"field": "unknown"}),
             rc=HTTP_CODE_BAD_REQUEST,
         )
+
+    def test_valuations(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        a_uri_0 = d["a_uri_0"]
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        # Add valuation
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_id_0,
+                value=100,
+                date_ord=today_ord,
+            )
+            s.add(v)
+            s.commit()
+            v_uri = v.uri
+
+        endpoint = "assets.valuations"
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, "period": "all"}),
+        )
+        self.assertRegex(result, r"<div .*>\$100.00</div>")
+        self.assertRegex(result, rf'<div id="val-{v_uri}"')
+        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, "period": "all"}),
+        )
+        # Second call for table should not update chart as well
+        self.assertNotRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, "period": "30-days"}),
+        )
+        self.assertRegex(
+            result,
+            r'<script>assetChart\.update\(.*"min": null.*\)</script>',
+        )
+        self.assertIn('"date_mode": "weeks"', result)
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, "period": "last-year"}),
+        )
+        self.assertRegex(
+            result,
+            r'<script>assetChart\.update\(.*"min": null.*\)</script>',
+        )
+        self.assertIn('"date_mode": "months"', result)
+        self.assertNotRegex(result, r"<div .*>\$100.00</div>")
+        self.assertNotRegex(result, rf'<div id="val-{v_uri}"')
+        self.assertNotRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, "period": "5-years"}),
+        )
+        self.assertRegex(
+            result,
+            r'<script>assetChart\.update\(.*"min": \[.+\].*\)</script>',
+        )
+        m = re.search(
+            r'<script>assetChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        dates_s = m[1] if m else ""
+        self.assertNotIn(today.isoformat(), dates_s)
+        self.assertIn(today.isoformat()[:7], dates_s)
+        self.assertIn('"date_mode": "years"', result)
+
+        # Make asset not editable
+        with p.get_session() as s:
+            a = s.query(Asset).where(Asset.id_ == a_id_0).first()
+            if a is None:
+                self.fail("Asset is missing")
+            a.ticker = "BANANA"
+            s.commit()
+
+        headers = {"HX-Trigger": "val-table"}
+        queries = {
+            "period": "custom",
+            "start": today.isoformat(),
+            "end": today.isoformat(),
+        }
+        result, _ = self.web_get(
+            (endpoint, {"uri": a_uri_0, **queries}),
+            headers=headers,
+        )
+        self.assertRegex(result, rf'<div id="val-{v_uri}"')
+        self.assertNotRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+
+    def test_new_valuation(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        a_uri_0 = d["a_uri_0"]
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        endpoint = "assets.new_valuation"
+        result, _ = self.web_get((endpoint, {"uri": a_uri_0}))
+        self.assertNotIn("Delete", result)
+
+        form = {}
+        result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
+        e_str = "Asset valuation date must not be empty"
+        self.assertIn(e_str, result)
+
+        form = {"date": today}
+        result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
+        e_str = "Asset valuation value must not be empty"
+        self.assertIn(e_str, result)
+
+        form = {"date": today, "value": "-100"}
+        result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
+        e_str = "Asset valuation value must be zero or positive"
+        self.assertIn(e_str, result)
+
+        form = {"date": today, "value": "100"}
+        result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
+        self.assertIn("empty:hidden", result)
+
+        with p.get_session() as s:
+            v = s.query(AssetValuation).first()
+            if v is None:
+                self.fail("AssetValuation is missing")
+            self.assertEqual(v.asset_id, a_id_0)
+            self.assertEqual(v.date_ord, today_ord)
+            self.assertEqual(v.value, 100)
+
+        form = {"date": today, "value": "100"}
+        result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
+        e_str = "Asset valuation date must be unique for each asset"
+        self.assertIn(e_str, result)
+
+    def test_edit_valuation(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+        yesterday = today - datetime.timedelta(days=1)
+        yesterday_ord = yesterday.toordinal()
+
+        a_uri_0 = d["a_uri_0"]
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        # Add valuations
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_id_0,
+                value=10,
+                date_ord=yesterday_ord,
+            )
+            s.add(v)
+            s.commit()
+
+            v = AssetValuation(
+                asset_id=a_id_0,
+                value=100,
+                date_ord=today_ord,
+            )
+            s.add(v)
+            s.commit()
+            v_id = v.id_
+            v_uri = v.uri
+
+        endpoint = "assets.edit_valuation"
+        result, _ = self.web_get((endpoint, {"uri": v_uri}))
+        self.assertIn("Delete", result)
+
+        form = {}
+        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        e_str = "Asset valuation date must not be empty"
+        self.assertIn(e_str, result)
+
+        form = {"date": today}
+        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        e_str = "Asset valuation value must not be empty"
+        self.assertIn(e_str, result)
+
+        form = {"date": today, "value": "-100"}
+        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        e_str = "Asset valuation value must be zero or positive"
+        self.assertIn(e_str, result)
+
+        form = {"date": today, "value": "200"}
+        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        self.assertIn("empty:hidden", result)
+
+        with p.get_session() as s:
+            v = s.query(AssetValuation).where(AssetValuation.id_ == v_id).first()
+            if v is None:
+                self.fail("AssetValuation is missing")
+            self.assertEqual(v.asset_id, a_id_0)
+            self.assertEqual(v.date_ord, today_ord)
+            self.assertEqual(v.value, 200)
+
+        form = {"date": yesterday, "value": "100"}
+        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        e_str = "Asset valuation date must be unique for each asset"
+        self.assertIn(e_str, result)
+
+    def test_delete_valuation(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        a_uri_0 = d["a_uri_0"]
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        # Add valuations
+        with p.get_session() as s:
+            v = AssetValuation(
+                asset_id=a_id_0,
+                value=100,
+                date_ord=today_ord,
+            )
+            s.add(v)
+            s.commit()
+            v_id = v.id_
+            v_uri = v.uri
+
+        endpoint = "assets.delete_valuation"
+        result, _ = self.web_post((endpoint, {"uri": v_uri}))
+        self.assertIn("empty:hidden", result)
+
+        with p.get_session() as s:
+            n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+            self.assertEqual(n, 0)

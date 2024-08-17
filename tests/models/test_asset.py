@@ -48,6 +48,22 @@ class TestAssetSplit(TestBase):
         self.assertEqual(v.multiplier, d["multiplier"])
         self.assertEqual(v.date_ord, d["date_ord"])
 
+        # Negative multiplier are bad
+        v.multiplier = Decimal(-1)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Zero multiplier are bad
+        v.multiplier = Decimal(0)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Duplicate dates are bad
+        v = AssetSplit(**d)
+        s.add(v)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
 
 class TestAssetValuation(TestBase):
     def test_init_properties(self) -> None:
@@ -74,6 +90,17 @@ class TestAssetValuation(TestBase):
         self.assertEqual(v.asset_id, d["asset_id"])
         self.assertEqual(v.value, d["value"])
         self.assertEqual(v.date_ord, d["date_ord"])
+
+        # Negative amounts are bad
+        v.value = Decimal(-1)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Duplicate dates are bad
+        v = AssetValuation(**d)
+        s.add(v)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
 
 class TestAsset(TestBase):
@@ -179,7 +206,7 @@ class TestAsset(TestBase):
         v_today = AssetValuation(
             asset_id=a.id_,
             date_ord=today_ord,
-            value=self.random_decimal(-1, 1),
+            value=self.random_decimal(0, 1),
         )
         s.add(v_today)
         s.commit()
@@ -206,17 +233,17 @@ class TestAsset(TestBase):
         v_today = AssetValuation(
             asset_id=a.id_,
             date_ord=today_ord,
-            value=self.random_decimal(-1, 1),
+            value=self.random_decimal(0, 1),
         )
         v_before = AssetValuation(
             asset_id=a.id_,
             date_ord=today_ord - 2,
-            value=self.random_decimal(-1, 1),
+            value=self.random_decimal(0, 1),
         )
         v_after = AssetValuation(
             asset_id=a.id_,
             date_ord=today_ord + 2,
-            value=self.random_decimal(-1, 1),
+            value=self.random_decimal(0, 1),
         )
         s.add_all((v_today, v_before, v_after))
         s.commit()
@@ -315,7 +342,6 @@ class TestAsset(TestBase):
 
         today = datetime.date.today()
         today_ord = today.toordinal()
-        yesterday_ord = today_ord - 1
 
         multiplier_0 = 10
         multiplier_1 = 7
@@ -357,7 +383,7 @@ class TestAsset(TestBase):
         # A split on today means trading occurs at yesterday / multiplier pricing
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=yesterday_ord,
+            date_ord=today_ord - 2,
             amount=value_yesterday,
             statement=self.random_string(),
         )
@@ -397,7 +423,7 @@ class TestAsset(TestBase):
         self.assertEqual(t_split_0.asset_quantity, 1)
         self.assertEqual(t_split_1.asset_quantity, 1)
 
-        r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
+        r_assets = acct.get_asset_qty(today_ord - 1, today_ord)
         r_values = r_assets[a.id_]
         target_values = [1, 2]
         self.assertEqual(r_values, target_values)
@@ -410,7 +436,7 @@ class TestAsset(TestBase):
         )
         split_1 = AssetSplit(
             asset_id=a.id_,
-            date_ord=today_ord,
+            date_ord=today_ord - 1,
             multiplier=multiplier_1,
         )
         s.add_all((split_0, split_1))
@@ -426,12 +452,12 @@ class TestAsset(TestBase):
         self.assertEqual(t_split_0.asset_quantity, 1 * multiplier)
         self.assertEqual(t_split_1.asset_quantity, 1)
 
-        r_assets = acct.get_asset_qty(yesterday_ord, today_ord)
+        r_assets = acct.get_asset_qty(today_ord - 1, today_ord)
         r_values = r_assets[a.id_]
         target_values = [multiplier, multiplier + 1]
         self.assertEqual(r_values, target_values)
 
-        _, _, r_assets = acct.get_value(yesterday_ord, today_ord)
+        _, _, r_assets = acct.get_value(today_ord - 1, today_ord)
         r_values = r_assets[a.id_]
         target_values = [value_yesterday, value_yesterday + value_today]
         self.assertEqual(r_values, target_values)
@@ -502,7 +528,7 @@ class TestAsset(TestBase):
         multiplier_2 = Decimal(1000) / 1281
         split_2 = AssetSplit(
             asset_id=a.id_,
-            date_ord=today_ord,
+            date_ord=today_ord - 2,
             multiplier=multiplier_2,
         )
         s.add(split_2)
@@ -548,7 +574,7 @@ class TestAsset(TestBase):
             av = AssetValuation(
                 asset_id=a.id_,
                 date_ord=today_ord + i,
-                value=self.random_decimal(-1, 1),
+                value=self.random_decimal(0, 1),
             )
             s.add(av)
         s.commit()
@@ -708,7 +734,7 @@ class TestAsset(TestBase):
             av = AssetValuation(
                 asset_id=a.id_,
                 date_ord=today_ord + i,
-                value=self.random_decimal(-1, 1),
+                value=self.random_decimal(0, 1),
             )
             s.add(av)
         s.commit()
@@ -904,12 +930,6 @@ class TestAsset(TestBase):
         target = (today_ord - (date_ord - 7)) // 7 + 1
         n = s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).count()
         self.assertEqual(n, target)
-
-        # Should have still reused existing rows
-        n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
-        self.assertEqual(n, 1)
-        n = s.query(AssetSplit).where(AssetSplit.id_ == split_id).count()
-        self.assertEqual(n, 1)
 
         # Add index which should be updated through today
         a = Asset(name="Banana Index", category=AssetCategory.INDEX, ticker="^BANANA")

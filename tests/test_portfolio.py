@@ -716,7 +716,7 @@ class TestPortfolio(TestBase):
             av = AssetValuation(
                 asset_id=a.id_,
                 date_ord=today_ord,
-                value=self.random_decimal(-1, 1),
+                value=self.random_decimal(0, 1),
             )
             s.add(av)
             s.commit()

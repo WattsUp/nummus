@@ -8,7 +8,6 @@ from nummus.models import (
     Account,
     AccountCategory,
     Asset,
-    AssetCategory,
     AssetValuation,
     Transaction,
     TransactionCategory,
@@ -152,7 +151,7 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri}),
             headers=headers,
         )
-        self.assertIn("Today's Balance <b>$90.00</b>", result)
+        self.assertRegex(result, r"<h1 .*>\$90.00</h1>")
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
@@ -164,7 +163,7 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri, "period": "last-year"}),
             headers=headers,
         )
-        self.assertIn("Today's Balance <b>$90.00</b>", result)
+        self.assertRegex(result, r"<h1 .*>\$90.00</h1>")
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
         self.assertNotRegex(result, r"<div .*>\$100.00</div>")
@@ -179,6 +178,8 @@ class TestAccount(WebTestBase):
         today_ord = today.toordinal()
 
         acct_uri = d["acct_uri"]
+        a_uri_0 = d["a_uri_0"]
+        a_uri_1 = d["a_uri_1"]
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
 
@@ -260,17 +261,11 @@ class TestAccount(WebTestBase):
         # Add an asset transaction
         with p.get_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
+            a_id_1 = Asset.uri_to_id(a_uri_1)
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Create assets
-            a_banana = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
-            a_house = Asset(name="Fruit Ct. House", category=AssetCategory.REAL_ESTATE)
-
-            s.add_all((a_banana, a_house))
-            s.commit()
 
             # Buy the house but no ticker so excluded
             txn = Transaction(
@@ -282,16 +277,12 @@ class TestAccount(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house.id_,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=1,
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
             s.commit()
-
-            a_banana_uri = a_banana.uri
-            a_house_uri = a_house.uri
-            a_house_id = a_house.id_
 
         headers = {"HX-Trigger": "txn-table"}
         result, _ = self.web_get(
@@ -305,19 +296,19 @@ class TestAccount(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
             r"(1\.000000).*(\$0\.00).*(0\.00%).*(-\$10\.00)[^0-9]*",
         )
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$80\.00).*(-\$10\.00)[^0-9]*")
 
         # Add a valuation for the house with zero profit
         with p.get_session() as s:
             v = AssetValuation(
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 date_ord=today_ord - 2,
                 value=10,
             )
@@ -335,13 +326,13 @@ class TestAccount(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertIn(f'id="asset-{a_house_uri}"', result_assets)
+        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(
             result_assets,
             r"(Real Estate).*(Fruit Ct\. House).*"
             r"(1\.000000).*(\$10\.00).*(11\.11%).*(\$0\.00)[^0-9]*",
         )
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         # Sell house for $20
@@ -361,7 +352,7 @@ class TestAccount(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                asset_id=a_house_id,
+                asset_id=a_id_1,
                 asset_quantity_unadjusted=-1,
                 category_id=categories["Securities Traded"],
             )
@@ -384,8 +375,8 @@ class TestAccount(WebTestBase):
         result_assets = result_assets.replace("\n", " ")
         result_assets, result_total = result_assets.split('id="assets-total"')
 
-        self.assertNotIn(f'id="asset-{a_house_uri}"', result_assets)
-        self.assertNotIn(f'id="asset-{a_banana_uri}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
+        self.assertNotIn(f'id="asset-{a_uri_1}"', result_assets)
         self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
 
     def test_txns_options(self) -> None:

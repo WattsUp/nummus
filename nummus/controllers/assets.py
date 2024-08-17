@@ -208,17 +208,23 @@ def edit_valuation(uri: str) -> str | flask.Response:
         form = flask.request.form
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
-            return common.error("Valuation date must not be empty")
+            return common.error("Asset valuation date must not be empty")
         value = form.get("value", type=utils.parse_real)
         if value is None:
-            return common.error("Valuation value must not be empty")
+            return common.error("Asset valuation value must not be empty")
 
         try:
             # Make the changes
             v.date_ord = date.toordinal()
             v.value = value
             s.commit()
-        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+        except exc.IntegrityError as e:
+            # Get the line that starts with (...IntegrityError)
+            orig = str(e.orig)
+            if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
+                return common.error(
+                    "Asset valuation date must be unique for each asset",
+                )
             return common.error(e)
 
         return common.overlay_swap(event="update-valuation")
@@ -265,10 +271,10 @@ def new_valuation(uri: str) -> str | flask.Response:
     form = flask.request.form
     date = form.get("date", type=datetime.date.fromisoformat)
     if date is None:
-        return common.error("Valuation date must not be empty")
+        return common.error("Asset valuation date must not be empty")
     value = form.get("value", type=utils.parse_real)
     if value is None:
-        return common.error("Valuation value must not be empty")
+        return common.error("Asset valuation value must not be empty")
 
     try:
         with flask.current_app.app_context():
@@ -282,7 +288,13 @@ def new_valuation(uri: str) -> str | flask.Response:
             )
             s.add(v)
             s.commit()
-    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+    except exc.IntegrityError as e:
+        # Get the line that starts with (...IntegrityError)
+        orig = str(e.orig)
+        if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
+            return common.error(
+                "Asset valuation date must be unique for each asset",
+            )
         return common.error(e)
 
     return common.overlay_swap(event="update-valuation")
@@ -501,6 +513,7 @@ def ctx_valuations(
             start = (
                 end if start_ord is None else datetime.date.fromordinal(start_ord[0])
             )
+        start_ord = start.toordinal()
         end_ord = end.toordinal()
 
         query = (
@@ -508,12 +521,10 @@ def ctx_valuations(
             .where(
                 AssetValuation.asset_id == asset.id_,
                 AssetValuation.date_ord <= end_ord,
+                AssetValuation.date_ord >= start_ord,
             )
             .order_by(AssetValuation.date_ord)
         )
-        if start is not None:
-            start_ord = start.toordinal()
-            query = query.where(AssetValuation.date_ord >= start_ord)
 
         page, count, offset_next = paginate(query, page_len, offset)  # type: ignore[attr-defined]
 

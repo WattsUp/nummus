@@ -48,7 +48,7 @@ def add_routes(app: flask.Flask) -> None:
         routes: Routes = m.ROUTES
         for url, (controller, methods) in routes.items():
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
-            if url in urls:
+            if url in urls:  # pragma: no cover
                 raise exc.DuplicateURLError(url, endpoint)
             urls.add(url)
             app.add_url_rule(url, endpoint, controller, methods=methods)

@@ -80,6 +80,7 @@ class TestBaseURI(TestBase):
         models = [
             Account,
             Asset,
+            AssetValuation,
             Budget,
             Credentials,
             HealthCheckIssue,
@@ -99,7 +100,6 @@ class TestBaseURI(TestBase):
         # Models without a URI not made for front end access
         models_none = [
             AssetSplit,
-            AssetValuation,
             Config,
             ImportedFile,
         ]
