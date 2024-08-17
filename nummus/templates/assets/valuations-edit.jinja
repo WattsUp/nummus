@@ -1,0 +1,48 @@
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
+     hx-get="{{ url_for("common.empty") }}"
+     hx-swap="innerHTML"></div>
+<div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+     hx-swap="innerHTML">
+    <button hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
+        {% with class="w-[32px] h-[32px]" %}
+            {% include "svg/x.svg" %}
+        {% endwith %}
+    </button>
+    <h1 class="font-serif text-4xl px-6 text-green-600">Edit asset valuation</h1>
+    <form class="flex flex-col w-full gap-1 px-6 grow" id="form-valuation">
+        <h1 class="font-bold">Edit details</h1>
+        <hr class="w-full border-grey-200">
+        <table class="w-full">
+            <tbody>
+                <tr>
+                    <td>Date</td>
+                    <td>
+                        <input type="date"
+                               name="date"
+                               value="{{ valuation["date"] or "" }}"
+                               class="w-full"
+                               autocomplete="off">
+                    </td>
+                </tr>
+                <tr>
+                    <td>Value</td>
+                    <td>
+                        <input name="value"
+                               value="{{ valuation["value"] or "" }}"
+                               class="w-full"
+                               autocomplete="off">
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </form>
+    <div id="overlay-error"
+         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
+    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+        <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
+        <button hx-post="{{ url_for("assets.edit_valuation", uri=valuation["uri"]) }}"
+                hx-target="#overlay-error"
+                hx-include="#form-valuation"
+                class="button bg-green">Save</button>
+    </div>
+</div>

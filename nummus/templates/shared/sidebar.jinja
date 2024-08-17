@@ -1,7 +1,7 @@
 <div id="sidebar"
      class="h-full w-[18rem] z-10 pt-12 top-0 fixed translate-x-[-18rem] hover:translate-x-0 transition-transform duration-300 xl:relative xl:pt-0 xl:left-0 xl:transition-none xl:translate-x-0 group/sidebar"
      hx-get="{{ url_for("common.sidebar") }}"
-     hx-trigger="update-account from:body"
+     hx-trigger="update-account from:body, update-valuation from:body"
      hx-target="#sidebar">
     <div class="absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg text-white text-center text-2xl xl:hidden">
         <div class="transition-transform duration-300 group-hover/sidebar:rotate-180 group-hover/sidebar:translate-y-16">

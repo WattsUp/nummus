@@ -184,6 +184,46 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-asset")
 
 
+def edit_valuation(uri: str) -> str | flask.Response:
+    """GET & POST /h/assets/v/<uri>/edit.
+
+    Args:
+        uri: AssetValuation URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        v: AssetValuation = web_utils.find(s, AssetValuation, uri)  # type: ignore[attr-defined]
+
+        if flask.request.method == "GET":
+            return flask.render_template(
+                "assets/valuations-edit.jinja",
+                valuation=ctx_valuation(v),
+            )
+
+        form = flask.request.form
+        date = form.get("date", type=datetime.date.fromisoformat)
+        if date is None:
+            return common.error("Valuation date must not be empty")
+        value = form.get("value", type=utils.parse_real)
+        if value is None:
+            return common.error("Valuation value must not be empty")
+
+        try:
+            # Make the changes
+            v.date_ord = date.toordinal()
+            v.value = value
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+        return common.overlay_swap(event="update-valuation")
+
+
 def ctx_asset(asset: Asset) -> dict[str, object]:
     """Get the context to build the asset details.
 
@@ -264,7 +304,7 @@ def valuations(uri: str) -> flask.Response:
         if not (
             PREVIOUS_PERIOD["start"] == start
             and PREVIOUS_PERIOD["end"] == end
-            and flask.request.headers.get("Hx-Trigger") != "valuation-table"
+            and flask.request.headers.get("Hx-Trigger") != "val-table"
         ):
             # If same period and not being updated via update_valuations:
             # don't update the chart
@@ -466,11 +506,6 @@ def ctx_valuation(
     }
 
 
-# TODO (WattsUp): Add valuation and profit chart
-# TODO (WattsUp): Add valuations table
-# TODO (WattsUp): Add valuations editor
-
-
 ROUTES: Routes = {
     "/assets/<path:uri>": (page, ["GET"]),
     "/assets/transactions": (page_transactions, ["GET"]),
@@ -478,4 +513,5 @@ ROUTES: Routes = {
     "/h/assets/txns-options/<path:field>": (txns_options, ["GET"]),
     "/h/assets/a/<path:uri>/edit": (edit, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
+    "/h/assets/v/<path:uri>/edit": (edit_valuation, ["GET", "POST"]),
 }
