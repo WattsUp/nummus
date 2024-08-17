@@ -4,7 +4,11 @@
      hx-indicator="unset">
     {% if val_table["editable"] %}
         <div>
-            <button class="button hover:blue">Manually add valuation</button>
+            <button class="button hover:blue"
+                    hx-get="{{ url_for("assets.new_valuation", **url_args) }}"
+                    hx-target="#overlay"
+                    hx-swap="innerHTML"
+                    hx-include="this">Manually add valuation</button>
         </div>
     {% endif %}
     <div class="grow"></div>

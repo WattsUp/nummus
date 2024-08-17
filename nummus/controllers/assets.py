@@ -224,6 +224,70 @@ def edit_valuation(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-valuation")
 
 
+def delete_valuation(uri: str) -> str | flask.Response:
+    """POST /h/assets/v/<uri>/edit.
+
+    Args:
+        uri: AssetValuation URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        v: AssetValuation = web_utils.find(s, AssetValuation, uri)  # type: ignore[attr-defined]
+        s.delete(v)
+        s.commit()
+        return common.overlay_swap(event="update-valuation")
+
+
+def new_valuation(uri: str) -> str | flask.Response:
+    """GET & POST /h/assets/a/<uri>/new-valuation.
+
+    Returns:
+        string HTML response
+    """
+    if flask.request.method == "GET":
+        ctx: dict[str, object] = {
+            "uri": None,
+            "date": None,
+            "value": None,
+        }
+
+        return flask.render_template(
+            "assets/valuations-edit.jinja",
+            valuation=ctx,
+            url_args={"uri": uri},
+        )
+
+    form = flask.request.form
+    date = form.get("date", type=datetime.date.fromisoformat)
+    if date is None:
+        return common.error("Valuation date must not be empty")
+    value = form.get("value", type=utils.parse_real)
+    if value is None:
+        return common.error("Valuation value must not be empty")
+
+    try:
+        with flask.current_app.app_context():
+            p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+        with p.get_session() as s:
+            asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+            v = AssetValuation(
+                asset_id=asset.id_,
+                date_ord=date.toordinal(),
+                value=value,
+            )
+            s.add(v)
+            s.commit()
+    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+        return common.error(e)
+
+    return common.overlay_swap(event="update-valuation")
+
+
 def ctx_asset(asset: Asset) -> dict[str, object]:
     """Get the context to build the asset details.
 
@@ -512,6 +576,8 @@ ROUTES: Routes = {
     "/h/assets/txns": (txns, ["GET"]),
     "/h/assets/txns-options/<path:field>": (txns_options, ["GET"]),
     "/h/assets/a/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
     "/h/assets/v/<path:uri>/edit": (edit_valuation, ["GET", "POST"]),
+    "/h/assets/v/<path:uri>/delete": (delete_valuation, ["GET", "POST"]),
 }
