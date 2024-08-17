@@ -1,0 +1,38 @@
+<div id="val-paging"
+     class="flex w-full justify-end my-1"
+     hx-swap-oob="{{ oob }}"
+     hx-indicator="unset">
+    {% if val_table["editable"] %}
+        <div>
+            <button class="button hover:blue">Manually add valuation</button>
+        </div>
+    {% endif %}
+    <div class="grow"></div>
+    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_first"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-first.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_prev"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-left.svg" %}
+        {% endwith %}
+    </button>
+    <span class="w-40 text-center">
+        {{ val_table["i_first"] }}
+        -
+        {{ val_table["i_last"] }}
+        of
+        {{ val_table["count"] }}
+    </span>
+    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_next"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-right.svg" %}
+        {% endwith %}
+    </button>
+    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_last"], **url_args) }}">
+        {% with class="w-[24px] h-[24px] hover:fill-green" %}
+            {% include "svg/arrow-last.svg" %}
+        {% endwith %}
+    </button>
+</div>

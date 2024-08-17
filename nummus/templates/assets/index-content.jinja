@@ -1,6 +1,6 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("assets.page", uri=asset["uri"]) }}"
-         hx-include="#txn-config,#txn-header"
+         hx-include="#val-config,#val-header"
          hx-trigger="update-asset from:body"
          hx-target="#main"
          hx-swap="innerHTML">
@@ -29,20 +29,15 @@
         {% include "shared/spinner.jinja" %}
     </div>
     <p class="w-full italic">Valuations are pruned to only when assets are held.</p>
-    <h1 class="text-3xl align-left w-full font-serif text-green-600">Profit & Loss</h1>
-    <div class="w-full h-96 relative">
-        <canvas id="profit-chart-canvas"></canvas>
-        {% include "shared/spinner.jinja" %}
-    </div>
+    {% include "assets/chart-data.jinja" %}
     <div class="w-full flex flex-col grow"
-         hx-target="#txn-table"
+         hx-target="#val-table"
          hx-swap="outerHTML"
          hx-indicator=".spinner">
         <h1 class="text-3xl align-left w-full font-serif text-green-600">Valuations</h1>
-        {% if not asset["ticker"] %}
-            <div>
-                <button class="button hover:blue">Manually add valuation</button>
-            </div>
-        {% endif %}
+        {% include "assets/valuations-config.jinja" %}
+        {% include "assets/valuations-paging.jinja" %}
+        {% include "assets/valuations-header.jinja" %}
+        {% include "assets/valuations.jinja" %}
     </div>
 </section>

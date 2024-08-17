@@ -64,6 +64,7 @@ class AssetValuation(Base):
     """
 
     # No __table_id__ because this is not user accessible
+    __table_id__ = 0x50000000
 
     asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
     value: ORMReal = orm.mapped_column(Decimal6)
