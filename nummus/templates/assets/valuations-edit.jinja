@@ -41,6 +41,7 @@
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         {% if valuation["uri"] %}
             <button hx-get="{{ url_for("assets.delete_valuation", uri=valuation["uri"]) }}"
+                    hx-confirm="Are you sure you wish to delete this valuation?"
                     class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
