@@ -204,6 +204,8 @@ class Transaction(Base):
 
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 
+    # TODO (WattsUp): Add a constraint so unlinked transactions cannot be locked
+
     @orm.validates("statement")
     @override
     def validate_strings(self, key: str, field: str | None) -> str | None:

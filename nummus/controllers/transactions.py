@@ -50,6 +50,7 @@ def page_all() -> str:
         title=title,
         txn_table=txn_table,
         endpoint="transactions.table",
+        endpoint_new="transactions.new",
     )
 
 
@@ -66,6 +67,7 @@ def table() -> flask.Response:
         txn_table=txn_table,
         include_oob=True,
         endpoint="transactions.table",
+        endpoint_new="transactions.new",
     )
     response = flask.make_response(html)
     args = dict(flask.request.args.lists())
@@ -114,6 +116,7 @@ def table_options(field: str) -> str:
             name=field,
             search_str=search_str,
             endpoint="transactions.table",
+            endpoint_new="transactions.new",
         )
 
 
@@ -488,11 +491,91 @@ def ctx_split(
     }
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/transactions/t/<uri>/edit.
+def new(acct_uri: str | None = None) -> str | flask.Response:
+    """GET & POST /h/transactions/new.
+
+    Args:
+        acct_uri: Account uri to make transaction for, None for blank
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        accounts = Account.map_name(s)
+        if flask.request.method == "GET":
+
+            ctx_parent = {
+                "uri": None,
+                "account": (
+                    None if acct_uri is None else accounts[Account.uri_to_id(acct_uri)]
+                ),
+                "date": datetime.date.today(),
+                "amount": None,
+            }
+
+            return flask.render_template(
+                "transactions/new.jinja",
+                parent=ctx_parent,
+                accounts=accounts.values(),
+            )
+
+        form = flask.request.form
+        date = form.get("date", type=datetime.date.fromisoformat)
+        if date is None:
+            return common.error("Transaction date must not be empty")
+        amount = form.get("amount", type=utils.parse_real)
+        if amount is None:
+            return common.error("Transaction amount must not be empty")
+        account = form.get("account")
+        if account is None:
+            return common.error("Transaction account must not be empty")
+
+        # Reverse accounts for LUT
+        accounts_rev = {v: k for k, v in accounts.items()}
+
+        category_id = (
+            s.query(TransactionCategory.id_)
+            .where(TransactionCategory.name == "Uncategorized")
+            .scalar()
+        )
+
+        try:
+            txn = Transaction(
+                account_id=accounts_rev[account],
+                date_ord=date.toordinal(),
+                amount=amount,
+                statement="Manually added",
+                locked=False,
+                linked=False,
+            )
+            t_split = TransactionSplit(
+                parent=txn,
+                amount=amount,
+                category_id=category_id,
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+
+            uri = txn.uri
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+        edit_overlay = transaction(uri, force_get=True)
+        if not isinstance(edit_overlay, str):
+            msg = "Edit overlay did not return a string"
+            raise TypeError(msg)
+        return common.overlay_swap(edit_overlay, event="update-transaction")
+
+
+def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/transactions/t/<uri>.
 
     Args:
         uri: URI of Transaction or TransactionSplit
+        force_get: True will force a GET request
 
     Returns:
         string HTML response
@@ -509,7 +592,7 @@ def edit(uri: str) -> str | flask.Response:
         categories = TransactionCategory.map_name(s)
         assets = Asset.map_name(s)
 
-        if flask.request.method == "GET":
+        if force_get or flask.request.method == "GET":
             accounts = Account.map_name(s)
 
             ctx_parent = {
@@ -557,6 +640,15 @@ def edit(uri: str) -> str | flask.Response:
                 tags=tags,
                 similar_uri=similar_uri,
             )
+        if flask.request.method == "DELETE":
+            if parent.linked:
+                return common.error("Cannot delete linked transaction")
+            s.query(TransactionSplit).where(
+                TransactionSplit.parent_id == parent.id_,
+            ).delete()
+            s.delete(parent)
+            s.commit()
+            return common.overlay_swap(event="update-transaction")
 
         try:
             form = flask.request.form
@@ -757,8 +849,9 @@ def remaining(uri: str) -> str:
 ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
+    "/h/transactions/new": (new, ["GET", "POST"]),
     "/h/transactions/options/<path:field>": (table_options, ["GET"]),
-    "/h/transactions/t/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/split": (split, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
 }

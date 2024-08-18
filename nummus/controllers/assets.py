@@ -61,7 +61,6 @@ def page_transactions() -> str:
         title=title,
         txn_table=txn_table,
         endpoint="assets.txns",
-        no_recent=True,
         asset_transactions=True,
     )
 
@@ -79,7 +78,6 @@ def txns() -> flask.Response:
         txn_table=txn_table,
         include_oob=True,
         endpoint="assets.txns",
-        no_recent=True,
         asset_transactions=True,
     )
     response = flask.make_response(html)
