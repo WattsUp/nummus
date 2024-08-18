@@ -284,6 +284,7 @@ def ctx_table(
         args = flask.request.args
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
+        linked = args.get("linked", type=utils.parse_bool)
         page_len = 25
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
@@ -361,6 +362,8 @@ def ctx_table(
 
         if locked is not None:
             query = query.where(TransactionSplit.locked == locked)
+        if linked is not None:
+            query = query.where(TransactionSplit.linked == linked)
 
         if search_str != "":
             query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
@@ -404,6 +407,8 @@ def ctx_table(
         ]
         if locked is not None:
             filters.append("Locked" if locked else "Unlocked")
+        if linked is not None:
+            filters.append("Linked" if linked else "Unlinked")
         if search_str:
             filters.append(f'"{search_str}"')
         n_filters = len(filters)
@@ -434,6 +439,7 @@ def ctx_table(
             "period": period,
             "search": search_str,
             "locked": locked,
+            "linked": linked,
             "options-account": options_account,
             "options-payee": options_payee,
             "options-category": options_category,
@@ -475,6 +481,7 @@ def ctx_split(
         "tag": t_split.tag,
         "amount": t_split.amount,
         "locked": t_split.locked,
+        "linked": t_split.linked,
         "asset_name": assets[t_split.asset_id] if t_split.asset_id else None,
         "asset_price": abs(t_split.amount / qty) if qty else None,
         "asset_quantity": qty,
@@ -509,6 +516,7 @@ def edit(uri: str) -> str | flask.Response:
                 "uri": parent.uri,
                 "account": accounts[parent.account_id],
                 "locked": parent.locked,
+                "linked": parent.linked,
                 "date": datetime.date.fromordinal(parent.date_ord),
                 "amount": parent.amount,
                 "statement": parent.statement,

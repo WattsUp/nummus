@@ -31,6 +31,11 @@
                 {% include "svg/lock.svg" %}
             {% endif %}
         </div>
+        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
+            {% if txn["linked"] %}
+                {% include "svg/link.svg" %}
+            {% endif %}
+        </div>
     </div>
 {% else %}
     <div id="txn-{{ txn["uri"] }}"
@@ -56,6 +61,11 @@
         <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
             {% if txn["locked"] %}
                 {% include "svg/lock.svg" %}
+            {% endif %}
+        </div>
+        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
+            {% if txn["linked"] %}
+                {% include "svg/link.svg" %}
             {% endif %}
         </div>
     </div>

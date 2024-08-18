@@ -10,10 +10,14 @@
             hx-target="#overlay"
             hx-swap="innerHTML">Edit categories</button>
     {% if not no_recent %}
-        <button class="button hover:green"
+        <button class="button hover:green mr-1"
                 hx-get="{{ url_for(endpoint, period="90-days", locked=False, **url_args) }}"
                 hx-include="this"
-                hx-indicator=".spinner">Recent & Unlocked</button>
+                hx-indicator=".spinner">Recent &amp; Unlocked</button>
+        <button class="button hover:green mr-1"
+                hx-get="{{ url_for(endpoint, period="90-days", linked=False, **url_args) }}"
+                hx-include="this"
+                hx-indicator=".spinner">Recent &amp; Unlinked</button>
     {% endif %}
     <div class="mr-auto"></div>
     <button hx-get="{{ url_for(endpoint, offset=txn_table["offset_first"], **url_args) }}">

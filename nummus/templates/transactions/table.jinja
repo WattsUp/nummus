@@ -3,6 +3,7 @@
         {% include "transactions/table-config.jinja" %}
         {% include "transactions/table-paging.jinja" %}
         {% include "transactions/table-locked.jinja" %}
+        {% include "transactions/table-linked.jinja" %}
     {% endwith %}
     {% if asset_transactions %}
         {% set columns = ["account", "asset"] %}

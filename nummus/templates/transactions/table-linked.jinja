@@ -1,0 +1,28 @@
+<div id="txn-linked"
+     class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center"
+     hx-swap-oob="{{ oob }}">
+    {% with svg_class="transition-colors cursor-pointer m-0 w-[24px] h-[24px]" %}
+        {% if txn_table["linked"] is none %}
+            <input name="linked" value="" class="hidden" autocomplete="off">
+            <div hx-get="{{ url_for(endpoint, linked=True, **url_args) }}">
+                {% with class = svg_class + " bg-grey-200 fill-grey-600" %}
+                    {% include "svg/link.svg" %}
+                {% endwith %}
+            </div>
+        {% elif txn_table["linked"] %}
+            <input name="linked" value="true" class="hidden" autocomplete="off">
+            <div hx-get="{{ url_for(endpoint, linked=False, **url_args) }}">
+                {% with class = svg_class + " bg-green fill-white" %}
+                    {% include "svg/link.svg" %}
+                {% endwith %}
+            </div>
+        {% else %}
+            <input name="linked" value="false" class="hidden" autocomplete="off">
+            <div hx-get="{{ url_for(endpoint, linked="", **url_args) }}">
+                {% with class = svg_class + " bg-green fill-transparent" %}
+                    {% include "svg/link.svg" %}
+                {% endwith %}
+            </div>
+        {% endif %}
+    {% endwith %}
+</div>

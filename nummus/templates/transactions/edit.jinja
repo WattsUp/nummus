@@ -21,26 +21,26 @@
     <form class="flex flex-col w-full px-6 grow"
           id="form-txn"
           onkeydown="return event.key != 'Enter';">
-        <table class="w-full">
+        <table class="w-full whitespace-nowrap">
             <tbody>
                 <tr>
-                    <td>Date</td>
-                    <td>
+                    <td class="pr-4">Date</td>
+                    <td class="pr-4">
                         <input class="w-full"
                                name="date"
                                type="date"
                                value="{{ parent["date"] }}"
                                autocomplete="off">
                     </td>
-                    <td class="w-8"></td>
-                    <td>Total Amount</td>
+                    <td class="pr-4"></td>
+                    <td class="pr-4">Total Amount</td>
                     <td>{{ parent["amount"] | money }}</td>
                 </tr>
                 <tr>
-                    <td>Account Name</td>
-                    <td>{{ parent["account"] }}</td>
-                    <td class="w-8"></td>
-                    <td>Transaction Locked</td>
+                    <td class="pr-4">Account Name</td>
+                    <td class="pr-4">{{ parent["account"] }}</td>
+                    <td class="pr-4"></td>
+                    <td class="pr-4">Transaction Locked</td>
                     <td>
                         <label class="checkbox">
                             <input type="checkbox"
@@ -54,8 +54,21 @@
                     </td>
                 </tr>
                 <tr>
-                    <td>Statement Text</td>
-                    <td colspan="4">{{ parent["statement"] }}</td>
+                    <td class="pr-4 align-top">Statement Text</td>
+                    <td class="pr-4 whitespace-normal break-words max-w-[450px]">{{ parent["statement"] }}</td>
+                    <td class="pr-4 align-top"></td>
+                    <td class="pr-4 align-top">Transaction Linked</td>
+                    <td class="align-top">
+                        {% if parent["linked"] %}
+                            {% with class = "w-6 h-6 fill-green" %}
+                                {% include "svg/link.svg" %}
+                            {% endwith %}
+                        {% else %}
+                            {% with class = "w-6 h-6 fill-grey-600" %}
+                                {% include "svg/link.svg" %}
+                            {% endwith %}
+                        {% endif %}
+                    </td>
                 </tr>
             </tbody>
         </table>

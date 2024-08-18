@@ -93,5 +93,6 @@
     <div class="w-[7rem] min-w-[7rem] p-1 text-right">Amount</div>
     {% if not asset_transactions %}
         {% include "transactions/table-locked.jinja" %}
+        {% include "transactions/table-linked.jinja" %}
     {% endif %}
 </div>

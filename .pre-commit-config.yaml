@@ -47,6 +47,8 @@ repos:
         exclude: \.(html|svg)$
       - id: mixed-line-ending
         args: [--fix=lf]
+      - id: no-commit-to-branch
+        args: ["--branch", "master"]
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.3.0
