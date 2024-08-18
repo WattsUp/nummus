@@ -55,7 +55,6 @@ class TestAsset(WebTestBase):
             "name": name,
             "description": description,
             "category": "real estate",
-            "interpolate": "",
             "ticker": ticker,
         }
         result, headers = self.web_post(url, data=form)
@@ -68,13 +67,11 @@ class TestAsset(WebTestBase):
             self.assertEqual(a.name, name)
             self.assertEqual(a.description, description)
             self.assertEqual(a.category, AssetCategory.REAL_ESTATE)
-            self.assertTrue(a.interpolate)
 
         form = {
             "name": "a",
             "description": description,
             "category": "real estate",
-            "interpolate": "",
             "ticker": ticker,
         }
         result, _ = self.web_post(url, data=form)
@@ -85,7 +82,6 @@ class TestAsset(WebTestBase):
             "name": name,
             "description": description,
             "category": "",
-            "interpolate": "",
             "ticker": ticker,
         }
         result, _ = self.web_post(url, data=form)
