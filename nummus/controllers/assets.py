@@ -165,7 +165,6 @@ def edit(uri: str) -> str | flask.Response:
         ticker = form["ticker"].strip()
         category_s = form.get("category")
         category = AssetCategory(category_s) if category_s else None
-        interpolate = "interpolate" in form
 
         if category is None:
             return common.error("Asset category must not be None")
@@ -176,7 +175,6 @@ def edit(uri: str) -> str | flask.Response:
             asset.description = description
             asset.ticker = ticker
             asset.category = category
-            asset.interpolate = interpolate
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -334,7 +332,6 @@ def ctx_asset(asset: Asset) -> dict[str, object]:
         "value": current_value,
         "value_date": current_date,
         "ticker": asset.ticker,
-        "interpolate": asset.interpolate,
     }
 
 
