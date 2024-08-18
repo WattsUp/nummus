@@ -987,3 +987,58 @@ class TestAsset(TestBase):
         # They should all be indices
         n = s.query(Asset).where(Asset.category == AssetCategory.INDEX).count()
         self.assertEqual(n, 6)
+
+    def test_autodetect_interpolate(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        d = {
+            "name": self.random_string(),
+            "description": self.random_string(),
+            "category": AssetCategory.STOCKS,
+        }
+
+        a = Asset(**d)
+
+        s.add(a)
+        s.commit()
+
+        # No valuations means no interpolation
+        a.autodetect_interpolate()
+        self.assertFalse(a.interpolate, "Interpolate is unexpectibly True")
+
+        # Single valuations means no interpolation
+        v_today = AssetValuation(
+            asset_id=a.id_,
+            date_ord=today_ord,
+            value=self.random_decimal(0, 1),
+        )
+        s.add(v_today)
+        s.commit()
+        a.autodetect_interpolate()
+        self.assertFalse(a.interpolate, "Interpolate is unexpectibly True")
+
+        # Sparse valuations means interpolation
+        v_before = AssetValuation(
+            asset_id=a.id_,
+            date_ord=today_ord - 30,
+            value=self.random_decimal(0, 1),
+        )
+        s.add(v_before)
+        s.commit()
+        a.autodetect_interpolate()
+        self.assertTrue(a.interpolate, "Interpolate is unexpectibly False")
+
+        # Daily valuations means no interpolation
+        v_after = AssetValuation(
+            asset_id=a.id_,
+            date_ord=today_ord + 1,
+            value=self.random_decimal(0, 1),
+        )
+        s.add(v_after)
+        s.commit()
+        a.autodetect_interpolate()
+        self.assertFalse(a.interpolate, "Interpolate is unexpectibly True")
