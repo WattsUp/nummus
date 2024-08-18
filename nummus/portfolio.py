@@ -757,6 +757,7 @@ class Portfolio:
         with self.get_session() as s:
             for asset in s.query(Asset).yield_per(YIELD_PER):
                 asset.prune_valuations()
+                asset.autodetect_interpolate()
             s.commit()
 
         # Optimize database
@@ -943,6 +944,11 @@ class Portfolio:
                         updated.append((name, ticker, start, end, None))
                     # start & end are None if there are no transactions for the Asset
 
+            s.commit()
+
+            # Auto update if asset needs interpolation
+            for asset in s.query(Asset).all():
+                asset.autodetect_interpolate()
             s.commit()
 
         return updated

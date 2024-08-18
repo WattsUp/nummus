@@ -71,7 +71,6 @@ class AssetValuation(Base):
         value: Value of assert
     """
 
-    # No __table_id__ because this is not user accessible
     __table_id__ = 0x30000000
 
     asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
@@ -128,8 +127,6 @@ class Asset(Base):
     name: ORMStr = orm.mapped_column(unique=True)
     description: ORMStrOpt
     category: orm.Mapped[AssetCategory]
-    # TODO (WattsUp): Auto detect interpolate based on minimum valuation date spacing
-    # Update during update-assets
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
 
@@ -654,3 +651,24 @@ class Asset(Base):
             )
             s.add(a)
         s.commit()
+
+    def autodetect_interpolate(self) -> None:
+        """Autodetect if Asset needs interpolation.
+
+        Does not commit changes, call s.commit() afterwards.
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        query = (
+            s.query(AssetValuation.date_ord)
+            .where(AssetValuation.asset_id == self.id_)
+            .order_by(AssetValuation.date_ord)
+        )
+        date_ords = [r[0] for r in query.yield_per(YIELD_PER)]
+        has_dailys = any(
+            (date_ords[i] - date_ords[i - 1]) == 1 for i in range(1, len(date_ords))
+        )
+        # Don't interpolate if there are dailys or if there is only one AssetValuation
+        self.interpolate = not has_dailys and len(date_ords) > 1
