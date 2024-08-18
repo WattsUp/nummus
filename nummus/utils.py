@@ -284,6 +284,32 @@ def date_add_months(date: datetime.date, months: int) -> datetime.date:
     return datetime.date(y, m, d)
 
 
+def start_of_month(date: datetime.date) -> datetime.date:
+    """Get the start of the month of a date.
+
+    Args:
+        date: Starting date
+
+    Returns:
+        datetime.date(date.year, date.month, 1)
+    """
+    return datetime.date(date.year, date.month, 1)
+
+
+def end_of_month(date: datetime.date) -> datetime.date:
+    """Get the end of the month of a date.
+
+    Args:
+        date: Starting date
+
+    Returns:
+        datetime.date(date.year, date.month, 28 to 31)
+    """
+    y = date.year
+    m = date.month
+    return datetime.date(y, m, calendar.monthrange(y, m)[1])
+
+
 def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     """Split a period into months.
 
@@ -304,11 +330,11 @@ def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     end_m = end.month
     months: dict[str, tuple[int, int]] = {}
     while y < end_y or (y == end_y and m <= end_m):
-        start_of_month = datetime.date(y, m, 1).toordinal()
-        end_of_month = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
+        _start_of_month = datetime.date(y, m, 1).toordinal()
+        _end_of_month = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
         months[f"{y:04}-{m:02}"] = (
-            max(start_ord, start_of_month),
-            min(end_ord, end_of_month),
+            max(start_ord, _start_of_month),
+            min(end_ord, _end_of_month),
         )
         y = y + (m // 12)
         m = (m % 12) + 1

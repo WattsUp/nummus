@@ -368,6 +368,7 @@ class Portfolio:
                     amount=d["amount"],
                     date_ord=d["date"].toordinal(),
                     statement=statement,
+                    linked=True,
                 )
                 t_split = TransactionSplit(
                     amount=d["amount"],

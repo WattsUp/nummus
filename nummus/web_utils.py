@@ -81,34 +81,33 @@ def parse_period(
         start = max(start, earliest)
         end = max(start, end, earliest)
     elif period == "this-month":
-        start = datetime.date(today.year, today.month, 1)
-        end = today
+        start = utils.start_of_month(today)
+        end = utils.end_of_month(today)
     elif period == "last-month":
-        start_this_month = datetime.date(today.year, today.month, 1)
-        end = start_this_month - datetime.timedelta(days=1)
-        start = datetime.date(end.year, end.month, 1)
+        end = utils.start_of_month(today) - datetime.timedelta(days=1)
+        start = utils.start_of_month(end)
     elif m_days := re.match(r"(\d+)-days", period):
         n = int(m_days.group(1))
         start = today - datetime.timedelta(days=n)
-        end = today
+        end = utils.end_of_month(today)
     elif m_months := re.match(r"(\d+)-months", period):
         n = int(m_months.group(1))
         start_this_month = datetime.date(today.year, today.month, 1)
         start = utils.date_add_months(start_this_month, -n)
-        end = today
+        end = utils.end_of_month(today)
     elif m_years := re.match(r"(\d+)-years?", period):
         n = int(m_years.group(1))
         start = datetime.date(today.year - n, today.month, 1)
-        end = today
+        end = utils.end_of_month(today)
     elif period == "this-year":
         start = datetime.date(today.year, 1, 1)
-        end = today
+        end = utils.end_of_month(today)
     elif period == "last-year":
         start = datetime.date(today.year - 1, 1, 1)
         end = datetime.date(today.year - 1, 12, 31)
     elif period == "all":
         start = None
-        end = today
+        end = utils.end_of_month(today)
     else:
         msg = f"Unknown period: {period}"
         raise exc.http.BadRequest(msg)
