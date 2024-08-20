@@ -26,7 +26,7 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "90-days"
+DEFAULT_PERIOD = "this-month"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 

@@ -514,6 +514,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
                 ),
                 "date": datetime.date.today(),
                 "amount": None,
+                "statement": "",
             }
 
             return flask.render_template(
@@ -532,6 +533,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         account = form.get("account")
         if account is None:
             return common.error("Transaction account must not be empty")
+        statement = form.get("statement")
 
         # Reverse accounts for LUT
         accounts_rev = {v: k for k, v in accounts.items()}
@@ -545,21 +547,24 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             msg = "Category Uncategorized not found"
             raise exc.ProtectedObjectNotFoundError(msg)
 
-        txn = Transaction(
-            account_id=accounts_rev[account],
-            date_ord=date.toordinal(),
-            amount=amount,
-            statement="Manually added",
-            locked=False,
-            linked=False,
-        )
-        t_split = TransactionSplit(
-            parent=txn,
-            amount=amount,
-            category_id=category_id,
-        )
-        s.add_all((txn, t_split))
-        s.commit()
+        try:
+            txn = Transaction(
+                account_id=accounts_rev[account],
+                date_ord=date.toordinal(),
+                amount=amount,
+                statement=statement or "Manually added",
+                locked=False,
+                linked=False,
+            )
+            t_split = TransactionSplit(
+                parent=txn,
+                amount=amount,
+                category_id=category_id,
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
 
         uri = txn.uri
 
@@ -567,7 +572,8 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         if not isinstance(edit_overlay, str):  # pragma: no cover
             msg = "Edit overlay did not return a string"
             raise TypeError(msg)
-        return common.overlay_swap(edit_overlay, event="update-transaction")
+        # Adding transactions update account cause the balance changes
+        return common.overlay_swap(edit_overlay, event="update-account")
 
 
 def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
@@ -648,7 +654,8 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             ).delete()
             s.delete(parent)
             s.commit()
-            return common.overlay_swap(event="update-transaction")
+            # Adding transactions update account cause the balance changes
+            return common.overlay_swap(event="update-account")
 
         try:
             form = flask.request.form
