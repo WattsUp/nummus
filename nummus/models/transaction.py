@@ -204,7 +204,12 @@ class Transaction(Base):
 
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 
-    # TODO (WattsUp): Add a constraint so unlinked transactions cannot be locked
+    __table_args__ = (
+        sqlalchemy.CheckConstraint(
+            "linked or not locked",
+            "Transaction cannot be locked until linked",
+        ),
+    )
 
     @orm.validates("statement")
     @override
