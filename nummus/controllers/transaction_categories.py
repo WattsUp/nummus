@@ -13,7 +13,6 @@ from nummus.models import (
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
-    YIELD_PER,
 )
 
 if TYPE_CHECKING:
@@ -109,8 +108,8 @@ def new() -> str | flask.Response:
     return common.overlay_swap(overlay())
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/txn-categories/<uri>/edit.
+def category(uri: str) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/txn-categories/<uri>.
 
     Args:
         uri: TransactionCategory URI
@@ -143,6 +142,26 @@ def edit(uri: str) -> str | flask.Response:
             msg = f"Locked category {cat.name} cannot be modified"
             raise exc.http.Forbidden(msg)
 
+        if flask.request.method == "DELETE":
+            # Move all transactions to Uncategorized
+            query = s.query(TransactionCategory.id_).where(
+                TransactionCategory.name == "Uncategorized",
+            )
+            try:
+                uncategorized_id: int = query.one()[0]
+            except exc.NoResultFound as e:  # pragma: no cover
+                # Uncategorized is locked and cannot be deleted
+                msg = "Could not find Uncategorized id"
+                raise exc.ProtectedObjectNotFoundError(msg) from e
+
+            s.query(TransactionSplit).where(
+                TransactionSplit.category_id == cat.id_,
+            ).update({"category_id": uncategorized_id})
+            s.delete(cat)
+            s.commit()
+
+            return common.overlay_swap(overlay(), event="update-transaction")
+
         form = flask.request.form
         name = form["name"].strip()
         group_s = form.get("group")
@@ -163,62 +182,8 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(overlay(), event="update-transaction")
 
 
-def delete(uri: str) -> str | flask.Response:
-    """GET & POST /h/txn-categories/<uri>/delete.
-
-    Args:
-        uri: TransactionCategory URI
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
-
-        if flask.request.method == "GET":
-            ctx: dict[str, object] = {
-                "uri": uri,
-                "name": cat.name,
-                "group": cat.group,
-                "group_type": TransactionCategoryGroup,
-                "locked": cat.locked,
-            }
-
-            return flask.render_template(
-                "transaction_categories/delete.jinja",
-                category=ctx,
-            )
-
-        if cat.locked:
-            msg = f"Locked category {cat.name} cannot be deleted"
-            raise exc.http.Forbidden(msg)
-
-        # Move all transactions to Uncategorized
-        query = s.query(TransactionCategory.id_).where(
-            TransactionCategory.name == "Uncategorized",
-        )
-        try:
-            uncategorized_id: int = query.one()[0]
-        except exc.NoResultFound as e:  # pragma: no cover
-            # Uncategorized is locked and cannot be deleted
-            msg = "Could not find Uncategorized id"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-
-        query = s.query(TransactionSplit).where(TransactionSplit.category_id == cat.id_)
-        for t_split in query.yield_per(YIELD_PER):
-            t_split.category_id = uncategorized_id
-        s.delete(cat)
-        s.commit()
-
-        return common.overlay_swap(overlay(), event="update-transaction")
-
-
 ROUTES: Routes = {
     "/h/txn-categories": (overlay, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
-    "/h/txn-categories/c/<path:uri>/edit": (edit, ["GET", "POST"]),
-    "/h/txn-categories/c/<path:uri>/delete": (delete, ["GET", "POST"]),
+    "/h/txn-categories/c/<path:uri>": (category, ["GET", "PUT", "DELETE"]),
 }

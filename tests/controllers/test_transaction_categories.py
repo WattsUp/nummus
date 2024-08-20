@@ -53,8 +53,10 @@ class TestTransactionCategory(WebTestBase):
             n_after = s.query(TransactionCategory).count()
             self.assertEqual(n_after, n_before + 1)
 
-    def test_edit(self) -> None:
+    def test_category(self) -> None:
         p = self._portfolio
+        today = datetime.date.today()
+        today_ord = today.toordinal()
 
         with p.get_session() as s:
             query = s.query(TransactionCategory)
@@ -65,14 +67,14 @@ class TestTransactionCategory(WebTestBase):
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
-        endpoint = "transaction_categories.edit"
+        endpoint = "transaction_categories.category"
         url = endpoint, {"uri": t_cat_uri}
         result, _ = self.web_get(url)
         self.assertIn("Delete", result)
 
         name = self.random_string()
         form = {"name": name, "group": "other"}
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
         with p.get_session() as s:
@@ -88,42 +90,16 @@ class TestTransactionCategory(WebTestBase):
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         self.assertIn(e_str, result)
 
         e_str = "Transaction group must not be None"
         form = {"name": "ab", "group": ""}
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         self.assertIn(e_str, result)
 
+        # Add transaction that needs to move
         with p.get_session() as s:
-            query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.locked.is_(True))
-            t_cat = query.first()
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
-            t_cat_uri = t_cat.uri
-
-        url = endpoint, {"uri": t_cat_uri}
-        form = {"name": "abc", "group": "other"}
-        self.web_post(url, rc=HTTP_CODE_FORBIDDEN, data=form)
-
-    def test_delete(self) -> None:
-        p = self._portfolio
-
-        today = datetime.date.today()
-        today_ord = today.toordinal()
-
-        with p.get_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.locked.is_(False))
-                .first()
-            )
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
-            t_cat_uri = t_cat.uri
-
             acct = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
@@ -150,12 +126,7 @@ class TestTransactionCategory(WebTestBase):
 
             t_split_id = t_split.id_
 
-        endpoint = "transaction_categories.delete"
-        url = endpoint, {"uri": t_cat_uri}
-        result, _ = self.web_get(url)
-        self.assertIn("Are you sure you want to delete this category?", result)
-
-        result, _ = self.web_post(url)
+        result, _ = self.web_delete(url)
         self.assertIn("Edit transaction categories", result)
 
         with p.get_session() as s:
@@ -180,4 +151,16 @@ class TestTransactionCategory(WebTestBase):
             t_cat_uri = t_cat.uri
 
         url = endpoint, {"uri": t_cat_uri}
-        self.web_post(url, rc=HTTP_CODE_FORBIDDEN)
+        self.web_delete(url, rc=HTTP_CODE_FORBIDDEN)
+
+        with p.get_session() as s:
+            query = s.query(TransactionCategory)
+            query = query.where(TransactionCategory.locked.is_(True))
+            t_cat = query.first()
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
+            t_cat_uri = t_cat.uri
+
+        url = endpoint, {"uri": t_cat_uri}
+        form = {"name": "abc", "group": "other"}
+        self.web_put(url, rc=HTTP_CODE_FORBIDDEN, data=form)

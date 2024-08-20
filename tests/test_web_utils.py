@@ -51,7 +51,7 @@ class TestWebUtils(TestBase):
         self.assertEqual(result, (end, end))
 
         start = datetime.date(today.year, today.month, 1)
-        end = today
+        end = utils.end_of_month(today)
         result = web_utils.parse_period("this-month", None, None)
         self.assertEqual(result, (start, end))
 
@@ -71,22 +71,22 @@ class TestWebUtils(TestBase):
         self.assertEqual(result, (start, end))
 
         start = utils.date_add_months(datetime.date(today.year, today.month, 1), -6)
-        end = today
+        end = utils.end_of_month(today)
         result = web_utils.parse_period("6-months", None, None)
         self.assertEqual(result, (start, end))
 
         start = datetime.date(today.year - 1, today.month, 1)
-        end = today
+        end = utils.end_of_month(today)
         result = web_utils.parse_period("1-year", None, None)
         self.assertEqual(result, (start, end))
 
         start = datetime.date(today.year - 5, today.month, 1)
-        end = today
+        end = utils.end_of_month(today)
         result = web_utils.parse_period("5-years", None, None)
         self.assertEqual(result, (start, end))
 
         start = datetime.date(today.year, 1, 1)
-        end = today
+        end = utils.end_of_month(today)
         result = web_utils.parse_period("this-year", None, None)
         self.assertEqual(result, (start, end))
 
@@ -96,7 +96,8 @@ class TestWebUtils(TestBase):
         self.assertEqual(result, (start, end))
 
         result = web_utils.parse_period("all", None, None)
-        self.assertEqual(result, (None, today))
+        end = utils.end_of_month(today)
+        self.assertEqual(result, (None, end))
 
         self.assertHTTPRaises(
             400,

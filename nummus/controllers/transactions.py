@@ -536,35 +536,35 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         # Reverse accounts for LUT
         accounts_rev = {v: k for k, v in accounts.items()}
 
-        category_id = (
+        category_id: int | None = (
             s.query(TransactionCategory.id_)
             .where(TransactionCategory.name == "Uncategorized")
             .scalar()
         )
+        if category_id is None:  # pragma: no cover
+            msg = "Category Uncategorized not found"
+            raise exc.ProtectedObjectNotFoundError(msg)
 
-        try:
-            txn = Transaction(
-                account_id=accounts_rev[account],
-                date_ord=date.toordinal(),
-                amount=amount,
-                statement="Manually added",
-                locked=False,
-                linked=False,
-            )
-            t_split = TransactionSplit(
-                parent=txn,
-                amount=amount,
-                category_id=category_id,
-            )
-            s.add_all((txn, t_split))
-            s.commit()
+        txn = Transaction(
+            account_id=accounts_rev[account],
+            date_ord=date.toordinal(),
+            amount=amount,
+            statement="Manually added",
+            locked=False,
+            linked=False,
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=amount,
+            category_id=category_id,
+        )
+        s.add_all((txn, t_split))
+        s.commit()
 
-            uri = txn.uri
-        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+        uri = txn.uri
 
         edit_overlay = transaction(uri, force_get=True)
-        if not isinstance(edit_overlay, str):
+        if not isinstance(edit_overlay, str):  # pragma: no cover
             msg = "Edit overlay did not return a string"
             raise TypeError(msg)
         return common.overlay_swap(edit_overlay, event="update-transaction")
@@ -712,7 +712,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
 
 
 def split(uri: str) -> str:
-    """GET, PUT & DELETE /h/transactions/<uri>/split.
+    """GET, POST & DELETE /h/transactions/<uri>/split.
 
     Args:
         uri: Transaction URI
@@ -734,7 +734,7 @@ def split(uri: str) -> str:
     tag: list[str | None] = list(form.getlist("tag"))
     amount: list[Decimal | None] = list(form.getlist("amount", utils.parse_real))
 
-    if flask.request.method == "PUT":
+    if flask.request.method == "POST":
         payee.append(None)
         description.append(None)
         category.append("Uncategorized")
@@ -851,7 +851,7 @@ ROUTES: Routes = {
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/new": (new, ["GET", "POST"]),
     "/h/transactions/options/<path:field>": (table_options, ["GET"]),
-    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
-    "/h/transactions/t/<path:uri>/split": (split, ["GET", "PUT", "DELETE"]),
+    "/h/transactions/t/<path:uri>/split": (split, ["GET", "POST", "DELETE"]),
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
+    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
 }

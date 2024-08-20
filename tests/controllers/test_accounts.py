@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import re
+from decimal import Decimal
 
 from nummus.controllers import accounts
 from nummus.models import (
@@ -17,14 +18,14 @@ from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
 class TestAccount(WebTestBase):
-    def test_edit(self) -> None:
+    def test_account(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
 
         acct_uri = d["acct_uri"]
         cat_1 = d["cat_1"]
 
-        endpoint = "accounts.edit"
+        endpoint = "accounts.account"
         url = endpoint, {"uri": acct_uri}
         result, _ = self.web_get(url)
         self.assertNotIn("<html", result)
@@ -39,7 +40,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "emergency": "",
         }
-        result, headers = self.web_post(url, data=form)
+        result, headers = self.web_put(url, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-account")
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
@@ -59,7 +60,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "closed": "",
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         e_str = "Cannot close Account with non-zero balance"
         self.assertIn(e_str, result)
         with p.get_session() as s:
@@ -74,7 +75,7 @@ class TestAccount(WebTestBase):
             "category": "credit",
             "number": "",
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         e_str = "Account name must be at least 2 characters long"
         self.assertIn(e_str, result)
         with p.get_session() as s:
@@ -89,7 +90,7 @@ class TestAccount(WebTestBase):
             "category": "",
             "number": "",
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         e_str = "Account category must not be None"
         self.assertIn(e_str, result)
 
@@ -129,7 +130,7 @@ class TestAccount(WebTestBase):
             "number": "",
             "closed": "",
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
             acct = s.query(Account).first()
@@ -156,8 +157,8 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
         result, _ = self.web_get(
             (endpoint, {"uri": acct_uri, "period": "last-year"}),
@@ -168,8 +169,8 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
         self.assertNotRegex(result, r"<div .*>\$100.00</div>")
         self.assertNotRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
+        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
     def test_txns(self) -> None:
         d = self._setup_portfolio()
@@ -208,8 +209,8 @@ class TestAccount(WebTestBase):
         self.assertRegex(result, r"<div .*>Uncategorized</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
         self.assertNotIn('id="assets"', result)  # Not an investment account
 
         result, _ = self.web_get(
@@ -238,8 +239,8 @@ class TestAccount(WebTestBase):
         self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
         self.assertNotRegex(result, r"<div .*>\$100.00</div>")
         self.assertNotRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
+        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
         result, _ = self.web_get(
             (endpoint, {"uri": acct_uri, "period": "5-years"}),
@@ -437,3 +438,61 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri, "field": "unknown"}),
             rc=HTTP_CODE_BAD_REQUEST,
         )
+
+    def test_new_txn(self) -> None:
+        p = self._portfolio
+        d = self._setup_portfolio()
+        today = datetime.date.today()
+
+        acct = d["acct"]
+        acct_uri = d["acct_uri"]
+
+        endpoint = "accounts.new_txn"
+        result, _ = self.web_get((endpoint, {"uri": acct_uri}))
+        self.assertIn("New transaction", result)
+        self.assertIn(f"selected>{acct}", result)
+
+        form = {}
+        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
+        self.assertIn("Transaction date must not be empty", result)
+
+        form = {"date": today}
+        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
+        self.assertIn("Transaction amount must not be empty", result)
+
+        form = {"date": today, "amount": "1000"}
+        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
+        self.assertIn("Transaction account must not be empty", result)
+
+        form = {"date": today, "amount": "1000", "account": acct}
+        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
+        # Redirect to edit after creating
+        self.assertIn("Edit transaction", result)
+        with p.get_session() as s:
+            acct_id = Account.uri_to_id(acct_uri)
+            txn = (
+                s.query(Transaction)
+                .where(
+                    Transaction.account_id == acct_id,
+                    Transaction.amount == Decimal("1000"),
+                )
+                .one()
+            )
+            self.assertEqual(txn.statement, "Manually added")
+            self.assertFalse(txn.locked, "Transaction unexpectably locked")
+            self.assertFalse(txn.linked, "Transaction unexpectably linked")
+
+            category_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Uncategorized")
+                .scalar()
+            )
+            t_split = (
+                s.query(TransactionSplit)
+                .where(
+                    TransactionSplit.account_id == acct_id,
+                    TransactionSplit.amount == Decimal("1000"),
+                )
+                .one()
+            )
+            self.assertEqual(t_split.category_id, category_id)

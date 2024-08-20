@@ -86,7 +86,7 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        <button hx-put="{{ url_for("transactions.split", uri=parent["uri"]) }}"
+        <button hx-post="{{ url_for("transactions.split", uri=parent["uri"]) }}"
                 hx-target="#txn-splits"
                 class="button hover:blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}

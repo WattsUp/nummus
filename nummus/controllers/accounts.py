@@ -30,8 +30,8 @@ DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/accounts/a/<uri>/edit.
+def account(uri: str) -> str | flask.Response:
+    """GET & POST /h/accounts/a/<uri>.
 
     Args:
         uri: Account URI
@@ -491,7 +491,7 @@ def txns_options(uri: str, field: str) -> str:
 
 
 def new_txn(uri: str) -> str | flask.Response:
-    """GET /h/accounts/a/<uri>/new-txn.
+    """GET & POST /h/accounts/a/<uri>/new-txn.
 
     Args:
         uri: Account URI
@@ -506,6 +506,6 @@ ROUTES: Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
-    "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
     "/h/accounts/a/<path:uri>/new-txn": (new_txn, ["GET", "POST"]),
 }

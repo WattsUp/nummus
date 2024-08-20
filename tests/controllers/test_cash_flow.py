@@ -61,8 +61,8 @@ class TestCashFlow(WebTestBase):
         self.assertIn('"date_mode": "days"', result)
         self.assertRegex(result, rf"<div .*>{cat_0}</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}/edit"')
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
+        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
         result, _ = self.web_get(
             (endpoint, {"period": "all"}),

@@ -16,7 +16,7 @@ from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 
 class TestAsset(WebTestBase):
-    def test_edit(self) -> None:
+    def test_asset(self) -> None:
         p = self._portfolio
 
         today = datetime.date.today()
@@ -40,7 +40,7 @@ class TestAsset(WebTestBase):
             a_id = a.id_
             a_uri = a.uri
 
-        endpoint = "assets.edit"
+        endpoint = "assets.asset"
         url = endpoint, {"uri": a_uri}
         result, _ = self.web_get(url)
         self.assertNotIn("<html", result)
@@ -57,7 +57,7 @@ class TestAsset(WebTestBase):
             "category": "real estate",
             "ticker": ticker,
         }
-        result, headers = self.web_post(url, data=form)
+        result, headers = self.web_put(url, data=form)
         self.assertEqual(headers["HX-Trigger"], "update-asset")
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:
@@ -74,7 +74,7 @@ class TestAsset(WebTestBase):
             "category": "real estate",
             "ticker": ticker,
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         e_str = "Asset name must be at least 2 characters long"
         self.assertIn(e_str, result)
 
@@ -84,7 +84,7 @@ class TestAsset(WebTestBase):
             "category": "",
             "ticker": ticker,
         }
-        result, _ = self.web_post(url, data=form)
+        result, _ = self.web_put(url, data=form)
         e_str = "Asset category must not be None"
         self.assertIn(e_str, result)
 
@@ -152,7 +152,7 @@ class TestAsset(WebTestBase):
         self.assertRegex(result, r"<h1 .*>\$100.00</h1>")
         self.assertRegex(result, rf"<h2 .*>[ \n]*as of {today}[ \n]*</h2>")
         self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
-        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 
     def test_txns(self) -> None:
         d = self._setup_portfolio()
@@ -330,7 +330,7 @@ class TestAsset(WebTestBase):
         )
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, rf'<div id="val-{v_uri}"')
-        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
+        self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0, "period": "all"}),
@@ -442,7 +442,7 @@ class TestAsset(WebTestBase):
         e_str = "Asset valuation date must be unique for each asset"
         self.assertIn(e_str, result)
 
-    def test_edit_valuation(self) -> None:
+    def test_valuation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
@@ -473,27 +473,27 @@ class TestAsset(WebTestBase):
             v_id = v.id_
             v_uri = v.uri
 
-        endpoint = "assets.edit_valuation"
+        endpoint = "assets.valuation"
         result, _ = self.web_get((endpoint, {"uri": v_uri}))
         self.assertIn("Delete", result)
 
         form = {}
-        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         e_str = "Asset valuation date must not be empty"
         self.assertIn(e_str, result)
 
         form = {"date": today}
-        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         e_str = "Asset valuation value must not be empty"
         self.assertIn(e_str, result)
 
         form = {"date": today, "value": "-100"}
-        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         e_str = "Asset valuation value must be zero or positive"
         self.assertIn(e_str, result)
 
         form = {"date": today, "value": "200"}
-        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         self.assertIn("empty:hidden", result)
 
         with p.get_session() as s:
@@ -505,33 +505,11 @@ class TestAsset(WebTestBase):
             self.assertEqual(v.value, 200)
 
         form = {"date": yesterday, "value": "100"}
-        result, _ = self.web_post((endpoint, {"uri": v_uri}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         e_str = "Asset valuation date must be unique for each asset"
         self.assertIn(e_str, result)
 
-    def test_delete_valuation(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.date.today()
-        today_ord = today.toordinal()
-
-        a_uri_0 = d["a_uri_0"]
-        a_id_0 = Asset.uri_to_id(a_uri_0)
-
-        # Add valuations
-        with p.get_session() as s:
-            v = AssetValuation(
-                asset_id=a_id_0,
-                value=100,
-                date_ord=today_ord,
-            )
-            s.add(v)
-            s.commit()
-            v_id = v.id_
-            v_uri = v.uri
-
-        endpoint = "assets.delete_valuation"
-        result, _ = self.web_post((endpoint, {"uri": v_uri}))
+        result, _ = self.web_delete((endpoint, {"uri": v_uri}))
         self.assertIn("empty:hidden", result)
 
         with p.get_session() as s:

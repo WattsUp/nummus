@@ -89,7 +89,7 @@ def parse_period(
     elif m_days := re.match(r"(\d+)-days", period):
         n = int(m_days.group(1))
         start = today - datetime.timedelta(days=n)
-        end = utils.end_of_month(today)
+        end = today
     elif m_months := re.match(r"(\d+)-months", period):
         n = int(m_months.group(1))
         start_this_month = datetime.date(today.year, today.month, 1)

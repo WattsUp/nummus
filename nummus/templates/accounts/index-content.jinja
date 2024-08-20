@@ -9,7 +9,7 @@
             <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
                 {{ acct["name"] }}
                 <div class="w-[20px] group cursor-pointer"
-                     hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
+                     hx-get="{{ url_for("accounts.account", uri=acct["uri"]) }}"
                      hx-target="#overlay"
                      hx-swap="innerHTML">
                     {% with class="fill-green-600 transition-colors group-hover:fill-black" %}

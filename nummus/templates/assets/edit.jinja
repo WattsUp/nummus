@@ -78,7 +78,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
-        <button hx-post="{{ url_for("assets.edit", uri=asset["uri"]) }}"
+        <button hx-put="{{ url_for("assets.asset", uri=asset["uri"]) }}"
                 hx-target="#overlay-error"
                 hx-include="#form-asset"
                 class="button bg-green">Save</button>

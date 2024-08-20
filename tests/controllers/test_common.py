@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import datetime
+import io
+import re
+import warnings
 from decimal import Decimal
+from typing import TYPE_CHECKING
+from unittest import mock
 
 from nummus import controllers
 from nummus import exceptions as exc
@@ -9,17 +14,22 @@ from nummus.controllers import common
 from nummus.models import (
     Account,
     AccountCategory,
+    Asset,
     Budget,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
 )
-from tests.controllers.base import WebTestBase
+from tests.controllers.base import HTTP_CODE_OK, WebTestBase
+
+if TYPE_CHECKING:
+    import werkzeug
 
 
 class TestCommon(WebTestBase):
     def test_sidebar(self) -> None:
+        _ = self._setup_portfolio()
         endpoint = "common.sidebar"
         result, _ = self.web_get(endpoint)
         self.assertIn("Click to show", result)
@@ -253,3 +263,75 @@ class TestCommon(WebTestBase):
             self.assertFalse(rule.endpoint.startswith("."))
             self.assertTrue(rule.rule.startswith("/"))
             self.assertFalse(rule.rule != "/" and rule.rule.endswith("/"))
+
+    def test_follow_links(self) -> None:
+        p = self._portfolio
+        _ = self._setup_portfolio()
+        with p.get_session() as s:
+            Asset.add_indices(s)
+
+        # Recursively click on every link checking that it is a valid link and valid
+        # method
+        visited: set[str] = set()
+
+        # Save hx-delete for the end in case it does successfully delete something
+        deletes: set[str] = set()
+
+        def visit_all_links(url: str, method: str, *, hx: bool = False) -> None:
+            request = f"{method} {url}"
+            if request in visited:
+                return
+            visited.add(request)
+            response: werkzeug.test.TestResponse | None = None
+            try:
+                data: dict[str, str] | None = None
+                if method in ["POST", "PUT", "DELETE"]:
+                    data = {
+                        "name": "",
+                        "institution": "",
+                        "number": "",
+                    }
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    with mock.patch("sys.stderr", new=io.StringIO()) as stderr:
+                        response = self._client.open(
+                            url,
+                            method=method,
+                            buffered=False,
+                            follow_redirects=False,
+                            headers={"Hx-Request": "true"} if hx else None,
+                            data=data,
+                        )
+                    stderr = stderr.getvalue()
+                page = response.text
+                self.assertEqual(
+                    response.status_code,
+                    HTTP_CODE_OK,
+                    msg=stderr if stderr else f"{request} {page}",
+                )
+                self.assertEqual(response.content_type, "text/html; charset=utf-8")
+
+            finally:
+                if response is not None:
+                    response.close()
+            hrefs = list(re.findall(r'href="([\w\d/\-]+)"', page))
+            hx_gets = list(re.findall(r'hx-get="([\w\d/\-]+)"', page))
+            hx_puts = list(re.findall(r'hx-put="([\w\d/\-]+)"', page))
+            hx_posts = list(re.findall(r'hx-post="([\w\d/\-]+)"', page))
+            hx_deletes = list(re.findall(r'hx-delete="([\w\d/\-]+)"', page))
+            page = ""  # Clear page so --locals isn't too noisy
+
+            for link in hrefs:
+                visit_all_links(link, "GET")
+            # With hx requests, add HX-Request header
+            for link in hx_gets:
+                visit_all_links(link, "GET", hx=True)
+            for link in hx_puts:
+                visit_all_links(link, "PUT", hx=True)
+            for link in hx_posts:
+                visit_all_links(link, "POST", hx=True)
+            deletes.update(hx_deletes)
+
+        visit_all_links("/", "GET")
+        for link in deletes:
+            visit_all_links(link, "DELETE", hx=True)

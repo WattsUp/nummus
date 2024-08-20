@@ -40,7 +40,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         {% if valuation["uri"] %}
-            <button hx-get="{{ url_for("assets.delete_valuation", uri=valuation["uri"]) }}"
+            <button hx-delete="{{ url_for("assets.valuation", uri=valuation["uri"]) }}"
                     hx-confirm="Are you sure you wish to delete this valuation?"
                     class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -51,7 +51,7 @@
         {% endif %}
         <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
         {% if valuation["uri"] %}
-            <button hx-post="{{ url_for("assets.edit_valuation", uri=valuation["uri"]) }}"
+            <button hx-put="{{ url_for("assets.valuation", uri=valuation["uri"]) }}"
                     hx-target="#overlay-error"
                     hx-include="#form-valuation"
                     class="button bg-green">Save</button>
