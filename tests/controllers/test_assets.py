@@ -58,6 +58,7 @@ class TestAsset(WebTestBase):
             "ticker": ticker,
         }
         result, headers = self.web_put(url, data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-asset")
         self.assertNotIn("<svg", result)  # No error SVG
         with p.get_session() as s:

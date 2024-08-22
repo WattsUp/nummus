@@ -136,6 +136,7 @@ class TestNetWorth(WebTestBase):
                 amount=10,
                 statement=self.random_string(),
                 locked=True,
+                linked=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
@@ -151,6 +152,7 @@ class TestNetWorth(WebTestBase):
                 amount=-10,
                 statement=self.random_string(),
                 locked=True,
+                linked=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,

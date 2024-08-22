@@ -363,6 +363,9 @@ class Portfolio:
                     if not statement:
                         statement = f"Asset Transaction {asset_name}"
 
+                # TODO (WattsUp): Link with unlink if possible
+                # Maybe make into a command?
+
                 txn = Transaction(
                     account_id=acct_id,
                     amount=d["amount"],

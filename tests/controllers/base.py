@@ -146,6 +146,7 @@ class WebTestBase(TestBase):
                 date_ord=today_ord,
                 amount=100,
                 statement=self.random_string(),
+                linked=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,

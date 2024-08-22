@@ -185,6 +185,11 @@ class TestCommon(WebTestBase):
             html = data.decode()
             self.assertValidHTML(html)
             self.assertIn(content, html)
+            self.assertIn(
+                "HX-Trigger",
+                response.headers,
+                msg=f"Response lack HX-Trigger {data}",
+            )
             self.assertEqual(response.headers["HX-Trigger"], event_0)
 
             response = common.overlay_swap(content, [event_0, event_1])
@@ -192,6 +197,11 @@ class TestCommon(WebTestBase):
             html = data.decode()
             self.assertValidHTML(html)
             self.assertIn(content, html)
+            self.assertIn(
+                "HX-Trigger",
+                response.headers,
+                msg=f"Response lack HX-Trigger {data}",
+            )
             self.assertEqual(response.headers["HX-Trigger"], f"{event_0},{event_1}")
 
     def test_error(self) -> None:

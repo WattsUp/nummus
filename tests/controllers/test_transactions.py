@@ -36,12 +36,24 @@ class TestTransaction(WebTestBase):
         acct_uri = d["acct_uri"]
         payee_0 = d["payee_0"]
         payee_1 = d["payee_1"]
+        t_0 = d["t_0"]
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
         cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
         a_uri_0 = d["a_uri_0"]
+
+        # Unlink transaction 0
+        with p.get_session() as s:
+            query = s.query(Transaction).where(
+                Transaction.id_ == Transaction.uri_to_id(t_0),
+            )
+            txn = query.one()
+            txn.linked = False
+            for t_split in txn.splits:
+                t_split.parent = txn
+            s.commit()
 
         endpoint = "transactions.table"
         result, _ = self.web_get(endpoint)
@@ -405,6 +417,7 @@ class TestTransaction(WebTestBase):
             "amount": ["20", "80"],
         }
         result, headers = self.web_put((endpoint, {"uri": t_0}), data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -412,7 +425,7 @@ class TestTransaction(WebTestBase):
 
             query = s.query(Transaction)
             query = query.where(Transaction.id_ == Transaction.uri_to_id(t_0))
-            txn: Transaction = query.scalar()
+            txn: Transaction = query.one()
             splits = txn.splits
 
             self.assertEqual(txn.date_ord, new_date_ord)
@@ -450,6 +463,7 @@ class TestTransaction(WebTestBase):
             "amount": "100",
         }
         result, headers = self.web_put((endpoint, {"uri": t_0}), data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -476,19 +490,32 @@ class TestTransaction(WebTestBase):
         result, _ = self.web_delete((endpoint, {"uri": t_1}), data=form)
         self.assertIn("Cannot delete linked transaction", result)
 
-        result, headers = self.web_delete((endpoint, {"uri": t_0}), data=form)
-        self.assertEqual(headers["HX-Trigger"], "update-transaction")
+        # Unlink transaction 1
+        with p.get_session() as s:
+            query = s.query(Transaction).where(
+                Transaction.id_ == Transaction.uri_to_id(t_1),
+            )
+            txn = query.one()
+            txn.locked = False
+            txn.linked = False
+            for t_split in txn.splits:
+                t_split.parent = txn
+            s.commit()
+
+        result, headers = self.web_delete((endpoint, {"uri": t_1}))
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
+        self.assertEqual(headers["HX-Trigger"], "update-account")
         with p.get_session() as s:
             n = (
                 s.query(Transaction)
-                .where(Transaction.id_ == Transaction.uri_to_id(t_0))
+                .where(Transaction.id_ == Transaction.uri_to_id(t_1))
                 .count()
             )
             self.assertEqual(n, 0)
 
             n = (
                 s.query(TransactionSplit)
-                .where(TransactionSplit.parent_id == Transaction.uri_to_id(t_0))
+                .where(TransactionSplit.parent_id == Transaction.uri_to_id(t_1))
                 .count()
             )
             self.assertEqual(n, 0)
@@ -614,6 +641,13 @@ class TestTransaction(WebTestBase):
         form = {"date": today, "amount": "1000"}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Transaction account must not be empty", result)
+
+        form = {"date": today, "amount": "1000", "account": acct, "statement": "n"}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn(
+            "Transaction statement must be at least 2 characters long",
+            result,
+        )
 
         form = {"date": today, "amount": "1000", "account": acct}
         result, _ = self.web_post(endpoint, data=form)

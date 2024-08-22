@@ -268,6 +268,7 @@ class TestPerformance(WebTestBase):
                 amount=1000,
                 statement=self.random_string(),
                 locked=True,
+                linked=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
@@ -283,6 +284,7 @@ class TestPerformance(WebTestBase):
                 amount=-1000,
                 statement=self.random_string(),
                 locked=True,
+                linked=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
