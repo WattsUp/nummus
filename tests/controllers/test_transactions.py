@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import re
 import urllib.parse
+from decimal import Decimal
 
 from nummus.models import (
     Account,
@@ -35,12 +36,24 @@ class TestTransaction(WebTestBase):
         acct_uri = d["acct_uri"]
         payee_0 = d["payee_0"]
         payee_1 = d["payee_1"]
+        t_0 = d["t_0"]
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
         cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
         a_uri_0 = d["a_uri_0"]
+
+        # Unlink transaction 0
+        with p.get_session() as s:
+            query = s.query(Transaction).where(
+                Transaction.id_ == Transaction.uri_to_id(t_0),
+            )
+            txn = query.one()
+            txn.linked = False
+            for t_split in txn.splits:
+                t_split.parent = txn
+            s.commit()
 
         endpoint = "transactions.table"
         result, _ = self.web_get(endpoint)
@@ -160,6 +173,16 @@ class TestTransaction(WebTestBase):
         self.assertRegex(
             result,
             r"<title>Transactions This Month, Locked \| nummus</title>",
+        )
+
+        result, _ = self.web_get(
+            (endpoint, {"linked": True}),
+        )
+        self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
+        self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
+        self.assertRegex(
+            result,
+            r"<title>Transactions This Month, Linked \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -329,39 +352,40 @@ class TestTransaction(WebTestBase):
             rc=HTTP_CODE_BAD_REQUEST,
         )
 
-    def test_edit(self) -> None:
+    def test_transaction(self) -> None:
         p = self._portfolio
         today = datetime.date.today()
         d = self._setup_portfolio()
 
         t_0 = d["t_0"]
+        t_1 = d["t_1"]
         t_split_0 = d["t_split_0"]
         payee_0 = d["payee_0"]
         cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
 
-        endpoint = "transactions.edit"
+        endpoint = "transactions.transaction"
         result, _ = self.web_get((endpoint, {"uri": t_split_0}))
         self.assertEqual(result.count('name="payee"'), 1)
 
         form = {}
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction date must not be empty", result)
 
         form = {"date": today, "amount": ""}
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Non-zero remaining amount to be assigned", result)
 
         form = {"date": today, "amount": "100"}
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction must have at least one split", result)
 
         form = {"date": today, "payee": "", "amount": "100"}
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction split missing properties", result)
 
         form = {"date": today, "payee": "a", "amount": "100"}
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn(
             "Transaction split payee must be at least 2 characters long",
             result,
@@ -376,7 +400,7 @@ class TestTransaction(WebTestBase):
             "tag": ["", ""],
             "amount": ["100", ""],
         }
-        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("Transaction split amount must not be empty", result)
 
         # Add split
@@ -392,7 +416,8 @@ class TestTransaction(WebTestBase):
             "tag": ["", ""],
             "amount": ["20", "80"],
         }
-        result, headers = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, headers = self.web_put((endpoint, {"uri": t_0}), data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -400,7 +425,7 @@ class TestTransaction(WebTestBase):
 
             query = s.query(Transaction)
             query = query.where(Transaction.id_ == Transaction.uri_to_id(t_0))
-            txn: Transaction = query.scalar()
+            txn: Transaction = query.one()
             splits = txn.splits
 
             self.assertEqual(txn.date_ord, new_date_ord)
@@ -437,7 +462,8 @@ class TestTransaction(WebTestBase):
             "tag": "",
             "amount": "100",
         }
-        result, headers = self.web_post((endpoint, {"uri": t_0}), data=form)
+        result, headers = self.web_put((endpoint, {"uri": t_0}), data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
         with p.get_session() as s:
@@ -460,6 +486,39 @@ class TestTransaction(WebTestBase):
             self.assertEqual(categories[t_split.category_id], cat_0)
             self.assertIsNone(t_split.tag)
             self.assertEqual(t_split.amount, 100)
+
+        result, _ = self.web_delete((endpoint, {"uri": t_1}), data=form)
+        self.assertIn("Cannot delete linked transaction", result)
+
+        # Unlink transaction 1
+        with p.get_session() as s:
+            query = s.query(Transaction).where(
+                Transaction.id_ == Transaction.uri_to_id(t_1),
+            )
+            txn = query.one()
+            txn.locked = False
+            txn.linked = False
+            for t_split in txn.splits:
+                t_split.parent = txn
+            s.commit()
+
+        result, headers = self.web_delete((endpoint, {"uri": t_1}))
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
+        self.assertEqual(headers["HX-Trigger"], "update-account")
+        with p.get_session() as s:
+            n = (
+                s.query(Transaction)
+                .where(Transaction.id_ == Transaction.uri_to_id(t_1))
+                .count()
+            )
+            self.assertEqual(n, 0)
+
+            n = (
+                s.query(TransactionSplit)
+                .where(TransactionSplit.parent_id == Transaction.uri_to_id(t_1))
+                .count()
+            )
+            self.assertEqual(n, 0)
 
     def test_split(self) -> None:
         d = self._setup_portfolio()
@@ -495,7 +554,7 @@ class TestTransaction(WebTestBase):
             "tag": tag,
             "amount": "100",
         }
-        result, _ = self.web_put((endpoint, {"uri": t_0}), data=form)
+        result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertEqual(result.count('name="payee"'), 2)
         self.assertRegex(result, rf'name="payee"[ \n]+value="{payee_0}"')
         self.assertRegex(result, r'name="payee"[ \n]+value=""')
@@ -557,3 +616,68 @@ class TestTransaction(WebTestBase):
         form = {"amount": ["20", "20.001"]}
         result, _ = self.web_post((endpoint, {"uri": t_0}), data=form)
         self.assertIn(">$60.00</div>", result)
+
+    def test_new(self) -> None:
+        p = self._portfolio
+        d = self._setup_portfolio()
+        today = datetime.date.today()
+
+        acct = d["acct"]
+        acct_uri = d["acct_uri"]
+
+        endpoint = "transactions.new"
+        result, _ = self.web_get(endpoint)
+        self.assertIn("New transaction", result)
+        self.assertNotIn(f"selected>{acct}", result)
+
+        form = {}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Transaction date must not be empty", result)
+
+        form = {"date": today}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Transaction amount must not be empty", result)
+
+        form = {"date": today, "amount": "1000"}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Transaction account must not be empty", result)
+
+        form = {"date": today, "amount": "1000", "account": acct, "statement": "n"}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn(
+            "Transaction statement must be at least 2 characters long",
+            result,
+        )
+
+        form = {"date": today, "amount": "1000", "account": acct}
+        result, _ = self.web_post(endpoint, data=form)
+        # Redirect to edit after creating
+        self.assertIn("Edit transaction", result)
+        with p.get_session() as s:
+            acct_id = Account.uri_to_id(acct_uri)
+            txn = (
+                s.query(Transaction)
+                .where(
+                    Transaction.account_id == acct_id,
+                    Transaction.amount == Decimal("1000"),
+                )
+                .one()
+            )
+            self.assertEqual(txn.statement, "Manually added")
+            self.assertFalse(txn.locked, "Transaction unexpectably locked")
+            self.assertFalse(txn.linked, "Transaction unexpectably linked")
+
+            category_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Uncategorized")
+                .scalar()
+            )
+            t_split = (
+                s.query(TransactionSplit)
+                .where(
+                    TransactionSplit.account_id == acct_id,
+                    TransactionSplit.amount == Decimal("1000"),
+                )
+                .one()
+            )
+            self.assertEqual(t_split.category_id, category_id)

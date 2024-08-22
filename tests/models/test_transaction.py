@@ -52,6 +52,20 @@ class TestTransaction(TestBase):
         self.assertEqual(txn.amount, d["amount"])
         self.assertEqual(txn.statement, d["statement"])
         self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
+        self.assertFalse(txn.linked, "Transaction is unexpectedly linked")
+
+        # Can link
+        txn.linked = True
+        s.commit()
+
+        # Can lock
+        txn.locked = True
+        s.commit()
+
+        # Cannot lock an unlinked transaction
+        txn.linked = False
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
 
 class TestTransactionSplit(TestBase):

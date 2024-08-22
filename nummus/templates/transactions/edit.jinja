@@ -18,44 +18,61 @@
     <datalist id="tags">
         {% for item in tags %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
     </datalist>
-    <form class="flex flex-col w-full px-6 grow"
-          id="form-txn"
-          onkeydown="return event.key != 'Enter';">
-        <table class="w-full">
+    <div class="flex flex-col w-full px-6 grow" id="form-txn">
+        <table class="w-full whitespace-nowrap">
             <tbody>
                 <tr>
-                    <td>Date</td>
-                    <td>
+                    <td class="pr-4">Date</td>
+                    <td class="pr-4">
                         <input class="w-full"
                                name="date"
                                type="date"
                                value="{{ parent["date"] }}"
                                autocomplete="off">
                     </td>
-                    <td class="w-8"></td>
-                    <td>Total Amount</td>
+                    <td class="pr-4"></td>
+                    <td class="pr-4">Total Amount</td>
                     <td>{{ parent["amount"] | money }}</td>
                 </tr>
                 <tr>
-                    <td>Account Name</td>
-                    <td>{{ parent["account"] }}</td>
-                    <td class="w-8"></td>
-                    <td>Transaction Locked</td>
+                    <td class="pr-4">Account Name</td>
+                    <td class="pr-4">{{ parent["account"] }}</td>
+                    <td class="pr-4"></td>
+                    <td class="pr-4">Transaction Locked</td>
                     <td>
-                        <label class="checkbox">
-                            <input type="checkbox"
-                                   name="locked"
-                                   {% if parent["locked"] %}checked{% endif %}
-                                   autocomplete="off">
-                            {% with class = "w-6 h-6" %}
+                        {% if parent["linked"] %}
+                            <label class="checkbox">
+                                <input type="checkbox"
+                                       name="locked"
+                                       {% if parent["locked"] %}checked{% endif %}
+                                       autocomplete="off">
+                                {% with class = "w-6 h-6" %}
+                                    {% include "svg/lock.svg" %}
+                                {% endwith %}
+                            </label>
+                        {% else %}
+                            {% with class = "w-6 h-6 fill-grey-600" %}
                                 {% include "svg/lock.svg" %}
                             {% endwith %}
-                        </label>
+                        {% endif %}
                     </td>
                 </tr>
                 <tr>
-                    <td>Statement Text</td>
-                    <td colspan="4">{{ parent["statement"] }}</td>
+                    <td class="pr-4 align-top">Statement Text</td>
+                    <td class="pr-4 whitespace-normal break-words max-w-[450px]">{{ parent["statement"] }}</td>
+                    <td class="pr-4 align-top"></td>
+                    <td class="pr-4 align-top">Transaction Linked</td>
+                    <td class="align-top">
+                        {% if parent["linked"] %}
+                            {% with class = "w-6 h-6 fill-green" %}
+                                {% include "svg/link.svg" %}
+                            {% endwith %}
+                        {% else %}
+                            {% with class = "w-6 h-6 fill-grey-600" %}
+                                {% include "svg/link.svg" %}
+                            {% endwith %}
+                        {% endif %}
+                    </td>
                 </tr>
             </tbody>
         </table>
@@ -65,11 +82,11 @@
             <h1 class="font-bold">Amount yet to be assigned</h1>
             {% include "transactions/edit-remaining.jinja" %}
         </div>
-    </form>
+    </div>
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        <button hx-put="{{ url_for("transactions.split", uri=parent["uri"]) }}"
+        <button hx-post="{{ url_for("transactions.split", uri=parent["uri"]) }}"
                 hx-target="#txn-splits"
                 class="button hover:blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -79,21 +96,17 @@
         </button>
         <button hx-delete="{{ url_for("transactions.split", uri=parent["uri"]) }}?all"
                 hx-target="#txn-splits"
-                hx-include="this"
+                hx-include="unset"
                 class="button hover:red">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/trash.svg" %}
             {% endwith %}
             Clear splits
         </button>
-        <button hx-get="{{ url_for("transaction_categories.overlay") }}"
-                hx-target="#overlay"
-                hx-swap="innerHTML"
-                class="button hover:blue">Edit categories</button>
         {% if similar_uri %}
             <button hx-get="{{ url_for("transactions.split", uri=parent["uri"], similar=similar_uri) }}"
                     hx-target="#txn-splits"
-                    hx-include="this"
+                    hx-include="unset"
                     class="button hover:yellow">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/copy.svg" %}
@@ -101,11 +114,24 @@
                 Copy similar
             </button>
         {% endif %}
+        {% if not parent["linked"] %}
+            <button hx-delete="{{ url_for("transactions.transaction", uri=parent["uri"]) }}"
+                    hx-target="#overlay-error"
+                    hx-swap="innerHTML"
+                    hx-include="unset"
+                    hx-confirm="Are you sure you wish to delete this unlinked transaction?"
+                    class="button hover:red">
+                {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+                    {% include "svg/trash.svg" %}
+                {% endwith %}
+                Delete
+            </button>
+        {% endif %}
         <button hx-get="{{ url_for("common.empty") }}"
                 class="button hover:green ml-auto"
                 hx-swap="innerHTML"
-                hx-include="this">Cancel</button>
-        <button hx-post="{{ url_for("transactions.edit", uri=parent["uri"]) }}"
+                hx-include="unset">Cancel</button>
+        <button hx-put="{{ url_for("transactions.transaction", uri=parent["uri"]) }}"
                 hx-target="#overlay-error"
                 hx-swap="innerHTML"
                 class="button bg-green">Save</button>

@@ -50,6 +50,7 @@ def page_all() -> str:
         title=title,
         txn_table=txn_table,
         endpoint="transactions.table",
+        endpoint_new="transactions.new",
     )
 
 
@@ -66,6 +67,7 @@ def table() -> flask.Response:
         txn_table=txn_table,
         include_oob=True,
         endpoint="transactions.table",
+        endpoint_new="transactions.new",
     )
     response = flask.make_response(html)
     args = dict(flask.request.args.lists())
@@ -114,6 +116,7 @@ def table_options(field: str) -> str:
             name=field,
             search_str=search_str,
             endpoint="transactions.table",
+            endpoint_new="transactions.new",
         )
 
 
@@ -284,6 +287,7 @@ def ctx_table(
         args = flask.request.args
         search_str = args.get("search", "").strip()
         locked = args.get("locked", type=utils.parse_bool)
+        linked = args.get("linked", type=utils.parse_bool)
         page_len = 25
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
@@ -361,6 +365,8 @@ def ctx_table(
 
         if locked is not None:
             query = query.where(TransactionSplit.locked == locked)
+        if linked is not None:
+            query = query.where(TransactionSplit.linked == linked)
 
         if search_str != "":
             query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
@@ -404,6 +410,8 @@ def ctx_table(
         ]
         if locked is not None:
             filters.append("Locked" if locked else "Unlocked")
+        if linked is not None:
+            filters.append("Linked" if linked else "Unlinked")
         if search_str:
             filters.append(f'"{search_str}"')
         n_filters = len(filters)
@@ -434,6 +442,7 @@ def ctx_table(
             "period": period,
             "search": search_str,
             "locked": locked,
+            "linked": linked,
             "options-account": options_account,
             "options-payee": options_payee,
             "options-category": options_category,
@@ -475,17 +484,104 @@ def ctx_split(
         "tag": t_split.tag,
         "amount": t_split.amount,
         "locked": t_split.locked,
+        "linked": t_split.linked,
         "asset_name": assets[t_split.asset_id] if t_split.asset_id else None,
         "asset_price": abs(t_split.amount / qty) if qty else None,
         "asset_quantity": qty,
     }
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/transactions/t/<uri>/edit.
+def new(acct_uri: str | None = None) -> str | flask.Response:
+    """GET & POST /h/transactions/new.
+
+    Args:
+        acct_uri: Account uri to make transaction for, None for blank
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.get_session() as s:
+        accounts = Account.map_name(s)
+        if flask.request.method == "GET":
+
+            ctx_parent = {
+                "uri": None,
+                "account": (
+                    None if acct_uri is None else accounts[Account.uri_to_id(acct_uri)]
+                ),
+                "date": datetime.date.today(),
+                "amount": None,
+                "statement": "",
+            }
+
+            return flask.render_template(
+                "transactions/new.jinja",
+                parent=ctx_parent,
+                accounts=accounts.values(),
+            )
+
+        form = flask.request.form
+        date = form.get("date", type=datetime.date.fromisoformat)
+        if date is None:
+            return common.error("Transaction date must not be empty")
+        amount = form.get("amount", type=utils.parse_real)
+        if amount is None:
+            return common.error("Transaction amount must not be empty")
+        account = form.get("account")
+        if account is None:
+            return common.error("Transaction account must not be empty")
+        statement = form.get("statement")
+
+        # Reverse accounts for LUT
+        accounts_rev = {v: k for k, v in accounts.items()}
+
+        category_id: int | None = (
+            s.query(TransactionCategory.id_)
+            .where(TransactionCategory.name == "Uncategorized")
+            .scalar()
+        )
+        if category_id is None:  # pragma: no cover
+            msg = "Category Uncategorized not found"
+            raise exc.ProtectedObjectNotFoundError(msg)
+
+        try:
+            txn = Transaction(
+                account_id=accounts_rev[account],
+                date_ord=date.toordinal(),
+                amount=amount,
+                statement=statement or "Manually added",
+                locked=False,
+                linked=False,
+            )
+            t_split = TransactionSplit(
+                parent=txn,
+                amount=amount,
+                category_id=category_id,
+            )
+            s.add_all((txn, t_split))
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+        uri = txn.uri
+
+        edit_overlay = transaction(uri, force_get=True)
+        if not isinstance(edit_overlay, str):  # pragma: no cover
+            msg = "Edit overlay did not return a string"
+            raise TypeError(msg)
+        # Adding transactions update account cause the balance changes
+        return common.overlay_swap(edit_overlay, event="update-account")
+
+
+def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/transactions/t/<uri>.
 
     Args:
         uri: URI of Transaction or TransactionSplit
+        force_get: True will force a GET request
 
     Returns:
         string HTML response
@@ -502,13 +598,14 @@ def edit(uri: str) -> str | flask.Response:
         categories = TransactionCategory.map_name(s)
         assets = Asset.map_name(s)
 
-        if flask.request.method == "GET":
+        if force_get or flask.request.method == "GET":
             accounts = Account.map_name(s)
 
             ctx_parent = {
                 "uri": parent.uri,
                 "account": accounts[parent.account_id],
                 "locked": parent.locked,
+                "linked": parent.linked,
                 "date": datetime.date.fromordinal(parent.date_ord),
                 "amount": parent.amount,
                 "statement": parent.statement,
@@ -549,6 +646,16 @@ def edit(uri: str) -> str | flask.Response:
                 tags=tags,
                 similar_uri=similar_uri,
             )
+        if flask.request.method == "DELETE":
+            if parent.linked:
+                return common.error("Cannot delete linked transaction")
+            s.query(TransactionSplit).where(
+                TransactionSplit.parent_id == parent.id_,
+            ).delete()
+            s.delete(parent)
+            s.commit()
+            # Adding transactions update account cause the balance changes
+            return common.overlay_swap(event="update-account")
 
         try:
             form = flask.request.form
@@ -612,7 +719,7 @@ def edit(uri: str) -> str | flask.Response:
 
 
 def split(uri: str) -> str:
-    """GET, PUT & DELETE /h/transactions/<uri>/split.
+    """GET, POST & DELETE /h/transactions/<uri>/split.
 
     Args:
         uri: Transaction URI
@@ -634,7 +741,7 @@ def split(uri: str) -> str:
     tag: list[str | None] = list(form.getlist("tag"))
     amount: list[Decimal | None] = list(form.getlist("amount", utils.parse_real))
 
-    if flask.request.method == "PUT":
+    if flask.request.method == "POST":
         payee.append(None)
         description.append(None)
         category.append("Uncategorized")
@@ -749,8 +856,9 @@ def remaining(uri: str) -> str:
 ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
+    "/h/transactions/new": (new, ["GET", "POST"]),
     "/h/transactions/options/<path:field>": (table_options, ["GET"]),
-    "/h/transactions/t/<path:uri>/edit": (edit, ["GET", "POST"]),
-    "/h/transactions/t/<path:uri>/split": (split, ["GET", "PUT", "DELETE"]),
+    "/h/transactions/t/<path:uri>/split": (split, ["GET", "POST", "DELETE"]),
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
+    "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
 }

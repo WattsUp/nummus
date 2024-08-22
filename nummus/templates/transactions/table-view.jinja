@@ -31,11 +31,16 @@
                 {% include "svg/lock.svg" %}
             {% endif %}
         </div>
+        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
+            {% if txn["linked"] %}
+                {% include "svg/link.svg" %}
+            {% endif %}
+        </div>
     </div>
 {% else %}
     <div id="txn-{{ txn["uri"] }}"
          class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 cursor-pointer"
-         hx-get="{{ url_for("transactions.edit", uri=txn["uri"]) }}"
+         hx-get="{{ url_for("transactions.transaction", uri=txn["uri"]) }}"
          hx-target="#overlay"
          hx-swap="innerHTML"
          hx-include="this">
@@ -56,6 +61,11 @@
         <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
             {% if txn["locked"] %}
                 {% include "svg/lock.svg" %}
+            {% endif %}
+        </div>
+        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
+            {% if txn["linked"] %}
+                {% include "svg/link.svg" %}
             {% endif %}
         </div>
     </div>

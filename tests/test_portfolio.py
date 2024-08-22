@@ -1001,6 +1001,8 @@ class TestPortfolio(TestBase):
 
             txn_1.locked = True
             txn_2.locked = True
+            txn_1.linked = True
+            txn_2.linked = True
 
             # txn_0 and txn_1 have same statement and same account
             result = p.find_similar_transaction(txn_0, do_commit=False)
@@ -1027,11 +1029,18 @@ class TestPortfolio(TestBase):
             result = p.find_similar_transaction(txn_0, do_commit=False)
             self.assertIsNone(result)
 
-            # No fuzzy matches at all
-            txn_0.amount = Decimal(8)
+            # No fuzzy matches at all and no amounts close
+            txn_0.amount = Decimal(1000)
             s.commit()
             result = p.find_similar_transaction(txn_0, do_commit=False)
             self.assertIsNone(result)
+
+            # No fuzzy matches at all but amount if close enough
+            # txn_2 is closer but txn_1 is same account
+            txn_0.amount = Decimal(8)
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_1.id_)
 
             # Make fuzzy close, txn_1 is same account so more points
             txn_1.statement = "Gas station 5678"

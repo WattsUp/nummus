@@ -56,7 +56,7 @@ extras_require["dev"] = extras_require["test"] + [
     "viztracer",
     "pre-commit",
     "djlint",
-    "pyright>=1.1.374",
+    "pyright>=1.1.377",
 ]
 
 setuptools.setup(

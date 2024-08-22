@@ -22,8 +22,6 @@ class OverdrawnAccounts(Base):
 
     @override
     def test(self) -> None:
-        today = datetime.date.today()
-        today_ord = today.toordinal()
         with self._p.get_session() as s:
             # Get a list of accounts subject to overdrawn so not credit and loans
             categories_exclude = [
@@ -50,7 +48,16 @@ class OverdrawnAccounts(Base):
                 # No asset transactions at all
                 self._commit_issues()
                 return
-            n = today_ord - start_ord + 1
+            end_ord = (
+                s.query(sqlalchemy.func.max(TransactionSplit.date_ord))
+                .where(TransactionSplit.account_id.in_(acct_ids))
+                .scalar()
+            )
+            if end_ord is None:  # pragma: no cover
+                # No asset transactions at all
+                self._commit_issues()
+                return
+            n = end_ord - start_ord + 1
 
             for acct_id, name in accounts.items():
                 # Get cash holdings across all time

@@ -44,6 +44,8 @@ class TransactionSplit(Base):
         date_ord: Date ordinal on which Transaction occurred
         locked: True only allows manually editing, False allows automatic changes
             (namely auto labeling field based on similar Transactions)
+        linked: True when transaction has been imported from a bank source, False
+            indicates transaction was manually created
         account: Account that owns this Transaction
         asset: Asset exchanged for cash, primarily for instrument transactions
         asset_quantity: Number of units of Asset exchanged, Positive indicates
@@ -68,6 +70,7 @@ class TransactionSplit(Base):
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date_ord: ORMInt
     locked: ORMBool
+    linked: ORMBool
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     asset_id: ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -86,7 +89,7 @@ class TransactionSplit(Base):
 
     @override
     def __setattr__(self, name: str, value: object) -> None:
-        if name in ["parent_id", "date", "locked", "account_id"]:
+        if name in ["parent_id", "date", "locked", "linked", "account_id"]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
@@ -144,6 +147,7 @@ class TransactionSplit(Base):
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("locked", parent.locked)
+        super().__setattr__("linked", parent.linked)
         super().__setattr__("account_id", parent.account_id)
 
 
@@ -181,6 +185,8 @@ class Transaction(Base):
         statement: Text appearing on Account statement
         locked: True only allows manually editing, False allows automatic changes
             (namely auto labeling field based on similar Transactions)
+        linked: True when transaction has been imported from a bank source, False
+            indicates transaction was manually created
         splits: List of TransactionSplits
     """
 
@@ -192,10 +198,18 @@ class Transaction(Base):
     amount: ORMReal = orm.mapped_column(Decimal6)
     statement: ORMStr
     locked: ORMBool = orm.mapped_column(default=False)
+    linked: ORMBool = orm.mapped_column(default=False)
 
     similar_txn_id: ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
 
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
+
+    __table_args__ = (
+        sqlalchemy.CheckConstraint(
+            "linked or not locked",
+            "Transaction cannot be locked until linked",
+        ),
+    )
 
     @orm.validates("statement")
     @override

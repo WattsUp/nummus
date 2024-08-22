@@ -26,12 +26,12 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "90-days"
+DEFAULT_PERIOD = "this-month"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/accounts/a/<uri>/edit.
+def account(uri: str) -> str | flask.Response:
+    """GET & POST /h/accounts/a/<uri>.
 
     Args:
         uri: Account URI
@@ -360,6 +360,7 @@ def page(uri: str) -> str:
             txn_table=txn_table,
             assets=ctx_assets(s, acct),
             endpoint="accounts.txns",
+            endpoint_new="accounts.new_txn",
             url_args={"uri": uri},
             no_account_column=True,
         )
@@ -401,6 +402,7 @@ def txns(uri: str) -> flask.Response:
             txn_table=txn_table,
             include_oob=True,
             endpoint="accounts.txns",
+            endpoint_new="accounts.new_txn",
             url_args={"uri": uri},
             no_account_column=True,
         )
@@ -482,14 +484,28 @@ def txns_options(uri: str, field: str) -> str:
             name=field,
             search_str=search_str,
             endpoint="accounts.txns",
+            endpoint_new="accounts.new_txn",
             url_args={"uri": uri},
             no_account_column=True,
         )
+
+
+def new_txn(uri: str) -> str | flask.Response:
+    """GET & POST /h/accounts/a/<uri>/new-txn.
+
+    Args:
+        uri: Account URI
+
+    Returns:
+        HTML response
+    """
+    return transactions.new(uri)
 
 
 ROUTES: Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
-    "/h/accounts/a/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
+    "/h/accounts/a/<path:uri>/new-txn": (new_txn, ["GET", "POST"]),
 }

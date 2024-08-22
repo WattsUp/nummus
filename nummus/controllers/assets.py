@@ -36,14 +36,14 @@ def page(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
-        val_table, title = ctx_valuations(asset)
-        title = f"Asset {asset.name}"
+        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        val_table, title = ctx_valuations(a)
+        title = f"Asset {a.name}"
         return common.page(
             "assets/index-content.jinja",
             title=title,
-            asset=ctx_asset(asset),
-            chart=ctx_chart(asset),
+            asset=ctx_asset(a),
+            chart=ctx_chart(a),
             val_table=val_table,
             url_args={"uri": uri},
         )
@@ -61,7 +61,6 @@ def page_transactions() -> str:
         title=title,
         txn_table=txn_table,
         endpoint="assets.txns",
-        no_recent=True,
         asset_transactions=True,
     )
 
@@ -79,7 +78,6 @@ def txns() -> flask.Response:
         txn_table=txn_table,
         include_oob=True,
         endpoint="assets.txns",
-        no_recent=True,
         asset_transactions=True,
     )
     response = flask.make_response(html)
@@ -138,8 +136,8 @@ def txns_options(field: str) -> str:
         )
 
 
-def edit(uri: str) -> str | flask.Response:
-    """GET & POST /h/assets/a/<uri>/edit.
+def asset(uri: str) -> str | flask.Response:
+    """GET & POST /h/assets/a/<uri>.
 
     Args:
         uri: Asset URI
@@ -151,12 +149,12 @@ def edit(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
 
         if flask.request.method == "GET":
             return flask.render_template(
                 "assets/edit.jinja",
-                asset=ctx_asset(asset),
+                asset=ctx_asset(a),
             )
 
         form = flask.request.form
@@ -171,10 +169,10 @@ def edit(uri: str) -> str | flask.Response:
 
         try:
             # Make the changes
-            asset.name = name
-            asset.description = description
-            asset.ticker = ticker
-            asset.category = category
+            a.name = name
+            a.description = description
+            a.ticker = ticker
+            a.category = category
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -182,8 +180,8 @@ def edit(uri: str) -> str | flask.Response:
         return common.overlay_swap(event="update-asset")
 
 
-def edit_valuation(uri: str) -> str | flask.Response:
-    """GET & POST /h/assets/v/<uri>/edit.
+def valuation(uri: str) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/assets/v/<uri>.
 
     Args:
         uri: AssetValuation URI
@@ -202,6 +200,10 @@ def edit_valuation(uri: str) -> str | flask.Response:
                 "assets/valuations-edit.jinja",
                 valuation=ctx_valuation(v),
             )
+        if flask.request.method == "DELETE":
+            s.delete(v)
+            s.commit()
+            return common.overlay_swap(event="update-valuation")
 
         form = flask.request.form
         date = form.get("date", type=datetime.date.fromisoformat)
@@ -225,25 +227,6 @@ def edit_valuation(uri: str) -> str | flask.Response:
                 )
             return common.error(e)
 
-        return common.overlay_swap(event="update-valuation")
-
-
-def delete_valuation(uri: str) -> str | flask.Response:
-    """POST /h/assets/v/<uri>/edit.
-
-    Args:
-        uri: AssetValuation URI
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.get_session() as s:
-        v: AssetValuation = web_utils.find(s, AssetValuation, uri)  # type: ignore[attr-defined]
-        s.delete(v)
-        s.commit()
         return common.overlay_swap(event="update-valuation")
 
 
@@ -278,9 +261,9 @@ def new_valuation(uri: str) -> str | flask.Response:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.get_session() as s:
-            asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+            a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
             v = AssetValuation(
-                asset_id=asset.id_,
+                asset_id=a.id_,
                 date_ord=date.toordinal(),
                 value=value,
             )
@@ -298,21 +281,21 @@ def new_valuation(uri: str) -> str | flask.Response:
     return common.overlay_swap(event="update-valuation")
 
 
-def ctx_asset(asset: Asset) -> dict[str, object]:
+def ctx_asset(a: Asset) -> dict[str, object]:
     """Get the context to build the asset details.
 
     Args:
-        asset: Asset to generate context for
+        a: Asset to generate context for
 
     Returns:
         Dictionary HTML context
     """
-    s = orm.object_session(asset)
+    s = orm.object_session(a)
     if s is None:
         raise exc.UnboundExecutionError
     valuation = (
         s.query(AssetValuation)
-        .where(AssetValuation.asset_id == asset.id_)
+        .where(AssetValuation.asset_id == a.id_)
         .order_by(AssetValuation.date_ord.desc())
         .first()
     )
@@ -324,14 +307,14 @@ def ctx_asset(asset: Asset) -> dict[str, object]:
         current_date = datetime.date.fromordinal(valuation.date_ord)
 
     return {
-        "uri": asset.uri,
-        "name": asset.name,
-        "description": asset.description,
-        "category": asset.category,
+        "uri": a.uri,
+        "name": a.name,
+        "description": a.description,
+        "category": a.category,
         "category_type": AssetCategory,
         "value": current_value,
         "value_date": current_date,
-        "ticker": asset.ticker,
+        "ticker": a.ticker,
     }
 
 
@@ -348,7 +331,7 @@ def valuations(uri: str) -> flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        asset: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)
@@ -360,14 +343,14 @@ def valuations(uri: str) -> flask.Response:
         if start is None:
             start_ord = (
                 s.query(AssetValuation.date_ord)
-                .where(AssetValuation.asset_id == asset.id_)
+                .where(AssetValuation.asset_id == a.id_)
                 .order_by(AssetValuation.date_ord)
                 .first()
             )
             start = (
                 end if start_ord is None else datetime.date.fromordinal(start_ord[0])
             )
-        val_table, title = ctx_valuations(asset)
+        val_table, title = ctx_valuations(a)
         html = f"<title>{title}</title>\n" + flask.render_template(
             "assets/valuations.jinja",
             val_table=val_table,
@@ -385,7 +368,7 @@ def valuations(uri: str) -> flask.Response:
             html += flask.render_template(
                 "assets/chart-data.jinja",
                 oob=True,
-                chart=ctx_chart(asset),
+                chart=ctx_chart(a),
                 url_args={"uri": uri},
             )
         response = flask.make_response(html)
@@ -402,11 +385,11 @@ def valuations(uri: str) -> flask.Response:
         return response
 
 
-def ctx_chart(asset: Asset) -> dict[str, object]:
+def ctx_chart(a: Asset) -> dict[str, object]:
     """Get the context to build the asset chart.
 
     Args:
-        asset: Asset to generate context for
+        a: Asset to generate context for
 
     Returns:
         Dictionary HTML context
@@ -420,12 +403,12 @@ def ctx_chart(asset: Asset) -> dict[str, object]:
         args.get("end", type=datetime.date.fromisoformat),
     )
     if start is None:
-        s = orm.object_session(asset)
+        s = orm.object_session(a)
         if s is None:
             raise exc.UnboundExecutionError
         start_ord = (
             s.query(AssetValuation.date_ord)
-            .where(AssetValuation.asset_id == asset.id_)
+            .where(AssetValuation.asset_id == a.id_)
             .order_by(AssetValuation.date_ord)
             .first()
         )
@@ -438,7 +421,7 @@ def ctx_chart(asset: Asset) -> dict[str, object]:
     end_ord = end.toordinal()
     n = end_ord - start_ord + 1
 
-    values = asset.get_value(start_ord, end_ord)
+    values = a.get_value(start_ord, end_ord)
 
     labels: list[str] = []
     values_min: list[Decimal] | None = None
@@ -477,12 +460,12 @@ def ctx_chart(asset: Asset) -> dict[str, object]:
 
 
 def ctx_valuations(
-    asset: Asset,
+    a: Asset,
 ) -> tuple[dict[str, object], str]:
     """Get the context to build the valuations table.
 
     Args:
-        asset: Asset to get valuations for
+        a: Asset to get valuations for
 
     Returns:
         Dictionary HTML context, title of page
@@ -503,7 +486,7 @@ def ctx_valuations(
         if start is None:
             start_ord = (
                 s.query(AssetValuation.date_ord)
-                .where(AssetValuation.asset_id == asset.id_)
+                .where(AssetValuation.asset_id == a.id_)
                 .order_by(AssetValuation.date_ord)
                 .first()
             )
@@ -516,7 +499,7 @@ def ctx_valuations(
         query = (
             s.query(AssetValuation)
             .where(
-                AssetValuation.asset_id == asset.id_,
+                AssetValuation.asset_id == a.id_,
                 AssetValuation.date_ord <= end_ord,
                 AssetValuation.date_ord >= start_ord,
             )
@@ -539,11 +522,11 @@ def ctx_valuations(
         else:
             title = period.replace("-", " ").title()
 
-        title = f"Asset {asset.name} {title} | nummus"
+        title = f"Asset {a.name} {title} | nummus"
 
         return {
-            "uri": asset.uri,
-            "editable": asset.ticker is None,
+            "uri": a.uri,
+            "editable": a.ticker is None,
             "valuations": valuations,
             "count": count,
             "offset": offset,
@@ -583,9 +566,8 @@ ROUTES: Routes = {
     "/assets/transactions": (page_transactions, ["GET"]),
     "/h/assets/txns": (txns, ["GET"]),
     "/h/assets/txns-options/<path:field>": (txns_options, ["GET"]),
-    "/h/assets/a/<path:uri>/edit": (edit, ["GET", "POST"]),
+    "/h/assets/a/<path:uri>": (asset, ["GET", "PUT"]),
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
-    "/h/assets/v/<path:uri>/edit": (edit_valuation, ["GET", "POST"]),
-    "/h/assets/v/<path:uri>/delete": (delete_valuation, ["GET", "POST"]),
+    "/h/assets/v/<path:uri>": (valuation, ["GET", "PUT", "DELETE"]),
 }

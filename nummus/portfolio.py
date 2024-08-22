@@ -363,11 +363,15 @@ class Portfolio:
                     if not statement:
                         statement = f"Asset Transaction {asset_name}"
 
+                # TODO (WattsUp): Link with unlink if possible
+                # Maybe make into a command?
+
                 txn = Transaction(
                     account_id=acct_id,
                     amount=d["amount"],
                     date_ord=d["date"].toordinal(),
                     statement=statement,
+                    linked=True,
                 )
                 t_split = TransactionSplit(
                     amount=d["amount"],
@@ -618,6 +622,7 @@ class Portfolio:
                 Transaction.amount >= amount_min,
                 Transaction.amount <= amount_max,
             )
+            .order_by(sort_closest_amount)
         )
         statements: dict[int, str] = {
             t_id: re.sub(r"[0-9]+", "", statement).lower()
@@ -632,8 +637,12 @@ class Portfolio:
             score_cutoff=utils.SEARCH_THRESHOLD,
         )
         if len(extracted) == 0:
-            return None
-        matches = {t_id: score for _, score, t_id in extracted}
+            # There are transactions with similar amounts but not close statement
+            # Return the closest in amount and account
+            # Aka proceed with all matches
+            matches = {t_id: 50 for t_id in statements}
+        else:
+            matches = {t_id: score for _, score, t_id in extracted}
 
         # Add a bonuse points for closeness in price and same account
         query = (

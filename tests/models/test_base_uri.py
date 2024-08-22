@@ -70,7 +70,7 @@ class TestBaseURI(TestBase):
         total = n * 8
         self.assertEqual(sum(counts), total)
 
-        std = np.std(counts) / total
+        std = float(np.std(counts) / total)
         self.assertLessEqual(std, 0.05)
 
     def test_table_ids(self) -> None:

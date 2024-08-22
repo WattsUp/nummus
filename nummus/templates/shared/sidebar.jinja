@@ -55,7 +55,7 @@
                         {% if loop.index != 1 %}<div class="mx-3 h-px bg-grey-200"></div>{% endif %}
                         <div class="block whitespace-nowrap relative p-px border-2 {{ "border-red" if acct["closed"] else "border-transparent" }}">
                             <div class="w-[18px] h-full absolute group/navitem cursor-pointer"
-                                 hx-get="{{ url_for("accounts.edit", uri=acct["uri"]) }}"
+                                 hx-get="{{ url_for("accounts.account", uri=acct["uri"]) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
                                 {% with class="fill-transparent transition-colors group-hover/navitem:fill-black" %}
