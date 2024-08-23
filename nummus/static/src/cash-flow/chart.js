@@ -225,7 +225,10 @@ const cashFlowChart = {
             row.appendChild(square);
 
             const name = document.createElement('div');
-            name.innerHTML = category.name;
+            if (category.emoji)
+                name.innerHTML = `${category.emoji} ${category.name}`;
+            else
+                name.innerHTML = category.name;
             name.classList.add('grow');
             name.classList.add('truncate');
             row.appendChild(name);
