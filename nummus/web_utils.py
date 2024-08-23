@@ -7,6 +7,8 @@ import mimetypes
 import re
 from typing import TYPE_CHECKING
 
+import emoji as emoji_mod
+
 from nummus import exceptions as exc
 from nummus import utils
 
@@ -150,3 +152,16 @@ def validate_image_upload(req: flask.Request) -> str:
         raise exc.http.RequestEntityTooLarge(msg)
 
     return suffix
+
+
+def strip_emojis(text: str) -> str:
+    """Remove all emojis from string.
+
+    Args:
+        text: String to clean
+
+    Returns:
+        String without any emojis
+    """
+    tokens = list(emoji_mod.analyze(text, non_emoji=True))
+    return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()

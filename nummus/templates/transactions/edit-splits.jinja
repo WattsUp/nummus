@@ -17,7 +17,7 @@
                     autocomplete="off">
                 {% for item in categories %}
                     <option value="{{ item }}"
-                            {% if item == txn["category"] %}selected{% endif %}>{{ item }}</option>
+                            {% if item == txn["category"] %}selected{% endif %}>{{ item | no_emojis }}</option>
                 {% endfor %}
             </select>
             <input name="tag"

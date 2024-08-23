@@ -24,6 +24,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
+from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -33,6 +34,7 @@ class _OptionContex(TypedDict):
     """Type definition for option context."""
 
     name: str
+    name_clean: str
     checked: bool
     hidden: bool
     score: int
@@ -152,20 +154,21 @@ def ctx_options(
         if id_ is None:
             continue
         name = id_mapping[id_] if id_mapping else id_
+        name_clean = web_utils.strip_emojis(name).lower()
         item: _OptionContex = {
             "name": name,
+            "name_clean": name_clean,
             "checked": name in selected,
             "hidden": False,
             "score": 0,
         }
         options_.append(item)
     if search_str not in [None, ""]:
-        names = {i: item["name"] for i, item in enumerate(options_)}
+        names = {i: item["name_clean"] for i, item in enumerate(options_)}
         extracted = process.extract(
             search_str,
             names,
             limit=None,
-            processor=lambda s: s.lower(),
         )
         for _, score, i in extracted:
             options_[i]["score"] = int(score)
@@ -174,6 +177,7 @@ def ctx_options(
         name = "[blank]"
         item = {
             "name": name,
+            "name_clean": name,
             "checked": name in selected,
             "hidden": search_str not in [None, ""],
             "score": 100,
@@ -182,7 +186,7 @@ def ctx_options(
 
     return sorted(
         options_,
-        key=lambda item: (-item["score"], not item["checked"], item["name"].lower()),
+        key=lambda item: (-item["score"], not item["checked"], item["name_clean"]),
     )
 
 
@@ -293,7 +297,21 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name(s)
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji,
+            )
+            .order_by(TransactionCategory.name)
+        )
+        if not asset_transactions:
+            query = query.where(TransactionCategory.name != "Securities Traded")
+        categories: dict[int, str] = {
+            t_cat_id: (f"{emoji} {name}" if emoji else name)
+            for t_cat_id, name, emoji in query.yield_per(YIELD_PER)
+        }
         assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
@@ -596,6 +614,20 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
         categories = TransactionCategory.map_name(s)
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji,
+            )
+            .where(TransactionCategory.name != "Securities Traded")
+            .order_by(TransactionCategory.name)
+        )
+        categories: dict[int, str] = {
+            t_cat_id: (f"{emoji} {name}" if emoji else name)
+            for t_cat_id, name, emoji in query.yield_per(YIELD_PER)
+        }
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":

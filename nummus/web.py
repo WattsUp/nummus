@@ -18,7 +18,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from nummus import controllers, portfolio, utils, version
+from nummus import controllers, portfolio, utils, version, web_utils
 
 if TYPE_CHECKING:
     import io
@@ -201,6 +201,7 @@ class Server:
         self._app.jinja_env.filters["pnl_color"] = lambda x: (
             "black" if x is None or x == 0 else ("green-600" if x > 0 else "red-600")
         )
+        self._app.jinja_env.filters["no_emojis"] = web_utils.strip_emojis
 
         if not p.ssl_cert_path.exists():
             print(
