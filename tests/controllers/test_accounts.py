@@ -390,7 +390,7 @@ class TestAccount(WebTestBase):
         d["payee_1"]
         d["t_split_0"]
         d["t_split_1"]
-        cat_0 = d["cat_0"]
+        cat_0_emoji = d["cat_0_emoji"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
@@ -405,11 +405,11 @@ class TestAccount(WebTestBase):
         )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
-        i_0 = result.find(cat_0)
+        i_0 = result.find(cat_0_emoji)
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
@@ -417,10 +417,10 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri, "field": "category", "category": cat_1}),
         )
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
-        i_0 = result.find(cat_0)
+        i_0 = result.find(cat_0_emoji)
         i_1 = result.find(cat_1)
         self.assertLess(i_1, i_0)
 

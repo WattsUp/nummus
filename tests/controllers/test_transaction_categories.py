@@ -19,7 +19,11 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
 
         with p.get_session() as s:
-            n = s.query(TransactionCategory).count()
+            n = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name != "Securities Traded")
+                .count()
+            )
 
         endpoint = "transaction_categories.overlay"
         result, _ = self.web_get(endpoint)
@@ -73,7 +77,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn("Delete", result)
 
         name = self.random_string()
-        form = {"name": name, "group": "other"}
+        form = {"name": name + "😀", "group": "other"}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -86,6 +90,7 @@ class TestTransactionCategory(WebTestBase):
             if t_cat is None:
                 self.fail("TransactionCategory is missing")
             self.assertEqual(t_cat.name, name)
+            self.assertEqual(t_cat.emoji, "😀")
             self.assertEqual(t_cat.group, TransactionCategoryGroup.OTHER)
 
         e_str = "Transaction category name must be at least 2 characters long"
@@ -159,8 +164,23 @@ class TestTransactionCategory(WebTestBase):
             t_cat = query.first()
             if t_cat is None:
                 self.fail("TransactionCategory is missing")
+            t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
         url = endpoint, {"uri": t_cat_uri}
-        form = {"name": "abc", "group": "other"}
-        self.web_put(url, rc=HTTP_CODE_FORBIDDEN, data=form)
+        form = {"name": "😀", "group": "other"}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn("Edit transaction categories", result)
+
+        # Only can edit emoji for a locked category
+        with p.get_session() as s:
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id)
+                .first()
+            )
+            if t_cat is None:
+                self.fail("TransactionCategory is missing")
+            self.assertNotEqual(t_cat.name, "abc")
+            self.assertEqual(t_cat.emoji, "😀")
+            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.OTHER)

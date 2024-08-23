@@ -178,3 +178,38 @@ class TransactionCategory(Base):
                 d[name] = cat
         s.commit()
         return d
+
+    @classmethod
+    def map_name_emoji(
+        cls,
+        s: orm.Session,
+        *,
+        no_securities_traded: bool = True,
+    ) -> dict[int, str]:
+        """Mapping between id and names with emojis.
+
+        Args:
+            s: SQL session to use
+            no_securities_traded: True will not include "Securities Traded"
+
+        Returns:
+            Dictionary {id: name with emoji}
+
+        Raises:
+            KeyError if model does not have name property
+        """
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji,
+            )
+            .order_by(TransactionCategory.name)
+        )
+        if no_securities_traded:
+            query = query.where(TransactionCategory.name != "Securities Traded")
+        return {
+            t_cat_id: (f"{emoji} {name}" if emoji else name)
+            for t_cat_id, name, emoji in query.all()
+        }

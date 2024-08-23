@@ -365,6 +365,7 @@ class Portfolio:
 
                 # TODO (WattsUp): Link with unlink if possible
                 # Maybe make into a command?
+                # TODO (WattsUp): Prevent creating future transactions
 
                 txn = Transaction(
                     account_id=acct_id,

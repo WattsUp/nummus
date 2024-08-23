@@ -24,7 +24,6 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
-from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -103,7 +102,7 @@ def table_options(field: str) -> str:
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
+            id_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -297,21 +296,10 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.name,
-                TransactionCategory.emoji,
-            )
-            .order_by(TransactionCategory.name)
+        categories = TransactionCategory.map_name_emoji(
+            s,
+            no_securities_traded=not asset_transactions,
         )
-        if not asset_transactions:
-            query = query.where(TransactionCategory.name != "Securities Traded")
-        categories: dict[int, str] = {
-            t_cat_id: (f"{emoji} {name}" if emoji else name)
-            for t_cat_id, name, emoji in query.yield_per(YIELD_PER)
-        }
         assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
@@ -545,6 +533,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
             return common.error("Transaction date must not be empty")
+        # TODO (WattsUp): Prevent creating future transactions
         amount = form.get("amount", type=utils.parse_real)
         if amount is None:
             return common.error("Transaction amount must not be empty")
@@ -613,21 +602,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
-        categories = TransactionCategory.map_name(s)
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.name,
-                TransactionCategory.emoji,
-            )
-            .where(TransactionCategory.name != "Securities Traded")
-            .order_by(TransactionCategory.name)
-        )
-        categories: dict[int, str] = {
-            t_cat_id: (f"{emoji} {name}" if emoji else name)
-            for t_cat_id, name, emoji in query.yield_per(YIELD_PER)
-        }
+        categories = TransactionCategory.map_name_emoji(s)
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":

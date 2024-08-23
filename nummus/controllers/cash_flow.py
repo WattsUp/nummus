@@ -353,7 +353,7 @@ def txns_options(field: str) -> str:
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
+            id_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -371,6 +371,7 @@ def txns_options(field: str) -> str:
                 search_str=search_str,
             ),
             name=field,
+            search_str=search_str,
             endpoint="cash_flow.txns",
         )
 
