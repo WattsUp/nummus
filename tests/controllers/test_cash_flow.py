@@ -37,7 +37,7 @@ class TestCashFlow(WebTestBase):
 
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
-        cat_0 = d["cat_0"]
+        cat_0_emoji = d["cat_0_emoji"]
 
         endpoint = "cash_flow.txns"
         result, _ = self.web_get(
@@ -59,7 +59,7 @@ class TestCashFlow(WebTestBase):
         dates_s = m[1] if m else ""
         self.assertIn(today.isoformat(), dates_s)
         self.assertIn('"date_mode": "days"', result)
-        self.assertRegex(result, rf"<div .*>{cat_0}</div>")
+        self.assertRegex(result, rf"<div .*>{cat_0_emoji}</div>")
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
@@ -211,7 +211,7 @@ class TestCashFlow(WebTestBase):
         d["payee_1"]
         d["t_split_0"]
         d["t_split_1"]
-        cat_0 = d["cat_0"]
+        cat_0_emoji = d["cat_0_emoji"]
         tag_1 = d["tag_1"]
 
         endpoint = "cash_flow.txns_options"
@@ -227,15 +227,15 @@ class TestCashFlow(WebTestBase):
         )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         self.assertNotIn("Uncategorized", result)
 
         result, _ = self.web_get(
-            (endpoint, {"field": "category", "category": cat_0}),
+            (endpoint, {"field": "category", "category": cat_0_emoji}),
         )
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+checked[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+checked[ \n]+hx-get')
 
         result, _ = self.web_get(
             (endpoint, {"field": "tag"}),

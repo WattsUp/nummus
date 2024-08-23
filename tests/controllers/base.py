@@ -141,6 +141,10 @@ class WebTestBase(TestBase):
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
+            s.query(TransactionCategory).where(
+                TransactionCategory.name == cat_0,
+            ).update({"emoji": "😀"})
+
             txn = Transaction(
                 account_id=acct.id_,
                 date_ord=today_ord,
@@ -201,6 +205,7 @@ class WebTestBase(TestBase):
             "payee_0": payee_0,
             "payee_1": payee_1,
             "cat_0": cat_0,
+            "cat_0_emoji": f"😀 {cat_0}",
             "cat_1": cat_1,
             "tag_1": tag_1,
             "a_0": a_name_0,

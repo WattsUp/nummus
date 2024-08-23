@@ -463,7 +463,7 @@ def txns_options(uri: str, field: str) -> str:
             msg = "Cannot get account options for account transactions"
             raise exc.http.BadRequest(msg)
         if field == "category":
-            id_mapping = TransactionCategory.map_name(s)
+            id_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)

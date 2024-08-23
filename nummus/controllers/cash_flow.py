@@ -83,20 +83,22 @@ def ctx_chart() -> dict[str, object]:
         query = query.with_entities(
             TransactionCategory.id_,
             TransactionCategory.name,
+            TransactionCategory.emoji,
             TransactionCategory.group,
         )
-        categories_income: dict[int, str] = {}
-        categories_expense: dict[int, str] = {}
-        for cat_id, name, group in query.all():
+        categories_income: dict[int, tuple[str, str]] = {}
+        categories_expense: dict[int, tuple[str, str]] = {}
+        for cat_id, name, emoji, group in query.all():
             if group == TransactionCategoryGroup.INCOME:
-                categories_income[cat_id] = name
+                categories_income[cat_id] = name, emoji
             elif group == TransactionCategoryGroup.EXPENSE:
-                categories_expense[cat_id] = name
+                categories_expense[cat_id] = name, emoji
 
         class CategoryContext(TypedDict):
             """Type definition for category context."""
 
             name: str
+            emoji: str | None
             amount: Decimal
 
         query = s.query(TransactionSplit)
@@ -118,7 +120,8 @@ def ctx_chart() -> dict[str, object]:
             if cat_id in categories_income:
                 income_categorized.append(
                     {
-                        "name": categories_income[cat_id],
+                        "name": categories_income[cat_id][0],
+                        "emoji": categories_income[cat_id][1],
                         "amount": amount,
                     },
                 )
@@ -126,7 +129,8 @@ def ctx_chart() -> dict[str, object]:
             elif cat_id in categories_expense:
                 expense_categorized.append(
                     {
-                        "name": categories_expense[cat_id],
+                        "name": categories_expense[cat_id][0],
+                        "emoji": categories_expense[cat_id][1],
                         "amount": amount,
                     },
                 )
@@ -349,7 +353,7 @@ def txns_options(field: str) -> str:
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
+            id_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -367,6 +371,7 @@ def txns_options(field: str) -> str:
                 search_str=search_str,
             ),
             name=field,
+            search_str=search_str,
             endpoint="cash_flow.txns",
         )
 

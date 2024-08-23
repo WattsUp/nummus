@@ -33,6 +33,7 @@ class _OptionContex(TypedDict):
     """Type definition for option context."""
 
     name: str
+    name_clean: str
     checked: bool
     hidden: bool
     score: int
@@ -101,7 +102,7 @@ def table_options(field: str) -> str:
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
+            id_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -152,20 +153,21 @@ def ctx_options(
         if id_ is None:
             continue
         name = id_mapping[id_] if id_mapping else id_
+        name_clean = web_utils.strip_emojis(name).lower()
         item: _OptionContex = {
             "name": name,
+            "name_clean": name_clean,
             "checked": name in selected,
             "hidden": False,
             "score": 0,
         }
         options_.append(item)
     if search_str not in [None, ""]:
-        names = {i: item["name"] for i, item in enumerate(options_)}
+        names = {i: item["name_clean"] for i, item in enumerate(options_)}
         extracted = process.extract(
             search_str,
             names,
             limit=None,
-            processor=lambda s: s.lower(),
         )
         for _, score, i in extracted:
             options_[i]["score"] = int(score)
@@ -174,6 +176,7 @@ def ctx_options(
         name = "[blank]"
         item = {
             "name": name,
+            "name_clean": name,
             "checked": name in selected,
             "hidden": search_str not in [None, ""],
             "score": 100,
@@ -182,7 +185,7 @@ def ctx_options(
 
     return sorted(
         options_,
-        key=lambda item: (-item["score"], not item["checked"], item["name"].lower()),
+        key=lambda item: (-item["score"], not item["checked"], item["name_clean"]),
     )
 
 
@@ -293,7 +296,10 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name(s)
+        categories = TransactionCategory.map_name_emoji(
+            s,
+            no_securities_traded=not asset_transactions,
+        )
         assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
@@ -527,6 +533,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
             return common.error("Transaction date must not be empty")
+        # TODO (WattsUp): Prevent creating future transactions
         amount = form.get("amount", type=utils.parse_real)
         if amount is None:
             return common.error("Transaction amount must not be empty")
@@ -595,7 +602,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
-        categories = TransactionCategory.map_name(s)
+        categories = TransactionCategory.map_name_emoji(s)
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import emoji as emoji_mod
 from sqlalchemy import orm
-from typing_extensions import override
 
-from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr
+from nummus import exceptions as exc
+from nummus import utils
+from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr, ORMStrOpt
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -23,21 +25,64 @@ class TransactionCategory(Base):
         id: TransactionCategory unique identifier
         uri: TransactionCategory unique identifier
         name: Name of category
+        emoji: Emoji(s) to prepend to name
         group: Type of category
-        locked: True will prevent any changes being made
+        locked: True will prevent any changes being made, okay to change emoji
     """
 
     __table_id__ = 0x70000000
 
     name: ORMStr = orm.mapped_column(unique=True)
+    emoji: ORMStrOpt
     group: orm.Mapped[TransactionCategoryGroup]
     locked: ORMBool
     is_profit_loss: ORMBool
 
     @orm.validates("name")
-    @override
-    def validate_strings(self, key: str, field: str | None) -> str | None:
-        return super().validate_strings(key, field)
+    def validate_name(self, _: str, field: str | None) -> str | None:
+        """Validates name is long enough and doesn't contains emojis.
+
+        Args:
+            field: Updated value
+
+        Returns:
+            field
+
+        Raises:
+            InvalidORMValueError if field is too short
+        """
+        if field is None or field in ["", "[blank]"]:
+            return None
+        if emoji_mod.emoji_count(field) > 0:
+            msg = "Transaction category name must not have emojis"
+            raise exc.InvalidORMValueError(msg)
+        if len(field) < utils.MIN_STR_LEN:
+            msg = (
+                "Transaction category name must be at least "
+                f"{utils.MIN_STR_LEN} characters long"
+            )
+            raise exc.InvalidORMValueError(msg)
+        return field
+
+    @orm.validates("emoji")
+    def validate_emoji(self, _: str, field: str | None) -> str | None:
+        """Validate emoji contains exactly one emoji.
+
+        Args:
+            field: Updated value
+
+        Returns:
+            field
+
+        Raises:
+            InvalidORMValueError if field is not a single emoji
+        """
+        if field is None or field in ["", "[blank]"]:
+            return None
+        if not emoji_mod.purely_emoji(field):
+            msg = "Transaction category emoji must only be emojis"
+            raise exc.InvalidORMValueError(msg)
+        return field
 
     @staticmethod
     def add_default(s: orm.Session) -> dict[str, TransactionCategory]:
@@ -133,3 +178,38 @@ class TransactionCategory(Base):
                 d[name] = cat
         s.commit()
         return d
+
+    @classmethod
+    def map_name_emoji(
+        cls,
+        s: orm.Session,
+        *,
+        no_securities_traded: bool = True,
+    ) -> dict[int, str]:
+        """Mapping between id and names with emojis.
+
+        Args:
+            s: SQL session to use
+            no_securities_traded: True will not include "Securities Traded"
+
+        Returns:
+            Dictionary {id: name with emoji}
+
+        Raises:
+            KeyError if model does not have name property
+        """
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji,
+            )
+            .order_by(TransactionCategory.name)
+        )
+        if no_securities_traded:
+            query = query.where(TransactionCategory.name != "Securities Traded")
+        return {
+            t_cat_id: (f"{emoji} {name}" if emoji else name)
+            for t_cat_id, name, emoji in query.all()
+        }

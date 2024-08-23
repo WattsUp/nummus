@@ -35,6 +35,7 @@ required = [
     "tqdm",
     "argcomplete",
     "scipy",
+    "emoji",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],

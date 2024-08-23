@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+import emoji as emoji_mod
 import flask
 
 from nummus import exceptions as exc
@@ -14,9 +15,28 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
+from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
+
+
+def _clean_emoji(text: str) -> tuple[str, str | None]:
+    """Clean a string to a single emoji.
+
+    Args:
+        text: Text to Clean
+
+    Returns:
+        (ASCII text, First emoji or None)
+    """
+    # Grab only the first emoji
+    tokens = list(emoji_mod.analyze(text, non_emoji=True))
+    text_e = "".join(
+        t.value.emoji for t in tokens if isinstance(t.value, emoji_mod.EmojiMatch)
+    )
+    text_t = "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
+    return text_t, text_e
 
 
 def overlay() -> str:
@@ -33,6 +53,7 @@ def overlay() -> str:
 
         uri: str | None
         name: str
+        emoji: str | None
         locked: bool
 
     with p.get_session() as s:
@@ -40,12 +61,18 @@ def overlay() -> str:
         expense: list[CategoryContext] = []
         other: list[CategoryContext] = []
 
-        for cat in s.query(TransactionCategory).all():
+        any_emojis = False
+        query = s.query(TransactionCategory).where(
+            TransactionCategory.name != "Securities Traded",
+        )
+        for cat in query.yield_per(YIELD_PER):
             cat_d: CategoryContext = {
                 "uri": cat.uri,
                 "name": cat.name,
+                "emoji": cat.emoji,
                 "locked": cat.locked,
             }
+            any_emojis = any_emojis or cat.emoji
             if cat.group == TransactionCategoryGroup.INCOME:
                 income.append(cat_d)
             elif cat.group == TransactionCategoryGroup.EXPENSE:
@@ -64,6 +91,7 @@ def overlay() -> str:
 
     return flask.render_template(
         "transaction_categories/table.jinja",
+        any_emojis=any_emojis,
         categories=ctx,
     )
 
@@ -78,6 +106,7 @@ def new() -> str | flask.Response:
         ctx: dict[str, object] = {
             "uri": None,
             "name": None,
+            "emoji": None,
             "group": None,
             "group_type": TransactionCategoryGroup,
             "locked": False,
@@ -90,12 +119,15 @@ def new() -> str | flask.Response:
     group = form.get("group", type=TransactionCategoryGroup)
     is_profit_loss = "is-pnl" in form
 
+    name, emoji = _clean_emoji(name)
+
     try:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.get_session() as s:
             cat = TransactionCategory(
                 name=name,
+                emoji=emoji,
                 group=group,
                 locked=False,
                 is_profit_loss=is_profit_loss,
@@ -127,6 +159,7 @@ def category(uri: str) -> str | flask.Response:
             ctx: dict[str, object] = {
                 "uri": uri,
                 "name": cat.name,
+                "emoji": cat.emoji,
                 "group": cat.group,
                 "group_type": TransactionCategoryGroup,
                 "locked": cat.locked,
@@ -138,11 +171,10 @@ def category(uri: str) -> str | flask.Response:
                 category=ctx,
             )
 
-        if cat.locked:
-            msg = f"Locked category {cat.name} cannot be modified"
-            raise exc.http.Forbidden(msg)
-
         if flask.request.method == "DELETE":
+            if cat.locked:
+                msg = f"Locked category {cat.name} cannot be modified"
+                raise exc.http.Forbidden(msg)
             # Move all transactions to Uncategorized
             query = s.query(TransactionCategory.id_).where(
                 TransactionCategory.name == "Uncategorized",
@@ -163,18 +195,22 @@ def category(uri: str) -> str | flask.Response:
             return common.overlay_swap(overlay(), event="update-transaction")
 
         form = flask.request.form
-        name = form["name"].strip()
+        name = form["name"]
         group_s = form.get("group")
         group = TransactionCategoryGroup(group_s) if group_s else None
         is_profit_loss = "is-pnl" in form
 
-        if group is None:
-            return common.error("Transaction group must not be None")
+        name, emoji = _clean_emoji(name)
 
         try:
-            cat.name = name
-            cat.group = group
-            cat.is_profit_loss = is_profit_loss
+            cat.emoji = emoji
+            if not cat.locked:
+                # Locked categorys can only change emoji
+                cat.name = name
+                if group is None:
+                    return common.error("Transaction group must not be None")
+                cat.group = group
+                cat.is_profit_loss = is_profit_loss
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
