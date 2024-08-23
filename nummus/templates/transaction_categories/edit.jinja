@@ -15,39 +15,63 @@
         <table class="w-full">
             <tbody>
                 <tr>
-                    <td>Category Name</td>
+                    <td class="w-48">Category Name</td>
                     <td>
-                        <input name="name"
-                               value="{{ category["name"] or "" }}"
-                               class="w-full"
-                               autocomplete="off">
-                    </td>
-                </tr>
-                <tr>
-                    <td>Group</td>
-                    <td>
-                        <select name="group" autocomplete="off">
-                            {% for group in category["group_type"] %}
-                                <option value="{{ group | enum }}"
-                                        {% if group == category["group"] %}selected{% endif %}>
-                                    {{ group | enum | title }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Include in profit &amp; loss</td>
-                    <td>
-                        <label class="flex gap-4 justify-between w-full checkbox">
-                            <input type="checkbox"
-                                   name="is-pnl"
-                                   {% if category["is_profit_loss"] %}checked{% endif %}
+                        {% if category["locked"] %}
+                            <input name="name"
+                                   value="{{ category["emoji"] or "" }}"
+                                   class="w-16"
                                    autocomplete="off">
-                            {% with class = "w-5 h-5" %}
-                                {% include "svg/check.svg" %}
-                            {% endwith %}
-                        </label>
+                            {{ category["name"] or "" }}
+                        {% else %}
+                            <input name="name"
+                                   value="{{ category["emoji"] + " " if category["emoji"] }}{{ category["name"] or "" }}"
+                                   class="w-full"
+                                   autocomplete="off">
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="w-48">Group</td>
+                    <td>
+                        {% if category["locked"] %}
+                            {{ category["group"] | enum | title }}
+                        {% else %}
+                            <select name="group" autocomplete="off">
+                                {% for group in category["group_type"] %}
+                                    <option value="{{ group | enum }}"
+                                            {% if group == category["group"] %}selected{% endif %}>
+                                        {{ group | enum | title }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td class="w-48">Include in profit &amp; loss</td>
+                    <td>
+                        {% if category["locked"] %}
+                            {% if category["is_profit_loss"] %}
+                                {% with class = "w-5 h-5 fill-green" %}
+                                    {% include "svg/check.svg" %}
+                                {% endwith %}
+                            {% else %}
+                                {% with class = "w-5 h-5 fill-grey-600" %}
+                                    {% include "svg/check.svg" %}
+                                {% endwith %}
+                            {% endif %}
+                        {% else %}
+                            <label class="flex gap-4 justify-between w-full checkbox">
+                                <input type="checkbox"
+                                       name="is-pnl"
+                                       {% if category["is_profit_loss"] %}checked{% endif %}
+                                       autocomplete="off">
+                                {% with class = "w-5 h-5" %}
+                                    {% include "svg/check.svg" %}
+                                {% endwith %}
+                            </label>
+                        {% endif %}
                     </td>
                 </tr>
             </tbody>
@@ -56,9 +80,10 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        {% if category["uri"] %}
+        {% if category["uri"] and not category["locked"] %}
             <button hx-delete="{{ url_for("transaction_categories.category", uri=category["uri"]) }}"
                     hx-confirm="Are you sure you wish to delete this transaction category? Any transactions assigned to this category will revert to Uncategorized"
+                    hx-target="#overlay-error"
                     class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
