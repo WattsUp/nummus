@@ -557,7 +557,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         try:
             txn = Transaction(
                 account_id=accounts_rev[account],
-                date_ord=date.toordinal(),
+                date=date,
                 amount=amount,
                 statement=statement or "Manually added",
                 locked=False,
@@ -670,7 +670,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             date = form.get("date", type=datetime.date.fromisoformat)
             if date is None:
                 return common.error("Transaction date must not be empty")
-            parent.date_ord = date.toordinal()
+            parent.date = date
             parent.locked = "locked" in form
 
             payee = form.getlist("payee")

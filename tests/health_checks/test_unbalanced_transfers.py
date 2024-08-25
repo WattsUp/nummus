@@ -24,9 +24,7 @@ class TestUnbalancedTransfers(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
         c = UnbalancedTransfers(p)
         c.test()
@@ -63,7 +61,7 @@ class TestUnbalancedTransfers(TestBase):
             # Good transfer amount but wrong category
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -77,7 +75,7 @@ class TestUnbalancedTransfers(TestBase):
 
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
             )
@@ -91,7 +89,7 @@ class TestUnbalancedTransfers(TestBase):
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-100,
                 statement=self.random_string(),
             )
@@ -105,7 +103,7 @@ class TestUnbalancedTransfers(TestBase):
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement=self.random_string(),
             )
@@ -151,7 +149,7 @@ class TestUnbalancedTransfers(TestBase):
             # Add another bad transfer
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=20,
                 statement=self.random_string(),
             )
@@ -165,7 +163,7 @@ class TestUnbalancedTransfers(TestBase):
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=Decimal("-20.1"),
                 statement=self.random_string(),
             )

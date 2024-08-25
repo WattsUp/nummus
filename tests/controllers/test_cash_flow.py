@@ -31,9 +31,7 @@ class TestCashFlow(WebTestBase):
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
-        today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
@@ -117,7 +115,7 @@ class TestCashFlow(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -171,7 +169,7 @@ class TestCashFlow(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=10,
                 statement=self.random_string(),
                 locked=True,

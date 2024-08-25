@@ -24,7 +24,6 @@ class TestTransaction(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -39,7 +38,7 @@ class TestTransaction(TestBase):
 
         d = {
             "account_id": acct.id_,
-            "date_ord": today_ord,
+            "date": today,
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
         }
@@ -49,7 +48,7 @@ class TestTransaction(TestBase):
         s.commit()
 
         self.assertEqual(txn.account_id, acct.id_)
-        self.assertEqual(txn.date_ord, d["date_ord"])
+        self.assertEqual(txn.date_ord, today.toordinal())
         self.assertEqual(txn.amount, d["amount"])
         self.assertEqual(txn.statement, d["statement"])
         self.assertFalse(txn.locked, "Transaction is unexpectedly locked")
@@ -75,7 +74,6 @@ class TestTransactionSplit(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -97,7 +95,7 @@ class TestTransactionSplit(TestBase):
 
         d = {
             "account_id": acct.id_,
-            "date_ord": today_ord,
+            "date": today,
             "amount": self.random_decimal(-1, 1),
             "statement": self.random_string(),
         }
@@ -183,7 +181,6 @@ class TestTransactionSplit(TestBase):
         models.metadata_create_all(s)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = Account(
             name=self.random_string(),
@@ -202,7 +199,7 @@ class TestTransactionSplit(TestBase):
         qty = self.random_decimal(10, 100, precision=9)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date=today,
             statement=self.random_string(),
             amount=10,
         )

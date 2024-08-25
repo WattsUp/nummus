@@ -159,7 +159,6 @@ class TestAsset(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct_uri = d["acct_uri"]
         a_1 = d["a_1"]
@@ -178,7 +177,7 @@ class TestAsset(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=0,
                 statement=self.random_string(),
             )
@@ -214,7 +213,7 @@ class TestAsset(WebTestBase):
         with p.get_session() as s:
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord - 2,
+                date=today - datetime.timedelta(days=2),
                 amount=-100,
                 statement=self.random_string(),
             )
@@ -242,7 +241,6 @@ class TestAsset(WebTestBase):
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = d["acct"]
         acct_uri = d["acct_uri"]
@@ -261,7 +259,7 @@ class TestAsset(WebTestBase):
             # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=0,
                 statement=self.random_string(),
             )

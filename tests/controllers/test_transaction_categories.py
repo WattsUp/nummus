@@ -60,7 +60,6 @@ class TestTransactionCategory(WebTestBase):
     def test_category(self) -> None:
         p = self._portfolio
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with p.get_session() as s:
             query = s.query(TransactionCategory)
@@ -117,7 +116,7 @@ class TestTransactionCategory(WebTestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )

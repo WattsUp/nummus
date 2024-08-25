@@ -56,10 +56,9 @@ class TestUpdateAssets(TestBase):
 
             # Add a transaction
             date = datetime.date(2023, 5, 1)
-            date_ord = date.toordinal()
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -120,7 +119,7 @@ class TestUpdateAssets(TestBase):
         with p.get_session() as s:
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=date_ord,
+                date=date,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )

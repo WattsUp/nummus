@@ -41,7 +41,6 @@ class TestCommon(WebTestBase):
         p = self._portfolio
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with self._flask_app.app_context():
             result = common.ctx_sidebar()
@@ -85,7 +84,7 @@ class TestCommon(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_savings.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -98,7 +97,7 @@ class TestCommon(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_checking.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-50,
                 statement=self.random_string(),
             )

@@ -776,7 +776,6 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with p.get_session() as s:
             # Delete index assets
@@ -804,7 +803,7 @@ class TestPortfolio(TestBase):
             # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -837,10 +836,9 @@ class TestPortfolio(TestBase):
 
             # Add a transaction
             date = datetime.date(2023, 5, 1)
-            date_ord = date.toordinal()
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=date_ord,
+                date=today,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -875,7 +873,7 @@ class TestPortfolio(TestBase):
             # Sell asset so it should not include today
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=date_ord,
+                date=today,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -929,7 +927,6 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with p.get_session() as s:
             categories = TransactionCategory.map_name(s)
@@ -954,7 +951,7 @@ class TestPortfolio(TestBase):
 
             txn_0 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement="Banana Store",
             )
@@ -969,7 +966,7 @@ class TestPortfolio(TestBase):
 
             txn_1 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement="Banana Store",
             )
@@ -983,7 +980,7 @@ class TestPortfolio(TestBase):
 
             txn_2 = Transaction(
                 account_id=acct_1.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement="Banana Store",
             )

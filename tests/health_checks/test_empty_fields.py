@@ -24,7 +24,6 @@ class TestEmptyFields(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         c = EmptyFields(p)
         c.test()
@@ -66,7 +65,7 @@ class TestEmptyFields(TestBase):
             amount = self.random_decimal(-1, 1)
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=amount,
                 statement=self.random_string(),
             )

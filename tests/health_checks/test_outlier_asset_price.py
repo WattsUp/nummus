@@ -67,7 +67,7 @@ class TestOutlierAssetPrice(TestBase):
             # Transactions with zero quantity are exempt
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=10,
                 statement=self.random_string(),
             )
@@ -83,7 +83,7 @@ class TestOutlierAssetPrice(TestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=-10,
                 statement=self.random_string(),
             )

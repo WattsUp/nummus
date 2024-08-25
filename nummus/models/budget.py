@@ -29,6 +29,11 @@ class BudgetAssignment(Base):
 
     __table_args__ = (sqlalchemy.UniqueConstraint("month_ord", "category_id"),)
 
+    @orm.validates("amount")
+    @override
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return super().validate_decimals(key, field)
+
 
 class Budget(Base):
     """Budget model for storing an allocation of expenses per month.

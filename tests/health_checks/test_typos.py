@@ -24,7 +24,6 @@ class TestTypos(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         c = Typos(p)
         c.test()
@@ -74,7 +73,7 @@ class TestTypos(TestBase):
             amount_0 = self.random_decimal(-1, 1)
             txn_0 = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord,
+                date=today,
                 amount=amount_0,
                 statement=self.random_string(),
             )
@@ -93,7 +92,7 @@ class TestTypos(TestBase):
             amount_1 = self.random_decimal(-1, 1)
             txn_1 = Transaction(
                 account_id=acct_id_1,
-                date_ord=today_ord,
+                date=today,
                 amount=amount_1,
                 statement=self.random_string(),
             )

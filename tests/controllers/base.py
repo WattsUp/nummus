@@ -113,7 +113,6 @@ class WebTestBase(TestBase):
         p = self._portfolio
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct_name = "Monkey Bank Checking"
         payee_0 = "Apple"
@@ -147,7 +146,7 @@ class WebTestBase(TestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
                 linked=True,
@@ -166,7 +165,7 @@ class WebTestBase(TestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
                 locked=True,

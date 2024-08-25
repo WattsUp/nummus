@@ -74,7 +74,7 @@ class TestPerformance(WebTestBase):
             # Add funding
             txn = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord - 2,
+                date=today - datetime.timedelta(days=2),
                 amount=1000,
                 statement=self.random_string(),
             )
@@ -89,7 +89,7 @@ class TestPerformance(WebTestBase):
             # Buy the house
             txn = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=-1000,
                 statement=self.random_string(),
             )
@@ -169,7 +169,7 @@ class TestPerformance(WebTestBase):
             # Sell the house
             txn = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord,
+                date=today,
                 amount=1001,
                 statement=self.random_string(),
             )
@@ -264,7 +264,7 @@ class TestPerformance(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id_1,
-                date_ord=today_ord,
+                date=today,
                 amount=1000,
                 statement=self.random_string(),
                 locked=True,
@@ -280,7 +280,7 @@ class TestPerformance(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id_1,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=-1000,
                 statement=self.random_string(),
                 locked=True,
@@ -371,7 +371,7 @@ class TestPerformance(WebTestBase):
             # Add funding
             txn = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord - 2,
+                date=today - datetime.timedelta(days=2),
                 amount=1000,
                 statement=self.random_string(),
             )
@@ -386,7 +386,7 @@ class TestPerformance(WebTestBase):
             # Buy the house
             txn = Transaction(
                 account_id=acct_id_0,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=-1000,
                 statement=self.random_string(),
             )

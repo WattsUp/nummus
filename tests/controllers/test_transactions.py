@@ -30,7 +30,6 @@ class TestTransaction(WebTestBase):
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = d["acct"]
         acct_uri = d["acct_uri"]
@@ -232,7 +231,7 @@ class TestTransaction(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement=self.random_string(),
             )

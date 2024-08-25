@@ -370,7 +370,7 @@ class Portfolio:
                 txn = Transaction(
                     account_id=acct_id,
                     amount=d["amount"],
-                    date_ord=d["date"].toordinal(),
+                    date_ord=d["date"],
                     statement=statement,
                     linked=True,
                 )

@@ -66,7 +66,7 @@ class TestMissingValuations(TestBase):
             amount = self.random_decimal(-1, 1)
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=amount,
                 statement=self.random_string(),
             )
