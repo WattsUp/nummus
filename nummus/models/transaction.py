@@ -69,6 +69,7 @@ class TransactionSplit(Base):
 
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date_ord: ORMInt
+    # TODO (WattsUp): Add month_ord to ease summing by month
     locked: ORMBool
     linked: ORMBool
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))

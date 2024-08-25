@@ -30,6 +30,7 @@ class TestAccount(TestBase):
             "category": AccountCategory.CASH,
             "closed": False,
             "emergency": False,
+            "budgeted": False,
         }
 
         acct = Account(**d)
@@ -66,6 +67,7 @@ class TestAccount(TestBase):
             "category": AccountCategory.CASH,
             "closed": False,
             "emergency": False,
+            "budgeted": False,
         }
 
         acct = Account(**d)
@@ -126,6 +128,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -267,6 +270,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
@@ -312,6 +316,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -620,6 +625,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
@@ -686,6 +692,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add(acct)
@@ -793,6 +800,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
@@ -832,6 +840,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add(acct)

@@ -67,6 +67,21 @@ class TestTransactionCategory(TestBase):
         t_cat.emoji = None
         s.commit()
 
+        # Just budget_group bad
+        t_cat.budget_group = self.random_string()
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Just budget_position bad
+        t_cat.budget_position = 10
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Both okay
+        t_cat.budget_group = self.random_string()
+        t_cat.budget_position = 10
+        s.commit()
+
     def test_add_default(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)

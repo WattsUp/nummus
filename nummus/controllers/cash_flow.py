@@ -79,8 +79,7 @@ def ctx_chart() -> dict[str, object]:
         ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
         # Categorize whole period
-        query = s.query(TransactionCategory)
-        query = query.with_entities(
+        query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.name,
             TransactionCategory.emoji,
@@ -101,15 +100,17 @@ def ctx_chart() -> dict[str, object]:
             emoji: str | None
             amount: Decimal
 
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.category_id,
-            sqlalchemy.func.sum(TransactionSplit.amount),
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.category_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+            )
+            .where(TransactionSplit.account_id.in_(ids))
+            .where(TransactionSplit.date_ord >= start_ord)
+            .where(TransactionSplit.date_ord <= end_ord)
+            .group_by(TransactionSplit.category_id)
         )
-        query = query.where(TransactionSplit.account_id.in_(ids))
-        query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.group_by(TransactionSplit.category_id)
         income_categorized: list[CategoryContext] = []
         expense_categorized: list[CategoryContext] = []
         total_income = Decimal(0)

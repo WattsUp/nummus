@@ -47,6 +47,17 @@
                     {% include "svg/check.svg" %}
                 {% endwith %}
             </label>
+            <label class="flex gap-4 justify-between w-full checkbox">
+                <span class="font-bold">Included in budgeting:</span>
+                <input type="checkbox"
+                       name="budgeted"
+                       {% if account["budgeted"] %}checked{% endif %}
+                       id="account-budgeted"
+                       autocomplete="off">
+                {% with class = "w-5 h-5" %}
+                    {% include "svg/check.svg" %}
+                {% endwith %}
+            </label>
         </div>
         <div class="w-7/12">
             <h1 class="font-bold">Edit details</h1>

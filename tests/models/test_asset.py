@@ -357,6 +357,7 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add_all((a, acct))
@@ -559,6 +560,7 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         t_cat = TransactionCategory(
             name="Securities Traded",
@@ -760,6 +762,7 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         t_cat = TransactionCategory(
             name="Securities Traded",

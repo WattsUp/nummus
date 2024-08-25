@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import emoji as emoji_mod
+import sqlalchemy
 from sqlalchemy import orm
 
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr, ORMStrOpt
+from nummus.models.base import Base, BaseEnum, ORMBool, ORMIntOpt, ORMStr, ORMStrOpt
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -28,6 +29,9 @@ class TransactionCategory(Base):
         emoji: Emoji(s) to prepend to name
         group: Type of category
         locked: True will prevent any changes being made, okay to change emoji
+        is_profit_loss: True will include category in profit loss calculations
+        budget_group: Name of group in budget category is a part of
+        budget_position: Position on budget page where category is located
     """
 
     __table_id__ = 0x70000000
@@ -37,6 +41,16 @@ class TransactionCategory(Base):
     group: orm.Mapped[TransactionCategoryGroup]
     locked: ORMBool
     is_profit_loss: ORMBool
+
+    budget_group: ORMStrOpt
+    budget_position: ORMIntOpt
+
+    __table_args__ = (
+        sqlalchemy.CheckConstraint(
+            "(budget_group IS NOT NULL) == (budget_position IS NOT NULL)",
+            name="group and position same null state",
+        ),
+    )
 
     @orm.validates("name")
     def validate_name(self, _: str, field: str | None) -> str | None:
@@ -83,6 +97,11 @@ class TransactionCategory(Base):
             msg = "Transaction category emoji must only be emojis"
             raise exc.InvalidORMValueError(msg)
         return field
+
+    @property
+    def emoji_name(self) -> str:
+        """Name of category with emoji."""
+        return f"{self.emoji} {self.name}" if self.emoji else self.name
 
     @staticmethod
     def add_default(s: orm.Session) -> dict[str, TransactionCategory]:

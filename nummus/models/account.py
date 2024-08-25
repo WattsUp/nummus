@@ -55,6 +55,7 @@ class Account(Base):
     category: orm.Mapped[AccountCategory]
     closed: ORMBool
     emergency: ORMBool
+    budgeted: ORMBool
 
     @orm.validates("name", "number", "institution")
     @override

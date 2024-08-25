@@ -1,0 +1,29 @@
+<section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
+         hx-get="{{ url_for("budgeting.page", month=table["month"]) }}"
+         hx-trigger="update-account from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <div class="w-full flex" hx-push-url="true">
+        <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">Budgeting</h1>
+        <div class="grow"></div>
+        <button hx-get="{{ url_for("budgeting.page", month=table["month_prev"]) }}">
+            {% with class="w-[36px] h-[36px] hover:fill-green" %}
+                {% include "svg/arrow-left.svg" %}
+            {% endwith %}
+        </button>
+        <h1 class="text-3xl font-serif text-green-600 text-right">{{ table["month"] }}</h1>
+        <button hx-get="{{ url_for("budgeting.page", month=table["month_next"]) }}">
+            {% with class="w-[36px] h-[36px] hover:fill-green" %}
+                {% include "svg/arrow-right.svg" %}
+            {% endwith %}
+        </button>
+    </div>
+    <p class="italic text-center text-sm">
+        The following accounts are included in budgeting. To change, edit account in the sidebar.
+    </p>
+    <div class="grid grid-cols-8 grid-flow-dense gap-2 italic text-center text-sm whitespace-nowrap">
+        {% for acct in table["accounts"] %}<div>{{ acct }}</div>{% endfor %}
+    </div>
+    <h1 class="text-3xl align-left w-full font-serif text-green-600">Categories</h1>
+    {% include "budgeting/table.jinja" %}
+</section>

@@ -32,6 +32,7 @@ class TestTransaction(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct)
         s.commit()
@@ -82,6 +83,7 @@ class TestTransactionSplit(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct)
         s.commit()
@@ -189,6 +191,7 @@ class TestTransactionSplit(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct)
         s.commit()
