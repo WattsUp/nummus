@@ -18,12 +18,6 @@
             {% endwith %}
         </button>
     </div>
-    <p class="italic text-center text-sm">
-        The following accounts are included in budgeting. To change, edit account in the sidebar.
-    </p>
-    <div class="grid grid-cols-8 grid-flow-dense gap-2 italic text-center text-sm whitespace-nowrap">
-        {% for acct in table["accounts"] %}<div>{{ acct }}</div>{% endfor %}
-    </div>
-    <h1 class="text-3xl align-left w-full font-serif text-green-600">Categories</h1>
+    <p class="italic text-sm">To change which accounts are included in budgeting, edit account in the sidebar.</p>
     {% include "budgeting/table.jinja" %}
 </section>

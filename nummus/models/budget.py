@@ -5,13 +5,29 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import ForeignKey, orm
 from typing_extensions import override
 
 from nummus.models.base import Base, Decimal6, ORMInt, ORMReal
 
 if TYPE_CHECKING:
     from decimal import Decimal
+
+
+class BudgetAssignment(Base):
+    """Budget assignment model for storing an contribution to a budget category.
+
+    Attributes:
+        month_ord: Date ordinal on which BudgetAssignment occurred (1st of month)
+        amount: Amount contributed to budget category
+        category_id: Budget category to contribute to
+    """
+
+    month_ord: ORMInt
+    amount: ORMReal
+    category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
+
+    __table_args__ = (sqlalchemy.UniqueConstraint("month_ord", "category_id"),)
 
 
 class Budget(Base):

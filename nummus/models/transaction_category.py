@@ -16,7 +16,7 @@ class TransactionCategoryGroup(BaseEnum):
 
     INCOME = 1
     EXPENSE = 2
-    OTHER = 3
+    OTHER = 3  # Change to TRANSFER
 
 
 class TransactionCategory(Base):

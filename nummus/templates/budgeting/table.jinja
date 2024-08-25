@@ -2,6 +2,7 @@
      class="w-full flex grow gap-2"
      hx-target="#budget-table"
      hx-swap="outerHTML">
+    <input id="table-month" name="month" value="{{ table["month"] }}" hidden>
     <div class="grow">
         <div class="w-full flex p-1">
             {# TODO (WattsUp): Add new group #}
@@ -20,6 +21,9 @@
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">All money assigned</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
                 </div>
                 {% with class = "w-12 h-12 fill-black" %}
                     {% include "svg/check.svg" %}
@@ -30,6 +34,9 @@
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">Ready to assign</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
                 </div>
                 <button class="button bg-green" disabled>Assign</button>
             </div>
@@ -38,6 +45,9 @@
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">More money assigned than held</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
                 </div>
                 <button class="button bg-red" disabled>Fix</button>
             </div>

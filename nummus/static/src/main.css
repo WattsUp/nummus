@@ -254,6 +254,22 @@
     input[type=checkbox].budget-group-toggle:checked~.budget-group-toggle-label::after {
         @apply content-["►"];
     }
+
+
+    .hover-edit>input,
+    .hover-edit:hover>span {
+        @apply hidden;
+    }
+
+    .hover-edit>span,
+    .hover-edit:hover>input,
+    .hover-edit>input:focus {
+        @apply inline;
+    }
+
+    .hover-edit>input:focus+span {
+        @apply hidden;
+    }
 }
 
 @font-face {
