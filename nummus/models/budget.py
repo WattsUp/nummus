@@ -24,7 +24,7 @@ class BudgetAssignment(Base):
     """
 
     month_ord: ORMInt
-    amount: ORMReal
+    amount: ORMReal = orm.mapped_column(Decimal6)
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
     __table_args__ = (sqlalchemy.UniqueConstraint("month_ord", "category_id"),)

@@ -602,6 +602,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
+        # TODO (WattsUp): Don't use emoji version for form values
         categories = TransactionCategory.map_name_emoji(s)
         assets = Asset.map_name(s)
 

@@ -46,9 +46,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if month_str is None
             else datetime.date.fromisoformat(month_str + "-01")
         )
-    end = utils.end_of_month(month)
     month_ord = month.toordinal()
-    end_ord = end.toordinal()
 
     class CategoryContext(TypedDict):
         """Type definition for budget category context."""
@@ -100,12 +98,77 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         total_available = Decimal(0)
         n_overspent = 0
 
+        budget_categories = {
+            t_cat_id
+            for t_cat_id, in s.query(TransactionCategory.id_)
+            .where(TransactionCategory.group != TransactionCategoryGroup.INCOME)
+            .all()
+        }
+
         query = (
             s.query(BudgetAssignment)
             .with_entities(BudgetAssignment.category_id, BudgetAssignment.amount)
             .where(BudgetAssignment.month_ord == month_ord)
         )
         categories_assigned: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+
+        min_month_ord = month_ord
+        prior_assigned: dict[int, dict[int, Decimal]] = {
+            t_cat_id: {} for t_cat_id in budget_categories
+        }
+        query = (
+            s.query(BudgetAssignment)
+            .with_entities(
+                BudgetAssignment.category_id,
+                BudgetAssignment.amount,
+                BudgetAssignment.month_ord,
+            )
+            .where(BudgetAssignment.month_ord < month_ord)
+            .order_by(BudgetAssignment.month_ord)
+        )
+        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
+            prior_assigned[cat_id][m_ord] = amount
+            min_month_ord = min(min_month_ord, m_ord)
+
+        prior_activity: dict[int, dict[int, Decimal]] = {
+            t_cat_id: {} for t_cat_id in budget_categories
+        }
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.category_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+                TransactionSplit.month_ord,
+            )
+            .where(
+                TransactionSplit.account_id.in_(accounts),
+                TransactionSplit.month_ord < month_ord,
+                TransactionSplit.month_ord >= min_month_ord,
+                TransactionSplit.category_id.in_(budget_categories),
+            )
+            .group_by(
+                TransactionSplit.category_id,
+                TransactionSplit.month_ord,
+            )
+        )
+        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
+            prior_activity[cat_id][m_ord] = amount
+
+        categories_leftover: dict[int, Decimal] = {
+            t_cat_id: Decimal(0) for t_cat_id in budget_categories
+        }
+        date = datetime.date.fromordinal(min_month_ord)
+        while date < month:
+            date_ord = date.toordinal()
+            for t_cat_id in budget_categories:
+                assigned = categories_leftover[t_cat_id] + prior_assigned[t_cat_id].get(
+                    date_ord,
+                    Decimal(0),
+                )
+                activity = prior_activity[t_cat_id].get(date_ord, Decimal(0))
+                leftover = assigned + activity
+                categories_leftover[t_cat_id] = max(Decimal(0), leftover)
+            date = utils.date_add_months(date, 1)
 
         query = (
             s.query(BudgetAssignment)
@@ -131,8 +194,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             )
             .where(
                 TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.date_ord >= month_ord,
-                TransactionSplit.date_ord <= end_ord,
+                TransactionSplit.month_ord == month_ord,
             )
             .group_by(TransactionSplit.category_id)
         )
@@ -141,8 +203,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         for t_cat in query.yield_per(YIELD_PER):
             activity = categories_activity.get(t_cat.id_, Decimal(0))
             assigned = categories_assigned.get(t_cat.id_, Decimal(0))
-            # TODO (WattsUp): available includes leftovers from last month
-            available = assigned + activity
+            leftover = categories_leftover.get(t_cat.id_, Decimal(0))
+            available = assigned + activity + leftover
             # Skip category if all numbers are 0 and not grouped
             if (
                 t_cat.budget_group is None
@@ -191,7 +253,12 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             group["available"] += available
             group["categories"].append(cat_ctx)
 
-        assignable = ending_balance - total_available - future_assigned
+        assignable = ending_balance - total_available
+        if assignable < 0:
+            future_assigned = Decimal(0)
+        else:
+            future_assigned = min(future_assigned, assignable)
+            assignable -= future_assigned
 
         groups_list = sorted(groups.items(), key=lambda item: item[1]["min_position"])
         if ungrouped["categories"]:

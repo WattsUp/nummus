@@ -127,6 +127,7 @@ def confirm(
         print()
 
 
+# TODO (WattsUp): Add precision argument to truncate number to
 def parse_real(s: str | None) -> Decimal | None:
     """Parse a string into a real number.
 
