@@ -33,6 +33,7 @@ class _OptionContex(TypedDict):
     """Type definition for option context."""
 
     name: str
+    label: str
     name_clean: str
     checked: bool
     hidden: bool
@@ -99,10 +100,12 @@ def table_options(field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        label_mapping = None
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name_emoji(s)
+            id_mapping = TransactionCategory.map_name(s)
+            label_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -113,7 +116,13 @@ def table_options(field: str) -> str:
 
         return flask.render_template(
             "transactions/table-options.jinja",
-            options=ctx_options(query, field, id_mapping, search_str=search_str),
+            options=ctx_options(
+                query,
+                field,
+                id_mapping,
+                label_mapping=label_mapping,
+                search_str=search_str,
+            ),
             name=field,
             search_str=search_str,
             endpoint="transactions.table",
@@ -125,6 +134,7 @@ def ctx_options(
     query: orm.Query,
     field: str,
     id_mapping: dict[int, str] | None = None,
+    label_mapping: dict[int, str] | None = None,
     search_str: str | None = None,
 ) -> list[_OptionContex]:
     """Get the context to build the options for table.
@@ -133,6 +143,7 @@ def ctx_options(
         query: Query to use to get distinct values
         field: TransactionSplit field to get options for
         id_mapping: Item ID to name mapping
+        label_mapping: Item ID to label mapping, None will use id_mapping
         search_str: Search options and hide non-matches
 
     Returns:
@@ -153,9 +164,11 @@ def ctx_options(
         if id_ is None:
             continue
         name = id_mapping[id_] if id_mapping else id_
+        label = label_mapping[id_] if label_mapping else name
         name_clean = web_utils.strip_emojis(name).lower()
         item: _OptionContex = {
             "name": name,
+            "label": label,
             "name_clean": name_clean,
             "checked": name in selected,
             "hidden": False,
@@ -176,6 +189,7 @@ def ctx_options(
         name = "[blank]"
         item = {
             "name": name,
+            "label": name,
             "name_clean": name,
             "checked": name in selected,
             "hidden": search_str not in [None, ""],
@@ -296,7 +310,11 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name_emoji(
+        categories = TransactionCategory.map_name(
+            s,
+            no_securities_traded=not asset_transactions,
+        )
+        categories_emoji = TransactionCategory.map_name_emoji(
             s,
             no_securities_traded=not asset_transactions,
         )
@@ -313,7 +331,7 @@ def ctx_table(
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
         options_payee = ctx_options(query, "payee")
-        options_category = ctx_options(query, "category", categories)
+        options_category = ctx_options(query, "category", categories, categories_emoji)
         options_tag = ctx_options(query, "tag")
         options_asset = ctx_options(query, "asset", assets)
 
@@ -396,7 +414,7 @@ def ctx_table(
         transactions: list[dict[str, object]] = []
         for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
-            t_split_ctx = ctx_split(t_split, accounts, categories, assets)
+            t_split_ctx = ctx_split(t_split, accounts, categories_emoji, assets)
             page_total += t_split.amount
 
             transactions.append(t_split_ctx)
@@ -602,8 +620,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
-        # TODO (WattsUp): Don't use emoji version for form values
-        categories = TransactionCategory.map_name_emoji(s)
+        categories = TransactionCategory.map_name(s)
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":

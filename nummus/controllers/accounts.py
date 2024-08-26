@@ -462,11 +462,13 @@ def txns_options(uri: str, field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        label_mapping = None
         if field == "account":
             msg = "Cannot get account options for account transactions"
             raise exc.http.BadRequest(msg)
         if field == "category":
-            id_mapping = TransactionCategory.map_name_emoji(s)
+            id_mapping = TransactionCategory.map_name(s)
+            label_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -481,6 +483,7 @@ def txns_options(uri: str, field: str) -> str:
                 query,
                 field,
                 id_mapping,
+                label_mapping=label_mapping,
                 search_str=search_str,
             ),
             txn_table={"uri": uri},

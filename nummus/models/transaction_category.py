@@ -5,6 +5,7 @@ from __future__ import annotations
 import emoji as emoji_mod
 import sqlalchemy
 from sqlalchemy import orm
+from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -197,6 +198,38 @@ class TransactionCategory(Base):
                 d[name] = cat
         s.commit()
         return d
+
+    @override
+    @classmethod
+    def map_name(
+        cls,
+        s: orm.Session,
+        *,
+        no_securities_traded: bool = True,
+    ) -> dict[int, str]:
+        """Mapping between id and names.
+
+        Args:
+            s: SQL session to use
+            no_securities_traded: True will not include "Securities Traded"
+
+        Returns:
+            Dictionary {id: name}
+
+        Raises:
+            KeyError if model does not have name property
+        """
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+            )
+            .order_by(TransactionCategory.name)
+        )
+        if no_securities_traded:
+            query = query.where(TransactionCategory.name != "Securities Traded")
+        return dict(query.all())  # type: ignore[attr-defined]
 
     @classmethod
     def map_name_emoji(
