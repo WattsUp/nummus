@@ -610,6 +610,16 @@ class Portfolio:
         if row is not None:
             return commit_match(row)
 
+        try:
+            securities_traded_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Securities Traded")
+                .one()[0]
+            )
+        except exc.NoResultFound as e:  # pragma: no cover
+            msg = "Category Securities Traded not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+
         # No statements match, choose highest fuzzy matching statement
         query = (
             s.query(Transaction)
@@ -631,6 +641,21 @@ class Portfolio:
         }
         if len(statements) == 0:
             return None
+        # Don't match a Transaction if it has a Securities Traded split
+        has_securities_traded = {
+            id_
+            for id_, in s.query(TransactionSplit.parent_id)
+            .where(
+                TransactionSplit.parent_id.in_(statements),
+                TransactionSplit.category_id == securities_traded_id,
+            )
+            .distinct()
+        }
+        statements = {
+            t_id: statement
+            for t_id, statement in statements.items()
+            if t_id not in has_securities_traded
+        }
         extracted = process.extract(
             re.sub(r"[0-9]+", "", txn.statement).lower(),
             statements,

@@ -25,7 +25,8 @@
                 </div>
                 <div class="w-28 text-right hover-edit">
                     <input class="w-full text-right"
-                           value="{{ "%.2f" % category["assigned"] }}"
+                           placeholder="0.00"
+                           value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
                            name="amount"
                            hx-put="{{ url_for("budgeting.assign", uri=category["uri"]) }}">
                     <span class="w-full text-right">{{ category["assigned"] | money }}</span>
