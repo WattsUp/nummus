@@ -59,11 +59,11 @@ def overlay() -> str:
     with p.get_session() as s:
         income: list[CategoryContext] = []
         expense: list[CategoryContext] = []
-        other: list[CategoryContext] = []
+        transfer: list[CategoryContext] = []
 
         any_emojis = False
         query = s.query(TransactionCategory).where(
-            TransactionCategory.name != "Securities Traded",
+            TransactionCategory.group != TransactionCategoryGroup.OTHER,
         )
         for cat in query.yield_per(YIELD_PER):
             cat_d: CategoryContext = {
@@ -77,22 +77,34 @@ def overlay() -> str:
                 income.append(cat_d)
             elif cat.group == TransactionCategoryGroup.EXPENSE:
                 expense.append(cat_d)
-            elif cat.group == TransactionCategoryGroup.OTHER:
-                other.append(cat_d)
+            elif cat.group == TransactionCategoryGroup.TRANSFER:
+                transfer.append(cat_d)
             else:  # pragma: no cover
                 msg = f"Unknown category type: {cat.group}"
                 raise ValueError(msg)
 
         income = sorted(income, key=lambda cat: cat["name"])
         expense = sorted(expense, key=lambda cat: cat["name"])
-        other = sorted(other, key=lambda cat: cat["name"])
+        transfer = sorted(transfer, key=lambda cat: cat["name"])
 
-        ctx = {"Income": income, "Expense": expense, "Other": other}
+        ctx = {"Income": income, "Expense": expense, "Transfer": transfer}
+
+        query = s.query(TransactionCategory.id_).where(
+            TransactionCategory.name == "Uncategorized",
+        )
+        try:
+            uncategorized_id: int = query.one()[0]
+        except exc.NoResultFound as e:  # pragma: no cover
+            # Uncategorized is locked and cannot be deleted
+            msg = "Could not find Uncategorized id"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        uncategorized_uri = TransactionCategory.id_to_uri(uncategorized_id)
 
     return flask.render_template(
         "transaction_categories/table.jinja",
         any_emojis=any_emojis,
         categories=ctx,
+        uncategorized=uncategorized_uri,
     )
 
 
@@ -108,7 +120,11 @@ def new() -> str | flask.Response:
             "name": None,
             "emoji": None,
             "group": None,
-            "group_type": TransactionCategoryGroup,
+            "group_type": {
+                g
+                for g in TransactionCategoryGroup
+                if g != TransactionCategoryGroup.OTHER
+            },
             "locked": False,
         }
 
@@ -161,7 +177,11 @@ def category(uri: str) -> str | flask.Response:
                 "name": cat.name,
                 "emoji": cat.emoji,
                 "group": cat.group,
-                "group_type": TransactionCategoryGroup,
+                "group_type": {
+                    g
+                    for g in TransactionCategoryGroup
+                    if g != TransactionCategoryGroup.OTHER
+                },
                 "locked": cat.locked,
                 "is_profit_loss": cat.is_profit_loss,
             }

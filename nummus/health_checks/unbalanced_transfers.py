@@ -8,10 +8,10 @@ from decimal import Decimal
 
 from typing_extensions import override
 
-from nummus import exceptions as exc
 from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+from nummus.models.transaction_category import TransactionCategoryGroup
 
 
 class UnbalancedTransfers(Base):
@@ -25,20 +25,15 @@ class UnbalancedTransfers(Base):
     )
     _SEVERE = True
 
-    _CATEGORY_NAME = "Transfers"
-
     @override
     def test(self) -> None:
         with self._p.get_session() as s:
-            try:
-                cat_transfers_id: int = (
-                    s.query(TransactionCategory.id_)
-                    .where(TransactionCategory.name == self._CATEGORY_NAME)
-                    .one()[0]
-                )
-            except exc.NoResultFound as e:  # pragma: no cover
-                msg = f"Category {self._CATEGORY_NAME} not found"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
+            cat_transfers_ids = {
+                t_cat_id
+                for t_cat_id, in s.query(TransactionCategory.id_)
+                .where(TransactionCategory.group == TransactionCategoryGroup.TRANSFER)
+                .all()
+            }
 
             accounts = Account.map_name(s)
 
@@ -89,7 +84,7 @@ class UnbalancedTransfers(Base):
                     TransactionSplit.date_ord,
                     TransactionSplit.amount,
                 )
-                .where(TransactionSplit.category_id == cat_transfers_id)
+                .where(TransactionSplit.category_id.in_(cat_transfers_ids))
                 .order_by(TransactionSplit.date_ord)
             )
             current_date_ord: int | None = None
@@ -115,17 +110,3 @@ class UnbalancedTransfers(Base):
                 add_issue(current_date_ord, current_splits)
 
         self._commit_issues()
-
-
-class UnbalancedCreditCardPayments(UnbalancedTransfers):
-    """Checks for non-zero net credit card payments."""
-
-    _NAME = "Unbalanced credit card payments"
-    _DESC = textwrap.dedent(
-        """\
-        Credit card payments are transfers so none should be lost.
-        If interest was incurred, add that as a separate transaction.""",
-    )
-    _SEVERE = True
-
-    _CATEGORY_NAME = "Credit Card Payments"

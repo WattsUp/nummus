@@ -90,7 +90,7 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.emoji, "😀")
-            self.assertEqual(t_cat.group, TransactionCategoryGroup.OTHER)
+            self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}
@@ -182,4 +182,4 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             self.assertNotEqual(t_cat.name, "abc")
             self.assertEqual(t_cat.emoji, "😀")
-            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.OTHER)
+            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)

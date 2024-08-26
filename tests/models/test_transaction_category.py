@@ -91,14 +91,14 @@ class TestTransactionCategory(TestBase):
 
         n_income = 0
         n_expense = 0
-        n_other = 0
+        n_transfer = 0
         for cat in result.values():
             if cat.group == TransactionCategoryGroup.INCOME:
                 n_income += 1
             elif cat.group == TransactionCategoryGroup.EXPENSE:
                 n_expense += 1
-            elif cat.group == TransactionCategoryGroup.OTHER:
-                n_other += 1
+            elif cat.group == TransactionCategoryGroup.TRANSFER:
+                n_transfer += 1
 
         query = s.query(TransactionCategory)
         query = query.where(
@@ -113,11 +113,13 @@ class TestTransactionCategory(TestBase):
         self.assertEqual(query.count(), n_expense)
 
         query = s.query(TransactionCategory)
-        query = query.where(TransactionCategory.group == TransactionCategoryGroup.OTHER)
-        self.assertEqual(query.count(), n_other)
+        query = query.where(
+            TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
+        )
+        self.assertEqual(query.count(), n_transfer)
 
         query = s.query(TransactionCategory)
-        self.assertEqual(query.count(), n_income + n_expense + n_other)
+        self.assertEqual(query.count(), n_income + n_expense + n_transfer)
         self.assertEqual(query.count(), 61)
 
     def test_map_name_emoji(self) -> None:

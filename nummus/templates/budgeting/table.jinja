@@ -38,6 +38,7 @@
                         <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
                     {% endif %}
                 </div>
+                {# TODO (WattsUp): Add auto assign #}
                 <button class="button bg-green" disabled>Assign</button>
             </div>
         {% else %}
@@ -49,6 +50,7 @@
                         <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
                     {% endif %}
                 </div>
+                {# TODO (WattsUp): Add fix overspending #}
                 <button class="button bg-red" disabled>Fix</button>
             </div>
         {% endif %}

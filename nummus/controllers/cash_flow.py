@@ -274,7 +274,7 @@ def page() -> str:
     Returns:
         string HTML response
     """
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, cash_flow=True)
     title = "Cash Flow," + title.removeprefix("Transactions")
     return common.page(
         "cash-flow/index-content.jinja",
@@ -298,7 +298,7 @@ def txns() -> flask.Response:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, cash_flow=True)
     start = txn_table["start"]
     title = "Cash Flow," + title.removeprefix("Transactions")
     html = f"<title>{title}</title>\n" + flask.render_template(
@@ -361,7 +361,7 @@ def txns_options(field: str) -> str:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
 
-        query, _, _, _ = transactions.table_unfiltered_query(s, no_other_group=True)
+        query, _, _, _ = transactions.table_unfiltered_query(s, cash_flow=True)
 
         search_str = args.get(f"search-{field}")
 

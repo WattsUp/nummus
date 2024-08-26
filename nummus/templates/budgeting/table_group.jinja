@@ -36,8 +36,10 @@
                     {% if category["available"] == 0 %}
                         <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
                     {% elif category["available"] > 0 %}
+                        {# TODO (WattsUp): Add move available #}
                         <span class="p-1 rounded bg-green-200 transition-colors hover:bg-green-900 hover:text-white">{{ category["available"] | money }}</span>
                     {% else %}
+                        {# TODO (WattsUp): Add fix overspending #}
                         <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white">{{ category["available"] | money }}</span>
                     {% endif %}
                 </div>

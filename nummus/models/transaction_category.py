@@ -17,7 +17,8 @@ class TransactionCategoryGroup(BaseEnum):
 
     INCOME = 1
     EXPENSE = 2
-    OTHER = 3  # Change to TRANSFER
+    TRANSFER = 3
+    OTHER = 4
 
 
 class TransactionCategory(Base):
@@ -116,6 +117,7 @@ class TransactionCategory(Base):
         """
         d: dict[str, TransactionCategory] = {}
         # Dictionary {group: {name: (locked, is_profit_loss)}}
+        # TODO (WattsUp): Add emojis and update default categories
         groups = {
             TransactionCategoryGroup.INCOME: {
                 "Consulting": (False, False),
@@ -173,16 +175,18 @@ class TransactionCategory(Base):
                 "Utilities": (False, False),
                 "Wages Paid": (False, False),
             },
-            TransactionCategoryGroup.OTHER: {
+            TransactionCategoryGroup.TRANSFER: {
                 "Credit Card Payments": (True, False),
                 "Expense Reimbursement": (False, False),
                 "General Rebalance": (False, False),
                 "Portfolio Management": (False, False),
                 "Savings": (True, False),
-                "Securities Traded": (True, True),
                 "Transfers": (True, False),
-                "Uncategorized": (True, False),
                 "Fraud": (False, False),
+            },
+            TransactionCategoryGroup.OTHER: {
+                "Securities Traded": (True, True),
+                "Uncategorized": (True, False),
             },
         }
 

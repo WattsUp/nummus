@@ -217,7 +217,7 @@ class TestCommon(WebTestBase):
 
             with p.get_session() as s:
                 t_cat = TransactionCategory()
-                t_cat.group = TransactionCategoryGroup.OTHER
+                t_cat.group = TransactionCategoryGroup.TRANSFER
                 t_cat.locked = False
                 t_cat.is_profit_loss = False
 
@@ -238,7 +238,7 @@ class TestCommon(WebTestBase):
 
                 t_cat = TransactionCategory()
                 t_cat.name = name
-                t_cat.group = TransactionCategoryGroup.OTHER
+                t_cat.group = TransactionCategoryGroup.TRANSFER
                 t_cat.locked = False
                 t_cat.is_profit_loss = False
                 with self.assertRaises(exc.IntegrityError) as cm:

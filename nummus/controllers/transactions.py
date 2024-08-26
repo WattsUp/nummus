@@ -208,7 +208,7 @@ def table_unfiltered_query(
     acct: Account | None = None,
     default_period: str = "this-month",
     *,
-    no_other_group: bool = False,
+    cash_flow: bool = False,
     asset_transactions: bool = False,
 ) -> tuple[orm.Query, str, datetime.date | None, datetime.date]:
     """Create transactions table query without any column filters.
@@ -217,7 +217,7 @@ def table_unfiltered_query(
         s: SQL session to use
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
-        no_other_group: True to exclude transactions in the OTHER group
+        cash_flow: True to only include INCOME and EXPENSE groups
         asset_transactions: True will only get transactions with assets,
             False will only get transactions without assets
 
@@ -240,12 +240,14 @@ def table_unfiltered_query(
     end_ord = end.toordinal()
 
     transaction_ids = None
-    if no_other_group:
+    if cash_flow:
         query = (
             s.query(TransactionCategory)
             .with_entities(TransactionCategory.id_)
             .where(
-                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+                TransactionCategory.group.in_(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.EXPENSE),
+                ),
             )
         )
         transaction_ids = {row[0] for row in query.all()}
@@ -282,7 +284,7 @@ def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
     *,
-    no_other_group: bool = False,
+    cash_flow: bool = False,
     asset_transactions: bool = False,
 ) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
@@ -290,7 +292,7 @@ def ctx_table(
     Args:
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
-        no_other_group: True to exclude transactions in the OTHER group
+        cash_flow: True to only include INCOME and EXPENSE groups
         asset_transactions: True will only get transactions with assets,
             False will only get transactions without assets
 
@@ -324,7 +326,7 @@ def ctx_table(
             s,
             acct,
             default_period,
-            no_other_group=no_other_group,
+            cash_flow=cash_flow,
             asset_transactions=asset_transactions,
         )
 
