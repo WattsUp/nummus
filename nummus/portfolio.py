@@ -317,6 +317,7 @@ class Portfolio:
         if i is None:
             raise exc.UnknownImporterError(path)
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
+        today = datetime.date.today()
 
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
@@ -365,7 +366,9 @@ class Portfolio:
 
                 # TODO (WattsUp): Link with unlink if possible
                 # Maybe make into a command?
-                # TODO (WattsUp): Prevent creating future transactions
+
+                if d["date"] > today:
+                    raise exc.FutureTransactionError
 
                 txn = Transaction(
                     account_id=acct_id,

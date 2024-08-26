@@ -7,7 +7,7 @@
          hx-include="this">
         {% block row %}
             <div class="w-[6rem] min-w-[6rem] p-1 grow">{{ val["date"] }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ val["value"] | money }}</div>
+            <div class="w-[12rem] min-w-[12rem] p-1 truncate text-right">{{ val["value"] | money6 }}</div>
         {% endblock row %}
     </div>
 {% else %}

@@ -42,6 +42,7 @@ __all__ = [
     "AssetWebError",
     "UnknownEncryptionVersionError",
     "InvalidBackupTarError",
+    "FutureTransactionError",
 ]
 
 
@@ -187,3 +188,12 @@ class UnknownEncryptionVersionError(Exception):
 
 class InvalidBackupTarError(Exception):
     """Error when a backup tar does not have expected contents."""
+
+
+class FutureTransactionError(Exception):
+    """Error when attempting to create a Transaction in the future."""
+
+    def __init__(self) -> None:
+        """Initialize FutureTransactionError."""
+        msg = "Cannot create Transaction in the future"
+        super().__init__(msg)

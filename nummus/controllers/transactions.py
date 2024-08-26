@@ -551,7 +551,8 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
             return common.error("Transaction date must not be empty")
-        # TODO (WattsUp): Prevent creating future transactions
+        if date > datetime.date.today():
+            return common.error("Cannot create future transaction")
         amount = form.get("amount", type=utils.parse_real)
         if amount is None:
             return common.error("Transaction amount must not be empty")
