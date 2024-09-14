@@ -267,7 +267,14 @@ def table_unfiltered_query(
             ),
             TransactionSplit.date_ord <= end_ord,
         )
-        .order_by(TransactionSplit.date_ord)
+        .order_by(
+            TransactionSplit.date_ord,
+            TransactionSplit.account_id,
+            TransactionSplit.payee,
+            TransactionSplit.category_id,
+            TransactionSplit.tag,
+            TransactionSplit.description,
+        )
     )
     if start is not None:
         start_ord = start.toordinal()
@@ -314,11 +321,11 @@ def ctx_table(
         accounts = Account.map_name(s)
         categories = TransactionCategory.map_name(
             s,
-            no_securities_traded=not asset_transactions,
+            no_asset_linked=False,
         )
         categories_emoji = TransactionCategory.map_name_emoji(
             s,
-            no_securities_traded=not asset_transactions,
+            no_asset_linked=False,
         )
         assets = Asset.map_name(s)
 

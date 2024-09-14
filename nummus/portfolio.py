@@ -659,6 +659,8 @@ class Portfolio:
             for t_id, statement in statements.items()
             if t_id not in has_securities_traded
         }
+        if len(statements) == 0:
+            return None
         extracted = process.extract(
             re.sub(r"[0-9]+", "", txn.statement).lower(),
             statements,

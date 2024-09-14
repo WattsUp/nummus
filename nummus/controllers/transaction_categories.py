@@ -120,11 +120,14 @@ def new() -> str | flask.Response:
             "name": None,
             "emoji": None,
             "group": None,
-            "group_type": {
-                g
-                for g in TransactionCategoryGroup
-                if g != TransactionCategoryGroup.OTHER
-            },
+            "group_type": sorted(
+                (
+                    g
+                    for g in TransactionCategoryGroup
+                    if g != TransactionCategoryGroup.OTHER
+                ),
+                key=lambda g: g.name,
+            ),
             "locked": False,
         }
 
@@ -177,11 +180,14 @@ def category(uri: str) -> str | flask.Response:
                 "name": cat.name,
                 "emoji": cat.emoji,
                 "group": cat.group,
-                "group_type": {
-                    g
-                    for g in TransactionCategoryGroup
-                    if g != TransactionCategoryGroup.OTHER
-                },
+                "group_type": sorted(
+                    (
+                        g
+                        for g in TransactionCategoryGroup
+                        if g != TransactionCategoryGroup.OTHER
+                    ),
+                    key=lambda g: g.name,
+                ),
                 "locked": cat.locked,
                 "is_profit_loss": cat.is_profit_loss,
             }

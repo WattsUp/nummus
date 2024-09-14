@@ -421,5 +421,6 @@
 
 @font-face {
     font-family: "noto-color-emoji";
-    src: url("/static/fonts/noto-color-emoji/regular.ttf") format("truetype");
+    src: local("Noto Color Emoji"),
+        url("/static/fonts/noto-color-emoji/regular.ttf") format("truetype");
 }
