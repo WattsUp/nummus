@@ -32,7 +32,10 @@
                     <span class="w-full text-right">{{ category["assigned"] | money }}</span>
                 </div>
                 <div class="w-28 text-right">{{ category["activity"] | money }}</div>
-                <div class="w-28 text-right">
+                <div class="w-28 text-right"
+                     hx-target="#overlay"
+                     hx-swap="innerHTML"
+                     hx-include="#table-month">
                     {% if category["available"] == 0 %}
                         <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
                     {% elif category["available"] > 0 %}
@@ -40,7 +43,8 @@
                         <span class="p-1 rounded bg-green-200 transition-colors hover:bg-green-900 hover:text-white">{{ category["available"] | money }}</span>
                     {% else %}
                         {# TODO (WattsUp): Add fix overspending #}
-                        <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white">{{ category["available"] | money }}</span>
+                        <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white cursor-pointer"
+                              hx-get="{{ url_for("budgeting.overspending", uri=category["uri"]) }}">{{ category["available"] | money }}</span>
                     {% endif %}
                 </div>
             </div>

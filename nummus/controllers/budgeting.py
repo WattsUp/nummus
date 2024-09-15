@@ -7,17 +7,10 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
-from nummus.models import (
-    Account,
-    TransactionCategory,
-    TransactionCategoryGroup,
-    TransactionSplit,
-    YIELD_PER,
-)
+from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
 from nummus.models.budget import BudgetAssignment
 
 if TYPE_CHECKING:
@@ -46,7 +39,6 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if month_str is None
             else datetime.date.fromisoformat(month_str + "-01")
         )
-    month_ord = month.toordinal()
 
     class CategoryContext(TypedDict):
         """Type definition for budget category context."""
@@ -69,113 +61,10 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         available: Decimal
 
     with p.get_session() as s:
-        query = s.query(Account).where(Account.budgeted)
-
-        # Include account if not closed
-        # Include account if most recent transaction is in period
-        def include_account(acct: Account) -> bool:
-            if not acct.closed:
-                return True
-            updated_on_ord = acct.updated_on_ord
-            return updated_on_ord is not None and updated_on_ord >= month_ord
-
-        accounts = {
-            acct.id_: acct.name for acct in query.all() if include_account(acct)
-        }
-
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                sqlalchemy.func.sum(TransactionSplit.amount),
-            )
-            .where(
-                TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.date_ord < month_ord,
-            )
+        categories, assignable, future_assigned = (
+            BudgetAssignment.get_monthly_available(s, month)
         )
-        starting_balance = query.scalar() or Decimal(0)
-        ending_balance = starting_balance
-        total_available = Decimal(0)
         n_overspent = 0
-
-        budget_categories = {
-            t_cat_id
-            for t_cat_id, in s.query(TransactionCategory.id_)
-            .where(TransactionCategory.group != TransactionCategoryGroup.INCOME)
-            .all()
-        }
-
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(BudgetAssignment.category_id, BudgetAssignment.amount)
-            .where(BudgetAssignment.month_ord == month_ord)
-        )
-        categories_assigned: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
-
-        min_month_ord = month_ord
-        prior_assigned: dict[int, dict[int, Decimal]] = {
-            t_cat_id: {} for t_cat_id in budget_categories
-        }
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(
-                BudgetAssignment.category_id,
-                BudgetAssignment.amount,
-                BudgetAssignment.month_ord,
-            )
-            .where(BudgetAssignment.month_ord < month_ord)
-            .order_by(BudgetAssignment.month_ord)
-        )
-        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
-            prior_assigned[cat_id][m_ord] = amount
-            min_month_ord = min(min_month_ord, m_ord)
-
-        prior_activity: dict[int, dict[int, Decimal]] = {
-            t_cat_id: {} for t_cat_id in budget_categories
-        }
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
-                TransactionSplit.month_ord,
-            )
-            .where(
-                TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.month_ord < month_ord,
-                TransactionSplit.month_ord >= min_month_ord,
-                TransactionSplit.category_id.in_(budget_categories),
-            )
-            .group_by(
-                TransactionSplit.category_id,
-                TransactionSplit.month_ord,
-            )
-        )
-        for cat_id, amount, m_ord in query.yield_per(YIELD_PER):
-            prior_activity[cat_id][m_ord] = amount
-
-        categories_leftover: dict[int, Decimal] = {
-            t_cat_id: Decimal(0) for t_cat_id in budget_categories
-        }
-        date = datetime.date.fromordinal(min_month_ord)
-        while date < month:
-            date_ord = date.toordinal()
-            for t_cat_id in budget_categories:
-                assigned = categories_leftover[t_cat_id] + prior_assigned[t_cat_id].get(
-                    date_ord,
-                    Decimal(0),
-                )
-                activity = prior_activity[t_cat_id].get(date_ord, Decimal(0))
-                leftover = assigned + activity
-                categories_leftover[t_cat_id] = max(Decimal(0), leftover)
-            date = utils.date_add_months(date, 1)
-
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(sqlalchemy.func.sum(BudgetAssignment.amount))
-            .where(BudgetAssignment.month_ord > month_ord)
-        )
-        future_assigned = query.scalar() or Decimal(0)
 
         groups: dict[str, GroupContext] = {}
         ungrouped: GroupContext = {
@@ -186,25 +75,9 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             "categories": [],
         }
 
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
-            )
-            .where(
-                TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.month_ord == month_ord,
-            )
-            .group_by(TransactionSplit.category_id)
-        )
-        categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
         query = s.query(TransactionCategory)
         for t_cat in query.yield_per(YIELD_PER):
-            activity = categories_activity.get(t_cat.id_, Decimal(0))
-            assigned = categories_assigned.get(t_cat.id_, Decimal(0))
-            leftover = categories_leftover.get(t_cat.id_, Decimal(0))
-            available = assigned + activity + leftover
+            assigned, activity, available = categories[t_cat.id_]
             # Skip category if all numbers are 0 and not grouped
             if (
                 t_cat.budget_group is None
@@ -213,10 +86,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 and available == 0
             ):
                 continue
-            ending_balance += activity
             if t_cat.group == TransactionCategoryGroup.INCOME:
                 continue
-            total_available += available
 
             if available < 0:
                 n_overspent += 1
@@ -253,13 +124,6 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             group["available"] += available
             group["categories"].append(cat_ctx)
 
-        assignable = ending_balance - total_available
-        if assignable < 0:
-            future_assigned = Decimal(0)
-        else:
-            future_assigned = min(future_assigned, assignable)
-            assignable -= future_assigned
-
         groups_list = sorted(groups.items(), key=lambda item: item[1]["min_position"])
         if ungrouped["categories"]:
             groups_list.append(("Ungrouped", ungrouped))
@@ -276,7 +140,6 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         "month": month_str,
         "month_next": utils.date_add_months(month, 1).isoformat()[:7],
         "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
-        "accounts": sorted(accounts.values()),
         "assignable": assignable,
         "future_assigned": future_assigned,
         "groups": groups_list,
@@ -313,30 +176,33 @@ def assign(uri: str) -> str:
     form = flask.request.form
     month = datetime.date.fromisoformat(form["month"] + "-01")
     month_ord = month.toordinal()
-    amount = form.get("amount", type=utils.parse_real)
-    if amount is None:
-        msg = "Budget assignment must not be empty"
-        raise ValueError(msg)
+    amount = form.get("amount", type=utils.parse_real) or Decimal(0)
 
     with p.get_session() as s:
-        cat = web_utils.find(s, TransactionCategory, uri)
-        a = (
-            s.query(BudgetAssignment)
-            .where(
+        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        if amount == 0:
+            s.query(BudgetAssignment).where(
                 BudgetAssignment.month_ord == month_ord,
                 BudgetAssignment.category_id == cat.id_,
-            )
-            .one_or_none()
-        )
-        if a is None:
-            a = BudgetAssignment(
-                month_ord=month_ord,
-                category_id=cat.id_,
-                amount=amount,
-            )
-            s.add(a)
+            ).delete()
         else:
-            a.amount = amount
+            a = (
+                s.query(BudgetAssignment)
+                .where(
+                    BudgetAssignment.month_ord == month_ord,
+                    BudgetAssignment.category_id == cat.id_,
+                )
+                .one_or_none()
+            )
+            if a is None:
+                a = BudgetAssignment(
+                    month_ord=month_ord,
+                    category_id=cat.id_,
+                    amount=amount,
+                )
+                s.add(a)
+            else:
+                a.amount = amount
         s.commit()
 
     table, _ = ctx_table(month=month)
@@ -346,7 +212,112 @@ def assign(uri: str) -> str:
     )
 
 
+def overspending(uri: str) -> str | flask.Response:
+    """GET & PUT /h/budgeting/c/<uri>/overspending.
+
+    Args:
+        uri: Category URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    args = flask.request.args
+
+    month_str = args["month"]
+    month = datetime.date.fromisoformat(month_str + "-01")
+    month_ord = month.toordinal()
+
+    with p.get_session() as s:
+        t_cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
+
+        if flask.request.method == "PUT":
+            _, _, available = categories[t_cat.id_]
+            source = flask.request.form["source"]
+            if source == "income":
+                source_id = None
+                source_available = assignable
+            else:
+                source_id = TransactionCategory.uri_to_id(source)
+                _, _, source_available = categories[source_id]
+            to_move = min(source_available, -available)
+
+            # Add assignment
+            a = (
+                s.query(BudgetAssignment)
+                .where(
+                    BudgetAssignment.category_id == t_cat.id_,
+                    BudgetAssignment.month_ord == month_ord,
+                )
+                .one_or_none()
+            )
+            if a is None:
+                a = BudgetAssignment(
+                    month_ord=month_ord,
+                    amount=to_move,
+                    category_id=t_cat.id_,
+                )
+                s.add(a)
+            else:
+                a.amount += to_move
+
+            if source_id is not None:
+                a = (
+                    s.query(BudgetAssignment)
+                    .where(
+                        BudgetAssignment.category_id == source_id,
+                        BudgetAssignment.month_ord == month_ord,
+                    )
+                    .one_or_none()
+                )
+                if a is None:
+                    a = BudgetAssignment(
+                        month_ord=month_ord,
+                        amount=-to_move,
+                        category_id=source_id,
+                    )
+                    s.add(a)
+                else:
+                    a.amount -= to_move
+
+            s.commit()
+            return common.overlay_swap(event="update-budget")
+
+        category_names = TransactionCategory.map_name(s)
+
+        options: list[tuple[str, str, Decimal]] = [
+            (
+                TransactionCategory.id_to_uri(t_cat_id),
+                category_names[t_cat_id],
+                available,
+            )
+            for t_cat_id, (_, _, available) in categories.items()
+            if available > 0
+        ]
+        _, _, available = categories[t_cat.id_]
+        options = sorted(options, key=lambda x: x[1])
+        if assignable > 0:
+            options.insert(0, ("income", "Assignable income", assignable))
+
+        month_str = month.isoformat()[:7]
+        category = {
+            "uri": uri,
+            "name": t_cat.emoji_name,
+            "available": available,
+            "month": month_str,
+            "options": options,
+        }
+    return flask.render_template(
+        "budgeting/edit-overspending.jinja",
+        category=category,
+    )
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
+    "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
 }

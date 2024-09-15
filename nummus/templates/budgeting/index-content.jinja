@@ -1,6 +1,6 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
          hx-get="{{ url_for("budgeting.page", month=table["month"]) }}"
-         hx-trigger="update-account from:body"
+         hx-trigger="update-account from:body, update-budget from:body"
          hx-target="#main"
          hx-swap="innerHTML">
     <div class="w-full flex" hx-push-url="true">
