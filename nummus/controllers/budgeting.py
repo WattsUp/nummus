@@ -50,6 +50,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         assigned: Decimal
         activity: Decimal
         available: Decimal
+        bar_mode: str
+        bar_w: Decimal
 
     class GroupContext(TypedDict):
         """Type definition for budget group context."""
@@ -92,6 +94,20 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if available < 0:
                 n_overspent += 1
 
+            if activity == 0 and available == 0:
+                bar_mode = "grey"
+                bar_w = Decimal(0)
+            elif available >= 0:
+                bar_mode = "funded"
+                bar_w = -activity / (available - activity) * 100
+            else:
+                bar_mode = "underfunded"
+                bar_w = (
+                    Decimal(0)
+                    if available < activity
+                    else (activity - available) / activity * 100
+                )
+
             cat_ctx: CategoryContext = {
                 "position": t_cat.budget_position,
                 "uri": t_cat.uri,
@@ -100,6 +116,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "assigned": assigned,
                 "activity": activity,
                 "available": available,
+                "bar_mode": bar_mode,
+                "bar_w": bar_w,
             }
             if t_cat.budget_group is None:
                 group = ungrouped

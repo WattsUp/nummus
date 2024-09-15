@@ -18,10 +18,17 @@
                 <div class="w-2"></div>
                 <div class="grow">
                     <div>{{ category["emoji_name"] }}</div>
-                    <div class="h-1 bg-grey-400 mr-1">
-                        <div class="bg-yellow h-full" style="width: {{ 50 }}%"></div>
-                    </div>
-                    {# TODO (WattsUp): Add progress bar #}
+                    {% if category["bar_mode"] == "grey" %}
+                        <div class="h-1 mr-1 bg-grey-400"></div>
+                    {% elif category["bar_mode"] == "funded" %}
+                        <div class="h-1 mr-1 bg-green">
+                            <div class="h-full bg-blue-500" style="width: {{ category["bar_w"] }}%"></div>
+                        </div>
+                    {% elif category["bar_mode"] == "underfunded" %}
+                        <div class="h-1 mr-1 bg-red">
+                            <div class="h-full bg-blue-500" style="width: {{ category["bar_w"] }}%"></div>
+                        </div>
+                    {% endif %}
                 </div>
                 <div class="w-28 text-right hover-edit">
                     <input class="w-full text-right"
