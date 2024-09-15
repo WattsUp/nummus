@@ -231,11 +231,15 @@ def overspending(uri: str) -> str | flask.Response:
     month_ord = month.toordinal()
 
     with p.get_session() as s:
-        t_cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        t_cat: TransactionCategory | None
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
 
         if flask.request.method == "PUT":
-            _, _, available = categories[t_cat.id_]
+            if t_cat is None:
+                available = assignable
+            else:
+                _, _, available = categories[t_cat.id_]
             source = flask.request.form["source"]
             if source == "income":
                 source_id = None
@@ -246,23 +250,24 @@ def overspending(uri: str) -> str | flask.Response:
             to_move = min(source_available, -available)
 
             # Add assignment
-            a = (
-                s.query(BudgetAssignment)
-                .where(
-                    BudgetAssignment.category_id == t_cat.id_,
-                    BudgetAssignment.month_ord == month_ord,
+            if t_cat is not None:
+                a = (
+                    s.query(BudgetAssignment)
+                    .where(
+                        BudgetAssignment.category_id == t_cat.id_,
+                        BudgetAssignment.month_ord == month_ord,
+                    )
+                    .one_or_none()
                 )
-                .one_or_none()
-            )
-            if a is None:
-                a = BudgetAssignment(
-                    month_ord=month_ord,
-                    amount=to_move,
-                    category_id=t_cat.id_,
-                )
-                s.add(a)
-            else:
-                a.amount += to_move
+                if a is None:
+                    a = BudgetAssignment(
+                        month_ord=month_ord,
+                        amount=to_move,
+                        category_id=t_cat.id_,
+                    )
+                    s.add(a)
+                else:
+                    a.amount += to_move
 
             if source_id is not None:
                 a = (
@@ -297,7 +302,10 @@ def overspending(uri: str) -> str | flask.Response:
             for t_cat_id, (_, _, available) in categories.items()
             if available > 0
         ]
-        _, _, available = categories[t_cat.id_]
+        if t_cat is None:
+            available = assignable
+        else:
+            _, _, available = categories[t_cat.id_]
         options = sorted(options, key=lambda x: x[1])
         if assignable > 0:
             options.insert(0, ("income", "Assignable income", assignable))
@@ -305,7 +313,7 @@ def overspending(uri: str) -> str | flask.Response:
         month_str = month.isoformat()[:7]
         category = {
             "uri": uri,
-            "name": t_cat.emoji_name,
+            "name": None if t_cat is None else t_cat.emoji_name,
             "available": available,
             "month": month_str,
             "options": options,

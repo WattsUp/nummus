@@ -15,7 +15,10 @@
             {% include "budgeting/table_group.jinja" %}
         {% endfor %}
     </div>
-    <div class="w-1/3">
+    <div class="w-1/3"
+         hx-target="#overlay"
+         hx-swap="innerHTML"
+         hx-include="#table-month">
         {% if table["assignable"] == 0 %}
             <div class="w-full bg-grey-200 text-xl flex justify-between p-2 items-center">
                 <div>
@@ -50,8 +53,8 @@
                         <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
                     {% endif %}
                 </div>
-                {# TODO (WattsUp): Add fix overspending #}
-                <button class="button bg-red" disabled>Fix</button>
+                <button class="button bg-red"
+                        hx-get="{{ url_for("budgeting.overspending", uri="income") }}">Fix</button>
             </div>
         {% endif %}
         {% if table["n_overspent"] > 0 %}
