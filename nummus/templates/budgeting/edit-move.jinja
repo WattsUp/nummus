@@ -8,19 +8,17 @@
             {% include "svg/x.svg" %}
         {% endwith %}
     </button>
-    <h1 class="font-serif text-4xl px-6 text-green-600">Cover overspending</h1>
+    <h1 class="font-serif text-4xl px-6 text-green-600">Move available funds</h1>
     <div class="w-full px-6 grow" id="form-edit-budget">
-        {% if category["name"] is none %}
-            <div>More money is assigned than held by {{ -category["available"] | money }}</div>
-        {% else %}
-            <div>{{ category["name"] }} is overspent by {{ -category["available"] | money }}</div>
-        {% endif %}
+        <div>{{ category["name"] }} has {{ category["available"] | money }} available</div>
         <div class="flex w-full">
             <div class="w-16">Move:</div>
-            <div class="grow">{{ -category["available"] | money }}</div>
+            <input class="grow"
+                   value="{{ "%.2f" % category["available"] }}"
+                   name="amount">
         </div>
         <div class="flex w-full">
-            <div class="w-16">From:</div>
+            <div class="w-16">To:</div>
             <select class="grow" name="source">
                 {% for uri, name, available in category["options"] %}
                     <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
@@ -32,7 +30,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
-        <button hx-put="{{ url_for("budgeting.overspending", uri=category["uri"], month=category["month"]) }}"
+        <button hx-put="{{ url_for("budgeting.move", uri=category["uri"], month=category["month"]) }}"
                 hx-target="#overlay-error"
                 hx-include="#form-edit-budget"
                 class="button bg-green">Save</button>

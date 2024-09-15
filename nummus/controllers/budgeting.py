@@ -324,8 +324,121 @@ def overspending(uri: str) -> str | flask.Response:
     )
 
 
+def move(uri: str) -> str | flask.Response:
+    """GET & PUT /h/budgeting/c/<uri>/move.
+
+    Args:
+        uri: Category URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    args = flask.request.args
+
+    month_str = args["month"]
+    month = datetime.date.fromisoformat(month_str + "-01")
+    month_ord = month.toordinal()
+
+    with p.get_session() as s:
+        t_cat: TransactionCategory | None
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
+
+        if flask.request.method == "PUT":
+            if t_cat is None:
+                available = assignable
+            else:
+                _, _, available = categories[t_cat.id_]
+            source = flask.request.form["source"]
+            to_move = flask.request.form.get("amount", type=utils.parse_real)
+            if to_move is None:
+                return common.error("Amount to move must not be blank")
+
+            source_id = (
+                None if source == "income" else TransactionCategory.uri_to_id(source)
+            )
+
+            # Add assignment
+            if t_cat is not None:
+                a = (
+                    s.query(BudgetAssignment)
+                    .where(
+                        BudgetAssignment.category_id == t_cat.id_,
+                        BudgetAssignment.month_ord == month_ord,
+                    )
+                    .one_or_none()
+                )
+                if a is None:
+                    a = BudgetAssignment(
+                        month_ord=month_ord,
+                        amount=-to_move,
+                        category_id=t_cat.id_,
+                    )
+                    s.add(a)
+                else:
+                    a.amount -= to_move
+
+            if source_id is not None:
+                a = (
+                    s.query(BudgetAssignment)
+                    .where(
+                        BudgetAssignment.category_id == source_id,
+                        BudgetAssignment.month_ord == month_ord,
+                    )
+                    .one_or_none()
+                )
+                if a is None:
+                    a = BudgetAssignment(
+                        month_ord=month_ord,
+                        amount=to_move,
+                        category_id=source_id,
+                    )
+                    s.add(a)
+                else:
+                    a.amount += to_move
+
+            s.commit()
+            return common.overlay_swap(event="update-budget")
+
+        category_names = TransactionCategory.map_name(s)
+
+        options: list[tuple[str, str, Decimal]] = [
+            (
+                TransactionCategory.id_to_uri(t_cat_id),
+                category_names[t_cat_id],
+                available,
+            )
+            for t_cat_id, (_, _, available) in categories.items()
+            if (t_cat is None or t_cat_id != t_cat.id_) and t_cat_id in category_names
+        ]
+        if t_cat is None:
+            available = assignable
+        else:
+            _, _, available = categories[t_cat.id_]
+        options = sorted(options, key=lambda x: (x[2] >= 0, x[1]))
+        if t_cat is not None:
+            options.insert(0, ("income", "Assignable income", assignable))
+
+        month_str = month.isoformat()[:7]
+        category = {
+            "uri": uri,
+            "name": None if t_cat is None else t_cat.emoji_name,
+            "available": available,
+            "month": month_str,
+            "options": options,
+        }
+    return flask.render_template(
+        "budgeting/edit-move.jinja",
+        category=category,
+    )
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
+    "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
 }

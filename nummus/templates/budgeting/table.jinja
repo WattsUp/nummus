@@ -41,8 +41,8 @@
                         <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
                     {% endif %}
                 </div>
-                {# TODO (WattsUp): Add auto assign #}
-                <button class="button bg-green" disabled>Assign</button>
+                <button class="button bg-green"
+                        hx-get="{{ url_for("budgeting.move", uri="income") }}">Assign</button>
             </div>
         {% else %}
             <div class="w-full bg-red-200 text-xl flex justify-between p-2 items-center">
