@@ -151,6 +151,7 @@ class TestCashFlow(WebTestBase):
                 closed=True,
                 category=AccountCategory.CASH,
                 emergency=False,
+                budgeted=True,
             )
             s.add(a)
             s.commit()
@@ -209,7 +210,7 @@ class TestCashFlow(WebTestBase):
         d["payee_1"]
         d["t_split_0"]
         d["t_split_1"]
-        cat_0_emoji = d["cat_0_emoji"]
+        cat_0 = d["cat_0"]
         tag_1 = d["tag_1"]
 
         endpoint = "cash_flow.txns_options"
@@ -225,15 +226,15 @@ class TestCashFlow(WebTestBase):
         )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         self.assertNotIn("Uncategorized", result)
 
         result, _ = self.web_get(
-            (endpoint, {"field": "category", "category": cat_0_emoji}),
+            (endpoint, {"field": "category", "category": cat_0}),
         )
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+checked[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+checked[ \n]+hx-get')
 
         result, _ = self.web_get(
             (endpoint, {"field": "tag"}),

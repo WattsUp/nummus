@@ -28,6 +28,8 @@ class BudgetAssignment(Base):
         category_id: Budget category to contribute to
     """
 
+    # No __table_id__ because this is not user accessible
+
     month_ord: ORMInt
     amount: ORMReal = orm.mapped_column(Decimal6)
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
@@ -200,9 +202,6 @@ class BudgetAssignment(Base):
             available = assigned + activity + leftover
             categories[t_cat_id] = (assigned, activity, available)
 
-            # Skip category if all numbers are 0 and not grouped
-            if group is None and activity == 0 and assigned == 0 and available == 0:
-                continue
             ending_balance += activity
             if group == TransactionCategoryGroup.INCOME:
                 continue

@@ -191,9 +191,13 @@ def assign(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    form = flask.request.form
-    month = datetime.date.fromisoformat(form["month"] + "-01")
+    args = flask.request.args
+
+    month_str = args["month"]
+    month = datetime.date.fromisoformat(month_str + "-01")
     month_ord = month.toordinal()
+
+    form = flask.request.form
     amount = form.get("amount", type=utils.parse_real) or Decimal(0)
 
     with p.get_session() as s:

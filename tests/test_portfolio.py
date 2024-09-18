@@ -243,6 +243,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_invest_0 = Account(
                 name="Primate Investments",
@@ -251,6 +252,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_invest_1 = Account(
                 name="Primate Investments",
@@ -258,6 +260,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_invest_0, acct_invest_1))
             s.commit()
@@ -367,6 +370,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_invest = Account(
                 name="Monkey Investments",
@@ -374,6 +378,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_invest))
             s.commit()
@@ -462,6 +467,15 @@ class TestPortfolio(TestBase):
             path = self._DATA_ROOT.joinpath("banana_bank_statement.pdf")
             self.assertRaises(exc.EmptyImportError, p.import_file, path, path_debug)
 
+            # Cannot import future transactions
+            path = self._DATA_ROOT.joinpath("transactions_future.csv")
+            self.assertRaises(
+                exc.FutureTransactionError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
@@ -478,6 +492,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -522,6 +537,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -699,6 +715,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -795,6 +812,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
 
             s.add_all((a, a_house, acct))
@@ -838,7 +856,7 @@ class TestPortfolio(TestBase):
             date = datetime.date(2023, 5, 1)
             txn = Transaction(
                 account_id=acct.id_,
-                date=today,
+                date=date,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -873,7 +891,7 @@ class TestPortfolio(TestBase):
             # Sell asset so it should not include today
             txn = Transaction(
                 account_id=acct.id_,
-                date=today,
+                date=date,
                 amount=self.random_decimal(-1, 1),
                 statement=self.random_string(),
             )
@@ -938,6 +956,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_1 = Account(
                 name="Monkey Bank Credit",
@@ -945,6 +964,7 @@ class TestPortfolio(TestBase):
                 category=AccountCategory.CREDIT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_0, acct_1))
             s.commit()
@@ -1046,6 +1066,21 @@ class TestPortfolio(TestBase):
             s.commit()
             result = p.find_similar_transaction(txn_0, do_commit=False)
             self.assertEqual(result, txn_1.id_)
+
+            # Cannot match if a split has an asset_linked
+            t_split_1.category_id = categories["Securities Traded"]
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertEqual(result, txn_2.id_)
+
+            t_split_2.category_id = categories["Securities Traded"]
+            s.commit()
+            result = p.find_similar_transaction(txn_0, do_commit=False)
+            self.assertIsNone(result)
+
+            t_split_1.category_id = categories["Uncategorized"]
+            t_split_2.category_id = categories["Uncategorized"]
+            s.commit()
 
             # txn_2 is closer so more points being closer
             txn_2.amount = Decimal(8.5)

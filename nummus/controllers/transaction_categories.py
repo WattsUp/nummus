@@ -150,6 +150,7 @@ def new() -> str | flask.Response:
                 group=group,
                 locked=False,
                 is_profit_loss=is_profit_loss,
+                asset_linked=False,
             )
             s.add(cat)
             s.commit()

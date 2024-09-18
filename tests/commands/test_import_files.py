@@ -30,6 +30,7 @@ class TestImport(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_invest = Account(
                 name="Monkey Investments",
@@ -37,6 +38,7 @@ class TestImport(TestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add_all((acct_checking, acct_invest, asset))

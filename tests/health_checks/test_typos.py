@@ -44,6 +44,7 @@ class TestTypos(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct_0)
             s.commit()
@@ -55,6 +56,7 @@ class TestTypos(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct_1)
             s.commit()
@@ -248,6 +250,7 @@ class TestTypos(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()

@@ -142,6 +142,7 @@ class TestAccount(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         s.add(t_cat)

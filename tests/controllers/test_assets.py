@@ -327,7 +327,7 @@ class TestAsset(WebTestBase):
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0, "period": "all"}),
         )
-        self.assertRegex(result, r"<div .*>\$100.00</div>")
+        self.assertRegex(result, r"<div .*>\$100.000000</div>")
         self.assertRegex(result, rf'<div id="val-{v_uri}"')
         self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 
@@ -354,7 +354,7 @@ class TestAsset(WebTestBase):
             r'<script>assetChart\.update\(.*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "months"', result)
-        self.assertNotRegex(result, r"<div .*>\$100.00</div>")
+        self.assertNotRegex(result, r"<div .*>\$100.000000</div>")
         self.assertNotRegex(result, rf'<div id="val-{v_uri}"')
         self.assertNotRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
 

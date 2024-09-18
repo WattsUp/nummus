@@ -38,7 +38,7 @@ class TestTransaction(WebTestBase):
         t_0 = d["t_0"]
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
-        cat_0_emoji = d["cat_0_emoji"]
+        cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
         a_uri_0 = d["a_uri_0"]
@@ -124,13 +124,13 @@ class TestTransaction(WebTestBase):
         )
 
         result, _ = self.web_get(
-            (endpoint, {"category": cat_0_emoji}),
+            (endpoint, {"category": cat_0}),
         )
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 1)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {cat_0_emoji} \| nummus</title>",
+            rf"<title>Transactions This Month, {cat_0} \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -262,7 +262,7 @@ class TestTransaction(WebTestBase):
         acct = d["acct"]
         payee_0 = d["payee_0"]
         payee_1 = d["payee_1"]
-        cat_0_emoji = d["cat_0_emoji"]
+        cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
@@ -278,11 +278,11 @@ class TestTransaction(WebTestBase):
             (endpoint, {"field": "category", "period": "all"}),
         )
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
-        i_0 = result.find(cat_0_emoji)
+        i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
@@ -290,10 +290,10 @@ class TestTransaction(WebTestBase):
             (endpoint, {"field": "category", "category": cat_1}),
         )
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
-        i_0 = result.find(cat_0_emoji)
+        i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
         self.assertLess(i_1, i_0)
 
@@ -361,7 +361,6 @@ class TestTransaction(WebTestBase):
         t_split_0 = d["t_split_0"]
         payee_0 = d["payee_0"]
         cat_0 = d["cat_0"]
-        cat_0_emoji = d["cat_0_emoji"]
         cat_1 = d["cat_1"]
 
         endpoint = "transactions.transaction"
@@ -396,7 +395,7 @@ class TestTransaction(WebTestBase):
             "locked": "",
             "payee": [payee_0, ""],
             "description": ["", ""],
-            "category": [cat_0_emoji, cat_1],
+            "category": [cat_0, cat_1],
             "tag": ["", ""],
             "amount": ["100", ""],
         }
@@ -412,7 +411,7 @@ class TestTransaction(WebTestBase):
             "locked": "",
             "payee": [payee_0, ""],
             "description": [new_desc, ""],
-            "category": [cat_0_emoji, cat_1],
+            "category": [cat_0, cat_1],
             "tag": ["", ""],
             "amount": ["20", "80"],
         }
@@ -458,7 +457,7 @@ class TestTransaction(WebTestBase):
             "date": new_date,
             "payee": payee_0,
             "description": new_desc,
-            "category": cat_0_emoji,
+            "category": cat_0,
             "tag": "",
             "amount": "100",
         }
@@ -633,6 +632,10 @@ class TestTransaction(WebTestBase):
         form = {}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Transaction date must not be empty", result)
+
+        form = {"date": today + datetime.timedelta(days=1)}
+        result, _ = self.web_post(endpoint, data=form)
+        self.assertIn("Cannot create future transaction", result)
 
         form = {"date": today}
         result, _ = self.web_post(endpoint, data=form)

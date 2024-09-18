@@ -69,6 +69,7 @@ class TestEmergencyFund(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=True,
                 emergency=True,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -146,6 +147,7 @@ class TestEmergencyFund(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=True,
                 emergency=True,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()

@@ -21,7 +21,7 @@ class TestTransactionCategory(WebTestBase):
         with p.get_session() as s:
             n = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name != "Securities Traded")
+                .where(TransactionCategory.group != TransactionCategoryGroup.OTHER)
                 .count()
             )
 
@@ -63,10 +63,8 @@ class TestTransactionCategory(WebTestBase):
 
         with p.get_session() as s:
             query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.locked.is_(False))
-            t_cat = query.first()
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
+            query = query.where(TransactionCategory.name == "Other Income")
+            t_cat = query.one()
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
@@ -76,7 +74,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn("Delete", result)
 
         name = self.random_string()
-        form = {"name": name + "😀", "group": "other"}
+        form = {"name": name + "😀", "group": "transfer"}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -110,6 +108,7 @@ class TestTransactionCategory(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()

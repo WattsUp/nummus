@@ -31,7 +31,7 @@ class MissingAssetLink(Base):
                 return
             acct_len = max(len(acct) for acct in accounts.values())
 
-            categories = TransactionCategory.map_name(s, no_securities_traded=False)
+            categories = TransactionCategory.map_name(s)
             categories_rev = {v: k for k, v in categories.items()}
 
             # These categories should be linked to an asset

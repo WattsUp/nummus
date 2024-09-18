@@ -59,6 +59,7 @@ class TestPerformance(WebTestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct_0)
             s.commit()
@@ -245,6 +246,7 @@ class TestPerformance(WebTestBase):
                 closed=True,
                 category=AccountCategory.INVESTMENT,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -357,6 +359,7 @@ class TestPerformance(WebTestBase):
                 category=AccountCategory.INVESTMENT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct_0)
             s.commit()

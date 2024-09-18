@@ -373,7 +373,7 @@ class Portfolio:
                 txn = Transaction(
                     account_id=acct_id,
                     amount=d["amount"],
-                    date_ord=d["date"],
+                    date=d["date"],
                     statement=statement,
                     linked=True,
                 )
@@ -565,6 +565,13 @@ class Portfolio:
         amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
         sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
 
+        cat_asset_linked = {
+            t_cat_id
+            for t_cat_id, in s.query(TransactionCategory.id_)
+            .where(TransactionCategory.asset_linked.is_(True))
+            .all()
+        }
+
         # Check within Account first, exact matches
         # If this matches, great, no post filtering needed
         query = (
@@ -613,16 +620,6 @@ class Portfolio:
         if row is not None:
             return commit_match(row)
 
-        try:
-            securities_traded_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Securities Traded")
-                .one()[0]
-            )
-        except exc.NoResultFound as e:  # pragma: no cover
-            msg = "Category Securities Traded not found"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-
         # No statements match, choose highest fuzzy matching statement
         query = (
             s.query(Transaction)
@@ -645,19 +642,19 @@ class Portfolio:
         if len(statements) == 0:
             return None
         # Don't match a Transaction if it has a Securities Traded split
-        has_securities_traded = {
+        has_asset_linked = {
             id_
             for id_, in s.query(TransactionSplit.parent_id)
             .where(
                 TransactionSplit.parent_id.in_(statements),
-                TransactionSplit.category_id == securities_traded_id,
+                TransactionSplit.category_id.in_(cat_asset_linked),
             )
             .distinct()
         }
         statements = {
             t_id: statement
             for t_id, statement in statements.items()
-            if t_id not in has_securities_traded
+            if t_id not in has_asset_linked
         }
         if len(statements) == 0:
             return None

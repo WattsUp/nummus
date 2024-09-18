@@ -90,6 +90,7 @@ class TestUtils(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=False,
         )
         s.add(t_cat)
         s.commit()

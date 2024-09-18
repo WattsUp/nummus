@@ -49,6 +49,7 @@ class TestTransaction(TestBase):
 
         self.assertEqual(txn.account_id, acct.id_)
         self.assertEqual(txn.date_ord, today.toordinal())
+        self.assertEqual(txn.date, today)
         self.assertEqual(txn.amount, d["amount"])
         self.assertEqual(txn.statement, d["statement"])
         self.assertFalse(txn.locked, "Transaction is unexpectedly locked")

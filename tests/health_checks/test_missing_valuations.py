@@ -48,6 +48,7 @@ class TestMissingValuations(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()

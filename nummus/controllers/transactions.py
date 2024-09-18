@@ -319,14 +319,8 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name(
-            s,
-            no_asset_linked=False,
-        )
-        categories_emoji = TransactionCategory.map_name_emoji(
-            s,
-            no_asset_linked=False,
-        )
+        categories = TransactionCategory.map_name(s)
+        categories_emoji = TransactionCategory.map_name_emoji(s)
         assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
@@ -630,7 +624,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
-        categories = TransactionCategory.map_name(s)
+        categories = TransactionCategory.map_name(s, no_asset_linked=True)
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":

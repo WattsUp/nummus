@@ -47,6 +47,7 @@ class TestUpdateAssets(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
 
             s.add_all((a, acct))

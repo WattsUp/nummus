@@ -212,7 +212,7 @@ class TransactionCategory(Base):
         cls,
         s: orm.Session,
         *,
-        no_asset_linked: bool = True,
+        no_asset_linked: bool = False,
     ) -> dict[int, str]:
         """Mapping between id and names.
 
@@ -243,7 +243,7 @@ class TransactionCategory(Base):
         cls,
         s: orm.Session,
         *,
-        no_asset_linked: bool = True,
+        no_asset_linked: bool = False,
     ) -> dict[int, str]:
         """Mapping between id and names with emojis.
 

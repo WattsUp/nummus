@@ -114,6 +114,7 @@ class TestNetWorth(WebTestBase):
                 closed=True,
                 category=AccountCategory.CASH,
                 emergency=False,
+                budgeted=True,
             )
             s.add(a)
             s.commit()

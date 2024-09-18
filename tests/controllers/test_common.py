@@ -63,6 +63,7 @@ class TestCommon(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_savings = Account(
                 name="Monkey Bank Savings",
@@ -70,6 +71,7 @@ class TestCommon(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=True,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
             s.commit()
@@ -216,10 +218,12 @@ class TestCommon(WebTestBase):
             self.assertIn(e_str, html)
 
             with p.get_session() as s:
-                t_cat = TransactionCategory()
-                t_cat.group = TransactionCategoryGroup.TRANSFER
-                t_cat.locked = False
-                t_cat.is_profit_loss = False
+                t_cat = TransactionCategory(
+                    group=TransactionCategoryGroup.TRANSFER,
+                    locked=False,
+                    is_profit_loss=False,
+                    asset_linked=False,
+                )
 
                 with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
@@ -236,11 +240,13 @@ class TestCommon(WebTestBase):
                 s.add(t_cat)
                 s.commit()
 
-                t_cat = TransactionCategory()
-                t_cat.name = name
-                t_cat.group = TransactionCategoryGroup.TRANSFER
-                t_cat.locked = False
-                t_cat.is_profit_loss = False
+                t_cat = TransactionCategory(
+                    name=name,
+                    group=TransactionCategoryGroup.TRANSFER,
+                    locked=False,
+                    is_profit_loss=False,
+                    asset_linked=False,
+                )
                 with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
                     s.commit()

@@ -44,6 +44,7 @@ class TestEmptyFields(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
                 # missing number
             )
             s.add(acct)

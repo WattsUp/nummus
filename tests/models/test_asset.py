@@ -368,6 +368,7 @@ class TestAsset(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
         s.add(t_cat)
         s.commit()
@@ -567,6 +568,7 @@ class TestAsset(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         s.add_all((a, acct, t_cat))
@@ -769,6 +771,7 @@ class TestAsset(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         # No ticker should fail
