@@ -56,7 +56,15 @@
             </div>
         {% endif %}
         {% if table["n_overspent"] > 0 %}
-            <div class="bg-red-200 text-center p-2">{{ table["n_overspent"] }} categories are overspent.</div>
+            <div class="bg-red-200 text-center p-2">
+                {{ table["n_overspent"] }}
+                {% if table["n_overspent"] == 1 %}
+                    category is
+                {% else %}
+                    categories are
+                {% endif %}
+                overspent.
+            </div>
         {% endif %}
         {# TODO (WattsUp): Add target editor #}
     </div>

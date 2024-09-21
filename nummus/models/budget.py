@@ -199,13 +199,15 @@ class BudgetAssignment(Base):
             activity = categories_activity.get(t_cat_id, Decimal(0))
             assigned = categories_assigned.get(t_cat_id, Decimal(0))
             leftover = categories_leftover.get(t_cat_id, Decimal(0))
-            available = assigned + activity + leftover
-            categories[t_cat_id] = (assigned, activity, available)
+            available = (
+                Decimal(0)
+                if group == TransactionCategoryGroup.INCOME
+                else assigned + activity + leftover
+            )
 
             ending_balance += activity
-            if group == TransactionCategoryGroup.INCOME:
-                continue
             total_available += available
+            categories[t_cat_id] = (assigned, activity, available)
 
         assignable = ending_balance - total_available
         if assignable < 0:

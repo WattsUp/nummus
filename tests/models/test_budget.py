@@ -175,7 +175,7 @@ class TestBudgetAssignment(TestBase):
         self.assertEqual(categories[t_cat_id], (Decimal(0), Decimal(-10), Decimal(-10)))
         self.assertEqual(
             categories[names_rev["Other Income"]],
-            (Decimal(0), Decimal(100), Decimal(100)),
+            (Decimal(0), Decimal(100), Decimal(0)),
         )
         self.assertEqual(assignable, Decimal(100))
         self.assertEqual(future_assigned, 0)

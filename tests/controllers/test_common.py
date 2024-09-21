@@ -39,6 +39,8 @@ class TestCommon(WebTestBase):
 
     def test_ctx_sidebar(self) -> None:
         p = self._portfolio
+        with p.get_session() as s:
+            TransactionCategory.add_default(s)
 
         today = datetime.date.today()
 

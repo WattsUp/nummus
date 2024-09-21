@@ -17,6 +17,7 @@ from tests.controllers.base import HTTP_CODE_FORBIDDEN, WebTestBase
 class TestTransactionCategory(WebTestBase):
     def test_overlay(self) -> None:
         p = self._portfolio
+        self._setup_portfolio()
 
         with p.get_session() as s:
             n = (
@@ -32,6 +33,7 @@ class TestTransactionCategory(WebTestBase):
 
     def test_new(self) -> None:
         p = self._portfolio
+        self._setup_portfolio()
 
         with p.get_session() as s:
             n_before = s.query(TransactionCategory).count()

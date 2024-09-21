@@ -22,6 +22,7 @@ from nummus.models import (
     AssetCategory,
     AssetValuation,
     Budget,
+    BudgetAssignment,
     Credentials,
     Transaction,
     TransactionCategory,
@@ -137,6 +138,7 @@ class WebTestBase(TestBase):
 
             acct_uri = acct.uri
 
+            TransactionCategory.add_default(s)
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -221,9 +223,11 @@ class WebTestBase(TestBase):
         models = [
             AssetValuation,
             Budget,
+            BudgetAssignment,
             Credentials,
             TransactionSplit,
             Transaction,
+            TransactionCategory,
             Asset,
             Account,
         ]

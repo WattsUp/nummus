@@ -17,6 +17,12 @@ from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
 
 class TestTransaction(WebTestBase):
     def test_page_all(self) -> None:
+        p = self._portfolio
+        self._setup_portfolio()
+        with p.get_session() as s:
+            s.query(TransactionSplit).delete()
+            s.query(Transaction).delete()
+            s.commit()
         endpoint = "transactions.page_all"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)

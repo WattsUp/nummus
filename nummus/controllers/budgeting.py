@@ -307,6 +307,8 @@ def overspending(uri: str) -> str | flask.Response:
                         category_id=source_id,
                     )
                     s.add(a)
+                elif a.amount == to_move:
+                    s.delete(a)
                 else:
                     a.amount -= to_move
 
@@ -374,14 +376,12 @@ def move(uri: str) -> str | flask.Response:
                 available = assignable
             else:
                 _, _, available = categories[t_cat.id_]
-            source = flask.request.form["source"]
+            dest = flask.request.form["destination"]
             to_move = flask.request.form.get("amount", type=utils.parse_real)
             if to_move is None:
                 return common.error("Amount to move must not be blank")
 
-            source_id = (
-                None if source == "income" else TransactionCategory.uri_to_id(source)
-            )
+            dest_id = None if dest == "income" else TransactionCategory.uri_to_id(dest)
 
             # Add assignment
             if t_cat is not None:
@@ -400,14 +400,16 @@ def move(uri: str) -> str | flask.Response:
                         category_id=t_cat.id_,
                     )
                     s.add(a)
+                elif a.amount == to_move:
+                    s.delete(a)
                 else:
                     a.amount -= to_move
 
-            if source_id is not None:
+            if dest_id is not None:
                 a = (
                     s.query(BudgetAssignment)
                     .where(
-                        BudgetAssignment.category_id == source_id,
+                        BudgetAssignment.category_id == dest_id,
                         BudgetAssignment.month_ord == month_ord,
                     )
                     .one_or_none()
@@ -416,7 +418,7 @@ def move(uri: str) -> str | flask.Response:
                     a = BudgetAssignment(
                         month_ord=month_ord,
                         amount=to_move,
-                        category_id=source_id,
+                        category_id=dest_id,
                     )
                     s.add(a)
                 else:

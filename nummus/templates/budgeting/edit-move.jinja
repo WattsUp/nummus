@@ -10,7 +10,11 @@
     </button>
     <h1 class="font-serif text-4xl px-6 text-green-600">Move available funds</h1>
     <div class="w-full px-6 grow" id="form-edit-budget">
-        <div>{{ category["name"] }} has {{ category["available"] | money }} available</div>
+        {% if category["name"] is none %}
+            <div>Assignable income has {{ category["available"] | money }} available</div>
+        {% else %}
+            <div>{{ category["name"] }} has {{ category["available"] | money }} available</div>
+        {% endif %}
         <div class="flex w-full">
             <div class="w-16">Move:</div>
             <input class="grow"
@@ -19,7 +23,7 @@
         </div>
         <div class="flex w-full">
             <div class="w-16">To:</div>
-            <select class="grow" name="source">
+            <select class="grow" name="destination">
                 {% for uri, name, available in category["options"] %}
                     <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
                 {% endfor %}
