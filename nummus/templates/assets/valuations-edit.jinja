@@ -1,9 +1,9 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
-     hx-get="{{ url_for("common.empty") }}"
+     hx-get="{{ url_for('common.empty') }}"
      hx-swap="innerHTML"></div>
 <div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-swap="innerHTML">
-    <button hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
+    <button hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6">
         {% with class="w-[32px] h-[32px]" %}
             {% include "svg/x.svg" %}
         {% endwith %}
@@ -40,7 +40,7 @@
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
         {% if valuation["uri"] %}
-            <button hx-delete="{{ url_for("assets.valuation", uri=valuation["uri"]) }}"
+            <button hx-delete="{{ url_for('assets.valuation', uri=valuation['uri']) }}"
                     hx-confirm="Are you sure you wish to delete this valuation?"
                     class="button hover:red mr-auto">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -49,14 +49,14 @@
                 Delete
             </button>
         {% endif %}
-        <button hx-get="{{ url_for("common.empty") }}" class="button hover:green">Cancel</button>
+        <button hx-get="{{ url_for('common.empty') }}" class="button hover:green">Cancel</button>
         {% if valuation["uri"] %}
-            <button hx-put="{{ url_for("assets.valuation", uri=valuation["uri"]) }}"
+            <button hx-put="{{ url_for('assets.valuation', uri=valuation['uri']) }}"
                     hx-target="#overlay-error"
                     hx-include="#form-valuation"
                     class="button bg-green">Save</button>
         {% else %}
-            <button hx-post="{{ url_for("assets.new_valuation", **url_args) }}"
+            <button hx-post="{{ url_for('assets.new_valuation', **url_args) }}"
                     hx-target="#overlay-error"
                     hx-include="#form-valuation"
                     class="button bg-green">Save</button>

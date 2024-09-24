@@ -3,7 +3,7 @@
        placeholder="Search..."
        name="search-{{ name }}"
        value="{{ search_str }}"
-       hx-get="{{ url_for(endpoint + "_options", field=name, **url_args) }}"
+       hx-get="{{ url_for(endpoint + '_options', field=name, **url_args) }}"
        hx-target="#txn-{{ name }}"
        hx-swap="innerHTML"
        hx-trigger="keyup changed delay:250ms"

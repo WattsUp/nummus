@@ -18,7 +18,7 @@
             </div>
         {% else %}
             <input name="linked" value="false" class="hidden" autocomplete="off">
-            <div hx-get="{{ url_for(endpoint, linked="", **url_args) }}">
+            <div hx-get="{{ url_for(endpoint, linked='', **url_args) }}">
                 {% with class = svg_class + " bg-green fill-transparent" %}
                     {% include "svg/link.svg" %}
                 {% endwith %}

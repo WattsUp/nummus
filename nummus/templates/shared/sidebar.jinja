@@ -1,6 +1,6 @@
 <div id="sidebar"
      class="h-full w-[18rem] z-10 pt-12 top-0 fixed translate-x-[-18rem] hover:translate-x-0 transition-transform duration-300 xl:relative xl:pt-0 xl:left-0 xl:transition-none xl:translate-x-0 group/sidebar"
-     hx-get="{{ url_for("common.sidebar") }}"
+     hx-get="{{ url_for('common.sidebar') }}"
      hx-trigger="update-account from:body, update-valuation from:body"
      hx-target="#sidebar">
     <div class="absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg text-white text-center text-2xl xl:hidden">
@@ -10,8 +10,8 @@
     </div>
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
         <a class="block m-2 cursor-pointer"
-           href="{{ url_for("net_worth.page") }}"
-           hx-get="{{ url_for("net_worth.page") }}"
+           href="{{ url_for('net_worth.page') }}"
+           hx-get="{{ url_for('net_worth.page') }}"
            hx-target="#main"
            hx-swap="innerHTML"
            hx-push-url="true">
@@ -39,7 +39,7 @@
         </a>
         {% if sidebar["include_closed"] %}
             <button class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900"
-                    hx-get="{{ url_for("common.sidebar", closed="excluded") }}">
+                    hx-get="{{ url_for('common.sidebar', closed='excluded') }}">
                 Closed accounts marked with red borders. Click to hide.
             </button>
         {% endif %}
@@ -55,7 +55,7 @@
                         {% if loop.index != 1 %}<div class="mx-3 h-px bg-grey-200"></div>{% endif %}
                         <div class="block whitespace-nowrap relative p-px border-2 {{ "border-red" if acct["closed"] else "border-transparent" }}">
                             <div class="w-[18px] h-full absolute group/navitem cursor-pointer"
-                                 hx-get="{{ url_for("accounts.account", uri=acct["uri"]) }}"
+                                 hx-get="{{ url_for('accounts.account', uri=acct['uri']) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
                                 {% with class="fill-transparent transition-colors group-hover/navitem:fill-black" %}
@@ -63,8 +63,8 @@
                                 {% endwith %}
                             </div>
                             <a class="cursor-pointer"
-                               href="{{ url_for("accounts.page", uri=acct["uri"]) }}"
-                               hx-get="{{ url_for("accounts.page", uri=acct["uri"]) }}"
+                               href="{{ url_for('accounts.page', uri=acct['uri']) }}"
+                               hx-get="{{ url_for('accounts.page', uri=acct['uri']) }}"
                                hx-target="#main"
                                hx-swap="innerHTML"
                                hx-push-url="true">
@@ -91,14 +91,14 @@
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for("common.sidebar", closed="excluded") }}">Click to hide</button>
+                        hx-get="{{ url_for('common.sidebar', closed='excluded') }}">Click to hide</button>
             {% else %}
                 <span>Excluded
                     {{ sidebar["n_closed"] }}
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for("common.sidebar", closed="included") }}">Click to show</button>
+                        hx-get="{{ url_for('common.sidebar', closed='included') }}">Click to show</button>
             {% endif %}
         </div>
     </nav>

@@ -38,7 +38,7 @@
                     {% endif %}
                 </div>
                 <button class="button bg-green"
-                        hx-get="{{ url_for("budgeting.move", uri="income", month=table["month"]) }}">Assign</button>
+                        hx-get="{{ url_for('budgeting.move', uri='income', month=table['month']) }}">Assign</button>
             </div>
         {% else %}
             <div class="w-full bg-red-200 text-xl flex justify-between p-2 items-center">
@@ -50,7 +50,7 @@
                     {% endif %}
                 </div>
                 <button class="button bg-red"
-                        hx-get="{{ url_for("budgeting.overspending", uri="income", month=table["month"]) }}">
+                        hx-get="{{ url_for('budgeting.overspending', uri='income', month=table['month']) }}">
                     Fix
                 </button>
             </div>

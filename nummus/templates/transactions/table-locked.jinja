@@ -18,7 +18,7 @@
             </div>
         {% else %}
             <input name="locked" value="false" class="hidden" autocomplete="off">
-            <div hx-get="{{ url_for(endpoint, locked="", **url_args) }}">
+            <div hx-get="{{ url_for(endpoint, locked='', **url_args) }}">
                 {% with class = svg_class + " bg-green fill-transparent" %}
                     {% include "svg/lock.svg" %}
                 {% endwith %}

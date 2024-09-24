@@ -1,5 +1,5 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
-         hx-get="{{ url_for("assets.page", uri=asset["uri"]) }}"
+         hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
          hx-include="#val-config,#val-header"
          hx-trigger="update-asset from:body"
          hx-target="#main"
@@ -9,7 +9,7 @@
             <h1 class="text-3xl align-left w-full font-serif text-green-600 flex items-center">
                 {{ asset["name"] }}
                 <div class="w-[20px] group cursor-pointer"
-                     hx-get="{{ url_for("assets.asset", uri=asset["uri"]) }}"
+                     hx-get="{{ url_for('assets.asset', uri=asset['uri']) }}"
                      hx-target="#overlay"
                      hx-swap="innerHTML">
                     {% with class="fill-green-600 transition-colors group-hover:fill-black" %}

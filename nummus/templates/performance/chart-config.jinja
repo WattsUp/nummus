@@ -8,7 +8,7 @@
     <div>
         Selected index
         <select name="index"
-                hx-get="{{ url_for("performance.chart") }}"
+                hx-get="{{ url_for('performance.chart') }}"
                 autocomplete="off">
             {% for index, selected in chart["indices"].items() %}
                 <option value="{{ index }}" {% if selected %}selected{% endif %}>{{ index }}</option>
@@ -25,7 +25,7 @@
     </div>
     <div class="grow"></div>
     <select name="period"
-            hx-get="{{ url_for("performance.chart") }}"
+            hx-get="{{ url_for('performance.chart') }}"
             autocomplete="off">
         {% with period = chart["period"] %}
             {% include "shared/period-options.jinja" %}
@@ -34,14 +34,14 @@
     <input type="date"
            name="start"
            value="{{ chart["start"] }}"
-           hx-get="{{ url_for("performance.chart", period="custom") }}"
+           hx-get="{{ url_for('performance.chart', period='custom') }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
     <input type="date"
            name="end"
            value="{{ chart["end"] }}"
-           hx-get="{{ url_for("performance.chart", period="custom") }}"
+           hx-get="{{ url_for('performance.chart', period='custom') }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
 </div>

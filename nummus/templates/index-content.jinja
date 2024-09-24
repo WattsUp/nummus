@@ -1,28 +1,28 @@
 <section class="flex flex-col max-w-screen-lg m-auto h-full">
     <div class="grid grid-cols-3 grid-flow-dense gap-2">
         <div class="relative min-h-[20rem] h-[20rem]"
-             hx-get="{{ url_for("net_worth.dashboard") }}"
+             hx-get="{{ url_for('net_worth.dashboard') }}"
              hx-trigger="load"
              hx-indicator=".spinner">{% include "shared/spinner.jinja" %}</div>
         {#<div hx-get="/h/dashboard/budget" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}
         <div class="relative min-h-[20rem] h-[20rem]"
-             hx-get="{{ url_for("cash_flow.dashboard", period="8-months") }}"
+             hx-get="{{ url_for('cash_flow.dashboard', period='8-months') }}"
              hx-trigger="load"
              hx-indicator=".spinner">{% include "shared/spinner.jinja" %}</div>
         {#<div hx-get="/h/dashboard/retirement" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}
         <div class="relative min-h-[20rem] h-[20rem]"
-             hx-get="{{ url_for("emergency_fund.dashboard") }}"
+             hx-get="{{ url_for('emergency_fund.dashboard') }}"
              hx-trigger="load"
              hx-indicator=".spinner">{% include "shared/spinner.jinja" %}</div>
         {#<div hx-get="/h/dashboard/debt-paydown" hx-trigger="load">
             <div class="text-center">{% include "shared/spinner.jinja" %}</div>
         </div>#}
         <div class="relative min-h-[20rem] h-[20rem]"
-             hx-get="{{ url_for("performance.dashboard") }}"
+             hx-get="{{ url_for('performance.dashboard') }}"
              hx-trigger="load"
              hx-indicator=".spinner">{% include "shared/spinner.jinja" %}</div>
     </div>

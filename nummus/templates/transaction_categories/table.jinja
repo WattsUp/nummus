@@ -1,9 +1,9 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
-     hx-get="{{ url_for("common.empty") }}"
+     hx-get="{{ url_for('common.empty') }}"
      hx-swap="innerHTML"></div>
 <div class="w-[800px] h-[580px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-swap="innerHTML">
-    <button hx-get="{{ url_for("common.empty") }}" class="ml-auto px-6">
+    <button hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6">
         {% with class="w-[32px] h-[32px]" %}
             {% include "svg/x.svg" %}
         {% endwith %}
@@ -11,9 +11,9 @@
     <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction categories</h1>
     <div class="flex gap-2 mx-6">
         <div class="grow"></div>
-        <button hx-get="{{ url_for("transaction_categories.category", uri=uncategorized) }}"
+        <button hx-get="{{ url_for('transaction_categories.category', uri=uncategorized) }}"
                 class="button hover:green ml-auto">Edit Uncategorized</button>
-        <button hx-get="{{ url_for("transaction_categories.new") }}"
+        <button hx-get="{{ url_for('transaction_categories.new') }}"
                 class="button bg-green ml-auto">Create category</button>
     </div>
     <div class="flex w-full gap-4 px-6 grow min-h-0 pb-4">
@@ -23,7 +23,7 @@
                 <div class="flex flex-col overflow-y-scroll grow">
                     {% for item in items %}
                         <div id="category-{{ item["uri"] }}"
-                             hx-get="{{ url_for("transaction_categories.category", uri=item["uri"]) }}"
+                             hx-get="{{ url_for('transaction_categories.category', uri=item['uri']) }}"
                              class="flex group cursor-pointer">
                             {% with class="w-[24px] h-[24px] block fill-white transition-colors p-1 group-hover:fill-black" %}
                                 {% include "svg/pencil.svg" %}

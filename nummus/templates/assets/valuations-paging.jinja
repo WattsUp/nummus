@@ -5,19 +5,19 @@
     {% if val_table["editable"] %}
         <div>
             <button class="button hover:blue"
-                    hx-get="{{ url_for("assets.new_valuation", **url_args) }}"
+                    hx-get="{{ url_for('assets.new_valuation', **url_args) }}"
                     hx-target="#overlay"
                     hx-swap="innerHTML"
                     hx-include="this">Manually add valuation</button>
         </div>
     {% endif %}
     <div class="grow"></div>
-    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_first"], **url_args) }}">
+    <button hx-get="{{ url_for('assets.valuations', offset=val_table['offset_first'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-first.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_prev"], **url_args) }}">
+    <button hx-get="{{ url_for('assets.valuations', offset=val_table['offset_prev'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-left.svg" %}
         {% endwith %}
@@ -29,12 +29,12 @@
         of
         {{ val_table["count"] }}
     </span>
-    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_next"], **url_args) }}">
+    <button hx-get="{{ url_for('assets.valuations', offset=val_table['offset_next'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-right.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for("assets.valuations", offset=val_table["offset_last"], **url_args) }}">
+    <button hx-get="{{ url_for('assets.valuations', offset=val_table['offset_last'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-last.svg" %}
         {% endwith %}

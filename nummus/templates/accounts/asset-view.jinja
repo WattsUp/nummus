@@ -1,7 +1,7 @@
 <div class="w-full flex even:bg-grey-50 hover:bg-grey-100">
     {% if asset["uri"] %}
         <div class="w-[2rem] min-w-[2rem] p-1 truncate flex items-center justify-center group cursor-pointer"
-             hx-get="{{ url_for("assets.asset", uri=asset["uri"]) }}"
+             hx-get="{{ url_for('assets.asset', uri=asset['uri']) }}"
              hx-target="#overlay"
              hx-swap="innerHTML">
             {% with class="w-[20px] h-[20px] fill-transparent transition-colors group-hover:fill-black" %}
@@ -10,8 +10,8 @@
         </div>
         <a id="asset-{{ asset["uri"] }}"
            class="w-full flex justify-between"
-           hx-get="{{ url_for("assets.page", uri=asset["uri"]) }}"
-           href="{{ url_for("assets.page", uri=asset["uri"]) }}"
+           hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
+           href="{{ url_for('assets.page', uri=asset['uri']) }}"
            hx-target="#main"
            hx-swap="innerHTML"
            hx-include="unset"
