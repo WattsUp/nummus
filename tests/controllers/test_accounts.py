@@ -98,7 +98,6 @@ class TestAccount(WebTestBase):
         # Cancel balance
         with p.get_session() as s:
             today = datetime.date.today()
-            today_ord = today.toordinal()
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
@@ -110,7 +109,7 @@ class TestAccount(WebTestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-90,
                 statement=self.random_string(),
                 locked=True,
@@ -273,7 +272,7 @@ class TestAccount(WebTestBase):
             # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord - 2,
+                date=today - datetime.timedelta(days=2),
                 amount=-10,
                 statement=self.random_string(),
             )
@@ -348,7 +347,7 @@ class TestAccount(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=20,
                 statement=self.random_string(),
             )
@@ -390,7 +389,7 @@ class TestAccount(WebTestBase):
         d["payee_1"]
         d["t_split_0"]
         d["t_split_1"]
-        cat_0_emoji = d["cat_0_emoji"]
+        cat_0 = d["cat_0"]
         cat_1 = d["cat_1"]
         tag_1 = d["tag_1"]
 
@@ -405,11 +404,11 @@ class TestAccount(WebTestBase):
         )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         # Check sorting
-        i_0 = result.find(cat_0_emoji)
+        i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
         self.assertLess(i_0, i_1)
 
@@ -417,10 +416,10 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri, "field": "category", "category": cat_1}),
         )
         self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
         # Check sorting
-        i_0 = result.find(cat_0_emoji)
+        i_0 = result.find(cat_0)
         i_1 = result.find(cat_1)
         self.assertLess(i_1, i_0)
 

@@ -15,23 +15,23 @@
         </button>
     {% endif %}
     <button class="button hover:red mr-1"
-            hx-get="{{ url_for(endpoint, search="", **url_args) }}"
+            hx-get="{{ url_for(endpoint, search='', **url_args) }}"
             hx-include="#txn-config">Clear Filters</button>
     {% if not asset_transactions %}
         <button class="button hover:green mr-1"
-                hx-get="{{ url_for(endpoint, period="90-days", locked=False, **url_args) }}"
+                hx-get="{{ url_for(endpoint, period='90-days', locked=False, **url_args) }}"
                 hx-include="this">Recent &amp; Unlocked</button>
         <button class="button hover:green mr-1"
-                hx-get="{{ url_for(endpoint, period="90-days", linked=False, **url_args) }}"
+                hx-get="{{ url_for(endpoint, period='90-days', linked=False, **url_args) }}"
                 hx-include="unset">Recent &amp; Unlinked</button>
     {% endif %}
     <div class="mr-auto"></div>
-    <button hx-get="{{ url_for(endpoint, offset=txn_table["offset_first"], **url_args) }}">
+    <button hx-get="{{ url_for(endpoint, offset=txn_table['offset_first'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-first.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for(endpoint, offset=txn_table["offset_prev"], **url_args) }}">
+    <button hx-get="{{ url_for(endpoint, offset=txn_table['offset_prev'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-left.svg" %}
         {% endwith %}
@@ -43,12 +43,12 @@
         of
         {{ txn_table["count"] }}
     </span>
-    <button hx-get="{{ url_for(endpoint, offset=txn_table["offset_next"], **url_args) }}">
+    <button hx-get="{{ url_for(endpoint, offset=txn_table['offset_next'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-right.svg" %}
         {% endwith %}
     </button>
-    <button hx-get="{{ url_for(endpoint, offset=txn_table["offset_last"], **url_args) }}">
+    <button hx-get="{{ url_for(endpoint, offset=txn_table['offset_last'], **url_args) }}">
         {% with class="w-[24px] h-[24px] hover:fill-green" %}
             {% include "svg/arrow-last.svg" %}
         {% endwith %}

@@ -24,7 +24,6 @@ class TestMissingAssetLink(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         c = MissingAssetLink(p)
         c.test()
@@ -45,6 +44,7 @@ class TestMissingAssetLink(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -62,7 +62,7 @@ class TestMissingAssetLink(TestBase):
             # Securities Traded expect an asset
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
             )
@@ -81,7 +81,7 @@ class TestMissingAssetLink(TestBase):
             # Interest does not expect an asset
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=20,
                 statement=self.random_string(),
             )

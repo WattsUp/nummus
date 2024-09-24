@@ -17,11 +17,12 @@ from tests.controllers.base import HTTP_CODE_FORBIDDEN, WebTestBase
 class TestTransactionCategory(WebTestBase):
     def test_overlay(self) -> None:
         p = self._portfolio
+        self._setup_portfolio()
 
         with p.get_session() as s:
             n = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name != "Securities Traded")
+                .where(TransactionCategory.group != TransactionCategoryGroup.OTHER)
                 .count()
             )
 
@@ -32,6 +33,7 @@ class TestTransactionCategory(WebTestBase):
 
     def test_new(self) -> None:
         p = self._portfolio
+        self._setup_portfolio()
 
         with p.get_session() as s:
             n_before = s.query(TransactionCategory).count()
@@ -60,14 +62,11 @@ class TestTransactionCategory(WebTestBase):
     def test_category(self) -> None:
         p = self._portfolio
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with p.get_session() as s:
             query = s.query(TransactionCategory)
-            query = query.where(TransactionCategory.locked.is_(False))
-            t_cat = query.first()
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
+            query = query.where(TransactionCategory.name == "Other Income")
+            t_cat = query.one()
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
@@ -77,7 +76,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn("Delete", result)
 
         name = self.random_string()
-        form = {"name": name + "😀", "group": "other"}
+        form = {"name": name + "😀", "group": "transfer"}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -91,7 +90,7 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.emoji, "😀")
-            self.assertEqual(t_cat.group, TransactionCategoryGroup.OTHER)
+            self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}
@@ -111,13 +110,14 @@ class TestTransactionCategory(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -183,4 +183,4 @@ class TestTransactionCategory(WebTestBase):
                 self.fail("TransactionCategory is missing")
             self.assertNotEqual(t_cat.name, "abc")
             self.assertEqual(t_cat.emoji, "😀")
-            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.OTHER)
+            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)

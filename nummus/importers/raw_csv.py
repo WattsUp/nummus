@@ -72,7 +72,10 @@ class CSVTransactionImporter(TransactionImporter):
                 "category": row.get("category") or None,
                 "tag": row.get("tag") or None,
                 "asset": row.get("asset") or None,
-                "asset_quantity": utils.parse_real(row.get("asset_quantity")),
+                "asset_quantity": utils.parse_real(
+                    row.get("asset_quantity"),
+                    precision=9,
+                ),
             }
             transactions.append(txn)
         return transactions

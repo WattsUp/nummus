@@ -3,7 +3,7 @@
      hx-swap-oob="{{ oob }}">
     <div class="grow"></div>
     <select name="period"
-            hx-get="{{ url_for("assets.valuations", **url_args) }}"
+            hx-get="{{ url_for('assets.valuations', **url_args) }}"
             autocomplete="off">
         {% with period = val_table["period"] %}
             {% include "shared/period-options.jinja" %}
@@ -12,14 +12,14 @@
     <input type="date"
            name="start"
            value="{{ val_table["start"] }}"
-           hx-get="{{ url_for("assets.valuations", period="custom", **url_args) }}"
+           hx-get="{{ url_for('assets.valuations', period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
     <input type="date"
            name="end"
            value="{{ val_table["end"] }}"
-           hx-get="{{ url_for("assets.valuations", period="custom", **url_args) }}"
+           hx-get="{{ url_for('assets.valuations', period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
 </div>

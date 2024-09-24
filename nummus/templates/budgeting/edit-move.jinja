@@ -1,0 +1,42 @@
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
+     hx-get="{{ url_for('common.empty') }}"
+     hx-swap="innerHTML"></div>
+<div class="w-[480px] h-[320px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+     hx-swap="innerHTML">
+    <button hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6">
+        {% with class="w-[32px] h-[32px]" %}
+            {% include "svg/x.svg" %}
+        {% endwith %}
+    </button>
+    <h1 class="font-serif text-4xl px-6 text-green-600">Move available funds</h1>
+    <div class="w-full px-6 grow" id="form-edit-budget">
+        {% if category["name"] is none %}
+            <div>Assignable income has {{ category["available"] | money }} available</div>
+        {% else %}
+            <div>{{ category["name"] }} has {{ category["available"] | money }} available</div>
+        {% endif %}
+        <div class="flex w-full">
+            <div class="w-16">Move:</div>
+            <input class="grow"
+                   value="{{ "%.2f" % category["available"] }}"
+                   name="amount">
+        </div>
+        <div class="flex w-full">
+            <div class="w-16">To:</div>
+            <select class="grow" name="destination">
+                {% for uri, name, available in category["options"] %}
+                    <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div id="overlay-error"
+         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
+    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+        <button hx-get="{{ url_for('common.empty') }}" class="button hover:green">Cancel</button>
+        <button hx-put="{{ url_for('budgeting.move', uri=category['uri'], month=category['month']) }}"
+                hx-target="#overlay-error"
+                hx-include="#form-edit-budget"
+                class="button bg-green">Save</button>
+    </div>
+</div>

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import datetime
 from typing import TYPE_CHECKING
 
 import sqlalchemy
@@ -9,6 +10,7 @@ from sqlalchemy import event, ForeignKey, orm
 from typing_extensions import override
 
 from nummus import exceptions as exc
+from nummus import utils
 from nummus.models.base import (
     Base,
     Decimal6,
@@ -69,6 +71,7 @@ class TransactionSplit(Base):
 
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date_ord: ORMInt
+    month_ord: ORMInt
     locked: ORMBool
     linked: ORMBool
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
@@ -89,7 +92,14 @@ class TransactionSplit(Base):
 
     @override
     def __setattr__(self, name: str, value: object) -> None:
-        if name in ["parent_id", "date", "locked", "linked", "account_id"]:
+        if name in [
+            "parent_id",
+            "date_ord",
+            "month_ord",
+            "locked",
+            "linked",
+            "account_id",
+        ]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
@@ -146,6 +156,7 @@ class TransactionSplit(Base):
             return
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
+        super().__setattr__("month_ord", parent.month_ord)
         super().__setattr__("locked", parent.locked)
         super().__setattr__("linked", parent.linked)
         super().__setattr__("account_id", parent.account_id)
@@ -195,6 +206,7 @@ class Transaction(Base):
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     date_ord: ORMInt
+    month_ord: ORMInt
     amount: ORMReal = orm.mapped_column(Decimal6)
     statement: ORMStr
     locked: ORMBool = orm.mapped_column(default=False)
@@ -220,3 +232,14 @@ class Transaction(Base):
     @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
         return super().validate_decimals(key, field)
+
+    @property
+    def date(self) -> datetime.date:
+        """Date on which Transaction occurred."""
+        return datetime.date.fromordinal(self.date_ord)
+
+    @date.setter
+    def date(self, d: datetime.date) -> None:
+        """Set date of Transaction."""
+        self.date_ord = d.toordinal()
+        self.month_ord = utils.start_of_month(d).toordinal()

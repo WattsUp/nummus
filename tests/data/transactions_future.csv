@@ -1,0 +1,5 @@
+Account,Date,Amount,Statement
+Monkey Bank Checking,2023-01-01,"$1,000.00",Paycheck
+Monkey Bank Checking,2023-01-02,-12.34,Banana
+Monkey Bank Checking,2023-01-02,-900,Account Transfer
+Monkey Investments,2123-01-02,900,Account Transfer

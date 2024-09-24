@@ -32,7 +32,7 @@ def get_importers(extra: Path | None) -> Sequence[type[TransactionImporter]]:
     Return:
         List of base importers and any in extra directory
     """
-    available = [
+    available: list[type[TransactionImporter]] = [
         CSVTransactionImporter,
     ]
     if extra is None:

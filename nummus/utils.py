@@ -127,11 +127,12 @@ def confirm(
         print()
 
 
-def parse_real(s: str | None) -> Decimal | None:
+def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     """Parse a string into a real number.
 
     Args:
         s: String to parse
+        precision: Number of digits to truncate number to
 
     Returns:
         String as number
@@ -141,6 +142,9 @@ def parse_real(s: str | None) -> Decimal | None:
     clean = _REGEX_REAL_CLEAN.sub("", s)
     if clean == "":
         return None
+    i = clean.find(".")
+    if i != -1:
+        clean = clean[: min(len(clean), i + precision + 1)]
     # Negative if -x.xx or (x.xx)
     if "-" in s or "(" in s:
         return Decimal(clean) * -1

@@ -30,14 +30,14 @@
                    value="{{ "%.2f" % txn["amount"] if txn["amount"] }}"
                    placeholder="Amount"
                    class="w-[7rem] min-w-[7rem] text-right p-1 truncate"
-                   hx-post="{{ url_for("transactions.remaining", uri=parent["uri"]) }}"
+                   hx-post="{{ url_for('transactions.remaining', uri=parent['uri']) }}"
                    hx-target="#txn-remaining"
                    hx-trigger="keyup changed"
                    autocomplete="off">
             {% if splits | length == 1 %}
                 <div class="w-[24px] h-[24px] my-0.5"></div>
             {% else %}
-                <button hx-delete="{{ url_for("transactions.split", uri=parent["uri"], index=loop.index) }}"
+                <button hx-delete="{{ url_for('transactions.split', uri=parent['uri'], index=loop.index) }}"
                         hx-target="#txn-splits">
                     {% with class="w-[24px] h-[24px] my-0.5" %}
                         {% include "svg/trash.svg" %}

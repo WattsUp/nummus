@@ -42,6 +42,7 @@ class TestOverdrawnAccounts(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_credit = Account(
                 name="Monkey Bank Credit",
@@ -49,6 +50,7 @@ class TestOverdrawnAccounts(TestBase):
                 category=AccountCategory.CREDIT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_credit))
             s.commit()
@@ -57,7 +59,7 @@ class TestOverdrawnAccounts(TestBase):
 
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
             )
@@ -72,7 +74,7 @@ class TestOverdrawnAccounts(TestBase):
             # Negative balance on credit accounts is okay
             txn = Transaction(
                 account_id=acct_credit_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
             )
@@ -105,7 +107,7 @@ class TestOverdrawnAccounts(TestBase):
         with p.get_session() as s:
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord - 7,
+                date=today - datetime.timedelta(days=7),
                 amount=20,
                 statement=self.random_string(),
             )

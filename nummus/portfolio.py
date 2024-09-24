@@ -317,6 +317,7 @@ class Portfolio:
         if i is None:
             raise exc.UnknownImporterError(path)
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
+        today = datetime.date.today()
 
         with self.get_session() as s:
             categories: dict[str, TransactionCategory] = {
@@ -365,12 +366,14 @@ class Portfolio:
 
                 # TODO (WattsUp): Link with unlink if possible
                 # Maybe make into a command?
-                # TODO (WattsUp): Prevent creating future transactions
+
+                if d["date"] > today:
+                    raise exc.FutureTransactionError
 
                 txn = Transaction(
                     account_id=acct_id,
                     amount=d["amount"],
-                    date_ord=d["date"].toordinal(),
+                    date=d["date"],
                     statement=statement,
                     linked=True,
                 )
@@ -562,6 +565,13 @@ class Portfolio:
         amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
         sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
 
+        cat_asset_linked = {
+            t_cat_id
+            for t_cat_id, in s.query(TransactionCategory.id_)
+            .where(TransactionCategory.asset_linked.is_(True))
+            .all()
+        }
+
         # Check within Account first, exact matches
         # If this matches, great, no post filtering needed
         query = (
@@ -628,6 +638,23 @@ class Portfolio:
         statements: dict[int, str] = {
             t_id: re.sub(r"[0-9]+", "", statement).lower()
             for t_id, statement in query.yield_per(YIELD_PER)
+        }
+        if len(statements) == 0:
+            return None
+        # Don't match a Transaction if it has a Securities Traded split
+        has_asset_linked = {
+            id_
+            for id_, in s.query(TransactionSplit.parent_id)
+            .where(
+                TransactionSplit.parent_id.in_(statements),
+                TransactionSplit.category_id.in_(cat_asset_linked),
+            )
+            .distinct()
+        }
+        statements = {
+            t_id: statement
+            for t_id, statement in statements.items()
+            if t_id not in has_asset_linked
         }
         if len(statements) == 0:
             return None

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Run every linter
 ruff check .
-djlint .
+djlint . --check --lint
 codespell .
 pyright # No dot cause it gets included files from pyproject.toml

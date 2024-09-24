@@ -3,7 +3,7 @@
        placeholder="Search..."
        name="search-{{ name }}"
        value="{{ search_str }}"
-       hx-get="{{ url_for(endpoint + "_options", field=name, **url_args) }}"
+       hx-get="{{ url_for(endpoint + '_options', field=name, **url_args) }}"
        hx-target="#txn-{{ name }}"
        hx-swap="innerHTML"
        hx-trigger="keyup changed delay:250ms"
@@ -20,7 +20,7 @@
             {% with class = "w-5 h-5" %}
                 {% include "svg/check.svg" %}
             {% endwith %}
-            <span class="min-w-0 truncate">{{ option["name"] }}</span>
+            <span class="min-w-0 truncate">{{ option["label"] }}</span>
         </label>
     {% endfor %}
 </div>

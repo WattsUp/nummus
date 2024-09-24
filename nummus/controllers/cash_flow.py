@@ -79,8 +79,7 @@ def ctx_chart() -> dict[str, object]:
         ids = [acct.id_ for acct in query.all() if include_account(acct)]
 
         # Categorize whole period
-        query = s.query(TransactionCategory)
-        query = query.with_entities(
+        query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.name,
             TransactionCategory.emoji,
@@ -101,15 +100,17 @@ def ctx_chart() -> dict[str, object]:
             emoji: str | None
             amount: Decimal
 
-        query = s.query(TransactionSplit)
-        query = query.with_entities(
-            TransactionSplit.category_id,
-            sqlalchemy.func.sum(TransactionSplit.amount),
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.category_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+            )
+            .where(TransactionSplit.account_id.in_(ids))
+            .where(TransactionSplit.date_ord >= start_ord)
+            .where(TransactionSplit.date_ord <= end_ord)
+            .group_by(TransactionSplit.category_id)
         )
-        query = query.where(TransactionSplit.account_id.in_(ids))
-        query = query.where(TransactionSplit.date_ord >= start_ord)
-        query = query.where(TransactionSplit.date_ord <= end_ord)
-        query = query.group_by(TransactionSplit.category_id)
         income_categorized: list[CategoryContext] = []
         expense_categorized: list[CategoryContext] = []
         total_income = Decimal(0)
@@ -273,7 +274,7 @@ def page() -> str:
     Returns:
         string HTML response
     """
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, cash_flow=True)
     title = "Cash Flow," + title.removeprefix("Transactions")
     return common.page(
         "cash-flow/index-content.jinja",
@@ -297,7 +298,7 @@ def txns() -> flask.Response:
         args.get("start", type=datetime.date.fromisoformat),
         args.get("end", type=datetime.date.fromisoformat),
     )
-    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, no_other_group=True)
+    txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, cash_flow=True)
     start = txn_table["start"]
     title = "Cash Flow," + title.removeprefix("Transactions")
     html = f"<title>{title}</title>\n" + flask.render_template(
@@ -350,15 +351,17 @@ def txns_options(field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        label_mapping = None
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name_emoji(s)
+            id_mapping = TransactionCategory.map_name(s)
+            label_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
 
-        query, _, _, _ = transactions.table_unfiltered_query(s, no_other_group=True)
+        query, _, _, _ = transactions.table_unfiltered_query(s, cash_flow=True)
 
         search_str = args.get(f"search-{field}")
 
@@ -368,6 +371,7 @@ def txns_options(field: str) -> str:
                 query,
                 field,
                 id_mapping,
+                label_mapping=label_mapping,
                 search_str=search_str,
             ),
             name=field,

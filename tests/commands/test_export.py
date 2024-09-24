@@ -54,9 +54,7 @@ class TestExport(TestBase):
             self.assertEqual(rows, [])
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
         with p.get_session() as s:
             categories = TransactionCategory.map_name(s)
@@ -68,6 +66,7 @@ class TestExport(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_1 = Account(
                 name="Monkey Bank Credit",
@@ -75,6 +74,7 @@ class TestExport(TestBase):
                 category=AccountCategory.CREDIT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_0, acct_1))
             s.commit()
@@ -85,7 +85,7 @@ class TestExport(TestBase):
 
             txn_0 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=100,
                 statement="Banana Store",
             )
@@ -102,7 +102,7 @@ class TestExport(TestBase):
 
             txn_1 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement="Grocery Store",
             )
@@ -116,7 +116,7 @@ class TestExport(TestBase):
 
             txn_2 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement="Banana Store",
             )

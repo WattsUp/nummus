@@ -187,7 +187,7 @@ def ctx_base() -> dict[str, object]:
         },
         "Banking": {
             "Cash Flow": ("cash_flow.page", False),
-            "Budgeting": None,
+            "Budgeting": ("budgeting.page", False),
         },
         "Investing": {
             "Holdings": None,

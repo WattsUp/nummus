@@ -114,6 +114,7 @@ class TestNetWorth(WebTestBase):
                 closed=True,
                 category=AccountCategory.CASH,
                 emergency=False,
+                budgeted=True,
             )
             s.add(a)
             s.commit()
@@ -132,7 +133,7 @@ class TestNetWorth(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement=self.random_string(),
                 locked=True,
@@ -148,7 +149,7 @@ class TestNetWorth(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=-10,
                 statement=self.random_string(),
                 locked=True,

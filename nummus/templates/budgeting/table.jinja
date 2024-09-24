@@ -1,0 +1,71 @@
+<div id="budget-table"
+     class="w-full flex grow gap-2"
+     hx-target="#budget-table"
+     hx-swap="outerHTML">
+    <div class="grow">
+        <div class="w-full flex p-1">
+            {# TODO (WattsUp): Add new group #}
+            <div class="grow"></div>
+            <div class="w-28 text-right">Assigned</div>
+            <div class="w-28 text-right">Activity</div>
+            <div class="w-28 text-right">Available</div>
+        </div>
+        {% for name, group in table["groups"] %}
+            {% include "budgeting/table_group.jinja" %}
+        {% endfor %}
+    </div>
+    <div class="w-1/3" hx-target="#overlay" hx-swap="innerHTML">
+        {% if table["assignable"] == 0 %}
+            <div class="w-full bg-grey-200 text-xl flex justify-between p-2 items-center">
+                <div>
+                    <div>{{ table["assignable"] | money }}</div>
+                    <div class="text-base">All money assigned</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
+                </div>
+                {% with class = "w-12 h-12 fill-black" %}
+                    {% include "svg/check.svg" %}
+                {% endwith %}
+            </div>
+        {% elif table["assignable"] > 0 %}
+            <div class="w-full bg-green-200 text-xl flex justify-between p-2 items-center">
+                <div>
+                    <div>{{ table["assignable"] | money }}</div>
+                    <div class="text-base">Ready to assign</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
+                </div>
+                <button class="button bg-green"
+                        hx-get="{{ url_for('budgeting.move', uri='income', month=table['month']) }}">Assign</button>
+            </div>
+        {% else %}
+            <div class="w-full bg-red-200 text-xl flex justify-between p-2 items-center">
+                <div>
+                    <div>{{ table["assignable"] | money }}</div>
+                    <div class="text-base">More money assigned than held</div>
+                    {% if table["future_assigned"] != 0 %}
+                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
+                    {% endif %}
+                </div>
+                <button class="button bg-red"
+                        hx-get="{{ url_for('budgeting.overspending', uri='income', month=table['month']) }}">
+                    Fix
+                </button>
+            </div>
+        {% endif %}
+        {% if table["n_overspent"] > 0 %}
+            <div class="bg-red-200 text-center p-2">
+                {{ table["n_overspent"] }}
+                {% if table["n_overspent"] == 1 %}
+                    category is
+                {% else %}
+                    categories are
+                {% endif %}
+                overspent.
+            </div>
+        {% endif %}
+        {# TODO (WattsUp): Add target editor #}
+    </div>
+</div>

@@ -21,7 +21,7 @@
            type="date"
            name="start"
            value="{{ txn_table["start"] }}"
-           hx-get="{{ url_for(endpoint, period="custom", **url_args) }}"
+           hx-get="{{ url_for(endpoint, period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
@@ -29,7 +29,7 @@
            type="date"
            name="end"
            value="{{ txn_table["end"] }}"
-           hx-get="{{ url_for(endpoint, period="custom", **url_args) }}"
+           hx-get="{{ url_for(endpoint, period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
 </div>

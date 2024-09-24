@@ -1,9 +1,9 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
-     hx-get="{{ url_for("common.empty") }}"
+     hx-get="{{ url_for('common.empty') }}"
      hx-swap="innerHTML"></div>
 <div class="w-[900px] h-[680px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-include="#form-txn">
-    <button hx-get="{{ url_for("common.empty") }}"
+    <button hx-get="{{ url_for('common.empty') }}"
             class="ml-auto px-6"
             hx-swap="innerHTML"
             hx-include="this">
@@ -86,7 +86,7 @@
     <div id="overlay-error"
          class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
     <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
-        <button hx-post="{{ url_for("transactions.split", uri=parent["uri"]) }}"
+        <button hx-post="{{ url_for('transactions.split', uri=parent['uri']) }}"
                 hx-target="#txn-splits"
                 class="button hover:blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
@@ -94,7 +94,7 @@
             {% endwith %}
             Add split
         </button>
-        <button hx-delete="{{ url_for("transactions.split", uri=parent["uri"]) }}?all"
+        <button hx-delete="{{ url_for('transactions.split', uri=parent['uri']) }}?all"
                 hx-target="#txn-splits"
                 hx-include="unset"
                 class="button hover:red">
@@ -104,7 +104,7 @@
             Clear splits
         </button>
         {% if similar_uri %}
-            <button hx-get="{{ url_for("transactions.split", uri=parent["uri"], similar=similar_uri) }}"
+            <button hx-get="{{ url_for('transactions.split', uri=parent['uri'], similar=similar_uri) }}"
                     hx-target="#txn-splits"
                     hx-include="unset"
                     class="button hover:yellow">
@@ -115,7 +115,7 @@
             </button>
         {% endif %}
         {% if not parent["linked"] %}
-            <button hx-delete="{{ url_for("transactions.transaction", uri=parent["uri"]) }}"
+            <button hx-delete="{{ url_for('transactions.transaction', uri=parent['uri']) }}"
                     hx-target="#overlay-error"
                     hx-swap="innerHTML"
                     hx-include="unset"
@@ -127,11 +127,11 @@
                 Delete
             </button>
         {% endif %}
-        <button hx-get="{{ url_for("common.empty") }}"
+        <button hx-get="{{ url_for('common.empty') }}"
                 class="button hover:green ml-auto"
                 hx-swap="innerHTML"
                 hx-include="unset">Cancel</button>
-        <button hx-put="{{ url_for("transactions.transaction", uri=parent["uri"]) }}"
+        <button hx-put="{{ url_for('transactions.transaction', uri=parent['uri']) }}"
                 hx-target="#overlay-error"
                 hx-swap="innerHTML"
                 class="button bg-green">Save</button>

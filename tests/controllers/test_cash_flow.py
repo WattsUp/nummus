@@ -31,9 +31,7 @@ class TestCashFlow(WebTestBase):
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
-        today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
@@ -117,7 +115,7 @@ class TestCashFlow(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -153,6 +151,7 @@ class TestCashFlow(WebTestBase):
                 closed=True,
                 category=AccountCategory.CASH,
                 emergency=False,
+                budgeted=True,
             )
             s.add(a)
             s.commit()
@@ -171,7 +170,7 @@ class TestCashFlow(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=10,
                 statement=self.random_string(),
                 locked=True,
@@ -211,7 +210,7 @@ class TestCashFlow(WebTestBase):
         d["payee_1"]
         d["t_split_0"]
         d["t_split_1"]
-        cat_0_emoji = d["cat_0_emoji"]
+        cat_0 = d["cat_0"]
         tag_1 = d["tag_1"]
 
         endpoint = "cash_flow.txns_options"
@@ -227,15 +226,15 @@ class TestCashFlow(WebTestBase):
         )
         self.assertNotIn("<html", result)
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
         self.assertNotIn("checked", result)
         self.assertNotIn("Uncategorized", result)
 
         result, _ = self.web_get(
-            (endpoint, {"field": "category", "category": cat_0_emoji}),
+            (endpoint, {"field": "category", "category": cat_0}),
         )
         self.assertEqual(result.count("span"), 2)
-        self.assertRegex(result, rf'value="{cat_0_emoji}"[ \n]+checked[ \n]+hx-get')
+        self.assertRegex(result, rf'value="{cat_0}"[ \n]+checked[ \n]+hx-get')
 
         result, _ = self.web_get(
             (endpoint, {"field": "tag"}),

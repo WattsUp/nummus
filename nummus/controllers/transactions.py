@@ -33,6 +33,7 @@ class _OptionContex(TypedDict):
     """Type definition for option context."""
 
     name: str
+    label: str
     name_clean: str
     checked: bool
     hidden: bool
@@ -99,10 +100,12 @@ def table_options(field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        label_mapping = None
         if field == "account":
             id_mapping = Account.map_name(s)
         elif field == "category":
-            id_mapping = TransactionCategory.map_name_emoji(s)
+            id_mapping = TransactionCategory.map_name(s)
+            label_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -113,7 +116,13 @@ def table_options(field: str) -> str:
 
         return flask.render_template(
             "transactions/table-options.jinja",
-            options=ctx_options(query, field, id_mapping, search_str=search_str),
+            options=ctx_options(
+                query,
+                field,
+                id_mapping,
+                label_mapping=label_mapping,
+                search_str=search_str,
+            ),
             name=field,
             search_str=search_str,
             endpoint="transactions.table",
@@ -125,6 +134,7 @@ def ctx_options(
     query: orm.Query,
     field: str,
     id_mapping: dict[int, str] | None = None,
+    label_mapping: dict[int, str] | None = None,
     search_str: str | None = None,
 ) -> list[_OptionContex]:
     """Get the context to build the options for table.
@@ -133,6 +143,7 @@ def ctx_options(
         query: Query to use to get distinct values
         field: TransactionSplit field to get options for
         id_mapping: Item ID to name mapping
+        label_mapping: Item ID to label mapping, None will use id_mapping
         search_str: Search options and hide non-matches
 
     Returns:
@@ -153,9 +164,11 @@ def ctx_options(
         if id_ is None:
             continue
         name = id_mapping[id_] if id_mapping else id_
+        label = label_mapping[id_] if label_mapping else name
         name_clean = web_utils.strip_emojis(name).lower()
         item: _OptionContex = {
             "name": name,
+            "label": label,
             "name_clean": name_clean,
             "checked": name in selected,
             "hidden": False,
@@ -176,6 +189,7 @@ def ctx_options(
         name = "[blank]"
         item = {
             "name": name,
+            "label": name,
             "name_clean": name,
             "checked": name in selected,
             "hidden": search_str not in [None, ""],
@@ -194,7 +208,7 @@ def table_unfiltered_query(
     acct: Account | None = None,
     default_period: str = "this-month",
     *,
-    no_other_group: bool = False,
+    cash_flow: bool = False,
     asset_transactions: bool = False,
 ) -> tuple[orm.Query, str, datetime.date | None, datetime.date]:
     """Create transactions table query without any column filters.
@@ -203,7 +217,7 @@ def table_unfiltered_query(
         s: SQL session to use
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
-        no_other_group: True to exclude transactions in the OTHER group
+        cash_flow: True to only include INCOME and EXPENSE groups
         asset_transactions: True will only get transactions with assets,
             False will only get transactions without assets
 
@@ -226,12 +240,14 @@ def table_unfiltered_query(
     end_ord = end.toordinal()
 
     transaction_ids = None
-    if no_other_group:
+    if cash_flow:
         query = (
             s.query(TransactionCategory)
             .with_entities(TransactionCategory.id_)
             .where(
-                TransactionCategory.group != TransactionCategoryGroup.OTHER,
+                TransactionCategory.group.in_(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.EXPENSE),
+                ),
             )
         )
         transaction_ids = {row[0] for row in query.all()}
@@ -251,7 +267,14 @@ def table_unfiltered_query(
             ),
             TransactionSplit.date_ord <= end_ord,
         )
-        .order_by(TransactionSplit.date_ord)
+        .order_by(
+            TransactionSplit.date_ord,
+            TransactionSplit.account_id,
+            TransactionSplit.payee,
+            TransactionSplit.category_id,
+            TransactionSplit.tag,
+            TransactionSplit.description,
+        )
     )
     if start is not None:
         start_ord = start.toordinal()
@@ -268,7 +291,7 @@ def ctx_table(
     acct: Account | None = None,
     default_period: str = "this-month",
     *,
-    no_other_group: bool = False,
+    cash_flow: bool = False,
     asset_transactions: bool = False,
 ) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
@@ -276,7 +299,7 @@ def ctx_table(
     Args:
         acct: Account to get transactions for, None will use filter queries
         default_period: Default period to use if no period given
-        no_other_group: True to exclude transactions in the OTHER group
+        cash_flow: True to only include INCOME and EXPENSE groups
         asset_transactions: True will only get transactions with assets,
             False will only get transactions without assets
 
@@ -296,24 +319,22 @@ def ctx_table(
         page_total = Decimal(0)
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name_emoji(
-            s,
-            no_securities_traded=not asset_transactions,
-        )
+        categories = TransactionCategory.map_name(s)
+        categories_emoji = TransactionCategory.map_name_emoji(s)
         assets = Asset.map_name(s)
 
         query, period, start, end = table_unfiltered_query(
             s,
             acct,
             default_period,
-            no_other_group=no_other_group,
+            cash_flow=cash_flow,
             asset_transactions=asset_transactions,
         )
 
         # Get options with these filters
         options_account = ctx_options(query, "account", accounts)
         options_payee = ctx_options(query, "payee")
-        options_category = ctx_options(query, "category", categories)
+        options_category = ctx_options(query, "category", categories, categories_emoji)
         options_tag = ctx_options(query, "tag")
         options_asset = ctx_options(query, "asset", assets)
 
@@ -396,7 +417,7 @@ def ctx_table(
         transactions: list[dict[str, object]] = []
         for t_split in page:  # type: ignore[attr-defined]
             t_split: TransactionSplit
-            t_split_ctx = ctx_split(t_split, accounts, categories, assets)
+            t_split_ctx = ctx_split(t_split, accounts, categories_emoji, assets)
             page_total += t_split.amount
 
             transactions.append(t_split_ctx)
@@ -533,7 +554,8 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
             return common.error("Transaction date must not be empty")
-        # TODO (WattsUp): Prevent creating future transactions
+        if date > datetime.date.today():
+            return common.error("Cannot create future transaction")
         amount = form.get("amount", type=utils.parse_real)
         if amount is None:
             return common.error("Transaction amount must not be empty")
@@ -557,7 +579,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         try:
             txn = Transaction(
                 account_id=accounts_rev[account],
-                date_ord=date.toordinal(),
+                date=date,
                 amount=amount,
                 statement=statement or "Manually added",
                 locked=False,
@@ -602,7 +624,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
             parent = child.parent
-        categories = TransactionCategory.map_name_emoji(s)
+        categories = TransactionCategory.map_name(s, no_asset_linked=True)
         assets = Asset.map_name(s)
 
         if force_get or flask.request.method == "GET":
@@ -670,7 +692,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             date = form.get("date", type=datetime.date.fromisoformat)
             if date is None:
                 return common.error("Transaction date must not be empty")
-            parent.date_ord = date.toordinal()
+            parent.date = date
             parent.locked = "locked" in form
 
             payee = form.getlist("payee")

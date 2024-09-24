@@ -8,7 +8,7 @@ from nummus import exceptions as exc
 from nummus.models import _TABLES, base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
-from nummus.models.budget import Budget
+from nummus.models.budget import Budget, BudgetAssignment
 from nummus.models.config import Config
 from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
@@ -100,6 +100,7 @@ class TestBaseURI(TestBase):
         # Models without a URI not made for front end access
         models_none = [
             AssetSplit,
+            BudgetAssignment,
             Config,
             ImportedFile,
         ]

@@ -12,7 +12,9 @@
         <meta name="description"
               content="A personal financial information aggregator and planning tool." />
         <meta name="keywords" content="">
-        <link rel="icon" type="image/x-icon" href="{{ url_for("static", filename="img/favicon.ico") }}">
+        <link rel="icon"
+              type="image/x-icon"
+              href="{{ url_for('static', filename='img/favicon.ico') }}">
         {% assets "css" %}
             <link rel="stylesheet" href="{{ ASSET_URL }}">
         {% endassets %}

@@ -43,6 +43,7 @@ class TestDuplicateTransactions(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -52,7 +53,7 @@ class TestDuplicateTransactions(TestBase):
             statement = self.random_string()
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=amount,
                 statement=statement,
             )
@@ -78,7 +79,7 @@ class TestDuplicateTransactions(TestBase):
             # Add a duplicate transaction
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=amount,
                 statement=statement,
             )

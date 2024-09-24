@@ -24,9 +24,7 @@ class TestUnbalancedTransfers(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
         c = UnbalancedTransfers(p)
         c.test()
@@ -39,7 +37,8 @@ class TestUnbalancedTransfers(TestBase):
 
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
-            t_cat_id = categories["Transfers"]
+            t_cat_id_0 = categories["Transfers"]
+            t_cat_id_1 = categories["Credit Card Payments"]
 
             acct_checking = Account(
                 name="Monkey Bank Checking",
@@ -47,6 +46,7 @@ class TestUnbalancedTransfers(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_savings = Account(
                 name="Monkey Bank Savings",
@@ -54,6 +54,7 @@ class TestUnbalancedTransfers(TestBase):
                 category=AccountCategory.CREDIT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
             s.commit()
@@ -63,56 +64,56 @@ class TestUnbalancedTransfers(TestBase):
             # Good transfer amount but wrong category
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat_id,
+                category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
             s.commit()
 
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat_id,
+                category_id=t_cat_id_1,
             )
             s.add_all((txn, t_split))
             s.commit()
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=today_ord,
+                date=today,
                 amount=-100,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat_id,
+                category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
             s.commit()
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
             s.commit()
@@ -135,7 +136,8 @@ class TestUnbalancedTransfers(TestBase):
             uri: textwrap.dedent(
                 f"""\
                 {today}: Sum of transfers on this day are non-zero
-                  Monkey Bank Checking:        -$10.00""",
+                  Monkey Bank Checking:        -$10.00 Credit Card Payments
+                  Monkey Bank Savings :        +$10.00 Transfers""",
             ),
         }
         self.assertEqual(c.issues, target)
@@ -143,36 +145,37 @@ class TestUnbalancedTransfers(TestBase):
         with p.get_session() as s:
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_split_savings_id,
+                TransactionSplit.amount == Decimal(10),
             ).update(
-                {"category_id": t_cat_id},
+                {"category_id": t_cat_id_1},
             )
             s.commit()
 
             # Add another bad transfer
             txn = Transaction(
                 account_id=acct_checking_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=20,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat_id,
+                category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
             s.commit()
 
             txn = Transaction(
                 account_id=acct_savings_id,
-                date_ord=yesterday_ord,
+                date=yesterday,
                 amount=Decimal("-20.1"),
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat_id,
+                category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
             s.commit()
@@ -195,8 +198,8 @@ class TestUnbalancedTransfers(TestBase):
             uri: textwrap.dedent(
                 f"""\
                 {yesterday}: Sum of transfers on this day are non-zero
-                  Monkey Bank Checking:        +$20.00
-                  Monkey Bank Savings :        -$20.10""",
+                  Monkey Bank Checking:        +$20.00 Transfers
+                  Monkey Bank Savings :        -$20.10 Transfers""",
             ),
         }
         self.assertEqual(c.issues, target)

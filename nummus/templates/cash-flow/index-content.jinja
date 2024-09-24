@@ -1,5 +1,5 @@
 <section class="flex flex-col bg-white max-w-screen-lg m-auto p-2 h-full"
-         hx-get="{{ url_for("cash_flow.page") }}"
+         hx-get="{{ url_for('cash_flow.page') }}"
          hx-include="#txn-config,#txn-header"
          hx-trigger="update-account from:body"
          hx-target="#main"

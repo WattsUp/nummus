@@ -22,7 +22,6 @@ class TestUnlockedTransactions(TestBase):
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         c = UnlockedTransactions(p)
         c.test()
@@ -43,6 +42,7 @@ class TestUnlockedTransactions(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
@@ -50,7 +50,7 @@ class TestUnlockedTransactions(TestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement=self.random_string(),
                 locked=False,

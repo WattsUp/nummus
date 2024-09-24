@@ -209,7 +209,7 @@ def valuation(uri: str) -> str | flask.Response:
         date = form.get("date", type=datetime.date.fromisoformat)
         if date is None:
             return common.error("Asset valuation date must not be empty")
-        value = form.get("value", type=utils.parse_real)
+        value = utils.parse_real(form.get("value"), precision=6)
         if value is None:
             return common.error("Asset valuation value must not be empty")
 
@@ -253,7 +253,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     date = form.get("date", type=datetime.date.fromisoformat)
     if date is None:
         return common.error("Asset valuation date must not be empty")
-    value = form.get("value", type=utils.parse_real)
+    value = utils.parse_real(form.get("value"), precision=6)
     if value is None:
         return common.error("Asset valuation value must not be empty")
 

@@ -60,6 +60,7 @@ class TestSummarize(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_1 = Account(
                 name="Monkey Bank Credit",
@@ -67,6 +68,7 @@ class TestSummarize(TestBase):
                 category=AccountCategory.CREDIT,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_0, acct_1))
             s.commit()
@@ -90,7 +92,7 @@ class TestSummarize(TestBase):
 
             txn_0 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord - 1,
+                date=today - datetime.timedelta(days=1),
                 amount=100,
                 statement="Banana Store",
             )
@@ -106,7 +108,7 @@ class TestSummarize(TestBase):
 
             txn_1 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement="Banana Store",
             )
@@ -122,7 +124,7 @@ class TestSummarize(TestBase):
 
             txn_2 = Transaction(
                 account_id=acct_0.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement="Banana Store",
             )
@@ -209,7 +211,7 @@ class TestSummarize(TestBase):
         with p.get_session() as s:
             txn_1 = Transaction(
                 account_id=acct_0_id,
-                date_ord=today_ord,
+                date=today,
                 amount=10,
                 statement="Banana Store",
             )

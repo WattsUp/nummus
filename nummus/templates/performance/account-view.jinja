@@ -1,7 +1,7 @@
 <a id="account-{{ account["uri"] }}"
    class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 cursor-pointer"
-   href="{{ url_for("accounts.page", uri=account["uri"]) }}"
-   hx-get="{{ url_for("accounts.page", uri=account["uri"]) }}"
+   href="{{ url_for('accounts.page', uri=account['uri']) }}"
+   hx-get="{{ url_for('accounts.page', uri=account['uri']) }}"
    hx-target="#main"
    hx-swap="innerHTML"
    hx-push-url="true">

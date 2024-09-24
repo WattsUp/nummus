@@ -27,6 +27,7 @@ class TestUtils(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         acct_invest = Account(
             name="Gorilla Investments",
@@ -34,6 +35,7 @@ class TestUtils(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add_all((acct_checking, acct_invest))
         s.commit()
@@ -70,7 +72,6 @@ class TestUtils(TestBase):
 
         n_transactions = 10
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         # Create accounts
         acct = Account(
@@ -79,6 +80,7 @@ class TestUtils(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct)
         s.commit()
@@ -88,6 +90,7 @@ class TestUtils(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=False,
         )
         s.add(t_cat)
         s.commit()
@@ -95,7 +98,7 @@ class TestUtils(TestBase):
         for _ in range(n_transactions):
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )

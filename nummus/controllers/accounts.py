@@ -64,6 +64,7 @@ def account(uri: str) -> str | flask.Response:
         category = AccountCategory(category_s) if category_s else None
         closed = "closed" in form
         emergency = "emergency" in form
+        budgeted = "budgeted" in form
 
         if category is None:
             return common.error("Account category must not be None")
@@ -80,6 +81,7 @@ def account(uri: str) -> str | flask.Response:
             acct.category = category
             acct.closed = closed
             acct.emergency = emergency
+            acct.budgeted = budgeted
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -118,6 +120,7 @@ def ctx_account(
         "updated_on": datetime.date.fromordinal(updated_on_ord),
         "closed": acct.closed,
         "emergency": acct.emergency,
+        "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
         "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),
     }
@@ -459,11 +462,13 @@ def txns_options(uri: str, field: str) -> str:
         args = flask.request.args
 
         id_mapping = None
+        label_mapping = None
         if field == "account":
             msg = "Cannot get account options for account transactions"
             raise exc.http.BadRequest(msg)
         if field == "category":
-            id_mapping = TransactionCategory.map_name_emoji(s)
+            id_mapping = TransactionCategory.map_name(s)
+            label_mapping = TransactionCategory.map_name_emoji(s)
         elif field not in {"payee", "tag"}:
             msg = f"Unexpected txns options: {field}"
             raise exc.http.BadRequest(msg)
@@ -478,6 +483,7 @@ def txns_options(uri: str, field: str) -> str:
                 query,
                 field,
                 id_mapping,
+                label_mapping=label_mapping,
                 search_str=search_str,
             ),
             txn_table={"uri": uri},

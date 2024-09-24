@@ -159,7 +159,6 @@ class TestAsset(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct_uri = d["acct_uri"]
         a_1 = d["a_1"]
@@ -178,7 +177,7 @@ class TestAsset(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=0,
                 statement=self.random_string(),
             )
@@ -214,7 +213,7 @@ class TestAsset(WebTestBase):
         with p.get_session() as s:
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord - 2,
+                date=today - datetime.timedelta(days=2),
                 amount=-100,
                 statement=self.random_string(),
             )
@@ -242,7 +241,6 @@ class TestAsset(WebTestBase):
         p = self._portfolio
         d = self._setup_portfolio()
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct = d["acct"]
         acct_uri = d["acct_uri"]
@@ -261,7 +259,7 @@ class TestAsset(WebTestBase):
             # Buy the house but no ticker so excluded
             txn = Transaction(
                 account_id=acct_id,
-                date_ord=today_ord,
+                date=today,
                 amount=0,
                 statement=self.random_string(),
             )
@@ -329,7 +327,7 @@ class TestAsset(WebTestBase):
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0, "period": "all"}),
         )
-        self.assertRegex(result, r"<div .*>\$100.00</div>")
+        self.assertRegex(result, r"<div .*>\$100.000000</div>")
         self.assertRegex(result, rf'<div id="val-{v_uri}"')
         self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 
@@ -356,7 +354,7 @@ class TestAsset(WebTestBase):
             r'<script>assetChart\.update\(.*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "months"', result)
-        self.assertNotRegex(result, r"<div .*>\$100.00</div>")
+        self.assertNotRegex(result, r"<div .*>\$100.000000</div>")
         self.assertNotRegex(result, rf'<div id="val-{v_uri}"')
         self.assertNotRegex(result, rf'hx-get="/h/assets/v/{v_uri}/edit"')
 

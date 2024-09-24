@@ -357,6 +357,7 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add_all((a, acct))
@@ -367,6 +368,7 @@ class TestAsset(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
         s.add(t_cat)
         s.commit()
@@ -383,7 +385,7 @@ class TestAsset(TestBase):
         # A split on today means trading occurs at yesterday / multiplier pricing
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 2,
+            date=today - datetime.timedelta(days=2),
             amount=value_yesterday,
             statement=self.random_string(),
         )
@@ -398,7 +400,7 @@ class TestAsset(TestBase):
 
         txn_1 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date=today,
             amount=value_today,
             statement=self.random_string(),
         )
@@ -465,7 +467,7 @@ class TestAsset(TestBase):
         # Non-integer splits should preserve summing to zero
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 7,
+            date=today - datetime.timedelta(days=7),
             amount=10,
             statement=self.random_string(),
         )
@@ -484,7 +486,7 @@ class TestAsset(TestBase):
         qty_1 = -qty / 2
         txn_1 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 6,
+            date=today - datetime.timedelta(days=6),
             amount=10,
             statement=self.random_string(),
         )
@@ -501,7 +503,7 @@ class TestAsset(TestBase):
 
         txn_1 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 6,
+            date=today - datetime.timedelta(days=6),
             amount=10,
             statement=self.random_string(),
         )
@@ -559,12 +561,14 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         t_cat = TransactionCategory(
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         s.add_all((a, acct, t_cat))
@@ -597,7 +601,7 @@ class TestAsset(TestBase):
         # Add a transaction before first day
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 4,
+            date=today - datetime.timedelta(days=4),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -615,8 +619,8 @@ class TestAsset(TestBase):
         n_deleted = a.prune_valuations()
         self.assertEqual(n_deleted, 0)
 
-        txn_0.date_ord = today_ord
-        t_split_0.date_ord = today_ord
+        txn_0.date = today
+        t_split_0.parent = txn_0
         s.commit()
 
         n_deleted = a.prune_valuations()
@@ -639,7 +643,7 @@ class TestAsset(TestBase):
         # Add sell some today
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date=today,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -656,7 +660,7 @@ class TestAsset(TestBase):
         # And remaining tomorrow
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord + 1,
+            date=today + datetime.timedelta(days=1),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -685,7 +689,7 @@ class TestAsset(TestBase):
         # Buy and sell some on the last day
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord + 3,
+            date=today + datetime.timedelta(days=3),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -700,7 +704,7 @@ class TestAsset(TestBase):
         s.commit()
         txn_0 = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord + 3,
+            date=today + datetime.timedelta(days=3),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -760,12 +764,14 @@ class TestAsset(TestBase):
             category=AccountCategory.CASH,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         t_cat = TransactionCategory(
             name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         # No ticker should fail
@@ -790,7 +796,7 @@ class TestAsset(TestBase):
         date_ord = date.toordinal()
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=date_ord,
+            date=date,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -901,8 +907,8 @@ class TestAsset(TestBase):
         # Move transaction forward so it'll have to delete valuations and splits
         date = datetime.date(2023, 10, 2)
         date_ord = date.toordinal()
-        txn.date_ord = date_ord
-        t_split.date_ord = date_ord
+        txn.date = date
+        t_split.parent = txn
         s.commit()
 
         r_start, r_end = a.update_valuations(through_today=False)

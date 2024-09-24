@@ -39,9 +39,10 @@ class TestCommon(WebTestBase):
 
     def test_ctx_sidebar(self) -> None:
         p = self._portfolio
+        with p.get_session() as s:
+            TransactionCategory.add_default(s)
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         with self._flask_app.app_context():
             result = common.ctx_sidebar()
@@ -64,6 +65,7 @@ class TestCommon(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             acct_savings = Account(
                 name="Monkey Bank Savings",
@@ -71,6 +73,7 @@ class TestCommon(WebTestBase):
                 category=AccountCategory.CASH,
                 closed=True,
                 emergency=False,
+                budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
             s.commit()
@@ -85,7 +88,7 @@ class TestCommon(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_savings.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
             )
@@ -98,7 +101,7 @@ class TestCommon(WebTestBase):
 
             txn = Transaction(
                 account_id=acct_checking.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-50,
                 statement=self.random_string(),
             )
@@ -217,10 +220,12 @@ class TestCommon(WebTestBase):
             self.assertIn(e_str, html)
 
             with p.get_session() as s:
-                t_cat = TransactionCategory()
-                t_cat.group = TransactionCategoryGroup.OTHER
-                t_cat.locked = False
-                t_cat.is_profit_loss = False
+                t_cat = TransactionCategory(
+                    group=TransactionCategoryGroup.TRANSFER,
+                    locked=False,
+                    is_profit_loss=False,
+                    asset_linked=False,
+                )
 
                 with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
@@ -237,11 +242,13 @@ class TestCommon(WebTestBase):
                 s.add(t_cat)
                 s.commit()
 
-                t_cat = TransactionCategory()
-                t_cat.name = name
-                t_cat.group = TransactionCategoryGroup.OTHER
-                t_cat.locked = False
-                t_cat.is_profit_loss = False
+                t_cat = TransactionCategory(
+                    name=name,
+                    group=TransactionCategoryGroup.TRANSFER,
+                    locked=False,
+                    is_profit_loss=False,
+                    asset_linked=False,
+                )
                 with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)
                     s.commit()

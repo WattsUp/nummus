@@ -145,7 +145,7 @@ class TestUtils(TestBase):
         finally:
             mock.builtins.input = original_input  # type: ignore[attr-defined]
 
-    def test_parse_financial(self) -> None:
+    def test_parse_real(self) -> None:
         result = utils.parse_real(None)
         self.assertIsNone(result)
 
@@ -163,13 +163,21 @@ class TestUtils(TestBase):
         result = utils.parse_real(s)
         self.assertEqual(result, Decimal("1000.1"))
 
-        s = "$1000.1"
+        s = "$1000.101"
         result = utils.parse_real(s)
         self.assertEqual(result, Decimal("1000.1"))
 
-        s = "-$1,000.1"
+        s = "$1,000.101"
+        result = utils.parse_real(s, precision=3)
+        self.assertEqual(result, Decimal("1000.101"))
+
+        s = "-$1,000.101"
         result = utils.parse_real(s)
         self.assertEqual(result, Decimal("-1000.1"))
+
+        s = "-$1,000.101"
+        result = utils.parse_real(s, precision=3)
+        self.assertEqual(result, Decimal("-1000.101"))
 
     def test_format_financial(self) -> None:
         x = Decimal("1000.1")

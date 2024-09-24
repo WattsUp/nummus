@@ -30,6 +30,7 @@ class TestAccount(TestBase):
             "category": AccountCategory.CASH,
             "closed": False,
             "emergency": False,
+            "budgeted": False,
         }
 
         acct = Account(**d)
@@ -66,6 +67,7 @@ class TestAccount(TestBase):
             "category": AccountCategory.CASH,
             "closed": False,
             "emergency": False,
+            "budgeted": False,
         }
 
         acct = Account(**d)
@@ -79,7 +81,7 @@ class TestAccount(TestBase):
 
         t_today = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date=today,
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -91,7 +93,7 @@ class TestAccount(TestBase):
 
         t_before = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord - 1,
+            date=today - datetime.timedelta(days=1),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -103,7 +105,7 @@ class TestAccount(TestBase):
 
         t_after = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord + 1,
+            date=today + datetime.timedelta(days=1),
             amount=self.random_decimal(-1, 1),
             statement=self.random_string(),
         )
@@ -126,6 +128,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -139,6 +142,7 @@ class TestAccount(TestBase):
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
+            asset_linked=True,
         )
 
         s.add(t_cat)
@@ -158,7 +162,7 @@ class TestAccount(TestBase):
         # Fund account on second day
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=self.random_decimal(10, 100),
             statement=self.random_string(),
         )
@@ -174,7 +178,7 @@ class TestAccount(TestBase):
         q0 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=self.random_decimal(-10, -1),
             statement=self.random_string(),
         )
@@ -199,7 +203,7 @@ class TestAccount(TestBase):
         q1 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=self.random_decimal(1, 10),
             statement=self.random_string(),
         )
@@ -224,7 +228,7 @@ class TestAccount(TestBase):
         q2 = self.random_decimal(0, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=today_ord,
+            date=today,
             amount=self.random_decimal(-10, -1),
             statement=self.random_string(),
         )
@@ -267,12 +271,13 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
         txn = Transaction(
             account_id=acct_unrelated.id_,
-            date_ord=today_ord,
+            date=today,
             amount=self.random_decimal(-10, -1),
             statement=self.random_string(),
         )
@@ -312,6 +317,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         assets: list[Asset] = []
         for _ in range(3):
@@ -364,7 +370,7 @@ class TestAccount(TestBase):
         t_fund = 100
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=t_fund,
             statement=self.random_string(),
         )
@@ -408,7 +414,7 @@ class TestAccount(TestBase):
         q0 = 1
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=t0,
             statement=self.random_string(),
         )
@@ -458,7 +464,7 @@ class TestAccount(TestBase):
         t1 = 9
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=end - 1,
+            date=today + datetime.timedelta(days=2),
             amount=t1,
             statement=self.random_string(),
         )
@@ -558,7 +564,7 @@ class TestAccount(TestBase):
         t2 = self.random_decimal(1, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start,
+            date=today - datetime.timedelta(days=3),
             amount=t2,
             statement=self.random_string(),
         )
@@ -571,7 +577,7 @@ class TestAccount(TestBase):
         t3 = self.random_decimal(-10, -1)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=t3,
             statement=self.random_string(),
         )
@@ -620,12 +626,13 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
         txn = Transaction(
             account_id=acct_unrelated.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=t0,
             statement=self.random_string(),
         )
@@ -653,7 +660,7 @@ class TestAccount(TestBase):
         # Add a day trade
         txn = Transaction(
             account_id=acct_unrelated.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=t1,
             statement=self.random_string(),
         )
@@ -686,6 +693,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add(acct)
@@ -708,7 +716,7 @@ class TestAccount(TestBase):
         t_fund = self.random_decimal(10, 100)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=t_fund,
             statement=self.random_string(),
         )
@@ -731,7 +739,7 @@ class TestAccount(TestBase):
         t0 = self.random_decimal(-10, -1)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=start + 1,
+            date=today - datetime.timedelta(days=2),
             amount=t0,
             statement=self.random_string(),
         )
@@ -754,7 +762,7 @@ class TestAccount(TestBase):
         t1 = self.random_decimal(1, 10)
         txn = Transaction(
             account_id=acct.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=t1,
             statement=self.random_string(),
         )
@@ -793,12 +801,13 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
         s.add(acct_unrelated)
         s.commit()
         txn = Transaction(
             account_id=acct_unrelated.id_,
-            date_ord=end,
+            date=today + datetime.timedelta(days=3),
             amount=t1,
             statement=self.random_string(),
         )
@@ -832,6 +841,7 @@ class TestAccount(TestBase):
             category=AccountCategory.INVESTMENT,
             closed=False,
             emergency=False,
+            budgeted=False,
         )
 
         s.add(acct)
@@ -860,7 +870,7 @@ class TestAccount(TestBase):
         # Buy the house
         txn = Transaction(
             account_id=acct_id,
-            date_ord=today_ord - 2,
+            date=today - datetime.timedelta(days=2),
             amount=-10,
             statement=self.random_string(),
         )
@@ -922,7 +932,7 @@ class TestAccount(TestBase):
         # Sell the house on the same day for $50
         txn = Transaction(
             account_id=acct_id,
-            date_ord=today_ord - 2,
+            date=today - datetime.timedelta(days=2),
             amount=50,
             statement=self.random_string(),
         )
@@ -964,7 +974,7 @@ class TestAccount(TestBase):
 
         txn = Transaction(
             account_id=acct_id,
-            date_ord=today_ord - 2,
+            date=today - datetime.timedelta(days=2),
             amount=-10,
             statement=self.random_string(),
         )
@@ -980,7 +990,7 @@ class TestAccount(TestBase):
 
         txn = Transaction(
             account_id=acct_id,
-            date_ord=today_ord - 1,
+            date=today - datetime.timedelta(days=1),
             amount=0,
             statement=self.random_string(),
         )
@@ -1003,7 +1013,7 @@ class TestAccount(TestBase):
 
         txn = Transaction(
             account_id=acct_id,
-            date_ord=today_ord,
+            date=today,
             amount=11,
             statement=self.random_string(),
         )

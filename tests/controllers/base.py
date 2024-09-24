@@ -22,6 +22,7 @@ from nummus.models import (
     AssetCategory,
     AssetValuation,
     Budget,
+    BudgetAssignment,
     Credentials,
     Transaction,
     TransactionCategory,
@@ -113,7 +114,6 @@ class WebTestBase(TestBase):
         p = self._portfolio
 
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
         acct_name = "Monkey Bank Checking"
         payee_0 = "Apple"
@@ -131,12 +131,14 @@ class WebTestBase(TestBase):
                 category=AccountCategory.CASH,
                 closed=False,
                 emergency=False,
+                budgeted=True,
             )
             s.add(acct)
             s.commit()
 
             acct_uri = acct.uri
 
+            TransactionCategory.add_default(s)
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -147,7 +149,7 @@ class WebTestBase(TestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=100,
                 statement=self.random_string(),
                 linked=True,
@@ -166,7 +168,7 @@ class WebTestBase(TestBase):
 
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=today_ord,
+                date=today,
                 amount=-10,
                 statement=self.random_string(),
                 locked=True,
@@ -221,9 +223,11 @@ class WebTestBase(TestBase):
         models = [
             AssetValuation,
             Budget,
+            BudgetAssignment,
             Credentials,
             TransactionSplit,
             Transaction,
+            TransactionCategory,
             Asset,
             Account,
         ]

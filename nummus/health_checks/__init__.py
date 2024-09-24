@@ -11,10 +11,7 @@ from nummus.health_checks.missing_valuations import MissingAssetValuations
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
 from nummus.health_checks.typos import Typos
-from nummus.health_checks.unbalanced_transfers import (
-    UnbalancedCreditCardPayments,
-    UnbalancedTransfers,
-)
+from nummus.health_checks.unbalanced_transfers import UnbalancedTransfers
 from nummus.health_checks.unlocked_transactions import UnlockedTransactions
 
 __all__ = [
@@ -27,7 +24,6 @@ __all__ = [
     "OutlierAssetPrice",
     "OverdrawnAccounts",
     "Typos",
-    "UnbalancedCreditCardPayments",
     "UnbalancedTransfers",
     "UnlockedTransactions",
     "CHECKS",
@@ -37,7 +33,6 @@ CHECKS: list[type[Base]] = [
     DatabaseIntegrity,
     DuplicateTransactions,
     UnbalancedTransfers,
-    UnbalancedCreditCardPayments,
     MissingAssetValuations,
     OutlierAssetPrice,
     OverdrawnAccounts,

@@ -6,10 +6,10 @@
      hx-swap="outerHTML"
      hx-indicator=".spinner">
     <button class="button {{ "hover:green" if chart["category"] else "bg-green" }}"
-            hx-get="{{ url_for("net_worth.chart", category="") }}">All</button>
+            hx-get="{{ url_for('net_worth.chart', category='') }}">All</button>
     {% for cat in chart["category_type"] %}
         <button class="button {{ "bg-green" if chart["category"] == cat else "hover:green" }}"
-                hx-get="{{ url_for("net_worth.chart", category=cat | enum) }}">{{ cat | enum | title }}</button>
+                hx-get="{{ url_for('net_worth.chart', category=cat | enum) }}">{{ cat | enum | title }}</button>
     {% endfor %}
     {% if chart["category"] %}
         <input name="category"
@@ -19,7 +19,7 @@
     {% endif %}
     <div class="grow"></div>
     <select name="period"
-            hx-get="{{ url_for("net_worth.chart") }}"
+            hx-get="{{ url_for('net_worth.chart') }}"
             autocomplete="off">
         {% with period = chart["period"] %}
             {% include "shared/period-options.jinja" %}
@@ -28,14 +28,14 @@
     <input type="date"
            name="start"
            value="{{ chart["start"] }}"
-           hx-get="{{ url_for("net_worth.chart", period="custom") }}"
+           hx-get="{{ url_for('net_worth.chart', period='custom') }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
     to
     <input type="date"
            name="end"
            value="{{ chart["end"] }}"
-           hx-get="{{ url_for("net_worth.chart", period="custom") }}"
+           hx-get="{{ url_for('net_worth.chart', period='custom') }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
            autocomplete="off">
 </div>
