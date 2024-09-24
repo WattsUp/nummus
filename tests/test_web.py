@@ -248,7 +248,7 @@ class TestHandler(TestBase):
         h = web.Handler(None, None, None, rfile="")  # type: ignore[attr-defined]
 
         h.response_length = None  # type: ignore[attr-defined]
-        utc_now = datetime.datetime.now(datetime.UTC)
+        utc_now = datetime.datetime.now(datetime.timezone.utc)
         with time_machine.travel(utc_now, tick=False):
             now = datetime.datetime.now().replace(microsecond=0)
 
