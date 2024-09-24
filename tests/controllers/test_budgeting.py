@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from nummus import utils
 from nummus.models import BudgetAssignment, TransactionCategory
+from nummus.models.transaction import TransactionSplit
 from tests.controllers.base import WebTestBase
 
 
@@ -224,6 +225,26 @@ class TestBudgeting(WebTestBase):
         self.assertRegex(
             result,
             r"<div>-\$150.00</div>[ \n]+<div .*>More money assigned than held</div>",
+        )
+
+        # Add unbalanced transfer
+        with p.get_session() as s:
+            t_cat_id_2 = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Transfers")
+                .one()[0]
+            )
+            s.query(TransactionSplit).where(TransactionSplit.amount > 0).update(
+                {"category_id": t_cat_id_2},
+            )
+            s.commit()
+        result, _ = self.web_get(endpoint, headers=headers)
+        self.assertRegex(
+            result,
+            r"<div .*>Ungrouped</div>[ \n]+"
+            r"<div .*>\$0.00</div>[ \n]+"
+            r"<div .*>\$100.00</div>[ \n]+"
+            r"<div .*>\$100.00</div>",
         )
 
     def test_assign(self) -> None:

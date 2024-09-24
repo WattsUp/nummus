@@ -99,7 +99,11 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 bar_w = Decimal(0)
             elif available >= 0:
                 bar_mode = "funded"
-                bar_w = -activity / (available - activity) * 100
+                bar_w = (
+                    Decimal(0)
+                    if activity > 0
+                    else -activity / (available - activity) * 100
+                )
             else:
                 bar_mode = "underfunded"
                 bar_w = (
