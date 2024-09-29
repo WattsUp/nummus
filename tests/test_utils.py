@@ -159,6 +159,10 @@ class TestUtils(TestBase):
         result = utils.parse_real(s)
         self.assertEqual(result, Decimal("1000.1"))
 
+        s = "1000"
+        result = utils.parse_real(s)
+        self.assertEqual(result, Decimal("1000"))
+
         s = "1,000.1"
         result = utils.parse_real(s)
         self.assertEqual(result, Decimal("1000.1"))
@@ -1051,4 +1055,18 @@ class TestUtils(TestBase):
             "A bunch of chocolate cake",
         }
         result = utils.dedupe(items)
+        self.assertEqual(result, target)
+
+    def test_start_of_month(self) -> None:
+        date = datetime.date(2024, 2, 20)
+
+        result = utils.start_of_month(date)
+        target = datetime.date(2024, 2, 1)
+        self.assertEqual(result, target)
+
+    def test_end_of_month(self) -> None:
+        date = datetime.date(2024, 2, 20)
+
+        result = utils.end_of_month(date)
+        target = datetime.date(2024, 2, 29)
         self.assertEqual(result, target)

@@ -4,7 +4,6 @@ import datetime
 import re
 from decimal import Decimal
 
-from nummus import utils
 from nummus.models import (
     Account,
     AccountCategory,
@@ -44,8 +43,6 @@ class TestPerformance(WebTestBase):
         today = datetime.date.today()
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
-        end_of_month = utils.end_of_month(today)
-        end_of_month_ord = end_of_month.toordinal()
 
         a_uri_1 = d["a_uri_1"]
 
@@ -124,10 +121,7 @@ class TestPerformance(WebTestBase):
         index_s = m[1] if m else ""
         dates_s = m[2] if m else ""
         self.assertIn(today.isoformat(), dates_s)
-        self.assertEqual(
-            index_s,
-            ", ".join(['"0"'] * (end_of_month_ord - today_ord + 3)),
-        )
+        self.assertEqual(index_s, '"0", "0", "0"')
         self.assertIn('"date_mode": "days"', result)
         # Get the asset block
         m = re.search(r'id="accounts"(.*)id="performance-chart-data"', result, re.S)
