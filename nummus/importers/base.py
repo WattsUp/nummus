@@ -17,7 +17,7 @@ class TxnDict(TypedDict):
     account: str
     date: datetime.date
     amount: Decimal
-    statement: str
+    statement: str | None
 
     # Importers may import these items
     payee: str | None

@@ -364,30 +364,70 @@ class Portfolio:
                     if not statement:
                         statement = f"Asset Transaction {asset_name}"
 
+                category_name = d["category"] or "Uncategorized"
+                try:
+                    category_id = categories[category_name].id_
+                except KeyError as e:
+                    msg = f"Could not find category '{category_name}', ctx={ctx}"
+                    raise exc.UnknownCategoryError(msg) from e
+
                 # TODO (WattsUp): Link with unlink if possible
                 # Maybe make into a command?
 
                 if d["date"] > today:
                     raise exc.FutureTransactionError
 
-                txn = Transaction(
-                    account_id=acct_id,
-                    amount=d["amount"],
-                    date=d["date"],
-                    statement=statement,
-                    linked=True,
-                )
-                t_split = TransactionSplit(
-                    amount=d["amount"],
-                    payee=d["payee"],
-                    description=d["description"],
-                    tag=d["tag"],
-                    category_id=categories[d["category"] or "Uncategorized"].id_,
-                    asset_id=asset_id,
-                    asset_quantity=d["asset_quantity"],
-                )
-                t_split.parent = txn
-                s.add_all((txn, t_split))
+                match_id: int | None = None
+                # Don't match if an asset transaction
+                if asset_id is None:
+                    date_ord = d["date"].toordinal()
+                    matches = list(
+                        s.query(Transaction)
+                        .with_entities(Transaction.id_, Transaction.date_ord)
+                        .where(
+                            Transaction.account_id == acct_id,
+                            Transaction.amount == d["amount"],
+                            Transaction.date_ord >= date_ord - 5,
+                            Transaction.date_ord <= date_ord + 5,
+                            Transaction.linked.is_(False),
+                        )
+                        .all(),
+                    )
+                    matches = sorted(matches, key=lambda x: abs(x[1] - date_ord))
+                    # If only one match on closest day, link transaction
+                    if len(matches) == 1 or (
+                        len(matches) > 1 and matches[0][1] != matches[1][1]
+                    ):
+                        match_id = matches[0][0]
+
+                if match_id:
+                    s.query(Transaction).where(Transaction.id_ == match_id).update(
+                        {"linked": True, "statement": statement},
+                    )
+                    s.query(TransactionSplit).where(
+                        TransactionSplit.parent_id == match_id,
+                    ).update({"linked": True})
+                else:
+                    txn = Transaction(
+                        account_id=acct_id,
+                        amount=d["amount"],
+                        date=d["date"],
+                        statement=statement,
+                        linked=True,
+                        # Asset transactions are immediately locked
+                        locked=asset_id is not None,
+                    )
+                    t_split = TransactionSplit(
+                        amount=d["amount"],
+                        payee=d["payee"],
+                        description=d["description"],
+                        tag=d["tag"],
+                        category_id=category_id,
+                        asset_id=asset_id,
+                        asset_quantity=d["asset_quantity"],
+                    )
+                    t_split.parent = txn
+                    s.add_all((txn, t_split))
 
             # Add file hash to prevent importing again
             if force:

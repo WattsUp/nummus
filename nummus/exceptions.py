@@ -43,6 +43,7 @@ __all__ = [
     "UnknownEncryptionVersionError",
     "InvalidBackupTarError",
     "FutureTransactionError",
+    "UnknownCategoryError",
 ]
 
 
@@ -197,3 +198,7 @@ class FutureTransactionError(Exception):
         """Initialize FutureTransactionError."""
         msg = "Cannot create Transaction in the future"
         super().__init__(msg)
+
+
+class UnknownCategoryError(Exception):
+    """Error when a category is not recognized."""

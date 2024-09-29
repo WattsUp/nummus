@@ -84,7 +84,7 @@ def parse_period(
         end = max(start, end, earliest)
     elif period == "this-month":
         start = utils.start_of_month(today)
-        end = utils.end_of_month(today)
+        end = today
     elif period == "last-month":
         end = utils.start_of_month(today) - datetime.timedelta(days=1)
         start = utils.start_of_month(end)
@@ -96,20 +96,20 @@ def parse_period(
         n = int(m_months.group(1))
         start_this_month = datetime.date(today.year, today.month, 1)
         start = utils.date_add_months(start_this_month, -n)
-        end = utils.end_of_month(today)
+        end = today
     elif m_years := re.match(r"(\d+)-years?", period):
         n = int(m_years.group(1))
         start = datetime.date(today.year - n, today.month, 1)
-        end = utils.end_of_month(today)
+        end = today
     elif period == "this-year":
         start = datetime.date(today.year, 1, 1)
-        end = utils.end_of_month(today)
+        end = today
     elif period == "last-year":
         start = datetime.date(today.year - 1, 1, 1)
         end = datetime.date(today.year - 1, 12, 31)
     elif period == "all":
         start = None
-        end = utils.end_of_month(today)
+        end = today
     else:
         msg = f"Unknown period: {period}"
         raise exc.http.BadRequest(msg)

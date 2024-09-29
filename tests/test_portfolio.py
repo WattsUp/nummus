@@ -441,9 +441,29 @@ class TestPortfolio(TestBase):
             )
             self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
+            # Unlink one so it'll link
+            txn = (
+                s.query(Transaction).where(Transaction.amount == Decimal("1000")).one()
+            )
+            txn.linked = False
+            txn.statement = "Overwrite me"
+            t_split = (
+                s.query(TransactionSplit)
+                .where(TransactionSplit.parent_id == txn.id_)
+                .one()
+            )
+            t_split.parent = txn
+            t_split.description = "Don't overwrite me"
+            s.commit()
+
             # But it will work with force
             p.import_file(path, path_debug, force=True)
             self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
+
+            self.assertTrue(txn.linked, "Transaction did not link")
+            self.assertTrue(t_split.linked, "TransactionSplit did not link")
+            self.assertNotEqual(txn.statement, "Overwrite me")
+            self.assertEqual(t_split.description, "Don't overwrite me")
 
             # Fine importing with force when not required
             path = self._DATA_ROOT.joinpath("transactions_required.csv")
@@ -471,6 +491,15 @@ class TestPortfolio(TestBase):
             path = self._DATA_ROOT.joinpath("transactions_future.csv")
             self.assertRaises(
                 exc.FutureTransactionError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+
+            # Fail unknown category
+            path = self._DATA_ROOT.joinpath("transactions_bad_category.csv")
+            self.assertRaises(
+                exc.UnknownCategoryError,
                 p.import_file,
                 path,
                 path_debug,
