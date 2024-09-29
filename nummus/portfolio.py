@@ -369,7 +369,7 @@ class Portfolio:
                     category_id = categories[category_name].id_
                 except KeyError as e:
                     msg = f"Could not find category '{category_name}', ctx={ctx}"
-                    raise KeyError(msg) from e
+                    raise exc.UnknownCategoryError(msg) from e
 
                 # TODO (WattsUp): Link with unlink if possible
                 # Maybe make into a command?
