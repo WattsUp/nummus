@@ -45,6 +45,7 @@ class TransactionCategory(Base):
     locked: ORMBool
     is_profit_loss: ORMBool
     asset_linked: ORMBool
+    essential: ORMBool
 
     budget_group: ORMStrOpt
     budget_position: ORMIntOpt
@@ -99,6 +100,28 @@ class TransactionCategory(Base):
             return None
         if not emoji_mod.purely_emoji(field):
             msg = "Transaction category emoji must only be emojis"
+            raise exc.InvalidORMValueError(msg)
+        return field
+
+    @orm.validates("essential")
+    def validate_essential(self, _: str, field: bool | None) -> bool | None:
+        """Validates income groups are not marked essential.
+
+        Args:
+            field: Updated value
+
+        Returns:
+            field
+
+        Raises:
+            InvalidORMValueError if field is essential
+        """
+        if (
+            self.group
+            in (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER)
+            and field
+        ):
+            msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)
         return field
 

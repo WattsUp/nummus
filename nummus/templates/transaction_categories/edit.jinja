@@ -74,6 +74,20 @@
                         {% endif %}
                     </td>
                 </tr>
+                <tr>
+                    <td class="w-48">Essential transaction</td>
+                    <td>
+                        <label class="flex gap-4 justify-between w-full checkbox">
+                            <input type="checkbox"
+                                   name="essential"
+                                   {% if category["essential"] %}checked{% endif %}
+                                   autocomplete="off">
+                            {% with class = "w-5 h-5" %}
+                                {% include "svg/check.svg" %}
+                            {% endwith %}
+                        </label>
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>

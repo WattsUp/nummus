@@ -191,6 +191,7 @@ def category(uri: str) -> str | flask.Response:
                 ),
                 "locked": cat.locked,
                 "is_profit_loss": cat.is_profit_loss,
+                "essential": cat.essential,
             }
 
             return flask.render_template(
@@ -226,6 +227,7 @@ def category(uri: str) -> str | flask.Response:
         group_s = form.get("group")
         group = TransactionCategoryGroup(group_s) if group_s else None
         is_profit_loss = "is-pnl" in form
+        essential = "essential" in form
 
         name, emoji = _clean_emoji(name)
 
@@ -238,6 +240,7 @@ def category(uri: str) -> str | flask.Response:
                     return common.error("Transaction group must not be None")
                 cat.group = group
                 cat.is_profit_loss = is_profit_loss
+            cat.essential = essential
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
