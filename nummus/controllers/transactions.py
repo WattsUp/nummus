@@ -348,7 +348,13 @@ def ctx_table(
         selected_tags = merge(options_tag, args.getlist("tag"))
         selected_assets = merge(options_asset, args.getlist("asset"))
 
-        if acct is None and len(selected_accounts) != 0:
+        any_filters_accounts = len(selected_accounts) > 0
+        any_filters_payees = len(selected_payees) > 0
+        any_filters_categories = len(selected_categories) > 0
+        any_filters_tags = len(selected_tags) > 0
+        any_filters_assets = len(selected_assets) > 0
+
+        if acct is None and any_filters_accounts:
             ids = [
                 acct_id
                 for acct_id, name in accounts.items()
@@ -356,7 +362,7 @@ def ctx_table(
             ]
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        if len(selected_payees) != 0:
+        if any_filters_payees:
             try:
                 selected_payees.remove("[blank]")
                 query = query.where(
@@ -366,7 +372,7 @@ def ctx_table(
             except ValueError:
                 query = query.where(TransactionSplit.payee.in_(selected_payees))
 
-        if len(selected_categories) != 0:
+        if any_filters_categories:
             ids = [
                 cat_id
                 for cat_id, name in categories.items()
@@ -374,17 +380,18 @@ def ctx_table(
             ]
             query = query.where(TransactionSplit.category_id.in_(ids))
 
-        if len(selected_tags) != 0:
+        if any_filters_tags:
             try:
                 selected_tags.remove("[blank]")
+            except ValueError:
+                query = query.where(TransactionSplit.tag.in_(selected_tags))
+            else:
                 query = query.where(
                     TransactionSplit.tag.in_(selected_tags)
                     | TransactionSplit.tag.is_(None),
                 )
-            except ValueError:
-                query = query.where(TransactionSplit.tag.in_(selected_tags))
 
-        if len(selected_assets) != 0:
+        if any_filters_assets:
             ids = [
                 asset_id for asset_id, name in assets.items() if name in selected_assets
             ]
@@ -475,11 +482,11 @@ def ctx_table(
             "options-category": options_category,
             "options-tag": options_tag,
             "options-asset": options_asset,
-            "any-filters-account": len(selected_accounts) > 0,
-            "any-filters-payee": len(selected_payees) > 0,
-            "any-filters-category": len(selected_categories) > 0,
-            "any-filters-tag": len(selected_tags) > 0,
-            "any-filters-asset": len(selected_assets) > 0,
+            "any-filters-account": any_filters_accounts,
+            "any-filters-payee": any_filters_payees,
+            "any-filters-category": any_filters_categories,
+            "any-filters-tag": any_filters_tags,
+            "any-filters-asset": any_filters_assets,
         }, title
 
 
