@@ -4,7 +4,7 @@ import datetime
 import secrets
 
 from nummus import portfolio
-from nummus.health_checks.unlocked_transactions import UnlockedTransactions
+from nummus.health_checks.unlinked_transactions import UnlinkedTransactions
 from nummus.models import (
     Account,
     AccountCategory,
@@ -16,14 +16,14 @@ from nummus.models import (
 from tests.base import TestBase
 
 
-class TestUnlockedTransactions(TestBase):
+class TestUnlinkedTransactions(TestBase):
     def test_check(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
 
-        c = UnlockedTransactions(p)
+        c = UnlinkedTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
@@ -54,7 +54,7 @@ class TestUnlockedTransactions(TestBase):
                 amount=10,
                 statement=self.random_string(),
                 locked=False,
-                linked=True,
+                linked=False,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
@@ -66,7 +66,7 @@ class TestUnlockedTransactions(TestBase):
             t_id = t_split.id_
             t_uri = t_split.uri
 
-        c = UnlockedTransactions(p)
+        c = UnlinkedTransactions(p)
         c.test()
 
         with p.get_session() as s:
@@ -79,36 +79,19 @@ class TestUnlockedTransactions(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] is unlocked",
+            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] is unlinked",
         }
         self.assertEqual(c.issues, target)
 
         # Solve all issues
         with p.get_session() as s:
-            # Should lock the parent and the child but okay for this test
+            # Should link the parent and the child but okay for this test
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
-                {"locked": True},
+                {"linked": True},
             )
             s.commit()
 
-        c = UnlockedTransactions(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.get_session() as s:
-            n = s.query(HealthCheckIssue).count()
-            self.assertEqual(n, 0)
-
-        # Ignore unlinked
-        with p.get_session() as s:
-            # Should lock the parent and the child but okay for this test
-            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
-                {"locked": False, "linked": False},
-            )
-            s.commit()
-
-        c = UnlockedTransactions(p)
+        c = UnlinkedTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
