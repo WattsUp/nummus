@@ -15,6 +15,7 @@ from nummus.health_checks.typos import Typos
 from nummus.health_checks.unbalanced_transfers import UnbalancedTransfers
 from nummus.health_checks.unlinked_transactions import UnlinkedTransactions
 from nummus.health_checks.unlocked_transactions import UnlockedTransactions
+from nummus.health_checks.unused_categories import UnusedCategories
 
 __all__ = [
     "Base",
@@ -30,6 +31,7 @@ __all__ = [
     "UnbalancedTransfers",
     "UnlockedTransactions",
     "UnlinkedTransactions",
+    "UnusedCategories",
     "CHECKS",
 ]
 
@@ -47,4 +49,5 @@ CHECKS: list[type[Base]] = [
     UnlinkedTransactions,
     EmptyFields,
     MissingAssetLink,
+    UnusedCategories,
 ]
