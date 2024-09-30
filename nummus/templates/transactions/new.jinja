@@ -30,7 +30,7 @@
                     <td>
                         <select class="w-full" name="account" autocomplete="off">
                             {% for item in accounts %}
-                                <option value="{{ item }}"
+                                <option value="{{ item | e }}"
                                         {% if item == parent["account"] %}selected{% endif %}>{{ item }}</option>
                             {% endfor %}
                         </select>
@@ -50,7 +50,7 @@
                     <td class="pr-4">Statement</td>
                     <td>
                         <input name="statement"
-                               value="{{ parent["statement"] or "" }}"
+                               value="{{ (parent["statement"] or "") | e }}"
                                placeholder="Manually added"
                                class="w-[7rem] min-w-[7rem] p-1 truncate w-full"
                                autocomplete="off">

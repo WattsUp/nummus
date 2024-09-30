@@ -67,13 +67,16 @@ class TestTransactionCategory(WebTestBase):
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.name == "Other Income")
             t_cat = query.one()
+            t_cat.name = 'Other Income"'
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
+            s.commit()
 
         endpoint = "transaction_categories.category"
         url = endpoint, {"uri": t_cat_uri}
         result, _ = self.web_get(url)
         self.assertIn("Delete", result)
+        self.assertIn('value="Other Income&#34;"', result)
 
         name = self.random_string()
         form = {"name": name + "😀", "group": "transfer"}

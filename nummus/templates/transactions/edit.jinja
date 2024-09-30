@@ -13,10 +13,10 @@
     </button>
     <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction</h1>
     <datalist id="payees">
-        {% for item in payees %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+        {% for item in payees %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
     <datalist id="tags">
-        {% for item in tags %}<option value="{{ item }}">{{ item }}</option>{% endfor %}
+        {% for item in tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
     <div class="flex flex-col w-full px-6 grow" id="form-txn">
         <table class="w-full whitespace-nowrap">

@@ -69,7 +69,7 @@
                         <td>
                             <input class="w-full"
                                    name="institution"
-                                   value="{{ account["institution"] }}"
+                                   value="{{ account["institution"] | e }}"
                                    autocomplete="off">
                         </td>
                     </tr>
@@ -87,7 +87,7 @@
                         <td>
                             <input class="w-full"
                                    name="name"
-                                   value="{{ account["name"] }}"
+                                   value="{{ account["name"] | e }}"
                                    autocomplete="off">
                         </td>
                     </tr>

@@ -3,7 +3,7 @@
      hx-swap-oob="{{ oob }}">
     {% if not asset_transactions %}
         <input name="search"
-               value="{{ txn_table["search"] }}"
+               value="{{ txn_table["search"] | e }}"
                placeholder="Search Transactions"
                class="mr-8 grow"
                hx-get="{{ url_for(endpoint, **url_args) }}"

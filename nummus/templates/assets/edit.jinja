@@ -35,7 +35,7 @@
                         <td>
                             <input class="w-full"
                                    name="name"
-                                   value="{{ asset["name"] }}"
+                                   value="{{ asset["name"] | e }}"
                                    autocomplete="off">
                         </td>
                     </tr>
@@ -44,7 +44,7 @@
                         <td>
                             <input class="w-full"
                                    name="ticker"
-                                   value="{{ asset["ticker"] or "" }}"
+                                   value="{{ (asset["ticker"] or "") | e }}"
                                    autocomplete="off">
                         </td>
                     </tr>

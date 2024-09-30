@@ -25,7 +25,7 @@
                             {{ category["name"] or "" }}
                         {% else %}
                             <input name="name"
-                                   value="{{ category["emoji"] + " " if category["emoji"] }}{{ category["name"] or "" }}"
+                                   value="{{ category["emoji"] + " " if category["emoji"] }}{{ (category["name"] or "") | e }}"
                                    class="w-full"
                                    autocomplete="off">
                         {% endif %}

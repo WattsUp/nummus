@@ -2,7 +2,7 @@
        class="w-full"
        placeholder="Search..."
        name="search-{{ name }}"
-       value="{{ search_str }}"
+       value="{{ search_str | e }}"
        hx-get="{{ url_for(endpoint + '_options', field=name, **url_args) }}"
        hx-target="#txn-{{ name }}"
        hx-swap="innerHTML"
@@ -13,7 +13,7 @@
         <label class="flex w-full checkbox {{ "hidden" if option["hidden"] }}">
             <input type="checkbox"
                    name="{{ name }}"
-                   value="{{ option["name"] }}"
+                   value="{{ option["name"] | e }}"
                    {% if option["checked"] %}checked{% endif %}
                    hx-get="{{ url_for(endpoint, **url_args) }}"
                    autocomplete="off">
