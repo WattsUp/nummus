@@ -365,21 +365,90 @@ class Portfolio:
                         statement = f"Asset Transaction {asset_name}"
 
                 category_name = d["category"] or "Uncategorized"
-                try:
-                    category_id = categories[category_name].id_
-                except KeyError as e:
-                    msg = f"Could not find category '{category_name}', ctx={ctx}"
-                    raise exc.UnknownCategoryError(msg) from e
-
-                # TODO (WattsUp): Link with unlink if possible
-                # Maybe make into a command?
 
                 if d["date"] > today:
                     raise exc.FutureTransactionError
 
                 match_id: int | None = None
-                # Don't match if an asset transaction
-                if asset_id is None:
+                if asset_id is not None:
+                    if category_name == "Investment Fees":
+                        # Associate fees with asset
+                        amount = abs(d["amount"])
+                        qty = d["asset_quantity"]
+                        if qty is None or asset_id is None:
+                            msg = f"Investment Fees needs Asset quantity, ctx={ctx}"
+                            raise exc.UnknownCategoryError(msg)
+                        qty = abs(qty)
+
+                        txn = Transaction(
+                            account_id=acct_id,
+                            amount=0,
+                            date=d["date"],
+                            statement=statement,
+                            linked=True,
+                            # Asset transactions are immediately locked
+                            locked=True,
+                        )
+                        t_split_0 = TransactionSplit(
+                            parent=txn,
+                            amount=amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Securities Traded"].id_,
+                            asset_id=asset_id,
+                            asset_quantity=-qty,
+                        )
+                        t_split_1 = TransactionSplit(
+                            parent=txn,
+                            amount=-amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Investment Fees"].id_,
+                            asset_id=asset_id,
+                            asset_quantity=0,
+                        )
+                        s.add_all((txn, t_split_0, t_split_1))
+                        continue
+                    if category_name == "Dividends Received":
+                        # Associate dividends with asset
+                        amount = abs(d["amount"])
+                        qty = d["asset_quantity"]
+                        if qty is None or asset_id is None:
+                            msg = f"Dividends Received needs Asset quantity, ctx={ctx}"
+                            raise exc.UnknownCategoryError(msg)
+                        qty = abs(qty)
+
+                        txn = Transaction(
+                            account_id=acct_id,
+                            amount=0,
+                            date=d["date"],
+                            statement=statement,
+                            linked=True,
+                            # Asset transactions are immediately locked
+                            locked=True,
+                        )
+                        t_split_0 = TransactionSplit(
+                            parent=txn,
+                            amount=-amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Securities Traded"].id_,
+                            asset_id=asset_id,
+                            asset_quantity=qty,
+                        )
+                        t_split_1 = TransactionSplit(
+                            parent=txn,
+                            amount=amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Dividends Received"].id_,
+                            asset_id=asset_id,
+                            asset_quantity=0,
+                        )
+                        s.add_all((txn, t_split_0, t_split_1))
+                        continue
+                else:
+                    # Don't match if an asset transaction
                     date_ord = d["date"].toordinal()
                     matches = list(
                         s.query(Transaction)
@@ -399,6 +468,12 @@ class Portfolio:
                         len(matches) > 1 and matches[0][1] != matches[1][1]
                     ):
                         match_id = matches[0][0]
+
+                try:
+                    category_id = categories[category_name].id_
+                except KeyError as e:
+                    msg = f"Could not find category '{category_name}', ctx={ctx}"
+                    raise exc.UnknownCategoryError(msg) from e
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
@@ -424,7 +499,7 @@ class Portfolio:
                         tag=d["tag"],
                         category_id=category_id,
                         asset_id=asset_id,
-                        asset_quantity=d["asset_quantity"],
+                        asset_quantity_unadjusted=d["asset_quantity"],
                     )
                     t_split.parent = txn
                     s.add_all((txn, t_split))
