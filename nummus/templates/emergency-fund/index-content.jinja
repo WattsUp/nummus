@@ -12,18 +12,7 @@
         <div class="text-center">
             <h1 class="text-lg font-bold">Recommended emergency fund</h1>
             <h1 class="text-2xl font-bold text-green-600">
-                {% if e_fund["budget"] %}{{ e_fund["target_low"] | money0 }} - {{ e_fund["target_high"] | money0 }}{% endif %}
-            </h1>
-        </div>
-        <div class="text-center">
-            <h1 class="text-lg font-bold">Monthly budget</h1>
-            <h1 class="text-2xl font-bold">
-                {% if e_fund["budget"] %}
-                    {{ e_fund["budget"] | money0 }}
-                {% else %}
-                    <span class="text-red">No budget</span>
-                {% endif %}
-                <!-- TODO (WattsUp): Add href to budget editor -->
+                {{ e_fund["target_lower"] | money0 }} - {{ e_fund["target_upper"] | money0 }}
             </h1>
         </div>
     </div>
@@ -32,54 +21,26 @@
     </div>
     {% include "emergency-fund/chart-data.jinja" %}
     <div>
-        {% if e_fund["delta_low"] is none %}
-            No budget found, please create one to get target emergency fund balance.
-            <!-- TODO (WattsUp): Add href to budget editor -->
-        {% elif e_fund["delta_low"] > 0 %}
+        {% if e_fund["delta_lower"] > 0 %}
             <p>
                 You have {{ e_fund["current"] | money0 }} in your emergency fund.
-                You need {{ e_fund["target_low"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
-                Consider increasing your emergency fund by {{ e_fund["delta_low"] | money0 }}.
+                You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
+                Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
             </p>
-        {% elif e_fund["delta_high"] > 0 %}
+        {% elif e_fund["delta_upper"] > 0 %}
             <p>
                 You have {{ e_fund["current"] | money0 }} in your emergency fund
-                which will cover {{ e_fund["months"] }} months of budgeted expenses.
-                You only need {{ e_fund["target_high"] | money0 }} to cover 6 months of budgeted expenses.
-                Unless you have a planned spending goal this year, the extra {{ e_fund["delta_high"] | money0 }} could be invested.
+                which will cover {{ "%0.1f" % e_fund["months"]   }} months of budgeted expenses.
+                You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
+                Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
             </p>
         {% else %}
             <p>
                 You have {{ e_fund["current"] | money0 }} in your emergency fund
-                which will cover {{ e_fund["months"] }} months of budgeted expenses.
+                which will cover {{ "%0.1f" % e_fund["months"] }} months of budgeted expenses.
                 You are in good shape to cover the recommended 3 - 6 months of budgeted expenses.
             </p>
         {% endif %}
     </div>
-    <div>
-        <table class="mx-auto min-w-[70%]">
-            <thead>
-                <tr>
-                    <th class="px-2">Institution</th>
-                    <th class="px-2">Account</th>
-                    <th class="px-2 text-right">Balance</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr class="border-y border-grey-500 font-bold">
-                    <td class="px-2">Total</td>
-                    <td class="px-2"></td>
-                    <td class="px-2 text-right">{{ e_fund["current"] | money }}</td>
-                </tr>
-                {% for uri, acct in e_fund["accts"].items() %}
-                    <tr>
-                        <td class="px-2">{{ acct["institution"] }}</td>
-                        <td class="px-2">{{ acct["name"] }}</td>
-                        <td class="px-2 text-right">{{ acct["balance"] | money }}</td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <p class="text-center italic">If you would like to change which accounts are included, edit them in the sidebar</p>
+    {# TODO (WattsUp): List essential categories and average 91d and 183d spending #}
 </section>
