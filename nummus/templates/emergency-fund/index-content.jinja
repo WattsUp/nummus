@@ -21,26 +21,29 @@
     </div>
     {% include "emergency-fund/chart-data.jinja" %}
     <div>
-        {% if e_fund["delta_lower"] > 0 %}
-            <p>
+        <p>
+            {% if e_fund["delta_lower"] > 0 %}
                 You have {{ e_fund["current"] | money0 }} in your emergency fund.
                 You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
                 Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
-            </p>
-        {% elif e_fund["delta_upper"] > 0 %}
-            <p>
+            {% elif e_fund["delta_upper"] > 0 %}
                 You have {{ e_fund["current"] | money0 }} in your emergency fund
                 which will cover {{ "%0.1f" % e_fund["months"]   }} months of budgeted expenses.
                 You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
                 Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
-            </p>
-        {% else %}
-            <p>
+            {% else %}
                 You have {{ e_fund["current"] | money0 }} in your emergency fund
                 which will cover {{ "%0.1f" % e_fund["months"] }} months of budgeted expenses.
                 You are in good shape to cover the recommended 3 - 6 months of budgeted expenses.
-            </p>
-        {% endif %}
+            {% endif %}
+            Edit emergency fund balance on the
+            <a class="underline text-blue cursor-pointer"
+               href="{{ url_for('budgeting.page') }}"
+               hx-get="{{ url_for('budgeting.page') }}"
+               hx-target="#main"
+               hx-swap="innerHTML"
+               hx-push-url="true">budgeting page</a>.
+        </p>
     </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Essential Spending</h1>
     <p class="italic text-sm">
