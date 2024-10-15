@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -85,7 +85,7 @@ def ctx_page() -> dict[str, object]:
         n_lower = 91
         n_upper = 182
 
-        categories: dict[int, str] = {}
+        categories: dict[int, tuple[str, str]] = {}
         categories_total: dict[int, Decimal] = {}
 
         daily = Decimal(0)
@@ -103,7 +103,7 @@ def ctx_page() -> dict[str, object]:
             .where(TransactionCategory.essential)
         )
         for t_cat_id, name, emoji in query.all():
-            categories[t_cat_id] = f"{emoji} {name}" if emoji else name
+            categories[t_cat_id] = (name, f"{emoji} {name}" if emoji else name)
             categories_total[t_cat_id] = Decimal(0)
 
         query = (
@@ -171,13 +171,32 @@ def ctx_page() -> dict[str, object]:
     else:
         months = 3 + (current - target_lower) / (target_upper - target_lower) * 3
 
-    # TODO (WattsUp): Add this info as a table
-    for t_cat_id, name in categories.items():
-        x = categories_total[t_cat_id] / n
-        x_lower = x * n_lower
-        x_upper = x * n_upper
-        x = x_upper / 6
-        print(name, x, x_lower, x_upper)
+    class CategoryInfo(TypedDict):
+        emoji_name: str
+        name: str
+        monthly: Decimal
+        lower: Decimal
+        upper: Decimal
+
+    category_infos: list[CategoryInfo] = []
+    for t_cat_id, (name, emoji_name) in categories.items():
+        x_daily = -categories_total[t_cat_id] / n
+        x_lower = x_daily * n_lower
+        x_upper = x_daily * n_upper
+        x_monthly = x_upper / 6
+        category_infos.append(
+            {
+                "emoji_name": emoji_name,
+                "name": name,
+                "monthly": x_monthly,
+                "lower": x_lower,
+                "upper": x_upper,
+            },
+        )
+    category_infos = sorted(
+        category_infos,
+        key=lambda item: (-round(item["monthly"], 2), item["name"]),
+    )
 
     return {
         "chart": {
@@ -193,6 +212,7 @@ def ctx_page() -> dict[str, object]:
         "months": months,
         "delta_lower": delta_lower,
         "delta_upper": delta_upper,
+        "categories": category_infos,
     }
 
 
