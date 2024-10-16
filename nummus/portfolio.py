@@ -376,8 +376,8 @@ class Portfolio:
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
                         if qty is None or asset_id is None:
-                            msg = f"Investment Fees needs Asset quantity, ctx={ctx}"
-                            raise exc.UnknownCategoryError(msg)
+                            msg = f"Investment Fees needs Asset and quantity, ctx={ctx}"
+                            raise exc.MissingAssetError(msg)
                         qty = abs(qty)
 
                         txn = Transaction(
@@ -414,8 +414,11 @@ class Portfolio:
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
                         if qty is None or asset_id is None:
-                            msg = f"Dividends Received needs Asset quantity, ctx={ctx}"
-                            raise exc.UnknownCategoryError(msg)
+                            msg = (
+                                "Dividends Received needs Asset and quantity,"
+                                f" ctx={ctx}"
+                            )
+                            raise exc.MissingAssetError(msg)
                         qty = abs(qty)
 
                         txn = Transaction(

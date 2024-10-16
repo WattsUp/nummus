@@ -91,6 +91,7 @@ class TestUtils(TestBase):
             locked=False,
             is_profit_loss=False,
             asset_linked=False,
+            essential=False,
         )
         s.add(t_cat)
         s.commit()

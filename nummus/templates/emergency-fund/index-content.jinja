@@ -22,7 +22,9 @@
     {% include "emergency-fund/chart-data.jinja" %}
     <div>
         <p>
-            {% if e_fund["delta_lower"] > 0 %}
+            {% if e_fund["months"] is none %}
+                No spending found to estimate emergency budget.
+            {% elif e_fund["delta_lower"] > 0 %}
                 You have {{ e_fund["current"] | money0 }} in your emergency fund.
                 You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
                 Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.

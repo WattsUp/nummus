@@ -54,6 +54,7 @@ class Account(Base):
     institution: ORMStr
     category: orm.Mapped[AccountCategory]
     closed: ORMBool
+    # TODO (WattsUp): Remove attribute
     emergency: ORMBool
     budgeted: ORMBool
 

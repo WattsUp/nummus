@@ -43,7 +43,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertNotIn("Delete", result)
 
         name = self.random_string()
-        form = {"name": name, "group": "other"}
+        form = {"name": name, "group": "expense", "essential": True}
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -79,7 +79,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn('value="Other Income&#34;"', result)
 
         name = self.random_string()
-        form = {"name": name + "😀", "group": "transfer"}
+        form = {"name": name + "😀", "group": "transfer", "essential": True}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -94,6 +94,7 @@ class TestTransactionCategory(WebTestBase):
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.emoji, "😀")
             self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
+            self.assertTrue(t_cat.essential)
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}

@@ -137,6 +137,7 @@ def new() -> str | flask.Response:
     name = form["name"].strip()
     group = form.get("group", type=TransactionCategoryGroup)
     is_profit_loss = "is-pnl" in form
+    essential = "essential" in form
 
     name, emoji = _clean_emoji(name)
 
@@ -151,6 +152,7 @@ def new() -> str | flask.Response:
                 locked=False,
                 is_profit_loss=is_profit_loss,
                 asset_linked=False,
+                essential=essential,
             )
             s.add(cat)
             s.commit()

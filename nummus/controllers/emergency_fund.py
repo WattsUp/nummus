@@ -52,7 +52,7 @@ def ctx_page() -> dict[str, object]:
                 .one()[0]
             )
         except exc.NoResultFound as e:  # pragma: no cover
-            msg = "Category Uncategorized not found"
+            msg = "Category Emergency Fund not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
 
         balance = s.query(sqlalchemy.func.sum(BudgetAssignment.amount)).where(
@@ -131,15 +131,19 @@ def ctx_page() -> dict[str, object]:
             if t_ord >= start_ord:
                 categories_total[t_cat_id] += amount
 
-        while date_ord < start_ord:
+        while date_ord <= today_ord:
             dailys.append(daily)
             date_ord += 1
             daily = Decimal(0)
 
         dates = utils.range_date(start_ord, today_ord)
 
-    totals_lower = [-sum(dailys[i : i + n_lower]) for i in range(len(dailys) - n_lower)]
-    totals_upper = [-sum(dailys[i : i + n_upper]) for i in range(len(dailys) - n_upper)]
+    totals_lower = [
+        -sum(dailys[i : i + n_lower]) for i in range(len(dailys) - n_lower + 1)
+    ]
+    totals_upper = [
+        -sum(dailys[i : i + n_upper]) for i in range(len(dailys) - n_upper + 1)
+    ]
 
     a_smoothing = 2 / Decimal(n_smoothing + 1)
 
@@ -164,12 +168,14 @@ def ctx_page() -> dict[str, object]:
     delta_upper = current - target_upper
 
     # Linearly interpret number of months
+    # TODO (WattsUp): Fix divide by zero
     if current < target_lower:
-        months = 3 * current / target_lower
+        months = None if target_lower == 0 else 3 * current / target_lower
     elif current > target_upper:
-        months = 6 * current / target_upper
+        months = None if target_upper == 0 else 6 * current / target_upper
     else:
-        months = 3 + (current - target_lower) / (target_upper - target_lower) * 3
+        dx = target_upper - target_lower
+        months = None if dx == 0 else 3 + (current - target_lower) / dx * 3
 
     class CategoryInfo(TypedDict):
         emoji_name: str

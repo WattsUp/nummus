@@ -225,6 +225,7 @@ class TestCommon(WebTestBase):
                     locked=False,
                     is_profit_loss=False,
                     asset_linked=False,
+                    essential=False,
                 )
 
                 with self.assertRaises(exc.IntegrityError) as cm:
@@ -248,6 +249,7 @@ class TestCommon(WebTestBase):
                     locked=False,
                     is_profit_loss=False,
                     asset_linked=False,
+                    essential=False,
                 )
                 with self.assertRaises(exc.IntegrityError) as cm:
                     s.add(t_cat)

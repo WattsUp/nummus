@@ -222,6 +222,7 @@ class BudgetAssignment(Base):
         return categories, assignable, future_assigned
 
 
+# TODO (WattsUp): Remove model
 class Budget(Base):
     """Budget model for storing an allocation of expenses per month.
 

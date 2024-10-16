@@ -17,7 +17,9 @@
         <script>emergencyFundChart.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
     </div>
     <div class="text-sm text-center">
-        {% if e_fund["delta_lower"] > 0 %}
+        {% if e_fund["months"] is none %}
+            No spending found to estimate emergency budget.
+        {% elif e_fund["delta_lower"] > 0 %}
             <p>Try to increase your fund to at least {{ e_fund["target_lower"] | money0 }}.</p>
         {% elif e_fund["delta_upper"] > 0 %}
             <p>{{ e_fund["delta_upper"] | money0 }} could be invested for potential greater returns.</p>

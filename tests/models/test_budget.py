@@ -61,6 +61,7 @@ class TestBudgetAssignment(TestBase):
             locked=False,
             is_profit_loss=False,
             asset_linked=True,
+            essential=False,
         )
         s.add(t_cat)
         s.commit()
