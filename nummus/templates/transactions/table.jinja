@@ -26,11 +26,10 @@
     {% endfor %}
 {% endif %}
 <div id="txn-table"
-    class="w-full flex flex-col grow min-h-[15rem]"
-    hx-get="{{ url_for(endpoint, **url_args) }}"
-    hx-trigger="update-transaction from:body, update-account from:body"
-    {# TODO (WattsUp): Keep current paging on update #}
-    hx-indicator="unset">
+     class="w-full flex flex-col grow min-h-[15rem]"
+     hx-get="{{ url_for(endpoint, offset=txn_table['offset'], **url_args) }}"
+     hx-trigger="update-transaction from:body, update-account from:body"
+     hx-indicator="unset">
     {% if txn_table["transactions"] | length == 0 %}
         <div class="text-center">No matching transactions for given query filters</div>
     {% endif %}
