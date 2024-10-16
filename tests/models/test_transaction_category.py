@@ -18,6 +18,7 @@ class TestTransactionCategory(TestBase):
             "locked": False,
             "is_profit_loss": False,
             "asset_linked": False,
+            "essential": False,
         }
 
         t_cat = TransactionCategory(**d)
@@ -29,6 +30,7 @@ class TestTransactionCategory(TestBase):
         self.assertEqual(t_cat.locked, d["locked"])
         self.assertEqual(t_cat.is_profit_loss, d["is_profit_loss"])
         self.assertEqual(t_cat.asset_linked, d["asset_linked"])
+        self.assertEqual(t_cat.essential, d["essential"])
 
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "b")
@@ -84,6 +86,20 @@ class TestTransactionCategory(TestBase):
         t_cat.budget_position = 10
         s.commit()
 
+        # INCOME cannot be essential
+        self.assertRaises(
+            exc.InvalidORMValueError,
+            setattr,
+            t_cat,
+            "essential",
+            True,  # noqa: FBT003
+        )
+
+        # EXPENSE okay
+        t_cat.group = TransactionCategoryGroup.EXPENSE
+        t_cat.essential = True
+        s.commit()
+
     def test_add_default(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
@@ -131,7 +147,7 @@ class TestTransactionCategory(TestBase):
 
         query = s.query(TransactionCategory)
         self.assertEqual(query.count(), n_income + n_expense + n_transfer + n_other)
-        self.assertEqual(query.count(), 61)
+        self.assertEqual(query.count(), 62)
 
     def test_map_name_emoji(self) -> None:
         s = self.get_session()

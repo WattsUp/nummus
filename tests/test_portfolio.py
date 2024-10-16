@@ -363,6 +363,9 @@ class TestPortfolio(TestBase):
         path_debug.unlink()
 
         with p.get_session() as s:
+            categories = TransactionCategory.map_name(s)
+            categories = {v: k for k, v in categories.items()}
+
             # Create accounts
             acct_checking = Account(
                 name="Monkey Bank Checking",
@@ -394,6 +397,7 @@ class TestPortfolio(TestBase):
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add(asset)
             s.commit()
+            a_id = asset.id_
 
             # We good now
             p.import_file(path, path_debug)
@@ -500,6 +504,79 @@ class TestPortfolio(TestBase):
             path = self._DATA_ROOT.joinpath("transactions_bad_category.csv")
             self.assertRaises(
                 exc.UnknownCategoryError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+
+            # Clear transactions
+            s.query(TransactionSplit).delete()
+            s.query(Transaction).delete()
+            s.commit()
+
+            # Import investment transactions
+            path = self._DATA_ROOT.joinpath("transactions_investments.csv")
+            p.import_file(path, path_debug)
+
+            transactions = s.query(Transaction).all()
+
+            for txn in transactions:
+                self.assertEqual(txn.amount, 0)
+
+                splits = txn.splits
+                self.assertEqual(len(splits), 2)
+                splits = sorted(splits, key=lambda t_split: t_split.amount)
+
+                if txn.statement == "Profit Maker":
+                    # Dividends
+                    t_split = splits[0]
+                    self.assertEqual(t_split.amount, Decimal("-1234.56"))
+                    self.assertEqual(t_split.asset_quantity, Decimal("32.1234"))
+                    self.assertEqual(t_split.asset_id, a_id)
+                    self.assertEqual(
+                        t_split.category_id,
+                        categories["Securities Traded"],
+                    )
+
+                    t_split = splits[1]
+                    self.assertEqual(t_split.amount, Decimal("1234.56"))
+                    self.assertEqual(t_split.asset_quantity, 0)
+                    self.assertEqual(t_split.asset_id, a_id)
+                    self.assertEqual(
+                        t_split.category_id,
+                        categories["Dividends Received"],
+                    )
+                else:
+                    # Fees
+                    t_split = splits[0]
+                    self.assertEqual(t_split.amount, Decimal("-900"))
+                    self.assertEqual(t_split.asset_quantity, 0)
+                    self.assertEqual(t_split.asset_id, a_id)
+                    self.assertEqual(
+                        t_split.category_id,
+                        categories["Investment Fees"],
+                    )
+
+                    t_split = splits[1]
+                    self.assertEqual(t_split.amount, Decimal("900"))
+                    self.assertEqual(t_split.asset_quantity, Decimal("-32.1234"))
+                    self.assertEqual(t_split.asset_id, a_id)
+                    self.assertEqual(
+                        t_split.category_id,
+                        categories["Securities Traded"],
+                    )
+
+            # Fail missing asset quantity
+            path = self._DATA_ROOT.joinpath("transactions_investments_missing0.csv")
+            self.assertRaises(
+                exc.MissingAssetError,
+                p.import_file,
+                path,
+                path_debug,
+            )
+            path = self._DATA_ROOT.joinpath("transactions_investments_missing1.csv")
+            self.assertRaises(
+                exc.MissingAssetError,
                 p.import_file,
                 path,
                 path_debug,

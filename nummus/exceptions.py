@@ -44,6 +44,7 @@ __all__ = [
     "InvalidBackupTarError",
     "FutureTransactionError",
     "UnknownCategoryError",
+    "MissingAssetError",
 ]
 
 
@@ -202,3 +203,7 @@ class FutureTransactionError(Exception):
 
 class UnknownCategoryError(Exception):
     """Error when a category is not recognized."""
+
+
+class MissingAssetError(Exception):
+    """Error when transaction is missing Asset information."""

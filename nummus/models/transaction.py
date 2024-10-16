@@ -80,6 +80,9 @@ class TransactionSplit(Base):
     asset_quantity: ORMRealOpt = orm.mapped_column(Decimal9)
     _asset_qty_unadjusted: ORMRealOpt = orm.mapped_column(Decimal9)
 
+    # TODO (WattsUp): Add constraint that both asset quantity and
+    # asset_quantity_unadjusted are set
+
     @orm.validates("payee", "description", "tag")
     @override
     def validate_strings(self, key: str, field: str | None) -> str | None:
@@ -99,6 +102,7 @@ class TransactionSplit(Base):
             "locked",
             "linked",
             "account_id",
+            # TODO (WattsUp): Also prevent asset_quantity
         ]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "

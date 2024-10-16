@@ -18,6 +18,9 @@ from nummus.models.transaction_category import (
     TransactionCategoryGroup,
 )
 
+# TODO (WattsUp): Add credit card payment to budget.
+# Separate by card so specific cards can move under specific groups
+
 
 class BudgetAssignment(Base):
     """Budget assignment model for storing an contribution to a budget category.
@@ -219,6 +222,7 @@ class BudgetAssignment(Base):
         return categories, assignable, future_assigned
 
 
+# TODO (WattsUp): Remove model
 class Budget(Base):
     """Budget model for storing an allocation of expenses per month.
 

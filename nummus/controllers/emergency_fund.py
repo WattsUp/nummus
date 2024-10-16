@@ -7,10 +7,16 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
+import sqlalchemy
 
+from nummus import exceptions as exc
 from nummus import portfolio, utils
 from nummus.controllers import common
-from nummus.models import Account, Budget
+from nummus.models import Account
+from nummus.models.base import YIELD_PER
+from nummus.models.budget import BudgetAssignment
+from nummus.models.transaction import TransactionSplit
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -27,80 +33,192 @@ def ctx_page() -> dict[str, object]:
 
     today = datetime.date.today()
     today_ord = today.toordinal()
-    start = utils.date_add_months(today, -8)
+    start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()
-    date_mode = "months"
+    n = today_ord - start_ord + 1
 
     with p.get_session() as s:
-        b = s.query(Budget).order_by(Budget.date_ord.desc()).first()
-        b_amount = None if b is None else -b.amount  # Budgets are negative
-
-        # Get liquid account ids
-        query = s.query(Account).where(Account.emergency.is_(True))
-        accts = query.all()
-        acct_ids = [acct.id_ for acct in accts]
-
-        acct_values, _, _ = Account.get_value_all(s, start_ord, today_ord, ids=acct_ids)
-
-        if len(acct_values) == 0:
-            balances = [Decimal(0) for _ in range(today_ord - start_ord + 1)]
-        else:
-            balances = [sum(x) for x in zip(*acct_values.values(), strict=True)]
-
-        class AccountContext(TypedDict):
-            """Type definition for Account context."""
-
-            name: str
-            institution: str
-            balance: Decimal
-
-        acct_info: dict[str, AccountContext] = {}
-        for acct in accts:
-            if acct.closed:
-                continue
-            acct_info[acct.uri] = {
-                "name": acct.name,
-                "institution": acct.institution,
-                "balance": acct_values[acct.id_][-1],
-            }
-        acct_info = dict(
-            sorted(acct_info.items(), key=lambda item: -item[1]["balance"]),
+        accounts: dict[int, str] = dict(
+            s.query(Account)  # type: ignore[attr-defined]
+            .with_entities(Account.id_, Account.name)
+            .where(Account.budgeted)
+            .all(),
         )
 
+        try:
+            t_cat_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "Emergency Fund")
+                .one()[0]
+            )
+        except exc.NoResultFound as e:  # pragma: no cover
+            msg = "Category Emergency Fund not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+
+        balance = s.query(sqlalchemy.func.sum(BudgetAssignment.amount)).where(
+            BudgetAssignment.category_id == t_cat_id,
+            BudgetAssignment.month_ord <= start_ord,
+        ).scalar() or Decimal(0)
+
+        date_ord = start_ord
+        balances: list[Decimal] = []
+
+        query = (
+            s.query(BudgetAssignment)
+            .with_entities(BudgetAssignment.month_ord, BudgetAssignment.amount)
+            .where(
+                BudgetAssignment.category_id == t_cat_id,
+                BudgetAssignment.month_ord > start_ord,
+            )
+            .order_by(BudgetAssignment.month_ord)
+        )
+        for b_ord, amount in query.all():
+            while date_ord < b_ord:
+                balances.append(balance)
+                date_ord += 1
+            balance += amount
+        while date_ord < today_ord:
+            balances.append(balance)
+            date_ord += 1
+
+        n_smoothing = 15
+        n_lower = 91
+        n_upper = 182
+
+        categories: dict[int, tuple[str, str]] = {}
+        categories_total: dict[int, Decimal] = {}
+
+        daily = Decimal(0)
+        dailys: list[Decimal] = []
+
+        date_ord = start_ord - n_upper - n_smoothing
+
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji,
+            )
+            .where(TransactionCategory.essential)
+        )
+        for t_cat_id, name, emoji in query.all():
+            categories[t_cat_id] = (name, f"{emoji} {name}" if emoji else name)
+            categories_total[t_cat_id] = Decimal(0)
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit.category_id,
+                sqlalchemy.func.sum(TransactionSplit.amount),
+            )
+            .where(
+                TransactionSplit.account_id.in_(accounts),
+                TransactionSplit.category_id.in_(categories),
+                TransactionSplit.date_ord >= date_ord,
+            )
+            .group_by(TransactionSplit.date_ord, TransactionSplit.category_id)
+        )
+        for t_ord, t_cat_id, amount in query.yield_per(YIELD_PER):
+            while date_ord < t_ord:
+                dailys.append(daily)
+                date_ord += 1
+                daily = Decimal(0)
+
+            daily += amount
+
+            if t_ord >= start_ord:
+                categories_total[t_cat_id] += amount
+
+        while date_ord <= today_ord:
+            dailys.append(daily)
+            date_ord += 1
+            daily = Decimal(0)
+
+        dates = utils.range_date(start_ord, today_ord)
+
+    totals_lower = [
+        -sum(dailys[i : i + n_lower]) for i in range(len(dailys) - n_lower + 1)
+    ]
+    totals_upper = [
+        -sum(dailys[i : i + n_upper]) for i in range(len(dailys) - n_upper + 1)
+    ]
+
+    a_smoothing = 2 / Decimal(n_smoothing + 1)
+
+    current = totals_lower[0]
+    for i, x in enumerate(totals_lower):
+        current = a_smoothing * x + (1 - a_smoothing) * current
+        totals_lower[i] = current
+
+    current = totals_upper[0]
+    for i, x in enumerate(totals_upper):
+        current = a_smoothing * x + (1 - a_smoothing) * current
+        totals_upper[i] = current
+
+    totals_lower = totals_lower[-n:]
+    totals_upper = totals_upper[-n:]
+
     current = balances[-1]
-    if b_amount is None:
-        target_low = None
-        target_high = None
-        delta_low = None
-        delta_high = None
-        months = None
+    target_lower = totals_lower[-1]
+    target_upper = totals_upper[-1]
+
+    delta_lower = target_lower - current
+    delta_upper = current - target_upper
+
+    # Linearly interpret number of months
+    # TODO (WattsUp): Fix divide by zero
+    if current < target_lower:
+        months = None if target_lower == 0 else 3 * current / target_lower
+    elif current > target_upper:
+        months = None if target_upper == 0 else 6 * current / target_upper
     else:
-        # Current target is latest target rounded to 2 sig figs
-        target_low = Decimal(f"{b_amount * 3:.2g}")
-        target_high = Decimal(f"{b_amount * 6:.2g}")
+        dx = target_upper - target_lower
+        months = None if dx == 0 else 3 + (current - target_lower) / dx * 3
 
-        delta_low = target_low - current
-        delta_high = current - target_high
+    class CategoryInfo(TypedDict):
+        emoji_name: str
+        name: str
+        monthly: Decimal
+        lower: Decimal
+        upper: Decimal
 
-        # Compute the number of months in savings
-        months = int(current // b_amount)
+    category_infos: list[CategoryInfo] = []
+    for t_cat_id, (name, emoji_name) in categories.items():
+        x_daily = -categories_total[t_cat_id] / n
+        x_lower = x_daily * n_lower
+        x_upper = x_daily * n_upper
+        x_monthly = x_upper / 6
+        category_infos.append(
+            {
+                "emoji_name": emoji_name,
+                "name": name,
+                "monthly": x_monthly,
+                "lower": x_lower,
+                "upper": x_upper,
+            },
+        )
+    category_infos = sorted(
+        category_infos,
+        key=lambda item: (-round(item["monthly"], 2), item["name"]),
+    )
 
     return {
         "chart": {
-            "labels": [d.isoformat() for d in utils.range_date(start_ord, today_ord)],
-            "date_mode": date_mode,
+            "labels": [d.isoformat() for d in dates],
+            "date_mode": "months",
             "balances": balances,
-            "target_high": target_high,
-            "target_low": target_low,
+            "spending_lower": totals_lower,
+            "spending_upper": totals_upper,
         },
         "current": current,
-        "target_high": target_high,
-        "target_low": target_low,
-        "budget": b_amount,
+        "target_lower": target_lower,
+        "target_upper": target_upper,
         "months": months,
-        "delta_low": delta_low,
-        "delta_high": delta_high,
-        "accts": acct_info,
+        "delta_lower": delta_lower,
+        "delta_upper": delta_upper,
+        "categories": category_infos,
     }
 
 

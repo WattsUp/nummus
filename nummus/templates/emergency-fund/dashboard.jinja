@@ -17,15 +17,14 @@
         <script>emergencyFundChart.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
     </div>
     <div class="text-sm text-center">
-        {% if e_fund["delta_low"] is none %}
-            No budget found, please create one to get target emergency fund balance.
-            <!-- TODO (WattsUp): Add href to budget editor -->
-        {% elif e_fund["delta_low"] > 0 %}
-            <p>Try to increase your fund to at least {{ e_fund["target_low"] | money0 }}.</p>
-        {% elif e_fund["delta_high"] > 0 %}
-            <p>{{ e_fund["delta_high"] | money0 }} could be invested for potential greater returns.</p>
+        {% if e_fund["months"] is none %}
+            No spending found to estimate emergency budget.
+        {% elif e_fund["delta_lower"] > 0 %}
+            <p>Try to increase your fund to at least {{ e_fund["target_lower"] | money0 }}.</p>
+        {% elif e_fund["delta_upper"] > 0 %}
+            <p>{{ e_fund["delta_upper"] | money0 }} could be invested for potential greater returns.</p>
         {% else %}
-            <p>You should be able to cover {{ e_fund["months"] }} months of expenses.</p>
+            <p>You should be able to cover {{ "%.1f" % e_fund["months"] }} months of expenses.</p>
         {% endif %}
     </div>
 </a>
