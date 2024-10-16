@@ -177,7 +177,6 @@ def ctx_base() -> dict[str, object]:
     Returns:
         Dictionary HTML context
     """
-    # TODO(WattsUp): Implement remaining pages
     pages: dict[str, dict[str, None | tuple[str, bool]]] = {
         "Overview": {
             "Dashboard": ("dashboard.page", False),

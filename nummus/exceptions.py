@@ -45,6 +45,7 @@ __all__ = [
     "FutureTransactionError",
     "UnknownCategoryError",
     "MissingAssetError",
+    "ComputedColumnError",
 ]
 
 
@@ -207,3 +208,7 @@ class UnknownCategoryError(Exception):
 
 class MissingAssetError(Exception):
     """Error when transaction is missing Asset information."""
+
+
+class ComputedColumnError(Exception):
+    """Error when attempting to set a computed column."""

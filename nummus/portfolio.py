@@ -396,7 +396,7 @@ class Portfolio:
                             description=d["description"],
                             category_id=categories["Securities Traded"].id_,
                             asset_id=asset_id,
-                            asset_quantity=-qty,
+                            asset_quantity_unadjusted=-qty,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
@@ -405,7 +405,7 @@ class Portfolio:
                             description=d["description"],
                             category_id=categories["Investment Fees"].id_,
                             asset_id=asset_id,
-                            asset_quantity=0,
+                            asset_quantity_unadjusted=0,
                         )
                         s.add_all((txn, t_split_0, t_split_1))
                         continue
@@ -437,7 +437,7 @@ class Portfolio:
                             description=d["description"],
                             category_id=categories["Securities Traded"].id_,
                             asset_id=asset_id,
-                            asset_quantity=qty,
+                            asset_quantity_unadjusted=qty,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
@@ -446,7 +446,7 @@ class Portfolio:
                             description=d["description"],
                             category_id=categories["Dividends Received"].id_,
                             asset_id=asset_id,
-                            asset_quantity=0,
+                            asset_quantity_unadjusted=0,
                         )
                         s.add_all((txn, t_split_0, t_split_1))
                         continue

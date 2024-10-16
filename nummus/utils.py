@@ -389,7 +389,6 @@ def downsample(
     values_avg: list[Decimal] = []
     values_max: list[Decimal] = []
 
-    # TODO (WattsUp): Not a very fast algorithm especially when downsampling many
     for period, limits in periods.items():
         values_sliced = values[limits[0] - start_ord : limits[1] - start_ord + 1]
         labels.append(period)

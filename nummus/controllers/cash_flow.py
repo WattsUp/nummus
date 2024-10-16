@@ -149,7 +149,6 @@ def ctx_chart() -> dict[str, object]:
         # If n > 400, sum by years and make bars
         # elif n > 80, sum by months and make bars
         # else make daily
-        # TODO (WattsUp): Add a previous dailys when period is months
         labels: list[str] = []
         date_mode: str | None = None
         incomes: list[Decimal] = []
@@ -315,8 +314,6 @@ def txns() -> flask.Response:
         # If same period and not being updated via update_transaction:
         # don't update the chart
         # aka if just the table changed pages or column filters
-        # TODO (WattsUp): use client side mechanism to determine when to send a new
-        # chart
         html += flask.render_template(
             "cash-flow/chart-data.jinja",
             oob=True,

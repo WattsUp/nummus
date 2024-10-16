@@ -80,8 +80,12 @@ class TransactionSplit(Base):
     asset_quantity: ORMRealOpt = orm.mapped_column(Decimal9)
     _asset_qty_unadjusted: ORMRealOpt = orm.mapped_column(Decimal9)
 
-    # TODO (WattsUp): Add constraint that both asset quantity and
-    # asset_quantity_unadjusted are set
+    __table_args__ = (
+        sqlalchemy.CheckConstraint(
+            "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
+            name="asset_quantity and unadjusted must be same null state",
+        ),
+    )
 
     @orm.validates("payee", "description", "tag")
     @override
@@ -102,13 +106,18 @@ class TransactionSplit(Base):
             "locked",
             "linked",
             "account_id",
-            # TODO (WattsUp): Also prevent asset_quantity
         ]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 "Do not set parent properties directly"
             )
             raise exc.ParentAttributeError(msg)
+        if name == "asset_quantity":
+            msg = (
+                "Call TransactionSplit.asset_quantity_unadjusted = x. "
+                "Do not set property directly"
+            )
+            raise exc.ComputedColumnError(msg)
         super().__setattr__(name, value)
 
     @property
@@ -123,12 +132,12 @@ class TransactionSplit(Base):
     def asset_quantity_unadjusted(self, qty: Decimal | None) -> None:
         if qty is None:
             self._asset_qty_unadjusted = None
-            self.asset_quantity = None
+            super().__setattr__("asset_quantity", None)
             return
         self._asset_qty_unadjusted = qty
 
         # Also set adjusted quantity with 1x multiplier
-        self.asset_quantity = qty
+        super().__setattr__("asset_quantity", qty)
 
     def adjust_asset_quantity(self, multiplier: Decimal) -> None:
         """Set adjusted asset quantity.
@@ -139,7 +148,18 @@ class TransactionSplit(Base):
         qty = self.asset_quantity_unadjusted
         if qty is None:
             raise exc.NonAssetTransactionError
-        self.asset_quantity = qty * multiplier
+        super().__setattr__("asset_quantity", qty * multiplier)
+
+    def adjust_asset_quantity_residual(self, residual: Decimal) -> None:
+        """Adjust asset quantity from a residual.
+
+        Args:
+            residual: Error amount in asset_quantity
+        """
+        qty = self.asset_quantity
+        if qty is None:
+            raise exc.NonAssetTransactionError
+        super().__setattr__("asset_quantity", qty - residual)
 
     @property
     def parent(self) -> Transaction:
@@ -152,9 +172,6 @@ class TransactionSplit(Base):
 
     @parent.setter
     def parent(self, parent: Transaction) -> None:
-        if not isinstance(parent, Transaction):
-            msg = "TransactionSplit.parent must be of type Transaction"
-            raise TypeError(msg)
         if parent.id_ is None:
             self._parent_tmp = parent
             return

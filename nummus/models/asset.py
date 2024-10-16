@@ -357,7 +357,7 @@ class Asset(Base):
             sum_adjusted += t_split.asset_quantity or Decimal(0)
             if sum_unadjusted == 0:
                 # sum_adjusted is an error term, use to make sum of adjusted zero out
-                t_split.asset_quantity = (t_split.asset_quantity or 0) - sum_adjusted
+                t_split.adjust_asset_quantity_residual(sum_adjusted)
                 # Zero out error term since it has been dealt with
                 sum_adjusted = 0
 
