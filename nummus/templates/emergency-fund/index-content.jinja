@@ -30,7 +30,7 @@
                 Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
             {% elif e_fund["delta_upper"] > 0 %}
                 You have {{ e_fund["current"] | money0 }} in your emergency fund
-                which will cover {{ "%0.1f" % e_fund["months"]   }} months of budgeted expenses.
+                which will cover {{ "%0.1f" % e_fund["months"] }} months of budgeted expenses.
                 You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
                 Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
             {% else %}
