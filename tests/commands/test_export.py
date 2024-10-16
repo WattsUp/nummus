@@ -65,7 +65,6 @@ class TestExport(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_1 = Account(
@@ -73,7 +72,6 @@ class TestExport(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CREDIT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_0, acct_1))

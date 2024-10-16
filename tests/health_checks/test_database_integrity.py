@@ -30,7 +30,6 @@ class TestDatabaseIntegrity(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_savings = Account(
@@ -38,7 +37,6 @@ class TestDatabaseIntegrity(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CREDIT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))

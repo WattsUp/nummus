@@ -41,7 +41,6 @@ class TestOverdrawnAccounts(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_credit = Account(
@@ -49,7 +48,6 @@ class TestOverdrawnAccounts(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CREDIT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_credit))

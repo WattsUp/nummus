@@ -55,7 +55,6 @@ class TestPerformance(WebTestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct_0)
@@ -239,7 +238,6 @@ class TestPerformance(WebTestBase):
                 institution=self.random_string(),
                 closed=True,
                 category=AccountCategory.INVESTMENT,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)
@@ -352,7 +350,6 @@ class TestPerformance(WebTestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct_0)

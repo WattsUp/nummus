@@ -42,7 +42,6 @@ class TestDuplicateTransactions(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)

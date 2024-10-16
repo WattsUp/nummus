@@ -37,17 +37,6 @@
                 {% endwith %}
             </label>
             <label class="flex gap-4 justify-between w-full checkbox">
-                <span class="font-bold">Included in emergency fund:</span>
-                <input type="checkbox"
-                       name="emergency"
-                       {% if account["emergency"] %}checked{% endif %}
-                       id="account-emergency"
-                       autocomplete="off">
-                {% with class = "w-5 h-5" %}
-                    {% include "svg/check.svg" %}
-                {% endwith %}
-            </label>
-            <label class="flex gap-4 justify-between w-full checkbox">
                 <span class="font-bold">Included in budgeting:</span>
                 <input type="checkbox"
                        name="budgeted"

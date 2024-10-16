@@ -242,7 +242,6 @@ class TestPortfolio(TestBase):
                 number="MONKEY-0123",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_invest_0 = Account(
@@ -251,7 +250,6 @@ class TestPortfolio(TestBase):
                 number="MONKEY-9999",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_invest_1 = Account(
@@ -259,7 +257,6 @@ class TestPortfolio(TestBase):
                 institution="Gorilla Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_invest_0, acct_invest_1))
@@ -372,7 +369,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_invest = Account(
@@ -380,7 +376,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_invest))
@@ -597,7 +592,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)
@@ -642,7 +636,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)
@@ -820,7 +813,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)
@@ -917,7 +909,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
 
@@ -1061,7 +1052,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_1 = Account(
@@ -1069,7 +1059,6 @@ class TestPortfolio(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CREDIT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_0, acct_1))

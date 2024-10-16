@@ -168,7 +168,6 @@ def ctx_page() -> dict[str, object]:
     delta_upper = current - target_upper
 
     # Linearly interpret number of months
-    # TODO (WattsUp): Fix divide by zero
     if current < target_lower:
         months = None if target_lower == 0 else 3 * current / target_lower
     elif current > target_upper:

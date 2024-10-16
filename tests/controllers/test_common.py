@@ -15,7 +15,6 @@ from nummus.models import (
     Account,
     AccountCategory,
     Asset,
-    Budget,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
@@ -64,7 +63,6 @@ class TestCommon(WebTestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_savings = Account(
@@ -72,7 +70,6 @@ class TestCommon(WebTestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=True,
-                emergency=False,
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
@@ -210,9 +207,6 @@ class TestCommon(WebTestBase):
     def test_error(self) -> None:
         p = self._portfolio
 
-        today = datetime.date.today()
-        today_ord = today.toordinal()
-
         with self._flask_app.app_context():
             e_str = self.random_string()
             html = common.error(e_str)
@@ -256,19 +250,6 @@ class TestCommon(WebTestBase):
                     s.commit()
                 e: exc.IntegrityError = cm.exception
                 e_str = "Transaction category name must be unique"
-                html = common.error(e)
-                self.assertValidHTML(html)
-                self.assertIn(e_str, html)
-                s.rollback()
-
-                b = Budget()
-                b.date_ord = today_ord
-                b.amount = Decimal(1)
-                with self.assertRaises(exc.IntegrityError) as cm:
-                    s.add(b)
-                    s.commit()
-                e: exc.IntegrityError = cm.exception
-                e_str = "Budget amount must be zero or negative"
                 html = common.error(e)
                 self.assertValidHTML(html)
                 self.assertIn(e_str, html)
