@@ -30,7 +30,6 @@ class TestTransaction(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         s.add(acct)
@@ -81,7 +80,6 @@ class TestTransactionSplit(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         s.add(acct)
@@ -165,9 +163,6 @@ class TestTransactionSplit(TestBase):
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, t_split_0, "payee", "a")
 
-        # Set an not an Transaction
-        self.assertRaises(TypeError, setattr, t_split_0, "parent", self.random_string())
-
         # Set parent_id directly
         self.assertRaises(
             exc.ParentAttributeError,
@@ -176,6 +171,20 @@ class TestTransactionSplit(TestBase):
             "parent_id",
             txn.id_,
         )
+
+        # Set asset_quantity directly
+        self.assertRaises(
+            exc.ComputedColumnError,
+            setattr,
+            t_split_1,
+            "asset_quantity",
+            None,
+        )
+
+        # Cannot have asset_quantity and _asset_qty_unadjusted be set and unset
+        t_split_1._asset_qty_unadjusted = None  # noqa: SLF001
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
     def test_asset_quantity(self) -> None:
         s = self.get_session()
@@ -188,7 +197,6 @@ class TestTransactionSplit(TestBase):
             institution=self.random_string(),
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         s.add(acct)
@@ -219,7 +227,13 @@ class TestTransactionSplit(TestBase):
         multiplier = self.random_decimal(1, 10)
         t_split.adjust_asset_quantity(multiplier)
         self.assertEqual(t_split.asset_quantity_unadjusted, qty)
-        self.assertEqual(t_split.asset_quantity, Decimal9.truncate(qty * multiplier))
+        qty_adj = Decimal9.truncate(qty * multiplier) or Decimal(0)
+        self.assertEqual(t_split.asset_quantity, qty_adj)
+
+        residual = Decimal("0.1")
+        t_split.adjust_asset_quantity_residual(residual)
+        self.assertEqual(t_split.asset_quantity_unadjusted, qty)
+        self.assertEqual(t_split.asset_quantity, qty_adj - residual)
 
         t_split.asset_quantity_unadjusted = None
         s.commit()
@@ -229,5 +243,11 @@ class TestTransactionSplit(TestBase):
         self.assertRaises(
             exc.NonAssetTransactionError,
             t_split.adjust_asset_quantity,
+            multiplier,
+        )
+
+        self.assertRaises(
+            exc.NonAssetTransactionError,
+            t_split.adjust_asset_quantity_residual,
             multiplier,
         )

@@ -356,7 +356,6 @@ class TestAsset(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
 
@@ -561,7 +560,6 @@ class TestAsset(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         t_cat = TransactionCategory(
@@ -765,7 +763,6 @@ class TestAsset(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         t_cat = TransactionCategory(

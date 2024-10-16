@@ -29,7 +29,6 @@ class TestImport(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             acct_invest = Account(
@@ -37,7 +36,6 @@ class TestImport(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)

@@ -21,7 +21,6 @@ from nummus.models import (
     Asset,
     AssetCategory,
     AssetValuation,
-    Budget,
     BudgetAssignment,
     Credentials,
     Transaction,
@@ -130,7 +129,6 @@ class WebTestBase(TestBase):
                 institution="Monkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)
@@ -222,7 +220,6 @@ class WebTestBase(TestBase):
         # In order of deletion, so children models first
         models = [
             AssetValuation,
-            Budget,
             BudgetAssignment,
             Credentials,
             TransactionSplit,

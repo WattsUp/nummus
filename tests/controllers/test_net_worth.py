@@ -113,7 +113,6 @@ class TestNetWorth(WebTestBase):
                 institution=self.random_string(),
                 closed=True,
                 category=AccountCategory.CASH,
-                emergency=False,
                 budgeted=True,
             )
             s.add(a)

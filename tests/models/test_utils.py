@@ -26,7 +26,6 @@ class TestUtils(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         acct_invest = Account(
@@ -34,7 +33,6 @@ class TestUtils(TestBase):
             institution="Ape Trading",
             category=AccountCategory.INVESTMENT,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         s.add_all((acct_checking, acct_invest))
@@ -79,7 +77,6 @@ class TestUtils(TestBase):
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=False,
             budgeted=False,
         )
         s.add(acct)

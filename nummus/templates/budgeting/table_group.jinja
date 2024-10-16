@@ -9,7 +9,6 @@
         <div class="w-28 text-right">{{ group["activity"] | money }}</div>
         <div class="w-28 text-right pr-1">{{ group["available"] | money }}</div>
     </div>
-    {# TODO (WattsUp): Drag to reorder #}
     <div class="budget-group w-full">
         {% for category in group["categories"] %}
             <div id="category-{{ category["uri"] }}"

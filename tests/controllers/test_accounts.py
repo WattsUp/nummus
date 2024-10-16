@@ -38,7 +38,6 @@ class TestAccount(WebTestBase):
             "name": name,
             "category": "credit",
             "number": "",
-            "emergency": "",
         }
         result, headers = self.web_put(url, data=form)
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
@@ -52,7 +51,6 @@ class TestAccount(WebTestBase):
             self.assertEqual(acct.institution, institution)
             self.assertEqual(acct.category, AccountCategory.CREDIT)
             self.assertFalse(acct.closed)
-            self.assertTrue(acct.emergency)
 
         form = {
             "institution": institution,
@@ -138,7 +136,6 @@ class TestAccount(WebTestBase):
             if acct is None:
                 self.fail("Account is missing")
             self.assertTrue(acct.closed)
-            self.assertFalse(acct.emergency)
 
     def test_page(self) -> None:
         d = self._setup_portfolio()

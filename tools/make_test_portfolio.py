@@ -168,7 +168,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=True,
             number="MB-1234",
         )
         savings = Account(
@@ -176,7 +175,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Monkey Bank",
             category=AccountCategory.CASH,
             closed=False,
-            emergency=True,
             number="MB-1235",
         )
         cc_0 = Account(
@@ -184,7 +182,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Monkey Bank",
             category=AccountCategory.CREDIT,
             closed=False,
-            emergency=False,
             number="MB-1236",
         )
         cc_1 = Account(
@@ -192,7 +189,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="PB Loans",
             category=AccountCategory.CREDIT,
             closed=False,
-            emergency=False,
             number="PB-1234",
         )
         mortgage = Account(
@@ -200,7 +196,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Monkey Bank",
             category=AccountCategory.MORTGAGE,
             closed=False,
-            emergency=False,
             number="MB-4234",
         )
         retirement = Account(
@@ -208,7 +203,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Monkey Bank Retirement",
             category=AccountCategory.INVESTMENT,
             closed=False,
-            emergency=False,
             number="MBR-1234",
         )
         real_estate = Account(
@@ -216,7 +210,6 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             institution="Real Estate",
             category=AccountCategory.FIXED,
             closed=False,
-            emergency=False,
         )
 
         accts = [checking, savings, cc_0, cc_1, mortgage, retirement, real_estate]

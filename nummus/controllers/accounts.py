@@ -63,7 +63,6 @@ def account(uri: str) -> str | flask.Response:
         category_s = form.get("category")
         category = AccountCategory(category_s) if category_s else None
         closed = "closed" in form
-        emergency = "emergency" in form
         budgeted = "budgeted" in form
 
         if category is None:
@@ -80,7 +79,6 @@ def account(uri: str) -> str | flask.Response:
             acct.number = number
             acct.category = category
             acct.closed = closed
-            acct.emergency = emergency
             acct.budgeted = budgeted
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -119,7 +117,6 @@ def ctx_account(
         "value": current_value,
         "updated_on": datetime.date.fromordinal(updated_on_ord),
         "closed": acct.closed,
-        "emergency": acct.emergency,
         "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
         "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),

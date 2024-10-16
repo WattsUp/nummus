@@ -18,9 +18,6 @@ from nummus.models.transaction_category import (
     TransactionCategoryGroup,
 )
 
-# TODO (WattsUp): Add credit card payment to budget.
-# Separate by card so specific cards can move under specific groups
-
 
 class BudgetAssignment(Base):
     """Budget assignment model for storing an contribution to a budget category.
@@ -220,30 +217,3 @@ class BudgetAssignment(Base):
             assignable -= future_assigned
 
         return categories, assignable, future_assigned
-
-
-# TODO (WattsUp): Remove model
-class Budget(Base):
-    """Budget model for storing an allocation of expenses per month.
-
-    Attributes:
-        uri: Budget unique identifier
-        date_ord: Date ordinal on which Budget is effective
-        amount: Target limit of expense per month, zero or negative
-    """
-
-    __table_id__ = 0x50000000
-
-    date_ord: ORMInt = orm.mapped_column(unique=True)
-    amount: ORMReal = orm.mapped_column(
-        Decimal6,
-        sqlalchemy.CheckConstraint(
-            "amount <= 0",
-            "budget.amount must be zero or negative",
-        ),
-    )
-
-    @orm.validates("amount")
-    @override
-    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)

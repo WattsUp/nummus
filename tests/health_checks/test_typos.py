@@ -43,7 +43,6 @@ class TestTypos(TestBase):
                 institution="Moonkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct_0)
@@ -55,7 +54,6 @@ class TestTypos(TestBase):
                 institution="Moonkey Bannke",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct_1)
@@ -249,7 +247,6 @@ class TestTypos(TestBase):
                 institution="Moonkey Bank",
                 category=AccountCategory.CASH,
                 closed=False,
-                emergency=False,
                 budgeted=True,
             )
             s.add(acct)

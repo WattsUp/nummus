@@ -143,7 +143,6 @@ class TransactionCategory(Base):
         """
         d: dict[str, TransactionCategory] = {}
         # Dictionary {group: {name: (locked, is_profit_loss, asset_linked, essential)}}
-        # TODO (WattsUp): Add emojis and update default categories
         groups = {
             TransactionCategoryGroup.INCOME: {
                 "Consulting": (False, False, False, False),

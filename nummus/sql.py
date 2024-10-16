@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from nummus.encryption import EncryptionInterface
 
 try:
-    # TODO(WattsUp): figure out Windows sqlcipher installation
     import sqlcipher3
 except ImportError:
     sqlcipher3 = None
