@@ -7,7 +7,7 @@ repos:
         args: [--fix, --exit-non-zero-on-fix]
 
   - repo: https://github.com/RobertCraigie/pyright-python
-    rev: v1.1.377
+    rev: v1.1.386
     hooks:
       - id: pyright
 
@@ -58,7 +58,7 @@ repos:
           - tomli
 
   - repo: https://github.com/Riverside-Healthcare/djLint
-    rev: v1.34.1
+    rev: v1.35.2
     hooks:
       - id: djlint-reformat-jinja
       - id: djlint-jinja

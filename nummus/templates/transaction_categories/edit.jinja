@@ -1,9 +1,12 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
      hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"></div>
+     hx-swap="innerHTML"
+     hx-on::before-request="overlayEditor.beforeCancel(event)"></div>
 <div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-swap="innerHTML">
-    <button hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6">
+    <button hx-get="{{ url_for('common.empty') }}"
+            class="ml-auto px-6"
+            hx-on::before-request="overlayEditor.beforeCancel(event)">
         {% with class="w-[32px] h-[32px]" %}
             {% include "svg/x.svg" %}
         {% endwith %}
@@ -106,7 +109,8 @@
             </button>
         {% endif %}
         <button hx-get="{{ url_for('transaction_categories.overlay') }}"
-                class="button hover:green">Cancel</button>
+                class="button hover:green"
+                hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>
         {% if category["uri"] %}
             <button hx-put="{{ url_for('transaction_categories.category', uri=category['uri']) }}"
                     hx-target="#overlay-error"
@@ -119,4 +123,5 @@
                     class="button bg-green">Save</button>
         {% endif %}
     </div>
+    <script>overlayEditor.addListeners("form-category");</script>
 </div>

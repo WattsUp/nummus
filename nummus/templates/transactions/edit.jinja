@@ -1,12 +1,14 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
      hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"></div>
+     hx-swap="innerHTML"
+     hx-on::before-request="overlayEditor.beforeCancel(event)"></div>
 <div class="w-[900px] h-[680px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
      hx-include="#form-txn">
     <button hx-get="{{ url_for('common.empty') }}"
             class="ml-auto px-6"
             hx-swap="innerHTML"
-            hx-include="this">
+            hx-include="this"
+            hx-on::before-request="overlayEditor.beforeCancel(event)">
         {% with class="w-[32px] h-[32px]" %}
             {% include "svg/x.svg" %}
         {% endwith %}
@@ -130,10 +132,12 @@
         <button hx-get="{{ url_for('common.empty') }}"
                 class="button hover:green ml-auto"
                 hx-swap="innerHTML"
-                hx-include="unset">Cancel</button>
+                hx-include="unset"
+                hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>
         <button hx-put="{{ url_for('transactions.transaction', uri=parent['uri']) }}"
                 hx-target="#overlay-error"
                 hx-swap="innerHTML"
                 class="button bg-green">Save</button>
     </div>
+    <script>overlayEditor.addListeners("form-txn");</script>
 </div>
