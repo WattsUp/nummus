@@ -30,28 +30,27 @@
     }
 
     .nav-folder>.nav-dropdown {
-        @apply scale-y-0 transition-transform origin-top;
+        @apply scale-y-0 transition-transform origin-top duration-300;
     }
 
     .nav-folder.open>.nav-dropdown {
         @apply scale-y-100;
     }
 
-
     .nav-folder.open>.nav-button {
         @apply bg-green-800;
     }
 
     .nav-button>.nav-hamburger {
-        @apply translate-x-[-50%] w-[32px] border-2 border-white absolute left-6 top-5 transition-transform;
+        @apply translate-x-[-50%] w-[24px] md:w-[32px] border-t-[3px] md:border-t-4 border-white absolute left-1/2 top-[15px] md:top-[20px] transition-transform;
     }
 
     .nav-button>.nav-hamburger:nth-child(1) {
-        @apply translate-y-[-10px];
+        @apply translate-y-[-8px] md:translate-y-[-10px];
     }
 
     .nav-button>.nav-hamburger:nth-child(3) {
-        @apply translate-y-[10px];
+        @apply translate-y-[8px] md:translate-y-[10px];
     }
 
     .nav-folder.open>.nav-button>.nav-hamburger:nth-child(1) {

@@ -6,7 +6,7 @@
         <div class="overflow-hidden h-full">
             <a href="{{ url_for('dashboard.page') }}"
                hx-get="{{ url_for('dashboard.page') }}"
-               class="block cursor-pointer hover:text-green-900 transition-colors px-2 mt-[-5px] md:mt-[-1px] lg:mt-[-6px]">
+               class="block cursor-pointer md:hover:text-green-900 transition-colors px-2 mt-[-5px] md:mt-[-1px] lg:mt-[-6px]">
                 <h1 class="font-title text-4xl md:text-5xl lg:text-6xl">nummus</h1>
             </a>
         </div>
@@ -36,17 +36,16 @@
                     </div>
                 {% endfor %}
             </div>
-            <div class="bg-white w-px h-8 ml-1 hidden md:block"></div>
-            <div class="nav-folder h-12 w-12 relative">
-                <div class="nav-button hover:bg-green-800 h-full transition-colors text-3xl font-title cursor-pointer"
+            <div class="nav-folder h-8 w-10 md:h-12 md:w-12 relative font-serif text-xl text-black">
+                <div class="nav-button md:hover:bg-green-800 h-full transition-colors cursor-pointer"
                      onclick="navigation.openDropdown(this)">
                     <div class="nav-hamburger"></div>
                     <div class="nav-hamburger"></div>
                     <div class="nav-hamburger"></div>
                 </div>
-                <div class="nav-dropdown absolute min-w-full text-black font-serif bg-green-300 right-0">
+                <div class="nav-dropdown absolute min-w-full bg-green-300 right-0 hidden md:block">
                     {% for title, item in base["menu"].items() %}
-                        <div class="border-r-green-800 border-r-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white"
+                        <div class="border-r-green-800 border-r-4 whitespace-nowrap hover:bg-green-800 hover:text-white"
                              onclick="navigation.closeDropdown()">
                             {% if item[1] %}
                                 <div class="inset-0 px-2 py-1 block cursor-pointer"
@@ -61,7 +60,43 @@
                         </div>
                     {% endfor %}
                 </div>
-                {# TODO (WattsUp): On sm: have full screen nav tree #}
+                <div class="nav-dropdown absolute w-screen h-screen bg-green-300 right-0 block md:hidden pb-8">
+                    <div class="h-full overflow-y-scroll">
+                        {% for section, subpages in base["pages"].items() %}
+                            <div class="pl-2">{{ section }}</div>
+                            {% for title, item in subpages.items() %}
+                                <div class="ml-2 border-l-green-800 border-l-4 whitespace-nowrap"
+                                     onclick="navigation.closeDropdown()">
+                                    {% if item[1] %}
+                                        <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                             hx-get="{{ url_for(item[0]) }}"
+                                             hx-target="#overlay"
+                                             hx-push-url="false">{{ title }}</div>
+                                    {% else %}
+                                        <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                           href="{{ url_for(item[0]) }}"
+                                           hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                        <div class="bg-green-800 h-px m-1"></div>
+                        {% for title, item in base["menu"].items() %}
+                            <div class="whitespace-nowrap" onclick="navigation.closeDropdown()">
+                                {% if item[1] %}
+                                    <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                         hx-get="{{ url_for(item[0]) }}"
+                                         hx-target="#overlay"
+                                         hx-push-url="false">{{ title }}</div>
+                                {% else %}
+                                    <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                       href="{{ url_for(item[0]) }}"
+                                       hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>
