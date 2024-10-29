@@ -317,6 +317,7 @@ const netWorthChart = {
                 null,
                 {
                     scales: {
+                        x: {ticks: {callback: formatDateTicksMonths}},
                         y: {ticks: {display: false}, grid: {drawTicks: false}},
                     },
                 },

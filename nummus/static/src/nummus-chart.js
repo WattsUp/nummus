@@ -26,7 +26,7 @@ const nummusChart = {
             tooltip: {
                 intersect: false,
                 mode: 'index',
-                enabled: true,
+                enabled: window.screen.width >= 768,
                 callbacks: {
                     label: function(context) {
                         let label = context.dataset.label || '';
