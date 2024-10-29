@@ -3,10 +3,16 @@
          hx-target="#main"
          hx-swap="innerHTML"
          hx-push-url="true">
-        <div class="overflow-hidden h-full">
+        <div class="sidebar-opener h-8 w-10 md:hidden py-0.5 px-[6px] text-center cursor-pointer"
+             onclick="navigation.openSidebar()">
+            {% with class="w-[28px] h-[28px] fill-white" %}
+                {% include "svg/dock-left.svg" %}
+            {% endwith %}
+        </div>
+        <div class="overflow-hidden h-full max-md:grow">
             <a href="{{ url_for('dashboard.page') }}"
                hx-get="{{ url_for('dashboard.page') }}"
-               class="block cursor-pointer md:hover:text-green-900 transition-colors px-2 mt-[-5px] md:mt-[-1px] lg:mt-[-6px]">
+               class="block cursor-pointer md:hover:text-green-900 transition-colors px-2 mt-[-5px] md:mt-[-1px] lg:mt-[-6px] text-center">
                 <h1 class="font-title text-4xl md:text-5xl lg:text-6xl">nummus</h1>
             </a>
         </div>

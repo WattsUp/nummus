@@ -1,20 +1,24 @@
 <div id="sidebar"
-     class="h-full w-[18rem] z-10 pt-12 top-0 fixed translate-x-[-18rem] hover:translate-x-0 transition-transform duration-300 xl:relative xl:pt-0 xl:left-0 xl:transition-none xl:translate-x-0 group/sidebar"
+     class="sidebar max-lg:unpinned"
      hx-get="{{ url_for('common.sidebar') }}"
      hx-trigger="update-account from:body, update-valuation from:body"
-     hx-target="#sidebar">
-    <div class="absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg text-white text-center text-2xl xl:hidden">
-        <div class="transition-transform duration-300 group-hover/sidebar:rotate-180 group-hover/sidebar:translate-y-16">
-            ⮕
-        </div>
-    </div>
+     hx-target="#sidebar"
+     hx-on::after-settle="navigation.preserveOpen(event)">
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
+        <div class="m-2 md:hover:bg-green-100 text-center group transition cursor-pointer flex items-center text-xl justify-end lg:hidden"
+             onclick="navigation.openSidebar()">
+            <span class="px-1">Close sidebar</span>
+            {% with class="w-[32px] h-[32px] fill-green-800" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </div>
         <a class="block m-2 cursor-pointer"
            href="{{ url_for('net_worth.page') }}"
            hx-get="{{ url_for('net_worth.page') }}"
            hx-target="#main"
            hx-swap="innerHTML"
-           hx-push-url="true">
+           hx-push-url="true"
+           hx-on::before-request="navigation.closeSidebar()">
             <div class="bg-green-800">
                 <h1 class="text-white p-1 text-2xl flex justify-between">
                     <span>Net Worth</span>
@@ -44,7 +48,7 @@
             </button>
         {% endif %}
         {% for cat, item in sidebar["categories"].items() %}
-            <div class="m-2">
+            <div class="m-2" hx-on::before-request="navigation.closeSidebar()">
                 <div class="block bg-green-800" todo="/#todo">
                     <h1 class="text-white p-1 text-xl flex justify-between">
                         <span>{{ cat | enum | title }}</span><span>{{ item[0] | money }}</span>

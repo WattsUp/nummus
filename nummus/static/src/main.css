@@ -65,6 +65,26 @@
         @apply translate-y-0 rotate-[-45deg];
     }
 
+    .sidebar {
+        @apply h-full w-[18rem] shrink-0;
+    }
+
+    .sidebar.unpinned {
+        @apply fixed transition-transform translate-x-[-100%] duration-300 z-10 top-0 pt-8 md:pt-12;
+    }
+
+    .sidebar.unpinned.open {
+        @apply translate-x-0;
+    }
+
+    .sidebar+.sidebar-spacer {
+        @apply w-10 bg-green-300 hidden shrink-0;
+    }
+
+    .sidebar.unpinned+.sidebar-spacer {
+        @apply md:block;
+    }
+
     .button {
         @apply px-2 rounded border transition-colors;
     }
