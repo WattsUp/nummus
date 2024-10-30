@@ -4,7 +4,7 @@
              hx-get="{{ url_for('assets.asset', uri=asset['uri']) }}"
              hx-target="#overlay"
              hx-swap="innerHTML">
-            {% with class="w-[20px] h-[20px] fill-transparent transition-colors group-hover:fill-black" %}
+            {% with class="w-[20px] h-[20px] fill-transparent transition-colors group-hover:fill-black max-md:fill-black" %}
                 {% include "svg/pencil.svg" %}
             {% endwith %}
         </div>
