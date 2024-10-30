@@ -1,9 +1,8 @@
 <div id="sidebar"
-     class="sidebar max-lg:unpinned"
+     class="sidebar max-lg:unpinned {{ 'open' if is_open else '' }}"
      hx-get="{{ url_for('common.sidebar') }}"
      hx-trigger="update-account from:body, update-valuation from:body"
-     hx-target="#sidebar"
-     hx-on::after-settle="navigation.preserveOpen(event)">
+     hx-target="#sidebar">
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
         <div class="m-2 md:hover:bg-green-100 text-center group transition cursor-pointer flex items-center text-xl justify-end lg:hidden"
              onclick="navigation.openSidebar()">
@@ -43,7 +42,7 @@
         </a>
         {% if sidebar["include_closed"] %}
             <button class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900"
-                    hx-get="{{ url_for('common.sidebar', closed='excluded') }}">
+                    hx-get="{{ url_for('common.sidebar', closed='excluded', open=true) }}">
                 Closed accounts marked with red borders. Click to hide.
             </button>
         {% endif %}
@@ -62,7 +61,7 @@
                                  hx-get="{{ url_for('accounts.account', uri=acct['uri']) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
-                                {% with class="fill-transparent transition-colors group-hover/navitem:fill-black" %}
+                                {% with class="fill-transparent transition-colors group-hover/navitem:fill-black max-md:fill-black" %}
                                     {% include "svg/pencil.svg" %}
                                 {% endwith %}
                             </div>
@@ -95,14 +94,14 @@
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for('common.sidebar', closed='excluded') }}">Click to hide</button>
+                        hx-get="{{ url_for('common.sidebar', closed='excluded', open=true) }}">Click to hide</button>
             {% else %}
                 <span>Excluded
                     {{ sidebar["n_closed"] }}
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for('common.sidebar', closed='included') }}">Click to show</button>
+                        hx-get="{{ url_for('common.sidebar', closed='included', open=true) }}">Click to show</button>
             {% endif %}
         </div>
     </nav>

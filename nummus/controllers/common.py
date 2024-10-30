@@ -24,10 +24,13 @@ def sidebar() -> str:
     Returns:
         HTML string response
     """
-    include_closed = flask.request.args.get("closed") == "included"
+    args = flask.request.args
+    include_closed = args.get("closed") == "included"
+    is_open = "open" in args
     return flask.render_template(
         "shared/sidebar.jinja",
         sidebar=ctx_sidebar(include_closed=include_closed),
+        is_open=is_open,
     )
 
 

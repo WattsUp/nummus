@@ -93,7 +93,7 @@
         </div>
     </div>
     <div id="overlay-error"
-         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
+         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
     <div class="w-full flex justify-end items-center text-xl gap-4 flex-wrap">
         {% if category["uri"] and not category["locked"] %}
             <button hx-delete="{{ url_for('transaction_categories.category', uri=category['uri']) }}"

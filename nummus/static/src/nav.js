@@ -44,15 +44,6 @@ const navigation = {
             document.querySelector('#sidebar').classList.remove('open');
         }
     },
-    /**
-     * After sidebar swap has settled, reopen sidebar
-     *
-     * @param {Event} event Triggering event
-     */
-    preserveOpen: function(event) {
-        // Call is only on button on open sidebar, so add open back
-        document.querySelector('#sidebar').classList.add('open');
-    },
 };
 
 window.addEventListener('click', navigation.closeDropdown);
