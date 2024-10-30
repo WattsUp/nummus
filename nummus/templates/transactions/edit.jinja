@@ -1,47 +1,54 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
      hx-get="{{ url_for('common.empty') }}"
      hx-swap="innerHTML"
      hx-on::before-request="overlayEditor.beforeCancel(event)"></div>
-<div class="w-[900px] h-[680px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+<div class="w-full max-md:min-h-full md:w-[750px] md:h-[580px] md:max-h-[90vh] lg:w-[900px] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
      hx-include="#form-txn">
-    <button hx-get="{{ url_for('common.empty') }}"
-            class="ml-auto px-6"
-            hx-swap="innerHTML"
-            hx-include="this"
-            hx-on::before-request="overlayEditor.beforeCancel(event)">
-        {% with class="w-[32px] h-[32px]" %}
-            {% include "svg/x.svg" %}
-        {% endwith %}
-    </button>
-    <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction</h1>
+    <div class="flex items-start mb-2">
+        <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction</h1>
+        <button hx-get="{{ url_for('common.empty') }}"
+                class="shrink-0"
+                hx-swap="innerHTML">
+            {% with class="w-[32px] h-[32px]" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </button>
+    </div>
     <datalist id="payees">
         {% for item in payees %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
     <datalist id="tags">
         {% for item in tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
-    <div class="flex flex-col w-full px-6 grow" id="form-txn">
-        <table class="w-full whitespace-nowrap">
-            <tbody>
-                <tr>
-                    <td class="pr-4">Date</td>
-                    <td class="pr-4">
-                        <input class="w-full"
-                               name="date"
+    <div class="flex flex-col w-full grow min-h-0" id="form-txn">
+        <div class="flex w-full max-md:flex-col md:gap-4">
+            <div class="flex flex-col grow min-h-7">
+                <div class="flex gap-2 flex-wrap max-md:justify-between">
+                    <div class="w-20 shrink-1">Date</div>
+                    <div>
+                        <input name="date"
                                type="date"
                                value="{{ parent["date"] }}"
                                autocomplete="off">
-                    </td>
-                    <td class="pr-4"></td>
-                    <td class="pr-4">Total Amount</td>
-                    <td>{{ parent["amount"] | money }}</td>
-                </tr>
-                <tr>
-                    <td class="pr-4">Account Name</td>
-                    <td class="pr-4">{{ parent["account"] }}</td>
-                    <td class="pr-4"></td>
-                    <td class="pr-4">Transaction Locked</td>
-                    <td>
+                    </div>
+                </div>
+                <div class="flex gap-2 min-h-7 max-md:justify-between">
+                    <div class="w-20 shrink-1">Account</div>
+                    <div>{{ parent["account"] }}</div>
+                </div>
+                <div class="flex gap-2 min-h-7 max-md:justify-between">
+                    <div class="w-20 shrink-1">Statement</div>
+                    <div class="italic truncate">{{ parent["statement"] }}</div>
+                </div>
+            </div>
+            <div class="flex flex-col">
+                <div class="flex gap-2 min-h-7 justify-between">
+                    <div class="w-28 shrink-1">Total Amount</div>
+                    <div>{{ parent["amount"] | money }}</div>
+                </div>
+                <div class="flex gap-2 min-h-7 justify-between">
+                    <div class="w-28 shrink-1">Locked</div>
+                    <div>
                         {% if parent["linked"] %}
                             <label class="checkbox">
                                 <input type="checkbox"
@@ -57,14 +64,11 @@
                                 {% include "svg/lock.svg" %}
                             {% endwith %}
                         {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="pr-4 align-top">Statement Text</td>
-                    <td class="pr-4 whitespace-normal break-words max-w-[450px]">{{ parent["statement"] }}</td>
-                    <td class="pr-4 align-top"></td>
-                    <td class="pr-4 align-top">Transaction Linked</td>
-                    <td class="align-top">
+                    </div>
+                </div>
+                <div class="flex gap-2 min-h-7 justify-between">
+                    <div class="w-28 shrink-1">Linked</div>
+                    <div>
                         {% if parent["linked"] %}
                             {% with class = "w-6 h-6 fill-green" %}
                                 {% include "svg/link.svg" %}
@@ -74,10 +78,10 @@
                                 {% include "svg/link.svg" %}
                             {% endwith %}
                         {% endif %}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
         <hr class="w-full border-grey-200">
         {% include "transactions/edit-splits.jinja" %}
         <div class="w-full flex justify-between mt-1">
@@ -86,11 +90,11 @@
         </div>
     </div>
     <div id="overlay-error"
-         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
-    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
+    <div class="w-full flex justify-between items-center text-xl gap-2 flex-wrap">
         <button hx-post="{{ url_for('transactions.split', uri=parent['uri']) }}"
                 hx-target="#txn-splits"
-                class="button hover:blue">
+                class="button hover-blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/plus.svg" %}
             {% endwith %}
@@ -99,7 +103,7 @@
         <button hx-delete="{{ url_for('transactions.split', uri=parent['uri']) }}?all"
                 hx-target="#txn-splits"
                 hx-include="unset"
-                class="button hover:red">
+                class="button hover-red">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/trash.svg" %}
             {% endwith %}
@@ -109,7 +113,7 @@
             <button hx-get="{{ url_for('transactions.split', uri=parent['uri'], similar=similar_uri) }}"
                     hx-target="#txn-splits"
                     hx-include="unset"
-                    class="button hover:yellow">
+                    class="button hover-yellow">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/copy.svg" %}
                 {% endwith %}
@@ -122,15 +126,16 @@
                     hx-swap="innerHTML"
                     hx-include="unset"
                     hx-confirm="Are you sure you wish to delete this unlinked transaction?"
-                    class="button hover:red">
+                    class="button hover-red">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
                 {% endwith %}
                 Delete
             </button>
         {% endif %}
+        <div class="grow"></div>
         <button hx-get="{{ url_for('common.empty') }}"
-                class="button hover:green ml-auto"
+                class="button hover-green"
                 hx-swap="innerHTML"
                 hx-include="unset"
                 hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>

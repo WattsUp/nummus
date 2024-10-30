@@ -6,7 +6,9 @@
      hx-swap="innerHTML">
     <div class="flex items-start mb-2">
         <h1 class="font-serif text-2xl text-green-600 grow">Edit asset</h1>
-        <button hx-get="{{ url_for('common.empty') }}" class="shrink-0">
+        <button hx-get="{{ url_for('common.empty') }}"
+                class="shrink-0"
+                hx-swap="innerHTML">
             {% with class="w-[32px] h-[32px]" %}
                 {% include "svg/x.svg" %}
             {% endwith %}
@@ -32,7 +34,7 @@
         <div class="md:w-7/12">
             <h1 class="font-bold">Edit details</h1>
             <hr class="w-full border-grey-200">
-            <div class="flex gap-1 flex-wrap">
+            <div class="flex gap-1 flex-wrap min-h-7">
                 <div class="w-20 shrink-1">Name</div>
                 <div class="grow">
                     <input class="w-full"
@@ -41,7 +43,7 @@
                            autocomplete="off">
                 </div>
             </div>
-            <div class="flex gap-1 flex-wrap">
+            <div class="flex gap-1 flex-wrap min-h-7">
                 <div class="w-20 shrink-1">Ticker</div>
                 <div class="grow">
                     <input class="w-full"
@@ -50,7 +52,7 @@
                            autocomplete="off">
                 </div>
             </div>
-            <div class="flex gap-1 flex-wrap">
+            <div class="flex gap-1 flex-wrap min-h-7">
                 <div class="w-20 shrink-1">Class</div>
                 <div class="grow">
                     <select class="w-full" name="category" autocomplete="off">
@@ -69,7 +71,8 @@
     </div>
     <div id="overlay-error"
          class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-    <div class="w-full flex justify-end items-center text-xl gap-4 flex-wrap">
+    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
+        <div class="grow"></div>
         <button hx-get="{{ url_for('common.empty') }}"
                 class="button hover-green"
                 hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>

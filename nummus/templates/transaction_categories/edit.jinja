@@ -8,6 +8,7 @@
         <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction category</h1>
         <button class="shrink-0"
                 hx-get="{{ url_for('common.empty') }}"
+                hx-swap="innerHTML"
                 hx-on::before-request="overlayEditor.beforeCancel(event)">
             {% with class="w-[32px] h-[32px]" %}
                 {% include "svg/x.svg" %}
@@ -17,7 +18,7 @@
     <div class="flex flex-col w-full gap-1 grow" id="form-category">
         <h1 class="font-bold">Edit details</h1>
         <hr class="w-full border-grey-200">
-        <div class="flex flex-wrap gap-1">
+        <div class="flex flex-wrap gap-1 min-h-7">
             <div class="w-44">Category Name</div>
             <div class="grow">
                 {% if category["locked"] %}
@@ -34,7 +35,7 @@
                 {% endif %}
             </div>
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 min-h-7">
             <div class="w-44 shrink-1">Group</div>
             <div class="grow">
                 {% if category["locked"] %}
@@ -51,7 +52,7 @@
                 {% endif %}
             </div>
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 min-h-7">
             <div class="w-44 shrink-1">Include in profit &amp; loss</div>
             <div class="grow">
                 {% if category["locked"] %}
@@ -77,7 +78,7 @@
                 {% endif %}
             </div>
         </div>
-        <div class="flex gap-1">
+        <div class="flex gap-1 min-h-7">
             <div class="w-44 shrink-1">Essential transaction</div>
             <div class="grow">
                 <label class="flex gap-4 justify-between w-full checkbox">
@@ -94,7 +95,7 @@
     </div>
     <div id="overlay-error"
          class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-    <div class="w-full flex justify-end items-center text-xl gap-4 flex-wrap">
+    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
         {% if category["uri"] and not category["locked"] %}
             <button hx-delete="{{ url_for('transaction_categories.category', uri=category['uri']) }}"
                     hx-confirm="Are you sure you wish to delete this transaction category? Any transactions assigned to this category will revert to Uncategorized"

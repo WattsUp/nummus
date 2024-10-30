@@ -5,7 +5,9 @@
      hx-swap="innerHTML">
     <div class="flex items-start mb-2">
         <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction categories</h1>
-        <button hx-get="{{ url_for('common.empty') }}" class="shrink-0">
+        <button hx-get="{{ url_for('common.empty') }}"
+                class="shrink-0"
+                hx-swap="innerHTML">
             {% with class="w-[32px] h-[32px]" %}
                 {% include "svg/x.svg" %}
             {% endwith %}
