@@ -23,62 +23,56 @@
     <div class="flex flex-col w-full grow min-h-0" id="form-txn">
         <div class="flex w-full max-md:flex-col md:gap-4">
             <div class="flex flex-col grow min-h-7">
-                <div class="flex gap-2 flex-wrap max-md:justify-between">
+                <div class="flex gap-2 flex-wrap max-md:justify-between items-center">
                     <div class="w-20 shrink-1">Date</div>
-                    <div>
-                        <input name="date"
-                               type="date"
-                               value="{{ parent["date"] }}"
-                               autocomplete="off">
-                    </div>
+                    <input name="date"
+                           type="date"
+                           value="{{ parent["date"] }}"
+                           autocomplete="off">
                 </div>
-                <div class="flex gap-2 min-h-7 max-md:justify-between">
+                <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
                     <div class="w-20 shrink-1">Account</div>
                     <div>{{ parent["account"] }}</div>
                 </div>
-                <div class="flex gap-2 min-h-7 max-md:justify-between">
+                <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
                     <div class="w-20 shrink-1">Statement</div>
                     <div class="italic truncate">{{ parent["statement"] }}</div>
                 </div>
             </div>
             <div class="flex flex-col">
-                <div class="flex gap-2 min-h-7 justify-between">
+                <div class="flex gap-2 min-h-7 justify-between items-center">
                     <div class="w-28 shrink-1">Total Amount</div>
                     <div>{{ parent["amount"] | money }}</div>
                 </div>
-                <div class="flex gap-2 min-h-7 justify-between">
+                <div class="flex gap-2 min-h-7 justify-between items-center">
                     <div class="w-28 shrink-1">Locked</div>
-                    <div>
-                        {% if parent["linked"] %}
-                            <label class="checkbox">
-                                <input type="checkbox"
-                                       name="locked"
-                                       {% if parent["locked"] %}checked{% endif %}
-                                       autocomplete="off">
-                                {% with class = "w-6 h-6" %}
-                                    {% include "svg/lock.svg" %}
-                                {% endwith %}
-                            </label>
-                        {% else %}
-                            {% with class = "w-6 h-6 fill-grey-600" %}
+                    {% if parent["linked"] %}
+                        <label class="checkbox">
+                            <input type="checkbox"
+                                   name="locked"
+                                   {% if parent["locked"] %}checked{% endif %}
+                                   autocomplete="off">
+                            {% with class = "w-6 h-6" %}
                                 {% include "svg/lock.svg" %}
                             {% endwith %}
-                        {% endif %}
-                    </div>
+                        </label>
+                    {% else %}
+                        {% with class = "w-6 h-6 fill-grey-600" %}
+                            {% include "svg/lock.svg" %}
+                        {% endwith %}
+                    {% endif %}
                 </div>
-                <div class="flex gap-2 min-h-7 justify-between">
+                <div class="flex gap-2 min-h-7 justify-between items-center">
                     <div class="w-28 shrink-1">Linked</div>
-                    <div>
-                        {% if parent["linked"] %}
-                            {% with class = "w-6 h-6 fill-green" %}
-                                {% include "svg/link.svg" %}
-                            {% endwith %}
-                        {% else %}
-                            {% with class = "w-6 h-6 fill-grey-600" %}
-                                {% include "svg/link.svg" %}
-                            {% endwith %}
-                        {% endif %}
-                    </div>
+                    {% if parent["linked"] %}
+                        {% with class = "w-6 h-6 fill-green" %}
+                            {% include "svg/link.svg" %}
+                        {% endwith %}
+                    {% else %}
+                        {% with class = "w-6 h-6 fill-grey-600" %}
+                            {% include "svg/link.svg" %}
+                        {% endwith %}
+                    {% endif %}
                 </div>
             </div>
         </div>

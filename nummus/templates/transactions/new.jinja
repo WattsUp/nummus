@@ -1,6 +1,7 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
      hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"></div>
+     hx-swap="innerHTML"
+     hx-on::before-request="overlayEditor.beforeCancel(event)"></div>
 <div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
      hx-include="#form-txn">
     <div class="flex items-start mb-2">
@@ -14,46 +15,38 @@
         </button>
     </div>
     <div class="flex w-full gap-1 min-h-0 flex-col grow" id="form-txn">
-        <div class="flex gap-1 flex-wrap min-h-7">
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-28 shrink-1">Date</div>
-            <div class="grow">
-                <input class="w-full"
-                       name="date"
-                       type="date"
-                       value="{{ parent["date"] }}"
-                       autocomplete="off">
-            </div>
+            <input class="grow"
+                   name="date"
+                   type="date"
+                   value="{{ parent["date"] }}"
+                   autocomplete="off">
         </div>
-        <div class="flex gap-1 flex-wrap min-h-7">
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-28 shrink-1">Account Name</div>
-            <div class="grow">
-                <select class="w-full" name="account" autocomplete="off">
-                    {% for item in accounts %}
-                        <option value="{{ item | e }}"
-                                {% if item == parent["account"] %}selected{% endif %}>{{ item }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            <select class="grow" name="account" autocomplete="off">
+                {% for item in accounts %}
+                    <option value="{{ item | e }}"
+                            {% if item == parent["account"] %}selected{% endif %}>{{ item }}</option>
+                {% endfor %}
+            </select>
         </div>
-        <div class="flex gap-1 flex-wrap min-h-7">
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-28 shrink-1">Total Amount</div>
-            <div class="grow">
-                <input name="amount"
-                       value="{{ parent["amount"] or "" }}"
-                       placeholder="Amount"
-                       class="w-full"
-                       autocomplete="off">
-            </div>
+            <input name="amount"
+                   value="{{ parent["amount"] or "" }}"
+                   placeholder="Amount"
+                   class="grow"
+                   autocomplete="off">
         </div>
-        <div class="flex gap-1 flex-wrap min-h-7">
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-28 shrink-1">Statement</div>
-            <div class="grow">
-                <input name="statement"
-                       value="{{ (parent["statement"] or "") | e }}"
-                       placeholder="Manually added"
-                       class="w-full"
-                       autocomplete="off">
-            </div>
+            <input name="statement"
+                   value="{{ (parent["statement"] or "") | e }}"
+                   placeholder="Manually added"
+                   class="grow"
+                   autocomplete="off">
         </div>
     </div>
     <div id="overlay-error"
@@ -63,10 +56,11 @@
         <button hx-get="{{ url_for('common.empty') }}"
                 class="button hover-green"
                 hx-swap="innerHTML"
-                hx-include="this">Cancel</button>
+                hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>
         <button hx-post="{{ url_for('transactions.new') }}"
                 hx-target="#overlay-error"
                 hx-swap="innerHTML"
                 class="button bg-green">Save</button>
     </div>
+    <script>overlayEditor.addListeners("form-txn");</script>
 </div>
