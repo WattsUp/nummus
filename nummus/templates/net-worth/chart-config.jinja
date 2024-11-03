@@ -1,23 +1,24 @@
 <div id="net-worth-config"
-     class="w-full flex justify-end gap-1 font-serif"
+     class="w-full flex justify-center gap-1 font-serif items-center"
      hx-swap-oob="{{ oob }}"
      hx-include="#net-worth-config"
      hx-target="#net-worth-chart-data"
      hx-swap="outerHTML"
      hx-indicator=".spinner">
-    <button class="button {{ "hover:green" if chart["category"] else "bg-green" }}"
-            hx-get="{{ url_for('net_worth.chart', category='') }}">All</button>
-    {% for cat in chart["category_type"] %}
-        <button class="button {{ "bg-green" if chart["category"] == cat else "hover:green" }}"
-                hx-get="{{ url_for('net_worth.chart', category=cat | enum) }}">{{ cat | enum | title }}</button>
-    {% endfor %}
-    {% if chart["category"] %}
-        <input name="category"
-               value="{{ chart["category"] | enum }}"
-               hidden
-               autocomplete="off">
-    {% endif %}
-    <div class="grow"></div>
+    <div class="max-md:hidden">
+        Accounts:
+        <select name="category"
+                hx-get="{{ url_for('net_worth.chart') }}"
+                autocomplete="off">
+            <option value="" {% if not chart["category"] %}selected{% endif %}>All</option>
+            {% for cat in chart["category_type"] %}
+                <option value="{{ cat | enum }}"
+                        {% if chart["category"] == cat %}selected{% endif %}>{{ cat | enum | title }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="grow max-md:hidden"></div>
+    <div class"md:hidden">Period</div>
     <select name="period"
             hx-get="{{ url_for('net_worth.chart') }}"
             autocomplete="off">
@@ -25,17 +26,19 @@
             {% include "shared/period-options.jinja" %}
         {% endwith %}
     </select>
-    <input type="date"
-           name="start"
-           value="{{ chart["start"] }}"
-           hx-get="{{ url_for('net_worth.chart', period='custom') }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed"
-           autocomplete="off">
-    to
-    <input type="date"
-           name="end"
-           value="{{ chart["end"] }}"
-           hx-get="{{ url_for('net_worth.chart', period='custom') }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed"
-           autocomplete="off">
+    <div class="max-md:hidden">
+        <input type="date"
+               name="start"
+               value="{{ chart["start"] }}"
+               hx-get="{{ url_for('net_worth.chart', period='custom') }}"
+               hx-trigger="blur changed,keyup[keyCode==13] changed"
+               autocomplete="off">
+        to
+        <input type="date"
+               name="end"
+               value="{{ chart["end"] }}"
+               hx-get="{{ url_for('net_worth.chart', period='custom') }}"
+               hx-trigger="blur changed,keyup[keyCode==13] changed"
+               autocomplete="off">
+    </div>
 </div>

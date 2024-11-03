@@ -26,7 +26,7 @@
     {% endfor %}
 {% endif %}
 <div id="txn-table"
-     class="w-full flex flex-col grow min-h-[15rem]"
+     class="w-full flex flex-col grow min-h-80"
      hx-get="{{ url_for(endpoint, offset=txn_table['offset'], **url_args) }}"
      hx-trigger="update-transaction from:body, update-account from:body"
      hx-indicator="unset">
@@ -37,12 +37,12 @@
         {% include "transactions/table-view.jinja" %}
     {% endfor %}
     <div class="grow"></div>
-    <div class="w-full flex justify-between font-bold border-t border-t-grey-200">
-        <div class="p-1 grow">Page Total</div>
+    <div class="w-full flex justify-between font-bold border-t border-t-grey-200 min-w-[650px]">
+        <div class="p-1">Page Total</div>
         <div class="p-1">{{ txn_table["page_total"] | money }}</div>
     </div>
-    <div class="w-full flex justify-between font-bold">
-        <div class="p-1 grow">Query Total</div>
+    <div class="w-full flex justify-between font-bold min-w-[650px]">
+        <div class="p-1">Query Total</div>
         <div class="p-1">{{ txn_table["query_total"] | money }}</div>
     </div>
 </div>

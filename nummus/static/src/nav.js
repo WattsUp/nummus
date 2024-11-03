@@ -27,6 +27,33 @@ const navigation = {
         }
     },
     /**
+     * On click of a txn-filter icon, toggle open
+     *
+     * @param {Element} src Triggering element
+     */
+    openTxnFilter: function(src) {
+        let txnFilter = src.parentNode;
+        document.querySelectorAll('.txn-filter').forEach((e) => {
+            if (e != txnFilter) {
+                e.classList.remove('open');
+            } else {
+                e.classList.toggle('open');
+            }
+        });
+    },
+    /**
+     * On click outside a txn-filter, close all txn-filters
+     *
+     * @param {Event} event Triggering event
+     */
+    closeTxnFilter: function(event) {
+        if (!event || !event.target.matches('.txn-filter, .txn-filter *')) {
+            document.querySelectorAll('.txn-filter').forEach((e) => {
+                e.classList.remove('open');
+            });
+        }
+    },
+    /**
      * On click, open accounts sidebar
      */
     openSidebar: function() {
@@ -48,3 +75,4 @@ const navigation = {
 
 window.addEventListener('click', navigation.closeDropdown);
 window.addEventListener('click', navigation.closeSidebar);
+window.addEventListener('click', navigation.closeTxnFilter);

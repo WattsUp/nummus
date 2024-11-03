@@ -32,8 +32,9 @@ const netWorthChart = {
             }
         }
 
+        const ticksEnabled = window.screen.width >= 768;
 
-        const width = 65;
+        const width = 60;
 
         {
             const canvas = document.getElementById('total-chart-canvas');
@@ -99,6 +100,14 @@ const netWorthChart = {
                     dateMode,
                     datasets,
                     plugins,
+                    {
+                        scales: {
+                            x: {
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            },
+                        },
+                    },
                 );
             }
         }
@@ -145,7 +154,16 @@ const netWorthChart = {
                     dateMode,
                     datasets,
                     plugins,
-                    {plugins: {tooltip: {enabled: false}}},
+                    {
+                        plugins: {tooltip: {enabled: false}},
+
+                        scales: {
+                            x: {
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            },
+                        },
+                    },
                 );
             }
         }
@@ -171,7 +189,16 @@ const netWorthChart = {
                     dateMode,
                     datasets,
                     plugins,
-                    {plugins: {tooltip: {enabled: false}}},
+                    {
+                        plugins: {tooltip: {enabled: false}},
+
+                        scales: {
+                            x: {
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            },
+                        },
+                    },
                 );
             }
         }

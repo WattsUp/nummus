@@ -27,6 +27,10 @@ const accountChart = {
             if (profitMax) profitMax.push(profitMax[0]);
         }
 
+        const ticksEnabled = window.screen.width >= 768;
+
+        const width = 60;
+
         {
             const canvas = document.getElementById('account-chart-canvas');
             const ctx = canvas.getContext('2d');
@@ -81,11 +85,23 @@ const accountChart = {
             if (this.chart && ctx == this.chart.ctx) {
                 nummusChart.update(this.chart, labels, dateMode, datasets);
             } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
                 this.chart = nummusChart.create(
                     ctx,
                     labels,
                     dateMode,
                     datasets,
+                    plugins,
+                    {
+                        scales: {
+                            x: {
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            },
+                        },
+                    },
                 );
             }
         }
@@ -145,11 +161,23 @@ const accountChart = {
                 nummusChart.update(
                     this.chartProfit, labels, dateMode, datasets);
             } else {
+                const plugins = [
+                    [pluginFixedAxisWidth, {width: width}],
+                ];
                 this.chartProfit = nummusChart.create(
                     ctx,
                     labels,
                     dateMode,
                     datasets,
+                    plugins,
+                    {
+                        scales: {
+                            x: {
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            },
+                        },
+                    },
                 );
             }
         }

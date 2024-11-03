@@ -320,5 +320,5 @@ def page(content_template: str, title: str, **context: object) -> str:
 
 ROUTES: Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
-    "/h/empty": (empty, ["GET"]),
+    "/h/empty": (empty, ["GET"]),  # TODO (WattsUp): Replace with JS
 }
