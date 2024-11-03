@@ -1,7 +1,6 @@
 <div id="val-config"
-     class="w-full flex justify-end gap-1 font-serif"
+     class="w-full flex justify-end gap-1 font-serif items-center"
      hx-swap-oob="{{ oob }}">
-    <div class="grow"></div>
     <select name="period"
             hx-get="{{ url_for('assets.valuations', **url_args) }}"
             autocomplete="off">

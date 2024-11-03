@@ -1,5 +1,5 @@
 <div id="sidebar"
-     class="sidebar max-lg:unpinned {{ 'open' if is_open else '' }}"
+     class="sidebar max-xl:unpinned {{ 'open' if is_open else '' }}"
      hx-get="{{ url_for('common.sidebar') }}"
      hx-trigger="update-account from:body, update-valuation from:body"
      hx-target="#sidebar">
