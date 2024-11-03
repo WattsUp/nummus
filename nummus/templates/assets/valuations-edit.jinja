@@ -1,55 +1,49 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
-     hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"></div>
-<div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
+     onclick="overlayEditor.close()"></div>
+<div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
      hx-swap="innerHTML">
-    <button hx-get="{{ url_for('common.empty') }}" class="ml-auto px-6">
-        {% with class="w-[32px] h-[32px]" %}
-            {% include "svg/x.svg" %}
-        {% endwith %}
-    </button>
-    <h1 class="font-serif text-4xl px-6 text-green-600">Edit asset valuation</h1>
-    <div class="flex flex-col w-full gap-1 px-6 grow" id="form-valuation">
+    <div class="flex items-start mb-2">
+        <h1 class="font-serif text-2xl text-green-600 grow">Edit asset valuation</h1>
+        <button class="shrink-0" onclick="overlayEditor.close()">
+            {% with class="w-[32px] h-[32px]" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </button>
+    </div>
+    <div class="flex flex-col w-full gap-1 grow" id="form-valuation">
         <h1 class="font-bold">Edit details</h1>
         <hr class="w-full border-grey-200">
-        <table class="w-full">
-            <tbody>
-                <tr>
-                    <td>Date</td>
-                    <td>
-                        <input type="date"
-                               name="date"
-                               value="{{ valuation["date"] or "" }}"
-                               class="w-full"
-                               autocomplete="off">
-                    </td>
-                </tr>
-                <tr>
-                    <td>Value</td>
-                    <td>
-                        <input name="value"
-                               value="{{ valuation["value"] or "" }}"
-                               class="w-full"
-                               autocomplete="off">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="flex flex-wrap gap-1 min-h-7 items-center">
+            <div class="w-24">Date</div>
+            <input type="date"
+                   name="date"
+                   value="{{ valuation["date"] or "" }}"
+                   class="grow"
+                   autocomplete="off">
+        </div>
+        <div class="flex flex-wrap gap-1 min-h-7 items-center">
+            <div class="w-24">Value</div>
+            <input name="value"
+                   value="{{ valuation["value"] or "" }}"
+                   class="grow"
+                   autocomplete="off">
+        </div>
     </div>
     <div id="overlay-error"
-         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
-    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
+    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
         {% if valuation["uri"] %}
             <button hx-delete="{{ url_for('assets.valuation', uri=valuation['uri']) }}"
                     hx-confirm="Are you sure you wish to delete this valuation?"
-                    class="button hover:red mr-auto">
+                    class="button hover-red">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
                 {% endwith %}
                 Delete
             </button>
         {% endif %}
-        <button hx-get="{{ url_for('common.empty') }}" class="button hover:green">Cancel</button>
+        <div class="grow"></div>
+        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
         {% if valuation["uri"] %}
             <button hx-put="{{ url_for('assets.valuation', uri=valuation['uri']) }}"
                     hx-target="#overlay-error"

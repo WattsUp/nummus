@@ -1,13 +1,10 @@
 <div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
-     hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"></div>
+     onclick="overlayEditor.close()"></div>
 <div class="w-full max-md:min-h-full md:w-[750px] md:h-[580px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
      hx-swap="innerHTML">
     <div class="flex items-start mb-2">
         <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction categories</h1>
-        <button hx-get="{{ url_for('common.empty') }}"
-                class="shrink-0"
-                hx-swap="innerHTML">
+        <button class="shrink-0" onclick="overlayEditor.close()">
             {% with class="w-[32px] h-[32px]" %}
                 {% include "svg/x.svg" %}
             {% endwith %}

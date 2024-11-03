@@ -164,9 +164,6 @@ class TestCommon(WebTestBase):
             result = common.ctx_sidebar(include_closed=False)
         self.assertDictEqual(result, target)
 
-    def test_empty(self) -> None:
-        self.assertEqual(common.empty(), "")
-
     def test_overlay_swap(self) -> None:
         with self._flask_app.app_context():
             content = self.random_string()

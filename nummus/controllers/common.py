@@ -219,15 +219,6 @@ def ctx_base() -> dict[str, object]:
     }
 
 
-def empty() -> str:
-    """GET /h/empty.
-
-    Returns:
-        HTML string response
-    """
-    return ""
-
-
 def overlay_swap(
     content: str | None = None,
     event: str | list[str] | None = None,
@@ -320,5 +311,4 @@ def page(content_template: str, title: str, **context: object) -> str:
 
 ROUTES: Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
-    "/h/empty": (empty, ["GET"]),  # TODO (WattsUp): Replace with JS
 }
