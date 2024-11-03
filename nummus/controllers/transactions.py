@@ -227,11 +227,7 @@ def table_unfiltered_query(
     args = flask.request.args
 
     period = args.get("period", default_period)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None and acct is not None:
         opened_on_ord = acct.opened_on_ord
         start = (
@@ -312,8 +308,8 @@ def ctx_table(
     with p.get_session() as s:
         args = flask.request.args
         search_str = args.get("search", "").strip()
-        locked = args.get("locked", type=utils.parse_bool)
-        linked = args.get("linked", type=utils.parse_bool)
+        locked = utils.parse_bool(args.get("locked"))
+        linked = utils.parse_bool(args.get("linked"))
         page_len = 25
         offset = int(args.get("offset", 0))
         page_total = Decimal(0)
@@ -558,12 +554,12 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             )
 
         form = flask.request.form
-        date = form.get("date", type=datetime.date.fromisoformat)
+        date = utils.parse_date(form.get("date"))
         if date is None:
             return common.error("Transaction date must not be empty")
         if date > datetime.date.today():
             return common.error("Cannot create future transaction")
-        amount = form.get("amount", type=utils.parse_real)
+        amount = utils.parse_real(form.get("amount"))
         if amount is None:
             return common.error("Transaction amount must not be empty")
         account = form.get("account")
@@ -696,7 +692,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         try:
             form = flask.request.form
 
-            date = form.get("date", type=datetime.date.fromisoformat)
+            date = utils.parse_date(form.get("date"))
             if date is None:
                 return common.error("Transaction date must not be empty")
             parent.date = date
@@ -706,7 +702,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             description = form.getlist("description")
             category = form.getlist("category")
             tag = form.getlist("tag")
-            amount = form.getlist("amount", utils.parse_real)
+            amount = [utils.parse_real(x) for x in form.getlist("amount")]
 
             if sum(filter(None, amount)) != parent.amount:
                 msg = "Non-zero remaining amount to be assigned"
@@ -775,7 +771,7 @@ def split(uri: str) -> str:
     description: list[str | None] = list(form.getlist("description"))
     category: list[str] = form.getlist("category")
     tag: list[str | None] = list(form.getlist("tag"))
-    amount: list[Decimal | None] = list(form.getlist("amount", utils.parse_real))
+    amount = [utils.parse_real(x) for x in form.getlist("amount")]
 
     if flask.request.method == "POST":
         payee.append(None)
@@ -880,7 +876,7 @@ def remaining(uri: str) -> str:
         parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
         form = flask.request.form
 
-        amount = form.getlist("amount", utils.parse_real)
+        amount = [utils.parse_real(x) for x in form.getlist("amount")]
         current = sum(filter(None, amount))
 
         return flask.render_template(

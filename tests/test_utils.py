@@ -220,9 +220,16 @@ class TestUtils(TestBase):
         result = utils.parse_bool("0")
         self.assertFalse(result)
 
-        self.assertRaises(TypeError, utils.parse_bool, None)
+    def test_parse_date(self) -> None:
+        result = utils.parse_date(None)
+        self.assertIsNone(result)
 
-        self.assertRaises(TypeError, utils.parse_bool, False)  # noqa: FBT003
+        result = utils.parse_date("")
+        self.assertIsNone(result)
+
+        result = utils.parse_date("2024-01-01")
+        target = datetime.date(2024, 1, 1)
+        self.assertEqual(result, target)
 
     def test_format_days(self) -> None:
         d = 0

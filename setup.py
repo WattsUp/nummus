@@ -27,7 +27,7 @@ required = [
     "flask-assets",
     "pytailwindcss",
     "jsmin",
-    "flask<2.3,>=2",
+    "flask>=3",
     "typing-extensions",
     "pdfplumber",
     "yfinance",
@@ -36,6 +36,7 @@ required = [
     "argcomplete",
     "scipy",
     "emoji",
+    "werkzeug>=3",
 ]
 extras_require = {
     "encrypt": ["sqlcipher3", "Cipher", "pycryptodome"],
@@ -57,7 +58,7 @@ extras_require["dev"] = extras_require["test"] + [
     "viztracer",
     "pre-commit",
     "djlint>=1.35.2",
-    "pyright>=1.1.386",
+    "pyright>=1.1.387",
 ]
 
 setuptools.setup(

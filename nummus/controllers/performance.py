@@ -32,11 +32,7 @@ def ctx_chart() -> dict[str, object]:
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     index = args.get("index", "S&P 500")
 
     class AccountContext(TypedDict):

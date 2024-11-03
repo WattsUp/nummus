@@ -169,7 +169,7 @@ def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> s
     return f"${x:,.{precision}f}"
 
 
-def parse_bool(s: str) -> bool | None:
+def parse_bool(s: str | None) -> bool | None:
     """Parse a string into a bool.
 
     Args:
@@ -178,12 +178,23 @@ def parse_bool(s: str) -> bool | None:
     Returns:
         Parsed bool
     """
-    if not isinstance(s, str):
-        msg = "parse_bool: argument must be string"
-        raise TypeError(msg)
-    if s == "":
+    if s is None or s == "":
         return None
     return s.lower() in ["true", "t", "1"]
+
+
+def parse_date(s: str | None) -> datetime.date | None:
+    """Parse isoformat date.
+
+    Args:
+        s: String to parse
+
+    Returns:
+        Date or None
+    """
+    if s is None or s == "":
+        return None
+    return datetime.date.fromisoformat(s)
 
 
 def format_days(days: int, labels: list[str] | None = None) -> str:

@@ -206,7 +206,7 @@ def valuation(uri: str) -> str | flask.Response:
             return common.overlay_swap(event="update-valuation")
 
         form = flask.request.form
-        date = form.get("date", type=datetime.date.fromisoformat)
+        date = utils.parse_date(form.get("date"))
         if date is None:
             return common.error("Asset valuation date must not be empty")
         value = utils.parse_real(form.get("value"), precision=6)
@@ -250,7 +250,7 @@ def new_valuation(uri: str) -> str | flask.Response:
         )
 
     form = flask.request.form
-    date = form.get("date", type=datetime.date.fromisoformat)
+    date = utils.parse_date(form.get("date"))
     if date is None:
         return common.error("Asset valuation date must not be empty")
     value = utils.parse_real(form.get("value"), precision=6)
@@ -335,11 +335,7 @@ def valuations(uri: str) -> flask.Response:
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
+        start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
         if start is None:
             start_ord = (
                 s.query(AssetValuation.date_ord)
@@ -397,11 +393,7 @@ def ctx_chart(a: Asset) -> dict[str, object]:
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None:
         s = orm.object_session(a)
         if s is None:
@@ -478,11 +470,7 @@ def ctx_valuations(
         page_len = 25
         offset = int(args.get("offset", 0))
         period = args.get("period", DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
+        start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
         if start is None:
             start_ord = (
                 s.query(AssetValuation.date_ord)
