@@ -4,7 +4,7 @@
  */
 const pluginBoxAnnotation = {
     id: 'boxAnnotation',
-    afterInit: function(chart) {
+    beforeInit: function(chart) {
         const {
             config: {
                 options: {

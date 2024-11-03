@@ -4,7 +4,7 @@
  */
 const pluginHoverHighlight = {
     id: 'hoverHighlight',
-    afterInit: function(chart) {
+    beforeInit: function(chart) {
         const {config: {options: {plugins: {hoverHighlight}}}} = chart;
         hoverHighlight.scroll = hoverHighlight.scroll ?? true;
         hoverHighlight.listenersEnter = [];
