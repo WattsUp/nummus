@@ -150,11 +150,11 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri}),
             headers=headers,
         )
-        self.assertRegex(result, r"<h1 .*>\$90.00</h1>")
+        self.assertRegex(result, r"<h1.*>\$90.00</h1>")
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
-        self.assertRegex(result, r"<div .*>Uncategorized</div>")
-        self.assertRegex(result, r"<div .*>\$100.00</div>")
-        self.assertRegex(result, r"<div .*>-\$10.00</div>")
+        self.assertRegex(result, r"<div.*>Uncategorized</div>")
+        self.assertRegex(result, r"<div.*>\$100.00</div>")
+        self.assertRegex(result, r"<div.*>-\$10.00</div>")
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
@@ -162,11 +162,11 @@ class TestAccount(WebTestBase):
             (endpoint, {"uri": acct_uri, "period": "last-year"}),
             headers=headers,
         )
-        self.assertRegex(result, r"<h1 .*>\$90.00</h1>")
+        self.assertRegex(result, r"<h1.*>\$90.00</h1>")
         self.assertRegex(result, r"<script>accountChart\.update\(.*\)</script>")
-        self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
-        self.assertNotRegex(result, r"<div .*>\$100.00</div>")
-        self.assertNotRegex(result, r"<div .*>-\$10.00</div>")
+        self.assertNotRegex(result, r"<div.*>Uncategorized</div>")
+        self.assertNotRegex(result, r"<div.*>\$100.00</div>")
+        self.assertNotRegex(result, r"<div.*>-\$10.00</div>")
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
 
