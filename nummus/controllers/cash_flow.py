@@ -43,11 +43,7 @@ def ctx_chart() -> dict[str, object]:
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
 
     with p.get_session() as s:
         if start is None:
@@ -292,11 +288,7 @@ def txns() -> flask.Response:
     """
     args = flask.request.args
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     txn_table, title = transactions.ctx_table(None, DEFAULT_PERIOD, cash_flow=True)
     start = txn_table["start"]
     title = "Cash Flow," + title.removeprefix("Transactions")

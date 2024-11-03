@@ -32,6 +32,7 @@ from tests.base import TestBase
 
 if TYPE_CHECKING:
     import werkzeug
+    import werkzeug.datastructures
 
 
 _RE_URI = re.compile(r"^[0-9a-f]{8}$")
@@ -293,7 +294,7 @@ class WebTestBase(TestBase):
         *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
-    ) -> tuple[str, dict[str, str]]:
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP request.
 
         Args:
@@ -387,7 +388,7 @@ class WebTestBase(TestBase):
         *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
-    ) -> tuple[str, dict[str, str]]:
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP GET request.
 
         Args:
@@ -411,7 +412,7 @@ class WebTestBase(TestBase):
         *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
-    ) -> tuple[str, dict[str, str]]:
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP PUT request.
 
         Args:
@@ -435,7 +436,7 @@ class WebTestBase(TestBase):
         *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
-    ) -> tuple[str, dict[str, str]]:
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP POST request.
 
         Args:
@@ -459,7 +460,7 @@ class WebTestBase(TestBase):
         *,
         rc: int = HTTP_CODE_OK,
         **kwargs: object,
-    ) -> tuple[str, dict[str, str]]:
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP DELETE request.
 
         Args:

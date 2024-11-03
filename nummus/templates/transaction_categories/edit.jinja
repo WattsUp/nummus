@@ -1,116 +1,107 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer"
-     hx-get="{{ url_for('common.empty') }}"
-     hx-swap="innerHTML"
-     hx-on::before-request="overlayEditor.beforeCancel(event)"></div>
-<div class="w-[500px] h-[400px] max-h-[90vh] bg-white opacity-100 m-auto flex flex-col pt-2"
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
+     onclick="overlayEditor.close()"></div>
+<div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
      hx-swap="innerHTML">
-    <button hx-get="{{ url_for('common.empty') }}"
-            class="ml-auto px-6"
-            hx-on::before-request="overlayEditor.beforeCancel(event)">
-        {% with class="w-[32px] h-[32px]" %}
-            {% include "svg/x.svg" %}
-        {% endwith %}
-    </button>
-    <h1 class="font-serif text-4xl px-6 text-green-600">Edit transaction category</h1>
-    <div class="flex flex-col w-full gap-1 px-6 grow" id="form-category">
+    <div class="flex items-start mb-2">
+        <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction category</h1>
+        <button class="shrink-0" onclick="overlayEditor.close()">
+            {% with class="w-[32px] h-[32px]" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </button>
+    </div>
+    <div class="flex flex-col w-full gap-1 grow" id="form-category">
         <h1 class="font-bold">Edit details</h1>
         <hr class="w-full border-grey-200">
-        <table class="w-full">
-            <tbody>
-                <tr>
-                    <td class="w-48">Category Name</td>
-                    <td>
-                        {% if category["locked"] %}
-                            <input name="name"
-                                   value="{{ category["emoji"] or "" }}"
-                                   class="w-16"
-                                   autocomplete="off">
-                            {{ category["name"] or "" }}
-                        {% else %}
-                            <input name="name"
-                                   value="{{ category["emoji"] + " " if category["emoji"] }}{{ (category["name"] or "") | e }}"
-                                   class="w-full"
-                                   autocomplete="off">
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="w-48">Group</td>
-                    <td>
-                        {% if category["locked"] %}
-                            {{ category["group"] | enum | title }}
-                        {% else %}
-                            <select name="group" autocomplete="off">
-                                {% for group in category["group_type"] %}
-                                    <option value="{{ group | enum }}"
-                                            {% if group == category["group"] %}selected{% endif %}>
-                                        {{ group | enum | title }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="w-48">Include in profit &amp; loss</td>
-                    <td>
-                        {% if category["locked"] %}
-                            {% if category["is_profit_loss"] %}
-                                {% with class = "w-5 h-5 fill-green" %}
-                                    {% include "svg/check.svg" %}
-                                {% endwith %}
-                            {% else %}
-                                {% with class = "w-5 h-5 fill-grey-600" %}
-                                    {% include "svg/check.svg" %}
-                                {% endwith %}
-                            {% endif %}
-                        {% else %}
-                            <label class="flex gap-4 justify-between w-full checkbox">
-                                <input type="checkbox"
-                                       name="is-pnl"
-                                       {% if category["is_profit_loss"] %}checked{% endif %}
-                                       autocomplete="off">
-                                {% with class = "w-5 h-5" %}
-                                    {% include "svg/check.svg" %}
-                                {% endwith %}
-                            </label>
-                        {% endif %}
-                    </td>
-                </tr>
-                <tr>
-                    <td class="w-48">Essential transaction</td>
-                    <td>
-                        <label class="flex gap-4 justify-between w-full checkbox">
-                            <input type="checkbox"
-                                   name="essential"
-                                   {% if category["essential"] %}checked{% endif %}
-                                   autocomplete="off">
-                            {% with class = "w-5 h-5" %}
-                                {% include "svg/check.svg" %}
-                            {% endwith %}
-                        </label>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div class="flex flex-wrap gap-1 min-h-7 items-center">
+            <div class="w-44">Category Name</div>
+            <div class="grow">
+                {% if category["locked"] %}
+                    <input name="name"
+                           value="{{ category["emoji"] or "" }}"
+                           class="w-16"
+                           autocomplete="off">
+                    {{ category["name"] or "" }}
+                {% else %}
+                    <input name="name"
+                           value="{{ category["emoji"] + " " if category["emoji"] }}{{ (category["name"] or "") | e }}"
+                           class="w-full"
+                           autocomplete="off">
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex gap-1 min-h-7 items-center">
+            <div class="w-44 shrink-1">Group</div>
+            <div class="grow">
+                {% if category["locked"] %}
+                    {{ category["group"] | enum | title }}
+                {% else %}
+                    <select name="group" autocomplete="off" class="w-full">
+                        {% for group in category["group_type"] %}
+                            <option value="{{ group | enum }}"
+                                    {% if group == category["group"] %}selected{% endif %}>
+                                {{ group | enum | title }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex gap-1 min-h-7 items-center">
+            <div class="w-44 shrink-1">Include in profit &amp; loss</div>
+            <div class="grow">
+                {% if category["locked"] %}
+                    {% if category["is_profit_loss"] %}
+                        {% with class = "w-5 h-5 fill-green" %}
+                            {% include "svg/check.svg" %}
+                        {% endwith %}
+                    {% else %}
+                        {% with class = "w-5 h-5 fill-grey-600" %}
+                            {% include "svg/check.svg" %}
+                        {% endwith %}
+                    {% endif %}
+                {% else %}
+                    <label class="flex gap-4 justify-between w-full checkbox">
+                        <input type="checkbox"
+                               name="is-pnl"
+                               {% if category["is_profit_loss"] %}checked{% endif %}
+                               autocomplete="off">
+                        {% with class = "w-5 h-5" %}
+                            {% include "svg/check.svg" %}
+                        {% endwith %}
+                    </label>
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex gap-1 min-h-7 items-center">
+            <div class="w-44 shrink-1">Essential transaction</div>
+            <label class="flex gap-4 justify-between grow checkbox">
+                <input type="checkbox"
+                       name="essential"
+                       {% if category["essential"] %}checked{% endif %}
+                       autocomplete="off">
+                {% with class = "w-5 h-5" %}
+                    {% include "svg/check.svg" %}
+                {% endwith %}
+            </label>
+        </div>
     </div>
     <div id="overlay-error"
-         class="w-full bg-red px-6 py-2 text-xl empty:hidden"></div>
-    <div class="w-full h-16 bg-grey-100 flex justify-end items-center px-6 text-xl gap-4">
+         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
+    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
         {% if category["uri"] and not category["locked"] %}
             <button hx-delete="{{ url_for('transaction_categories.category', uri=category['uri']) }}"
                     hx-confirm="Are you sure you wish to delete this transaction category? Any transactions assigned to this category will revert to Uncategorized"
                     hx-target="#overlay-error"
-                    class="button hover:red mr-auto">
+                    class="button hover-red">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
                 {% endwith %}
                 Delete
             </button>
         {% endif %}
-        <button hx-get="{{ url_for('transaction_categories.overlay') }}"
-                class="button hover:green"
-                hx-on::before-request="overlayEditor.beforeCancel(event)">Cancel</button>
+        <div class="grow"></div>
+        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
         {% if category["uri"] %}
             <button hx-put="{{ url_for('transaction_categories.category', uri=category['uri']) }}"
                     hx-target="#overlay-error"

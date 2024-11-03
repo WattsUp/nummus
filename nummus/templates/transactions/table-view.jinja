@@ -1,72 +1,40 @@
-{% if asset_transactions %}
-    <div id="txn-{{ txn["uri"] }}"
-         class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100">
-        <div class="w-[6rem] min-w-[6rem] p-1">{{ txn["date"] }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["account"] or "" }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate grow">{{ txn["asset_name"] or "" }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ txn["asset_price"] | money if txn["asset_price"] }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ txn["asset_quantity"] | qty }}</div>
-        <div class="w-[7rem] min-w-[7rem] p-1 truncate text-right">{{ txn["amount"] | money }}</div>
-    </div>
-{% elif txn["asset_name"] %}
+{% set row_class = "w-full flex even:bg-grey-50 md:hover:bg-grey-100 min-w-[750px] md:min-w-[650px]" %}
+{% if asset_transactions or txn["asset_name"] %}
     {# Asset transactions cannot be edited, omit edit link #}
-    <div id="txn-{{ txn["uri"] }}"
-         class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100">
-        <div class="w-[6rem] min-w-[6rem] p-1">{{ txn["date"] }}</div>
-        {% if no_account_column %}
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["payee"] or "" }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate grow">{{ txn["description"] or "" }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["category"] }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["tag"] or "" }}</div>
-        {% else %}
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["account"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["payee"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate grow">{{ txn["description"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["category"] }}</div>
-            <div class="w-[6rem] min-w-[6rem] p-1 truncate">{{ txn["tag"] or "" }}</div>
-        {% endif %}
-        <div class="w-[7rem] min-w-[7rem] p-1 truncate text-right">{{ txn["amount"] | money }}</div>
-        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
-            {% if txn["locked"] %}
-                {% include "svg/lock.svg" %}
+    <div id="txn-{{ txn["uri"] }}" class="{{ row_class }}">
+        {% block row %}
+            <div class="w-24 shrink-0 p-1">{{ txn["date"] }}</div>
+            {% if not no_account_column %}<div class="w-24 shrink-0 grow p-1 truncate">{{ txn["account"] or "" }}</div>{% endif %}
+            {% if asset_transactions %}
+                <div class="w-24 shrink-0 grow p-1 truncate">{{ txn["asset_name"] or "" }}</div>
+                <div class="w-28 shrink-0 p-1 truncate text-right">{{ txn["asset_price"] | money if txn["asset_price"] }}</div>
+                <div class="w-28 shrink-0 p-1 truncate text-right">{{ txn["asset_quantity"] | qty }}</div>
+            {% else %}
+                <div class="w-20 shrink-0 grow p-1 truncate">{{ txn["payee"] or "" }}</div>
+                <div class="w-24 shrink-0 grow p-1 truncate">{{ txn["description"] or "" }}</div>
+                <div class="w-24 shrink-0 grow p-1 truncate">{{ txn["category"] or "" }}</div>
+                <div class="w-20 shrink-0 grow p-1 truncate max-lg:hidden">{{ txn["tag"] or "" }}</div>
             {% endif %}
-        </div>
-        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
-            {% if txn["linked"] %}
-                {% include "svg/link.svg" %}
+            <div class="w-28 shrink-0 p-1 truncate text-right">{{ txn["amount"] | money }}</div>
+            {% if not asset_transactions %}
+                <div class="w-[24px] shrink-0 p-0 flex items-center">
+                    {% if txn["locked"] %}
+                        {% include "svg/lock.svg" %}
+                    {% endif %}
+                </div>
+                <div class="w-[24px] shrink-0 p-0 flex items-center">
+                    {% if txn["linked"] %}
+                        {% include "svg/link.svg" %}
+                    {% endif %}
+                </div>
             {% endif %}
-        </div>
+        {% endblock row %}
     </div>
 {% else %}
     <div id="txn-{{ txn["uri"] }}"
-         class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100 cursor-pointer"
+         class="{{ row_class }} cursor-pointer"
          hx-get="{{ url_for('transactions.transaction', uri=txn['uri']) }}"
          hx-target="#overlay"
          hx-swap="innerHTML"
-         hx-include="this">
-        <div class="w-[6rem] min-w-[6rem] p-1">{{ txn["date"] }}</div>
-        {% if no_account_column %}
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["payee"] or "" }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate grow">{{ txn["description"] or "" }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["category"] }}</div>
-            <div class="w-[10rem] min-w-[10rem] p-1 truncate">{{ txn["tag"] or "" }}</div>
-        {% else %}
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["account"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["payee"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate grow">{{ txn["description"] or "" }}</div>
-            <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ txn["category"] }}</div>
-            <div class="w-[6rem] min-w-[6rem] p-1 truncate">{{ txn["tag"] or "" }}</div>
-        {% endif %}
-        <div class="w-[7rem] min-w-[7rem] p-1 truncate text-right">{{ txn["amount"] | money }}</div>
-        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
-            {% if txn["locked"] %}
-                {% include "svg/lock.svg" %}
-            {% endif %}
-        </div>
-        <div class="w-[1.5rem] min-w-[1.5rem] p-0 flex items-center">
-            {% if txn["linked"] %}
-                {% include "svg/link.svg" %}
-            {% endif %}
-        </div>
-    </div>
+         hx-include="this">{{ self.row() }}</div>
 {% endif %}

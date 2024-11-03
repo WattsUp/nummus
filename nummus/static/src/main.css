@@ -29,6 +29,70 @@
         --color-black: theme("colors.black.DEFAULT");
     }
 
+    .nav-folder>.nav-dropdown {
+        @apply scale-y-0 transition-transform origin-top duration-300;
+    }
+
+    .nav-folder.open>.nav-dropdown {
+        @apply scale-y-100;
+    }
+
+    .nav-folder.open>.nav-button {
+        @apply bg-green-800;
+    }
+
+    .nav-button>.nav-hamburger {
+        @apply -translate-x-1/2 w-[24px] md:w-[32px] border-t-[3px] md:border-t-4 border-white absolute left-1/2 top-[15px] md:top-[20px] transition-transform;
+    }
+
+    .nav-button>.nav-hamburger:nth-child(1) {
+        @apply translate-y-[-8px] md:translate-y-[-10px];
+    }
+
+    .nav-button>.nav-hamburger:nth-child(3) {
+        @apply translate-y-[8px] md:translate-y-[10px];
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(1) {
+        @apply translate-y-0 rotate-45;
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(2) {
+        @apply scale-x-0;
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(3) {
+        @apply translate-y-0 -rotate-45;
+    }
+
+    .txn-filter>.txn-filter-dropdown {
+        @apply absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden;
+    }
+
+    .txn-filter.open>.txn-filter-dropdown {
+        @apply block;
+    }
+
+    .sidebar {
+        @apply h-full w-[18rem] shrink-0;
+    }
+
+    .sidebar.unpinned {
+        @apply fixed transition-transform -translate-x-full duration-300 z-10 top-0 pt-8 md:pt-12;
+    }
+
+    .sidebar.unpinned.open {
+        @apply translate-x-0;
+    }
+
+    .sidebar+.sidebar-spacer {
+        @apply w-10 bg-green-300 hidden shrink-0;
+    }
+
+    .sidebar.unpinned+.sidebar-spacer {
+        @apply md:block;
+    }
+
     .button {
         @apply px-2 rounded border transition-colors;
     }
@@ -38,52 +102,52 @@
     }
 
     .button:hover svg {
-        @apply fill-white;
+        @apply md:fill-white;
     }
 
     .button.bg-green {
-        @apply text-white border-green hover:border-green-900 hover:bg-green-900;
+        @apply text-white border-green md:hover:border-green-900 md:hover:bg-green-900;
     }
 
-    .button.hover\:green {
-        @apply hover:border-green-900 hover:bg-green-900 hover:text-white;
+    .button.hover-green {
+        @apply md:hover:border-green-900 md:hover:bg-green-900 md:hover:text-white;
     }
 
     .button.bg-red {
-        @apply text-black border-red hover:border-red-900 hover:bg-red-900 hover:text-white;
+        @apply text-black border-red md:hover:border-red-900 md:hover:bg-red-900 md:hover:text-white;
     }
 
-    .button.hover\:red {
-        @apply hover:border-red-900 hover:bg-red-900 hover:text-white;
+    .button.hover-red {
+        @apply md:hover:border-red-900 md:hover:bg-red-900 md:hover:text-white;
     }
 
     .button.bg-blue {
-        @apply text-black border-blue hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+        @apply text-black border-blue md:hover:border-blue-900 md:hover:bg-blue-900 md:hover:text-white;
     }
 
-    .button.hover\:blue {
-        @apply hover:border-blue-900 hover:bg-blue-900 hover:text-white;
+    .button.hover-blue {
+        @apply md:hover:border-blue-900 md:hover:bg-blue-900 md:hover:text-white;
     }
 
     .button.bg-white {
-        @apply text-black border-white hover:text-white hover:border-green-900 hover:bg-green-900;
+        @apply text-black border-white md:hover:text-white md:hover:border-green-900 md:hover:bg-green-900;
     }
 
     .button.bg-yellow {
-        @apply text-black border-yellow hover:border-yellow-400 hover:bg-yellow-400;
+        @apply text-black border-yellow md:hover:border-yellow-400 md:hover:bg-yellow-400;
     }
 
-    .button.hover\:yellow {
-        @apply hover:border-yellow-400 hover:bg-yellow-400;
+    .button.hover-yellow {
+        @apply md:hover:border-yellow-400 md:hover:bg-yellow-400;
     }
 
     .button.bg-yellow:hover svg,
-    .button.hover\:yellow:hover svg {
-        @apply fill-black;
+    .button.hover-yellow:hover svg {
+        @apply md:fill-black;
     }
 
     .button:disabled {
-        @apply cursor-auto bg-grey-200 text-black border-black hover:bg-grey-200 hover:text-black hover:border-black;
+        @apply cursor-auto bg-grey-200 text-black border-black md:hover:bg-grey-200 md:hover:text-black md:hover:border-black;
     }
 
     .checkbox {
@@ -99,7 +163,7 @@
     }
 
     .checkbox:hover input~svg {
-        @apply bg-grey-400;
+        @apply md:bg-grey-400;
     }
 
     .checkbox input:checked~svg {
@@ -236,7 +300,7 @@
     }
 
     .tooltip:hover .tooltip-text {
-        @apply visible opacity-100;
+        @apply md:visible md:opacity-100;
     }
 
     .budget-group-toggle-label {
@@ -244,7 +308,7 @@
     }
 
     .budget-group-toggle-label::after {
-        @apply content-["▼"] absolute left-[-1rem] cursor-pointer text-grey-500 hover:text-green;
+        @apply content-["▼"] absolute -left-4 cursor-pointer text-grey-500 md:hover:text-green;
     }
 
     input[type=checkbox].budget-group-toggle:checked~.budget-group {

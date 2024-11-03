@@ -1,24 +1,25 @@
 <div id="assets"
-     class="w-full flex flex-col max-h-[25vh] overflow-y-auto"
+     class="min-h-80 max-h-[25vh] overflow-y-scroll"
      hx-swap-oob="{{ oob }}">
-    <div class="header w-full flex justify-between font-bold border-b border-b-grey-200 sticky top-0 bg-white">
-        <div class="w-[2rem] min-w-[2rem] p-1"></div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate">Class</div>
-        <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">Name</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Quantity</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Balance</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Balance Mix</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Profit &amp; Loss</div>
+    <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-[500px]">
+        <div class="w-24 shrink-0 grow p-1 max-md:hidden">Class</div>
+        <div class="w-32 shrink-0 grow-[4] p-1">Name</div>
+        <div class="w-28 shrink-0 grow p-1 text-right max-md:hidden">End Quantity</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">End Balance</div>
+        <div class="w-20 shrink-0 grow p-1 text-right">Mix</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">Profit &amp; Loss</div>
     </div>
     {% for asset in assets["assets"] %}
         {% include "accounts/asset-view.jinja" %}
     {% endfor %}
     <div id="assets-total"
-         class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
-        <div class="p-1 grow">Total</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ assets["end_value"] | money }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right"></div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ assets["profit"] | pnl_color }}">
+         class="w-full flex font-bold border-t border-t-grey-200 sticky bottom-0 bg-white min-w-[500px]">
+        <div class="w-24 shrink-0 grow p-1 max-md:hidden">Total</div>
+        <div class="w-32 shrink-0 grow-[4] p-1"></div>
+        <div class="w-28 shrink-0 grow p-1 text-right max-md:hidden"></div>
+        <div class="w-28 shrink-0 grow p-1 text-right">{{ assets["end_value"] | money }}</div>
+        <div class="w-20 shrink-0 grow p-1 text-right"></div>
+        <div class="w-28 shrink-0 grow p-1 text-right text-{{ assets["profit"] | pnl_color }}">
             {{ assets["profit"] | money }}
         </div>
     </div>

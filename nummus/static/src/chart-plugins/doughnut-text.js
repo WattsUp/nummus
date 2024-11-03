@@ -4,7 +4,7 @@
  */
 const pluginDoughnutText = {
     id: 'doughnutText',
-    afterInit: function(chart) {
+    beforeInit: function(chart) {
         const {config: {options: {plugins: {doughnutText}}}} = chart;
         chart.doughnutText = doughnutText;
     },

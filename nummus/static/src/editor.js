@@ -46,23 +46,20 @@ const overlayEditor = {
      */
     pendingChanges: function() {
         overlayEditor.anyPendingChanges = true;
-        console.log('changes');
     },
     /**
-     * Listener before a request to cancel edits
-     *
-     * @param {Event} e Before request event
+     * Close overlay if no pending changes
      */
-    beforeCancel: function(e) {
+    close: function() {
         if (overlayEditor.anyPendingChanges) {
             var result = window.confirm(
                 'There are pending changes. Are you sure you want to cancel edits?');
-            if (result) {
-                overlayEditor.anyPendingChanges = false;
-            } else {
-                e.preventDefault();
+            if (!result) {
+                return
             }
         }
+        overlayEditor.anyPendingChanges = false;
+        document.querySelector('#overlay').innerHTML = '';
     },
 };
 

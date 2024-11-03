@@ -5,7 +5,7 @@
     {% endwith %}
 {% endif %}
 <div id="val-table"
-     class="w-full flex flex-col grow min-h-[15rem]"
+     class="w-full flex flex-col grow min-h-80"
      hx-get="{{ url_for('assets.valuations', **url_args) }}"
      hx-trigger="update-valuation from:body, update-asset from:body"
      hx-indicator="unset">

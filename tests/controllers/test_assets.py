@@ -128,8 +128,8 @@ class TestAsset(WebTestBase):
             headers=headers,
         )
         self.assertIn(a_0, result)
-        self.assertRegex(result, r"<h1 .*>\$0.00</h1>")
-        self.assertRegex(result, r"<h2 .*>[ \n]*no valuations[ \n]*</h2>")
+        self.assertRegex(result, r"<h1.*>\$0.00</h1>")
+        self.assertRegex(result, r"<h2.*>[ \n]*no valuations[ \n]*</h2>")
         self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
         self.assertIn("No matching valuations for given query filters", result)
 
@@ -150,8 +150,8 @@ class TestAsset(WebTestBase):
             (endpoint, {"uri": a_uri_0}),
             headers=headers,
         )
-        self.assertRegex(result, r"<h1 .*>\$100.00</h1>")
-        self.assertRegex(result, rf"<h2 .*>[ \n]*as of {today}[ \n]*</h2>")
+        self.assertRegex(result, r"<h1.*>\$100.00</h1>")
+        self.assertRegex(result, rf"<h2.*>[ \n]*as of {today}[ \n]*</h2>")
         self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
         self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 

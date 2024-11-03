@@ -24,10 +24,13 @@ def sidebar() -> str:
     Returns:
         HTML string response
     """
-    include_closed = flask.request.args.get("closed") == "included"
+    args = flask.request.args
+    include_closed = args.get("closed") == "included"
+    is_open = "open" in args
     return flask.render_template(
         "shared/sidebar.jinja",
         sidebar=ctx_sidebar(include_closed=include_closed),
+        is_open=is_open,
     )
 
 
@@ -216,15 +219,6 @@ def ctx_base() -> dict[str, object]:
     }
 
 
-def empty() -> str:
-    """GET /h/empty.
-
-    Returns:
-        HTML string response
-    """
-    return ""
-
-
 def overlay_swap(
     content: str | None = None,
     event: str | list[str] | None = None,
@@ -317,5 +311,4 @@ def page(content_template: str, title: str, **context: object) -> str:
 
 ROUTES: Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
-    "/h/empty": (empty, ["GET"]),
 }

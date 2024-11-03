@@ -1,23 +1,31 @@
-<header class="bg-green text-white fixed top-0 left-0 right-0 h-8 lg:h-12 z-40">
+<header class="bg-green text-white fixed top-0 left-0 right-0 h-8 md:h-12 z-40">
     <div class="max-w-7xl flex items-center h-full mx-auto"
          hx-target="#main"
          hx-swap="innerHTML"
          hx-push-url="true">
-        <div class="overflow-hidden h-full">
+        <div class="sidebar-opener h-8 w-10 md:hidden py-0.5 px-[6px] text-center cursor-pointer"
+             onclick="navigation.openSidebar()">
+            {% with class="w-[28px] h-[28px] fill-white" %}
+                {% include "svg/dock-left.svg" %}
+            {% endwith %}
+        </div>
+        <div class="overflow-hidden h-full max-md:grow">
             <a href="{{ url_for('dashboard.page') }}"
                hx-get="{{ url_for('dashboard.page') }}"
-               class="block cursor-pointer hover:text-green-900 transition-colors px-2 mt-[-6px]">
-                <h1 class="font-title text-4xl lg:text-6xl">nummus</h1>
+               class="block cursor-pointer md:hover:text-green-900 transition-colors px-2 mt-[-5px] md:mt-[-1px] lg:mt-[-6px] text-center">
+                <h1 class="font-title text-4xl md:text-5xl lg:text-6xl">nummus</h1>
             </a>
         </div>
-        <div class="ml-auto items-center h-full hidden lg:flex">
-            <ul class="flex h-full">
+        <div class="ml-auto items-center h-full flex">
+            <div class="h-full hidden md:flex">
                 {% for section, subpages in base["pages"].items() %}
-                    <li class="hover:bg-green-800 transition-colors p-2 mx-1 cursor-default text-3xl relative font-title h-full group">
-                        {{ section }}
-                        <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 left-0">
+                    <div class="nav-folder mx-1 relative">
+                        <div class="nav-button hover:bg-green-800 py-1.5 px-1 lg:px-2 transition-colors text-3xl font-title cursor-pointer"
+                             onclick="navigation.openDropdown(this)">{{ section }}</div>
+                        <div class="nav-dropdown absolute min-w-full text-black font-serif bg-green-300">
                             {% for title, item in subpages.items() %}
-                                <li class="border-l-green-800 border-l-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
+                                <div class="border-l-green-800 border-l-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white"
+                                     onclick="navigation.closeDropdown()">
                                     {% if item[1] %}
                                         <div class="inset-0 px-2 py-1 block cursor-pointer"
                                              hx-get="{{ url_for(item[0]) }}"
@@ -28,20 +36,23 @@
                                            href="{{ url_for(item[0]) }}"
                                            hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
                                     {% endif %}
-                                </li>
+                                </div>
                             {% endfor %}
-                        </ul>
-                    </li>
+                        </div>
+                    </div>
                 {% endfor %}
-            </ul>
-            <div class="bg-white w-px h-8 ml-1"></div>
-            <div class="h-12 w-12 relative p-2 group">
-                {% with class="fill-white transition-colors w-[32px] h-[32px] group-hover:fill-green-900" %}
-                    {% include "svg/menu.svg" %}
-                {% endwith %}
-                <ul class="invisible absolute bg-green-300 text-black font-serif top-12 min-w-full transition-transform scale-y-0 origin-top group-hover:visible group-hover:scale-y-100 right-0">
+            </div>
+            <div class="nav-folder h-8 w-10 md:h-12 md:w-12 relative font-serif text-xl text-black">
+                <div class="nav-button md:hover:bg-green-800 h-full transition-colors cursor-pointer"
+                     onclick="navigation.openDropdown(this)">
+                    <div class="nav-hamburger"></div>
+                    <div class="nav-hamburger"></div>
+                    <div class="nav-hamburger"></div>
+                </div>
+                <div class="nav-dropdown absolute min-w-full bg-green-300 right-0 hidden md:block">
                     {% for title, item in base["menu"].items() %}
-                        <li class="border-r-green-800 border-r-4 text-xl whitespace-nowrap hover:bg-green-800 hover:text-white">
+                        <div class="border-r-green-800 border-r-4 whitespace-nowrap hover:bg-green-800 hover:text-white"
+                             onclick="navigation.closeDropdown()">
                             {% if item[1] %}
                                 <div class="inset-0 px-2 py-1 block cursor-pointer"
                                      hx-get="{{ url_for(item[0]) }}"
@@ -52,9 +63,46 @@
                                    href="{{ url_for(item[0]) }}"
                                    hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
                             {% endif %}
-                        </li>
+                        </div>
                     {% endfor %}
-                </ul>
+                </div>
+                <div class="nav-dropdown absolute w-screen h-screen bg-green-300 right-0 block md:hidden pb-8">
+                    <div class="h-full overflow-y-scroll">
+                        {% for section, subpages in base["pages"].items() %}
+                            <div class="pl-2">{{ section }}</div>
+                            {% for title, item in subpages.items() %}
+                                <div class="ml-2 border-l-green-800 border-l-4 whitespace-nowrap"
+                                     onclick="navigation.closeDropdown()">
+                                    {% if item[1] %}
+                                        <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                             hx-get="{{ url_for(item[0]) }}"
+                                             hx-target="#overlay"
+                                             hx-push-url="false">{{ title }}</div>
+                                    {% else %}
+                                        <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                           href="{{ url_for(item[0]) }}"
+                                           hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+                        <div class="bg-green-800 h-px m-1"></div>
+                        {% for title, item in base["menu"].items() %}
+                            <div class="whitespace-nowrap" onclick="navigation.closeDropdown()">
+                                {% if item[1] %}
+                                    <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                         hx-get="{{ url_for(item[0]) }}"
+                                         hx-target="#overlay"
+                                         hx-push-url="false">{{ title }}</div>
+                                {% else %}
+                                    <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                       href="{{ url_for(item[0]) }}"
+                                       hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
             </div>
         </div>
     </div>

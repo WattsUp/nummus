@@ -135,11 +135,7 @@ def ctx_chart(acct: Account) -> dict[str, object]:
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None:
         opened_on_ord = acct.opened_on_ord
         start = (
@@ -214,11 +210,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     args = flask.request.args
 
     period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(
-        period,
-        args.get("start", type=datetime.date.fromisoformat),
-        args.get("end", type=datetime.date.fromisoformat),
-    )
+    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None:
         opened_on_ord = acct.opened_on_ord
         start = (
@@ -383,11 +375,7 @@ def txns(uri: str) -> flask.Response:
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(
-            period,
-            args.get("start", type=datetime.date.fromisoformat),
-            args.get("end", type=datetime.date.fromisoformat),
-        )
+        start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
         if start is None:
             opened_on_ord = acct.opened_on_ord
             start = (

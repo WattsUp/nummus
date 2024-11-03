@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 
 from nummus import utils
 from nummus.models import (
@@ -110,9 +111,17 @@ class TestEmergencyFund(WebTestBase):
             r'<script>emergencyFundChart\.update\(.*"balances": \[.+\].*\)</script>',
         )
         self.assertIn("Groceries", result)
-        self.assertIn("$32.97", result)
-        self.assertIn("$98.91", result)
-        self.assertIn("$197.83", result)
+        m = re.search(
+            r"Groceries.*\$(\d+\.\d+).*\$(\d+\.\d+).*\$(\d+\.\d+)",
+            result,
+            re.S,
+        )
+        if m is None:
+            self.fail("Could not find Groceries row")
+        else:
+            self.assertEqualWithinError(float(m[1]), 32.97, 0.01)
+            self.assertEqualWithinError(float(m[2]), 98.91, 0.01)
+            self.assertEqualWithinError(float(m[3]), 197.83, 0.01)
 
         # Increase fund to $100
         with p.get_session() as s:

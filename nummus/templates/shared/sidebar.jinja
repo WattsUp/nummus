@@ -1,20 +1,23 @@
 <div id="sidebar"
-     class="h-full w-[18rem] z-10 pt-12 top-0 fixed translate-x-[-18rem] hover:translate-x-0 transition-transform duration-300 xl:relative xl:pt-0 xl:left-0 xl:transition-none xl:translate-x-0 group/sidebar"
+     class="sidebar max-xl:unpinned {{ 'open' if is_open else '' }}"
      hx-get="{{ url_for('common.sidebar') }}"
      hx-trigger="update-account from:body, update-valuation from:body"
      hx-target="#sidebar">
-    <div class="absolute bg-blue-500 w-[32px] h-24 right-[-32px] top-16 rounded-r-lg text-white text-center text-2xl xl:hidden">
-        <div class="transition-transform duration-300 group-hover/sidebar:rotate-180 group-hover/sidebar:translate-y-16">
-            ⮕
-        </div>
-    </div>
     <nav class="h-full overflow-y-auto bg-green-300 w-full font-serif">
+        <div class="m-2 md:hover:bg-green-100 text-center group transition cursor-pointer flex items-center text-xl justify-end lg:hidden"
+             onclick="navigation.openSidebar()">
+            <span class="px-1">Close sidebar</span>
+            {% with class="w-[32px] h-[32px] fill-green-800" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </div>
         <a class="block m-2 cursor-pointer"
            href="{{ url_for('net_worth.page') }}"
            hx-get="{{ url_for('net_worth.page') }}"
            hx-target="#main"
            hx-swap="innerHTML"
-           hx-push-url="true">
+           hx-push-url="true"
+           hx-on::before-request="navigation.closeSidebar()">
             <div class="bg-green-800">
                 <h1 class="text-white p-1 text-2xl flex justify-between">
                     <span>Net Worth</span>
@@ -39,12 +42,12 @@
         </a>
         {% if sidebar["include_closed"] %}
             <button class="m-2 bg-white border-red border-2 p-1 text-center block transition-colors hover:bg-green-900 hover:text-white hover:border-green-900"
-                    hx-get="{{ url_for('common.sidebar', closed='excluded') }}">
+                    hx-get="{{ url_for('common.sidebar', closed='excluded', open=true) }}">
                 Closed accounts marked with red borders. Click to hide.
             </button>
         {% endif %}
         {% for cat, item in sidebar["categories"].items() %}
-            <div class="m-2">
+            <div class="m-2" hx-on::before-request="navigation.closeSidebar()">
                 <div class="block bg-green-800" todo="/#todo">
                     <h1 class="text-white p-1 text-xl flex justify-between">
                         <span>{{ cat | enum | title }}</span><span>{{ item[0] | money }}</span>
@@ -58,7 +61,7 @@
                                  hx-get="{{ url_for('accounts.account', uri=acct['uri']) }}"
                                  hx-target="#overlay"
                                  hx-swap="innerHTML">
-                                {% with class="fill-transparent transition-colors group-hover/navitem:fill-black" %}
+                                {% with class="fill-transparent transition-colors group-hover/navitem:fill-black max-md:fill-black" %}
                                     {% include "svg/pencil.svg" %}
                                 {% endwith %}
                             </div>
@@ -91,14 +94,14 @@
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for('common.sidebar', closed='excluded') }}">Click to hide</button>
+                        hx-get="{{ url_for('common.sidebar', closed='excluded', open=true) }}">Click to hide</button>
             {% else %}
                 <span>Excluded
                     {{ sidebar["n_closed"] }}
                     closed accounts
                 </span>
                 <button class="button bg-white"
-                        hx-get="{{ url_for('common.sidebar', closed='included') }}">Click to show</button>
+                        hx-get="{{ url_for('common.sidebar', closed='included', open=true) }}">Click to show</button>
             {% endif %}
         </div>
     </nav>

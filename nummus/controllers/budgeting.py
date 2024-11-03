@@ -202,7 +202,7 @@ def assign(uri: str) -> str:
     month_ord = month.toordinal()
 
     form = flask.request.form
-    amount = form.get("amount", type=utils.parse_real) or Decimal(0)
+    amount = utils.parse_real(form.get("amount")) or Decimal(0)
 
     with p.get_session() as s:
         cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
@@ -381,7 +381,7 @@ def move(uri: str) -> str | flask.Response:
             else:
                 _, _, available = categories[t_cat.id_]
             dest = flask.request.form["destination"]
-            to_move = flask.request.form.get("amount", type=utils.parse_real)
+            to_move = utils.parse_real(flask.request.form.get("amount"))
             if to_move is None:
                 return common.error("Amount to move must not be blank")
 

@@ -26,7 +26,7 @@ const nummusChart = {
             tooltip: {
                 intersect: false,
                 mode: 'index',
-                enabled: true,
+                enabled: window.screen.width >= 768,
                 callbacks: {
                     label: function(context) {
                         let label = context.dataset.label || '';
@@ -270,6 +270,9 @@ const nummusChart = {
             // Swapping same type monthly or not
             for (let i = 0; i < datasets.length; ++i) {
                 chart.data.datasets[i].data = datasets[i].data;
+                chart.data.datasets[i].borderColor = datasets[i].borderColor;
+                chart.data.datasets[i].backgroundColor =
+                    datasets[i].backgroundColor;
             }
         } else {
             chart.data.datasets = datasets;

@@ -1,13 +1,13 @@
 <div id="accounts"
-     class="w-full flex flex-col max-h-[25vh] overflow-y-auto"
+     class="min-h-80 max-h-[25vh] overflow-y-scroll"
      hx-swap-oob="{{ oob }}">
-    <div class="header w-full flex justify-between font-bold border-b border-b-grey-200 sticky top-0 bg-white">
-        <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">Name</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Initial Balance</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Cash Flow</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">End Balance</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">Profit &amp; Loss</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 text-right tooltip">
+    <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-[650px]">
+        <div class="w-28 shrink-0 grow-[4] p-1 truncate">Name</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">Initial</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">Cash Flow</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">End Balance</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">P&amp;L</div>
+        <div class="w-24 shrink-0 grow p-1 text-right md:tooltip">
             MWRR p.a.
             <div class="tooltip-text right-[80%] after:top-1/4 top-0  after:left-full after:border-l-grey-800 after:-mt-[4px] font-normal w-60">
                 Money-Weighted Return Rate per annum
@@ -18,15 +18,15 @@
         {% include "performance/account-view.jinja" %}
     {% endfor %}
     <div id="accounts-total"
-         class="w-full flex justify-between font-bold border-t border-t-grey-200 sticky bottom-0 bg-white">
-        <div class="p-1 grow">Total</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["initial"] | money }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["cash_flow"] | money }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ accounts["end"] | money }}</div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["profit"] | pnl_color }}">
+         class="w-full flex font-bold border-t border-t-grey-200 sticky bottom-0 bg-white min-w-[650px]">
+        <div class="w-28 shrink-0 grow-[4] p-1 truncate">Total</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">{{ accounts["initial"] | money }}</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">{{ accounts["cash_flow"] | money }}</div>
+        <div class="w-28 shrink-0 grow p-1 text-right">{{ accounts["end"] | money }}</div>
+        <div class="w-28 shrink-0 grow p-1 text-right text-{{ accounts["profit"] | pnl_color }}">
             {{ accounts["profit"] | money }}
         </div>
-        <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ accounts["mwrr"] | pnl_color }}">
+        <div class="w-24 shrink-0 grow p-1 text-right text-{{ accounts["mwrr"] | pnl_color }}">
             {{ accounts["mwrr"] | percent }}
         </div>
     </div>

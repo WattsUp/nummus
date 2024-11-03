@@ -66,6 +66,12 @@ const emergencyFundChart = {
             labels,
             dateMode,
             datasets,
+            null,
+            {
+                scales: {
+                    x: {ticks: {callback: formatDateTicksMonths}},
+                },
+            },
         );
     },
     /**

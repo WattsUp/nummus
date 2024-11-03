@@ -1,38 +1,26 @@
-<div class="w-full flex even:bg-grey-50 hover:bg-grey-100">
-    {% if asset["uri"] %}
-        <div class="w-[2rem] min-w-[2rem] p-1 truncate flex items-center justify-center group cursor-pointer"
-             hx-get="{{ url_for('assets.asset', uri=asset['uri']) }}"
-             hx-target="#overlay"
-             hx-swap="innerHTML">
-            {% with class="w-[20px] h-[20px] fill-transparent transition-colors group-hover:fill-black" %}
-                {% include "svg/pencil.svg" %}
-            {% endwith %}
-        </div>
-        <a id="asset-{{ asset["uri"] }}"
-           class="w-full flex justify-between"
-           hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
-           href="{{ url_for('assets.page', uri=asset['uri']) }}"
-           hx-target="#main"
-           hx-swap="innerHTML"
-           hx-include="unset"
-           hx-push-url="true">
-            {% block row %}
-                <div class="w-[8rem] min-w-[8rem] p-1 truncate">{{ asset["category"] | enum | title }}</div>
-                <div class="w-[15rem] min-w-[15rem] p-1 truncate grow">{{ asset["name"] }}</div>
-                <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">
-                    {% if asset["end_qty"] is not none %}{{ asset["end_qty"] | qty }}{% endif %}
-                </div>
-                <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ asset["end_value"] | money }}</div>
-                <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right">{{ asset["end_value_ratio"] | percent }}</div>
-                <div class="w-[8rem] min-w-[8rem] p-1 truncate text-right text-{{ asset["profit"] | pnl_color }}">
-                    {% if asset["profit"] is not none %}{{ asset["profit"] | money }}{% endif %}
-                </div>
-            {% endblock row %}
-        </a>
-    {% else %}
-        <div class="w-full flex justify-between even:bg-grey-50 hover:bg-grey-100">
-            <div class="w-[2rem] min-w-[2rem] p-1"></div>
-            {{ self.row() }}
-        </div>
-    {% endif %}
-</div>
+{% set class = "w-full flex even:bg-grey-50 hover:bg-grey-100 min-w-[500px]" %}
+{% if asset["uri"] %}
+    <a id="asset-{{ asset["uri"] }}"
+       class="{{ class }}"
+       hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
+       href="{{ url_for('assets.page', uri=asset['uri']) }}"
+       hx-target="#main"
+       hx-swap="innerHTML"
+       hx-include="unset"
+       hx-push-url="true">
+        {% block row %}
+            <div class="w-24 shrink-0 grow p-1 truncate max-md:hidden">{{ asset["category"] | enum | title }}</div>
+            <div class="w-32 shrink-0 grow-[4] p-1 truncate">{{ asset["name"] }}</div>
+            <div class="w-28 shrink-0 grow p-1 text-right max-md:hidden">
+                {% if asset["end_qty"] is not none %}{{ asset["end_qty"] | qty }}{% endif %}
+            </div>
+            <div class="w-28 shrink-0 grow p-1 text-right">{{ asset["end_value"] | money }}</div>
+            <div class="w-20 shrink-0 grow p-1 text-right">{{ asset["end_value_ratio"] | percent }}</div>
+            <div class="w-28 shrink-0 grow p-1 text-right text-{{ asset["profit"] | pnl_color }}">
+                {% if asset["profit"] is not none %}{{ asset["profit"] | money }}{% endif %}
+            </div>
+        {% endblock row %}
+    </a>
+{% else %}
+    <div class="{{ class }}">{{ self.row() }}</div>
+{% endif %}

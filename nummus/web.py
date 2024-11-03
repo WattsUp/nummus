@@ -166,6 +166,7 @@ class Server:
         self._app.context_processor(
             lambda: {
                 "version": version.__version__,
+                "current_year": datetime.date.today().year,
                 "url_args": {},
             },
         )

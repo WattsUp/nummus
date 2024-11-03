@@ -73,6 +73,8 @@ const cashFlowChart = {
             hoverRadius: 0,
         };
 
+        const ticksEnabled = window.screen.width >= 768;
+
         {
             const canvas = document.getElementById('cash-flow-chart-canvas');
             const ctx = canvas.getContext('2d');
@@ -102,49 +104,15 @@ const cashFlowChart = {
                     dateMode,
                     datasets,
                     null,
-                    {scales: {x: {stacked: true}}},
-                );
-            }
-        }
-
-        const width = 65;
-
-        {
-            const canvas = document.getElementById('income-chart-canvas');
-            const ctx = canvas.getContext('2d');
-            if (this.chartIncome && ctx == this.chartIncome.ctx) {
-                nummusChart.update(
-                    this.chartIncome, labels, dateMode, [datasetIncome]);
-            } else {
-                const plugins = [
-                    [pluginFixedAxisWidth, {width: width}],
-                ];
-                this.chartIncome = nummusChart.create(
-                    ctx,
-                    labels,
-                    dateMode,
-                    [datasetIncome],
-                    plugins,
-                );
-            }
-        }
-
-        {
-            const canvas = document.getElementById('expense-chart-canvas');
-            const ctx = canvas.getContext('2d');
-            if (this.chartExpense && ctx == this.chartExpense.ctx) {
-                nummusChart.update(
-                    this.chartExpense, labels, dateMode, [datasetExpense]);
-            } else {
-                const plugins = [
-                    [pluginFixedAxisWidth, {width: width}],
-                ];
-                this.chartExpense = nummusChart.create(
-                    ctx,
-                    labels,
-                    dateMode,
-                    [datasetExpense],
-                    plugins,
+                    {
+                        scales: {
+                            x: {
+                                stacked: true,
+                                ticks: {display: ticksEnabled},
+                                grid: {drawTicks: ticksEnabled}
+                            }
+                        }
+                    },
                 );
             }
         }

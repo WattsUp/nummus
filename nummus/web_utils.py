@@ -61,8 +61,8 @@ def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
 
 def parse_period(
     period: str,
-    start_custom: datetime.date | None,
-    end_custom: datetime.date | None,
+    start_custom: datetime.date | str | None,
+    end_custom: datetime.date | str | None,
 ) -> tuple[datetime.date | None, datetime.date]:
     """Parse time period from arguments.
 
@@ -75,6 +75,11 @@ def parse_period(
         start, end dates
         start is None for "all"
     """
+    if isinstance(start_custom, str):
+        start_custom = datetime.date.fromisoformat(start_custom)
+    if isinstance(end_custom, str):
+        end_custom = datetime.date.fromisoformat(end_custom)
+
     today = datetime.date.today()
     if period == "custom":
         earliest = datetime.date(1970, 1, 1)
