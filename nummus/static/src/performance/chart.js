@@ -32,7 +32,7 @@ const performanceChart = {
 
         const blue = getThemeColor('blue');
         const yellow = getThemeColor('yellow');
-        const width = 65;
+        const ticksEnabled = window.screen.width >= 768;
 
         {
             const canvas = document.getElementById('performance-chart-canvas');
@@ -128,6 +128,10 @@ const performanceChart = {
 
             const options = {
                 scales: {
+                    x: {
+                        ticks: {display: ticksEnabled},
+                        grid: {drawTicks: ticksEnabled}
+                    },
                     y: {
                         ticks: {
                             callback: formatPercentTicks,
@@ -158,15 +162,12 @@ const performanceChart = {
             if (this.chart && ctx == this.chart.ctx) {
                 nummusChart.update(this.chart, labels, dateMode, datasets);
             } else {
-                const plugins = [
-                    [pluginFixedAxisWidth, {width: width}],
-                ];
                 this.chart = nummusChart.create(
                     ctx,
                     labels,
                     dateMode,
                     datasets,
-                    plugins,
+                    null,
                     options,
                 );
             }

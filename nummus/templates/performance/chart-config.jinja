@@ -1,11 +1,11 @@
 <div id="performance-config"
-     class="w-full flex justify-end gap-1 font-serif"
+     class="w-full my-1 font-serif flex justify-between max-lg:flex-col gap-1"
      hx-swap-oob="{{ oob }}"
      hx-include="#performance-config"
      hx-target="#performance-chart-data"
      hx-swap="outerHTML"
      hx-indicator=".spinner">
-    <div>
+    <div class="flex justify-center items-center gap-1">
         Selected index
         <select name="index"
                 hx-get="{{ url_for('performance.chart') }}"
@@ -14,34 +14,36 @@
                 <option value="{{ index }}" {% if selected %}selected{% endif %}>{{ index }}</option>
             {% endfor %}
         </select>
-        <div class="tooltip">
+        <div class="tooltip max-md:hidden">
             {% with class = "w-6 h-6 inline-block align-bottom" %}
                 {% include "svg/help.svg" %}
             {% endwith %}
-            <div class="tooltip-text left-[120%] top-1/2 -translate-y-1/2 after:right-full after:border-r-grey-800 after:-mt-[4px] font-sans">
+            <div class="tooltip-text left-1/2 -translate-x-1/2 mt-1 font-sans after:bottom-full after:border-b-grey-800 after:-ml-[4px] after:top-[unset] after:left-1/2">
                 {{ chart["index_description"] }}
             </div>
         </div>
     </div>
-    <div class="grow"></div>
-    <select name="period"
-            hx-get="{{ url_for('performance.chart') }}"
-            autocomplete="off">
-        {% with period = chart["period"] %}
-            {% include "shared/period-options.jinja" %}
-        {% endwith %}
-    </select>
-    <input type="date"
-           name="start"
-           value="{{ chart["start"] }}"
-           hx-get="{{ url_for('performance.chart', period='custom') }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed"
-           autocomplete="off">
-    to
-    <input type="date"
-           name="end"
-           value="{{ chart["end"] }}"
-           hx-get="{{ url_for('performance.chart', period='custom') }}"
-           hx-trigger="blur changed,keyup[keyCode==13] changed"
-           autocomplete="off">
+    <div class="italic md:hidden">{{ chart["index_description"] }}</div>
+    <div class="flex justify-center items-center gap-1">
+        <select name="period"
+                hx-get="{{ url_for('performance.chart') }}"
+                autocomplete="off">
+            {% with period = chart["period"] %}
+                {% include "shared/period-options.jinja" %}
+            {% endwith %}
+        </select>
+        <input type="date"
+               name="start"
+               value="{{ chart["start"] }}"
+               hx-get="{{ url_for('performance.chart', period='custom') }}"
+               hx-trigger="blur changed,keyup[keyCode==13] changed"
+               autocomplete="off">
+        to
+        <input type="date"
+               name="end"
+               value="{{ chart["end"] }}"
+               hx-get="{{ url_for('performance.chart', period='custom') }}"
+               hx-trigger="blur changed,keyup[keyCode==13] changed"
+               autocomplete="off">
+    </div>
 </div>
