@@ -156,7 +156,6 @@ const netWorthChart = {
                     plugins,
                     {
                         plugins: {tooltip: {enabled: false}},
-
                         scales: {
                             x: {
                                 ticks: {display: ticksEnabled},

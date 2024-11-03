@@ -3,9 +3,9 @@
          hx-trigger="update-account from:body, update-asset from:body"
          hx-target="#main"
          hx-swap="innerHTML">
-    <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
-    <div class="w-full flex text-lg">
-        <h2 class="ml-auto">
+    <div class="w-full flex justify-between items-end">
+        <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
+        <h2 class="text-lg whitespace-nowrap">
             Today's Balance <b>{{ current | money }}</b>
         </h2>
     </div>
