@@ -3,18 +3,17 @@
            type="checkbox"
            id="toggle-{{ name }}">
     <label class="budget-group-toggle-label" for="toggle-{{ name }}"></label>
-    <div class="w-full bg-grey-100 flex p-1 items-center">
-        <div class="grow">{{ name }}</div>
-        <div class="w-28 text-right">{{ group["assigned"] | money }}</div>
-        <div class="w-28 text-right">{{ group["activity"] | money }}</div>
-        <div class="w-28 text-right pr-1">{{ group["available"] | money }}</div>
+    <div class="w-full flex gap-1 py-1 bg-grey-100">
+        <div class="w-28 shrink-0 grow">{{ name }}</div>
+        <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
+        <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
+        <div class="w-28 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
     </div>
-    <div class="budget-group w-full">
+    <div class="budget-group w-full pb-1">
         {% for category in group["categories"] %}
             <div id="category-{{ category["uri"] }}"
-                 class="w-full flex p-1 items-center">
-                <div class="w-2"></div>
-                <div class="grow">
+                 class="w-full flex gap-1 pt-1 items-center">
+                <div class="w-28 shrink-0 grow">
                     <div>{{ category["emoji_name"] }}</div>
                     {% if category["bar_mode"] == "grey" %}
                         <div class="h-1 mr-1 bg-grey-400"></div>
@@ -28,7 +27,7 @@
                         </div>
                     {% endif %}
                 </div>
-                <div class="w-28 text-right hover-edit">
+                <div class="w-28 shrink-0 text-right max-md:hidden hover-edit">
                     <input class="w-full text-right"
                            placeholder="0.00"
                            value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
@@ -36,8 +35,10 @@
                            hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}">
                     <span class="w-full text-right">{{ category["assigned"] | money }}</span>
                 </div>
-                <div class="w-28 text-right">{{ category["activity"] | money }}</div>
-                <div class="w-28 text-right" hx-target="#overlay" hx-swap="innerHTML">
+                <div class="w-28 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
+                <div class="w-28 shrink-0 text-right"
+                     hx-target="#overlay"
+                     hx-swap="innerHTML">
                     {% if category["available"] == 0 %}
                         <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
                     {% elif category["available"] > 0 %}

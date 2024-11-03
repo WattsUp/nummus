@@ -1,21 +1,22 @@
 <div id="budget-table"
-     class="w-full flex grow gap-2"
+     class="w-full flex gap-2 max-lg:flex-col-reverse max-lg:items-center"
      hx-target="#budget-table"
      hx-swap="outerHTML">
-    <div class="grow">
-        <div class="w-full flex p-1">
-            <div class="grow"></div>
-            <div class="w-28 text-right">Assigned</div>
-            <div class="w-28 text-right">Activity</div>
-            <div class="w-28 text-right">Available</div>
+    <div class="grow max-lg:w-full">
+        <div class="w-full flex gap-1 p-1">
+            <div class="w-28 shrink-0 grow"></div>
+            <div class="w-28 shrink-0 text-right max-md:hidden">Assigned</div>
+            <div class="w-28 shrink-0 text-right max-md:hidden">Activity</div>
+            <div class="w-28 shrink-0 text-right">Available</div>
         </div>
         {% for name, group in table["groups"] %}
             {% include "budgeting/table_group.jinja" %}
         {% endfor %}
     </div>
-    <div class="w-1/3" hx-target="#overlay" hx-swap="innerHTML">
+    <div class="lg:w-1/3" hx-target="#overlay" hx-swap="innerHTML">
+        {% set class = "w-full text-xl flex justify-between p-2 items-center gap-2" %}
         {% if table["assignable"] == 0 %}
-            <div class="w-full bg-grey-200 text-xl flex justify-between p-2 items-center">
+            <div class="{{ class }} bg-grey-200">
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">All money assigned</div>
@@ -28,7 +29,7 @@
                 {% endwith %}
             </div>
         {% elif table["assignable"] > 0 %}
-            <div class="w-full bg-green-200 text-xl flex justify-between p-2 items-center">
+            <div class="{{ class }} bg-green-200">
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">Ready to assign</div>
@@ -40,7 +41,7 @@
                         hx-get="{{ url_for('budgeting.move', uri='income', month=table['month']) }}">Assign</button>
             </div>
         {% else %}
-            <div class="w-full bg-red-200 text-xl flex justify-between p-2 items-center">
+            <div class="{{ class }} bg-red-200">
                 <div>
                     <div>{{ table["assignable"] | money }}</div>
                     <div class="text-base">More money assigned than held</div>
