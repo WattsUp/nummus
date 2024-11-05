@@ -34,7 +34,7 @@ class TestPerformance(WebTestBase):
         )
         self.assertRegex(
             result,
-            r'<script>performanceChart\.update\(.*"values": \[.+\].*\)</script>',
+            r'<script>performance\.update\(.*"values": \[.+\].*\)</script>',
         )
 
     def test_chart(self) -> None:
@@ -107,12 +107,12 @@ class TestPerformance(WebTestBase):
         self.assertNotIn("<html", result)
         self.assertRegex(
             result,
-            r"<script>performanceChart\.update\(.*"
+            r"<script>performance\.update\(.*"
             r'"min": null.*"values": \[.+\].*\)</script>',
         )
         self.assertIn('<div id="performance-config"', result)
         m = re.search(
-            r"<script>performanceChart\.update\(.*"
+            r"<script>performance\.update\(.*"
             r'"index": \[([^\]]+)\].*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
@@ -182,13 +182,12 @@ class TestPerformance(WebTestBase):
         )
         self.assertRegex(
             result,
-            r"<script>performanceChart\.update\(.*"
+            r"<script>performance\.update\(.*"
             r'index": \[.+\].*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "weeks"', result)
         m = re.search(
-            r"<script>performanceChart\.update\(.*"
-            r'"index": \[([^\]]+)\].*\)</script>',
+            r'<script>performance\.update\(.*"index": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -202,8 +201,7 @@ class TestPerformance(WebTestBase):
         )
         self.assertIn('"date_mode": "months"', result)
         m = re.search(
-            r"<script>performanceChart\.update\(.*"
-            r'"index": \[([^\]]+)\].*\)</script>',
+            r'<script>performance\.update\(.*"index": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -217,11 +215,11 @@ class TestPerformance(WebTestBase):
         )
         self.assertRegex(
             result,
-            r"<script>performanceChart\.update\(.*"
+            r"<script>performance\.update\(.*"
             r'index": \[.+\].*"min": \[.+\].*\)</script>',
         )
         m = re.search(
-            r'<script>performanceChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>performance\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)

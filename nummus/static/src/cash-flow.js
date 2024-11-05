@@ -1,4 +1,4 @@
-const cashFlowChart = {
+const cashFlow = {
     chartTotal: null,
     chartIncome: null,
     chartExpense: null,

@@ -1,4 +1,4 @@
-const assetChart = {
+const assets = {
     chart: null,
     chartProfit: null,
     /**

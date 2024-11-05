@@ -23,7 +23,7 @@ class TestCashFlow(WebTestBase):
         self.assertIn("income-pie-chart-canvas", result)
         self.assertRegex(
             result,
-            r'<script>cashFlowChart\.update\(.*"totals": \[.+\].*\)</script>',
+            r'<script>cashFlow\.update\(.*"totals": \[.+\].*\)</script>',
         )
         self.assertNotIn("Uncategorized", result)
 
@@ -44,13 +44,13 @@ class TestCashFlow(WebTestBase):
         self.assertNotIn("income-pie-chart-canvas", result)
         self.assertRegex(
             result,
-            r"<script>cashFlowChart\.update\(.*"
+            r"<script>cashFlow\.update\(.*"
             r'"chart_bars": false.*"totals": \[.+\].*\)</script>',
         )
         self.assertIn("Interest", result)
         self.assertNotIn("Uncategorized", result)
         m = re.search(
-            r'<script>cashFlowChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>cashFlow\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -66,14 +66,14 @@ class TestCashFlow(WebTestBase):
             (endpoint, {"period": "all"}),
         )
         # Second call for table should not update chart as well
-        self.assertNotRegex(result, r"<script>cashFlowChart\.update\(.*\)</script>")
+        self.assertNotRegex(result, r"<script>cashFlow\.update\(.*\)</script>")
 
         result, _ = self.web_get(
             (endpoint, {"period": "30-days", "account": "None selected"}),
         )
         self.assertRegex(
             result,
-            r"<script>cashFlowChart\.update\(.*"
+            r"<script>cashFlow\.update\(.*"
             r'"chart_bars": false.*"totals": \[.+\].*\)</script>',
         )
         self.assertIn('"date_mode": "weeks"', result)
@@ -91,13 +91,13 @@ class TestCashFlow(WebTestBase):
         )
         self.assertRegex(
             result,
-            r"<script>cashFlowChart\.update\(.*"
+            r"<script>cashFlow\.update\(.*"
             r'"chart_bars": true.*"totals": \[.+\].*\)</script>',
         )
         self.assertIn("Interest", result)
         self.assertNotIn("Uncategorized", result)
         m = re.search(
-            r'<script>cashFlowChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>cashFlow\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -258,10 +258,10 @@ class TestCashFlow(WebTestBase):
         )
         self.assertRegex(
             result,
-            r'<script>cashFlowChart\.updateDashboard\(.*"totals": \[.+\].*\)</script>',
+            r'<script>cashFlow\.updateDashboard\(.*"totals": \[.+\].*\)</script>',
         )
         m = re.search(
-            r"<script>cashFlowChart\.updateDashboard\("
+            r"<script>cashFlow\.updateDashboard\("
             r'.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )

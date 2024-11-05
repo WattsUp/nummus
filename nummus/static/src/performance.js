@@ -1,4 +1,4 @@
-const performanceChart = {
+const performance = {
     chart: null,
     /**
      * Create Performance Chart
