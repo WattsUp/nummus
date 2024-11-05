@@ -2,7 +2,7 @@
      class="w-full flex gap-2 max-lg:flex-col-reverse max-lg:items-center"
      hx-target="#budget-table"
      hx-swap="outerHTML">
-    <div class="grow max-lg:w-full">
+    <div id="budget-table-root" class="grow max-lg:w-full">
         <div class="w-full flex gap-1 p-1">
             <div class="w-28 shrink-0 grow"></div>
             <div class="w-28 shrink-0 text-right max-md:hidden">Assigned</div>
@@ -67,4 +67,5 @@
             </div>
         {% endif %}
     </div>
+    <script>budgeting.setup()</script>
 </div>

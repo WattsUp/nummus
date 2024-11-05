@@ -1,3 +1,4 @@
+'use strict';
 const emergencyFund = {
     chart: null,
     /**

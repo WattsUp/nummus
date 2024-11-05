@@ -1,3 +1,4 @@
+'use strict';
 const performance = {
     chart: null,
     /**
