@@ -519,11 +519,11 @@ class TestPortfolio(TestBase):
                 self.assertEqual(txn.amount, 0)
 
                 splits = txn.splits
-                self.assertEqual(len(splits), 2)
+                self.assertEqual(len(splits), 1 if txn.statement == "Cash Maker" else 2)
                 splits = sorted(splits, key=lambda t_split: t_split.amount)
 
                 if txn.statement == "Profit Maker":
-                    # Dividends
+                    # Reinvested Dividends
                     t_split = splits[0]
                     self.assertEqual(t_split.amount, Decimal("-1234.56"))
                     self.assertEqual(t_split.asset_quantity, Decimal("32.1234"))
@@ -534,6 +534,16 @@ class TestPortfolio(TestBase):
                     )
 
                     t_split = splits[1]
+                    self.assertEqual(t_split.amount, Decimal("1234.56"))
+                    self.assertEqual(t_split.asset_quantity, 0)
+                    self.assertEqual(t_split.asset_id, a_id)
+                    self.assertEqual(
+                        t_split.category_id,
+                        categories["Dividends Received"],
+                    )
+                elif txn.statement == "Cash Maker":
+                    # Cash Dividends
+                    t_split = splits[0]
                     self.assertEqual(t_split.amount, Decimal("1234.56"))
                     self.assertEqual(t_split.asset_quantity, 0)
                     self.assertEqual(t_split.asset_id, a_id)

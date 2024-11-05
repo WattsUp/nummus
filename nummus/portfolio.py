@@ -432,15 +432,6 @@ class Portfolio:
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
-                            amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=qty,
-                        )
-                        t_split_1 = TransactionSplit(
-                            parent=txn,
                             amount=amount,
                             payee=d["payee"],
                             description=d["description"],
@@ -448,7 +439,19 @@ class Portfolio:
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
-                        s.add_all((txn, t_split_0, t_split_1))
+                        t_split_1 = TransactionSplit(
+                            parent=txn,
+                            amount=-amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Securities Traded"].id_,
+                            asset_id=asset_id,
+                            asset_quantity_unadjusted=qty,
+                        )
+                        s.add_all((txn, t_split_0))
+                        if qty != 0:
+                            # Zero quantity means cash dividends, not reinvested
+                            s.add(t_split_1)
                         continue
                 else:
                     # Don't match if an asset transaction
@@ -512,6 +515,14 @@ class Portfolio:
                 s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
                 s.commit()
             s.add(ImportedFile(hash_=h))
+            s.commit()
+
+            # Update splits on each touched
+            query = s.query(Asset).where(
+                Asset.id_.in_(a_id for a_id, _ in asset_mapping.values()),
+            )
+            for asset in query.all():
+                asset.update_splits()
             s.commit()
 
         # If successful, delete the temp file

@@ -77,7 +77,7 @@ def ctx_page() -> dict[str, object]:
                 balances.append(balance)
                 date_ord += 1
             balance += amount
-        while date_ord < today_ord:
+        while date_ord <= today_ord:
             balances.append(balance)
             date_ord += 1
 

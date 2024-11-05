@@ -4,7 +4,7 @@
            id="toggle-{{ name }}">
     <label class="budget-group-toggle-label" for="toggle-{{ name }}"></label>
     <div class="w-full flex gap-1 py-1 bg-grey-100">
-        <div class="w-28 shrink-0 grow">{{ name }}</div>
+        <div class="w-28 shrink-0 grow pl-1">{{ name }}</div>
         <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
         <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
         <div class="w-28 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
