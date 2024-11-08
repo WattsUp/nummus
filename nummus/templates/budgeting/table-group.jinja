@@ -1,4 +1,5 @@
-<div class="w-full pl-4 relative will-change-transform budget-group">
+<div id="budget-group-{{ name }}"
+     class="w-full pl-4 relative will-change-transform budget-group">
     <input class="budget-group-toggle hidden"
            type="checkbox"
            id="toggle-{{ name }}">
@@ -11,8 +12,9 @@
     </div>
     <div class="w-full pb-1 budget-group-fold">
         {% for category in group["categories"] %}
-            <div id="category-{{ category["uri"] }}"
+            <div id="category-{{ category["name"] }}"
                  class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row">
+                <input name="row" value="{{ category["uri"] }}" hidden>
                 <div class="w-28 shrink-0 grow cursor-grab budget-row-handle">
                     <div>{{ category["emoji_name"] }}</div>
                     {% if category["bar_mode"] == "grey" %}

@@ -1,7 +1,10 @@
 <div id="budget-table"
      class="w-full flex gap-2 max-lg:flex-col-reverse max-lg:items-center"
      hx-target="#budget-table"
-     hx-swap="outerHTML">
+     hx-swap="outerHTML"
+     hx-trigger="reorder-rows"
+     hx-put="{{ url_for('budgeting.reorder') }}"
+     hx-include="this">
     <div id="budget-table-root" class="grow max-lg:w-full">
         <div class="w-full flex gap-1 p-1">
             <div class="w-28 shrink-0 grow"></div>

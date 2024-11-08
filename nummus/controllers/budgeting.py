@@ -464,9 +464,47 @@ def move(uri: str) -> str | flask.Response:
     )
 
 
+def reorder() -> str:
+    """GET & PUT /h/budgeting/c/<uri>/move.
+
+    Args:
+        uri: Category URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    form = flask.request.form
+    row_uris = form.getlist("row")
+    groups = form.getlist("group")
+
+    with p.get_session() as s:
+        for i, (t_cat_uri, group) in enumerate(zip(row_uris, groups, strict=True)):
+            t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
+            s.query(TransactionCategory).where(
+                TransactionCategory.id_ == t_cat_id,
+            ).update(
+                {
+                    "budget_position": int(i),
+                    "budget_group": group,
+                },
+            )
+
+        s.commit()
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+    )
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
+    "/h/budgeting/reorder": (reorder, ["PUT"]),
 }
