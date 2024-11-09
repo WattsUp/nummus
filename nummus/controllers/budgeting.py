@@ -558,15 +558,39 @@ def group(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    name = flask.request.form["name"]
+    if flask.request.method == "PUT":
+        name = flask.request.form["name"]
 
-    with p.get_session() as s:
-        g = web_utils.find(s, BudgetGroup, uri)
-        try:
-            g.name = name
+        with p.get_session() as s:
+            g = web_utils.find(s, BudgetGroup, uri)
+            try:
+                g.name = name
+                s.commit()
+            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                return common.error(e)
+    elif flask.request.method == "DELETE":
+        with p.get_session() as s:
+            g = web_utils.find(s, BudgetGroup, uri)
+            s.query(TransactionCategory).where(
+                TransactionCategory.budget_group_id == g.id_,
+            ).update(
+                {
+                    TransactionCategory.budget_group_id: None,
+                    TransactionCategory.budget_position: None,
+                },
+            )
+            s.delete(g)
+            # Subtract 1 from the following positions to close the gap
+            query = (
+                s.query(BudgetGroup)
+                .where(BudgetGroup.position >= g.position)
+                .order_by(BudgetGroup.position)
+            )
+            for g in query.yield_per(YIELD_PER):
+                g.position -= 1
             s.commit()
-        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+    else:
+        raise NotImplementedError
 
     table, _ = ctx_table()
     return flask.render_template(
@@ -610,6 +634,6 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
-    "/h/budgeting/g/<path:uri>": (group, ["PUT"]),
+    "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
 }

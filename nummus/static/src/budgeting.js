@@ -1,6 +1,9 @@
 'use strict';
 const budgeting = {
     table: null,
+    trash: null,
+    trashSVG: null,
+    trashRect: null,
     isGroup: false,
     dragItem: null,
     dragItemHeight: null,
@@ -22,6 +25,8 @@ const budgeting = {
      */
     setup: function() {
         this.table = document.querySelector('#budget-table');
+        this.trash = document.querySelector('#budget-trash');
+        this.trashSVG = this.trash.querySelector('svg');
 
         // Remove any that exist
         this.table.removeEventListener('mousedown', this.dragStart);
@@ -116,6 +121,7 @@ const budgeting = {
         if (budgeting.isGroup) {
             document.querySelector('#budget-temp-group')
                 .append(budgeting.dragItem);
+            budgeting.trash.classList.remove('hidden');
         } else {
             document.querySelector('#budget-temp-row')
                 .append(budgeting.dragItem);
@@ -153,6 +159,8 @@ const budgeting = {
             budgeting.staticItemsY[i] = rect.y;
         });
 
+        budgeting.trashRect = budgeting.trash.getBoundingClientRect();
+
         budgeting.drag(event);
     },
     /**
@@ -165,6 +173,15 @@ const budgeting = {
         const offsetY = event.clientY - budgeting.initialY;
         const dragItemY = event.clientY - budgeting.mouseOffsetY -
             budgeting.dragItemHeight / 2;
+
+        if (budgeting.isGroup && event.clientX >= budgeting.trashRect.left &&
+            event.clientX <= budgeting.trashRect.right &&
+            event.clientY >= budgeting.trashRect.top &&
+            event.clientY <= budgeting.trashRect.bottom) {
+            budgeting.trashSVG.classList.add('fill-red');
+        } else {
+            budgeting.trashSVG.classList.remove('fill-red');
+        }
 
         budgeting.dragItem.style.transform =
             `translate(${offsetX}px, ${offsetY}px)`;
@@ -202,11 +219,20 @@ const budgeting = {
      * @param {Event} event Triggering event
      */
     dragEnd: function(event) {
+        let anyMoved = false;
         if (budgeting.isDragging) {
             // Get the final state and submit
             let lastChange = null;
             let invalid = false;
             if (budgeting.isGroup) {
+                if (event.clientX >= budgeting.trashRect.left &&
+                    event.clientX <= budgeting.trashRect.right &&
+                    event.clientY >= budgeting.trashRect.top &&
+                    event.clientY <= budgeting.trashRect.bottom) {
+                    budgeting.cleanUp();
+                    htmx.trigger(`#${budgeting.dragItem.id}`, 'trash-group');
+                    return;
+                }
                 invalid = true;
                 document.querySelectorAll('.budget-group:not(.dragging)')
                     .forEach((e) => {
@@ -303,25 +329,13 @@ const budgeting = {
                 }
             }
 
-            // Restore open states
-            document.querySelectorAll('.budget-group-toggle').forEach((e) => {
-                e.checked = budgeting.groupOpen[e.id];
-            });
-            // Finish dragging
-            budgeting.staticItems.forEach((e) => {
-                e.style.transform = '';
-            })
-            budgeting.dragItem.style.transform = '';
-            budgeting.table.classList.remove('select-none');
-            budgeting.dragItem.classList.remove('dragging');
-
             if (invalid) {
                 // Put dragItem back
                 budgeting.dragItemParent.insertBefore(
                     budgeting.dragItem, budgeting.dragItemSibling);
             } else {
                 // Add group input on each row
-                let anyMoved = budgeting.dragItemGroup !=
+                anyMoved = budgeting.dragItemGroup !=
                     budgeting.dragItem.closest('.budget-group');
                 document.querySelectorAll('.budget-row').forEach((e, i) => {
                     if (i != e.getAttribute('position')) {
@@ -343,21 +357,41 @@ const budgeting = {
                         anyMoved = true;
                     }
                 });
-                if (anyMoved) {
-                    htmx.trigger('#budget-table', 'reorder-rows');
-                } else {
-                    document.querySelectorAll('.budget-row input[name=group]')
-                        .forEach((e) => {
-                            e.remove();
-                        })
-                }
             }
         }
 
+        budgeting.cleanUp();
+        if (anyMoved) {
+            htmx.trigger('#budget-table', 'reorder-rows');
+        } else {
+            document.querySelectorAll('.budget-row input[name=group]')
+                .forEach((e) => {
+                    e.remove();
+                })
+        }
+    },
+    cleanUp: function() {
+        // Restore open states
+        if (budgeting.isDragging) {
+            document.querySelectorAll('.budget-group-toggle').forEach((e) => {
+                e.checked = budgeting.groupOpen[e.id];
+            });
+        }
+        if (budgeting.staticItems) {
+            // Finish dragging
+            budgeting.staticItems.forEach((e) => {
+                e.style.transform = '';
+            })
+        }
+        if (budgeting.dragItem) {
+            budgeting.dragItem.style.transform = '';
+            budgeting.dragItem.classList.remove('dragging');
+        }
+        budgeting.table.classList.remove('select-none');
         // Remove styles and listeners
         document.removeEventListener('mousemove', budgeting.drag);
         document.removeEventListener('mousemove', budgeting.dragStartTest);
         budgeting.isDragging = false;
-        budgeting.dragItem = null;
+        budgeting.trash.classList.add('hidden');
     },
 };

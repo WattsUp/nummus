@@ -114,6 +114,7 @@ module.exports = {
                  'text-yellow-600',
                  'select-none',
                  'dragging',
+                 'fill-red',
              ],
     plugins : [],
 };

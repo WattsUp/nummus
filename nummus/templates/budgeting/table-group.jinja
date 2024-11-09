@@ -1,5 +1,10 @@
 <div id="budget-group-{{ group["uri"] or "" }}"
-     class="w-full pl-4 relative will-change-transform budget-group">
+     class="w-full pl-4 relative will-change-transform budget-group"
+     hx-target="#overlay-error"
+     hx-swap="innerHTML"
+     hx-trigger="trash-group"
+     {% if group["uri"] %}hx-delete="{{ url_for('budgeting.group', uri=group["uri"]) }}"{% endif %}
+     hx-include="unset">
     <input class="budget-group-toggle hidden"
            type="checkbox"
            id="toggle-{{ group["uri"] }}">
