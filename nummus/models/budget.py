@@ -11,12 +11,31 @@ from typing_extensions import override
 
 from nummus import utils
 from nummus.models.account import Account
-from nummus.models.base import Base, Decimal6, ORMInt, ORMReal, YIELD_PER
+from nummus.models.base import Base, Decimal6, ORMInt, ORMReal, ORMStr, YIELD_PER
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
+
+
+class BudgetGroup(Base):
+    """Budget group model for storing a grouping of categories.
+
+    Attributes:
+        name: Group name
+        position: Group position
+    """
+
+    __table_id__ = 0x50000000
+
+    name: ORMStr = orm.mapped_column(unique=True)
+    position: ORMInt = orm.mapped_column(unique=True)
+
+    @orm.validates("name")
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
+        return super().validate_strings(key, field)
 
 
 class BudgetAssignment(Base):

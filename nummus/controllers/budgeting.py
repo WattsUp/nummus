@@ -7,12 +7,13 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
+from sqlalchemy import sql
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
-from nummus.models.budget import BudgetAssignment
+from nummus.models.budget import BudgetAssignment, BudgetGroup
 
 if TYPE_CHECKING:
 
@@ -57,7 +58,9 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
     class GroupContext(TypedDict):
         """Type definition for budget group context."""
 
-        min_position: int
+        position: int
+        name: str | None
+        uri: str | None
         categories: list[CategoryContext]
         assigned: Decimal
         activity: Decimal
@@ -69,9 +72,22 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         )
         n_overspent = 0
 
-        groups: dict[str | None, GroupContext] = {}
+        groups: dict[int | None, GroupContext] = {}
+        query = s.query(BudgetGroup)
+        for g in query.all():
+            groups[g.id_] = {
+                "position": g.position,
+                "name": g.name,
+                "uri": g.uri,
+                "assigned": Decimal(0),
+                "activity": Decimal(0),
+                "available": Decimal(0),
+                "categories": [],
+            }
         ungrouped: GroupContext = {
-            "min_position": -1,
+            "position": -1,
+            "name": None,
+            "uri": None,
             "assigned": Decimal(0),
             "activity": Decimal(0),
             "available": Decimal(0),
@@ -83,7 +99,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             assigned, activity, available = categories[t_cat.id_]
             # Skip category if all numbers are 0 and not grouped
             if (
-                t_cat.budget_group is None
+                t_cat.budget_group_id is None
                 and activity == 0
                 and assigned == 0
                 and available == 0
@@ -124,33 +140,16 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "bar_mode": bar_mode,
                 "bar_w": bar_w,
             }
-            if t_cat.budget_group is None:
-                g = ungrouped
-            else:
-                if t_cat.budget_group not in groups:
-                    groups[t_cat.budget_group] = {
-                        "min_position": t_cat.budget_position or 0,
-                        "assigned": Decimal(0),
-                        "activity": Decimal(0),
-                        "available": Decimal(0),
-                        "categories": [],
-                    }
-                g = groups[t_cat.budget_group]
-
-                # Calculate the minimum position caring for None
-                g["min_position"] = min(
-                    g["min_position"] or 0,
-                    t_cat.budget_position or 0,
-                )
+            g = groups.get(t_cat.budget_group_id, ungrouped)
             g["assigned"] += assigned
             g["activity"] += activity
             g["available"] += available
             g["categories"].append(cat_ctx)
 
-        groups_list = sorted(groups.items(), key=lambda item: item[1]["min_position"])
-        groups_list.append((None, ungrouped))
+        groups_list = sorted(groups.values(), key=lambda item: item["position"])
+        groups_list.append(ungrouped)
 
-        for _, g in groups_list:
+        for g in groups_list:
             g["categories"] = sorted(
                 g["categories"],
                 key=lambda item: (item["position"] or 0, item["name"]),
@@ -205,7 +204,7 @@ def assign(uri: str) -> str:
     amount = utils.parse_real(form.get("amount")) or Decimal(0)
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        cat = web_utils.find(s, TransactionCategory, uri)
         if amount == 0:
             s.query(BudgetAssignment).where(
                 BudgetAssignment.month_ord == month_ord,
@@ -258,7 +257,7 @@ def overspending(uri: str) -> str | flask.Response:
 
     with p.get_session() as s:
         t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
 
         if flask.request.method == "PUT":
@@ -372,7 +371,7 @@ def move(uri: str) -> str | flask.Response:
 
     with p.get_session() as s:
         t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
 
         if flask.request.method == "PUT":
@@ -479,27 +478,69 @@ def reorder() -> str:
     groups = form.getlist("group")
 
     with p.get_session() as s:
-        for i, (t_cat_uri, g) in enumerate(zip(row_uris, groups, strict=True)):
-            t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
-            if g == "":
-                s.query(TransactionCategory).where(
-                    TransactionCategory.id_ == t_cat_id,
-                ).update(
-                    {
-                        "budget_position": None,
-                        "budget_group": None,
-                    },
-                )
-            else:
-                s.query(TransactionCategory).where(
-                    TransactionCategory.id_ == t_cat_id,
-                ).update(
-                    {
-                        "budget_position": int(i),
-                        "budget_group": g,
-                    },
-                )
+        g_positions: dict[int, int] = {}
+        t_cat_groups: dict[int, int | None] = {}
+        t_cat_positions: dict[int, int | None] = {}
 
+        i = 0
+        i_group = 0
+        last_group = None
+        for t_cat_uri, g_uri in zip(row_uris, groups, strict=True):
+            g_id = None if g_uri == "" else BudgetGroup.uri_to_id(g_uri)
+            if g_uri != last_group:
+                if g_id is not None:
+                    g_positions[g_id] = i_group
+                i = 0
+                i_group += 1
+
+            t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
+            if g_id is None:
+                t_cat_groups[t_cat_id] = None
+                t_cat_positions[t_cat_id] = None
+            else:
+                t_cat_groups[t_cat_id] = g_id
+                t_cat_positions[t_cat_id] = i
+
+            i += 1
+            last_group = g_uri
+
+        # Set all to -index first so swapping can occur without unique violations
+        s.query(BudgetGroup).update(
+            {
+                BudgetGroup.position: sql.case(
+                    {g_id: -i for i, g_id in enumerate(g_positions)},
+                    value=BudgetGroup.id_,
+                ),
+            },
+        )
+        # Set all to None first so swapping can occur without unique violations
+        s.query(TransactionCategory).update(
+            {
+                TransactionCategory.budget_group_id: None,
+                TransactionCategory.budget_position: None,
+            },
+        )
+
+        s.query(BudgetGroup).update(
+            {
+                BudgetGroup.position: sql.case(
+                    g_positions,
+                    value=BudgetGroup.id_,
+                ),
+            },
+        )
+        s.query(TransactionCategory).update(
+            {
+                TransactionCategory.budget_group_id: sql.case(
+                    t_cat_groups,
+                    value=TransactionCategory.id_,
+                ),
+                TransactionCategory.budget_position: sql.case(
+                    t_cat_positions,
+                    value=TransactionCategory.id_,
+                ),
+            },
+        )
         s.commit()
 
     table, _ = ctx_table()
@@ -509,8 +550,8 @@ def reorder() -> str:
     )
 
 
-def group() -> str:
-    """PUT /h/budgeting/group.
+def group(uri: str) -> str:
+    """PUT /h/budgeting/g/<path:uri>.
 
     Returns:
         string HTML response
@@ -519,35 +560,15 @@ def group() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     # TODO(WattsUp): Same endpoint for new, rename, and delete?
-    name = flask.request.args["name"]
-    new_name = flask.request.form["new-name"]
+    name = flask.request.form["name"]
 
     with p.get_session() as s:
+        g = web_utils.find(s, BudgetGroup, uri)
         try:
-            new_name = TransactionCategory.validate_strings(
-                key="budget_group",
-                field=new_name,
-            )
-        except exc.InvalidORMValueError:
-            msg = f"Group must be at least {utils.MIN_STR_LEN} characters long"
-            return common.error(msg)
-
-        if new_name is None:
-            n = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.budget_group == name)
-                .update({"budget_group": new_name, "budget_position": None})
-            )
-        else:
-            n = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.budget_group == name)
-                .update({"budget_group": new_name})
-            )
-        if n == 0:
-            raise exc.NoResultFound
-
-        s.commit()
+            g.name = name
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
 
     table, _ = ctx_table()
     return flask.render_template(
@@ -563,5 +584,5 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
-    "/h/budgeting/group": (group, ["PUT"]),
+    "/h/budgeting/g/<path:uri>": (group, ["PUT"]),
 }

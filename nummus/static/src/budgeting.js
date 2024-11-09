@@ -205,7 +205,6 @@ const budgeting = {
                         const group = e.closest('.budget-group');
                         const groupChange =
                             group.getAttribute('reorder') || null;
-                        const groupName = group.id.slice(13);
 
                         if (groupChange != null && groupChange != lastChange) {
                             group.parentNode.insertBefore(
@@ -227,7 +226,7 @@ const budgeting = {
                         const groupChange =
                             groupHeader.getAttribute('reorder') || null;
                         const rowURI = e.id.slice(9);
-                        const groupName = group.id.slice(13);
+                        const groupURI = group.id.slice(13);
 
                         if (rowChange != null && rowChange != lastChange) {
                             if (groupChange == null) {
@@ -246,7 +245,6 @@ const budgeting = {
 
                         lastChange = rowChange;
                         lastGroup = group;
-                        lastGroupName = groupName;
                     });
                 // Move to last group if not moved yet
                 if (!invalid && !wasMoved) {
@@ -294,12 +292,12 @@ const budgeting = {
                     }
 
                     const group = e.closest('.budget-group');
-                    const groupName = group ? group.id.slice(13) : '';
+                    const groupURI = group ? group.id.slice(13) : '';
 
                     const inputGroup = document.createElement('input');
                     inputGroup.name = 'group';
                     inputGroup.type = 'text';
-                    inputGroup.value = groupName;
+                    inputGroup.value = groupURI;
                     inputGroup.hidden = true;
                     e.append(inputGroup);
                 });

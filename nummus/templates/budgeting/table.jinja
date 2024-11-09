@@ -14,7 +14,7 @@
             <div class="w-28 shrink-0 text-right">Available</div>
             <div class="w-6 shrink-0 max-md:hidden"></div>
         </div>
-        {% for name, group in table["groups"] %}
+        {% for group in table["groups"] %}
             {% include "budgeting/table-group.jinja" %}
         {% endfor %}
         <div id="budget-temp-root" class="pl-4 w-full"></div>

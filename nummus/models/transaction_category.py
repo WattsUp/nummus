@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import emoji as emoji_mod
 import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import ForeignKey, orm
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -48,14 +48,15 @@ class TransactionCategory(Base):
     asset_linked: ORMBool
     essential: ORMBool
 
-    budget_group: ORMStrOpt
+    budget_group_id: ORMIntOpt = orm.mapped_column(ForeignKey("budget_group.id_"))
     budget_position: ORMIntOpt
 
     __table_args__ = (
         sqlalchemy.CheckConstraint(
-            "(budget_group IS NOT NULL) == (budget_position IS NOT NULL)",
+            "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
         ),
+        sqlalchemy.UniqueConstraint("budget_group_id", "budget_position"),
     )
 
     @orm.validates("name")
@@ -125,11 +126,6 @@ class TransactionCategory(Base):
             msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)
         return field
-
-    @orm.validates("budget_group")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
 
     @property
     def emoji_name(self) -> str:
