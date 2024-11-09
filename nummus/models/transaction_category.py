@@ -126,6 +126,11 @@ class TransactionCategory(Base):
             raise exc.InvalidORMValueError(msg)
         return field
 
+    @orm.validates("budget_group")
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
+        return super().validate_strings(key, field)
+
     @property
     def emoji_name(self) -> str:
         """Name of category with emoji."""

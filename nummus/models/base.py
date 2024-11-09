@@ -40,9 +40,10 @@ class Base(orm.DeclarativeBase):
     """
 
     @orm.declared_attr  # type: ignore[attr-defined]
+    @classmethod
     @override
-    def __tablename__(self) -> str:
-        return utils.camel_to_snake(self.__name__)
+    def __tablename__(cls) -> str:
+        return utils.camel_to_snake(cls.__name__)
 
     __table_id__: int
 
@@ -131,7 +132,8 @@ class Base(orm.DeclarativeBase):
         query = s.query(cls).with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]
         return dict(query.all())
 
-    def validate_strings(self, key: str, field: str | None) -> str | None:
+    @classmethod
+    def validate_strings(cls, key: str, field: str | None) -> str | None:
         """Validates string fields are long enough.
 
         Args:
@@ -147,7 +149,7 @@ class Base(orm.DeclarativeBase):
         if field is None or field in ["", "[blank]"]:
             return None
         if len(field) < utils.MIN_STR_LEN:
-            table: str = self.__tablename__
+            table: str = cls.__tablename__  # type: ignore[attr-defined]
             table = table.replace("_", " ").capitalize()
             msg = f"{table} {key} must be at least {utils.MIN_STR_LEN} characters long"
             raise exc.InvalidORMValueError(msg)

@@ -1,21 +1,42 @@
-<div id="budget-group-{{ name }}"
+<div id="budget-group-{{ name or "" }}"
      class="w-full pl-4 relative will-change-transform budget-group">
     <input class="budget-group-toggle hidden"
            type="checkbox"
            id="toggle-{{ name }}">
     <label class="budget-group-toggle-label" for="toggle-{{ name }}"></label>
-    <div class="w-full flex gap-1 py-1 bg-grey-100 budget-group-header">
-        <div class="w-28 shrink-0 grow pl-1 cursor-grab budget-group-handle">{{ name }}</div>
+    <div class="w-full flex gap-1 py-1 bg-grey-100 items-center h-8 budget-group-header">
+        <div class="w-28 shrink-0 grow pl-1 hover-edit">
+            {% if name %}
+                <input class="w-full"
+                       placeholder="Group name"
+                       value="{{ name }}"
+                       name="new-name"
+                       hx-put="{{ url_for('budgeting.group', name=name) }}"
+                       hx-include="unset"
+                       hx-target="#overlay-error"
+                       hx-swap="innerHTML">
+                <span class="w-full">{{ name }}</span>
+            {% else %}
+                Ungrouped
+            {% endif %}
+        </div>
         <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
         <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
         <div class="w-28 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
+        <div class="w-6 shrink-0 cursor-grab budget-group-handle max-md:hidden">
+            {% if name %}
+                {% with class = "w-[24px] h-[24px]" %}
+                    {% include "svg/drag.svg" %}
+                {% endwith %}
+            {% endif %}
+        </div>
     </div>
     <div class="w-full pb-1 budget-group-fold">
         {% for category in group["categories"] %}
             <div id="category-{{ category["name"] }}"
                  class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row">
                 <input name="row" value="{{ category["uri"] }}" hidden>
-                <div class="w-28 shrink-0 grow cursor-grab budget-row-handle">
+                <div class="w-28 shrink-0 grow">
                     <div>{{ category["emoji_name"] }}</div>
                     {% if category["bar_mode"] == "grey" %}
                         <div class="h-1 mr-1 bg-grey-400"></div>
@@ -50,6 +71,11 @@
                         <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white cursor-pointer"
                               hx-get="{{ url_for('budgeting.overspending', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
                     {% endif %}
+                </div>
+                <div class="w-6 shrink-0 cursor-grab budget-row-handle max-md:hidden">
+                    {% with class = "w-[24px] h-[24px]" %}
+                        {% include "svg/drag.svg" %}
+                    {% endwith %}
                 </div>
             </div>
         {% endfor %}

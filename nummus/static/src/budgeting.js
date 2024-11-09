@@ -7,6 +7,7 @@ const budgeting = {
     dragItemHeight: null,
     dragItemParent: null,
     dragItemSibling: null,
+    dragItemGroup: null,
     staticItems: [],
     staticItemsY: [],
     initialX: null,
@@ -22,7 +23,7 @@ const budgeting = {
      */
     setup: function() {
         this.table = document.querySelector('#budget-table');
-        this.tableRoot = document.querySelector('#budget-table-root');
+        this.tableRoot = document.querySelector('#budget-temp-root');
 
         // Remove any that exist
         this.table.removeEventListener('mousedown', this.dragStart);
@@ -52,10 +53,30 @@ const budgeting = {
             // Not a handle, ignore mouse up
             return;
         }
-        budgeting.staticItems = Array.from(budgeting.staticItems)
-                                    .filter((e) => e != budgeting.dragItem);
+
+        let firstGroup = true;
+        let firstGroupLabel = true;
+        budgeting.staticItems =
+            Array.from(budgeting.staticItems).filter((e) => {
+                if (e == budgeting.dragItem) {
+                    return false;
+                }
+                if (!budgeting.isGroup) {
+                    if (e.matches('.budget-group-header') && firstGroup) {
+                        firstGroup = false;
+                        return false;
+                    }
+                    if (e.matches('.budget-group-toggle-label') &&
+                        firstGroupLabel) {
+                        firstGroupLabel = false;
+                        return false;
+                    }
+                }
+                return true;
+            });
         budgeting.dragItemParent = budgeting.dragItem.parentNode;
         budgeting.dragItemSibling = budgeting.dragItem.nextSibling;
+        budgeting.dragItemGroup = budgeting.dragItem.closest('.budget-group');
 
         // Set position attribute
         document.querySelectorAll('.budget-row').forEach((e, i) => {
@@ -82,7 +103,7 @@ const budgeting = {
     dragStartTest(event) {
         const dx = event.clientX - budgeting.initialMouseX;
         const dy = event.clientY - budgeting.initialMouseY;
-        const delta = Math.sqrt(dx * dx + dy + dy);
+        const delta = Math.sqrt(dx * dx + dy * dy);
 
         if (delta < 10) {
             return;
@@ -196,6 +217,7 @@ const budgeting = {
             } else {
                 let lastGroup = null;
                 let lastGroupName = null;
+                let wasMoved = false;
                 document.querySelectorAll('.budget-row:not(.dragging)')
                     .forEach((e) => {
                         const group = e.closest('.budget-group');
@@ -211,12 +233,14 @@ const budgeting = {
                             if (groupChange == null) {
                                 group.querySelector('.budget-group-fold')
                                     .insertBefore(budgeting.dragItem, e);
+                                wasMoved = true;
                             } else if (lastGroup == null) {
                                 // Invalid placed outside a group
                                 invalid = true;
                             } else {
                                 lastGroup.querySelector('.budget-group-fold')
                                     .append(budgeting.dragItem);
+                                wasMoved = true;
                             }
                         }
 
@@ -224,6 +248,24 @@ const budgeting = {
                         lastGroup = group;
                         lastGroupName = groupName;
                     });
+                // Move to last group if not moved yet
+                if (!invalid && !wasMoved) {
+                    const ungroup = document.querySelector('#budget-group-');
+                    const ungroupHeader =
+                        ungroup.querySelector('.budget-group-header');
+                    const ungroupChange =
+                        ungroupHeader.getAttribute('reorder') || null;
+
+                    if (ungroupChange) {
+                        lastGroup.querySelector('.budget-group-fold')
+                            .append(budgeting.dragItem);
+                    } else {
+                        document
+                            .querySelector(
+                                '#budget-group- > .budget-group-fold')
+                            .append(budgeting.dragItem);
+                    }
+                }
             }
 
             // Restore open states
@@ -244,14 +286,15 @@ const budgeting = {
                     budgeting.dragItem, budgeting.dragItemSibling);
             } else {
                 // Add group input on each row
-                let anyMoved = false;
+                let anyMoved = budgeting.dragItemGroup !=
+                    budgeting.dragItem.closest('.budget-group');
                 document.querySelectorAll('.budget-row').forEach((e, i) => {
                     if (i != e.getAttribute('position')) {
                         anyMoved = true;
                     }
 
                     const group = e.closest('.budget-group');
-                    const groupName = group.id.slice(13);
+                    const groupName = group ? group.id.slice(13) : '';
 
                     const inputGroup = document.createElement('input');
                     inputGroup.name = 'group';

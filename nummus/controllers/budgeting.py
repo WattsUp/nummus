@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
@@ -68,7 +69,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         )
         n_overspent = 0
 
-        groups: dict[str, GroupContext] = {}
+        groups: dict[str | None, GroupContext] = {}
         ungrouped: GroupContext = {
             "min_position": -1,
             "assigned": Decimal(0),
@@ -124,7 +125,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "bar_w": bar_w,
             }
             if t_cat.budget_group is None:
-                group = ungrouped
+                g = ungrouped
             else:
                 if t_cat.budget_group not in groups:
                     groups[t_cat.budget_group] = {
@@ -134,25 +135,24 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                         "available": Decimal(0),
                         "categories": [],
                     }
-                group = groups[t_cat.budget_group]
+                g = groups[t_cat.budget_group]
 
                 # Calculate the minimum position caring for None
-                group["min_position"] = min(
-                    group["min_position"] or 0,
+                g["min_position"] = min(
+                    g["min_position"] or 0,
                     t_cat.budget_position or 0,
                 )
-            group["assigned"] += assigned
-            group["activity"] += activity
-            group["available"] += available
-            group["categories"].append(cat_ctx)
+            g["assigned"] += assigned
+            g["activity"] += activity
+            g["available"] += available
+            g["categories"].append(cat_ctx)
 
         groups_list = sorted(groups.items(), key=lambda item: item[1]["min_position"])
-        if ungrouped["categories"]:
-            groups_list.append(("Ungrouped", ungrouped))
+        groups_list.append((None, ungrouped))
 
-        for _, group in groups_list:
-            group["categories"] = sorted(
-                group["categories"],
+        for _, g in groups_list:
+            g["categories"] = sorted(
+                g["categories"],
                 key=lambda item: (item["position"] or 0, item["name"]),
             )
 
@@ -465,10 +465,7 @@ def move(uri: str) -> str | flask.Response:
 
 
 def reorder() -> str:
-    """GET & PUT /h/budgeting/c/<uri>/move.
-
-    Args:
-        uri: Category URI
+    """GET & PUT /h/budgeting/reorder.
 
     Returns:
         string HTML response
@@ -476,21 +473,32 @@ def reorder() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
+    # TODO(WattsUp): Same endpoint for new, rename, and delete?
     form = flask.request.form
     row_uris = form.getlist("row")
     groups = form.getlist("group")
 
     with p.get_session() as s:
-        for i, (t_cat_uri, group) in enumerate(zip(row_uris, groups, strict=True)):
+        for i, (t_cat_uri, g) in enumerate(zip(row_uris, groups, strict=True)):
             t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
-            s.query(TransactionCategory).where(
-                TransactionCategory.id_ == t_cat_id,
-            ).update(
-                {
-                    "budget_position": int(i),
-                    "budget_group": group,
-                },
-            )
+            if g == "":
+                s.query(TransactionCategory).where(
+                    TransactionCategory.id_ == t_cat_id,
+                ).update(
+                    {
+                        "budget_position": None,
+                        "budget_group": None,
+                    },
+                )
+            else:
+                s.query(TransactionCategory).where(
+                    TransactionCategory.id_ == t_cat_id,
+                ).update(
+                    {
+                        "budget_position": int(i),
+                        "budget_group": g,
+                    },
+                )
 
         s.commit()
 
@@ -501,10 +509,59 @@ def reorder() -> str:
     )
 
 
+def group() -> str:
+    """PUT /h/budgeting/group.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    # TODO(WattsUp): Same endpoint for new, rename, and delete?
+    name = flask.request.args["name"]
+    new_name = flask.request.form["new-name"]
+
+    with p.get_session() as s:
+        try:
+            new_name = TransactionCategory.validate_strings(
+                key="budget_group",
+                field=new_name,
+            )
+        except exc.InvalidORMValueError:
+            msg = f"Group must be at least {utils.MIN_STR_LEN} characters long"
+            return common.error(msg)
+
+        if new_name is None:
+            n = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.budget_group == name)
+                .update({"budget_group": new_name, "budget_position": None})
+            )
+        else:
+            n = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.budget_group == name)
+                .update({"budget_group": new_name})
+            )
+        if n == 0:
+            raise exc.NoResultFound
+
+        s.commit()
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+        oob=True,
+    )
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
+    "/h/budgeting/group": (group, ["PUT"]),
 }
