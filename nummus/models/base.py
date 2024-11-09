@@ -146,7 +146,10 @@ class Base(orm.DeclarativeBase):
         Raises:
             InvalidORMValueError if field is too short
         """
-        if field is None or field in ["", "[blank]"]:
+        if field is None:
+            return None
+        field = field.strip()
+        if field in ["", "[blank]"]:
             return None
         if len(field) < utils.MIN_STR_LEN:
             table: str = cls.__tablename__  # type: ignore[attr-defined]

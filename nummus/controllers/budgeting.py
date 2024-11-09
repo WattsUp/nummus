@@ -472,26 +472,25 @@ def reorder() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    # TODO(WattsUp): Same endpoint for new, rename, and delete?
     form = flask.request.form
-    row_uris = form.getlist("row")
+    group_uris = form.getlist("group_uri")
+    row_uris = form.getlist("row_uri")
     groups = form.getlist("group")
 
     with p.get_session() as s:
-        g_positions: dict[int, int] = {}
+        g_positions = {
+            BudgetGroup.uri_to_id(g_uri): i for i, g_uri in enumerate(group_uris)
+        }
+
         t_cat_groups: dict[int, int | None] = {}
         t_cat_positions: dict[int, int | None] = {}
 
         i = 0
-        i_group = 0
         last_group = None
         for t_cat_uri, g_uri in zip(row_uris, groups, strict=True):
             g_id = None if g_uri == "" else BudgetGroup.uri_to_id(g_uri)
             if g_uri != last_group:
-                if g_id is not None:
-                    g_positions[g_id] = i_group
                 i = 0
-                i_group += 1
 
             t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
             if g_id is None:
@@ -508,7 +507,7 @@ def reorder() -> str:
         s.query(BudgetGroup).update(
             {
                 BudgetGroup.position: sql.case(
-                    {g_id: -i for i, g_id in enumerate(g_positions)},
+                    {g_id: -i - 1 for i, g_id in enumerate(g_positions)},
                     value=BudgetGroup.id_,
                 ),
             },
@@ -559,13 +558,40 @@ def group(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    # TODO(WattsUp): Same endpoint for new, rename, and delete?
     name = flask.request.form["name"]
 
     with p.get_session() as s:
         g = web_utils.find(s, BudgetGroup, uri)
         try:
             g.name = name
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+        oob=True,
+    )
+
+
+def new_group() -> str:
+    """PUT /h/budgeting/group.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    name = flask.request.form["name"]
+
+    with p.get_session() as s:
+        n = s.query(BudgetGroup).count()
+        try:
+            g = BudgetGroup(name=name, position=n)
+            s.add(g)
             s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -585,4 +611,5 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
     "/h/budgeting/g/<path:uri>": (group, ["PUT"]),
+    "/h/budgeting/new-group": (new_group, ["POST"]),
 }

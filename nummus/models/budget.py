@@ -32,6 +32,9 @@ class BudgetGroup(Base):
     name: ORMStr = orm.mapped_column(unique=True)
     position: ORMInt = orm.mapped_column(unique=True)
 
+    # TODO (WattsUp): Add open state to model
+    # Cookies would be better so it's per browser
+
     @orm.validates("name")
     def validate_string_columns(self, key: str, field: str | None) -> str | None:
         """Validate string columns."""

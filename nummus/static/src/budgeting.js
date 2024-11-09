@@ -1,7 +1,6 @@
 'use strict';
 const budgeting = {
     table: null,
-    tableRoot: null,
     isGroup: false,
     dragItem: null,
     dragItemHeight: null,
@@ -23,7 +22,6 @@ const budgeting = {
      */
     setup: function() {
         this.table = document.querySelector('#budget-table');
-        this.tableRoot = document.querySelector('#budget-temp-root');
 
         // Remove any that exist
         this.table.removeEventListener('mousedown', this.dragStart);
@@ -82,6 +80,9 @@ const budgeting = {
         document.querySelectorAll('.budget-row').forEach((e, i) => {
             e.setAttribute('position', i);
         });
+        document.querySelectorAll('.budget-group').forEach((e, i) => {
+            e.setAttribute('position', i);
+        });
 
         // Record initial position
         const rect = budgeting.dragItem.getBoundingClientRect();
@@ -112,7 +113,13 @@ const budgeting = {
 
         // If dragging a row, move to top so it is visible
         // Also moving group to top makes everything only translate down
-        budgeting.tableRoot.append(budgeting.dragItem);
+        if (budgeting.isGroup) {
+            document.querySelector('#budget-temp-group')
+                .append(budgeting.dragItem);
+        } else {
+            document.querySelector('#budget-temp-row')
+                .append(budgeting.dragItem);
+        }
 
         // Prepare for dragging
         budgeting.dragItem.classList.add('dragging');
@@ -200,6 +207,7 @@ const budgeting = {
             let lastChange = null;
             let invalid = false;
             if (budgeting.isGroup) {
+                invalid = true;
                 document.querySelectorAll('.budget-group:not(.dragging)')
                     .forEach((e) => {
                         const group = e.closest('.budget-group');
@@ -209,6 +217,7 @@ const budgeting = {
                         if (groupChange != null && groupChange != lastChange) {
                             group.parentNode.insertBefore(
                                 budgeting.dragItem, group);
+                            invalid = false;
                         }
 
                         lastChange = groupChange;
@@ -237,8 +246,24 @@ const budgeting = {
                                 // Invalid placed outside a group
                                 invalid = true;
                             } else {
-                                lastGroup.querySelector('.budget-group-fold')
-                                    .append(budgeting.dragItem);
+                                let nextGroup =
+                                    lastGroup.parentNode.querySelector(
+                                        `#${lastGroup.id} + .budget-group`);
+                                let nextGroupHeader = nextGroup &&
+                                    nextGroup.querySelector(
+                                        '.budget-group-header');
+                                if (nextGroup &&
+                                    nextGroupHeader.getAttribute('reorder')) {
+                                    // If next group exist and was moved, add to
+                                    // lastGroup
+                                    lastGroup
+                                        .querySelector('.budget-group-fold')
+                                        .append(budgeting.dragItem);
+                                } else {
+                                    nextGroup
+                                        .querySelector('.budget-group-fold')
+                                        .append(budgeting.dragItem);
+                                }
                                 wasMoved = true;
                             }
                         }
@@ -255,8 +280,20 @@ const budgeting = {
                         ungroupHeader.getAttribute('reorder') || null;
 
                     if (ungroupChange) {
-                        lastGroup.querySelector('.budget-group-fold')
-                            .append(budgeting.dragItem);
+                        let nextGroup = lastGroup.parentNode.querySelector(
+                            `#${lastGroup.id} + .budget-group`);
+                        let nextGroupHeader = nextGroup &&
+                            nextGroup.querySelector('.budget-group-header');
+                        if (nextGroup &&
+                            nextGroupHeader.getAttribute('reorder')) {
+                            // If next group exist and was moved, add to
+                            // lastGroup
+                            lastGroup.querySelector('.budget-group-fold')
+                                .append(budgeting.dragItem);
+                        } else {
+                            nextGroup.querySelector('.budget-group-fold')
+                                .append(budgeting.dragItem);
+                        }
                     } else {
                         document
                             .querySelector(
@@ -300,6 +337,11 @@ const budgeting = {
                     inputGroup.value = groupURI;
                     inputGroup.hidden = true;
                     e.append(inputGroup);
+                });
+                document.querySelectorAll('.budget-group').forEach((e, i) => {
+                    if (i != e.getAttribute('position')) {
+                        anyMoved = true;
+                    }
                 });
                 if (anyMoved) {
                     htmx.trigger('#budget-table', 'reorder-rows');
