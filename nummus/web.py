@@ -18,7 +18,10 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 
-from nummus import controllers, portfolio, utils, version, web_utils
+from nummus import controllers
+from nummus import exceptions as exc
+from nummus import portfolio, utils, version, web_utils
+from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
     import io
@@ -156,6 +159,20 @@ class Server:
         # Add Portfolio to context for controllers
         with self._app.app_context():
             flask.current_app.portfolio = p  # type: ignore[attr-defined]
+
+        with p.get_session() as s:
+            secret_key = (
+                s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).scalar()
+            )
+            if secret_key is None:
+                msg = "Config SECRET_KEY was not found"
+                raise exc.ProtectedObjectNotFoundError(msg)
+        self._app.secret_key = secret_key
+        self._app.config.update(
+            SESSION_COOKIE_SECURE=True,
+            SESSION_COOKIE_HTTPONLY=True,
+            SESSION_COOKIE_SAMESITE="Lax",
+        )
 
         # Enable debugger and reloader when debug
         self._app.debug = debug

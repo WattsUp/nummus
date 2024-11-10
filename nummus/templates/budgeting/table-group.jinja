@@ -5,21 +5,44 @@
      hx-trigger="trash-group"
      {% if group["uri"] %}hx-delete="{{ url_for('budgeting.group', uri=group["uri"]) }}"{% endif %}
      hx-include="unset">
-    <input class="budget-group-toggle hidden"
-           type="checkbox"
-           id="toggle-{{ group["uri"] }}">
-    <label class="budget-group-toggle-label" for="toggle-{{ group["uri"] }}"></label>
+    {% if group["uri"] %}
+        <input class="budget-group-toggle hidden"
+               id="toggle-{{ group["uri"] }}"
+               type="checkbox"
+               {% if group["is_closed"] %}checked{% endif %}
+               name="closed"
+               hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
+               hx-include="#name-{{ group["uri"] }}"
+               hx-target="#overlay-error"
+               hx-swap="innerHTML"
+               autocomplete="off">
+        <label class="budget-group-toggle-label" for="toggle-{{ group["uri"] }}"></label>
+    {% else %}
+        <input class="budget-group-toggle hidden"
+               id="toggle-ungrouped"
+               type="checkbox"
+               {% if group["is_closed"] %}checked{% endif %}
+               name="closed"
+               hx-put="{{ url_for('budgeting.group', uri="ungrouped") }}"
+               hx-include="unset"
+               hx-target="#overlay-error"
+               hx-swap="innerHTML"
+               autocomplete="off">
+        <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>
+    {% endif %}
     <div class="w-full flex gap-1 py-1 bg-grey-100 items-center h-8 budget-group-header">
         <div class="w-28 shrink-0 grow pl-1 hover-edit">
             {% if group["uri"] %}
                 <input class="w-full"
+                       id="name-{{ group["uri"] }}"
                        placeholder="Group name"
                        value="{{ group["name"] }}"
                        name="name"
                        hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
-                       hx-include="unset"
+                       hx-include="#toggle-{{ group["uri"] }}"
                        hx-target="#overlay-error"
-                       hx-swap="innerHTML">
+                       hx-swap="innerHTML"
+                       autocomplete="off">
                 <span id="{{ group["uri"] }}-name" class="w-full">{{ group["name"] }}</span>
             {% else %}
                 Ungrouped
@@ -61,7 +84,8 @@
                            placeholder="0.00"
                            value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
                            name="amount"
-                           hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}">
+                           hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}"
+                           autocomplete="off">
                     <span class="w-full text-right">{{ category["assigned"] | money }}</span>
                 </div>
                 <div class="w-28 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>

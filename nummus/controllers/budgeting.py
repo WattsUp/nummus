@@ -61,6 +61,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         position: int
         name: str | None
         uri: str | None
+        is_closed: bool
         categories: list[CategoryContext]
         assigned: Decimal
         activity: Decimal
@@ -72,6 +73,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         )
         n_overspent = 0
 
+        groups_closed: list[str] = flask.session.get("groups_closed", [])
+
         groups: dict[int | None, GroupContext] = {}
         query = s.query(BudgetGroup)
         for g in query.all():
@@ -79,6 +82,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "position": g.position,
                 "name": g.name,
                 "uri": g.uri,
+                "is_closed": g.uri in groups_closed,
                 "assigned": Decimal(0),
                 "activity": Decimal(0),
                 "available": Decimal(0),
@@ -88,6 +92,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             "position": -1,
             "name": None,
             "uri": None,
+            "is_closed": "ungrouped" in groups_closed,
             "assigned": Decimal(0),
             "activity": Decimal(0),
             "available": Decimal(0),
@@ -560,15 +565,26 @@ def group(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     if flask.request.method == "PUT":
-        name = flask.request.form["name"]
+        form = flask.request.form
+        closed = "closed" in form
+        if uri != "ungrouped":
+            name = form["name"]
 
-        with p.get_session() as s:
-            g = web_utils.find(s, BudgetGroup, uri)
-            try:
-                g.name = name
-                s.commit()
-            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                return common.error(e)
+            with p.get_session() as s:
+                g = web_utils.find(s, BudgetGroup, uri)
+                try:
+                    g.name = name
+                    s.commit()
+                except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                    return common.error(e)
+
+        groups_closed: list[str] = flask.session.get("groups_closed", [])
+        groups_closed = [x for x in groups_closed if x != uri]
+        if closed:
+            groups_closed.append(uri)
+        elif uri in groups_closed:
+            groups_closed = [x for x in groups_closed if x != uri]
+        flask.session["groups_closed"] = groups_closed
     elif flask.request.method == "DELETE":
         with p.get_session() as s:
             g = web_utils.find(s, BudgetGroup, uri)

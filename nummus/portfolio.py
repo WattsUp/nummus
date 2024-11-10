@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import io
 import re
+import secrets
 import shutil
 import sys
 import tarfile
@@ -171,8 +172,12 @@ class Portfolio:
                 key=ConfigKey.CIPHER,
                 value=cipher_b64,
             )
+            c_key = Config(
+                key=ConfigKey.SECRET_KEY,
+                value=secrets.token_hex(),
+            )
 
-            s.add_all((c_version, c_enc_test, c_cipher))
+            s.add_all((c_version, c_enc_test, c_cipher, c_key))
             s.commit()
         path_db.chmod(0o600)  # Only owner can read/write
 
