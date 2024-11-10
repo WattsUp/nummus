@@ -504,43 +504,44 @@ def reorder() -> str:
             last_group = g_uri
 
         # Set all to -index first so swapping can occur without unique violations
-        s.query(BudgetGroup).update(
-            {
-                BudgetGroup.position: sql.case(
-                    {g_id: -i - 1 for i, g_id in enumerate(g_positions)},
-                    value=BudgetGroup.id_,
-                ),
-            },
-        )
-        # Set all to None first so swapping can occur without unique violations
-        s.query(TransactionCategory).update(
-            {
-                TransactionCategory.budget_group_id: None,
-                TransactionCategory.budget_position: None,
-            },
-        )
+        if len(g_positions) > 0 and len(t_cat_positions) > 0:
+            s.query(BudgetGroup).update(
+                {
+                    BudgetGroup.position: sql.case(
+                        {g_id: -i - 1 for i, g_id in enumerate(g_positions)},
+                        value=BudgetGroup.id_,
+                    ),
+                },
+            )
+            # Set all to None first so swapping can occur without unique violations
+            s.query(TransactionCategory).update(
+                {
+                    TransactionCategory.budget_group_id: None,
+                    TransactionCategory.budget_position: None,
+                },
+            )
 
-        s.query(BudgetGroup).update(
-            {
-                BudgetGroup.position: sql.case(
-                    g_positions,
-                    value=BudgetGroup.id_,
-                ),
-            },
-        )
-        s.query(TransactionCategory).update(
-            {
-                TransactionCategory.budget_group_id: sql.case(
-                    t_cat_groups,
-                    value=TransactionCategory.id_,
-                ),
-                TransactionCategory.budget_position: sql.case(
-                    t_cat_positions,
-                    value=TransactionCategory.id_,
-                ),
-            },
-        )
-        s.commit()
+            s.query(BudgetGroup).update(
+                {
+                    BudgetGroup.position: sql.case(
+                        g_positions,
+                        value=BudgetGroup.id_,
+                    ),
+                },
+            )
+            s.query(TransactionCategory).update(
+                {
+                    TransactionCategory.budget_group_id: sql.case(
+                        t_cat_groups,
+                        value=TransactionCategory.id_,
+                    ),
+                    TransactionCategory.budget_position: sql.case(
+                        t_cat_positions,
+                        value=TransactionCategory.id_,
+                    ),
+                },
+            )
+            s.commit()
 
     table, _ = ctx_table()
     return flask.render_template(
@@ -601,7 +602,7 @@ def group(uri: str) -> str:
 
 
 def new_group() -> str:
-    """PUT /h/budgeting/group.
+    """POST /h/budgeting/group.
 
     Returns:
         string HTML response

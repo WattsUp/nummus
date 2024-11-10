@@ -4,8 +4,12 @@ import datetime
 from decimal import Decimal
 
 from nummus import utils
-from nummus.models import BudgetAssignment, TransactionCategory
-from nummus.models.transaction import TransactionSplit
+from nummus.models import (
+    BudgetAssignment,
+    BudgetGroup,
+    TransactionCategory,
+    TransactionSplit,
+)
 from tests.controllers.base import WebTestBase
 
 
@@ -38,10 +42,10 @@ class TestBudgeting(WebTestBase):
         self.assertIn(month_str, result)
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>",
         )
         self.assertRegex(result, r"hx-get=.*>-\$10.00</span>")
         self.assertNotIn("General Merchandise", result)
@@ -60,10 +64,10 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get((endpoint, {"month": month_str}), headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>",
         )
         self.assertRegex(result, r"<span .*>\$0.00</span>")
         self.assertRegex(
@@ -85,10 +89,10 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$50.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$50.00</div>",
         )
         self.assertRegex(result, r"<span .*>\$0.00</span>")
         self.assertRegex(result, r"hx-get=.*>\$50.00</span>")
@@ -103,25 +107,29 @@ class TestBudgeting(WebTestBase):
 
         # Group General Merchandise
         with p.get_session() as s:
+            g = BudgetGroup(name="Bills", position=0)
+            s.add(g)
+            s.commit()
+            g_bills_id = g.id_
             s.query(TransactionCategory).where(
                 TransactionCategory.name == "General Merchandise",
-            ).update({"budget_group": "Bills", "budget_position": 1})
+            ).update({"budget_group_id": g_bills_id, "budget_position": 0})
             s.commit()
 
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Bills</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>\$50.00</div>",
+            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>\$50.00</div>",
         )
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>",
         )
         i_uncategorized = result.find("Uncategorized")
         i_general = result.find("General Merchandise")
@@ -129,30 +137,33 @@ class TestBudgeting(WebTestBase):
 
         # Group Uncategorized
         with p.get_session() as s:
-            s.query(TransactionCategory).where(
-                TransactionCategory.name == "General Merchandise",
-            ).update({"budget_group": "Bills", "budget_position": 2})
+            s.query(BudgetGroup).where(BudgetGroup.id_ == g_bills_id).update(
+                {"position": 1},
+            )
+            g = BudgetGroup(name="Wants", position=0)
+            s.add(g)
+            s.commit()
+            g_wants_id = g.id_
             s.query(TransactionCategory).where(
                 TransactionCategory.name == "Uncategorized",
-            ).update({"budget_group": "Wants", "budget_position": 1})
+            ).update({"budget_group_id": g_wants_id, "budget_position": 0})
             s.commit()
 
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Bills</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>\$50.00</div>",
+            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>\$50.00</div>",
         )
         self.assertRegex(
             result,
-            r"<div .*>Wants</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>",
+            r"<span.*>Wants</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>",
         )
-        self.assertNotIn("Ungrouped", result)
         i_uncategorized = result.find("Uncategorized")
         i_general = result.find("General Merchandise")
         self.assertLess(i_uncategorized, i_general)
@@ -164,21 +175,20 @@ class TestBudgeting(WebTestBase):
         with p.get_session() as s:
             s.query(TransactionCategory).where(
                 TransactionCategory.name == "General Merchandise",
-            ).update({"budget_group": "Bills", "budget_position": 2})
+            ).update({"budget_group_id": g_bills_id, "budget_position": 1})
             s.query(TransactionCategory).where(
                 TransactionCategory.name == "Uncategorized",
-            ).update({"budget_group": "Bills", "budget_position": 1})
+            ).update({"budget_group_id": g_bills_id, "budget_position": 0})
             s.commit()
 
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Bills</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$50.00</div>",
+            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$50.00</div>",
         )
-        self.assertNotIn("Ungrouped", result)
         i_uncategorized = result.find("Uncategorized")
         i_general = result.find("General Merchandise")
         self.assertLess(i_uncategorized, i_general)
@@ -198,10 +208,10 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Bills</div>[ \n]+"
-            r"<div .*>\$50.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$90.00</div>",
+            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$50.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$90.00</div>",
         )
         self.assertRegex(
             result,
@@ -217,10 +227,10 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Bills</div>[ \n]+"
-            r"<div .*>\$200.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$240.00</div>",
+            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
+            r"<div.*>\$200.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$240.00</div>",
         )
         self.assertRegex(
             result,
@@ -241,10 +251,10 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>\$100.00</div>[ \n]+"
-            r"<div .*>\$100.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>\$100.00</div>[ \n]+"
+            r"<div.*>\$100.00</div>",
         )
 
     def test_assign(self) -> None:
@@ -276,10 +286,10 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(a.amount, Decimal(10))
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$0.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$0.00</div>",
         )
 
         form = {"amount": "100"}
@@ -293,10 +303,10 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(a.amount, Decimal(100))
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$100.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>\$90.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$100.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>\$90.00</div>",
         )
 
         form = {"amount": "0"}
@@ -306,10 +316,10 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(n, 0)
         self.assertRegex(
             result,
-            r"<div .*>Ungrouped</div>[ \n]+"
-            r"<div .*>\$0.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>[ \n]+"
-            r"<div .*>-\$10.00</div>",
+            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
+            r"<div.*>\$0.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>[ \n]+"
+            r"<div.*>-\$10.00</div>",
         )
 
     def test_overspending(self) -> None:
@@ -588,3 +598,242 @@ class TestBudgeting(WebTestBase):
                 .one()
             )
             self.assertEqual(a.amount, Decimal(-50))
+
+    def test_reorder(self) -> None:
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        with p.get_session() as s:
+            g_0 = BudgetGroup(name=self.random_string(), position=0)
+            g_1 = BudgetGroup(name=self.random_string(), position=1)
+            s.add_all((g_0, g_1))
+            s.commit()
+            g_id_0 = g_0.id_
+            g_uri_0 = g_0.uri
+            g_id_1 = g_1.id_
+            g_uri_1 = g_1.uri
+
+            t_cat_0 = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name == "General Merchandise")
+                .one()
+            )
+            t_cat_id_0 = t_cat_0.id_
+            t_cat_uri_0 = t_cat_0.uri
+            t_cat_0.budget_group_id = g_id_0
+            t_cat_0.budget_position = 0
+
+            t_cat_1 = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name == "Uncategorized")
+                .one()
+            )
+            t_cat_id_1 = t_cat_1.id_
+            t_cat_uri_1 = t_cat_1.uri
+            t_cat_1.budget_group_id = g_id_0
+            t_cat_1.budget_position = 1
+
+            t_cat_2 = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name == "Groceries")
+                .one()
+            )
+            t_cat_id_2 = t_cat_2.id_
+            t_cat_uri_2 = t_cat_2.uri
+            t_cat_2.budget_group_id = g_id_1
+            t_cat_2.budget_position = 0
+            s.commit()
+
+        endpoint = "budgeting.reorder"
+        url = endpoint
+        # Empty form doesn't make problems
+        form = {}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+
+        # Swap groups 0 and 1
+        form = {
+            "group_uri": [g_uri_1, g_uri_0],
+            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group": [g_uri_1, g_uri_0, g_uri_0],
+        }
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+
+        with p.get_session() as s:
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
+            self.assertEqual(g.position, 1)
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_1).one()
+            self.assertEqual(g.position, 0)
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_0)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_0)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_1)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 1)
+            self.assertEqual(t_cat.budget_group_id, g_id_0)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_2)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_1)
+
+        form = {
+            "group_uri": [g_uri_1, g_uri_0],
+            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group": [g_uri_1, g_uri_1, g_uri_0],
+        }
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+
+        with p.get_session() as s:
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
+            self.assertEqual(g.position, 1)
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_1).one()
+            self.assertEqual(g.position, 0)
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_0)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 1)
+            self.assertEqual(t_cat.budget_group_id, g_id_1)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_1)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_0)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_2)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_1)
+
+        form = {
+            "group_uri": [g_uri_1, g_uri_0],
+            "row_uri": [t_cat_uri_0, t_cat_uri_1, t_cat_uri_2],
+            "group": [g_uri_1, g_uri_0, ""],
+        }
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+
+        with p.get_session() as s:
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
+            self.assertEqual(g.position, 1)
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_1).one()
+            self.assertEqual(g.position, 0)
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_0)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_1)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_1)
+                .one()
+            )
+            self.assertEqual(t_cat.budget_position, 0)
+            self.assertEqual(t_cat.budget_group_id, g_id_0)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_2)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+
+    def test_group(self) -> None:
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        with p.get_session() as s:
+            g_0 = BudgetGroup(name=self.random_string(), position=0)
+            g_1 = BudgetGroup(name=self.random_string(), position=1)
+            s.add_all((g_0, g_1))
+            s.commit()
+            g_id_0 = g_0.id_
+            g_uri_0 = g_0.uri
+            g_id_1 = g_1.id_
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name == "General Merchandise")
+                .one()
+            )
+            t_cat_id = t_cat.id_
+            t_cat.budget_group_id = g_id_0
+            t_cat.budget_position = 0
+            s.commit()
+
+        endpoint = "budgeting.group"
+        url = endpoint, {"uri": g_uri_0}
+        form = {"name": ""}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn("Budget group name must not be empty", result)
+
+        form = {"name": "Bills"}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertIn("Bills", result)
+
+        with p.get_session() as s:
+            name = s.query(BudgetGroup.name).where(BudgetGroup.id_ == g_id_0).scalar()
+            self.assertEqual(name, "Bills")
+
+        result, _ = self.web_delete(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertNotIn("Bills", result)
+
+        with p.get_session() as s:
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_group_id)
+            self.assertIsNone(t_cat.budget_position)
+
+            # Next category should move up
+            position = (
+                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_id_1).scalar()
+            )
+            self.assertEqual(position, 0)
+
+    def test_new_group(self) -> None:
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        with p.get_session() as s:
+            g_0 = BudgetGroup(name="Bills", position=0)
+            s.add(g_0)
+            s.commit()
+
+        endpoint = "budgeting.new_group"
+        url = endpoint
+        form = {"name": "Bills"}
+        result, _ = self.web_post(url, data=form)
+        self.assertIn("Budget group name must be unique", result)
+
+        form = {"name": "Wants"}
+        result, _ = self.web_post(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertIn("Bills", result)
+        self.assertIn("Wants", result)

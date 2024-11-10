@@ -22,6 +22,7 @@ from nummus.models import (
     AssetCategory,
     AssetValuation,
     BudgetAssignment,
+    BudgetGroup,
     Credentials,
     Transaction,
     TransactionCategory,
@@ -228,6 +229,7 @@ class WebTestBase(TestBase):
             TransactionCategory,
             Asset,
             Account,
+            BudgetGroup,
         ]
         with self._portfolio.get_session() as s:
             for model in models:

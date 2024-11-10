@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from nummus import exceptions as exc
 from nummus import models
-from nummus.models import TransactionCategory, TransactionCategoryGroup
+from nummus.models import BudgetGroup, TransactionCategory, TransactionCategoryGroup
 from tests.base import TestBase
 
 
@@ -10,6 +10,11 @@ class TestTransactionCategory(TestBase):
     def test_init_properties(self) -> None:
         s = self.get_session()
         models.metadata_create_all(s)
+
+        g = BudgetGroup(name=self.random_string(), position=0)
+        s.add(g)
+        s.commit()
+        g_id = g.id_
 
         d = {
             "name": self.random_string(),
@@ -72,7 +77,7 @@ class TestTransactionCategory(TestBase):
         s.commit()
 
         # Just budget_group bad
-        t_cat.budget_group = self.random_string()
+        t_cat.budget_group_id = g_id
         self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()
 
@@ -82,7 +87,7 @@ class TestTransactionCategory(TestBase):
         s.rollback()
 
         # Both okay
-        t_cat.budget_group = self.random_string()
+        t_cat.budget_group_id = g_id
         t_cat.budget_position = 10
         s.commit()
 

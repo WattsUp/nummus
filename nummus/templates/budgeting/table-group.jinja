@@ -39,7 +39,7 @@
     </div>
     <div class="w-full pb-1 budget-group-fold">
         {% for category in group["categories"] %}
-            <div id="category-{{ category["name"] }}"
+            <div id="category-{{ category["uri"] }}"
                  class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row">
                 <input name="row_uri" value="{{ category["uri"] }}" hidden>
                 <div class="w-28 shrink-0 grow">

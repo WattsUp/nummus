@@ -260,7 +260,6 @@ const budgeting = {
                         const rowChange = e.getAttribute('reorder') || null;
                         const groupChange =
                             groupHeader.getAttribute('reorder') || null;
-                        const rowURI = e.id.slice(9);
                         const groupURI = group.id.slice(13);
 
                         if (rowChange != null && rowChange != lastChange) {
