@@ -21,6 +21,15 @@ class Bytes:
         return isinstance(other, Bytes) and self._data == other._data
 
 
+class Derived(base.BaseEnum):
+    RED = 1
+    BLUE = 2
+
+    @classmethod
+    def _lut(cls) -> Mapping[str, Derived]:
+        return {"r": cls.RED, "b": cls.BLUE}
+
+
 class Parent(base.Base):
     __table_id__ = 0xF0000000
 
@@ -46,6 +55,8 @@ class Child(base.Base):
     parent: orm.Mapped[Parent] = orm.relationship(back_populates="children")
 
     height: base.ORMRealOpt = orm.mapped_column(base.Decimal6)
+
+    color: orm.Mapped[Derived | None] = orm.mapped_column(base.SQLEnum(Derived))
 
 
 class TestORMBase(TestBase):
@@ -95,6 +106,11 @@ class TestORMBase(TestBase):
         s.commit()
         self.assertIsInstance(child.height, Decimal)
         self.assertEqual(child.height, Decimal("1.234567"))
+
+        child.color = Derived.RED
+        s.commit()
+        self.assertIsInstance(child.color, Derived)
+        self.assertEqual(child.color, Derived.RED)
 
     def test_comparators(self) -> None:
         s = self.get_session()
@@ -161,15 +177,6 @@ class TestORMBase(TestBase):
         self.assertEqual(result, field)
 
         self.assertRaises(exc.InvalidORMValueError, parent.validate_strings, key, "a")
-
-
-class Derived(base.BaseEnum):
-    RED = 1
-    BLUE = 2
-
-    @classmethod
-    def _lut(cls) -> Mapping[str, Derived]:
-        return {"r": cls.RED, "b": cls.BLUE}
 
 
 class TestBaseEnum(TestBase):

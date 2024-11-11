@@ -9,7 +9,15 @@ from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.models.base import Base, BaseEnum, ORMBool, ORMIntOpt, ORMStr, ORMStrOpt
+from nummus.models.base import (
+    Base,
+    BaseEnum,
+    ORMBool,
+    ORMIntOpt,
+    ORMStr,
+    ORMStrOpt,
+    SQLEnum,
+)
 
 
 class TransactionCategoryGroup(BaseEnum):
@@ -42,7 +50,9 @@ class TransactionCategory(Base):
 
     name: ORMStr = orm.mapped_column(unique=True)
     emoji: ORMStrOpt
-    group: orm.Mapped[TransactionCategoryGroup]
+    group: orm.Mapped[TransactionCategoryGroup] = orm.mapped_column(
+        SQLEnum(TransactionCategoryGroup),
+    )
     locked: ORMBool
     is_profit_loss: ORMBool
     asset_linked: ORMBool

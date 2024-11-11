@@ -172,7 +172,7 @@ class Base(orm.DeclarativeBase):
         return getattr(self.__class__, key).type.truncate(field)
 
 
-class BaseEnum(enum.Enum):
+class BaseEnum(enum.IntEnum):
     """Enum class with a parser."""
 
     @classmethod
@@ -192,6 +192,69 @@ class BaseEnum(enum.Enum):
             Dictionary {alternate names for enums: Enum}
         """
         return {}  # pragma: no cover
+
+
+class SQLEnum(types.TypeDecorator):
+    """SQL type for enumeration, stores as integer."""
+
+    impl = types.Integer
+
+    cache_ok = True
+
+    def __init__(
+        self,
+        enum_type: type[BaseEnum],
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        """Initialize IntEnum.
+
+        Args:
+            enum_type: BaseEnum this column is
+            args: Passed to super
+            kwargs: Passed to super
+        """
+        super().__init__(*args, **kwargs)
+
+        self._enum_type = enum_type
+
+    @override
+    def process_bind_param(
+        self,
+        value: BaseEnum | None,
+        dialect: sqlalchemy.Dialect,
+    ) -> int | None:
+        """Receive a bound parameter value to be converted.
+
+        Args:
+            value: Python side value to convert
+            dialect: Dialect to use
+
+        Returns:
+            SQL side representation of value
+        """
+        if value is None:
+            return None
+        return value.value
+
+    @override
+    def process_result_value(
+        self,
+        value: int | None,
+        dialect: sqlalchemy.Dialect,
+    ) -> BaseEnum | None:
+        """Receive a result-row column value to be converted.
+
+        Args:
+            value: SQL side value to convert
+            dialect: Dialect to use
+
+        Returns:
+            Python side representation of value
+        """
+        if value is None:
+            return None
+        return self._enum_type(value)
 
 
 class Decimal6(types.TypeDecorator):
