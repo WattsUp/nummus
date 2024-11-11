@@ -23,6 +23,7 @@ from nummus.models.base import (
     ORMReal,
     ORMStr,
     ORMStrOpt,
+    SQLEnum,
     YIELD_PER,
 )
 from nummus.models.transaction import TransactionSplit
@@ -126,7 +127,7 @@ class Asset(Base):
 
     name: ORMStr = orm.mapped_column(unique=True)
     description: ORMStrOpt
-    category: orm.Mapped[AssetCategory]
+    category: orm.Mapped[AssetCategory] = orm.mapped_column(SQLEnum(AssetCategory))
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
 

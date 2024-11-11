@@ -11,7 +11,15 @@ from sqlalchemy import orm
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.asset import Asset
-from nummus.models.base import Base, BaseEnum, ORMBool, ORMStr, ORMStrOpt, YIELD_PER
+from nummus.models.base import (
+    Base,
+    BaseEnum,
+    ORMBool,
+    ORMStr,
+    ORMStrOpt,
+    SQLEnum,
+    YIELD_PER,
+)
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 
@@ -51,7 +59,7 @@ class Account(Base):
     name: ORMStr
     number: ORMStrOpt
     institution: ORMStr
-    category: orm.Mapped[AccountCategory]
+    category: orm.Mapped[AccountCategory] = orm.mapped_column(SQLEnum(AccountCategory))
     closed: ORMBool
     budgeted: ORMBool
 
