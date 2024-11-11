@@ -133,7 +133,7 @@ class Base(orm.DeclarativeBase):
         return dict(query.all())
 
     @classmethod
-    def validate_strings(cls, key: str, field: str | None) -> str | None:
+    def clean_strings(cls, key: str, field: str | None) -> str | None:
         """Validates string fields are long enough.
 
         Args:
@@ -158,7 +158,8 @@ class Base(orm.DeclarativeBase):
             raise exc.InvalidORMValueError(msg)
         return field
 
-    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+    @classmethod
+    def clean_decimals(cls, key: str, field: Decimal | None) -> Decimal | None:
         """Validates decimals are truncated to their SQL precision.
 
         Args:
@@ -169,7 +170,7 @@ class Base(orm.DeclarativeBase):
             field
         """
         # Call truncate using the proper Decimal precision
-        return getattr(self.__class__, key).type.truncate(field)
+        return getattr(cls, key).type.truncate(field)
 
 
 class BaseEnum(enum.IntEnum):
@@ -327,3 +328,28 @@ class Decimal9(Decimal6):
 
     _FACTOR_OUT = Decimal("1e-9")
     _FACTOR_IN = 1 / _FACTOR_OUT
+
+
+def string_column_args(name: str) -> tuple[sqlalchemy.CheckConstraint, ...]:
+    """Get table args for string column.
+
+    Args:
+        name: Name of string column
+
+    Returns:
+        Tuple of constraints
+    """
+    return (
+        sqlalchemy.CheckConstraint(
+            f"length({name}) >= {utils.MIN_STR_LEN}",
+            f"{name} must be at least {utils.MIN_STR_LEN} characters long",
+        ),
+        sqlalchemy.CheckConstraint(
+            f"{name} != '[blank]'",
+            f"{name} must not be '[blank]'",
+        ),
+        sqlalchemy.CheckConstraint(
+            f"{name} not like ' %' and {name} not like '% '",
+            f"{name} must not have leading or trailing whitespace",
+        ),
+    )
