@@ -133,8 +133,8 @@ class Asset(Base):
     # NOT ticker, since there are valid single letter tickers
     # NOT unit, since there are valid single letter units: ea
     @orm.validates("name", "description", "tag")
-    @override
-    def validate_strings(self, key: str, field: str | None) -> str | None:
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
         return super().validate_strings(key, field)
 
     @orm.validates("ticker")

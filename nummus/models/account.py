@@ -7,7 +7,6 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import orm
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -57,8 +56,8 @@ class Account(Base):
     budgeted: ORMBool
 
     @orm.validates("name", "number", "institution")
-    @override
-    def validate_strings(self, key: str, field: str | None) -> str | None:
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
         return super().validate_strings(key, field)
 
     @property
