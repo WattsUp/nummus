@@ -82,6 +82,12 @@ class TestPortfolio(TestBase):
             )[0]
             self.assertEqual(value, str(version.__version__))
 
+            n = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).count()
+            self.assertEqual(n, 1)
+
+            n = s.query(Config).where(Config.key == ConfigKey.SECRET_KEY).count()
+            self.assertEqual(n, 1)
+
         p = None
         sql.drop_session()
 

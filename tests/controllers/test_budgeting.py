@@ -772,6 +772,7 @@ class TestBudgeting(WebTestBase):
             g_id_0 = g_0.id_
             g_uri_0 = g_0.uri
             g_id_1 = g_1.id_
+            g_uri_1 = g_1.uri
 
             t_cat = (
                 s.query(TransactionCategory)
@@ -789,10 +790,17 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_put(url, data=form)
         self.assertIn("Budget group name must not be empty", result)
 
+        form = {"name": "Bills", "closed": ""}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertIn("Bills", result)
+        self.assertEqual(result.count("checked"), 1)
+
         form = {"name": "Bills"}
         result, _ = self.web_put(url, data=form)
         self.assertIn('<div id="budget-table"', result)
         self.assertIn("Bills", result)
+        self.assertEqual(result.count("checked"), 0)
 
         with p.get_session() as s:
             name = s.query(BudgetGroup.name).where(BudgetGroup.id_ == g_id_0).scalar()
@@ -816,6 +824,24 @@ class TestBudgeting(WebTestBase):
                 s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_id_1).scalar()
             )
             self.assertEqual(position, 0)
+
+        url = endpoint, {"uri": g_uri_1}
+        form = {"name": "Bills", "closed": ""}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result.count("checked"), 1)
+
+        url = endpoint, {"uri": "ungrouped"}
+        form = {"closed": ""}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result.count("checked"), 2)
+
+        url = endpoint, {"uri": "ungrouped"}
+        form = {}
+        result, _ = self.web_put(url, data=form)
+        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result.count("checked"), 1)
 
     def test_new_group(self) -> None:
         _ = self._setup_portfolio()

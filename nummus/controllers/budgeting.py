@@ -582,8 +582,6 @@ def group(uri: str) -> str:
         groups_closed = [x for x in groups_closed if x != uri]
         if closed:
             groups_closed.append(uri)
-        elif uri in groups_closed:
-            groups_closed = [x for x in groups_closed if x != uri]
         flask.session["groups_closed"] = groups_closed
     elif flask.request.method == "DELETE":
         with p.get_session() as s:

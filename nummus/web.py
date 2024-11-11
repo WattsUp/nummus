@@ -164,7 +164,7 @@ class Server:
             secret_key = (
                 s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).scalar()
             )
-            if secret_key is None:
+            if secret_key is None:  # pragma: no cover
                 msg = "Config SECRET_KEY was not found"
                 raise exc.ProtectedObjectNotFoundError(msg)
         self._app.secret_key = secret_key
