@@ -44,7 +44,7 @@ class DuplicateTransactions(Base):
                     Transaction.statement,
                 )
                 .order_by(Transaction.date_ord)
-                .having(sqlalchemy.func.count(Transaction.id_) > 1)
+                .having(sqlalchemy.func.count() > 1)
             )
             for date_ord, acct_id, amount in query.yield_per(YIELD_PER):
                 date_ord: int

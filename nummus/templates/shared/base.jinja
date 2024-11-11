@@ -20,6 +20,9 @@
         {% endassets %}
         {% assets "js" %}
             <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+            {# DELETE is supposed to use request parameters but form is way better #}
+            {# htmx 2.x followed the spec properly, revert #}
+            <script>htmx.config.methodsThatUseUrlParams = ["get"]</script>
         {% endassets %}
     </head>
     <body class="antialiased bg-grey-100 h-screen w-screen relative text-black"

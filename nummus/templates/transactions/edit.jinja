@@ -17,31 +17,32 @@
         {% for item in tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
     <div class="flex flex-col w-full grow min-h-0" id="form-txn">
-        <div class="flex w-full max-md:flex-col md:gap-4">
+        <div class="flex w-full max-md:flex-col md:gap-4 whitespace-nowrap">
             <div class="flex flex-col grow min-w-0">
                 <div class="flex gap-2 flex-wrap max-md:justify-between items-center">
-                    <div class="w-20 shrink-1">Date</div>
+                    <div class="w-20 shrink-0">Date</div>
                     <input name="date"
                            type="date"
+                           class="shrink-0"
                            value="{{ parent["date"] }}"
                            autocomplete="off">
                 </div>
                 <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
-                    <div class="w-20 shrink-1">Account</div>
-                    <div>{{ parent["account"] }}</div>
+                    <div class="w-20 shrink-0">Account</div>
+                    <div class="shrink-0">{{ parent["account"] }}</div>
                 </div>
                 <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
-                    <div class="w-20 shrink-1">Statement</div>
+                    <div class="w-20 shrink-0">Statement</div>
                     <div class="italic truncate min-w-0">{{ parent["statement"] }}</div>
                 </div>
             </div>
-            <div class="flex flex-col min-w-0">
+            <div class="flex flex-col min-w-0 shrink-0">
                 <div class="flex gap-2 min-h-7 justify-between items-center">
-                    <div class="w-28 shrink-1">Total Amount</div>
-                    <div>{{ parent["amount"] | money }}</div>
+                    <div class="w-28 shrink-2">Total Amount</div>
+                    <div class="shrink-0">{{ parent["amount"] | money }}</div>
                 </div>
                 <div class="flex gap-2 min-h-7 justify-between items-center">
-                    <div class="w-28 shrink-1">Locked</div>
+                    <div class="w-28 shrink-0">Locked</div>
                     {% if parent["linked"] %}
                         <label class="checkbox">
                             <input type="checkbox"
@@ -59,7 +60,7 @@
                     {% endif %}
                 </div>
                 <div class="flex gap-2 min-h-7 justify-between items-center">
-                    <div class="w-28 shrink-1">Linked</div>
+                    <div class="w-28 shrink-0">Linked</div>
                     {% if parent["linked"] %}
                         {% with class = "w-6 h-6 fill-green" %}
                             {% include "svg/link.svg" %}
