@@ -30,7 +30,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("No spending", result)
         self.assertRegex(
             result,
-            r'<script>emergencyFundChart\.update\(.*"balances": \[.+\].*\)</script>',
+            r'<script>emergencyFund\.update\(.*"balances": \[.+\].*\)</script>',
         )
 
         # Add an emergency fund
@@ -108,7 +108,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("increasing your emergency fund by $29", result)
         self.assertRegex(
             result,
-            r'<script>emergencyFundChart\.update\(.*"balances": \[.+\].*\)</script>',
+            r'<script>emergencyFund\.update\(.*"balances": \[.+\].*\)</script>',
         )
         self.assertIn("Groceries", result)
         m = re.search(
@@ -155,7 +155,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("No spending", result)
         self.assertRegex(
             result,
-            r"<script>emergencyFundChart\.updateDashboard\("
+            r"<script>emergencyFund\.updateDashboard\("
             r'.*"balances": \[.+\].*\)</script>',
         )
 
@@ -232,7 +232,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("increase your fund to at least $39", result)
         self.assertRegex(
             result,
-            r"<script>emergencyFundChart\.updateDashboard"
+            r"<script>emergencyFund\.updateDashboard"
             r'\(.*"balances": \[.+\].*\)</script>',
         )
 

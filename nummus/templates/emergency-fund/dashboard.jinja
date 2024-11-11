@@ -14,7 +14,7 @@
         <canvas id="e-fund-chart-canvas"></canvas>
     </div>
     <div id="e-fund-chart-data">
-        <script>emergencyFundChart.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
+        <script>emergencyFund.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
     </div>
     <div class="text-sm text-center">
         {% if e_fund["months"] is none %}

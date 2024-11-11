@@ -1,4 +1,5 @@
-const accountChart = {
+'use strict';
+const accounts = {
     chart: null,
     chartProfit: null,
     /**

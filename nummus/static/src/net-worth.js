@@ -1,4 +1,5 @@
-const netWorthChart = {
+'use strict';
+const netWorth = {
     chartTotal: null,
     chartAssets: null,
     chartLiabilities: null,

@@ -130,7 +130,7 @@ class TestAsset(WebTestBase):
         self.assertIn(a_0, result)
         self.assertRegex(result, r"<h1.*>\$0.00</h1>")
         self.assertRegex(result, r"<h2.*>[ \n]*no valuations[ \n]*</h2>")
-        self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+        self.assertRegex(result, r"<script>assets\.update\(.*\)</script>")
         self.assertIn("No matching valuations for given query filters", result)
 
         # Add valuation
@@ -152,7 +152,7 @@ class TestAsset(WebTestBase):
         )
         self.assertRegex(result, r"<h1.*>\$100.00</h1>")
         self.assertRegex(result, rf"<h2.*>[ \n]*as of {today}[ \n]*</h2>")
-        self.assertRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+        self.assertRegex(result, r"<script>assets\.update\(.*\)</script>")
         self.assertRegex(result, rf'hx-get="/h/assets/v/{v_uri}"')
 
     def test_txns(self) -> None:
@@ -335,14 +335,14 @@ class TestAsset(WebTestBase):
             (endpoint, {"uri": a_uri_0, "period": "all"}),
         )
         # Second call for table should not update chart as well
-        self.assertNotRegex(result, r"<script>assetChart\.update\(.*\)</script>")
+        self.assertNotRegex(result, r"<script>assets\.update\(.*\)</script>")
 
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0, "period": "30-days"}),
         )
         self.assertRegex(
             result,
-            r'<script>assetChart\.update\(.*"min": null.*\)</script>',
+            r'<script>assets\.update\(.*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "weeks"', result)
 
@@ -351,7 +351,7 @@ class TestAsset(WebTestBase):
         )
         self.assertRegex(
             result,
-            r'<script>assetChart\.update\(.*"min": null.*\)</script>',
+            r'<script>assets\.update\(.*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "months"', result)
         self.assertNotRegex(result, r"<div .*>\$100.000000</div>")
@@ -363,10 +363,10 @@ class TestAsset(WebTestBase):
         )
         self.assertRegex(
             result,
-            r'<script>assetChart\.update\(.*"min": \[.+\].*\)</script>',
+            r'<script>assets\.update\(.*"min": \[.+\].*\)</script>',
         )
         m = re.search(
-            r'<script>assetChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>assets\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)

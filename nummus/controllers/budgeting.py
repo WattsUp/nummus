@@ -7,11 +7,13 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
+from sqlalchemy import sql
 
+from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
-from nummus.models.budget import BudgetAssignment
+from nummus.models.budget import BudgetAssignment, BudgetGroup
 
 if TYPE_CHECKING:
 
@@ -56,7 +58,10 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
     class GroupContext(TypedDict):
         """Type definition for budget group context."""
 
-        min_position: int
+        position: int
+        name: str | None
+        uri: str | None
+        is_closed: bool
         categories: list[CategoryContext]
         assigned: Decimal
         activity: Decimal
@@ -68,9 +73,26 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         )
         n_overspent = 0
 
-        groups: dict[str, GroupContext] = {}
+        groups_closed: list[str] = flask.session.get("groups_closed", [])
+
+        groups: dict[int | None, GroupContext] = {}
+        query = s.query(BudgetGroup)
+        for g in query.all():
+            groups[g.id_] = {
+                "position": g.position,
+                "name": g.name,
+                "uri": g.uri,
+                "is_closed": g.uri in groups_closed,
+                "assigned": Decimal(0),
+                "activity": Decimal(0),
+                "available": Decimal(0),
+                "categories": [],
+            }
         ungrouped: GroupContext = {
-            "min_position": -1,
+            "position": -1,
+            "name": None,
+            "uri": None,
+            "is_closed": "ungrouped" in groups_closed,
             "assigned": Decimal(0),
             "activity": Decimal(0),
             "available": Decimal(0),
@@ -82,7 +104,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             assigned, activity, available = categories[t_cat.id_]
             # Skip category if all numbers are 0 and not grouped
             if (
-                t_cat.budget_group is None
+                t_cat.budget_group_id is None
                 and activity == 0
                 and assigned == 0
                 and available == 0
@@ -123,36 +145,18 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "bar_mode": bar_mode,
                 "bar_w": bar_w,
             }
-            if t_cat.budget_group is None:
-                group = ungrouped
-            else:
-                if t_cat.budget_group not in groups:
-                    groups[t_cat.budget_group] = {
-                        "min_position": t_cat.budget_position or 0,
-                        "assigned": Decimal(0),
-                        "activity": Decimal(0),
-                        "available": Decimal(0),
-                        "categories": [],
-                    }
-                group = groups[t_cat.budget_group]
+            g = groups.get(t_cat.budget_group_id, ungrouped)
+            g["assigned"] += assigned
+            g["activity"] += activity
+            g["available"] += available
+            g["categories"].append(cat_ctx)
 
-                # Calculate the minimum position caring for None
-                group["min_position"] = min(
-                    group["min_position"] or 0,
-                    t_cat.budget_position or 0,
-                )
-            group["assigned"] += assigned
-            group["activity"] += activity
-            group["available"] += available
-            group["categories"].append(cat_ctx)
+        groups_list = sorted(groups.values(), key=lambda item: item["position"])
+        groups_list.append(ungrouped)
 
-        groups_list = sorted(groups.items(), key=lambda item: item[1]["min_position"])
-        if ungrouped["categories"]:
-            groups_list.append(("Ungrouped", ungrouped))
-
-        for _, group in groups_list:
-            group["categories"] = sorted(
-                group["categories"],
+        for g in groups_list:
+            g["categories"] = sorted(
+                g["categories"],
                 key=lambda item: (item["position"] or 0, item["name"]),
             )
 
@@ -205,7 +209,7 @@ def assign(uri: str) -> str:
     amount = utils.parse_real(form.get("amount")) or Decimal(0)
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        cat = web_utils.find(s, TransactionCategory, uri)
         if amount == 0:
             s.query(BudgetAssignment).where(
                 BudgetAssignment.month_ord == month_ord,
@@ -258,7 +262,7 @@ def overspending(uri: str) -> str | flask.Response:
 
     with p.get_session() as s:
         t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
 
         if flask.request.method == "PUT":
@@ -372,7 +376,7 @@ def move(uri: str) -> str | flask.Response:
 
     with p.get_session() as s:
         t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
 
         if flask.request.method == "PUT":
@@ -464,9 +468,187 @@ def move(uri: str) -> str | flask.Response:
     )
 
 
+def reorder() -> str:
+    """GET & PUT /h/budgeting/reorder.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    form = flask.request.form
+    group_uris = form.getlist("group_uri")
+    row_uris = form.getlist("row_uri")
+    groups = form.getlist("group")
+
+    with p.get_session() as s:
+        g_positions = {
+            BudgetGroup.uri_to_id(g_uri): i for i, g_uri in enumerate(group_uris)
+        }
+
+        t_cat_groups: dict[int, int | None] = {}
+        t_cat_positions: dict[int, int | None] = {}
+
+        i = 0
+        last_group = None
+        for t_cat_uri, g_uri in zip(row_uris, groups, strict=True):
+            g_id = None if g_uri == "" else BudgetGroup.uri_to_id(g_uri)
+            if g_uri != last_group:
+                i = 0
+
+            t_cat_id = TransactionCategory.uri_to_id(t_cat_uri)
+            if g_id is None:
+                t_cat_groups[t_cat_id] = None
+                t_cat_positions[t_cat_id] = None
+            else:
+                t_cat_groups[t_cat_id] = g_id
+                t_cat_positions[t_cat_id] = i
+
+            i += 1
+            last_group = g_uri
+
+        # Set all to -index first so swapping can occur without unique violations
+        if len(g_positions) > 0 and len(t_cat_positions) > 0:
+            s.query(BudgetGroup).update(
+                {
+                    BudgetGroup.position: sql.case(
+                        {g_id: -i - 1 for i, g_id in enumerate(g_positions)},
+                        value=BudgetGroup.id_,
+                    ),
+                },
+            )
+            # Set all to None first so swapping can occur without unique violations
+            s.query(TransactionCategory).update(
+                {
+                    TransactionCategory.budget_group_id: None,
+                    TransactionCategory.budget_position: None,
+                },
+            )
+
+            s.query(BudgetGroup).update(
+                {
+                    BudgetGroup.position: sql.case(
+                        g_positions,
+                        value=BudgetGroup.id_,
+                    ),
+                },
+            )
+            s.query(TransactionCategory).update(
+                {
+                    TransactionCategory.budget_group_id: sql.case(
+                        t_cat_groups,
+                        value=TransactionCategory.id_,
+                    ),
+                    TransactionCategory.budget_position: sql.case(
+                        t_cat_positions,
+                        value=TransactionCategory.id_,
+                    ),
+                },
+            )
+            s.commit()
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+    )
+
+
+def group(uri: str) -> str:
+    """PUT /h/budgeting/g/<path:uri>.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    if flask.request.method == "PUT":
+        form = flask.request.form
+        closed = "closed" in form
+        if uri != "ungrouped":
+            name = form["name"]
+
+            with p.get_session() as s:
+                g = web_utils.find(s, BudgetGroup, uri)
+                try:
+                    g.name = name
+                    s.commit()
+                except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                    return common.error(e)
+
+        groups_closed: list[str] = flask.session.get("groups_closed", [])
+        groups_closed = [x for x in groups_closed if x != uri]
+        if closed:
+            groups_closed.append(uri)
+        flask.session["groups_closed"] = groups_closed
+    elif flask.request.method == "DELETE":
+        with p.get_session() as s:
+            g = web_utils.find(s, BudgetGroup, uri)
+            s.query(TransactionCategory).where(
+                TransactionCategory.budget_group_id == g.id_,
+            ).update(
+                {
+                    TransactionCategory.budget_group_id: None,
+                    TransactionCategory.budget_position: None,
+                },
+            )
+            s.delete(g)
+            # Subtract 1 from the following positions to close the gap
+            query = (
+                s.query(BudgetGroup)
+                .where(BudgetGroup.position >= g.position)
+                .order_by(BudgetGroup.position)
+            )
+            for g in query.yield_per(YIELD_PER):
+                g.position -= 1
+            s.commit()
+    else:
+        raise NotImplementedError
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+        oob=True,
+    )
+
+
+def new_group() -> str:
+    """POST /h/budgeting/group.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    name = flask.request.form["name"]
+
+    with p.get_session() as s:
+        n = s.query(BudgetGroup).count()
+        try:
+            g = BudgetGroup(name=name, position=n)
+            s.add(g)
+            s.commit()
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+    table, _ = ctx_table()
+    return flask.render_template(
+        "budgeting/table.jinja",
+        table=table,
+        oob=True,
+    )
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
+    "/h/budgeting/reorder": (reorder, ["PUT"]),
+    "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
+    "/h/budgeting/new-group": (new_group, ["POST"]),
 }

@@ -36,7 +36,7 @@ def page(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        a = web_utils.find(s, Asset, uri)
         val_table, title = ctx_valuations(a)
         title = f"Asset {a.name}"
         return common.page(
@@ -149,7 +149,7 @@ def asset(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        a = web_utils.find(s, Asset, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -193,7 +193,7 @@ def valuation(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        v: AssetValuation = web_utils.find(s, AssetValuation, uri)  # type: ignore[attr-defined]
+        v = web_utils.find(s, AssetValuation, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -261,7 +261,7 @@ def new_valuation(uri: str) -> str | flask.Response:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.get_session() as s:
-            a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+            a = web_utils.find(s, Asset, uri)
             v = AssetValuation(
                 asset_id=a.id_,
                 date_ord=date.toordinal(),
@@ -331,7 +331,7 @@ def valuations(uri: str) -> flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        a: Asset = web_utils.find(s, Asset, uri)  # type: ignore[attr-defined]
+        a = web_utils.find(s, Asset, uri)
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)

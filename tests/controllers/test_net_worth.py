@@ -25,7 +25,7 @@ class TestNetWorth(WebTestBase):
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(
             result,
-            r'<script>netWorthChart\.update\(.*"accounts": \[.+\].*\)</script>',
+            r'<script>netWorth\.update\(.*"accounts": \[.+\].*\)</script>',
         )
 
     def test_chart(self) -> None:
@@ -48,12 +48,12 @@ class TestNetWorth(WebTestBase):
         self.assertNotIn("Today's Balance", result)
         self.assertRegex(
             result,
-            r"<script>netWorthChart\.update\(.*"
+            r"<script>netWorth\.update\(.*"
             r'accounts": \[.+\].*"min": null.*\)</script>',
         )
         self.assertIn('<div id="net-worth-config"', result)
         m = re.search(
-            r'<script>netWorthChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>netWorth\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -76,7 +76,7 @@ class TestNetWorth(WebTestBase):
         )
         self.assertRegex(
             result,
-            r"<script>netWorthChart\.update\(.*"
+            r"<script>netWorth\.update\(.*"
             r'accounts": \[.+\].*"min": null.*\)</script>',
         )
         self.assertIn('"date_mode": "weeks"', result)
@@ -92,11 +92,11 @@ class TestNetWorth(WebTestBase):
         )
         self.assertRegex(
             result,
-            r"<script>netWorthChart\.update\(.*"
+            r"<script>netWorth\.update\(.*"
             r'accounts": \[.+\].*"min": \[.+\].*\)</script>',
         )
         m = re.search(
-            r'<script>netWorthChart\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
+            r'<script>netWorth\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )
         self.assertIsNotNone(m)
@@ -241,10 +241,10 @@ class TestNetWorth(WebTestBase):
         self.assertNotIn("<html", result)
         self.assertRegex(
             result,
-            r'<script>netWorthChart\.updateDashboard\(.*"total": \[.+\].*\)</script>',
+            r'<script>netWorth\.updateDashboard\(.*"total": \[.+\].*\)</script>',
         )
         m = re.search(
-            r"<script>netWorthChart\.updateDashboard\("
+            r"<script>netWorth\.updateDashboard\("
             r'.*"labels": \[([^\]]+)\].*\)</script>',
             result,
         )

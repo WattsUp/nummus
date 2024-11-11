@@ -175,7 +175,7 @@ def category(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        cat: TransactionCategory = web_utils.find(s, TransactionCategory, uri)  # type: ignore[attr-defined]
+        cat = web_utils.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: dict[str, object] = {

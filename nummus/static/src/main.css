@@ -311,7 +311,15 @@
         @apply content-["▼"] absolute -left-4 cursor-pointer text-grey-500 md:hover:text-green;
     }
 
-    input[type=checkbox].budget-group-toggle:checked~.budget-group {
+    .dragging {
+        @apply z-50;
+    }
+
+    .dragging::before {
+        @apply content-[""] absolute -inset-1 bg-white border-2 border-grey-500 shadow-xl z-[-1];
+    }
+
+    input[type=checkbox].budget-group-toggle:checked~.budget-group-fold {
         @apply hidden;
     }
 

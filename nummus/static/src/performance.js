@@ -1,4 +1,5 @@
-const performanceChart = {
+'use strict';
+const performance = {
     chart: null,
     /**
      * Create Performance Chart

@@ -9,6 +9,7 @@ preview = true
 skip = "3rd-party,dist,*.pem,*.json"
 ignore-words-list = [
     "assertIn",
+    "initialY",
 ]
 
 [tool.coverage.run]

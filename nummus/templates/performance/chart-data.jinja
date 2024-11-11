@@ -7,5 +7,5 @@
     {% endwith %}
 {% endif %}
 <div id="performance-chart-data">
-    <script>performanceChart.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+    <script>performance.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
 </div>

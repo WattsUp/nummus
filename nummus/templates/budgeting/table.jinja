@@ -1,19 +1,45 @@
 <div id="budget-table"
      class="w-full flex gap-2 max-lg:flex-col-reverse max-lg:items-center"
      hx-target="#budget-table"
-     hx-swap="outerHTML">
-    <div class="grow max-lg:w-full">
-        <div class="w-full flex gap-1 p-1">
-            <div class="w-28 shrink-0 grow"></div>
+     hx-swap="outerHTML"
+     hx-trigger="reorder-rows"
+     hx-put="{{ url_for('budgeting.reorder') }}"
+     hx-include="this"
+     hx-swap-oob="{{ oob }}">
+    <div id="budget-table-root" class="grow max-lg:w-full">
+        <div class="w-full flex gap-1 p-1 h-8 items-center justify-end">
+            <div class="w-28 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
+                {% with class = "w-[24px] h-[24px]" %}
+                    {% include "svg/plus.svg" %}
+                {% endwith %}
+                <input class="w-full"
+                       placeholder="Group name"
+                       name="name"
+                       hx-post="{{ url_for('budgeting.new_group') }}"
+                       hx-include="unset"
+                       hx-target="#overlay-error"
+                       hx-swap="innerHTML">
+                <span class="w-full">New Group</span>
+            </div>
             <div class="w-28 shrink-0 text-right max-md:hidden">Assigned</div>
             <div class="w-28 shrink-0 text-right max-md:hidden">Activity</div>
             <div class="w-28 shrink-0 text-right">Available</div>
+            <div class="w-6 shrink-0 max-md:hidden"></div>
         </div>
-        {% for name, group in table["groups"] %}
-            {% include "budgeting/table_group.jinja" %}
+        {% for group in table["groups"] %}
+            {% include "budgeting/table-group.jinja" %}
         {% endfor %}
+        <div id="budget-temp-group" class="w-full"></div>
+        <div id="budget-temp-row" class="pl-4 w-full"></div>
+        <div id="budget-trash" class="flex justify-center hidden">
+            {% with class = "w-1/4" %}
+                {% include "svg/trash.svg" %}
+            {% endwith %}
+        </div>
     </div>
     <div class="lg:w-1/3" hx-target="#overlay" hx-swap="innerHTML">
+        <div id="overlay-error"
+             class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
         {% set class = "w-full text-xl flex justify-between p-2 items-center gap-2" %}
         {% if table["assignable"] == 0 %}
             <div class="{{ class }} bg-grey-200">
@@ -67,4 +93,5 @@
             </div>
         {% endif %}
     </div>
+    <script>budgeting.setup()</script>
 </div>

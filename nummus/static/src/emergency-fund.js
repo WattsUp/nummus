@@ -1,4 +1,5 @@
-const emergencyFundChart = {
+'use strict';
+const emergencyFund = {
     chart: null,
     /**
      * Create Emergency Fund Chart

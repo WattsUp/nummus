@@ -45,7 +45,7 @@ def account(uri: str) -> str | flask.Response:
     today_ord = today.toordinal()
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
+        acct = web_utils.find(s, Account, uri)
 
         values, _, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
@@ -341,7 +341,7 @@ def page(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
+        acct = web_utils.find(s, Account, uri)
         txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
         title = f"Account {acct.name}," + title.removeprefix("Transactions")
         return common.page(
@@ -371,7 +371,7 @@ def txns(uri: str) -> flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
+        acct = web_utils.find(s, Account, uri)
 
         args = flask.request.args
         period = args.get("period", DEFAULT_PERIOD)
@@ -443,7 +443,7 @@ def txns_options(uri: str, field: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        acct: Account = web_utils.find(s, Account, uri)  # type: ignore[attr-defined]
+        acct = web_utils.find(s, Account, uri)
         args = flask.request.args
 
         id_mapping = None

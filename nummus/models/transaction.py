@@ -88,8 +88,8 @@ class TransactionSplit(Base):
     )
 
     @orm.validates("payee", "description", "tag")
-    @override
-    def validate_strings(self, key: str, field: str | None) -> str | None:
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
         return super().validate_strings(key, field)
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
@@ -245,8 +245,8 @@ class Transaction(Base):
     )
 
     @orm.validates("statement")
-    @override
-    def validate_strings(self, key: str, field: str | None) -> str | None:
+    def validate_string_columns(self, key: str, field: str | None) -> str | None:
+        """Validate string columns."""
         return super().validate_strings(key, field)
 
     @orm.validates("amount")

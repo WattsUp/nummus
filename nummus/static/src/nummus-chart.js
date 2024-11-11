@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Charts creator and updater for nummus
  *

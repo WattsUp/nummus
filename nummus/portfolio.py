@@ -7,6 +7,7 @@ import datetime
 import hashlib
 import io
 import re
+import secrets
 import shutil
 import sys
 import tarfile
@@ -171,8 +172,12 @@ class Portfolio:
                 key=ConfigKey.CIPHER,
                 value=cipher_b64,
             )
+            c_key = Config(
+                key=ConfigKey.SECRET_KEY,
+                value=secrets.token_hex(),
+            )
 
-            s.add_all((c_version, c_enc_test, c_cipher))
+            s.add_all((c_version, c_enc_test, c_cipher, c_key))
             s.commit()
         path_db.chmod(0o600)  # Only owner can read/write
 
@@ -432,15 +437,6 @@ class Portfolio:
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
-                            amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=qty,
-                        )
-                        t_split_1 = TransactionSplit(
-                            parent=txn,
                             amount=amount,
                             payee=d["payee"],
                             description=d["description"],
@@ -448,7 +444,19 @@ class Portfolio:
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
-                        s.add_all((txn, t_split_0, t_split_1))
+                        t_split_1 = TransactionSplit(
+                            parent=txn,
+                            amount=-amount,
+                            payee=d["payee"],
+                            description=d["description"],
+                            category_id=categories["Securities Traded"].id_,
+                            asset_id=asset_id,
+                            asset_quantity_unadjusted=qty,
+                        )
+                        s.add_all((txn, t_split_0))
+                        if qty != 0:
+                            # Zero quantity means cash dividends, not reinvested
+                            s.add(t_split_1)
                         continue
                 else:
                     # Don't match if an asset transaction
@@ -512,6 +520,14 @@ class Portfolio:
                 s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
                 s.commit()
             s.add(ImportedFile(hash_=h))
+            s.commit()
+
+            # Update splits on each touched
+            query = s.query(Asset).where(
+                Asset.id_.in_(a_id for a_id, _ in asset_mapping.values()),
+            )
+            for asset in query.all():
+                asset.update_splits()
             s.commit()
 
         # If successful, delete the temp file

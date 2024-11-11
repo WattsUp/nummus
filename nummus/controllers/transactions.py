@@ -623,9 +623,9 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
 
     with p.get_session() as s:
         try:
-            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
+            parent = web_utils.find(s, Transaction, uri)
         except exc.http.BadRequest:
-            child: TransactionSplit = web_utils.find(s, TransactionSplit, uri)  # type: ignore[attr-defined]
+            child = web_utils.find(s, TransactionSplit, uri)
             parent = child.parent
         categories = TransactionCategory.map_name(s, no_asset_linked=True)
         assets = Asset.map_name(s)
@@ -808,7 +808,7 @@ def split(uri: str) -> str:
                 amount.append(t_amount)
 
             # Update the amount of the first split to be the proper sum
-            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
+            parent = web_utils.find(s, Transaction, uri)
             amount[0] = parent.amount - sum(filter(None, amount[1:]))
 
     # DELETE below
@@ -850,7 +850,7 @@ def split(uri: str) -> str:
     )
     if flask.request.method in ["GET", "DELETE"]:
         with p.get_session() as s:
-            parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
+            parent = web_utils.find(s, Transaction, uri)
             current = sum(filter(None, amount))
             html += flask.render_template(
                 "transactions/edit-remaining.jinja",
@@ -873,7 +873,7 @@ def remaining(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.get_session() as s:
-        parent: Transaction = web_utils.find(s, Transaction, uri)  # type: ignore[attr-defined]
+        parent = web_utils.find(s, Transaction, uri)
         form = flask.request.form
 
         amount = [utils.parse_real(x) for x in form.getlist("amount")]

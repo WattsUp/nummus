@@ -8,15 +8,16 @@ import re
 from typing import TYPE_CHECKING
 
 import emoji as emoji_mod
+from typing_extensions import TypeVar
 
 from nummus import exceptions as exc
 from nummus import utils
+from nummus.models import Base
 
 if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
-    from nummus.models import Base
 
 MAX_IMAGE_SIZE = int(1e6)
 
@@ -31,8 +32,10 @@ LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the
 LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
 # else tick each day
 
+T = TypeVar("T", bound=Base)
 
-def find(s: orm.Session, cls: type[Base], uri: str) -> Base:
+
+def find(s: orm.Session, cls: type[T], uri: str) -> T:
     """Find the matching object by URI.
 
     Args:

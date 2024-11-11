@@ -1,4 +1,5 @@
-const cashFlowChart = {
+'use strict';
+const cashFlow = {
     chartTotal: null,
     chartIncome: null,
     chartExpense: null,

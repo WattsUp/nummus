@@ -13,6 +13,7 @@ class ConfigKey(BaseEnum):
     VERSION = 1
     ENCRYPTION_TEST = 2
     CIPHER = 3
+    SECRET_KEY = 4
 
 
 class Config(Base):
