@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-from nummus.models.base import Base, ORMStr
+from sqlalchemy import orm
+
+from nummus.models.base import Base, ORMStr, string_column_args
 
 
 class Credentials(Base):
@@ -19,3 +21,14 @@ class Credentials(Base):
     site: ORMStr
     user: ORMStr
     password: ORMStr
+
+    __table_args__ = (
+        *string_column_args("site"),
+        *string_column_args("user"),
+        *string_column_args("password"),
+    )
+
+    @orm.validates("site", "user", "password")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field)

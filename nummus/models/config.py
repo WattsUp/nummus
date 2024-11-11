@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from sqlalchemy import orm
 
-from nummus.models.base import Base, BaseEnum, ORMStr, SQLEnum
+from nummus.models.base import Base, BaseEnum, ORMStr, SQLEnum, string_column_args
 
 
 class ConfigKey(BaseEnum):
@@ -28,3 +28,10 @@ class Config(Base):
 
     key: orm.Mapped[ConfigKey] = orm.mapped_column(SQLEnum(ConfigKey), unique=True)
     value: ORMStr
+
+    __table_args__ = (*string_column_args("value"),)
+
+    @orm.validates("value")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field)

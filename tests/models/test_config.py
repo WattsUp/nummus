@@ -28,3 +28,13 @@ class TestConfig(TestBase):
         s.add(c)
         self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()
+
+        # Empty values are bad
+        c = config.Config(key=config.ConfigKey.SECRET_KEY, value="")
+        s.add(c)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Short values are bad
+        d["value"] = "a"
+        self.assertRaises(exc.InvalidORMValueError, config.Config, **d)

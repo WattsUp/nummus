@@ -8,7 +8,6 @@ from sqlalchemy import ForeignKey, orm
 from typing_extensions import override
 
 from nummus import exceptions as exc
-from nummus import utils
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -17,6 +16,7 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     SQLEnum,
+    string_column_args,
 )
 
 
@@ -62,6 +62,8 @@ class TransactionCategory(Base):
     budget_position: ORMIntOpt
 
     __table_args__ = (
+        *string_column_args("name"),
+        *string_column_args("emoji", short_check=False),
         sqlalchemy.CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
@@ -70,36 +72,31 @@ class TransactionCategory(Base):
     )
 
     @orm.validates("name")
-    def validate_name(self, _: str, field: str | None) -> str | None:
+    def validate_name(self, key: str, field: str | None) -> str | None:
         """Validates name is long enough and doesn't contains emojis.
 
         Args:
+            key: Field being updated
             field: Updated value
 
         Returns:
             field
 
         Raises:
-            InvalidORMValueError if field is too short
+            InvalidORMValueError if field is too short or has emojies
         """
-        if field is None or field in ["", "[blank]"]:
-            return None
-        if emoji_mod.emoji_count(field) > 0:
+        cleaned = self.clean_strings(key, field)
+        if cleaned is not None and emoji_mod.emoji_count(cleaned) > 0:
             msg = "Transaction category name must not have emojis"
             raise exc.InvalidORMValueError(msg)
-        if len(field) < utils.MIN_STR_LEN:
-            msg = (
-                "Transaction category name must be at least "
-                f"{utils.MIN_STR_LEN} characters long"
-            )
-            raise exc.InvalidORMValueError(msg)
-        return field
+        return cleaned
 
     @orm.validates("emoji")
-    def validate_emoji(self, _: str, field: str | None) -> str | None:
+    def validate_emoji(self, key: str, field: str | None) -> str | None:
         """Validate emoji contains exactly one emoji.
 
         Args:
+            key: Field being updated
             field: Updated value
 
         Returns:
@@ -108,12 +105,11 @@ class TransactionCategory(Base):
         Raises:
             InvalidORMValueError if field is not a single emoji
         """
-        if field is None or field in ["", "[blank]"]:
-            return None
-        if not emoji_mod.purely_emoji(field):
+        cleaned = self.clean_strings(key, field, short_check=False)
+        if cleaned is not None and not emoji_mod.purely_emoji(cleaned):
             msg = "Transaction category emoji must only be emojis"
             raise exc.InvalidORMValueError(msg)
-        return field
+        return cleaned
 
     @orm.validates("essential")
     def validate_essential(self, _: str, field: bool | None) -> bool | None:
@@ -128,10 +124,9 @@ class TransactionCategory(Base):
         Raises:
             InvalidORMValueError if field is essential
         """
-        if (
-            self.group
-            in (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER)
-            and field
+        if field and self.group in (
+            TransactionCategoryGroup.INCOME,
+            TransactionCategoryGroup.OTHER,
         ):
             msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)

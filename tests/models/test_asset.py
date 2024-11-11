@@ -152,35 +152,24 @@ class TestAsset(TestBase):
         result = s.query(AssetValuation).all()
         self.assertEqual(result, [])
 
+        d = {
+            "name": self.random_string(),
+            "description": self.random_string(),
+            "category": AssetCategory.STOCKS,
+            "ticker": self.random_string().upper(),
+        }
+        a = Asset(**d)
+        s.add(a)
+        s.commit()
+
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, a, "name", "a")
+        self.assertRaises(exc.IntegrityError, s.query(Asset).update, {"name": "a"})
+        s.rollback()
 
         # But not for ticker
-        a.ticker = "AB"
+        a.ticker = "A"
         s.commit()
-
-        # Lower case ticker is bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "Ab")
-
-        # Spaces are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "A B")
-
-        # Caret, dollar sign, and a dash okay
-        a.ticker = "^AB"
-        s.commit()
-
-        a.ticker = "$AB"
-        s.commit()
-
-        a.ticker = "$A-B"
-        s.commit()
-
-        # Other places for these symbols are not okay
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB^")
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB$")
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB-")
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "AB--C")
-        self.assertRaises(exc.InvalidORMValueError, setattr, a, "ticker", "-AB")
 
         # None is okay
         a.ticker = None

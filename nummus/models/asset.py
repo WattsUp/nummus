@@ -3,14 +3,12 @@
 from __future__ import annotations
 
 import datetime
-import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import sqlalchemy
 import yfinance as yf
 from sqlalchemy import orm
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -24,14 +22,13 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     SQLEnum,
+    string_column_args,
     YIELD_PER,
 )
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
-
-_RE_ASSET_TICKER = re.compile(r"^[\$\^]?[A-Z][A-Z0-9.]*(-[A-Z]+)?$")
 
 
 class AssetSplit(Base):
@@ -58,9 +55,9 @@ class AssetSplit(Base):
     __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("multiplier")
-    @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)
 
 
 class AssetValuation(Base):
@@ -87,9 +84,9 @@ class AssetValuation(Base):
     __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("value")
-    @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)
 
 
 class AssetCategory(BaseEnum):
@@ -131,37 +128,17 @@ class Asset(Base):
     interpolate: ORMBool = orm.mapped_column(default=False)
     ticker: ORMStrOpt = orm.mapped_column(unique=True)
 
-    # NOT ticker, since there are valid single letter tickers
-    # NOT unit, since there are valid single letter units: ea
-    @orm.validates("name", "description", "tag")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
+    __table_args__ = (
+        *string_column_args("name"),
+        *string_column_args("description"),
+        # No short check, since there are valid single letter tickers
+        *string_column_args("ticker", short_check=False),
+    )
 
-    @orm.validates("ticker")
-    def validate_ticker(self, _: str, field: str | None) -> str | None:
-        """Validates ticker is UPPERCASE.
-
-        Args:
-            key: Field being updated
-            field: Updated value
-
-        Returns:
-            field
-
-        Raises:
-            InvalidORMValueError if field is not uppercase.
-        """
-        if field is None or field in ["", "[blank]"]:
-            return None
-        if not _RE_ASSET_TICKER.match(field):
-            msg = (
-                "Asset ticker must be uppercase letters and numbers only, "
-                "optional ^ or $ prefix"
-            )
-            raise exc.InvalidORMValueError(msg)
-
-        return field
+    @orm.validates("name", "description", "ticker")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field, short_check=key != "ticker")
 
     @classmethod
     def get_value_all(
