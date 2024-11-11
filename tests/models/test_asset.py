@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import models
@@ -618,9 +618,9 @@ class TestAsset(TestBase):
         # Should be left with one valuation on and all after
         n = s.query(AssetValuation).count()
         self.assertEqual(n, 4)
-        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
-        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 3)
 
         # None to delete
@@ -669,9 +669,9 @@ class TestAsset(TestBase):
         # Should be left with one valuation on and one after
         n = s.query(AssetValuation).count()
         self.assertEqual(n, 2)
-        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
-        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 1)
         s.rollback()
 
@@ -713,9 +713,9 @@ class TestAsset(TestBase):
         # Should be left with one valuation on, one after, and on last
         n = s.query(AssetValuation).count()
         self.assertEqual(n, 3)
-        date_ord = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
-        date_ord = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).scalar()
+        date_ord = s.query(func.max(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord + 3)
         s.rollback()
 

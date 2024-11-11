@@ -7,8 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
@@ -291,7 +290,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
 
     # Add in cash too
     cash: Decimal = (
-        s.query(sqlalchemy.func.sum(TransactionSplit.amount))
+        s.query(func.sum(TransactionSplit.amount))
         .where(TransactionSplit.account_id == acct.id_)
         .one()[0]
     )

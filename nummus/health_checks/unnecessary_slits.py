@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 
-import sqlalchemy
+from sqlalchemy import func
 from typing_extensions import override
 
 from nummus.health_checks.base import Base
@@ -43,7 +43,7 @@ class UnnecessarySplits(Base):
                     TransactionSplit.tag,
                 )
                 .order_by(TransactionSplit.date_ord)
-                .having(sqlalchemy.func.count() > 1)
+                .having(func.count() > 1)
             )
             for date_ord, acct_id, t_id, payee, t_cat_id, tag in query.yield_per(
                 YIELD_PER,

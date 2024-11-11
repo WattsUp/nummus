@@ -4,11 +4,18 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from nummus.models import base_uri
 from nummus.models.account import Account, AccountCategory
 from nummus.models.asset import Asset, AssetCategory, AssetSplit, AssetValuation
 from nummus.models.base import Base, BaseEnum, YIELD_PER
 from nummus.models.base_uri import Cipher, load_cipher
-from nummus.models.budget import BudgetAssignment, BudgetGroup
+from nummus.models.budget import (
+    BudgetAssignment,
+    BudgetGroup,
+    Target,
+    TargetPeriod,
+    TargetType,
+)
 from nummus.models.config import Config, ConfigKey
 from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
@@ -21,7 +28,6 @@ from nummus.models.transaction_category import (
 from nummus.models.utils import paginate, query_count, search
 
 if TYPE_CHECKING:
-    import sqlalchemy
     from sqlalchemy import orm
 
 __all__ = [
@@ -42,6 +48,9 @@ __all__ = [
     "HealthCheckIssue",
     "ImportedFile",
     "load_cipher",
+    "Target",
+    "TargetPeriod",
+    "TargetType",
     "Transaction",
     "TransactionSplit",
     "TransactionCategory",
@@ -53,20 +62,21 @@ __all__ = [
     "metadata_create_all",
 ]
 
-_TABLES: list[sqlalchemy.Table] = [  # type: ignore[attr-defined]
-    Account.__table__,
-    Asset.__table__,
-    AssetSplit.__table__,
-    AssetValuation.__table__,
-    BudgetAssignment.__table__,
-    BudgetGroup.__table__,
-    Config.__table__,
-    Credentials.__table__,
-    ImportedFile.__table__,
-    HealthCheckIssue.__table__,
-    Transaction.__table__,
-    TransactionCategory.__table__,
-    TransactionSplit.__table__,
+_MODELS: list[type[Base]] = [
+    Account,
+    Asset,
+    AssetSplit,
+    AssetValuation,
+    BudgetAssignment,
+    BudgetGroup,
+    Config,
+    Credentials,
+    ImportedFile,
+    HealthCheckIssue,
+    Target,
+    Transaction,
+    TransactionCategory,
+    TransactionSplit,
 ]
 
 
@@ -78,5 +88,12 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    Base.metadata.create_all(s.get_bind(), _TABLES)
+    i = 1
+    for m in _MODELS:
+        if hasattr(m, "__table_id__") and m.__table_id__ is None:
+            continue
+        m.__table_id__ = i << base_uri.TABLE_OFFSET
+        i += 1
+
+    Base.metadata.create_all(s.get_bind(), [m.__table__ for m in _MODELS])  # type: ignore[attr-defined]
     s.commit()

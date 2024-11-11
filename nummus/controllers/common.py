@@ -8,7 +8,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus.models import Account, AccountCategory, Transaction
@@ -114,7 +114,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
             s.query(Transaction)
             .with_entities(
                 Transaction.account_id,
-                sqlalchemy.func.max(Transaction.date_ord),
+                func.max(Transaction.date_ord),
             )
             .group_by(Transaction.account_id)
         )

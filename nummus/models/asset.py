@@ -6,9 +6,8 @@ import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-import sqlalchemy
 import yfinance as yf
-from sqlalchemy import orm
+from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -40,19 +39,19 @@ class AssetSplit(Base):
         multiplier: Multiplier of split, qty = qty_unadjusted * multiplier
     """
 
-    # No __table_id__ because this is not user accessible
+    __table_id__ = None
 
-    asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
+    asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     multiplier: ORMReal = orm.mapped_column(
         Decimal6,
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "multiplier > 0",
             "asset_split.multiplier must be positive",
         ),
     )
     date_ord: ORMInt
 
-    __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
+    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("multiplier")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -71,17 +70,17 @@ class AssetValuation(Base):
 
     __table_id__ = 0x30000000
 
-    asset_id: ORMInt = orm.mapped_column(sqlalchemy.ForeignKey("asset.id_"))
+    asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     date_ord: ORMInt
     value: ORMReal = orm.mapped_column(
         Decimal6,
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "value >= 0",
             "asset_valuation.value must be zero or positive",
         ),
     )
 
-    __table_args__ = (sqlalchemy.UniqueConstraint("asset_id", "date_ord"),)
+    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("value")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -120,7 +119,7 @@ class Asset(Base):
             valuations must be manually entered
     """
 
-    __table_id__ = 0x40000000
+    __table_id__ = 0x20000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     description: ORMStrOpt
@@ -179,7 +178,7 @@ class Asset(Base):
             s.query(AssetValuation)
             .with_entities(
                 AssetValuation.asset_id,
-                sqlalchemy.func.max(AssetValuation.date_ord),
+                func.max(AssetValuation.date_ord),
                 AssetValuation.value,
             )
             .where(AssetValuation.date_ord <= start_ord)
@@ -229,7 +228,7 @@ class Asset(Base):
             s.query(AssetValuation)
             .with_entities(
                 AssetValuation.asset_id,
-                sqlalchemy.func.min(AssetValuation.date_ord),
+                func.min(AssetValuation.date_ord),
                 AssetValuation.value,
             )
             .where(
@@ -402,7 +401,7 @@ class Asset(Base):
             trim_end: int | None = None
             if date_ord_sell is not None:
                 # Get date of oldest valuation after or on the sell
-                query = s.query(sqlalchemy.func.min(AssetValuation.date_ord)).where(
+                query = s.query(func.min(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
                     AssetValuation.date_ord >= date_ord_sell,
                 )
@@ -410,7 +409,7 @@ class Asset(Base):
 
             if date_ord_buy is not None:
                 # Get date of most recent valuation or on before the buy
-                query = s.query(sqlalchemy.func.max(AssetValuation.date_ord)).where(
+                query = s.query(func.max(AssetValuation.date_ord)).where(
                     AssetValuation.asset_id == self.id_,
                     AssetValuation.date_ord <= date_ord_buy,
                 )
@@ -461,8 +460,8 @@ class Asset(Base):
         today_ord = today.toordinal()
 
         query = s.query(TransactionSplit).with_entities(
-            sqlalchemy.func.min(TransactionSplit.date_ord),
-            sqlalchemy.func.max(TransactionSplit.date_ord),
+            func.min(TransactionSplit.date_ord),
+            func.max(TransactionSplit.date_ord),
         )
         # If asset is an INDEX, look at all transactions
         if self.category == AssetCategory.INDEX:

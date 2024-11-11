@@ -16,7 +16,7 @@ class HealthCheckIssue(Base):
         ignore: True will ignore this issue
     """
 
-    __table_id__ = 0x20000000
+    __table_id__ = 0x60000000
 
     check: ORMStr
     value: ORMStr

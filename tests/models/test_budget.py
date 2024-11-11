@@ -10,6 +10,9 @@ from nummus.models import (
     AccountCategory,
     BudgetAssignment,
     BudgetGroup,
+    Target,
+    TargetPeriod,
+    TargetType,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
@@ -313,3 +316,72 @@ class TestBudgetAssignment(TestBase):
         )
         self.assertEqual(assignable, Decimal(40))
         self.assertEqual(future_assigned, 0)
+
+
+class TestTarget(TestBase):
+    def test_init_properties(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+        TransactionCategory.add_default(s)
+        names = TransactionCategory.map_name(s)
+        names_rev = {v: k for k, v in names.items()}
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        d = {
+            "category_id": names_rev["General Merchandise"],
+            "amount": self.random_decimal(1, 10),
+            "type_": TargetType.BALANCE,
+            "period": TargetPeriod.ONCE,
+            "due_date_ord": today_ord,
+            "repeat_every": 0,
+        }
+
+        t = Target(**d)
+        s.add(t)
+        s.commit()
+
+        self.assertEqual(t.category_id, d["category_id"])
+        self.assertEqual(t.amount, d["amount"])
+        self.assertEqual(t.type_, d["type_"])
+        self.assertEqual(t.period, d["period"])
+        self.assertEqual(t.due_date_ord, d["due_date_ord"])
+        self.assertEqual(t.repeat_every, d["repeat_every"])
+
+        # ONCE cannot be REFILL
+        t.type_ = TargetType.REFILL
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # ONCE cannot be ACCUMULATE
+        t.type_ = TargetType.ACCUMULATE
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # ONCE cannot repeat
+        t.repeat_every = 2
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # BALANCE cannot have a due date
+        t.due_date_ord = None
+        s.commit()
+
+        # But not ONCE can be those things
+        t.period = TargetPeriod.WEEK
+        t.type_ = TargetType.ACCUMULATE
+        t.repeat_every = 2
+        t.due_date_ord = today_ord
+        s.commit()
+
+        # ACCUMULATE must have a due date
+        t.due_date_ord = None
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Duplicate category_id are bad
+        t = Target(**d)
+        s.add(t)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()

@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import orm, sql, types
+from sqlalchemy import CheckConstraint, orm, sql, types
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -45,7 +45,7 @@ class Base(orm.DeclarativeBase):
     def __tablename__(cls) -> str:
         return utils.camel_to_snake(cls.__name__)
 
-    __table_id__: int
+    __table_id__: int | None
 
     id_: ORMInt = orm.mapped_column(primary_key=True, autoincrement=True)
 
@@ -59,6 +59,9 @@ class Base(orm.DeclarativeBase):
         Returns:
             URI string
         """
+        if cls.__table_id__ is None:
+            msg = f"{cls.__name__} does not have table_id"
+            raise exc.NoURIError(msg)
         return base_uri.id_to_uri(id_ | cls.__table_id__)
 
     @classmethod
@@ -341,7 +344,7 @@ def string_column_args(
     name: str,
     *,
     short_check: bool = True,
-) -> tuple[sqlalchemy.CheckConstraint, ...]:
+) -> tuple[CheckConstraint, ...]:
     """Get table args for string column.
 
     Args:
@@ -354,21 +357,21 @@ def string_column_args(
     name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
     return (
         (
-            sqlalchemy.CheckConstraint(
+            CheckConstraint(
                 f"length({name_col}) >= {utils.MIN_STR_LEN}",
                 f"{name} must be at least {utils.MIN_STR_LEN} characters long",
             )
             if short_check
-            else sqlalchemy.CheckConstraint(
+            else CheckConstraint(
                 f"{name_col} != ''",
                 f"{name} must be empty",
             )
         ),
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             f"{name_col} != '[blank]'",
             f"{name} must not be '[blank]'",
         ),
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             f"{name_col} not like ' %' and {name_col} not like '% '",
             f"{name} must not have leading or trailing whitespace",
         ),

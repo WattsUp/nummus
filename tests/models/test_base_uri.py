@@ -5,10 +5,10 @@ import random
 import numpy as np
 
 from nummus import exceptions as exc
-from nummus.models import _TABLES, base_uri
+from nummus.models import _MODELS, base_uri
 from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
-from nummus.models.budget import BudgetAssignment, BudgetGroup
+from nummus.models.budget import BudgetAssignment, BudgetGroup, Target
 from nummus.models.config import Config
 from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
@@ -75,27 +75,30 @@ class TestBaseURI(TestBase):
 
     def test_table_ids(self) -> None:
         # Make sure all models are covered
-        tables = set(_TABLES)
+        models = set(_MODELS)
 
-        models = [
+        models_uri = [
             Account,
             Asset,
             AssetValuation,
             BudgetGroup,
             Credentials,
             HealthCheckIssue,
+            Target,
             Transaction,
             TransactionCategory,
             TransactionSplit,
         ]
         table_ids = set()
-        for model in models:
+        for model in models_uri:
             t_id = model.__table_id__
+            if t_id is None:
+                self.fail(f"{model.__name__}.__table_id__ not set")
             self.assertNotIn(t_id, table_ids)
             table_ids.add(t_id)
             self.assertEqual(t_id & base_uri.MASK_TABLE, t_id)
 
-            tables.remove(model.__table__)
+            models.remove(model)
 
         # Models without a URI not made for front end access
         models_none = [
@@ -105,15 +108,13 @@ class TestBaseURI(TestBase):
             ImportedFile,
         ]
         for model in models_none:
-            try:
-                t_id = model.__table_id__
-                self.assertIsNone(t_id)
-            except AttributeError:
-                # Not there works too
-                pass
-            tables.remove(model.__table__)
+            t_id = model.__table_id__
+            self.assertIsNone(t_id)
+            models.remove(model)
 
-        self.assertEqual(len(tables), 0)
+            self.assertRaises(exc.NoURIError, model.id_to_uri, 0)
+
+        self.assertEqual(len(models), 0)
 
     def test_to_bytes(self) -> None:
         cipher = base_uri.Cipher.generate()

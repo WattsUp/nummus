@@ -151,6 +151,10 @@ class ProtectedObjectNotFoundError(Exception):
     """Error when a protected object (non-deletable) could not be found."""
 
 
+class NoURIError(Exception):
+    """Error when a URI is requested for a model without one."""
+
+
 class WrongURITypeError(Exception):
     """Error when a URI is decoded for a different model."""
 

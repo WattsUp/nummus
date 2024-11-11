@@ -7,9 +7,8 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import orm
+from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
@@ -403,11 +402,11 @@ def ctx_table(
 
         page, count, offset_next = paginate(query, page_len, offset)  # type: ignore[attr-defined]
 
-        query = query.with_entities(sqlalchemy.func.sum(TransactionSplit.amount))
+        query = query.with_entities(func.sum(TransactionSplit.amount))
         query_total = query.scalar() or Decimal(0)
 
         if start is None:
-            query = s.query(sqlalchemy.func.min(TransactionSplit.date_ord)).where(
+            query = s.query(func.min(TransactionSplit.date_ord)).where(
                 TransactionSplit.asset_id.is_(None),
             )
             start_ord = query.scalar()

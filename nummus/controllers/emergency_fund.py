@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
+from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
@@ -55,7 +55,7 @@ def ctx_page() -> dict[str, object]:
             msg = "Category Emergency Fund not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
 
-        balance = s.query(sqlalchemy.func.sum(BudgetAssignment.amount)).where(
+        balance = s.query(func.sum(BudgetAssignment.amount)).where(
             BudgetAssignment.category_id == t_cat_id,
             BudgetAssignment.month_ord <= start_ord,
         ).scalar() or Decimal(0)
@@ -111,7 +111,7 @@ def ctx_page() -> dict[str, object]:
             .with_entities(
                 TransactionSplit.date_ord,
                 TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(
                 TransactionSplit.account_id.in_(accounts),

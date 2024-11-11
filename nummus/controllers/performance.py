@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
+from sqlalchemy import func
 
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
@@ -51,7 +51,7 @@ def ctx_chart() -> dict[str, object]:
     with p.get_session() as s:
         acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
         if start is None:
-            query = s.query(sqlalchemy.func.min(TransactionSplit.date_ord)).where(
+            query = s.query(func.min(TransactionSplit.date_ord)).where(
                 TransactionSplit.asset_id.is_(None),
                 TransactionSplit.account_id.in_(acct_ids),
             )

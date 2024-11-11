@@ -17,7 +17,7 @@ class ImportedFile(Base):
         date: Date of import
     """
 
-    # No __table_id__ because this is not user accessible
+    __table_id__ = None
 
     hash_: ORMStr = orm.MappedColumn(unique=True)
     date_ord: ORMInt = orm.MappedColumn(
