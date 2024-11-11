@@ -22,6 +22,7 @@ from nummus.models.base import (
     ORMRealOpt,
     ORMStr,
     ORMStrOpt,
+    string_column_args,
 )
 
 if TYPE_CHECKING:
@@ -81,6 +82,9 @@ class TransactionSplit(Base):
     _asset_qty_unadjusted: ORMRealOpt = orm.mapped_column(Decimal9)
 
     __table_args__ = (
+        *string_column_args("payee"),
+        *string_column_args("description"),
+        *string_column_args("tag"),
         sqlalchemy.CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
@@ -88,14 +92,14 @@ class TransactionSplit(Base):
     )
 
     @orm.validates("payee", "description", "tag")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field, short_check=key != "ticker")
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
-    @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)
 
     @override
     def __setattr__(self, name: str, value: object) -> None:
@@ -238,6 +242,7 @@ class Transaction(Base):
     splits: orm.Mapped[list[TransactionSplit]] = orm.relationship()
 
     __table_args__ = (
+        *string_column_args("statement"),
         sqlalchemy.CheckConstraint(
             "linked or not locked",
             "Transaction cannot be locked until linked",
@@ -245,14 +250,14 @@ class Transaction(Base):
     )
 
     @orm.validates("statement")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field, short_check=key != "ticker")
 
     @orm.validates("amount")
-    @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)
 
     @property
     def date(self) -> datetime.date:

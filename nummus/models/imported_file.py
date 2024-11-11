@@ -6,7 +6,7 @@ import datetime
 
 from sqlalchemy import orm
 
-from nummus.models.base import Base, ORMInt, ORMStr
+from nummus.models.base import Base, ORMInt, ORMStr, string_column_args
 
 
 class ImportedFile(Base):
@@ -23,3 +23,10 @@ class ImportedFile(Base):
     date_ord: ORMInt = orm.MappedColumn(
         default=lambda: datetime.date.today().toordinal(),
     )
+
+    __table_args__ = (*string_column_args("hash_"),)
+
+    @orm.validates("hash_")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field, short_check=key != "ticker")

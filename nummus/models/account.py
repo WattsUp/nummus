@@ -18,6 +18,7 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     SQLEnum,
+    string_column_args,
     YIELD_PER,
 )
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -63,10 +64,16 @@ class Account(Base):
     closed: ORMBool
     budgeted: ORMBool
 
+    __table_args__ = (
+        *string_column_args("name"),
+        *string_column_args("number"),
+        *string_column_args("institution"),
+    )
+
     @orm.validates("name", "number", "institution")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field)
 
     @property
     def opened_on_ord(self) -> int | None:

@@ -37,6 +37,12 @@ class Parent(base.Base):
     name: base.ORMStrOpt
     children: orm.Mapped[list[Child]] = orm.relationship(back_populates="parent")
 
+    __table_args__ = (*base.string_column_args("name"),)
+
+    @orm.validates("name")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        return self.clean_strings(key, field)
+
     @property
     def favorite_child(self) -> Child | None:
         if len(self.children) < 1:
@@ -57,6 +63,10 @@ class Child(base.Base):
     height: base.ORMRealOpt = orm.mapped_column(base.Decimal6)
 
     color: orm.Mapped[Derived | None] = orm.mapped_column(base.SQLEnum(Derived))
+
+    @orm.validates("height")
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        return self.clean_decimals(key, field)
 
 
 class TestORMBase(TestBase):
@@ -99,13 +109,6 @@ class TestORMBase(TestBase):
         s.commit()
         self.assertIsInstance(child.height, Decimal)
         self.assertEqual(child.height, height)
-
-        # Only 6 decimals
-        height = Decimal("1.23456789")
-        child.height = height
-        s.commit()
-        self.assertIsInstance(child.height, Decimal)
-        self.assertEqual(child.height, Decimal("1.234567"))
 
         child.color = Derived.RED
         s.commit()
@@ -159,24 +162,64 @@ class TestORMBase(TestBase):
         }
         self.assertEqual(result, target)
 
-    def test_validate_strings(self) -> None:
+    def test_clean_strings(self) -> None:
+        s = self.get_session()
+        base.Base.metadata.create_all(
+            s.get_bind(),
+            tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
+        )
+        s.commit()
+
         parent = Parent()
-        key = self.random_string()
+        s.add(parent)
+        s.commit()
 
-        result = parent.validate_strings(key, None)
-        self.assertIsNone(result)
+        parent.name = None
+        self.assertIsNone(parent.name)
 
-        result = parent.validate_strings(key, "")
-        self.assertIsNone(result)
+        parent.name = "    "
+        self.assertIsNone(parent.name)
 
-        result = parent.validate_strings(key, "[blank]")
-        self.assertIsNone(result)
+        parent.name = "[blank]"
+        self.assertIsNone(parent.name)
 
         field = self.random_string(3)
-        result = parent.validate_strings(key, field)
-        self.assertEqual(result, field)
+        parent.name = field
+        self.assertEqual(parent.name, field)
 
-        self.assertRaises(exc.InvalidORMValueError, parent.validate_strings, key, "a")
+        self.assertRaises(exc.InvalidORMValueError, setattr, parent, "name", "a")
+
+        # SQL errors when dirty strings get in
+        s.query(Parent).update({Parent.name: None})
+        s.commit()
+
+        u = {Parent.name: ""}
+        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
+        s.rollback()
+
+        u = {Parent.name: "[blank]"}
+        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
+        s.rollback()
+
+        u = {Parent.name: " leading"}
+        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
+        s.rollback()
+
+        u = {Parent.name: "trailing "}
+        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
+        s.rollback()
+
+        u = {Parent.name: "a"}
+        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
+        s.rollback()
+
+    def test_clean_decimals(self) -> None:
+        child = Child()
+
+        # Only 6 decimals
+        height = Decimal("1.23456789")
+        child.height = height
+        self.assertEqual(child.height, Decimal("1.234567"))
 
 
 class TestBaseEnum(TestBase):

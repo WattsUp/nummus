@@ -7,7 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import orm, types
+from sqlalchemy import orm, sql, types
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -133,12 +133,19 @@ class Base(orm.DeclarativeBase):
         return dict(query.all())
 
     @classmethod
-    def validate_strings(cls, key: str, field: str | None) -> str | None:
-        """Validates string fields are long enough.
+    def clean_strings(
+        cls,
+        key: str,
+        field: str | None,
+        *,
+        short_check: bool = True,
+    ) -> str | None:
+        """Cleans and validates string fields.
 
         Args:
             key: Field being updated
             field: Updated value
+            short_check: True will add a check for MIN_STR_LEN
 
         Returns:
             field
@@ -151,14 +158,15 @@ class Base(orm.DeclarativeBase):
         field = field.strip()
         if field in ["", "[blank]"]:
             return None
-        if len(field) < utils.MIN_STR_LEN:
+        if short_check and len(field) < utils.MIN_STR_LEN:
             table: str = cls.__tablename__  # type: ignore[attr-defined]
             table = table.replace("_", " ").capitalize()
             msg = f"{table} {key} must be at least {utils.MIN_STR_LEN} characters long"
             raise exc.InvalidORMValueError(msg)
         return field
 
-    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+    @classmethod
+    def clean_decimals(cls, key: str, field: Decimal | None) -> Decimal | None:
         """Validates decimals are truncated to their SQL precision.
 
         Args:
@@ -169,7 +177,7 @@ class Base(orm.DeclarativeBase):
             field
         """
         # Call truncate using the proper Decimal precision
-        return getattr(self.__class__, key).type.truncate(field)
+        return getattr(cls, key).type.truncate(field)
 
 
 class BaseEnum(enum.IntEnum):
@@ -327,3 +335,41 @@ class Decimal9(Decimal6):
 
     _FACTOR_OUT = Decimal("1e-9")
     _FACTOR_IN = 1 / _FACTOR_OUT
+
+
+def string_column_args(
+    name: str,
+    *,
+    short_check: bool = True,
+) -> tuple[sqlalchemy.CheckConstraint, ...]:
+    """Get table args for string column.
+
+    Args:
+        name: Name of string column
+        short_check: True will add a check for MIN_STR_LEN
+
+    Returns:
+        Tuple of constraints
+    """
+    name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
+    return (
+        (
+            sqlalchemy.CheckConstraint(
+                f"length({name_col}) >= {utils.MIN_STR_LEN}",
+                f"{name} must be at least {utils.MIN_STR_LEN} characters long",
+            )
+            if short_check
+            else sqlalchemy.CheckConstraint(
+                f"{name_col} != ''",
+                f"{name} must be empty",
+            )
+        ),
+        sqlalchemy.CheckConstraint(
+            f"{name_col} != '[blank]'",
+            f"{name} must not be '[blank]'",
+        ),
+        sqlalchemy.CheckConstraint(
+            f"{name_col} not like ' %' and {name_col} not like '% '",
+            f"{name} must not have leading or trailing whitespace",
+        ),
+    )

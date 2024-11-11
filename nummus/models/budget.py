@@ -7,11 +7,18 @@ from decimal import Decimal
 
 import sqlalchemy
 from sqlalchemy import ForeignKey, orm
-from typing_extensions import override
 
 from nummus import utils
 from nummus.models.account import Account
-from nummus.models.base import Base, Decimal6, ORMInt, ORMReal, ORMStr, YIELD_PER
+from nummus.models.base import (
+    Base,
+    Decimal6,
+    ORMInt,
+    ORMReal,
+    ORMStr,
+    string_column_args,
+    YIELD_PER,
+)
 from nummus.models.transaction import TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
@@ -32,10 +39,12 @@ class BudgetGroup(Base):
     name: ORMStr = orm.mapped_column(unique=True)
     position: ORMInt = orm.mapped_column(unique=True)
 
+    __table_args__ = (*string_column_args("name"),)
+
     @orm.validates("name")
-    def validate_string_columns(self, key: str, field: str | None) -> str | None:
-        """Validate string columns."""
-        return super().validate_strings(key, field)
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field, short_check=key != "ticker")
 
 
 class BudgetAssignment(Base):
@@ -56,9 +65,9 @@ class BudgetAssignment(Base):
     __table_args__ = (sqlalchemy.UniqueConstraint("month_ord", "category_id"),)
 
     @orm.validates("amount")
-    @override
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        return super().validate_decimals(key, field)
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)
 
     @classmethod
     def get_monthly_available(
