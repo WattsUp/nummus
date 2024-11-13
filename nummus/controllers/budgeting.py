@@ -12,8 +12,14 @@ from sqlalchemy import sql
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
-from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
-from nummus.models.budget import BudgetAssignment, BudgetGroup
+from nummus.models import (
+    BudgetAssignment,
+    BudgetGroup,
+    Target,
+    TransactionCategory,
+    TransactionCategoryGroup,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
 
@@ -41,6 +47,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if month_str is None
             else datetime.date.fromisoformat(month_str + "-01")
         )
+    month_ord = month.toordinal()
 
     class CategoryContext(TypedDict):
         """Type definition for budget category context."""
@@ -73,6 +80,13 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         )
         n_overspent = 0
 
+        targets: dict[int, Target] = {
+            t.category_id: t
+            for t in s.query(Target)
+            .where(Target.due_date_ord >= month_ord)
+            .yield_per(YIELD_PER)
+        }
+
         groups_closed: list[str] = flask.session.get("groups_closed", [])
 
         groups: dict[int | None, GroupContext] = {}
@@ -102,12 +116,14 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         query = s.query(TransactionCategory)
         for t_cat in query.yield_per(YIELD_PER):
             assigned, activity, available = categories[t_cat.id_]
+            target = targets.get(t_cat.id_)
             # Skip category if all numbers are 0 and not grouped
             if (
                 t_cat.budget_group_id is None
                 and activity == 0
                 and assigned == 0
                 and available == 0
+                and target is None
             ):
                 continue
             if t_cat.group == TransactionCategoryGroup.INCOME:
@@ -115,6 +131,12 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
 
             if available < 0:
                 n_overspent += 1
+
+            target_assigned: Decimal | None = None
+            if target is not None:
+                balance = available - assigned
+                target_assigned = target.get_expected_assigned(month, balance)
+                print(t_cat.name, target_assigned, assigned)
 
             if activity == 0 and available == 0:
                 bar_mode = "grey"

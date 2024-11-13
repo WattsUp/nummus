@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
 
+from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.account import Account
 from nummus.models.base import (
@@ -262,7 +263,7 @@ class TargetPeriod(BaseEnum):
 
     WEEK = 1
     MONTH = 2
-    ANNUAL = 3
+    YEAR = 3
     ONCE = 4
 
 
@@ -295,17 +296,21 @@ class Target(Base):
 
     __table_args__ = (
         CheckConstraint(
-            f"period != {TargetPeriod.ONCE.value} or repeat_every == 0",
-            "ONCE targets cannot repeat",
+            f"(period == {TargetPeriod.ONCE.value}) == (repeat_every == 0)",
+            "ONCE are the only that cannot repeat",
         ),
         CheckConstraint(
-            f"period != {TargetPeriod.ONCE.value} or "
-            f"type_ == {TargetType.BALANCE.value}",
+            f"(period == {TargetPeriod.ONCE.value}) == "
+            f"(type_ == {TargetType.BALANCE.value})",
             "ONCE targets must be BALANCE",
         ),
         CheckConstraint(
             f"type_ == {TargetType.BALANCE.value} or due_date_ord IS NOT null",
             "Only BALANCE targets cannot have a due date",
+        ),
+        CheckConstraint(
+            f"period != {TargetPeriod.WEEK.value} or repeat_every == 1",
+            "WEEK targets must repeat every week",
         ),
     )
 
@@ -313,3 +318,56 @@ class Target(Base):
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
         """Validates decimal fields satisfy constraints."""
         return self.clean_decimals(key, field)
+
+    def get_expected_assigned(self, month: datetime.date, balance: Decimal) -> Decimal:
+        """Get expected assigned amount.
+
+        Args:
+            month: Month to check progress during
+            balance: Category balance on first day of month
+
+        Returns:
+            Expected assigned amount
+        """
+        if self.due_date_ord is None:
+            # No due date, easy to figure out progress
+            return self.amount - balance
+
+        due_date = datetime.date.fromordinal(self.due_date_ord)
+        if self.period == TargetPeriod.WEEK:
+            # Need the number of weekdays that fall in this month
+            n_weekdays = utils.weekdays_in_month(due_date.weekday(), month)
+            amount = n_weekdays * self.amount
+            return amount if self.type_ == TargetType.ACCUMULATE else amount - balance
+
+        # Get next due date
+        if self.period == TargetPeriod.ONCE and month >= due_date:
+            # Non-repeating target is in the past
+            # Should be fully funded by now
+            return self.amount - balance
+        last_due_date = due_date
+        while due_date < month:
+            last_due_date = due_date
+
+            # Increment
+            if self.period == TargetPeriod.MONTH:
+                due_date = utils.date_add_months(due_date, self.repeat_every)
+            elif self.period == TargetPeriod.YEAR:
+                due_date = utils.date_add_months(due_date, 12 * self.repeat_every)
+            else:  # pragma: no cover
+                msg = "Target due date cannot be incremented"
+                raise exc.InvalidTargetValueError(msg)
+
+        if self.type_ == TargetType.BALANCE:
+            n_months = utils.date_months_between(month, due_date)
+            return (self.amount - balance) / (n_months + 1)
+        # If ACCUMULATE and last repeat ended last month, ignore balance
+        if (
+            self.type_ == TargetType.ACCUMULATE
+            and utils.date_months_between(last_due_date, month) == 1
+        ):
+            deficient = self.amount
+        else:
+            deficient = self.amount - balance
+        n_months = utils.date_months_between(month, due_date)
+        return deficient / (n_months + 1)

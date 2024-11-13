@@ -299,6 +299,39 @@ def date_add_months(date: datetime.date, months: int) -> datetime.date:
     return datetime.date(y, m, d)
 
 
+def date_months_between(start: datetime.date, end: datetime.date) -> int:
+    """Count the numbers of months from start to end.
+
+    Args:
+        start: Starting date
+        end: Ending date
+
+    Returns:
+        Number of months between, ignoring day of month
+    """
+    dm = end.month - start.month
+    dy = end.year - start.year
+    return dm + dy * 12
+
+
+def weekdays_in_month(weekday: int, month: datetime.date) -> int:
+    """Count the number of weekdays in a month.
+
+    Args:
+        weekday: [0, 6] matching datetime.date.weekday
+        month: Month to check
+
+    Returns:
+        Number of specific weekday fall inside month
+    """
+    y = month.year
+    m = month.month
+    n, remainder = divmod(calendar.monthrange(y, m)[1], DAYS_IN_WEEK)
+    if (weekday - month.weekday()) % 7 < remainder:
+        return n + 1
+    return n
+
+
 def start_of_month(date: datetime.date) -> datetime.date:
     """Get the start of the month of a date.
 
@@ -749,3 +782,25 @@ def dedupe(strings: Iterable[str]) -> set[str]:
             unique.add(extracted[0][0])
 
     return unique
+
+
+def clamp(
+    value: Decimal,
+    c_min: Decimal = Decimal(0),
+    c_max: Decimal = Decimal(1),
+) -> Decimal:
+    """Clamp value to range.
+
+    Args:
+        value: Value to clamp
+        c_min: Minimum value
+        c_max: Maximum value
+
+    Returns:
+        value clamped to [c_min, c_max]
+    """
+    if value > c_max:
+        return c_max
+    if value < c_min:
+        return c_min
+    return value

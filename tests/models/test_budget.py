@@ -371,9 +371,29 @@ class TestTarget(TestBase):
         # But not ONCE can be those things
         t.period = TargetPeriod.WEEK
         t.type_ = TargetType.ACCUMULATE
-        t.repeat_every = 2
+        t.repeat_every = 1
         t.due_date_ord = today_ord
         s.commit()
+
+        # WEEK must repeat
+        t.repeat_every = 0
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # WEEK can only repeat every week
+        t.repeat_every = 2
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # MONTH and YEAR can repeat every other
+        t.period = TargetPeriod.MONTH
+        t.repeat_every = 2
+        s.commit()
+
+        # !ONCE cannot be BALANCE
+        t.type_ = TargetType.BALANCE
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
         # ACCUMULATE must have a due date
         t.due_date_ord = None
@@ -385,3 +405,273 @@ class TestTarget(TestBase):
         s.add(t)
         self.assertRaises(exc.IntegrityError, s.commit)
         s.rollback()
+
+    def test_get_expected_assigned(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+        t_cat = TransactionCategory(
+            name=self.random_string(),
+            group=TransactionCategoryGroup.EXPENSE,
+            locked=False,
+            is_profit_loss=False,
+            asset_linked=False,
+            essential=False,
+        )
+        s.add(t_cat)
+        s.commit()
+        t_cat_id = t_cat.id_
+
+        date = datetime.date(2024, 11, 12)
+
+        # There are 5 months so need to add 2k each month
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("25e3"),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            due_date_ord=datetime.date(2025, 3, 31).toordinal(),
+            repeat_every=0,
+        )
+        result = t.get_expected_assigned(date, Decimal("15e3"))
+        target = Decimal("2e3")
+        self.assertEqual(result, target)
+
+        # Target is end of month so need to add 10k more
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("25e3"),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            due_date_ord=datetime.date(2024, 11, 30).toordinal(),
+            repeat_every=0,
+        )
+        result = t.get_expected_assigned(date, Decimal("15e3"))
+        target = Decimal("10e3")
+        self.assertEqual(result, target)
+
+        # Target is end of last month so need to add 10k more
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("25e3"),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            due_date_ord=datetime.date(2024, 10, 31).toordinal(),
+            repeat_every=0,
+        )
+        result = t.get_expected_assigned(date, Decimal("15e3"))
+        target = Decimal("10e3")
+        self.assertEqual(result, target)
+
+        # Target is end of next month so need to add 5k more
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("25e3"),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            due_date_ord=datetime.date(2024, 12, 31).toordinal(),
+            repeat_every=0,
+        )
+        result = t.get_expected_assigned(date, Decimal("15e3"))
+        target = Decimal("5e3")
+        self.assertEqual(result, target)
+
+        # Target has no due date so need to add 10k more
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("25e3"),
+            type_=TargetType.BALANCE,
+            period=TargetPeriod.ONCE,
+            due_date_ord=None,
+            repeat_every=0,
+        )
+        result = t.get_expected_assigned(date, Decimal("15e3"))
+        target = Decimal("10e3")
+        self.assertEqual(result, target)
+
+        # Target is to ACCUMULATE 5k each month so always need 5k
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 12, 1).toordinal(),
+            repeat_every=6,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("2e3")
+        self.assertEqual(result, target)
+
+        # Target is due in a few days, need remaining
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 11, 15).toordinal(),
+            repeat_every=6,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target was due a few days ago, need remaining
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=6,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target was due a few days ago, need remaining
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=6,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target is ACCUMULATE every month, need full amount always
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("5e3")
+        self.assertEqual(result, target)
+
+        # Target is ACCUMULATE every year, and ends this month
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.YEAR,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target is ACCUMULATE every year, and ended last month
+        # So ignore balance
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.YEAR,
+            due_date_ord=datetime.date(2023, 10, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("5e3") / 12
+        self.assertEqual(result, target)
+
+        # Target is REFILL every month, need deficient amount always
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.REFILL,
+            period=TargetPeriod.MONTH,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target is REFILL every year, and ends this month
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.REFILL,
+            period=TargetPeriod.YEAR,
+            due_date_ord=datetime.date(2023, 11, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3")
+        self.assertEqual(result, target)
+
+        # Target is REFILL every year, and ended last month
+        # So include balance
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("5e3"),
+            type_=TargetType.REFILL,
+            period=TargetPeriod.YEAR,
+            due_date_ord=datetime.date(2023, 10, 1).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("1e3"))
+        target = Decimal("4e3") / 12
+        self.assertEqual(result, target)
+
+        # Target is ACCUMULATE every week due Friday
+        # With 5 Fridays in November 2024, need 500
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("100"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.WEEK,
+            due_date_ord=datetime.date(2024, 10, 4).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("50"))
+        target = Decimal("500")
+        self.assertEqual(result, target)
+
+        # Target is ACCUMULATE every week due Sunday
+        # With 4 Sundays in November 2024, need 400
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("100"),
+            type_=TargetType.ACCUMULATE,
+            period=TargetPeriod.WEEK,
+            due_date_ord=datetime.date(2024, 10, 6).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("50"))
+        target = Decimal("400")
+        self.assertEqual(result, target)
+
+        # Target is REFILL every week due Friday
+        # With 5 Fridays in November 2024, need 450
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("100"),
+            type_=TargetType.REFILL,
+            period=TargetPeriod.WEEK,
+            due_date_ord=datetime.date(2024, 10, 4).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("50"))
+        target = Decimal("450")
+        self.assertEqual(result, target)
+
+        # Target is REFILL every week due Sunday
+        # With 4 Sundays in November 2024, need 350
+        t = Target(
+            category_id=t_cat_id,
+            amount=Decimal("100"),
+            type_=TargetType.REFILL,
+            period=TargetPeriod.WEEK,
+            due_date_ord=datetime.date(2024, 10, 6).toordinal(),
+            repeat_every=1,
+        )
+        result = t.get_expected_assigned(date, Decimal("50"))
+        target = Decimal("350")
+        self.assertEqual(result, target)
