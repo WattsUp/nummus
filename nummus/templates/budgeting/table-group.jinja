@@ -31,7 +31,7 @@
         <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>
     {% endif %}
     <div class="w-full flex gap-1 py-1 bg-grey-100 items-center h-8 budget-group-header">
-        <div class="w-28 shrink-0 grow pl-1 hover-edit">
+        <div class="w-24 shrink-0 grow pl-1 hover-edit">
             {% if group["uri"] %}
                 <input class="w-full"
                        id="name-{{ group["uri"] }}"
@@ -48,9 +48,9 @@
                 Ungrouped
             {% endif %}
         </div>
-        <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
-        <div class="w-28 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
-        <div class="w-28 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
+        <div class="w-24 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
+        <div class="w-24 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
+        <div class="w-24 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
         <div class="w-6 shrink-0 cursor-grab budget-group-handle max-md:hidden">
             {% if group["uri"] %}
                 <input name="group_uri" value="{{ group["uri"] }}" hidden>
@@ -65,31 +65,36 @@
             <div id="category-{{ category["uri"] }}"
                  class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row">
                 <input name="row_uri" value="{{ category["uri"] }}" hidden>
-                <div class="w-28 shrink-0 grow">
-                    <div>{{ category["emoji_name"] }}</div>
-                    {% if category["bar_mode"] == "grey" %}
-                        <div class="h-1 mr-1 bg-grey-400"></div>
-                    {% elif category["bar_mode"] == "funded" %}
-                        <div class="h-1 mr-1 bg-green">
-                            <div class="h-full bg-blue-500" style="width: {{ category["bar_w"] }}%"></div>
-                        </div>
-                    {% elif category["bar_mode"] == "underfunded" %}
-                        <div class="h-1 mr-1 bg-red">
-                            <div class="h-full bg-blue-500" style="width: {{ category["bar_w"] }}%"></div>
-                        </div>
-                    {% endif %}
+                <div class="w-24 shrink-0 grow">
+                    <div class="flex gap-2 justify-between items-center">
+                        <div class="truncate">{{ category["emoji_name"] }}</div>
+                        <div class="text-grey-600 truncate text-sm">{{ category["status_text"] }}</div>
+                    </div>
+                    <div class="h-[5px] w-full flex gap-1">
+                        {% for bar_w, bg_fill_w, fg_fill_w, bg, fg in category["bars"] %}
+                            <div class="h-full rounded grow relative bg-grey-400"
+                                 style="width: {{ bar_w | percent }}">
+                                <div class="h-full rounded absolute top-0 left-0 bg-{{ bg }}"
+                                     style="width: {{ bg_fill_w | percent }}"></div>
+                                <div class="h-full rounded absolute top-0 left-0 bar-fg {{ fg }}"
+                                     style="width: {{ fg_fill_w | percent }}"></div>
+                            </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="w-28 shrink-0 text-right max-md:hidden hover-edit">
+                <div class="w-24 shrink-0 text-right max-md:hidden hover-edit">
                     <input class="w-full text-right"
                            placeholder="0.00"
                            value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
                            name="amount"
+                           hx-target="#budget-table"
+                           hx-swap="outerHTML"
                            hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}"
                            autocomplete="off">
                     <span class="w-full text-right">{{ category["assigned"] | money }}</span>
                 </div>
-                <div class="w-28 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
-                <div class="w-28 shrink-0 text-right"
+                <div class="w-24 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
+                <div class="w-24 shrink-0 text-right"
                      hx-target="#overlay"
                      hx-swap="innerHTML">
                     {% if category["available"] == 0 %}

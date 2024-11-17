@@ -16,6 +16,8 @@ from nummus.models import (
     BudgetAssignment,
     BudgetGroup,
     Target,
+    TargetPeriod,
+    TargetType,
     TransactionCategory,
     TransactionCategoryGroup,
     YIELD_PER,
@@ -47,7 +49,6 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if month_str is None
             else datetime.date.fromisoformat(month_str + "-01")
         )
-    month_ord = month.toordinal()
 
     class CategoryContext(TypedDict):
         """Type definition for budget category context."""
@@ -59,8 +60,9 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         assigned: Decimal
         activity: Decimal
         available: Decimal
-        bar_mode: str
-        bar_w: Decimal
+        status_text: str
+        # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
+        bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
 
     class GroupContext(TypedDict):
         """Type definition for budget group context."""
@@ -81,10 +83,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         n_overspent = 0
 
         targets: dict[int, Target] = {
-            t.category_id: t
-            for t in s.query(Target)
-            .where(Target.due_date_ord >= month_ord)
-            .yield_per(YIELD_PER)
+            t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
         }
 
         groups_closed: list[str] = flask.session.get("groups_closed", [])
@@ -115,7 +114,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
 
         query = s.query(TransactionCategory)
         for t_cat in query.yield_per(YIELD_PER):
-            assigned, activity, available = categories[t_cat.id_]
+            assigned, activity, available, leftover = categories[t_cat.id_]
             target = targets.get(t_cat.id_)
             # Skip category if all numbers are 0 and not grouped
             if (
@@ -132,29 +131,92 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             if available < 0:
                 n_overspent += 1
 
+            status_text = ""
             target_assigned: Decimal | None = None
-            if target is not None:
-                balance = available - assigned
-                target_assigned = target.get_expected_assigned(month, balance)
-                print(t_cat.name, target_assigned, assigned)
-
-            if activity == 0 and available == 0:
-                bar_mode = "grey"
-                bar_w = Decimal(0)
-            elif available >= 0:
-                bar_mode = "funded"
-                bar_w = (
-                    Decimal(0)
-                    if activity > 0
-                    else -activity / (available - activity) * 100
-                )
+            bar_dollars: list[Decimal] = []
+            if target is None:
+                if activity == 0 and available == 0:
+                    bar_dollars.append(Decimal(0))
+                elif available >= 0:
+                    bar_dollars.append(available - activity)
+                else:
+                    bar_dollars.append(-activity)
+                    status_text = '<span class="font-bold">Overspent</span>'
             else:
-                bar_mode = "underfunded"
-                bar_w = (
-                    Decimal(0)
-                    if available < activity
-                    else (activity - available) / activity * 100
+                balance = available - assigned
+                target_assigned, next_due_date = target.get_expected_assigned(
+                    month,
+                    balance,
                 )
+                target_assigned = round(target_assigned, 2)
+                deficent = target_assigned - assigned
+
+                if deficent <= 0:
+                    if available < 0:
+                        status_text = '<span class="font-bold">Overspent</span>'
+                    else:
+                        # Say funded unless next due date is out there, then On track
+                        status_text = (
+                            "Funded"
+                            if next_due_date is None
+                            or utils.date_months_between(month, next_due_date) == 0
+                            else "On track"
+                        )
+                elif available < 0:
+                    status_text = (
+                        '<span class="font-bold">Overspent</span> '
+                        f"{utils.format_financial(deficent)} more needed"
+                    )
+                else:
+                    status_text = f"{utils.format_financial(deficent)} more needed"
+
+                if target.type_ != TargetType.REFILL:
+                    bar_dollars.append(leftover)
+
+                if (
+                    target.period == TargetPeriod.WEEK
+                    and target.due_date_ord is not None
+                ):
+                    weekday = datetime.date.fromordinal(target.due_date_ord).weekday()
+                    n_bars = utils.weekdays_in_month(weekday, month)
+                    bar_dollars.extend([target.amount] * n_bars)
+                else:
+                    bar_dollars.append(target.amount)
+
+                # If assigned >= target_assigned: green else yellow
+                # overspending always red
+
+                # If any leftover and ACCUMULATE, have bar split starting with leftover
+                # amount
+
+                # If WEEK, have bar segment for each week
+            bar_dollars_sum = sum(bar_dollars)
+            bars: list[tuple[Decimal, Decimal, Decimal, str, str]] = []
+            bar_start = Decimal(0)
+            total_assigned = available - activity
+            if total_assigned > bar_dollars_sum:
+                bar_dollars[-1] += total_assigned - bar_dollars_sum
+                bar_dollars_sum = total_assigned
+            for v in bar_dollars:
+                bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
+
+                fg = "green"
+                if v == 0:
+                    bg = "grey-400"
+                    bg_fill_w = Decimal(1)
+                    fg_fill_w = Decimal(0)
+                elif available < 0:
+                    bg = "red"
+                    fg = "yellow"
+                    bg_fill_w = utils.clamp((-activity - bar_start) / v)
+                    fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+                else:
+                    bg = "green" if total_assigned == bar_dollars_sum else "yellow"
+                    bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+                    fg_fill_w = utils.clamp((-activity - bar_start) / v)
+
+                bars.append((bar_w, bg_fill_w, fg_fill_w, bg, fg))
+                bar_start += v
 
             cat_ctx: CategoryContext = {
                 "position": t_cat.budget_position,
@@ -164,8 +226,8 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 "assigned": assigned,
                 "activity": activity,
                 "available": available,
-                "bar_mode": bar_mode,
-                "bar_w": bar_w,
+                "status_text": status_text,
+                "bars": bars,
             }
             g = groups.get(t_cat.budget_group_id, ungrouped)
             g["assigned"] += assigned
@@ -291,14 +353,14 @@ def overspending(uri: str) -> str | flask.Response:
             if t_cat is None:
                 available = assignable
             else:
-                _, _, available = categories[t_cat.id_]
+                _, _, available, _ = categories[t_cat.id_]
             source = flask.request.form["source"]
             if source == "income":
                 source_id = None
                 source_available = assignable
             else:
                 source_id = TransactionCategory.uri_to_id(source)
-                _, _, source_available = categories[source_id]
+                _, _, source_available, _ = categories[source_id]
             to_move = min(source_available, -available)
 
             # Add assignment
@@ -353,13 +415,13 @@ def overspending(uri: str) -> str | flask.Response:
                 category_names[t_cat_id],
                 available,
             )
-            for t_cat_id, (_, _, available) in categories.items()
+            for t_cat_id, (_, _, available, _) in categories.items()
             if available > 0
         ]
         if t_cat is None:
             available = assignable
         else:
-            _, _, available = categories[t_cat.id_]
+            _, _, available, _ = categories[t_cat.id_]
         options = sorted(options, key=lambda x: x[1])
         if assignable > 0:
             options.insert(0, ("income", "Assignable income", assignable))
@@ -405,7 +467,7 @@ def move(uri: str) -> str | flask.Response:
             if t_cat is None:
                 available = assignable
             else:
-                _, _, available = categories[t_cat.id_]
+                _, _, available, _ = categories[t_cat.id_]
             dest = flask.request.form["destination"]
             to_move = utils.parse_real(flask.request.form.get("amount"))
             if to_move is None:
@@ -465,13 +527,13 @@ def move(uri: str) -> str | flask.Response:
                 category_names[t_cat_id],
                 available,
             )
-            for t_cat_id, (_, _, available) in categories.items()
+            for t_cat_id, (_, _, available, _) in categories.items()
             if (t_cat is None or t_cat_id != t_cat.id_) and t_cat_id in category_names
         ]
         if t_cat is None:
             available = assignable
         else:
-            _, _, available = categories[t_cat.id_]
+            _, _, available, _ = categories[t_cat.id_]
         options = sorted(options, key=lambda x: (x[2] >= 0, x[1]))
         if t_cat is not None:
             options.insert(0, ("income", "Assignable income", assignable))

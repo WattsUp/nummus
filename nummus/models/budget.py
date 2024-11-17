@@ -77,7 +77,7 @@ class BudgetAssignment(Base):
         cls,
         s: orm.Session,
         month: datetime.date,
-    ) -> tuple[dict[int, tuple[Decimal, Decimal, Decimal]], Decimal, Decimal]:
+    ) -> tuple[dict[int, tuple[Decimal, Decimal, Decimal, Decimal]], Decimal, Decimal]:
         """Get available budget for a month.
 
         Args:
@@ -86,7 +86,7 @@ class BudgetAssignment(Base):
 
         Returns:
             (
-                dict{TransactionCategory: (assigned, activity, available)},
+                dict{TransactionCategory: (assigned, activity, available, leftover)},
                 assignable,
                 future_assigned,
             )
@@ -221,7 +221,7 @@ class BudgetAssignment(Base):
         )
         categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        categories: dict[int, tuple[Decimal, Decimal, Decimal]] = {}
+        categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]] = {}
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.group,
@@ -238,7 +238,7 @@ class BudgetAssignment(Base):
 
             ending_balance += activity
             total_available += available
-            categories[t_cat_id] = (assigned, activity, available)
+            categories[t_cat_id] = (assigned, activity, available, leftover)
 
         assignable = ending_balance - total_available
         if assignable < 0:
@@ -319,7 +319,11 @@ class Target(Base):
         """Validates decimal fields satisfy constraints."""
         return self.clean_decimals(key, field)
 
-    def get_expected_assigned(self, month: datetime.date, balance: Decimal) -> Decimal:
+    def get_expected_assigned(
+        self,
+        month: datetime.date,
+        balance: Decimal,
+    ) -> tuple[Decimal, datetime.date | None]:
         """Get expected assigned amount.
 
         Args:
@@ -327,24 +331,27 @@ class Target(Base):
             balance: Category balance on first day of month
 
         Returns:
-            Expected assigned amount
+            (Expected assigned amount, next due date)
         """
+        balance = max(Decimal(0), balance)
         if self.due_date_ord is None:
             # No due date, easy to figure out progress
-            return self.amount - balance
+            return self.amount - balance, None
 
         due_date = datetime.date.fromordinal(self.due_date_ord)
         if self.period == TargetPeriod.WEEK:
             # Need the number of weekdays that fall in this month
             n_weekdays = utils.weekdays_in_month(due_date.weekday(), month)
             amount = n_weekdays * self.amount
-            return amount if self.type_ == TargetType.ACCUMULATE else amount - balance
+            return (
+                amount if self.type_ == TargetType.ACCUMULATE else amount - balance
+            ), None
 
         # Get next due date
         if self.period == TargetPeriod.ONCE and month >= due_date:
             # Non-repeating target is in the past
             # Should be fully funded by now
-            return self.amount - balance
+            return self.amount - balance, None
         last_due_date = due_date
         while due_date < month:
             last_due_date = due_date
@@ -360,7 +367,7 @@ class Target(Base):
 
         if self.type_ == TargetType.BALANCE:
             n_months = utils.date_months_between(month, due_date)
-            return (self.amount - balance) / (n_months + 1)
+            return (self.amount - balance) / (n_months + 1), due_date
         # If ACCUMULATE and last repeat ended last month, ignore balance
         if (
             self.type_ == TargetType.ACCUMULATE
@@ -370,4 +377,4 @@ class Target(Base):
         else:
             deficient = self.amount - balance
         n_months = utils.date_months_between(month, due_date)
-        return deficient / (n_months + 1)
+        return deficient / (n_months + 1), due_date

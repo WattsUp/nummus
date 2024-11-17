@@ -342,6 +342,18 @@
     .hover-edit>input:focus+span {
         @apply hidden;
     }
+
+    .bar-fg {
+        @apply pattern-diagonal-lines pattern-size-2 pattern-opacity-100;
+    }
+
+    .bar-fg.green {
+        @apply pattern-green-100 pattern-bg-green-400;
+    }
+
+    .bar-fg.yellow {
+        @apply pattern-yellow-100 pattern-bg-yellow-300;
+    }
 }
 
 @font-face {

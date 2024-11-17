@@ -115,6 +115,10 @@ module.exports = {
                  'select-none',
                  'dragging',
                  'fill-red',
+                 'bg-green-400',
+                 'bg-green',
+                 'bg-yellow',
+                 'bg-red',
              ],
-    plugins : [],
+    plugins : [require('./plugins/tailwindcss-bg-patterns')],
 };
