@@ -30,7 +30,7 @@ const accounts = {
 
         const ticksEnabled = window.screen.width >= 768;
 
-        const width = 60;
+        const width = 65;
 
         {
             const canvas = document.getElementById('account-chart-canvas');

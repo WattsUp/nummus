@@ -115,14 +115,14 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
         query = s.query(TransactionCategory)
         for t_cat in query.yield_per(YIELD_PER):
             assigned, activity, available, leftover = categories[t_cat.id_]
-            target = targets.get(t_cat.id_)
+            tar = targets.get(t_cat.id_)
             # Skip category if all numbers are 0 and not grouped
             if (
                 t_cat.budget_group_id is None
                 and activity == 0
                 and assigned == 0
                 and available == 0
-                and target is None
+                and tar is None
             ):
                 continue
             if t_cat.group == TransactionCategoryGroup.INCOME:
@@ -134,7 +134,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
             status_text = ""
             target_assigned: Decimal | None = None
             bar_dollars: list[Decimal] = []
-            if target is None:
+            if tar is None:
                 if activity == 0 and available == 0:
                     bar_dollars.append(Decimal(0))
                 elif available >= 0:
@@ -144,7 +144,7 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                     status_text = '<span class="font-bold">Overspent</span>'
             else:
                 balance = available - assigned
-                target_assigned, next_due_date = target.get_expected_assigned(
+                target_assigned, next_due_date = tar.get_expected_assigned(
                     month,
                     balance,
                 )
@@ -170,18 +170,15 @@ def ctx_table(month: datetime.date | None = None) -> tuple[dict[str, object], st
                 else:
                     status_text = f"{utils.format_financial(deficent)} more needed"
 
-                if target.type_ != TargetType.REFILL:
+                if tar.type_ != TargetType.REFILL and leftover != 0:
                     bar_dollars.append(leftover)
 
-                if (
-                    target.period == TargetPeriod.WEEK
-                    and target.due_date_ord is not None
-                ):
-                    weekday = datetime.date.fromordinal(target.due_date_ord).weekday()
+                if tar.period == TargetPeriod.WEEK and tar.due_date_ord is not None:
+                    weekday = datetime.date.fromordinal(tar.due_date_ord).weekday()
                     n_bars = utils.weekdays_in_month(weekday, month)
-                    bar_dollars.extend([target.amount] * n_bars)
+                    bar_dollars.extend([tar.amount] * n_bars)
                 else:
-                    bar_dollars.append(target.amount)
+                    bar_dollars.append(tar.amount)
 
                 # If assigned >= target_assigned: green else yellow
                 # overspending always red
@@ -727,6 +724,129 @@ def new_group() -> str:
     )
 
 
+def target(uri: str) -> str | flask.Response:
+    """GET /h/budgeting/t/<path:uri>.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    args = flask.request.args if flask.request.method == "GET" else flask.request.form
+    today = datetime.date.today()
+
+    with p.get_session() as s:
+        try:
+            tar = web_utils.find(s, Target, uri)
+            t_cat_id = tar.category_id
+        except exc.http.BadRequest:
+            t_cat_id = TransactionCategory.uri_to_id(uri)
+            tar = s.query(Target).where(Target.category_id == t_cat_id).one_or_none()
+
+        emoji, name = (
+            s.query(TransactionCategory)
+            .with_entities(TransactionCategory.emoji, TransactionCategory.name)
+            .where(TransactionCategory.id_ == t_cat_id)
+            .one()
+        )
+        emoji_name = f"{emoji} {name}" if emoji else name
+
+        period_options = {
+            TargetPeriod.ONCE: "Once",
+            TargetPeriod.WEEK: "Weekly",
+            TargetPeriod.MONTH: "Monthly",
+            TargetPeriod.YEAR: "Annually",
+        }
+        period_options_rev = {v: k for k, v in period_options.items()}
+
+        new_target = tar is None
+        if tar is None:
+            # New target
+            tar = Target(
+                category_id=t_cat_id,
+                amount=0,
+                type_=TargetType.ACCUMULATE,
+                period=TargetPeriod.MONTH,
+                due_date_ord=today.toordinal(),
+                repeat_every=1,
+            )
+        elif flask.request.method == "DELETE":
+            s.delete(tar)
+            s.commit()
+            return common.overlay_swap(event="update-budget")
+
+        # Parse form
+        period = args.get("period")
+        if period is not None:
+            tar.period = period_options_rev[period]
+        due = args.get("due")
+        if "change" in args:
+            due = "0" if tar.period == TargetPeriod.WEEK else today.isoformat()
+        amount = utils.parse_real(args.get("amount"))
+        if amount is not None:
+            tar.amount = amount
+        tar_type = args.get("type", type=TargetType)
+        if tar_type is not None:
+            tar.type_ = tar_type
+        repeat_every = args.get("repeat", type=int)
+        if repeat_every is not None:
+            tar.repeat_every = repeat_every
+        if due is not None:
+            if tar.period == TargetPeriod.WEEK:
+                # due is day of week, get a date that works
+                due_date = today + datetime.timedelta(
+                    days=int(due) - today.weekday(),
+                )
+            else:
+                due_date = datetime.date.fromisoformat(due)
+            tar.due_date_ord = due_date.toordinal()
+
+        if tar.period == TargetPeriod.ONCE:
+            tar.repeat_every = 0
+            tar.type_ = TargetType.BALANCE
+        elif tar.period == TargetPeriod.WEEK:
+            tar.repeat_every = 1
+
+        try:
+            if flask.request.method == "PUT":
+                s.commit()
+                return common.overlay_swap(event="update-budget")
+            if flask.request.method == "POST":
+                s.add(tar)
+                s.commit()
+                return common.overlay_swap(event="update-budget")
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
+
+        # Create context
+        due_date = (
+            None
+            if tar.due_date_ord is None
+            else datetime.date.fromordinal(tar.due_date_ord)
+        )
+        ctx = {
+            "uri": uri,
+            "new": new_target,
+            "category": emoji_name,
+            "type": tar.type_,
+            "period": tar.period,
+            "period_options": period_options,
+            "repeat_every": tar.repeat_every,
+            "due_date": due_date,
+            "due_date_weekday": None if due_date is None else due_date.weekday(),
+            "amount": tar.amount,
+            "weekdays": utils.WEEKDAYS,
+        }
+
+        return flask.render_template(
+            "budgeting/target.jinja",
+            target=ctx,
+        )
+
+
+# TODO (WattsUp): Add sidebar details of budget row, have edit/new target buttons there
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
@@ -735,4 +855,5 @@ ROUTES: Routes = {
     "/h/budgeting/reorder": (reorder, ["PUT"]),
     "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
+    "/h/budgeting/t/<path:uri>": (target, ["GET", "POST", "PUT", "DELETE"]),
 }

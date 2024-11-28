@@ -122,7 +122,7 @@
     }
 
     .button.bg-blue {
-        @apply text-black border-blue md:hover:border-blue-900 md:hover:bg-blue-900 md:hover:text-white;
+        @apply text-white border-blue md:hover:border-blue-900 md:hover:bg-blue-900;
     }
 
     .button.hover-blue {

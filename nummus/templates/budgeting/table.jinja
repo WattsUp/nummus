@@ -4,9 +4,8 @@
      hx-swap="outerHTML"
      hx-trigger="reorder-rows"
      hx-put="{{ url_for('budgeting.reorder') }}"
-     hx-include="this"
      hx-swap-oob="{{ oob }}">
-    <div id="budget-table-root" class="grow max-lg:w-full">
+    <div id="budget-table-root" class="grow max-lg:w-full" hx-include="this">
         <div class="w-full flex gap-1 p-1 h-8 items-center justify-end">
             <div class="w-24 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
                 {% with class = "w-[24px] h-[24px]" %}
@@ -17,7 +16,7 @@
                        name="name"
                        hx-post="{{ url_for('budgeting.new_group') }}"
                        hx-include="unset"
-                       hx-target="#overlay-error"
+                       hx-target="#sidebar-error"
                        hx-swap="innerHTML">
                 <span class="w-full">New Group</span>
             </div>
@@ -37,8 +36,11 @@
             {% endwith %}
         </div>
     </div>
-    <div class="lg:w-1/3 lg:max-w-72" hx-target="#overlay" hx-swap="innerHTML">
-        <div id="overlay-error"
+    <div class="lg:w-1/3 lg:max-w-72"
+         hx-target="#overlay"
+         hx-swap="innerHTML"
+         hx-include="this">
+        <div id="sidebar-error"
              class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
         {% set class = "w-full text-xl flex justify-between p-2 items-center gap-2" %}
         {% if table["assignable"] == 0 %}

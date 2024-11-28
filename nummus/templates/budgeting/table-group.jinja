@@ -1,6 +1,6 @@
 <div id="budget-group-{{ group["uri"] or "" }}"
      class="w-full pl-4 relative will-change-transform budget-group"
-     hx-target="#overlay-error"
+     hx-target="#sidebar-error"
      hx-swap="innerHTML"
      hx-trigger="trash-group"
      {% if group["uri"] %}hx-delete="{{ url_for('budgeting.group', uri=group["uri"]) }}"{% endif %}
@@ -13,7 +13,7 @@
                name="closed"
                hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
                hx-include="#name-{{ group["uri"] }}"
-               hx-target="#overlay-error"
+               hx-target="#sidebar-error"
                hx-swap="innerHTML"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-{{ group["uri"] }}"></label>
@@ -25,7 +25,7 @@
                name="closed"
                hx-put="{{ url_for('budgeting.group', uri="ungrouped") }}"
                hx-include="unset"
-               hx-target="#overlay-error"
+               hx-target="#sidebar-error"
                hx-swap="innerHTML"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>
@@ -40,7 +40,7 @@
                        name="name"
                        hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
                        hx-include="#toggle-{{ group["uri"] }}"
-                       hx-target="#overlay-error"
+                       hx-target="#sidebar-error"
                        hx-swap="innerHTML"
                        autocomplete="off">
                 <span id="{{ group["uri"] }}-name" class="w-full">{{ group["name"] }}</span>
@@ -65,7 +65,10 @@
             <div id="category-{{ category["uri"] }}"
                  class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row">
                 <input name="row_uri" value="{{ category["uri"] }}" hidden>
-                <div class="w-24 shrink-0 grow">
+                <div class="w-24 shrink-0 grow cursor-pointer"
+                     hx-target="#overlay"
+                     hx-swap="innerHTML"
+                     hx-get="{{ url_for('budgeting.target', uri=category['uri']) }}">
                     <div class="flex gap-2 justify-between items-center">
                         <div class="truncate">{{ category["emoji_name"] }}</div>
                         <div class="text-grey-600 truncate text-sm">{{ category["status_text"] }}</div>
