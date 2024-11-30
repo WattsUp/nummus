@@ -53,6 +53,7 @@
             <div class="flex gap-1 flex-wrap min-h-7 items-center">
                 <div class="w-32 shrink-1">By</div>
                 <input class="grow" name="due" type="date" value="{{ target["due_date"] }}">
+                {# TODO (WattsUp): Change ONCE to month, year #}
             </div>
         {% endif %}
         {% set money_period = ("/week" if target["period"].name == "WEEK") %}

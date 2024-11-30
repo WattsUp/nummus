@@ -1,5 +1,6 @@
 'use strict';
 const budgeting = {
+    sidebarChart: null,
     table: null,
     trash: null,
     trashSVG: null,
@@ -392,5 +393,42 @@ const budgeting = {
         document.removeEventListener('mousemove', budgeting.dragStartTest);
         budgeting.isDragging = false;
         budgeting.trash.classList.add('hidden');
+    },
+    /**
+     * Create budgeting sidebar Chart
+     *
+     * @param {Object} raw Raw data from budgeting controller
+     */
+    update: function(assigned, targetAmount, onTrack) {
+        const remaining = targetAmount - assigned;
+        const percent = assigned / targetAmount * 100;
+
+        const canvas = document.getElementById('budget-sidebar-canvas');
+        const ctx = canvas.getContext('2d');
+        const datasets = [
+            {
+                name: 'Assigned',
+                amount: assigned,
+                color: getThemeColor(onTrack ? 'green' : 'yellow'),
+            },
+        ];
+        if (remaining > 0) {
+            datasets.push({
+
+                name: 'Assigned',
+                amount: remaining,
+                color: getThemeColor('grey-500'),
+            });
+        }
+        if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
+            nummusChart.updatePie(this.sidebarChart, datasets);
+        } else {
+            this.chartPieAssets = nummusChart.createPie(
+                ctx,
+                datasets,
+                null,
+                {plugins: {doughnutText: {text: `${percent.toFixed(0)}%`}}},
+            );
+        }
     },
 };

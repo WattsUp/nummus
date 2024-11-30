@@ -1,0 +1,112 @@
+<div id="budgeting-sidebar" class="bg-grey-100 p-2 mt-2">
+    <div class="flex gap-1 flex-wrap min-h-7 items-center font-bold">
+        <div class="w-40 shrink-1">Available Balance</div>
+        <div class="grow text-right">
+            {% if budget_sidebar["uri"] is none %}
+                <span class="p-1 rounded">{{ budget_sidebar["available"] | money }}</span>
+            {% elif budget_sidebar["available"] == 0 %}
+                <span class="p-1 rounded bg-grey-50 text-grey-600">{{ budget_sidebar["available"] | money }}</span>
+            {% elif budget_sidebar["available"] > 0 %}
+                <span class="p-1 rounded bg-green-200 transition-colors hover:bg-green-900 hover:text-white cursor-pointer"
+                      hx-get="{{ url_for('budgeting.move', uri=budget_sidebar['uri'], month=budget_sidebar['month']) }}">{{ budget_sidebar["available"] | money }}</span>
+            {% else %}
+                <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white cursor-pointer"
+                      hx-get="{{ url_for('budgeting.overspending', uri=budget_sidebar['uri'], month=budget_sidebar['month']) }}">{{ budget_sidebar["available"] | money }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="flex gap-1 flex-wrap min-h-7 items-center">
+        <div class="w-40 shrink-1">Cash leftover</div>
+        <div class="grow text-right pr-1">{{ budget_sidebar["leftover"] | money }}</div>
+    </div>
+    <div class="flex gap-1 flex-wrap min-h-7 items-center">
+        <div class="w-40 shrink-1">Assigned this month</div>
+        <div class="grow text-right pr-1">{{ budget_sidebar["assigned"] | money }}</div>
+    </div>
+    {% if budget_sidebar["uri"] is none %}
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
+            <div class="w-40 shrink-1">Assigned in future</div>
+            <div class="grow text-right pr-1">{{ budget_sidebar["future_assigned"] | money }}</div>
+        </div>
+    {% endif %}
+    <div class="flex gap-1 flex-wrap min-h-7 items-center">
+        <div class="w-40 shrink-1">Activity</div>
+        <div class="grow text-right pr-1">{{ budget_sidebar["activity"] | money }}</div>
+    </div>
+    <input id="budgeting-sidebar-uri"
+           name="sidebar"
+           value="{{ budget_sidebar['uri'] or "" }}"
+           hidden>
+</div>
+<div id="budgeting-sidebar-target"
+     class="bg-grey-100 p-2 mt-2 empty:hidden"
+     hx-swap-oob="{{ oob }}"
+     hx-include="#budgeting-month,#budgeting-sidebar">
+    {%- if budget_sidebar["uri"] is not none -%}
+        {% if budget_sidebar["has_target"] %}
+            <div class="font-bold">Target</div>
+            <div class="font-bold border-b">{{ budget_sidebar["name"] }}</div>
+            {% set money_suffix = ("/week" if budget_sidebar["target_period"].name == "WEEK") %}
+            {% if budget_sidebar["target_period"].name == "ONCE" %}
+                {% set money_prefix = "Have" %}
+            {% elif budget_sidebar["target_type"].name == "REFILL" %}
+                {% set money_prefix = "Refill up to" %}
+            {% else %}
+                {% set money_prefix = "Assign" %}
+            {% endif %}
+            <div class="font-bold">{{ money_prefix }} {{ budget_sidebar["target_amount_raw"] | money }}{{ money_suffix }}</div>
+            <div class="border-b">By {{ budget_sidebar["target_next"] }}</div>
+            <div class="w-full my-1">
+                <canvas id="budget-sidebar-canvas"></canvas>
+            </div>
+            {% if budget_sidebar["assigned"] < budget_sidebar["target_assigned"] %}
+                <div class="bg-yellow-100 p-1 text-center w-full">
+                    Assign {{ (budget_sidebar["target_assigned"] - budget_sidebar["assigned"]) | money }} more to meet target
+                </div>
+            {% elif budget_sidebar["target_to_go"] == 0 %}
+                <div class="bg-green-200 p-1 text-center w-full">Target is achieved</div>
+            {% else %}
+                <div class="bg-green-200 p-1 text-center w-full">On track to achieve target</div>
+            {% endif %}
+            {% if budget_sidebar["target_type"].name == "BALANCE" %}
+                <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                    <div class="w-40 shrink-1">Target Balance</div>
+                    <div class="grow text-right pr-1">{{ budget_sidebar["target_amount"] | money }}</div>
+                </div>
+                <div class="flex gap-1 flex-wrap min-h-7 items-center border-b">
+                    <div class="w-40 shrink-1">Current Balance</div>
+                    <div class="grow text-right pr-1">{{ budget_sidebar["available"] | money }}</div>
+                </div>
+            {% else %}
+                <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                    <div class="w-40 shrink-1">Amount to assign</div>
+                    <div class="grow text-right pr-1">{{ budget_sidebar["target_amount"] | money }}</div>
+                </div>
+                <div class="flex gap-1 flex-wrap min-h-7 items-center border-b">
+                    <div class="w-40 shrink-1">Assigned so far</div>
+                    <div class="grow text-right pr-1">{{ budget_sidebar["assigned_cumulative"] | money }}</div>
+                </div>
+            {% endif %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-40 shrink-1">To go</div>
+                <div class="grow text-right pr-1">{{ budget_sidebar["target_to_go"] | money }}</div>
+            </div>
+            <button class="button bg-blue text-center w-full"
+                    hx-get="{{ url_for('budgeting.target', uri=budget_sidebar["uri"]) }}">Edit Target</button>
+            <script>budgeting.update(
+                        {{ budget_sidebar["assigned_cumulative"] }},
+                        {{ budget_sidebar["target_amount"] }},
+                        {{ budget_sidebar["assigned"] }} >=
+                        {{ budget_sidebar["target_assigned"] }},
+                    )
+            </script>
+        {% else %}
+            <div class="font-bold border-b">Target</div>
+            <div class="font-bold">How much is needed for</div>
+            <div class="font-bold">{{ budget_sidebar["name"] }}?</div>
+            <div>With a target, nummus can guide you to stay on track over time.</div>
+            <button class="button bg-blue text-center w-full"
+                    hx-get="{{ url_for('budgeting.target', uri=budget_sidebar["uri"]) }}">Create Target</button>
+        {% endif %}
+    {%- endif -%}
+</div>
