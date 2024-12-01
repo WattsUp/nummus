@@ -41,7 +41,8 @@
 <div id="budgeting-sidebar-target"
      class="bg-grey-100 p-2 mt-2 empty:hidden"
      hx-swap-oob="{{ oob }}"
-     hx-include="#budgeting-month,#budgeting-sidebar">
+     hx-include="#budgeting-month,#budgeting-sidebar"
+     hx-on::after-settle="console.log(event)">
     {%- if budget_sidebar["uri"] is not none -%}
         {% if budget_sidebar["has_target"] %}
             <div class="font-bold">Target</div>
@@ -56,7 +57,7 @@
             {% endif %}
             <div class="font-bold">{{ money_prefix }} {{ budget_sidebar["target_amount_raw"] | money }}{{ money_suffix }}</div>
             <div class="border-b">By {{ budget_sidebar["target_next"] }}</div>
-            <div class="w-full my-1">
+            <div class="w-full my-1 relative">
                 <canvas id="budget-sidebar-canvas"></canvas>
             </div>
             {% if budget_sidebar["assigned"] < budget_sidebar["target_assigned"] %}

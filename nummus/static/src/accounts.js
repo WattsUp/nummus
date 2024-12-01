@@ -8,7 +8,18 @@ const accounts = {
      * @param {Object} raw Raw data from accounts controller
      */
     update: function(raw) {
-        'use strict';
+        if (nummusChart.pendingSwap) {
+            accounts.updateEvent = () => {
+                accounts.update(raw);
+            };
+            document.addEventListener(
+                'nummus-chart-after-settle', accounts.updateEvent);
+            return;
+        }
+        if (accounts.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', accounts.updateEvent);
+        }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
         const values = raw.values.map(v => Number(v));

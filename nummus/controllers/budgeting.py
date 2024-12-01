@@ -148,7 +148,7 @@ def ctx_table(
             assigned_cumulative = assigned
             if not last_repeat_last_month or tar.type_ == TargetType.REFILL:
                 assigned_cumulative += leftover
-            deficent = target_assigned - assigned_cumulative
+            deficent = target_assigned - assigned
 
             if deficent <= 0:
                 if available < 0:

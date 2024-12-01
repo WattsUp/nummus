@@ -397,11 +397,25 @@ const budgeting = {
     /**
      * Create budgeting sidebar Chart
      *
-     * @param {Object} raw Raw data from budgeting controller
+     * @param {Number} assigned Amount of money assigned to target
+     * @param {Number} targetAmount Full target amount
+     * @param {Boolean} onTrack True if target is on track
      */
     update: function(assigned, targetAmount, onTrack) {
+        if (nummusChart.pendingSwap) {
+            budgeting.updateEvent = () => {
+                budgeting.update(assigned, targetAmount, onTrack);
+            };
+            document.addEventListener(
+                'nummus-chart-after-settle', budgeting.updateEvent);
+            return;
+        }
+        if (budgeting.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', budgeting.updateEvent);
+        }
         const remaining = targetAmount - assigned;
-        const percent = assigned / targetAmount * 100;
+        const percent = Math.min(100, assigned / targetAmount * 100);
 
         const canvas = document.getElementById('budget-sidebar-canvas');
         const ctx = canvas.getContext('2d');
@@ -423,11 +437,14 @@ const budgeting = {
         if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
             nummusChart.updatePie(this.sidebarChart, datasets);
         } else {
-            this.chartPieAssets = nummusChart.createPie(
+            this.sidebarChart = nummusChart.createPie(
                 ctx,
                 datasets,
                 null,
-                {plugins: {doughnutText: {text: `${percent.toFixed(0)}%`}}},
+                {
+                    plugins: {doughnutText: {text: `${percent.toFixed(0)}%`}},
+                    animations: false,
+                },
             );
         }
     },
