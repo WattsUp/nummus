@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import math
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -27,6 +28,160 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
+
+
+class TargetContext(TypedDict):
+    """Target Monthly Context."""
+
+    target_assigned: Decimal
+    total_assigned: Decimal
+    to_go: Decimal
+    on_track: bool
+    next_due_date: datetime.date | str | None
+
+    progress_bars: list[Decimal]
+    target: Decimal
+    total_target: Decimal
+    total_to_go: Decimal
+
+    period: TargetPeriod
+    type: TargetType
+
+
+def ctx_target(
+    tar: Target,
+    month: datetime.date,
+    assigned: Decimal,
+    available: Decimal,
+    leftover: Decimal,
+) -> TargetContext:
+    """Get monthly context for target.
+
+    Args:
+        tar: Target to get context for
+        month: Month to check progress during
+        assigned: Amount assigned this month
+        available: Available balance this month
+        leftover: Category leftover balance from previous month
+
+    Returns:
+        TargetContext
+    """
+    if tar.due_date_ord is None:
+        # No due date, easy to figure out progress
+        # This is a BALANCE target
+        target_assigned = tar.amount - leftover
+        to_go = tar.amount - available
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": available,
+            "to_go": to_go,
+            "on_track": to_go > 0,
+            "next_due_date": None,
+            "progress_bars": [tar.amount],
+            "target": tar.amount,
+            "total_target": tar.amount,
+            "total_to_go": max(Decimal(0), to_go),
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    due_date = datetime.date.fromordinal(tar.due_date_ord)
+    if tar.period == TargetPeriod.WEEK:
+        # Need the number of weekdays that fall in this month
+        weekday = due_date.weekday()
+        n_weekdays = utils.weekdays_in_month(weekday, month)
+        total_target = n_weekdays * tar.amount
+        target_assigned = total_target
+        total_assigned = assigned
+        progress_bars = [leftover] + [tar.amount] * n_weekdays
+        if tar.type_ == TargetType.REFILL or leftover == 0:
+            # Adjust leftover to/from everything
+            target_assigned -= leftover
+            total_assigned += leftover
+            progress_bars.pop(0)
+        total_to_go = total_target - total_assigned
+
+        on_track = assigned >= target_assigned
+        next_due_date = datetime.date.today()
+        if month.year == next_due_date.year and month.month == next_due_date.month:
+            # Move next_due_date to next weekday
+            n_days = weekday - next_due_date.weekday()
+            # Keep positive
+            next_due_date += datetime.timedelta(
+                days=n_days + (utils.DAYS_IN_WEEK if n_days < 0 else 0),
+            )
+            n_weeks_elapsed = math.ceil(next_due_date.day / utils.DAYS_IN_WEEK)
+            on_track = assigned >= (tar.amount * n_weeks_elapsed)
+
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": total_assigned,
+            "to_go": target_assigned - assigned,
+            "on_track": on_track,
+            "next_due_date": utils.WEEKDAYS[weekday],
+            "progress_bars": progress_bars,
+            "target": tar.amount,
+            "total_target": total_target,
+            "total_to_go": total_to_go,
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    if tar.period == TargetPeriod.ONCE:
+        # This is a BALANCE target
+        n_months = max(0, utils.date_months_between(month, due_date))
+        target_assigned = (tar.amount - leftover) / (n_months + 1)
+        total_to_go = tar.amount - available
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": available,
+            "to_go": target_assigned - assigned,
+            "on_track": assigned >= target_assigned,
+            "next_due_date": due_date,
+            "progress_bars": [tar.amount],
+            "target": tar.amount,
+            "total_target": tar.amount,
+            "total_to_go": max(Decimal(0), total_to_go),
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    # Move due_date into month
+    n = utils.date_months_between(due_date, month)
+    n_months_every = (
+        tar.repeat_every if tar.period == TargetPeriod.MONTH else tar.repeat_every * 12
+    )
+    n = math.ceil(n / n_months_every) * n_months_every
+    due_date = utils.date_add_months(due_date, n)
+    last_due_date = utils.date_add_months(due_date, -n_months_every)
+    last_repeat_last_month = utils.date_months_between(last_due_date, month) == 1
+
+    # If ACCUMULATE and last repeat ended last month, ignore balance
+    total_assigned = assigned
+    progress_bars = [leftover, tar.amount]
+    if tar.type_ == TargetType.REFILL or not last_repeat_last_month:
+        # Adjust leftover to/from everything
+        total_assigned += leftover
+        progress_bars.pop(0)
+    total_to_go = tar.amount - total_assigned
+
+    n_months = utils.date_months_between(month, due_date)
+    target_assigned = tar.amount / (n_months + 1)
+
+    return {
+        "target_assigned": target_assigned,
+        "total_assigned": total_assigned,
+        "to_go": target_assigned - total_assigned,
+        "on_track": total_assigned >= target_assigned,
+        "next_due_date": due_date,
+        "progress_bars": progress_bars,
+        "target": tar.amount,
+        "total_target": tar.amount,
+        "total_to_go": max(Decimal(0), total_to_go),
+        "period": tar.period,
+        "type": tar.type_,
+    }
 
 
 def ctx_table(
@@ -59,9 +214,10 @@ def ctx_table(
         assigned: Decimal
         activity: Decimal
         available: Decimal
-        status_text: str
         # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
         bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
+
+        target: TargetContext | None
 
     class GroupContext(TypedDict):
         """Type definition for budget group context."""
@@ -126,66 +282,20 @@ def ctx_table(
         if available < 0:
             n_overspent += 1
 
-        status_text = ""
-        target_assigned: Decimal | None = None
         bar_dollars: list[Decimal] = []
         if tar is None:
-            if activity == 0 and available == 0:
-                bar_dollars.append(Decimal(0))
-            elif available >= 0:
-                bar_dollars.append(available - activity)
-            else:
-                bar_dollars.append(-activity)
-                status_text = '<span class="font-bold">Overspent</span>'
+            bar_dollars = [max(available, Decimal(0)) - activity]
+            target_ctx = None
         else:
-            target_assigned, next_due_date, n_amounts, last_repeat_last_month = (
-                tar.get_expected_assigned(
-                    month,
-                    leftover,
-                )
+            target_ctx = ctx_target(
+                tar,
+                month,
+                assigned,
+                available,
+                leftover,
             )
-            target_assigned = round(target_assigned, 2)
-            assigned_cumulative = assigned
-            if not last_repeat_last_month or tar.type_ == TargetType.REFILL:
-                assigned_cumulative += leftover
-            deficent = target_assigned - assigned
+            bar_dollars = target_ctx["progress_bars"]
 
-            if deficent <= 0:
-                if available < 0:
-                    status_text = '<span class="font-bold">Overspent</span>'
-                else:
-                    # Say funded unless next due date is out there, then On track
-                    status_text = (
-                        "Funded"
-                        if next_due_date is None
-                        or utils.date_months_between(month, next_due_date) == 0
-                        else "On track"
-                    )
-            elif available < 0:
-                status_text = (
-                    '<span class="font-bold">Overspent</span> '
-                    f"{utils.format_financial(deficent)} more needed"
-                )
-            else:
-                status_text = f"{utils.format_financial(deficent)} more needed"
-
-            # If ACCUMULATE and last repeat ended last month, separate leftover bar
-            if (
-                tar.type_ == TargetType.ACCUMULATE
-                and last_repeat_last_month
-                and leftover != 0
-            ):
-                bar_dollars.append(leftover)
-
-            bar_dollars.extend([tar.amount] * n_amounts)
-
-            # If assigned >= target_assigned: green else yellow
-            # overspending always red
-
-            # If any leftover and ACCUMULATE, have bar split starting with leftover
-            # amount
-
-            # If WEEK, have bar segment for each week
         bar_dollars_sum = sum(bar_dollars)
         bars: list[tuple[Decimal, Decimal, Decimal, str, str]] = []
         bar_start = Decimal(0)
@@ -222,8 +332,8 @@ def ctx_table(
             "assigned": assigned,
             "activity": activity,
             "available": available,
-            "status_text": status_text,
             "bars": bars,
+            "target": target_ctx,
         }
         g = groups.get(t_cat.budget_group_id, ungrouped)
         g["assigned"] += assigned
@@ -962,7 +1072,7 @@ def ctx_sidebar(
             "assigned": total_assigned,
             "future_assigned": future_assigned,
             "activity": total_activity,
-            "has_target": False,
+            "target": None,
         }
     t_cat = web_utils.find(s, TransactionCategory, uri)
     t_cat_id = t_cat.id_
@@ -970,7 +1080,6 @@ def ctx_sidebar(
 
     tar = s.query(Target).where(Target.category_id == t_cat_id).one_or_none()
     if tar is None:
-        has_target = False
         return {
             "uri": uri,
             "name": t_cat.emoji_name,
@@ -980,30 +1089,16 @@ def ctx_sidebar(
             "assigned": assigned,
             "future_assigned": Decimal(0),
             "activity": activity,
-            "has_target": has_target,
+            "target": None,
         }
-    has_target = True
-    target_assigned, next_due_date, n_amounts, last_repeat_last_month = (
-        tar.get_expected_assigned(
-            month,
-            leftover,
-        )
+    target_ctx = ctx_target(
+        tar,
+        month,
+        assigned,
+        available,
+        leftover,
     )
-    target_assigned = round(target_assigned, 2)
-    target_amount = tar.amount * n_amounts
 
-    assigned_cumulative = assigned
-    if not last_repeat_last_month or tar.type_ == TargetType.REFILL:
-        assigned_cumulative += leftover
-
-    if tar.type_ == TargetType.BALANCE:
-        target_to_go = target_amount - available
-    else:
-        target_to_go = max(Decimal(0), target_amount - assigned_cumulative)
-
-    if tar.period == TargetPeriod.WEEK and tar.due_date_ord is not None:
-        due_date = datetime.date.fromordinal(tar.due_date_ord)
-        next_due_date = utils.WEEKDAYS[due_date.weekday()]
     return {
         "uri": uri,
         "name": t_cat.emoji_name,
@@ -1011,17 +1106,9 @@ def ctx_sidebar(
         "available": available,
         "leftover": leftover,
         "assigned": assigned,
-        "assigned_cumulative": assigned_cumulative,
         "future_assigned": Decimal(0),
         "activity": activity,
-        "has_target": has_target,
-        "target_amount": target_amount,
-        "target_amount_raw": tar.amount,
-        "target_assigned": target_assigned,
-        "target_to_go": target_to_go,
-        "target_type": tar.type_,
-        "target_period": tar.period,
-        "target_next": next_due_date,
+        "target": target_ctx,
     }
 
 

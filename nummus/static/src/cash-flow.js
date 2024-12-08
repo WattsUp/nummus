@@ -11,6 +11,11 @@ const cashFlow = {
      * @param {Object} raw Raw data from cash flow controller
      */
     update: function(raw) {
+        if (cashFlow.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', cashFlow.updateEvent);
+            cashFlow.updateEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             cashFlow.updateEvent = () => {
                 cashFlow.update(raw);
@@ -18,10 +23,6 @@ const cashFlow = {
             document.addEventListener(
                 'nummus-chart-after-settle', cashFlow.updateEvent);
             return;
-        }
-        if (cashFlow.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', cashFlow.updateEvent);
         }
         // Import data, Strings to Numbers
         const chartBars = raw.chart_bars;
@@ -227,6 +228,11 @@ const cashFlow = {
      * @param {Object} raw Raw data from emergency fund controller
      */
     updateDashboard: function(raw) {
+        if (cashFlow.updateDashboardEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', cashFlow.updateDashboardEvent);
+            cashFlow.updateDashboardEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             cashFlow.updateDashboardEvent = () => {
                 cashFlow.updateDashboard(raw);
@@ -234,10 +240,6 @@ const cashFlow = {
             document.addEventListener(
                 'nummus-chart-after-settle', cashFlow.updateDashboardEvent);
             return;
-        }
-        if (cashFlow.updateDashboardEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', cashFlow.updateDashboardEvent);
         }
         // Always chartBars
         const labels = raw.labels;

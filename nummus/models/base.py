@@ -204,6 +204,16 @@ class BaseEnum(enum.IntEnum):
         """
         return {}  # pragma: no cover
 
+    def __eq__(self, value: object) -> bool:
+        """Equal to test."""
+        if isinstance(value, str):
+            return self.name == value
+        return super().__eq__(value)
+
+    def __hash__(self) -> int:
+        """Hashing function for dictionary keys."""
+        return self.value
+
 
 class SQLEnum(types.TypeDecorator):
     """SQL type for enumeration, stores as integer."""

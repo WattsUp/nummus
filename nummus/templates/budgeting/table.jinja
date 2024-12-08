@@ -41,7 +41,8 @@
     </div>
     <div class="w-full max-w-72 max-lg:hidden"
          hx-target="#overlay"
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         hx-include="unset">
         {% include "budgeting/table-status.jinja" %}
         {% include "budgeting/sidebar.jinja" %}
     </div>

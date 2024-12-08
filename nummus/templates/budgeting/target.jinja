@@ -37,7 +37,7 @@
                    hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
                    hx-trigger="change, keyup changed delay:100ms">
         </div>
-        {% if target["period"].name == "WEEK" %}
+        {% if target["period"] == "WEEK" %}
             <div class="flex gap-1 flex-wrap min-h-7 items-center">
                 <div class="w-32 shrink-1">Every</div>
                 <select class="grow" name="due">
@@ -56,20 +56,19 @@
                 {# TODO (WattsUp): Change ONCE to month, year #}
             </div>
         {% endif %}
-        {% set money_period = ("/week" if target["period"].name == "WEEK") %}
-        {% set next_period = ("year" if target["period"].name == "YEAR" else "month") %}
-        {% if target["period"].name != "ONCE" %}
+        {% set money_period = ("/week" if target["period"] == "WEEK") %}
+        {% set next_period = ("year" if target["period"] == "YEAR" else "month") %}
+        {% if target["period"] != "ONCE" %}
             <div class="flex gap-1 flex-wrap min-h-7 items-center">
                 <div class="w-32 shrink-1">Next {{ next_period }}</div>
                 <select class="grow"
                         name="type"
                         hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}">
                     <option value="accumulate"
-                            {% if target["type"].name == "ACCUMULATE" %}selected{% endif %}>
+                            {% if target["type"] == "ACCUMULATE" %}selected{% endif %}>
                         Add {{ target["amount"] | money }}{{ money_period }} more
                     </option>
-                    <option value="refill"
-                            {% if target["type"].name == "REFILL" %}selected{% endif %}>
+                    <option value="refill" {% if target["type"] == "REFILL" %}selected{% endif %}>
                         Refill up to {{ target["amount"] | money }}{{ money_period }}
                     </option>
                 </select>
@@ -87,7 +86,7 @@
             </div>
         {% endif %}
         <div>
-            {% if target["type"].name == "ACCUMULATE" %}
+            {% if target["type"] == "ACCUMULATE" %}
                 <p>
                     {% if target["repeat_every"] > 1 %}
                         Every {{ target["repeat_every"] }} {{ next_period }}s
@@ -98,7 +97,7 @@
                     This accumulates the any unspent amount.
                 </p>
                 <p class="italic">Use for: bills, subscriptions, savings</p>
-            {% elif target["type"].name == "REFILL" %}
+            {% elif target["type"] == "REFILL" %}
                 <p>
                     {% if target["repeat_every"] > 1 %}
                         Every {{ target["repeat_every"] }} {{ next_period }}s

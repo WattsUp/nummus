@@ -11,7 +11,7 @@
                {% if group["is_closed"] %}checked{% endif %}
                name="closed"
                hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
-               hx-include="#name-{{ group["uri"] }}"
+               hx-include="#name-{{ group["uri"] }},#budgeting-month"
                hx-target="#sidebar-error"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-{{ group["uri"] }}"></label>
@@ -22,7 +22,7 @@
                {% if group["is_closed"] %}checked{% endif %}
                name="closed"
                hx-put="{{ url_for('budgeting.group', uri="ungrouped") }}"
-               hx-include="unset"
+               hx-include="#budgeting-month"
                hx-target="#sidebar-error"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>

@@ -7,6 +7,11 @@ const emergencyFund = {
      * @param {Object} raw Raw data from emergency fund controller
      */
     update: function(raw) {
+        if (emergencyFund.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', emergencyFund.updateEvent);
+            emergencyFund.updateEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             emergencyFund.updateEvent = () => {
                 emergencyFund.update(raw);
@@ -14,10 +19,6 @@ const emergencyFund = {
             document.addEventListener(
                 'nummus-chart-after-settle', emergencyFund.updateEvent);
             return;
-        }
-        if (emergencyFund.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', emergencyFund.updateEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
@@ -92,6 +93,12 @@ const emergencyFund = {
      * @param {Object} raw Raw data from emergency fund controller
      */
     updateDashboard: function(raw) {
+        if (emergencyFund.updateDashboardEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle',
+                emergencyFund.updateDashboardEvent);
+            emergencyFund.updateDashboardEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             emergencyFund.updateDashboardEvent = () => {
                 emergencyFund.updateDashboard(raw);
@@ -100,11 +107,6 @@ const emergencyFund = {
                 'nummus-chart-after-settle',
                 emergencyFund.updateDashboardEvent);
             return;
-        }
-        if (emergencyFund.updateDashboardEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle',
-                emergencyFund.updateDashboardEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;

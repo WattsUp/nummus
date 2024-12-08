@@ -7,6 +7,11 @@ const performance = {
      * @param {Object} raw Raw data from performance controller
      */
     update: function(raw) {
+        if (performance.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', performance.updateEvent);
+            performance.updateEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             performance.updateEvent = () => {
                 performance.update(raw);
@@ -14,10 +19,6 @@ const performance = {
             document.addEventListener(
                 'nummus-chart-after-settle', performance.updateEvent);
             return;
-        }
-        if (performance.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', performance.updateEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;

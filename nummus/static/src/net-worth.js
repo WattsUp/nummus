@@ -11,6 +11,11 @@ const netWorth = {
      * @param {Object} raw Raw data from net worth controller
      */
     update: function(raw) {
+        if (netWorth.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', netWorth.updateEvent);
+            netWorth.updateEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             netWorth.updateEvent = () => {
                 netWorth.update(raw);
@@ -18,10 +23,6 @@ const netWorth = {
             document.addEventListener(
                 'nummus-chart-after-settle', netWorth.updateEvent);
             return;
-        }
-        if (netWorth.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', netWorth.updateEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
@@ -315,6 +316,11 @@ const netWorth = {
      * @param {Object} raw Raw data from net worth controller
      */
     updateDashboard: function(raw) {
+        if (netWorth.updateDashboardEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', netWorth.updateDashboardEvent);
+            netWorth.updateDashboardEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             netWorth.updateDashboardEvent = () => {
                 netWorth.updateDashboard(raw);
@@ -322,10 +328,6 @@ const netWorth = {
             document.addEventListener(
                 'nummus-chart-after-settle', netWorth.updateDashboardEvent);
             return;
-        }
-        if (netWorth.updateDashboardEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', netWorth.updateDashboardEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;

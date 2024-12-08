@@ -488,7 +488,13 @@ class Portfolio:
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
-                        {"linked": True, "statement": statement},
+                        {
+                            "linked": True,
+                            "statement": Transaction.clean_strings(
+                                "statement",
+                                statement,
+                            ),
+                        },
                     )
                     s.query(TransactionSplit).where(
                         TransactionSplit.parent_id == match_id,

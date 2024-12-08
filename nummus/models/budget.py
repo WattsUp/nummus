@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import math
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
@@ -318,67 +317,3 @@ class Target(Base):
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
         """Validates decimal fields satisfy constraints."""
         return self.clean_decimals(key, field)
-
-    def get_expected_assigned(
-        self,
-        month: datetime.date,
-        leftover: Decimal,
-    ) -> tuple[Decimal, datetime.date | None, int, bool]:
-        """Get expected assigned amount.
-
-        Args:
-            month: Month to check progress during
-            leftover: Category leftover balance from previous month
-
-        Returns:
-            (
-                expected assigned amount,
-                next due date,
-                number of target amounts this month,
-                last repeat was last month,
-            )
-        """
-        if self.due_date_ord is None:
-            # No due date, easy to figure out progress
-            return self.amount - leftover, None, 1, False
-
-        due_date = datetime.date.fromordinal(self.due_date_ord)
-        if self.period == TargetPeriod.WEEK:
-            # Need the number of weekdays that fall in this month
-            n_weekdays = utils.weekdays_in_month(due_date.weekday(), month)
-            amount = n_weekdays * self.amount
-            return (
-                (amount if self.type_ == TargetType.ACCUMULATE else amount - leftover),
-                None,
-                n_weekdays,
-                True,
-            )
-
-        # Get next due date
-        if self.period == TargetPeriod.ONCE:
-            if month >= due_date:
-                # Non-repeating target is in the past
-                # Should be fully funded by now
-                return self.amount - leftover, None, 1, False
-            n_months = utils.date_months_between(month, due_date)
-            return (self.amount - leftover) / (n_months + 1), due_date, 1, False
-
-        # Move due_date into month
-        n = utils.date_months_between(due_date, month)
-        n_months_every = (
-            self.repeat_every
-            if self.period == TargetPeriod.MONTH
-            else self.repeat_every * 12
-        )
-        n = math.ceil(n / n_months_every) * n_months_every
-        due_date = utils.date_add_months(due_date, n)
-        last_due_date = utils.date_add_months(due_date, -n_months_every)
-        last_repeat_last_month = utils.date_months_between(last_due_date, month) == 1
-
-        # If ACCUMULATE and last repeat ended last month, ignore balance
-        if self.type_ == TargetType.ACCUMULATE and last_repeat_last_month:
-            deficient = self.amount
-        else:
-            deficient = self.amount - leftover
-        n_months = utils.date_months_between(month, due_date)
-        return deficient / (n_months + 1), due_date, 1, last_repeat_last_month

@@ -8,6 +8,11 @@ const accounts = {
      * @param {Object} raw Raw data from accounts controller
      */
     update: function(raw) {
+        if (accounts.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', accounts.updateEvent);
+            accounts.updateEvent = null;
+        }
         if (nummusChart.pendingSwap) {
             accounts.updateEvent = () => {
                 accounts.update(raw);
@@ -15,10 +20,6 @@ const accounts = {
             document.addEventListener(
                 'nummus-chart-after-settle', accounts.updateEvent);
             return;
-        }
-        if (accounts.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', accounts.updateEvent);
         }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
