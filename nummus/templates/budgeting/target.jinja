@@ -18,7 +18,7 @@
             {% for period, period_str in target["period_options"].items() %}
                 {% if period == target["period"] %}
                     <div class="button bg-blue cursor-pointer">{{ period_str }}</div>
-                    <input value="{{ period_str }}" name="period" hidden>
+                    <input value="{{ period_str }}" name="period" type="hidden">
                 {% else %}
                     <div class="button hover-blue cursor-pointer"
                          hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}">
@@ -49,11 +49,44 @@
                     {% endfor %}
                 </select>
             </div>
+        {% elif target["period"] == "ONCE" %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">Due Date</div>
+                <label class="checkbox">
+                    <input type="checkbox"
+                           name="has-due"
+                           {% if target["due_date"] %}checked{% endif %}
+                           hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                           autocomplete="off">
+                    {% with class = "w-6 h-6" %}
+                        {% include "svg/check.svg" %}
+                    {% endwith %}
+                </label>
+                <input type="hidden" name="has-due" value="off">
+            </div>
+            {% if target["due_date"] %}
+                <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                    <div class="w-32 shrink-1">By</div>
+                    <select class="grow" name="due-month">
+                        {% for month in target["months"] %}
+                            <option value="{{ loop.index }}"
+                                    {% if target["due_date_month"] == loop.index %}selected{% endif %}>
+                                {{ month }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <select name="due-year">
+                        {% for year in range(current_year, current_year + 50) %}
+                            <option value="{{ year }}"
+                                    {% if target["due_date_year"] == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
         {% else %}
             <div class="flex gap-1 flex-wrap min-h-7 items-center">
                 <div class="w-32 shrink-1">By</div>
                 <input class="grow" name="due" type="date" value="{{ target["due_date"] }}">
-                {# TODO (WattsUp): Change ONCE to month, year #}
             </div>
         {% endif %}
         {% set money_period = ("/week" if target["period"] == "WEEK") %}

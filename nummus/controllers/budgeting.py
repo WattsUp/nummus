@@ -76,7 +76,7 @@ def ctx_target(
             "target_assigned": target_assigned,
             "total_assigned": available,
             "to_go": to_go,
-            "on_track": to_go > 0,
+            "on_track": to_go <= 0,
             "next_due_date": None,
             "progress_bars": [tar.amount],
             "target": tar.amount,
@@ -138,7 +138,7 @@ def ctx_target(
             "total_assigned": available,
             "to_go": target_assigned - assigned,
             "on_track": assigned >= target_assigned,
-            "next_due_date": due_date,
+            "next_due_date": f"{due_date:%B %Y}",
             "progress_bars": [tar.amount],
             "target": tar.amount,
             "total_target": tar.amount,
@@ -978,8 +978,18 @@ def target(uri: str) -> str | flask.Response:
             else:
                 due_date = datetime.date.fromisoformat(due)
             tar.due_date_ord = due_date.toordinal()
-        elif tar.type_ == TargetType.BALANCE:
-            tar.due_date_ord = None
+        elif tar.period == TargetPeriod.ONCE:
+            has_due_date = args.get("has-due")
+            due_month = args.get("due-month", type=int)
+            due_year = args.get("due-year", type=int)
+            if has_due_date == "on":
+                if due_month is not None and due_year is not None:
+                    due_date = datetime.date(due_year, due_month, 1)
+                else:
+                    due_date = today
+                tar.due_date_ord = due_date.toordinal()
+            elif has_due_date == "off":
+                tar.due_date_ord = None
 
         if tar.period == TargetPeriod.ONCE:
             tar.repeat_every = 0
@@ -1014,8 +1024,11 @@ def target(uri: str) -> str | flask.Response:
             "repeat_every": tar.repeat_every,
             "due_date": due_date,
             "due_date_weekday": None if due_date is None else due_date.weekday(),
+            "due_date_month": None if due_date is None else due_date.month,
+            "due_date_year": None if due_date is None else due_date.year,
             "amount": tar.amount,
             "weekdays": utils.WEEKDAYS,
+            "months": utils.MONTHS,
         }
 
         return flask.render_template(

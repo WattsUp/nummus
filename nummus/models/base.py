@@ -210,6 +210,12 @@ class BaseEnum(enum.IntEnum):
             return self.name == value
         return super().__eq__(value)
 
+    def __ne__(self, value: object) -> bool:
+        """Not equal to test."""
+        if isinstance(value, str):
+            return self.name != value
+        return super().__ne__(value)
+
     def __hash__(self) -> int:
         """Hashing function for dictionary keys."""
         return self.value

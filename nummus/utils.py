@@ -60,6 +60,21 @@ WEEKDAYS = [
     "Sunday",
 ]
 
+MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]
+
 
 def camel_to_snake(s: str) -> str:
     """Transform CamelCase to snake_case."""
