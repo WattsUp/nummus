@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import orm
+from sqlalchemy import func, orm
 
 from nummus import utils
 from nummus.models.account import Account
@@ -82,7 +82,7 @@ def query_count(query: orm.Query[Base]) -> int:
     # https://datawookie.dev/blog/2021/01/sqlalchemy-efficient-counting/
     col_one = sqlalchemy.literal_column("1")
     counter = query.statement.with_only_columns(  # type: ignore[attr-defined]
-        sqlalchemy.func.count(col_one),
+        func.count(col_one),
         maintain_column_froms=True,
     )
     counter = counter.order_by(None)

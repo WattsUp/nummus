@@ -24,7 +24,7 @@ class Config(Base):
         value: Value of config pair
     """
 
-    # No __table_id__ because this is not user accessible
+    __table_id__ = None
 
     key: orm.Mapped[ConfigKey] = orm.mapped_column(SQLEnum(ConfigKey), unique=True)
     value: ORMStr

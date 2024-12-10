@@ -7,8 +7,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
@@ -49,7 +48,7 @@ def ctx_chart() -> dict[str, object]:
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
-            query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+            query = query.with_entities(func.min(TransactionSplit.date_ord))
             start_ord = query.scalar()
             start = (
                 datetime.date.fromordinal(start_ord)
@@ -100,7 +99,7 @@ def ctx_chart() -> dict[str, object]:
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(TransactionSplit.account_id.in_(ids))
             .where(TransactionSplit.date_ord >= start_ord)
@@ -248,7 +247,7 @@ def sum_income_expense(
     query = s.query(TransactionSplit)
     query = query.with_entities(
         TransactionSplit.category_id,
-        sqlalchemy.func.sum(TransactionSplit.amount),
+        func.sum(TransactionSplit.amount),
     )
     query = query.where(TransactionSplit.account_id.in_(ids))
     query = query.where(TransactionSplit.date_ord >= start_ord)

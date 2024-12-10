@@ -8,7 +8,7 @@ import string
 from typing import TYPE_CHECKING
 
 import spellchecker
-import sqlalchemy
+from sqlalchemy import func
 from typing_extensions import override
 
 from nummus import utils
@@ -116,7 +116,7 @@ class Typos(Base):
                         TransactionSplit.date_ord,
                         TransactionSplit.account_id,
                         field,
-                        sqlalchemy.func.count(),
+                        func.count(),
                     )
                     .group_by(field)
                 )
@@ -147,7 +147,7 @@ class Typos(Base):
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                     TransactionSplit.description,
-                    sqlalchemy.func.count(),
+                    func.count(),
                 )
                 .group_by(TransactionSplit.description)
             )

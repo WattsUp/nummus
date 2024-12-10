@@ -1064,6 +1064,63 @@ class TestUtils(TestBase):
         result = utils.dedupe(items)
         self.assertEqual(result, target)
 
+    def test_date_months_between(self) -> None:
+        # Same date is zero
+        start = datetime.date(2024, 11, 1)
+        end = start
+        result = utils.date_months_between(start, end)
+        self.assertEqual(result, 0)
+
+        # Same month is zero
+        start = datetime.date(2024, 11, 1)
+        end = datetime.date(2024, 11, 30)
+        result = utils.date_months_between(start, end)
+        self.assertEqual(result, 0)
+        result = utils.date_months_between(end, start)
+        self.assertEqual(result, 0)
+
+        # Next month is one
+        start = datetime.date(2024, 11, 1)
+        end = datetime.date(2024, 12, 31)
+        result = utils.date_months_between(start, end)
+        self.assertEqual(result, 1)
+        result = utils.date_months_between(end, start)
+        self.assertEqual(result, -1)
+
+        # 11 months is 11
+        start = datetime.date(2023, 11, 1)
+        end = datetime.date(2024, 10, 15)
+        result = utils.date_months_between(start, end)
+        self.assertEqual(result, 11)
+        result = utils.date_months_between(end, start)
+        self.assertEqual(result, -11)
+
+        # 13 months is 13
+        start = datetime.date(2024, 11, 1)
+        end = datetime.date(2023, 10, 15)
+        result = utils.date_months_between(start, end)
+        self.assertEqual(result, -13)
+        result = utils.date_months_between(end, start)
+        self.assertEqual(result, 13)
+
+    def test_weekdays_in_month(self) -> None:
+        date = datetime.date(2024, 11, 1)
+        weekday = date.weekday()  # Friday
+
+        # weekday is Friday, there are 5 Fridays
+        result = utils.weekdays_in_month(weekday, date)
+        self.assertEqual(result, 5)
+
+        # weekday is Saturday, there are 5 Saturday
+        weekday = (weekday + 1) % 7
+        result = utils.weekdays_in_month(weekday, date)
+        self.assertEqual(result, 5)
+
+        # weekday is Sunday, there are 4 Sundays
+        weekday = (weekday + 1) % 7
+        result = utils.weekdays_in_month(weekday, date)
+        self.assertEqual(result, 4)
+
     def test_start_of_month(self) -> None:
         date = datetime.date(2024, 2, 20)
 
@@ -1076,4 +1133,25 @@ class TestUtils(TestBase):
 
         result = utils.end_of_month(date)
         target = datetime.date(2024, 2, 29)
+        self.assertEqual(result, target)
+
+    def test_clamp(self) -> None:
+        result = utils.clamp(Decimal(0.5))
+        target = Decimal(0.5)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(-0.5))
+        target = Decimal(0)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(1.5))
+        target = Decimal(1)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(150), c_max=Decimal(100))
+        target = Decimal(100)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(-150), c_min=Decimal(-100))
+        target = Decimal(-100)
         self.assertEqual(result, target)

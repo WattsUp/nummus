@@ -10,9 +10,9 @@ from pathlib import Path
 from typing import TypedDict
 
 import colorama
-import sqlalchemy
 import viztracer
 from colorama import Fore
+from sqlalchemy import func
 
 from nummus.commands.base import unlock
 from nummus.models import Account, Asset, AssetValuation, TransactionSplit
@@ -71,7 +71,7 @@ def main(command_line: list[str] | None = None) -> int:
         # Get start date
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))
-        query = query.with_entities(sqlalchemy.func.min(TransactionSplit.date_ord))
+        query = query.with_entities(func.min(TransactionSplit.date_ord))
         start_ord = query.scalar()
         start = (
             datetime.date.fromordinal(start_ord)

@@ -1,7 +1,7 @@
 ---
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.5.6
+    rev: v0.8.2
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -67,3 +67,4 @@ repos:
     rev: v17.0.6
     hooks:
       - id: clang-format
+        exclude: nummus/static/plugins

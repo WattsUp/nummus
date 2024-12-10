@@ -103,7 +103,7 @@ class Summarize(Base):
             Dictionary of statistics
         """
         # Defer for faster time to main
-        import sqlalchemy
+        from sqlalchemy import func
 
         from nummus import utils
         from nummus.models import (
@@ -133,7 +133,7 @@ class Summarize(Base):
             # Get the inception date
             start_date_ord: int = (
                 s.query(
-                    sqlalchemy.func.min(TransactionSplit.date_ord),
+                    func.min(TransactionSplit.date_ord),
                 ).scalar()
                 or datetime.date(1970, 1, 1).toordinal()
             )

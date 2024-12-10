@@ -8,7 +8,19 @@ const accounts = {
      * @param {Object} raw Raw data from accounts controller
      */
     update: function(raw) {
-        'use strict';
+        if (accounts.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', accounts.updateEvent);
+            accounts.updateEvent = null;
+        }
+        if (nummusChart.pendingSwap) {
+            accounts.updateEvent = () => {
+                accounts.update(raw);
+            };
+            document.addEventListener(
+                'nummus-chart-after-settle', accounts.updateEvent);
+            return;
+        }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
         const values = raw.values.map(v => Number(v));
@@ -30,7 +42,7 @@ const accounts = {
 
         const ticksEnabled = window.screen.width >= 768;
 
-        const width = 60;
+        const width = 65;
 
         {
             const canvas = document.getElementById('account-chart-canvas');

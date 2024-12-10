@@ -16,7 +16,7 @@ class Credentials(Base):
         password: Secret password
     """
 
-    __table_id__ = 0x60000000
+    __table_id__ = 0x50000000
 
     site: ORMStr
     user: ORMStr

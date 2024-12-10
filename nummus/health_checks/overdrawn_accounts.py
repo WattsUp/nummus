@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy
+from sqlalchemy import func
 from typing_extensions import override
 
 from nummus import utils
@@ -40,7 +40,7 @@ class OverdrawnAccounts(Base):
             issues: list[tuple[str, str, str]] = []
 
             start_ord = (
-                s.query(sqlalchemy.func.min(TransactionSplit.date_ord))
+                s.query(func.min(TransactionSplit.date_ord))
                 .where(TransactionSplit.account_id.in_(acct_ids))
                 .scalar()
             )
@@ -49,7 +49,7 @@ class OverdrawnAccounts(Base):
                 self._commit_issues()
                 return
             end_ord = (
-                s.query(sqlalchemy.func.max(TransactionSplit.date_ord))
+                s.query(func.max(TransactionSplit.date_ord))
                 .where(TransactionSplit.account_id.in_(acct_ids))
                 .scalar()
             )

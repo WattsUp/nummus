@@ -132,8 +132,6 @@ select = [
 ]
 
 ignore = [
-    "ANN101",  # missing type annotation for self
-    "ANN102",  # missing type annotation for cls
     "I001",    # mismatch between ruff and isort
     "TD003",   # issue links not required for TODOs
     "PLR0911", # Too many return statements

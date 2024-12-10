@@ -5,17 +5,19 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-import sqlalchemy
-from sqlalchemy import ForeignKey, orm
+from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
 
 from nummus import utils
 from nummus.models.account import Account
 from nummus.models.base import (
     Base,
+    BaseEnum,
     Decimal6,
     ORMInt,
+    ORMIntOpt,
     ORMReal,
     ORMStr,
+    SQLEnum,
     string_column_args,
     YIELD_PER,
 )
@@ -34,7 +36,7 @@ class BudgetGroup(Base):
         position: Group position
     """
 
-    __table_id__ = 0x50000000
+    __table_id__ = 0x40000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     position: ORMInt = orm.mapped_column(unique=True)
@@ -56,13 +58,13 @@ class BudgetAssignment(Base):
         category_id: Budget category to contribute to
     """
 
-    # No __table_id__ because this is not user accessible
+    __table_id__ = None
 
     month_ord: ORMInt
     amount: ORMReal = orm.mapped_column(Decimal6)
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
-    __table_args__ = (sqlalchemy.UniqueConstraint("month_ord", "category_id"),)
+    __table_args__ = (UniqueConstraint("month_ord", "category_id"),)
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -74,7 +76,7 @@ class BudgetAssignment(Base):
         cls,
         s: orm.Session,
         month: datetime.date,
-    ) -> tuple[dict[int, tuple[Decimal, Decimal, Decimal]], Decimal, Decimal]:
+    ) -> tuple[dict[int, tuple[Decimal, Decimal, Decimal, Decimal]], Decimal, Decimal]:
         """Get available budget for a month.
 
         Args:
@@ -83,7 +85,7 @@ class BudgetAssignment(Base):
 
         Returns:
             (
-                dict{TransactionCategory: (assigned, activity, available)},
+                dict{TransactionCategory: (assigned, activity, available, leftover)},
                 assignable,
                 future_assigned,
             )
@@ -107,7 +109,7 @@ class BudgetAssignment(Base):
         query = (
             s.query(TransactionSplit)
             .with_entities(
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(
                 TransactionSplit.account_id.in_(accounts),
@@ -161,7 +163,7 @@ class BudgetAssignment(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
                 TransactionSplit.month_ord,
             )
             .where(
@@ -198,7 +200,7 @@ class BudgetAssignment(Base):
         # Future months' assignment
         query = (
             s.query(BudgetAssignment)
-            .with_entities(sqlalchemy.func.sum(BudgetAssignment.amount))
+            .with_entities(func.sum(BudgetAssignment.amount))
             .where(BudgetAssignment.month_ord > month_ord)
         )
         future_assigned = query.scalar() or Decimal(0)
@@ -208,7 +210,7 @@ class BudgetAssignment(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.category_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(
                 TransactionSplit.account_id.in_(accounts),
@@ -218,7 +220,7 @@ class BudgetAssignment(Base):
         )
         categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        categories: dict[int, tuple[Decimal, Decimal, Decimal]] = {}
+        categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]] = {}
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.group,
@@ -235,7 +237,7 @@ class BudgetAssignment(Base):
 
             ending_balance += activity
             total_available += available
-            categories[t_cat_id] = (assigned, activity, available)
+            categories[t_cat_id] = (assigned, activity, available, leftover)
 
         assignable = ending_balance - total_available
         if assignable < 0:
@@ -245,3 +247,73 @@ class BudgetAssignment(Base):
             assignable -= future_assigned
 
         return categories, assignable, future_assigned
+
+
+class TargetType(BaseEnum):
+    """Type of budget target."""
+
+    ACCUMULATE = 1
+    REFILL = 2
+    BALANCE = 3
+
+
+class TargetPeriod(BaseEnum):
+    """Type of budget due date."""
+
+    WEEK = 1
+    MONTH = 2
+    YEAR = 3
+    ONCE = 4
+
+
+class Target(Base):
+    """Budget target model for storing a desired budget amount.
+
+    Attributes:
+        category_id: Budget category to target
+        amount: Amount to target
+        type_: Type of budget target
+        period: Type of budget due date
+        due_date_ord: First date ordinal on which target is due
+        repeat_every: Repeat target every n period
+    """
+
+    __table_id__ = 0x70000000
+
+    category_id: ORMInt = orm.mapped_column(
+        ForeignKey("transaction_category.id_"),
+        unique=True,
+    )
+    amount: ORMReal = orm.mapped_column(
+        Decimal6,
+        CheckConstraint("amount > 0", "target.amount must be positive"),
+    )
+    type_: orm.Mapped[TargetType] = orm.mapped_column(SQLEnum(TargetType))
+    period: orm.Mapped[TargetPeriod] = orm.mapped_column(SQLEnum(TargetPeriod))
+    due_date_ord: ORMIntOpt
+    repeat_every: ORMInt
+
+    __table_args__ = (
+        CheckConstraint(
+            f"(period == {TargetPeriod.ONCE.value}) == (repeat_every == 0)",
+            "ONCE are the only that cannot repeat",
+        ),
+        CheckConstraint(
+            f"(period == {TargetPeriod.ONCE.value}) == "
+            f"(type_ == {TargetType.BALANCE.value})",
+            "ONCE targets must be BALANCE",
+        ),
+        CheckConstraint(
+            f"type_ == {TargetType.BALANCE.value} or due_date_ord IS NOT null",
+            "Only BALANCE targets cannot have a due date",
+        ),
+        CheckConstraint(
+            f"period != {TargetPeriod.WEEK.value} or repeat_every == 1",
+            "WEEK targets must repeat every week",
+        ),
+    )
+
+    @orm.validates("amount")
+    def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
+        """Validates decimal fields satisfy constraints."""
+        return self.clean_decimals(key, field)

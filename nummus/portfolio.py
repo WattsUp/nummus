@@ -16,7 +16,7 @@ from pathlib import Path
 import sqlalchemy
 import tqdm
 from rapidfuzz import process
-from sqlalchemy import orm
+from sqlalchemy import orm, Row
 
 from nummus import encryption
 from nummus import exceptions as exc
@@ -488,7 +488,13 @@ class Portfolio:
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
-                        {"linked": True, "statement": statement},
+                        {
+                            "linked": True,
+                            "statement": Transaction.clean_strings(
+                                "statement",
+                                statement,
+                            ),
+                        },
                     )
                     s.query(TransactionSplit).where(
                         TransactionSplit.parent_id == match_id,
@@ -688,7 +694,7 @@ class Portfolio:
             txn.amount + utils.MATCH_ABSOLUTE,
         )
 
-        def commit_match(matching_row: int | sqlalchemy.Row[tuple[int]]) -> int:
+        def commit_match(matching_row: int | Row[tuple[int]]) -> int:
             id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
             if do_commit:
                 txn.similar_txn_id = id_

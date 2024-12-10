@@ -6,7 +6,7 @@ import datetime
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import event, ForeignKey, orm
+from sqlalchemy import CheckConstraint, event, ForeignKey, orm
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -55,11 +55,11 @@ class TransactionSplit(Base):
             Account gained Assets (inflow)
     """
 
-    __table_id__ = 0x80000000
+    __table_id__ = 0xA0000000
 
     amount: ORMReal = orm.mapped_column(
         Decimal6,
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "amount != 0",
             "transaction_split.amount must be non-zero",
         ),
@@ -85,7 +85,7 @@ class TransactionSplit(Base):
         *string_column_args("payee"),
         *string_column_args("description"),
         *string_column_args("tag"),
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
         ),
@@ -226,7 +226,7 @@ class Transaction(Base):
         splits: List of TransactionSplits
     """
 
-    __table_id__ = 0x90000000
+    __table_id__ = 0x80000000
 
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
@@ -243,7 +243,7 @@ class Transaction(Base):
 
     __table_args__ = (
         *string_column_args("statement"),
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "linked or not locked",
             "Transaction cannot be locked until linked",
         ),

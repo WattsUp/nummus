@@ -1,0 +1,31 @@
+<div class="flex gap-2 justify-between items-center">
+    <div class="truncate">{{ category["emoji_name"] }}</div>
+    <div class="text-grey-600 truncate text-sm">
+        {% if category["available"] < 0 %}<b>Overspent</b>{% endif %}
+        {% if category["target"] %}
+            {% set target = category["target"] %}
+            {% if target["total_to_go"] == 0 %}
+                Funded
+            {% elif target["on_track"] %}
+                {% if target["period"] == "WEEK" %}
+                    On track, {{ target["to_go"] | money }} more needed
+                {% else %}
+                    On track
+                {% endif %}
+            {% else %}
+                {{ target["to_go"] | money }} more needed
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+<div class="h-[5px] w-full flex gap-1">
+    {% for bar_w, bg_fill_w, fg_fill_w, bg, fg in category["bars"] %}
+        <div class="h-full rounded grow relative bg-grey-400"
+             style="width: {{ bar_w | percent }}">
+            <div class="h-full rounded absolute top-0 left-0 bg-{{ bg }}"
+                 style="width: {{ bg_fill_w | percent }}"></div>
+            <div class="h-full rounded absolute top-0 left-0 bar-fg {{ fg }}"
+                 style="width: {{ fg_fill_w | percent }}"></div>
+        </div>
+    {% endfor %}
+</div>

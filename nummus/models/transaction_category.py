@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import emoji as emoji_mod
-import sqlalchemy
-from sqlalchemy import ForeignKey, orm
+from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -46,7 +45,7 @@ class TransactionCategory(Base):
         budget_position: Position on budget page where category is located
     """
 
-    __table_id__ = 0x70000000
+    __table_id__ = 0x90000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     emoji: ORMStrOpt
@@ -64,11 +63,11 @@ class TransactionCategory(Base):
     __table_args__ = (
         *string_column_args("name"),
         *string_column_args("emoji", short_check=False),
-        sqlalchemy.CheckConstraint(
+        CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
         ),
-        sqlalchemy.UniqueConstraint("budget_group_id", "budget_position"),
+        UniqueConstraint("budget_group_id", "budget_position"),
     )
 
     @orm.validates("name")

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 
-import sqlalchemy
+from sqlalchemy import func
 from typing_extensions import override
 
 from nummus.health_checks.base import Base
@@ -27,7 +27,7 @@ class MissingAssetValuations(Base):
                 s.query(TransactionSplit)
                 .with_entities(
                     TransactionSplit.asset_id,
-                    sqlalchemy.func.min(TransactionSplit.date_ord),
+                    func.min(TransactionSplit.date_ord),
                 )
                 .where(TransactionSplit.asset_id.isnot(None))
                 .group_by(TransactionSplit.asset_id)
@@ -38,7 +38,7 @@ class MissingAssetValuations(Base):
                 s.query(AssetValuation)
                 .with_entities(
                     AssetValuation.asset_id,
-                    sqlalchemy.func.min(AssetValuation.date_ord),
+                    func.min(AssetValuation.date_ord),
                 )
                 .group_by(AssetValuation.asset_id)
             )

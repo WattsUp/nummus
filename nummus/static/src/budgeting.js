@@ -1,5 +1,6 @@
 'use strict';
 const budgeting = {
+    sidebarChart: null,
     table: null,
     trash: null,
     trashSVG: null,
@@ -392,5 +393,60 @@ const budgeting = {
         document.removeEventListener('mousemove', budgeting.dragStartTest);
         budgeting.isDragging = false;
         budgeting.trash.classList.add('hidden');
+    },
+    /**
+     * Create budgeting sidebar Chart
+     *
+     * @param {Number} assigned Amount of money assigned to target
+     * @param {Number} targetAmount Full target amount
+     * @param {Boolean} onTrack True if target is on track
+     */
+    update: function(assigned, targetAmount, onTrack) {
+        if (budgeting.updateEvent) {
+            document.removeEventListener(
+                'nummus-chart-after-settle', budgeting.updateEvent);
+            budgeting.updateEvent = null;
+        }
+        if (nummusChart.pendingSwap) {
+            budgeting.updateEvent = () => {
+                budgeting.update(assigned, targetAmount, onTrack);
+            };
+            document.addEventListener(
+                'nummus-chart-after-settle', budgeting.updateEvent);
+            return;
+        }
+        const remaining = targetAmount - assigned;
+        const percent = Math.min(100, assigned / targetAmount * 100);
+
+        const canvas = document.getElementById('budget-sidebar-canvas');
+        const ctx = canvas.getContext('2d');
+        const datasets = [
+            {
+                name: 'Assigned',
+                amount: assigned,
+                color: getThemeColor(onTrack ? 'green' : 'yellow'),
+            },
+        ];
+        if (remaining > 0) {
+            datasets.push({
+
+                name: 'Assigned',
+                amount: remaining,
+                color: getThemeColor('grey-500'),
+            });
+        }
+        if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
+            nummusChart.updatePie(this.sidebarChart, datasets);
+        } else {
+            this.sidebarChart = nummusChart.createPie(
+                ctx,
+                datasets,
+                null,
+                {
+                    plugins: {doughnutText: {text: `${percent.toFixed(0)}%`}},
+                    animations: false,
+                },
+            );
+        }
     },
 };

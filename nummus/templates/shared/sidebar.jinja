@@ -28,14 +28,15 @@
                 <h2 class="flex justify-between pt-2">
                     <span>Assets</span><span>{{ sidebar["assets"] | money0 }}</span>
                 </h2>
-                <div class="h-1 bg-grey-400">
-                    <div class="bg-blue h-full" style="width: {{ sidebar["assets-w"] }}%"></div>
+                <div class="h-[5px] bg-grey-400 rounded">
+                    <div class="bg-blue h-full rounded"
+                         style="width: {{ sidebar["assets-w"] }}%"></div>
                 </div>
                 <h2 class="flex justify-between">
                     <span>Liabilities</span><span>{{ sidebar["liabilities"] | money0 }}</span>
                 </h2>
-                <div class="h-1 bg-grey-400">
-                    <div class="bg-yellow h-full"
+                <div class="h-[5px] bg-grey-400 rounded">
+                    <div class="bg-yellow h-full rounded"
                          style="width: {{ sidebar["liabilities-w"] }}%"></div>
                 </div>
             </div>

@@ -6,9 +6,12 @@
      hx-put="{{ url_for('budgeting.reorder') }}"
      hx-include="this"
      hx-swap-oob="{{ oob }}">
-    <div id="budget-table-root" class="grow max-lg:w-full">
+    <input id="budgeting-month" name="month" value="{{ table["month"] }}" hidden>
+    <div id="budget-table-root"
+         class="grow max-lg:w-full"
+         hx-include="#budgeting-month,#budgeting-sidebar">
         <div class="w-full flex gap-1 p-1 h-8 items-center justify-end">
-            <div class="w-28 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
+            <div class="w-24 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
                 {% with class = "w-[24px] h-[24px]" %}
                     {% include "svg/plus.svg" %}
                 {% endwith %}
@@ -16,14 +19,13 @@
                        placeholder="Group name"
                        name="name"
                        hx-post="{{ url_for('budgeting.new_group') }}"
-                       hx-include="unset"
-                       hx-target="#overlay-error"
+                       hx-target="#sidebar-error"
                        hx-swap="innerHTML">
                 <span class="w-full">New Group</span>
             </div>
-            <div class="w-28 shrink-0 text-right max-md:hidden">Assigned</div>
-            <div class="w-28 shrink-0 text-right max-md:hidden">Activity</div>
-            <div class="w-28 shrink-0 text-right">Available</div>
+            <div class="w-24 shrink-0 text-right max-md:hidden">Assigned</div>
+            <div class="w-24 shrink-0 text-right max-md:hidden">Activity</div>
+            <div class="w-24 shrink-0 text-right">Available</div>
             <div class="w-6 shrink-0 max-md:hidden"></div>
         </div>
         {% for group in table["groups"] %}
@@ -37,61 +39,12 @@
             {% endwith %}
         </div>
     </div>
-    <div class="lg:w-1/3" hx-target="#overlay" hx-swap="innerHTML">
-        <div id="overlay-error"
-             class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-        {% set class = "w-full text-xl flex justify-between p-2 items-center gap-2" %}
-        {% if table["assignable"] == 0 %}
-            <div class="{{ class }} bg-grey-200">
-                <div>
-                    <div>{{ table["assignable"] | money }}</div>
-                    <div class="text-base">All money assigned</div>
-                    {% if table["future_assigned"] != 0 %}
-                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
-                    {% endif %}
-                </div>
-                {% with class = "w-12 h-12 fill-black" %}
-                    {% include "svg/check.svg" %}
-                {% endwith %}
-            </div>
-        {% elif table["assignable"] > 0 %}
-            <div class="{{ class }} bg-green-200">
-                <div>
-                    <div>{{ table["assignable"] | money }}</div>
-                    <div class="text-base">Ready to assign</div>
-                    {% if table["future_assigned"] != 0 %}
-                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
-                    {% endif %}
-                </div>
-                <button class="button bg-green"
-                        hx-get="{{ url_for('budgeting.move', uri='income', month=table['month']) }}">Assign</button>
-            </div>
-        {% else %}
-            <div class="{{ class }} bg-red-200">
-                <div>
-                    <div>{{ table["assignable"] | money }}</div>
-                    <div class="text-base">More money assigned than held</div>
-                    {% if table["future_assigned"] != 0 %}
-                        <div class="italic text-sm">{{ table["future_assigned"] | money }} assigned in the future.</div>
-                    {% endif %}
-                </div>
-                <button class="button bg-red"
-                        hx-get="{{ url_for('budgeting.overspending', uri='income', month=table['month']) }}">
-                    Fix
-                </button>
-            </div>
-        {% endif %}
-        {% if table["n_overspent"] > 0 %}
-            <div class="bg-red-200 text-center p-2">
-                {{ table["n_overspent"] }}
-                {% if table["n_overspent"] == 1 %}
-                    category is
-                {% else %}
-                    categories are
-                {% endif %}
-                overspent.
-            </div>
-        {% endif %}
+    <div class="w-full max-w-72 max-lg:hidden"
+         hx-target="#overlay"
+         hx-swap="innerHTML"
+         hx-include="unset">
+        {% include "budgeting/table-status.jinja" %}
+        {% include "budgeting/sidebar.jinja" %}
     </div>
     <script>budgeting.setup()</script>
 </div>

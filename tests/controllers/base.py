@@ -24,6 +24,7 @@ from nummus.models import (
     BudgetAssignment,
     BudgetGroup,
     Credentials,
+    Target,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -221,6 +222,7 @@ class WebTestBase(TestBase):
         # Clean portfolio
         # In order of deletion, so children models first
         models = [
+            Target,
             AssetValuation,
             BudgetAssignment,
             Credentials,

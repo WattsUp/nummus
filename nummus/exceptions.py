@@ -19,33 +19,35 @@ if TYPE_CHECKING:
 
 
 __all__ = [
-    "DuplicateURLError",
+    "AssetWebError",
+    "ComputedColumnError",
     "DatabaseError",
-    "IntegrityError",
-    "MultipleResultsFound",
-    "NoResultFound",
-    "UnboundExecutionError",
-    "http",
-    "FileAlreadyImportedError",
-    "UnknownImporterError",
+    "DuplicateURLError",
     "EmptyImportError",
     "FailedImportError",
-    "UnlockingError",
+    "FileAlreadyImportedError",
+    "FutureTransactionError",
+    "IntegrityError",
+    "InvalidBackupTarError",
+    "InvalidORMValueError",
+    "InvalidTargetValueError",
+    "InvalidURIError",
+    "MissingAssetError",
+    "MultipleResultsFound",
+    "NoAssetWebSourceError",
+    "NoResultFound",
+    "NoURIError",
+    "NonAssetTransactionError",
     "NotEncryptedError",
     "ParentAttributeError",
-    "NonAssetTransactionError",
     "ProtectedObjectNotFoundError",
-    "WrongURITypeError",
-    "InvalidURIError",
-    "InvalidORMValueError",
-    "NoAssetWebSourceError",
-    "AssetWebError",
-    "UnknownEncryptionVersionError",
-    "InvalidBackupTarError",
-    "FutureTransactionError",
+    "UnboundExecutionError",
     "UnknownCategoryError",
-    "MissingAssetError",
-    "ComputedColumnError",
+    "UnknownEncryptionVersionError",
+    "UnknownImporterError",
+    "UnlockingError",
+    "WrongURITypeError",
+    "http",
 ]
 
 
@@ -151,6 +153,10 @@ class ProtectedObjectNotFoundError(Exception):
     """Error when a protected object (non-deletable) could not be found."""
 
 
+class NoURIError(Exception):
+    """Error when a URI is requested for a model without one."""
+
+
 class WrongURITypeError(Exception):
     """Error when a URI is decoded for a different model."""
 
@@ -212,3 +218,7 @@ class MissingAssetError(Exception):
 
 class ComputedColumnError(Exception):
     """Error when attempting to set a computed column."""
+
+
+class InvalidTargetValueError(Exception):
+    """Error when a target value is invalid."""

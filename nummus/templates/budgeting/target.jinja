@@ -1,0 +1,178 @@
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
+     onclick="overlayEditor.close()"></div>
+<div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
+     hx-swap="innerHTML">
+    <div class="flex items-start mb-2">
+        <h1 class="font-serif text-2xl text-green-600 grow">
+            {{ "New" if target["new"] else "Edit" }} Target: {{ target["category"] }}
+        </h1>
+        <button class="shrink-0" onclick="overlayEditor.close()">
+            {% with class="w-[32px] h-[32px]" %}
+                {% include "svg/x.svg" %}
+            {% endwith %}
+        </button>
+    </div>
+    <div class="flex w-full gap-1 flex-col grow"
+         id="form-edit-target"
+         hx-target="#overlay"
+         hx-include="this">
+        <div class="flex gap-1 justify-center">
+            {% for period, period_str in target["period_options"].items() %}
+                {% if period == target["period"] %}
+                    <div class="button bg-blue cursor-pointer">{{ period_str }}</div>
+                    <input value="{{ period_str }}" name="period" type="hidden">
+                {% else %}
+                    <div class="button hover-blue cursor-pointer"
+                         hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}">
+                        {{ period_str }}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
+            <div class="w-32 shrink-1">Amount</div>
+            <input id="budgeting-amount"
+                   class="grow"
+                   name="amount"
+                   placeholder="0.00"
+                   value="{{ "%.2f" % target["amount"] if target["amount"] }}"
+                   hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                   hx-trigger="change, keyup changed delay:100ms">
+        </div>
+        {% if target["period"] == "WEEK" %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">Every</div>
+                <select class="grow" name="due">
+                    {% for weekday in target["weekdays"] %}
+                        <option value="{{ loop.index0 }}"
+                                {% if target["due_date_weekday"] == loop.index0 %}selected{% endif %}>
+                            {{ weekday }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% elif target["period"] == "ONCE" %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">Due Date</div>
+                <label class="checkbox">
+                    <input type="checkbox"
+                           name="has-due"
+                           {% if target["due_date"] %}checked{% endif %}
+                           hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                           autocomplete="off">
+                    {% with class = "w-6 h-6" %}
+                        {% include "svg/check.svg" %}
+                    {% endwith %}
+                </label>
+                <input type="hidden" name="has-due" value="off">
+            </div>
+            {% if target["due_date"] %}
+                <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                    <div class="w-32 shrink-1">By</div>
+                    <select class="grow" name="due-month">
+                        {% for month in target["months"] %}
+                            <option value="{{ loop.index }}"
+                                    {% if target["due_date_month"] == loop.index %}selected{% endif %}>
+                                {{ month }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <select name="due-year">
+                        {% for year in range(current_year, current_year + 50) %}
+                            <option value="{{ year }}"
+                                    {% if target["due_date_year"] == year %}selected{% endif %}>{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">By</div>
+                <input class="grow" name="due" type="date" value="{{ target["due_date"] }}">
+            </div>
+        {% endif %}
+        {% set money_period = ("/week" if target["period"] == "WEEK") %}
+        {% set next_period = ("year" if target["period"] == "YEAR" else "month") %}
+        {% if target["period"] != "ONCE" %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">Next {{ next_period }}</div>
+                <select class="grow"
+                        name="type"
+                        hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}">
+                    <option value="accumulate"
+                            {% if target["type"] == "ACCUMULATE" %}selected{% endif %}>
+                        Add {{ target["amount"] | money }}{{ money_period }} more
+                    </option>
+                    <option value="refill" {% if target["type"] == "REFILL" %}selected{% endif %}>
+                        Refill up to {{ target["amount"] | money }}{{ money_period }}
+                    </option>
+                </select>
+            </div>
+        {% endif %}
+        {% if target["period"].name in ("MONTH", "YEAR") %}
+            <div class="flex gap-1 flex-wrap min-h-7 items-center">
+                <div class="w-32 shrink-1">Repeat every</div>
+                <input class="grow"
+                       name="repeat"
+                       type="number"
+                       min="1"
+                       value="{{ target["repeat_every"] }}"
+                       hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}">
+            </div>
+        {% endif %}
+        <div>
+            {% if target["type"] == "ACCUMULATE" %}
+                <p>
+                    {% if target["repeat_every"] > 1 %}
+                        Every {{ target["repeat_every"] }} {{ next_period }}s
+                    {% else %}
+                        Each {{ next_period }}
+                    {% endif %}
+                    assign {{ target["amount"] | money }}{{ money_period }}.
+                    This accumulates the any unspent amount.
+                </p>
+                <p class="italic">Use for: bills, subscriptions, savings</p>
+            {% elif target["type"] == "REFILL" %}
+                <p>
+                    {% if target["repeat_every"] > 1 %}
+                        Every {{ target["repeat_every"] }} {{ next_period }}s
+                    {% else %}
+                        Each {{ next_period }}
+                    {% endif %}
+                    have {{ target["amount"] | money }}{{ money_period }} on hand.
+                    Any unspent amount applies to next {{ next_period }}'s {{ target["amount"] | money }}{{ money_period }}.
+                </p>
+                <p class="italic">Use for: gasoline, fun money, dining out</p>
+            {% endif %}
+        </div>
+    </div>
+    <div id="overlay-error"
+         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
+    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
+        {% if not target["new"] %}
+            <button hx-delete="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                    hx-confirm="Are you sure you wish to delete this target?"
+                    hx-target="#overlay-error"
+                    class="button hover-red">
+                {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+                    {% include "svg/trash.svg" %}
+                {% endwith %}
+                Delete
+            </button>
+        {% endif %}
+        <div class="grow"></div>
+        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
+        {% if target["new"] %}
+            <button hx-post="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                    hx-target="#overlay-error"
+                    hx-include="#form-edit-target"
+                    class="button bg-green">Save</button>
+        {% else %}
+            <button hx-put="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                    hx-target="#overlay-error"
+                    hx-include="#form-edit-target"
+                    class="button bg-green">Save</button>
+        {% endif %}
+    </div>
+    <script>overlayEditor.addListeners("form-edit-target");</script>
+</div>

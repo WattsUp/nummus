@@ -5,8 +5,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-import sqlalchemy
-from sqlalchemy import orm
+from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -81,7 +80,7 @@ class Account(Base):
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
-        query = s.query(sqlalchemy.func.min(Transaction.date_ord)).where(
+        query = s.query(func.min(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
         return query.scalar()
@@ -92,7 +91,7 @@ class Account(Base):
         s = orm.object_session(self)
         if s is None:
             raise exc.UnboundExecutionError
-        query = s.query(sqlalchemy.func.max(Transaction.date_ord)).where(
+        query = s.query(func.max(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
         return query.scalar()
@@ -152,7 +151,7 @@ class Account(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.account_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(TransactionSplit.date_ord <= start_ord)
             .group_by(TransactionSplit.account_id)
@@ -169,7 +168,7 @@ class Account(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.account_id,
-                sqlalchemy.func.sum(TransactionSplit.amount),
+                func.sum(TransactionSplit.amount),
             )
             .where(
                 TransactionSplit.date_ord == start_ord,
@@ -454,7 +453,7 @@ class Account(Base):
             .with_entities(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
-                sqlalchemy.func.sum(TransactionSplit.asset_quantity),
+                func.sum(TransactionSplit.asset_quantity),
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),
@@ -587,7 +586,7 @@ class Account(Base):
             s.query(TransactionSplit)
             .with_entities(
                 TransactionSplit.asset_id,
-                sqlalchemy.func.sum(TransactionSplit.asset_quantity),
+                func.sum(TransactionSplit.asset_quantity),
             )
             .where(
                 TransactionSplit.asset_id.is_not(None),

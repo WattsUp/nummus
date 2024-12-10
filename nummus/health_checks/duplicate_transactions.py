@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from typing import TYPE_CHECKING
 
-import sqlalchemy
+from sqlalchemy import func
 from typing_extensions import override
 
 from nummus import utils
@@ -44,7 +44,7 @@ class DuplicateTransactions(Base):
                     Transaction.statement,
                 )
                 .order_by(Transaction.date_ord)
-                .having(sqlalchemy.func.count() > 1)
+                .having(func.count() > 1)
             )
             for date_ord, acct_id, amount in query.yield_per(YIELD_PER):
                 date_ord: int
