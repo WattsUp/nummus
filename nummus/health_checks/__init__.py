@@ -19,6 +19,7 @@ from nummus.health_checks.unnecessary_slits import UnnecessarySplits
 from nummus.health_checks.unused_categories import UnusedCategories
 
 __all__ = [
+    "CHECKS",
     "Base",
     "CategoryDirection",
     "DatabaseIntegrity",
@@ -30,11 +31,10 @@ __all__ = [
     "OverdrawnAccounts",
     "Typos",
     "UnbalancedTransfers",
-    "UnlockedTransactions",
     "UnlinkedTransactions",
+    "UnlockedTransactions",
     "UnnecessarySplits",
     "UnusedCategories",
-    "CHECKS",
 ]
 
 CHECKS: list[type[Base]] = [

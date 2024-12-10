@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
 __all__ = [
+    "YIELD_PER",
     "Account",
     "AccountCategory",
     "Asset",
@@ -47,19 +48,18 @@ __all__ = [
     "Credentials",
     "HealthCheckIssue",
     "ImportedFile",
-    "load_cipher",
     "Target",
     "TargetPeriod",
     "TargetType",
     "Transaction",
-    "TransactionSplit",
     "TransactionCategory",
     "TransactionCategoryGroup",
-    "YIELD_PER",
+    "TransactionSplit",
+    "load_cipher",
+    "metadata_create_all",
     "paginate",
     "query_count",
     "search",
-    "metadata_create_all",
 ]
 
 _MODELS: list[type[Base]] = [
