@@ -68,3 +68,8 @@ repos:
     hooks:
       - id: clang-format
         exclude: nummus/static/plugins
+
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
