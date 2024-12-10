@@ -3,10 +3,16 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
+import time_machine
+
 from nummus import utils
+from nummus.controllers import budgeting
 from nummus.models import (
     BudgetAssignment,
     BudgetGroup,
+    Target,
+    TargetPeriod,
+    TargetType,
     TransactionCategory,
     TransactionSplit,
 )
@@ -55,7 +61,7 @@ class TestBudgeting(WebTestBase):
         )
         self.assertRegex(result, r"1[ \n]+category is[ \n]+overspent")
 
-        # Assign to category
+        # Assign to category and add a target
         with p.get_session() as s:
             a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=t_cat_id_0)
             s.add(a)
@@ -86,6 +92,16 @@ class TestBudgeting(WebTestBase):
             s.add(a)
             s.commit()
 
+            tar = Target(
+                category_id=t_cat_id_1,
+                amount=Decimal(50),
+                type_=TargetType.BALANCE,
+                period=TargetPeriod.ONCE,
+                repeat_every=0,
+            )
+            s.add(tar)
+            s.commit()
+
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertRegex(
             result,
@@ -101,6 +117,7 @@ class TestBudgeting(WebTestBase):
             r"<div>\$40.00</div>[ \n]+<div .*>Ready to assign</div>[ \n]+",
         )
         self.assertNotIn("overspent", result)
+        self.assertIn("Funded", result)
         i_uncategorized = result.find("Uncategorized")
         i_general = result.find("General Merchandise")
         self.assertLess(i_general, i_uncategorized)
@@ -863,3 +880,671 @@ class TestBudgeting(WebTestBase):
         self.assertIn('<div id="budget-table"', result)
         self.assertIn("Bills", result)
         self.assertIn("Wants", result)
+
+    def test_ctx_target(self) -> None:
+        # Test the context since testing the HTML would be very difficult
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        today = datetime.date.today()
+        month = utils.start_of_month(today)
+        next_year = utils.date_add_months(month, 12)
+
+        with p.get_session() as s:
+            t_cat_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "General Merchandise")
+                .one()[0]
+            )
+
+            # BALANCE target, no due date
+            tar = Target(
+                category_id=t_cat_id,
+                period=TargetPeriod.ONCE,
+                type_=TargetType.BALANCE,
+                amount=100,
+                repeat_every=0,
+            )
+            s.add(tar)
+            s.commit()
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(30),
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(70),
+                "on_track": False,
+                "next_due_date": None,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(70),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Funded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(100),
+                available=Decimal(110),
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(110),
+                "to_go": Decimal(-10),
+                "on_track": True,
+                "next_due_date": None,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(0),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # BALANCE target, due in 12 months
+            tar.due_date_ord = next_year.toordinal()
+            s.commit()
+
+            # Not on track
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(0),
+                available=Decimal(9),
+                leftover=Decimal(9),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(7),
+                "total_assigned": Decimal(9),
+                "to_go": Decimal(7),
+                "on_track": False,
+                "next_due_date": f"{next_year:%B %Y}",
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(91),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # On track
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(29),
+                leftover=Decimal(9),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(7),
+                "total_assigned": Decimal(29),
+                "to_go": Decimal(-13),
+                "on_track": True,
+                "next_due_date": f"{next_year:%B %Y}",
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(71),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # BALANCE target, due this month
+            tar.due_date_ord = month.toordinal()
+            s.commit()
+            # Funded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(120),
+                available=Decimal(129),
+                leftover=Decimal(9),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(91),
+                "total_assigned": Decimal(129),
+                "to_go": Decimal(-29),
+                "on_track": True,
+                "next_due_date": f"{month:%B %Y}",
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(0),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # WEEK target, REFILL
+            tar.period = TargetPeriod.WEEK
+            tar.type_ = TargetType.REFILL
+            tar.due_date_ord = today.toordinal()
+            tar.repeat_every = 1
+            s.commit()
+            n_weeks = utils.weekdays_in_month(today.weekday(), month)
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(100 * n_weeks - 10),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(100 * n_weeks - 30),
+                "on_track": False,
+                "next_due_date": utils.WEEKDAYS[today.weekday()],
+                "progress_bars": [Decimal(100)] * n_weeks,
+                "target": Decimal(100),
+                "total_target": Decimal(100 * n_weeks),
+                "total_to_go": Decimal(100 * n_weeks - 30),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # On track, be 2 weeks in
+            now = datetime.datetime(month.year, month.month, 10)
+            with time_machine.travel(now, tick=False):
+                ctx = budgeting.ctx_target(
+                    tar,
+                    month,
+                    assigned=Decimal(100 * 2),
+                    available=Decimal(0),  # Spent it all
+                    leftover=Decimal(10),
+                )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(100 * n_weeks - 10),
+                "total_assigned": Decimal(100 * 2 + 10),
+                "to_go": Decimal(100 * (n_weeks - 2) - 10),
+                "on_track": True,
+                "next_due_date": utils.WEEKDAYS[today.weekday()],
+                "progress_bars": [Decimal(100)] * n_weeks,
+                "target": Decimal(100),
+                "total_target": Decimal(100 * n_weeks),
+                "total_to_go": Decimal(100 * (n_weeks - 2) - 10),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Not on track, be 3 weeks in
+            now = datetime.datetime(month.year, month.month, 17)
+            with time_machine.travel(now, tick=False):
+                ctx = budgeting.ctx_target(
+                    tar,
+                    month,
+                    assigned=Decimal(100 * 2),
+                    available=Decimal(0),  # Spent it all
+                    leftover=Decimal(10),
+                )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(100 * n_weeks - 10),
+                "total_assigned": Decimal(100 * 2 + 10),
+                "to_go": Decimal(100 * (n_weeks - 2) - 10),
+                "on_track": False,
+                "next_due_date": utils.WEEKDAYS[today.weekday()],
+                "progress_bars": [Decimal(100)] * n_weeks,
+                "target": Decimal(100),
+                "total_target": Decimal(100 * n_weeks),
+                "total_to_go": Decimal(100 * (n_weeks - 2) - 10),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Funded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(100 * n_weeks),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(100 * n_weeks - 10),
+                "total_assigned": Decimal(100 * n_weeks + 10),
+                "to_go": Decimal(-10),
+                "on_track": True,
+                "next_due_date": utils.WEEKDAYS[today.weekday()],
+                "progress_bars": [Decimal(100)] * n_weeks,
+                "target": Decimal(100),
+                "total_target": Decimal(100 * n_weeks),
+                "total_to_go": Decimal(0),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # WEEK target, ACCUMULATE
+            tar.period = TargetPeriod.WEEK
+            tar.type_ = TargetType.ACCUMULATE
+            tar.due_date_ord = today.toordinal()
+            tar.repeat_every = 1
+            s.commit()
+            n_weeks = utils.weekdays_in_month(today.weekday(), month)
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                utils.date_add_months(month, 1),
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            n_weeks = utils.weekdays_in_month(
+                today.weekday(),
+                utils.date_add_months(month, 1),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(100 * n_weeks),
+                "total_assigned": Decimal(20),
+                "to_go": Decimal(100 * n_weeks - 20),
+                "on_track": False,
+                "next_due_date": utils.WEEKDAYS[today.weekday()],
+                "progress_bars": [Decimal(10)] + [Decimal(100)] * n_weeks,
+                "target": Decimal(100),
+                "total_target": Decimal(100 * n_weeks),
+                "total_to_go": Decimal(100 * n_weeks - 20),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # MONTH target, ACCUMULATE
+            tar.period = TargetPeriod.MONTH
+            tar.type_ = TargetType.ACCUMULATE
+            tar.due_date_ord = today.toordinal()
+            tar.repeat_every = 2
+            s.commit()
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(70),
+                "on_track": False,
+                "next_due_date": today,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(70),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                utils.date_add_months(month, 1),
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(50),
+                "total_assigned": Decimal(20),
+                "to_go": Decimal(30),
+                "on_track": False,
+                "next_due_date": utils.date_add_months(today, 2),
+                "progress_bars": [Decimal(10), Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(80),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # On track
+            ctx = budgeting.ctx_target(
+                tar,
+                utils.date_add_months(month, 1),
+                assigned=Decimal(60),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(50),
+                "total_assigned": Decimal(60),
+                "to_go": Decimal(-10),
+                "on_track": True,
+                "next_due_date": utils.date_add_months(today, 2),
+                "progress_bars": [Decimal(10), Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(40),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # MONTH target, REFILL
+            tar.period = TargetPeriod.MONTH
+            tar.type_ = TargetType.REFILL
+            tar.due_date_ord = today.toordinal()
+            tar.repeat_every = 2
+            s.commit()
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(70),
+                "on_track": False,
+                "next_due_date": today,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(70),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                utils.date_add_months(month, 1),
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(45),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(25),
+                "on_track": False,
+                "next_due_date": utils.date_add_months(today, 2),
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(70),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # YEAR target, REFILL
+            tar.period = TargetPeriod.YEAR
+            tar.type_ = TargetType.REFILL
+            tar.due_date_ord = today.toordinal()
+            tar.repeat_every = 2
+            s.commit()
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(10),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(30),
+                "to_go": Decimal(70),
+                "on_track": False,
+                "next_due_date": today,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(70),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+            # Underfunded
+            ctx = budgeting.ctx_target(
+                tar,
+                utils.date_add_months(month, 1),
+                assigned=Decimal(20),
+                available=Decimal(0),  # Spent it all
+                leftover=Decimal(4),
+            )
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(4),
+                "total_assigned": Decimal(24),
+                "to_go": Decimal(-16),
+                "on_track": True,
+                "next_due_date": utils.date_add_months(today, 24),
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(76),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
+    def test_target(self) -> None:
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        today = datetime.date.today()
+
+        with p.get_session() as s:
+            t_cat_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "General Merchandise")
+                .one()[0]
+            )
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+
+        # Get new target editor
+        endpoint = "budgeting.target"
+        url = (endpoint, {"uri": t_cat_uri})
+        result, _ = self.web_get(url)
+        self.assertIn("New Target: General Merchandise", result)
+
+        # Negative is bad
+        form = {
+            "period": "Once",
+            "amount": "-100",
+            "type": "BALANCE",
+            "has-due": "off",
+        }
+        result, _ = self.web_post(url, data=form)
+        self.assertIn("Target amount must be positive", result)
+
+        # Create new target
+        form = {
+            "period": "Once",
+            "amount": "100",
+            "type": "BALANCE",
+            "has-due": "off",
+        }
+        _, headers = self.web_post(url, data=form)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
+        self.assertEqual(headers["HX-Trigger"], "update-budget")
+
+        with p.get_session() as s:
+            tar = s.query(Target).one()
+            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.period, TargetPeriod.ONCE)
+            self.assertEqual(tar.type_, TargetType.BALANCE)
+            self.assertEqual(tar.amount, 100)
+            self.assertIsNone(tar.due_date_ord)
+            self.assertEqual(tar.repeat_every, 0)
+
+            tar_uri = tar.uri
+
+        result, _ = self.web_post(url, data=form)
+        self.assertIn("Cannot have multiple targets per category", result)
+
+        result, _ = self.web_get((endpoint, {"uri": tar_uri, "has-due": "on"}))
+        self.assertRegex(result, rf'value="{today.month}"[ \n]*selected>')
+
+        # Edit target
+        form = {
+            "period": "Once",
+            "amount": "100",
+            "type": "BALANCE",
+            "has-due": "on",
+            "due-month": 12,
+            "due-year": today.year + 1,
+        }
+        url = (endpoint, {"uri": tar_uri})
+        self.web_put(url, data=form)
+        with p.get_session() as s:
+            tar = s.query(Target).one()
+            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.period, TargetPeriod.ONCE)
+            self.assertEqual(tar.type_, TargetType.BALANCE)
+            self.assertEqual(tar.amount, 100)
+            date = datetime.date(today.year + 1, 12, 1)
+            self.assertEqual(tar.due_date_ord, date.toordinal())
+            self.assertEqual(tar.repeat_every, 0)
+
+        # No has-due means it shouldn't change due date
+        result, _ = self.web_get(url)
+        self.assertRegex(result, r'value="12"[ \n]*selected>[ \n]*December')
+        self.assertRegex(result, rf'value="{today.year+1}"[ \n]*selected>')
+
+        # Changing period to weekly should reset due date
+        result, _ = self.web_get(
+            (endpoint, {"uri": t_cat_uri, "period": "Weekly", "change": True}),
+        )
+        self.assertRegex(result, r'value="0"[ \n]*selected>[ \n]*Monday')
+
+        form = {
+            "period": "Weekly",
+            "amount": "100",
+            "type": "REFILL",
+            "due": 1,
+        }
+        self.web_put(url, data=form)
+        with p.get_session() as s:
+            tar = s.query(Target).one()
+            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.period, TargetPeriod.WEEK)
+            self.assertEqual(tar.type_, TargetType.REFILL)
+            if tar.due_date_ord is None:
+                self.fail("due_date_ord is None")
+            else:
+                date = datetime.date.fromordinal(tar.due_date_ord)
+                self.assertEqual(date.weekday(), 1)
+            self.assertEqual(tar.repeat_every, 1)
+
+        form = {
+            "period": "Monthly",
+            "amount": "100",
+            "type": "ACCUMULATE",
+            "due": today,
+            "repeat": 2,
+        }
+        self.web_put(url, data=form)
+        with p.get_session() as s:
+            tar = s.query(Target).one()
+            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.period, TargetPeriod.MONTH)
+            self.assertEqual(tar.type_, TargetType.ACCUMULATE)
+            if tar.due_date_ord is None:
+                self.fail("due_date_ord is None")
+            else:
+                date = datetime.date.fromordinal(tar.due_date_ord)
+                self.assertEqual(date, today)
+            self.assertEqual(tar.repeat_every, 2)
+
+        form = {
+            "period": "Annually",
+            "amount": "100",
+            "type": "ACCUMULATE",
+            "due": today,
+        }
+        self.web_put(url, data=form)
+        with p.get_session() as s:
+            tar = s.query(Target).one()
+            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.period, TargetPeriod.YEAR)
+            self.assertEqual(tar.type_, TargetType.ACCUMULATE)
+            if tar.due_date_ord is None:
+                self.fail("due_date_ord is None")
+            else:
+                date = datetime.date.fromordinal(tar.due_date_ord)
+                self.assertEqual(date, today)
+            self.assertEqual(tar.repeat_every, 2)
+
+        _, headers = self.web_delete(url)
+        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
+        self.assertEqual(headers["HX-Trigger"], "update-budget")
+        with p.get_session() as s:
+            n = s.query(Target).count()
+            self.assertEqual(n, 0)
+
+    def test_sidebar(self) -> None:
+        _ = self._setup_portfolio()
+        p = self._portfolio
+
+        with p.get_session() as s:
+            t_cat_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "General Merchandise")
+                .one()[0]
+            )
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+
+        # No category selected
+        endpoint = "budgeting.sidebar"
+        result, _ = self.web_get(endpoint)
+        self.assertNotIn("General Merchandise", result)
+        self.assertNotIn("Create Target", result)
+
+        # Category selected without target
+        url = (endpoint, {"uri": t_cat_uri})
+        result, _ = self.web_get(url)
+        self.assertIn("General Merchandise", result)
+        self.assertIn("Create Target", result)
+
+        with p.get_session() as s:
+            tar = Target(
+                category_id=t_cat_id,
+                period=TargetPeriod.ONCE,
+                type_=TargetType.BALANCE,
+                amount=100,
+                repeat_every=0,
+            )
+            s.add(tar)
+            s.commit()
+
+        # Category selected with target
+        url = (endpoint, {"uri": t_cat_uri})
+        result, _ = self.web_get(url)
+        self.assertIn("General Merchandise", result)
+        self.assertIn("Edit Target", result)
+        self.assertIn("Have", result)
+        self.assertIn("Assign $100.00 more to meet target", result)

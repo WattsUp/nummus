@@ -46,6 +46,8 @@ __all__ = [
     "UnknownCategoryError",
     "MissingAssetError",
     "ComputedColumnError",
+    "InvalidTargetValueError",
+    "NoURIError",
 ]
 
 

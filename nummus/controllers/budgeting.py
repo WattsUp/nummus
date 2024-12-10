@@ -123,7 +123,7 @@ def ctx_target(
             "progress_bars": progress_bars,
             "target": tar.amount,
             "total_target": total_target,
-            "total_to_go": total_to_go,
+            "total_to_go": max(Decimal(0), total_to_go),
             "period": tar.period,
             "type": tar.type_,
         }
@@ -158,21 +158,23 @@ def ctx_target(
     last_repeat_last_month = utils.date_months_between(last_due_date, month) == 1
 
     # If ACCUMULATE and last repeat ended last month, ignore balance
+    target_assigned = tar.amount
     total_assigned = assigned
     progress_bars = [leftover, tar.amount]
     if tar.type_ == TargetType.REFILL or not last_repeat_last_month:
         # Adjust leftover to/from everything
+        target_assigned -= leftover
         total_assigned += leftover
         progress_bars.pop(0)
     total_to_go = tar.amount - total_assigned
 
     n_months = utils.date_months_between(month, due_date)
-    target_assigned = tar.amount / (n_months + 1)
+    target_assigned = target_assigned / (n_months + 1)
 
     return {
         "target_assigned": target_assigned,
         "total_assigned": total_assigned,
-        "to_go": target_assigned - total_assigned,
+        "to_go": target_assigned - assigned,
         "on_track": total_assigned >= target_assigned,
         "next_due_date": due_date,
         "progress_bars": progress_bars,
@@ -950,6 +952,9 @@ def target(uri: str) -> str | flask.Response:
             s.delete(tar)
             s.commit()
             return common.overlay_swap(event="update-budget")
+        elif flask.request.method == "POST":
+            error = "Cannot have multiple targets per category"
+            return common.error(error)
 
         # Parse form
         period = args.get("period")
@@ -967,7 +972,7 @@ def target(uri: str) -> str | flask.Response:
         repeat_every = args.get("repeat", type=int)
         if repeat_every is not None:
             tar.repeat_every = repeat_every
-        if tar.period != TargetPeriod.ONCE:
+        elif tar.period != TargetPeriod.ONCE:
             tar.repeat_every = max(1, tar.repeat_every)
         if due is not None:
             if tar.period == TargetPeriod.WEEK:

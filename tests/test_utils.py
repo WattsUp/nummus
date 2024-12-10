@@ -1134,3 +1134,24 @@ class TestUtils(TestBase):
         result = utils.end_of_month(date)
         target = datetime.date(2024, 2, 29)
         self.assertEqual(result, target)
+
+    def test_clamp(self) -> None:
+        result = utils.clamp(Decimal(0.5))
+        target = Decimal(0.5)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(-0.5))
+        target = Decimal(0)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(1.5))
+        target = Decimal(1)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(150), c_max=Decimal(100))
+        target = Decimal(100)
+        self.assertEqual(result, target)
+
+        result = utils.clamp(Decimal(-150), c_min=Decimal(-100))
+        target = Decimal(-100)
+        self.assertEqual(result, target)
