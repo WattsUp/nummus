@@ -54,7 +54,7 @@ Issues = "https://github.com/WattsUp/nummus/issues"
 
 [project.optional-dependencies]
 encrypt = ["sqlcipher3", "Cipher", "pycryptodome"]
-tests = [
+test = [
   "AutoDict",
   "coverage",
   "numpy",
@@ -63,7 +63,7 @@ tests = [
   "numpy-financial",
 ]
 dev = [
-  "nummus[tests]",    # Development needs tests too
+  "nummus[test]",     # Development needs tests too
   "ruff>=0.8.2",
   "codespell>=2.3.0",
   "black",
