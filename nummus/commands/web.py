@@ -64,12 +64,8 @@ class Web(Base):  # pragma: no cover
         parser.add_argument(
             "--debug",
             # Default to if it detects a dev install
-            # Aka not at a clean tag on master branch
-            default=(
-                version.version_dict["branch"] != "master"
-                or version.version_dict["distance"] != 0
-                or version.version_dict["dirty"]
-            ),
+            # Aka not at a clean tag
+            default=(len(version.version_tuple) > 3),  # noqa: PLR2004
             action="store_true",
             help=argparse.SUPPRESS,
         )
