@@ -87,7 +87,7 @@ class Portfolio:
         return self._path_importers
 
     @staticmethod
-    def is_encrypted(path: str | Path) -> bool:
+    def is_encrypted_path(path: str | Path) -> bool:
         """Check Portfolio's config for encryption status.
 
         Args:
@@ -105,6 +105,11 @@ class Portfolio:
             raise FileNotFoundError(msg)
         path_salt = path_db.with_suffix(".nacl")
         return path_salt.exists()
+
+    @property
+    def is_encrypted(self) -> bool:
+        """Check if portfolio is encrypted."""
+        return self._enc is not None
 
     @staticmethod
     def create(path: str | Path, key: str | None = None) -> Portfolio:

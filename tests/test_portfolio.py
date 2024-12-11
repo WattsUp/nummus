@@ -98,7 +98,7 @@ class TestPortfolio(TestBase):
             self.assertEqual(buf[: len(target)], target)
             buf = None  # Clear local buffer
         self.assertFalse(
-            portfolio.Portfolio.is_encrypted(path_db),
+            portfolio.Portfolio.is_encrypted_path(path_db),
             "Database is unexpectedly encrypted",
         )
 
@@ -187,7 +187,7 @@ class TestPortfolio(TestBase):
             self.assertNotEqual(buf[: len(target)], target)
             buf = None  # Clear local buffer
         self.assertTrue(
-            portfolio.Portfolio.is_encrypted(path_db),
+            portfolio.Portfolio.is_encrypted_path(path_db),
             "Database is unexpectedly unencrypted",
         )
 
@@ -213,23 +213,27 @@ class TestPortfolio(TestBase):
         # Invalid root password
         self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
 
-    def test_is_encrypted(self) -> None:
+    def test_is_encrypted_path(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_salt = path_db.with_suffix(".nacl")
 
-        self.assertRaises(FileNotFoundError, portfolio.Portfolio.is_encrypted, path_db)
+        self.assertRaises(
+            FileNotFoundError,
+            portfolio.Portfolio.is_encrypted_path,
+            path_db,
+        )
 
         with path_db.open("w", encoding="utf-8") as file:
             file.write("I'm a database")
 
         self.assertFalse(
-            portfolio.Portfolio.is_encrypted(path_db),
+            portfolio.Portfolio.is_encrypted_path(path_db),
             "Database is unexpectedly encrypted",
         )
 
         path_salt.touch()
         self.assertTrue(
-            portfolio.Portfolio.is_encrypted(path_db),
+            portfolio.Portfolio.is_encrypted_path(path_db),
             "Database is unexpectedly unencrypted",
         )
 

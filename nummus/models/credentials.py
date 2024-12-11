@@ -6,6 +6,8 @@ from sqlalchemy import orm
 
 from nummus.models.base import Base, ORMStr, string_column_args
 
+# TODO (WattsUp): Remove this model, not used
+
 
 class Credentials(Base):
     """Credential model for storing a user/password set for a site.

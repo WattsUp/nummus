@@ -8,6 +8,7 @@ from nummus import exceptions as exc
 from nummus.controllers import (
     accounts,
     assets,
+    auth,
     budgeting,
     cash_flow,
     common,
@@ -34,6 +35,7 @@ def add_routes(app: flask.Flask) -> None:
     module = [
         accounts,
         assets,
+        auth,
         budgeting,
         cash_flow,
         common,
