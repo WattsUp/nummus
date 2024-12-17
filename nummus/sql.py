@@ -53,13 +53,7 @@ def get_session(
     Returns:
         Session to database
     """
-    if path is None:
-        msg = "Path must not be None"
-        raise ValueError(msg)
-    if path not in _ENGINES:
-        _ENGINES[path] = _get_engine(path, enc)
-
-    return orm.Session(bind=_ENGINES[path])
+    return orm.Session(bind=get_engine(path, enc))
 
 
 def drop_session(path: Path | None = None) -> None:
@@ -75,7 +69,7 @@ def drop_session(path: Path | None = None) -> None:
         _ENGINES.pop(path, None)
 
 
-def _get_engine(
+def get_engine(
     path: Path,
     enc: EncryptionInterface | None = None,
 ) -> sqlalchemy.engine.Engine:
@@ -89,6 +83,8 @@ def _get_engine(
     Returns:
         sqlalchemy.Engine
     """
+    if path in _ENGINES:
+        return _ENGINES[path]
     # Cannot support in-memory DB cause every transaction closes it
     if enc is not None:
         db_key = base64.urlsafe_b64encode(enc.hashed_key).decode()
@@ -101,4 +97,5 @@ def _get_engine(
         else:
             db_path = f"sqlite:////{path}"
         engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
+    _ENGINES[path] = engine
     return engine

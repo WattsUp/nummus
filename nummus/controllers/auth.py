@@ -107,14 +107,14 @@ def login() -> str | flask.Response:
 
     with p.get_session() as s:
         expected_encoded = (
-            s.query(Config).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
         )
         if expected_encoded is None:
             msg = "Web user not found in portfolio"
             raise exc.ProtectedObjectNotFoundError(msg)
 
-        encoded = p.encrypt(password)
-        if encoded != expected_encoded:
+        expected = p.decrypt(expected_encoded)
+        if password.encode() != expected:
             return common.error("Bad password")
 
         web_user = WebUser()

@@ -11,6 +11,7 @@ import sys
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from colorama import Fore
 from rapidfuzz import process
 from scipy import optimize
 
@@ -24,6 +25,8 @@ _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
 _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
+
+MIN_PASS_LEN = 8
 
 MIN_STR_LEN = 2
 SEARCH_THRESHOLD = 60
@@ -115,6 +118,36 @@ def get_input(
     except (KeyboardInterrupt, EOFError):
         return None
     return input_
+
+
+def get_password() -> str | None:
+    """Get password from user input with confirmation.
+
+    Returns:
+        Password or None if canceled.
+    """
+    key: str | None = None
+    while key is None:
+        key = get_input("Please enter password: ", secure=True)
+        if key is None:
+            return None
+
+        if len(key) < MIN_PASS_LEN:
+            print(
+                f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters",
+            )
+            key = None
+            continue
+
+        repeat = get_input("Please confirm password: ", secure=True)
+        if repeat is None:
+            return None
+
+        if key != repeat:
+            print(f"{Fore.RED}Passwords must match")
+            key = None
+
+    return key
 
 
 def confirm(

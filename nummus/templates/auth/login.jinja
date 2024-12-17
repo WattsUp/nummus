@@ -36,7 +36,7 @@
                 </p>
                 <div id="login-error" class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
                 {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-                <input class="my-2" placeholder="Password" name="password">
+                <input class="my-2" type="password" placeholder="Password" name="password">
                 <button class="button bg-green mx-auto text-3xl font-serif px-3 py-1.5"
                         hx-post="{{ url_for('auth.login') }}"
                         hx-target="#login-error"

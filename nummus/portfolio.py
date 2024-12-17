@@ -16,7 +16,7 @@ from pathlib import Path
 import sqlalchemy
 import tqdm
 from rapidfuzz import process
-from sqlalchemy import orm, Row
+from sqlalchemy import func, orm, Row
 
 from nummus import encryption
 from nummus import exceptions as exc
@@ -53,10 +53,9 @@ class Portfolio:
             FileNotFoundError if database does not exist
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
-        name = self._path_db.with_suffix("").name
         self._path_salt = self._path_db.with_suffix(".nacl")
-        self._path_importers = self._path_db.parent.joinpath(f"{name}.importers")
-        self._path_ssl = self._path_db.parent.joinpath(f"{name}.ssl")
+        self._path_importers = self._path_db.with_suffix(".importers")
+        self._path_ssl = self._path_db.with_suffix(".ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
             raise FileNotFoundError(msg)
@@ -183,6 +182,13 @@ class Portfolio:
             )
 
             s.add_all((c_version, c_enc_test, c_cipher, c_key))
+
+            if enc is not None and key is not None:
+                c_web_key = Config(
+                    key=ConfigKey.WEB_KEY,
+                    value=enc.encrypt(key),
+                )
+                s.add(c_web_key)
             s.commit()
         path_db.chmod(0o600)  # Only owner can read/write
 
@@ -978,8 +984,8 @@ class Portfolio:
 
         return (size_before, size_after)
 
-    @staticmethod
-    def restore(p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
+    @classmethod
+    def restore(cls, p: str | Path | Portfolio, tar_ver: int | None = None) -> None:
         """Restore Portfolio from backup.
 
         Args:
@@ -1027,6 +1033,7 @@ class Portfolio:
                 if member not in member_paths:
                     msg = f"Backup is missing required file: {member}"
                     raise exc.InvalidBackupTarError(msg)
+            cls.delete_files(path_db)
             for member in members:
                 if member.path == "_timestamp":
                     continue
@@ -1050,6 +1057,18 @@ class Portfolio:
         # Reload Portfolio
         if isinstance(p, Portfolio):
             p._unlock()  # noqa: SLF001
+
+    @classmethod
+    def delete_files(cls, path_db: Path) -> None:
+        """Delete all files and folder for portfolio.
+
+        Args:
+            path_db: Path to portfolio
+        """
+        path_db.unlink(missing_ok=True)
+        path_db.with_suffix(".nacl").unlink(missing_ok=True)
+        shutil.rmtree(path_db.with_suffix(".importers"))
+        shutil.rmtree(path_db.with_suffix(".ssl"))
 
     @property
     def ssl_cert_path(self) -> Path:
@@ -1134,3 +1153,87 @@ class Portfolio:
             s.commit()
 
         return updated
+
+    def change_key(self, key: str) -> None:
+        """Change portfolio password.
+
+        This also works to add encryption to an unencrypted portfolio.
+
+        Args:
+            key: New portfolio key
+        """
+        # Changing portfolio password requires recreating it
+        path_new = self._path_db.with_suffix(".new.db")
+        dst = Portfolio.create(path_new, key)
+
+        engine_src = sql.get_engine(self._path_db, self._enc)
+        engine_dst = sql.get_engine(dst._path_db, dst._enc)  # noqa: SLF001
+
+        exclude_tables = ("config",)
+
+        with engine_src.connect() as conn_src, engine_dst.connect() as conn_dst:
+            metadata_src = sqlalchemy.MetaData()
+            metadata_src.reflect(bind=engine_src)
+            metadata_dst = sqlalchemy.MetaData()
+            metadata_dst.reflect(bind=engine_dst)
+
+            # Drop destination tables in order of foreign keys
+            for table in reversed(metadata_dst.sorted_tables):
+                if table.name not in exclude_tables:
+                    table.drop(bind=engine_dst)
+            metadata_dst.clear()
+            metadata_dst.reflect(bind=engine_dst)
+
+            # Create destination tables in order of foreign keys
+            for table in metadata_src.sorted_tables:
+                if table.name not in exclude_tables:
+                    table.create(bind=engine_dst)
+            metadata_dst.clear()
+            metadata_dst.reflect(bind=engine_dst)
+
+            # Count total number of rows for progress bar
+            col = func.count(sqlalchemy.literal_column("*"))
+            n = 0
+            for table in metadata_src.sorted_tables:
+                if table.name not in exclude_tables:
+                    query = sqlalchemy.select(col).select_from(table)
+                    result = conn_src.execute(query).scalar_one()
+                    n += result
+
+            # Copy each row, metadata is the same so order of columns is the same
+            with tqdm.tqdm(desc="Copying rows", total=n) as bar:
+                for table in metadata_dst.sorted_tables:
+                    if table.name in exclude_tables:
+                        continue
+                    table_src = metadata_src.tables[table.name]
+                    statement = table.insert()
+                    select = conn_src.execute(table_src.select())
+                    for row in select:
+                        conn_dst.execute(statement.values(row))
+                        bar.update()
+
+            conn_dst.commit()
+
+        # Move new database into existing
+        shutil.copyfile(dst.path, self.path)
+        shutil.copyfile(dst._path_salt, self._path_salt)  # noqa: SLF001
+
+        # Test unlock
+        self._enc = dst._enc  # noqa: SLF001
+        self._unlock()
+
+        # And delete temporary
+        self.delete_files(dst.path)
+
+    def change_web_key(self, key: str) -> None:
+        """Change password used to access web.
+
+        Args:
+            key: New web key
+        """
+        key_encrypted = self.encrypt(key)
+        with self.get_session() as s:
+            s.query(Config).where(Config.key == ConfigKey.WEB_KEY).update(
+                {Config.value: key_encrypted},
+            )
+            s.commit()
