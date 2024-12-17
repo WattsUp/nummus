@@ -77,6 +77,16 @@ _MODELS: list[type[Base]] = [
 ]
 
 
+def set_table_uris() -> None:
+    """Set table URIs."""
+    i = 1
+    for m in _MODELS:
+        if hasattr(m, "__table_id__") and m.__table_id__ is None:
+            continue
+        m.__table_id__ = i << base_uri.TABLE_OFFSET
+        i += 1
+
+
 def metadata_create_all(s: orm.Session) -> None:
     """Create all tables for nummus models.
 
@@ -85,12 +95,8 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    i = 1
-    for m in _MODELS:
-        if hasattr(m, "__table_id__") and m.__table_id__ is None:
-            continue
-        m.__table_id__ = i << base_uri.TABLE_OFFSET
-        i += 1
-
     Base.metadata.create_all(s.get_bind(), [m.__table__ for m in _MODELS])  # type: ignore[attr-defined]
     s.commit()
+
+
+set_table_uris()
