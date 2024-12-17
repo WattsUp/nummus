@@ -54,7 +54,7 @@ class Account(Base):
         updated_on: Date of latest Transaction
     """
 
-    __table_id__ = 0x10000000
+    __table_id__ = 0x00000000
 
     name: ORMStr
     number: ORMStrOpt

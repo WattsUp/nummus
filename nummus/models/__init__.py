@@ -17,7 +17,6 @@ from nummus.models.budget import (
     TargetType,
 )
 from nummus.models.config import Config, ConfigKey
-from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -45,7 +44,6 @@ __all__ = [
     "Cipher",
     "Config",
     "ConfigKey",
-    "Credentials",
     "HealthCheckIssue",
     "ImportedFile",
     "Target",
@@ -70,7 +68,6 @@ _MODELS: list[type[Base]] = [
     BudgetAssignment,
     BudgetGroup,
     Config,
-    Credentials,
     ImportedFile,
     HealthCheckIssue,
     Target,
