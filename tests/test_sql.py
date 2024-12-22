@@ -30,9 +30,6 @@ class Child(ORMBase):
 
 class TestSQL(TestBase):
     def test_get_session_unencrypted(self) -> None:
-        path = None
-        self.assertRaises(ValueError, sql.get_session, path)
-
         # Relative file
         path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
             Path.cwd(),

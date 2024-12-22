@@ -80,7 +80,7 @@ class Create(Base):
                     key = file.read().strip()
 
             # Get key from user is password file empty
-            key = utils.get_password()
+            key = key or utils.get_password()
             if key is None:
                 # Canceled
                 return -1

@@ -88,6 +88,11 @@ class TestPortfolio(TestBase):
             n = s.query(Config).where(Config.key == ConfigKey.SECRET_KEY).count()
             self.assertEqual(n, 1)
 
+            # No web key since no encryption
+            n = s.query(Config).where(Config.key == ConfigKey.WEB_KEY).count()
+            self.assertEqual(n, 0)
+        self.assertFalse(p.is_encrypted)
+
         p = None
         sql.drop_session()
 
@@ -176,6 +181,11 @@ class TestPortfolio(TestBase):
         enc_secret = p.encrypt(secret)
         result = p.decrypt_s(enc_secret)
         self.assertEqual(result, secret)
+        self.assertTrue(p.is_encrypted)
+
+        with p.get_session() as s:
+            n = s.query(Config).where(Config.key == ConfigKey.WEB_KEY).count()
+            self.assertEqual(n, 1)
 
         p = None
         sql.drop_session()
@@ -715,6 +725,7 @@ class TestPortfolio(TestBase):
         ssl_cert = self.random_string().encode()
         ssl_key = self.random_string().encode()
 
+        path_cert.parent.mkdir(exist_ok=True)
         with path_cert.open("wb") as file:
             file.write(ssl_cert)
         with path_key.open("wb") as file:
@@ -1216,3 +1227,73 @@ class TestPortfolio(TestBase):
             result = p.find_similar_transaction(txn_0, do_commit=True, cache_ok=False)
             self.assertEqual(result, txn_1.id_)
             self.assertEqual(txn_0.similar_txn_id, txn_1.id_)
+
+    def test_change_key(self) -> None:
+        if not encryption.AVAILABLE:
+            self.skipTest("Encryption is not installed")
+
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        key = self.random_string()
+
+        # Create encrypted portfolio
+        p = portfolio.Portfolio.create(path_db, key)
+
+        # WEB_KEY is key encrypted with key
+        web_key = key
+        with p.get_session() as s:
+            expected_encrypted = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            )
+            if expected_encrypted is None:
+                self.fail("WEB_KEY is missing")
+            expected = p.decrypt_s(expected_encrypted)
+            self.assertEqual(expected, web_key)
+
+        new_key = self.random_string()
+        with mock.patch("sys.stderr", new=io.StringIO()) as _:
+            p.change_key(new_key)
+        with p.get_session() as s:
+            expected_encrypted = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            )
+            if expected_encrypted is None:
+                self.fail("WEB_KEY is missing")
+            expected = p.decrypt_s(expected_encrypted)
+            self.assertEqual(expected, web_key)
+
+        # Unlocking with new_key works
+        portfolio.Portfolio(path_db, new_key)
+
+        # Unlocking with key doesn't work
+        self.assertRaises(exc.UnlockingError, portfolio.Portfolio, path_db, key)
+
+    def test_change_web_key(self) -> None:
+        if not encryption.AVAILABLE:
+            self.skipTest("Encryption is not installed")
+
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        key = self.random_string()
+
+        # Create encrypted portfolio
+        p = portfolio.Portfolio.create(path_db, key)
+
+        with p.get_session() as s:
+            expected_encrypted = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            )
+            if expected_encrypted is None:
+                self.fail("WEB_KEY is missing")
+            expected = p.decrypt_s(expected_encrypted)
+            self.assertEqual(expected, key)
+
+        new_key = self.random_string()
+        p.change_web_key(new_key)
+        with p.get_session() as s:
+            expected_encrypted = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            )
+            if expected_encrypted is None:
+                self.fail("WEB_KEY is missing")
+            expected = p.decrypt_s(expected_encrypted)
+            self.assertEqual(expected, new_key)
+            self.assertNotEqual(expected, key)

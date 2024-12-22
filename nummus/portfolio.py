@@ -137,6 +137,11 @@ class Portfolio:
         path_importers = path_db.parent.joinpath(f"{name}.importers")
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
+        path_db.parent.mkdir(parents=True, exist_ok=True)
+        path_importers.mkdir(exist_ok=True)
+        path_ssl.mkdir(exist_ok=True)
+        path_ssl.chmod(0o700)  # Only owner can read/write
+
         enc = None
         enc_config = None
         if encryption.AVAILABLE and key is not None:
@@ -147,11 +152,6 @@ class Portfolio:
         else:
             # Remove salt if unencrypted
             path_salt.unlink(missing_ok=True)
-
-        path_db.parent.mkdir(parents=True, exist_ok=True)
-        path_importers.mkdir(exist_ok=True)
-        path_ssl.mkdir(exist_ok=True)
-        path_ssl.chmod(0o700)  # Only owner can read/write
 
         cipher_bytes = models.Cipher.generate().to_bytes()
         cipher_b64 = base64.b64encode(cipher_bytes).decode()
@@ -1067,8 +1067,14 @@ class Portfolio:
         """
         path_db.unlink(missing_ok=True)
         path_db.with_suffix(".nacl").unlink(missing_ok=True)
-        shutil.rmtree(path_db.with_suffix(".importers"))
-        shutil.rmtree(path_db.with_suffix(".ssl"))
+
+        path = path_db.with_suffix(".importers")
+        if path.exists() and not path.is_symlink():
+            shutil.rmtree(path)
+
+        path = path_db.with_suffix(".ssl")
+        if path.exists() and not path.is_symlink():
+            shutil.rmtree(path)
 
     @property
     def ssl_cert_path(self) -> Path:
@@ -1213,6 +1219,14 @@ class Portfolio:
                         bar.update()
 
             conn_dst.commit()
+
+        # Use new encryption key
+        with self.get_session() as s:
+            value_encrypted: str | None = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
+            )
+            value = key if value_encrypted is None else self.decrypt_s(value_encrypted)
+        dst.change_web_key(value)
 
         # Move new database into existing
         shutil.copyfile(dst.path, self.path)

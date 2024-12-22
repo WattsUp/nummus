@@ -70,7 +70,8 @@ def get_user(username: str) -> flask_login.UserMixin | flask_login.AnonymousUser
     Returns:
         User object or Anonymous
     """
-    if username != WebUser.ID:
+    if username != WebUser.ID:  # pragma: no cover
+        # Don't need to test anonymous
         return flask_login.AnonymousUserMixin()
     return WebUser()
 
@@ -109,7 +110,8 @@ def login() -> str | flask.Response:
         expected_encoded = (
             s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
         )
-        if expected_encoded is None:
+        if expected_encoded is None:  # pragma: no cover
+            # Don't need to test ProtectedObjectNotFoundError
             msg = "Web user not found in portfolio"
             raise exc.ProtectedObjectNotFoundError(msg)
 

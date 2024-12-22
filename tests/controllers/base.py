@@ -44,6 +44,7 @@ TreeNode = Tree | tuple[str, Tree] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 HTTP_CODE_OK = 200
+HTTP_CODE_REDIRECT = 302
 HTTP_CODE_BAD_REQUEST = 400
 HTTP_CODE_FORBIDDEN = 403
 
@@ -295,6 +296,7 @@ class WebTestBase(TestBase):
         endpoint: str | tuple[str, Queries],
         *,
         rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
         **kwargs: object,
     ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP request.
@@ -303,6 +305,7 @@ class WebTestBase(TestBase):
             method: HTTP method to use
             endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
+            content_type: Content type to check for
             kwargs: Passed to client.get
 
         Returns:
@@ -366,8 +369,8 @@ class WebTestBase(TestBase):
                             **kwargs,
                         )
             duration = time.perf_counter() - start
-            self.assertEqual(response.status_code, rc, msg=response.text)
-            self.assertEqual(response.content_type, "text/html; charset=utf-8")
+            self.assertEqual(response.status_code, rc)
+            self.assertEqual(response.content_type, content_type)
 
             with autodict.JSONAutoDict(str(TEST_LOG)) as d:
                 if clean_url not in d["web_latency"]:
@@ -377,9 +380,13 @@ class WebTestBase(TestBase):
             # Fairly loose cause jinja and sql caching will save time
             self.assertLessEqual(duration, 0.5)  # All responses faster than 500ms
 
-            html = response.text
-            self.assertValidHTML(html)
-            return html, response.headers
+            if content_type == "text/html; charset=utf-8":
+                html = response.text
+                if response.status_code != HTTP_CODE_REDIRECT:
+                    # werkzeug redirect doesn't have close tags
+                    self.assertValidHTML(html)
+                return html, response.headers
+            return response.data, response.headers
         finally:
             if response is not None:
                 response.close()
@@ -389,6 +396,7 @@ class WebTestBase(TestBase):
         endpoint: str | tuple[str, Queries],
         *,
         rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
         **kwargs: object,
     ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP GET request.
@@ -396,6 +404,7 @@ class WebTestBase(TestBase):
         Args:
             endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
+            content_type: Content type to check for
             kwargs: Passed to client.get
 
         Returns:
@@ -405,6 +414,7 @@ class WebTestBase(TestBase):
             "GET",
             endpoint,
             rc=rc,
+            content_type=content_type,
             **kwargs,
         )
 
@@ -413,6 +423,7 @@ class WebTestBase(TestBase):
         endpoint: str | tuple[str, Queries],
         *,
         rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
         **kwargs: object,
     ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP PUT request.
@@ -420,6 +431,7 @@ class WebTestBase(TestBase):
         Args:
             endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
+            content_type: Content type to check for
             kwargs: Passed to client.get
 
         Returns:
@@ -429,6 +441,7 @@ class WebTestBase(TestBase):
             "PUT",
             endpoint,
             rc=rc,
+            content_type=content_type,
             **kwargs,
         )
 
@@ -437,6 +450,7 @@ class WebTestBase(TestBase):
         endpoint: str | tuple[str, Queries],
         *,
         rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
         **kwargs: object,
     ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP POST request.
@@ -444,6 +458,7 @@ class WebTestBase(TestBase):
         Args:
             endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
+            content_type: Content type to check for
             kwargs: Passed to client.get
 
         Returns:
@@ -453,6 +468,7 @@ class WebTestBase(TestBase):
             "POST",
             endpoint,
             rc=rc,
+            content_type=content_type,
             **kwargs,
         )
 
@@ -461,6 +477,7 @@ class WebTestBase(TestBase):
         endpoint: str | tuple[str, Queries],
         *,
         rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
         **kwargs: object,
     ) -> tuple[str, werkzeug.datastructures.Headers]:
         """Run a test HTTP DELETE request.
@@ -468,6 +485,7 @@ class WebTestBase(TestBase):
         Args:
             endpoint: Route endpoint to test or (endpoint, url_for kwargs)
             rc: Expected HTTP return code
+            content_type: Content type to check for
             kwargs: Passed to client.get
 
         Returns:
@@ -477,5 +495,6 @@ class WebTestBase(TestBase):
             "DELETE",
             endpoint,
             rc=rc,
+            content_type=content_type,
             **kwargs,
         )

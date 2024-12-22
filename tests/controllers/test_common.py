@@ -332,3 +332,27 @@ class TestCommon(WebTestBase):
         visit_all_links("/", "GET")
         for link in deletes:
             visit_all_links(link, "DELETE", hx=True)
+
+    def test_redirect(self) -> None:
+        with self._flask_app.app_context():
+            url = self.random_string()
+            response = common.redirect(url)
+            self.assertIn(
+                "HX-Redirect",
+                response.headers,
+                msg=f"Response lack HX-Redirect {response}",
+            )
+            self.assertEqual(response.headers["HX-Redirect"], url)
+
+    def test_page(self) -> None:
+        _ = self._setup_portfolio()
+
+        endpoint = "dashboard.page"
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(endpoint, headers=headers)
+        self.assertIn("<title>", result)
+        self.assertNotIn("<html", result)
+
+        result, _ = self.web_get(endpoint)
+        self.assertIn("<title>", result)
+        self.assertIn("<html", result)

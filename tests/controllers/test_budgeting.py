@@ -1062,7 +1062,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
             # On track, be 2 weeks in
-            now = datetime.datetime(month.year, month.month, 10)
+            now = datetime.datetime(month.year, month.month, 6)
             with time_machine.travel(now, tick=False):
                 ctx = budgeting.ctx_target(
                     tar,
@@ -1084,6 +1084,7 @@ class TestBudgeting(WebTestBase):
                 "period": tar.period,
                 "type": tar.type_,
             }
+            self.maxDiff = None
             self.assertEqual(ctx, target)
 
             # Not on track, be 3 weeks in

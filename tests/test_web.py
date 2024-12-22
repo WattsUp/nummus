@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import enum
 import io
 import shutil
 from decimal import Decimal
@@ -12,6 +13,12 @@ from colorama import Back, Fore
 
 from nummus import __version__, portfolio, web
 from tests.base import TestBase
+
+
+class Derived(enum.IntEnum):
+    RED = 1
+    BLUE = 2
+    SEAFOAM_GREEN = 3
 
 
 class TestServer(TestBase):
@@ -233,13 +240,44 @@ class TestServer(TestBase):
             result = flask.render_template_string("{{ number | money }}", **context)
             self.assertEqual(result, target)
 
+            target = "$1,000"
+            result = flask.render_template_string("{{ number | money0 }}", **context)
+            self.assertEqual(result, target)
+
+            target = "$1,000.100000"
+            result = flask.render_template_string("{{ number | money6 }}", **context)
+            self.assertEqual(result, target)
+
             target = "1,000.10"
             result = flask.render_template_string("{{ number | comma }}", **context)
+            self.assertEqual(result, target)
+
+            target = "1,000.100000"
+            result = flask.render_template_string("{{ number | qty }}", **context)
+            self.assertEqual(result, target)
+
+            target = "green-600"
+            result = flask.render_template_string("{{ number | pnl_color }}", **context)
+            self.assertEqual(result, target)
+
+            context = {"number": Decimal("-0.12345")}
+            target = "red-600"
+            result = flask.render_template_string("{{ number | pnl_color }}", **context)
             self.assertEqual(result, target)
 
             context = {"duration": 14}
             target = "2 wks"
             result = flask.render_template_string("{{ duration | days }}", **context)
+            self.assertEqual(result, target)
+
+            context = {"number": Decimal("0.123456")}
+            target = "12.35%"
+            result = flask.render_template_string("{{ number | percent }}", **context)
+            self.assertEqual(result, target)
+
+            context = {"var": Derived.SEAFOAM_GREEN}
+            target = "SEAFOAM GREEN"
+            result = flask.render_template_string("{{ var | enum }}", **context)
             self.assertEqual(result, target)
 
 
