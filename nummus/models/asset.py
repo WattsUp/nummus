@@ -68,7 +68,7 @@ class AssetValuation(Base):
         value: Value of assert
     """
 
-    __table_id__ = 0x30000000
+    __table_id__ = 0x00000000
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     date_ord: ORMInt
@@ -119,7 +119,7 @@ class Asset(Base):
             valuations must be manually entered
     """
 
-    __table_id__ = 0x20000000
+    __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     description: ORMStrOpt

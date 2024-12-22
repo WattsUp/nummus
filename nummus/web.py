@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 import flask
 import flask_assets
+import flask_login
 import gevent.pywsgi
 import pytailwindcss
 import webassets.filter
@@ -21,6 +22,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from nummus import controllers
 from nummus import exceptions as exc
 from nummus import portfolio, utils, version, web_utils
+from nummus.controllers import auth
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
@@ -173,6 +175,10 @@ class Server:
             SESSION_COOKIE_HTTPONLY=True,
             SESSION_COOKIE_SAMESITE="Lax",
         )
+        login_manager = flask_login.LoginManager()
+        login_manager.init_app(self._app)
+        login_manager.user_loader(auth.get_user)
+        login_manager.login_view = "auth.page_login"  # type: ignore[attr-defined]
 
         # Enable debugger and reloader when debug
         self._app.debug = debug
@@ -187,6 +193,9 @@ class Server:
                 "url_args": {},
             },
         )
+        if p.is_encrypted:
+            # Only can have authentiation with encrypted portfolio
+            self._app.before_request(auth.default_login_required)
 
         # Setup environment and static file bundles
         env_assets = flask_assets.Environment(self._app)

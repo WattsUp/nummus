@@ -14,6 +14,7 @@ class ConfigKey(BaseEnum):
     ENCRYPTION_TEST = 2
     CIPHER = 3
     SECRET_KEY = 4
+    WEB_KEY = 5
 
 
 class Config(Base):

@@ -55,7 +55,7 @@ class TransactionSplit(Base):
             Account gained Assets (inflow)
     """
 
-    __table_id__ = 0xA0000000
+    __table_id__ = 0x00000000
 
     amount: ORMReal = orm.mapped_column(
         Decimal6,
@@ -226,7 +226,7 @@ class Transaction(Base):
         splits: List of TransactionSplits
     """
 
-    __table_id__ = 0x80000000
+    __table_id__ = 0x00000000
 
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 

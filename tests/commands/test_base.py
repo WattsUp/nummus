@@ -59,7 +59,7 @@ class Testbase(TestBase):
             create.Create(path_db, None, force=True, no_encrypt=False).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(
-            portfolio.Portfolio.is_encrypted(path_db),
+            portfolio.Portfolio.is_encrypted_path(path_db),
             "Portfolio is not encrypted",
         )
 

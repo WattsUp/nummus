@@ -10,7 +10,6 @@ from nummus.models.account import Account
 from nummus.models.asset import Asset, AssetSplit, AssetValuation
 from nummus.models.budget import BudgetAssignment, BudgetGroup, Target
 from nummus.models.config import Config
-from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -82,7 +81,6 @@ class TestBaseURI(TestBase):
             Asset,
             AssetValuation,
             BudgetGroup,
-            Credentials,
             HealthCheckIssue,
             Target,
             Transaction,

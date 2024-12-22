@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import colorama
 
 from nummus.commands.backup import Backup, Restore
+from nummus.commands.change_password import ChangePassword
 from nummus.commands.clean import Clean
 from nummus.commands.create import Create
 from nummus.commands.export import Export
@@ -38,5 +39,6 @@ COMMANDS: dict[str, type[Base]] = {
         UpdateAssets,
         Health,
         Summarize,
+        ChangePassword,
     ]
 }

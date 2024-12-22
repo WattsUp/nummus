@@ -36,7 +36,7 @@ class BudgetGroup(Base):
         position: Group position
     """
 
-    __table_id__ = 0x40000000
+    __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     position: ORMInt = orm.mapped_column(unique=True)
@@ -278,7 +278,7 @@ class Target(Base):
         repeat_every: Repeat target every n period
     """
 
-    __table_id__ = 0x70000000
+    __table_id__ = 0x00000000
 
     category_id: ORMInt = orm.mapped_column(
         ForeignKey("transaction_category.id_"),

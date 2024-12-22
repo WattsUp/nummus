@@ -36,7 +36,10 @@ class Base(ABC):
             do_unlock: True will unlock portfolio, False will not
         """
         super().__init__()
-        # defer for faster time to main
+
+        path_db = path_db.expanduser().absolute()
+        if path_password:
+            path_password = path_password.expanduser().absolute()
 
         self._path_db = path_db
         self._path_password = path_password
@@ -86,7 +89,7 @@ def unlock(
         print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
         return None
 
-    if not portfolio.Portfolio.is_encrypted(path_db):
+    if not portfolio.Portfolio.is_encrypted_path(path_db):
         p = portfolio.Portfolio(path_db, None)
         print(f"{Fore.GREEN}Portfolio is unlocked")
         return p

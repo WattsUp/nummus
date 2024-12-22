@@ -24,3 +24,6 @@ portfolio.db
 portfolio.config
 portfolio.images
 result.json
+
+# Secrets
+*.secret

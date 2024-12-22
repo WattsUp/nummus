@@ -11,6 +11,7 @@ import flask
 from sqlalchemy import func
 
 from nummus import exceptions as exc
+from nummus import models
 from nummus.models import Account, AccountCategory, Transaction
 
 if TYPE_CHECKING:
@@ -174,44 +175,58 @@ def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
     }
 
 
+class LinkType(models.BaseEnum):
+    """Header link type."""
+
+    PAGE = 1
+    OVERLAY = 2
+    HX_POST = 3
+
+
 def ctx_base() -> dict[str, object]:
     """Get the context to build the base page.
 
     Returns:
         Dictionary HTML context
     """
-    pages: dict[str, dict[str, None | tuple[str, bool]]] = {
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    pages: dict[str, dict[str, None | tuple[str, LinkType]]] = {
         "Overview": {
-            "Dashboard": ("dashboard.page", False),
-            "Net Worth": ("net_worth.page", False),
-            "Transactions": ("transactions.page_all", False),
-            "Asset Transactions": ("assets.page_transactions", False),
+            "Dashboard": ("dashboard.page", LinkType.PAGE),
+            "Net Worth": ("net_worth.page", LinkType.PAGE),
+            "Transactions": ("transactions.page_all", LinkType.PAGE),
+            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
         },
         "Banking": {
-            "Cash Flow": ("cash_flow.page", False),
-            "Budgeting": ("budgeting.page", False),
+            "Cash Flow": ("cash_flow.page", LinkType.PAGE),
+            "Budgeting": ("budgeting.page", LinkType.PAGE),
         },
         "Investing": {
             "Holdings": None,
-            "Asset Transactions": ("assets.page_transactions", False),
+            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
             "Balances": None,
-            "Performance": ("performance.page", False),
+            "Performance": ("performance.page", LinkType.PAGE),
             "Allocation": None,
             "US Sectors": None,
         },
         "Planning": {
             "Future Net Worth": None,
             "Retirement": None,
-            "Emergency Fund": ("emergency_fund.page", False),
+            "Emergency Fund": ("emergency_fund.page", LinkType.PAGE),
             "Investment": None,
         },
     }
     for section, subpages in pages.items():
         pages[section] = {k: v for k, v in subpages.items() if v}
 
-    menu: dict[str, None | tuple[str, bool]] = {
-        "Logout": None,
-        "Edit Transaction Categories": ("transaction_categories.overlay", True),
+    menu: dict[str, None | tuple[str, LinkType]] = {
+        "Logout": ("auth.logout", LinkType.HX_POST) if p.is_encrypted else None,
+        "Edit Transaction Categories": (
+            "transaction_categories.overlay",
+            LinkType.OVERLAY,
+        ),
     }
     return {
         "pages": {k: v for k, v in pages.items() if v},
@@ -243,6 +258,22 @@ def overlay_swap(
             response.headers["HX-Trigger"] = event
         else:
             response.headers["HX-Trigger"] = ",".join(event)
+    return response
+
+
+def redirect(
+    url: str,
+) -> flask.Response:
+    """Create a response to redirect to url.
+
+    Args:
+        url: URL to redirect to
+
+    Returns:
+        Response that causes a full page reload to URL
+    """
+    response = flask.make_response("")
+    response.headers["HX-Redirect"] = url
     return response
 
 

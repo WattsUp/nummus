@@ -17,7 +17,6 @@ from nummus.models.budget import (
     TargetType,
 )
 from nummus.models.config import Config, ConfigKey
-from nummus.models.credentials import Credentials
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.imported_file import ImportedFile
 from nummus.models.transaction import Transaction, TransactionSplit
@@ -45,7 +44,6 @@ __all__ = [
     "Cipher",
     "Config",
     "ConfigKey",
-    "Credentials",
     "HealthCheckIssue",
     "ImportedFile",
     "Target",
@@ -70,7 +68,6 @@ _MODELS: list[type[Base]] = [
     BudgetAssignment,
     BudgetGroup,
     Config,
-    Credentials,
     ImportedFile,
     HealthCheckIssue,
     Target,
@@ -78,6 +75,16 @@ _MODELS: list[type[Base]] = [
     TransactionCategory,
     TransactionSplit,
 ]
+
+
+def set_table_uris() -> None:
+    """Set table URIs."""
+    i = 1
+    for m in _MODELS:
+        if hasattr(m, "__table_id__") and m.__table_id__ is None:
+            continue
+        m.__table_id__ = i << base_uri.TABLE_OFFSET
+        i += 1
 
 
 def metadata_create_all(s: orm.Session) -> None:
@@ -88,12 +95,8 @@ def metadata_create_all(s: orm.Session) -> None:
     Args:
         s: Session to create tables for
     """
-    i = 1
-    for m in _MODELS:
-        if hasattr(m, "__table_id__") and m.__table_id__ is None:
-            continue
-        m.__table_id__ = i << base_uri.TABLE_OFFSET
-        i += 1
-
     Base.metadata.create_all(s.get_bind(), [m.__table__ for m in _MODELS])  # type: ignore[attr-defined]
     s.commit()
+
+
+set_table_uris()

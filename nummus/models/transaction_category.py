@@ -45,7 +45,7 @@ class TransactionCategory(Base):
         budget_position: Position on budget page where category is located
     """
 
-    __table_id__ = 0x90000000
+    __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
     emoji: ORMStrOpt
