@@ -7,7 +7,7 @@ from unittest import mock
 
 import flask
 
-from nummus import portfolio, web
+from nummus import encryption, portfolio, web
 from tests.controllers.base import HTTP_CODE_REDIRECT, WebTestBase
 
 
@@ -16,6 +16,8 @@ class TestAuth(WebTestBase):
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
+        if not encryption.AVAILABLE:
+            return
         cls._clean_test_root()
 
         # Create a portfolio for the test class
@@ -36,6 +38,8 @@ class TestAuth(WebTestBase):
             cls._client = cls._flask_app.test_client()
 
     def test_login(self) -> None:
+        if not encryption.AVAILABLE:
+            self.skipTest("Encryption is not installed")
         key = self._key
 
         # Not logged in should redirect any page to page_login

@@ -6,7 +6,7 @@ from unittest import mock
 
 from colorama import Fore
 
-from nummus import portfolio
+from nummus import encryption, portfolio
 from nummus.commands import change_password, create
 from nummus.models import Config, ConfigKey
 from tests.base import TestBase
@@ -21,6 +21,8 @@ class MockPortfolio(portfolio.Portfolio):
 
 class TestChangePassword(TestBase):
     def test_change_password(self) -> None:
+        if not encryption.AVAILABLE:
+            self.skipTest("Encryption is not installed")
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         MockPortfolio.create(path_db, None)
         p = MockPortfolio(path_db, None)
