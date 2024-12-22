@@ -851,22 +851,22 @@ class Portfolio:
         """Back up database, duplicates files.
 
         Returns:
-            (Path to newly created backup tar.gz, backup version)
+            (Path to newly created backup tar, backup version)
         """
         # Find latest backup file for this Portfolio
         i = 0
         parent = self._path_db.parent
         name = self._path_db.with_suffix("").name
-        re_filter = re.compile(rf"^{name}.backup(\d+).tar.gz$")
+        re_filter = re.compile(rf"^{name}.backup(\d+).tar$")
         for file in parent.iterdir():
             m = re_filter.match(file.name)
             if m is not None:
                 i = max(i, int(m.group(1)))
         tar_ver = i + 1
 
-        path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar.gz")
+        path_backup = self._path_db.with_suffix(f".backup{tar_ver}.tar")
 
-        with tarfile.open(path_backup, "w:gz") as tar:
+        with tarfile.open(path_backup, "w") as tar:
             files: list[Path] = [self._path_db]
 
             if self._path_salt.exists():
@@ -904,13 +904,13 @@ class Portfolio:
         name = path_db.with_suffix("").name
 
         # Find latest backup file for this Portfolio
-        re_filter = re.compile(rf"^{name}.backup(\d+).tar.gz$")
+        re_filter = re.compile(rf"^{name}.backup(\d+).tar$")
         for file in parent.iterdir():
             m = re_filter.match(file.name)
             if m is None:
                 continue
             # tar archive preserved owner and mode so no need to set these
-            with tarfile.open(file, "r:gz") as tar:
+            with tarfile.open(file, "r") as tar:
                 try:
                     file_ts = tar.extractfile("_timestamp")
                 except KeyError as e:
@@ -969,11 +969,11 @@ class Portfolio:
                     file.unlink()
 
         # Move backup to i=1
-        path_new = parent.joinpath(f"{name}.backup1.tar.gz")
+        path_new = parent.joinpath(f"{name}.backup1.tar")
         shutil.move(path_backup, path_new)
 
         # Move optimized backup to i=2
-        path_new = parent.joinpath(f"{name}.backup2.tar.gz")
+        path_new = parent.joinpath(f"{name}.backup2.tar")
         shutil.move(path_backup_optimized, path_new)
 
         # Restore the optimized version
@@ -1003,7 +1003,7 @@ class Portfolio:
         if tar_ver is None:
             # Find latest backup file for this Portfolio
             i = 0
-            re_filter = re.compile(rf"^{name}.backup(\d+).tar.gz$")
+            re_filter = re.compile(rf"^{name}.backup(\d+).tar$")
             for file in parent.iterdir():
                 m = re_filter.match(file.name)
                 if m is not None:
@@ -1013,7 +1013,7 @@ class Portfolio:
                 raise FileNotFoundError(msg)
             tar_ver = i
 
-        path_backup = parent.joinpath(f"{name}.backup{tar_ver}.tar.gz")
+        path_backup = parent.joinpath(f"{name}.backup{tar_ver}.tar")
         if not path_backup.exists():
             msg = f"Backup does not exist {path_backup}"
             raise FileNotFoundError(msg)
@@ -1022,10 +1022,10 @@ class Portfolio:
         sql.drop_session(path_db)
 
         # tar archive preserved owner and mode so no need to set these
-        with tarfile.open(path_backup, "r:gz") as tar:
+        with tarfile.open(path_backup, "r") as tar:
             required = {
                 "_timestamp",
-                re.sub(r"\.backup\d+.tar.gz$", ".db", path_backup.name),
+                re.sub(r"\.backup\d+.tar$", ".db", path_backup.name),
             }
             members = tar.getmembers()
             member_paths = [member.path for member in members]

@@ -13,7 +13,7 @@ from tests.base import TestBase
 class TestBackUp(TestBase):
     def test_backup_restore(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_backup = path_db.with_suffix(".backup1.tar.gz")
+        path_backup = path_db.with_suffix(".backup1.tar")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
@@ -58,7 +58,7 @@ class TestBackUp(TestBase):
 
         fake_stdout = fake_stdout.getvalue()
         target = (
-            f"{Fore.CYAN}Extracted backup tar.gz\n"
+            f"{Fore.CYAN}Extracted backup tar\n"
             f"{Fore.GREEN}Portfolio is unlocked\n"
             f"{Fore.GREEN}Portfolio restored for {path_db}\n"
         )
