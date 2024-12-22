@@ -20,7 +20,7 @@ class Backup(Base):
 
     NAME = "backup"
     HELP = "backup portfolio"
-    DESCRIPTION = "Backup portfolio to a tar.gz"
+    DESCRIPTION = "Backup portfolio to a tar"
 
     def __init__(
         self,
@@ -120,7 +120,7 @@ class Restore(Base):
                     )
                 return 0
             portfolio.Portfolio.restore(self._path_db, tar_ver=self._tar_ver)
-            print(f"{Fore.CYAN}Extracted backup tar.gz")
+            print(f"{Fore.CYAN}Extracted backup tar")
         except FileNotFoundError as e:
             print(f"{Fore.RED}{e}")
             return -1

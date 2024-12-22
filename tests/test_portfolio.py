@@ -637,14 +637,14 @@ class TestPortfolio(TestBase):
         with time_machine.travel(utc_now, tick=False):
             result, tar_ver = p.backup()
 
-        path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
+        path_backup_1 = path_db.with_suffix(".backup1.tar")
         self.assertEqual(result, path_backup_1)
         self.assertEqual(tar_ver, 1)
 
         self.assertTrue(path_backup_1.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
 
-        with tarfile.open(path_backup_1, "r:gz") as tar:
+        with tarfile.open(path_backup_1, "r") as tar:
             buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
@@ -674,7 +674,7 @@ class TestPortfolio(TestBase):
             accounts = s.query(Account).all()
             self.assertEqual(len(accounts), 2)
 
-        with tarfile.open(path_backup_1, "r:gz") as tar:
+        with tarfile.open(path_backup_1, "r") as tar:
             buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
@@ -685,7 +685,7 @@ class TestPortfolio(TestBase):
         portfolio.Portfolio.restore(p)
 
         # Files should match again
-        with tarfile.open(path_backup_1, "r:gz") as tar:
+        with tarfile.open(path_backup_1, "r") as tar:
             buf_backup = tar.extractfile(path_db.name).read()  # type: ignore[attr-defined]
             with path_db.open("rb") as file:
                 buf = file.read()
@@ -707,7 +707,7 @@ class TestPortfolio(TestBase):
         # Another backup should increment the version
         p.backup()
 
-        path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
+        path_backup_2 = path_db.with_suffix(".backup2.tar")
 
         self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
@@ -732,7 +732,7 @@ class TestPortfolio(TestBase):
             file.write(ssl_key)
 
         p.backup()
-        with tarfile.open(path_backup_1, "r:gz") as tar:
+        with tarfile.open(path_backup_1, "r") as tar:
             buf_backup = tar.extractfile(path_cert_rel).read()  # type: ignore[attr-defined]
             self.assertEqual(buf_backup, ssl_cert)
             buf_backup = tar.extractfile(path_key_rel).read()  # type: ignore[attr-defined]
@@ -769,16 +769,16 @@ class TestPortfolio(TestBase):
         self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
         self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
 
-        with tarfile.open(path_backup_2, "r:gz") as tar:
+        with tarfile.open(path_backup_2, "r") as tar:
             buf_backup = tar.extractfile(path_salt.name).read()  # type: ignore[attr-defined]
             with path_salt.open("rb") as file:
                 buf = file.read()
             self.assertEqual(buf_backup, buf)
 
         # Check invalid tars are invalid
-        path_backup_3 = path_db.with_suffix(".backup3.tar.gz")
+        path_backup_3 = path_db.with_suffix(".backup3.tar")
         # Empty tar
-        with tarfile.open(path_backup_3, "w:gz") as tar:
+        with tarfile.open(path_backup_3, "w") as tar:
             pass
         self.assertRaises(
             exc.InvalidBackupTarError,
@@ -787,7 +787,7 @@ class TestPortfolio(TestBase):
         )
 
         # _timestamp being a directory will return None in extractfile
-        with tarfile.open(path_backup_3, "w:gz") as tar:
+        with tarfile.open(path_backup_3, "w") as tar:
             info = tarfile.TarInfo("_timestamp")
             info.type = tarfile.DIRTYPE
             tar.addfile(info)
@@ -798,7 +798,7 @@ class TestPortfolio(TestBase):
         )
 
         # Missing files
-        with tarfile.open(path_backup_3, "w:gz") as tar:
+        with tarfile.open(path_backup_3, "w") as tar:
             pass
         self.assertRaises(
             exc.InvalidBackupTarError,
@@ -808,7 +808,7 @@ class TestPortfolio(TestBase):
         )
 
         # Path traversal files are bad
-        with tarfile.open(path_backup_3, "w:gz") as tar:
+        with tarfile.open(path_backup_3, "w") as tar:
             info = tarfile.TarInfo("_timestamp")
             tar.addfile(info)
             info = tarfile.TarInfo(path_db.name)
@@ -880,7 +880,7 @@ class TestPortfolio(TestBase):
         # Test for real this time
         result, tar_ver = p.backup()
 
-        path_backup_4 = path_db.with_suffix(".backup4.tar.gz")
+        path_backup_4 = path_db.with_suffix(".backup4.tar")
         self.assertEqual(result, path_backup_4)
         self.assertEqual(tar_ver, 4)
 

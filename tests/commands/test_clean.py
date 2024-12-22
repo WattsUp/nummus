@@ -14,8 +14,8 @@ from tests.base import TestBase
 class TestClean(TestBase):
     def test_clean(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_backup_1 = path_db.with_suffix(".backup1.tar.gz")
-        path_backup_2 = path_db.with_suffix(".backup2.tar.gz")
+        path_backup_1 = path_db.with_suffix(".backup1.tar")
+        path_backup_2 = path_db.with_suffix(".backup2.tar")
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             create.Create(path_db, None, force=False, no_encrypt=True).run()
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
