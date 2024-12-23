@@ -417,7 +417,7 @@ class TestTransaction(WebTestBase):
             "description": [new_desc, ""],
             "category": [cat_0, cat_1],
             "tag": ["", ""],
-            "amount": ["20", "80"],
+            "amount": ["40/2", "(100-3*10)+10"],
         }
         result, headers = self.web_put((endpoint, {"uri": t_0}), data=form)
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")

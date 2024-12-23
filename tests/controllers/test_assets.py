@@ -488,7 +488,7 @@ class TestAsset(WebTestBase):
         e_str = "Asset valuation value must be zero or positive"
         self.assertIn(e_str, result)
 
-        form = {"date": today, "value": "200"}
+        form = {"date": today, "value": "100*2"}
         result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         self.assertIn("empty:hidden", result)
 

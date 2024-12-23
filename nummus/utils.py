@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ast
 import calendar
 import datetime
 import getpass
+import operator as op
 import re
 import shutil
 import sys
@@ -15,16 +17,28 @@ from colorama import Fore
 from rapidfuzz import process
 from scipy import optimize
 
+from nummus import exceptions as exc
 from nummus import global_config
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Callable, Iterable
 
 
 _REGEX_CC_SC_0 = re.compile(r"(.)([A-Z][a-z]+)")
 _REGEX_CC_SC_1 = re.compile(r"([a-z0-9])([A-Z])")
 
 _REGEX_REAL_CLEAN = re.compile(r"[^0-9\.]")
+
+REAL_OPERATORS: dict[type[ast.operator], Callable[[Decimal, Decimal], Decimal]] = {
+    ast.Add: op.add,
+    ast.Sub: op.sub,
+    ast.Mult: op.mul,
+    ast.Div: op.truediv,
+}
+REAL_UNARY_OPERATORS: dict[type[ast.unaryop], Callable[[Decimal], Decimal]] = {
+    ast.UAdd: op.pos,
+    ast.USub: op.neg,
+}
 
 MIN_PASS_LEN = 8
 
@@ -185,12 +199,45 @@ def confirm(
         print()
 
 
+def _eval_node(node: ast.expr) -> Decimal:
+    if isinstance(node, ast.Constant):
+        return Decimal(node.value)
+    if isinstance(node, ast.BinOp):
+        return REAL_OPERATORS[type(node.op)](
+            _eval_node(node.left),
+            _eval_node(node.right),
+        )
+    if isinstance(node, ast.UnaryOp):
+        return REAL_UNARY_OPERATORS[type(node.op)](_eval_node(node.operand))
+    msg = f"Unsupported node: '{type(node)}'"
+    raise exc.EvaluationError(msg)
+
+
+def evaluate_real_statement(s: str | None, precision: int = 2) -> Decimal | None:
+    """Evaluate statement, using Decimal for numbers.
+
+    Args:
+        s: String statement
+        precision: Number of digits to round number to
+
+    Returns:
+        Evaluated statement
+    """
+    if s is None:
+        return None
+    try:
+        value = _eval_node(ast.parse(s, mode="eval").body)
+    except (exc.EvaluationError, SyntaxError):
+        return None
+    return round(value, precision)
+
+
 def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     """Parse a string into a real number.
 
     Args:
         s: String to parse
-        precision: Number of digits to truncate number to
+        precision: Number of digits to round number to
 
     Returns:
         String as number
@@ -200,13 +247,8 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     clean = _REGEX_REAL_CLEAN.sub("", s)
     if clean == "":
         return None
-    i = clean.find(".")
-    if i != -1:
-        clean = clean[: min(len(clean), i + precision + 1)]
-    # Negative if -x.xx or (x.xx)
-    if "-" in s or "(" in s:
-        return Decimal(clean) * -1
-    return Decimal(clean)
+    value = -Decimal(clean) if "-" in s or "(" in s else Decimal(clean)
+    return round(value, precision)
 
 
 def format_financial(x: Decimal, precision: int = 2, *, plus: bool = False) -> str:

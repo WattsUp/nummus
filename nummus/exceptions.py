@@ -24,6 +24,7 @@ __all__ = [
     "DatabaseError",
     "DuplicateURLError",
     "EmptyImportError",
+    "EvaluationError",
     "FailedImportError",
     "FileAlreadyImportedError",
     "FutureTransactionError",
@@ -222,3 +223,7 @@ class ComputedColumnError(Exception):
 
 class InvalidTargetValueError(Exception):
     """Error when a target value is invalid."""
+
+
+class EvaluationError(Exception):
+    """Error encountered when evaluating expression."""

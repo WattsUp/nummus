@@ -558,7 +558,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             return common.error("Transaction date must not be empty")
         if date > datetime.date.today():
             return common.error("Cannot create future transaction")
-        amount = utils.parse_real(form.get("amount"))
+        amount = utils.evaluate_real_statement(form.get("amount"))
         if amount is None:
             return common.error("Transaction amount must not be empty")
         account = form.get("account")
@@ -701,7 +701,9 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 description = form.getlist("description")
                 category = form.getlist("category")
                 tag = form.getlist("tag")
-                amount = [utils.parse_real(x) for x in form.getlist("amount")]
+                amount = [
+                    utils.evaluate_real_statement(x) for x in form.getlist("amount")
+                ]
 
                 if sum(filter(None, amount)) != parent.amount:
                     msg = "Non-zero remaining amount to be assigned"
@@ -770,7 +772,7 @@ def split(uri: str) -> str:
     description: list[str | None] = list(form.getlist("description"))
     category: list[str] = form.getlist("category")
     tag: list[str | None] = list(form.getlist("tag"))
-    amount = [utils.parse_real(x) for x in form.getlist("amount")]
+    amount = [utils.evaluate_real_statement(x) for x in form.getlist("amount")]
 
     if flask.request.method == "POST":
         payee.append(None)
@@ -875,7 +877,7 @@ def remaining(uri: str) -> str:
         parent = web_utils.find(s, Transaction, uri)
         form = flask.request.form
 
-        amount = [utils.parse_real(x) for x in form.getlist("amount")]
+        amount = [utils.evaluate_real_statement(x) for x in form.getlist("amount")]
         current = sum(filter(None, amount))
 
         return flask.render_template(
