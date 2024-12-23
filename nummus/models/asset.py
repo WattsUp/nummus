@@ -627,7 +627,6 @@ class Asset(Base):
                 ticker=ticker,
             )
             s.add(a)
-        s.commit()
 
     def autodetect_interpolate(self) -> None:
         """Autodetect if Asset needs interpolation.

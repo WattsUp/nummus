@@ -119,7 +119,7 @@ class TestBase(unittest.TestCase):
 
     def get_session(self) -> orm.Session:
         path = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        return sql.get_session(path, None)
+        return orm.Session(sql.get_engine(path, None))
 
     @classmethod
     def _clean_test_root(cls) -> None:
@@ -188,7 +188,6 @@ class TestBase(unittest.TestCase):
 
     def setUp(self, *, clean: bool = True) -> None:
         if clean:
-            sql.drop_session()
             self._clean_test_root()
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
 
@@ -209,7 +208,6 @@ class TestBase(unittest.TestCase):
         with autodict.JSONAutoDict(str(TEST_LOG)) as d:
             d["methods"][self.id()] = duration
         if clean:
-            sql.drop_session()
             self._clean_test_root()
 
         # Restore sleeping

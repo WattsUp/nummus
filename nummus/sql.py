@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 import sqlalchemy.event
-from sqlalchemy import orm
 
 if TYPE_CHECKING:
     import sqlite3
@@ -21,8 +20,6 @@ try:
 except ImportError:
     sqlcipher3 = None
 
-# Cache engines so recomputing db_key is avoided
-_ENGINES: dict[Path, sqlalchemy.engine.Engine] = {}
 
 _ENGINE_ARGS: dict[str, object] = {}
 
@@ -39,36 +36,6 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
     cursor.close()
 
 
-def get_session(
-    path: Path,
-    enc: EncryptionInterface | None = None,  # type: ignore[attr-defined]
-) -> orm.Session:
-    """Get database session.
-
-    Args:
-        path: Path to database file
-        config: Configuration provider
-        enc: Encryption object storing the key
-
-    Returns:
-        Session to database
-    """
-    return orm.Session(bind=get_engine(path, enc))
-
-
-def drop_session(path: Path | None = None) -> None:
-    """Close database session.
-
-    Args:
-        path: Path to database file, None will drop all sessions
-    """
-    if path is None:
-        orm.close_all_sessions()  # Close any sessions
-        _ENGINES.clear()
-    else:
-        _ENGINES.pop(path, None)
-
-
 def get_engine(
     path: Path,
     enc: EncryptionInterface | None = None,
@@ -83,8 +50,6 @@ def get_engine(
     Returns:
         sqlalchemy.Engine
     """
-    if path in _ENGINES:
-        return _ENGINES[path]
     # Cannot support in-memory DB cause every transaction closes it
     if enc is not None:
         db_key = base64.urlsafe_b64encode(enc.hashed_key).decode()
@@ -97,5 +62,4 @@ def get_engine(
         else:
             db_path = f"sqlite:////{path}"
         engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
-    _ENGINES[path] = engine
     return engine

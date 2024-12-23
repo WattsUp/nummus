@@ -238,7 +238,6 @@ class TransactionCategory(Base):
                 )
                 s.add(cat)
                 d[name] = cat
-        s.commit()
         return d
 
     @override
