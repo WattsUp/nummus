@@ -24,10 +24,10 @@ class TestAsset(WebTestBase):
 
         name = self.random_string()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Delete index assets
             s.query(Asset).delete()
-            s.commit()
+            s.flush()
 
             a = Asset(
                 name=name,
@@ -35,7 +35,7 @@ class TestAsset(WebTestBase):
                 interpolate=False,
             )
             s.add(a)
-            s.commit()
+            s.flush()
 
             a_id = a.id_
             a_uri = a.uri
@@ -61,7 +61,7 @@ class TestAsset(WebTestBase):
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-asset")
         self.assertNotIn("<svg", result)  # No error SVG
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = s.query(Asset).first()
             if a is None:
                 self.fail("Asset is missing")
@@ -90,14 +90,13 @@ class TestAsset(WebTestBase):
         self.assertIn(e_str, result)
 
         # Add a valuations
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id,
                 date_ord=today_ord,
                 value=10,
             )
             s.add(v)
-            s.commit()
 
         result, _ = self.web_get(url)
         self.assertIn("10.00", result)
@@ -134,14 +133,14 @@ class TestAsset(WebTestBase):
         self.assertIn("No matching valuations for given query filters", result)
 
         # Add valuation
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id_0,
                 value=100,
                 date_ord=today_ord,
             )
             s.add(v)
-            s.commit()
+            s.flush()
             v_uri = v.uri
 
         endpoint = "assets.page"
@@ -166,7 +165,7 @@ class TestAsset(WebTestBase):
         a_uri_1 = d["a_uri_1"]
 
         # Add dividend transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             a_id_0 = Asset.uri_to_id(a_uri_0)
             a_id_1 = Asset.uri_to_id(a_uri_1)
@@ -196,7 +195,7 @@ class TestAsset(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split_2, t_split_3))
-            s.commit()
+            s.flush()
 
             t_split_3 = t_split_3.uri
 
@@ -210,7 +209,7 @@ class TestAsset(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_3}"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_3}/edit"')
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             txn = Transaction(
                 account_id=acct_id,
                 date=today - datetime.timedelta(days=2),
@@ -225,7 +224,7 @@ class TestAsset(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             t_split_4 = t_split.uri
 
@@ -248,7 +247,7 @@ class TestAsset(WebTestBase):
         a_0 = d["a_0"]
 
         # Add dividend transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             a_id_0 = Asset.uri_to_id(a_uri_0)
 
@@ -278,7 +277,7 @@ class TestAsset(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split_2, t_split_3))
-            s.commit()
+            s.flush()
 
             t_split_2 = t_split_2.uri
             t_split_3 = t_split_3.uri
@@ -313,14 +312,14 @@ class TestAsset(WebTestBase):
         a_id_0 = Asset.uri_to_id(a_uri_0)
 
         # Add valuation
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id_0,
                 value=100,
                 date_ord=today_ord,
             )
             s.add(v)
-            s.commit()
+            s.flush()
             v_uri = v.uri
 
         endpoint = "assets.valuations"
@@ -376,12 +375,11 @@ class TestAsset(WebTestBase):
         self.assertIn('"date_mode": "years"', result)
 
         # Make asset not editable
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = s.query(Asset).where(Asset.id_ == a_id_0).first()
             if a is None:
                 self.fail("Asset is missing")
             a.ticker = "BANANA"
-            s.commit()
 
         headers = {"HX-Trigger": "val-table"}
         queries = {
@@ -428,7 +426,7 @@ class TestAsset(WebTestBase):
         result, _ = self.web_post((endpoint, {"uri": a_uri_0}), data=form)
         self.assertIn("empty:hidden", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = s.query(AssetValuation).first()
             if v is None:
                 self.fail("AssetValuation is missing")
@@ -453,14 +451,13 @@ class TestAsset(WebTestBase):
         a_id_0 = Asset.uri_to_id(a_uri_0)
 
         # Add valuations
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id_0,
                 value=10,
                 date_ord=yesterday_ord,
             )
             s.add(v)
-            s.commit()
 
             v = AssetValuation(
                 asset_id=a_id_0,
@@ -468,7 +465,7 @@ class TestAsset(WebTestBase):
                 date_ord=today_ord,
             )
             s.add(v)
-            s.commit()
+            s.flush()
             v_id = v.id_
             v_uri = v.uri
 
@@ -495,7 +492,7 @@ class TestAsset(WebTestBase):
         result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
         self.assertIn("empty:hidden", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = s.query(AssetValuation).where(AssetValuation.id_ == v_id).first()
             if v is None:
                 self.fail("AssetValuation is missing")
@@ -511,6 +508,6 @@ class TestAsset(WebTestBase):
         result, _ = self.web_delete((endpoint, {"uri": v_uri}))
         self.assertIn("empty:hidden", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
             self.assertEqual(n, 0)

@@ -29,7 +29,7 @@ class TestOverdrawnAccounts(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -51,7 +51,7 @@ class TestOverdrawnAccounts(TestBase):
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_credit))
-            s.commit()
+            s.flush()
             acct_checking_id = acct_checking.id_
             acct_credit_id = acct_credit.id_
 
@@ -67,7 +67,7 @@ class TestOverdrawnAccounts(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             # Negative balance on credit accounts is okay
             txn = Transaction(
@@ -82,12 +82,11 @@ class TestOverdrawnAccounts(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = OverdrawnAccounts(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -102,7 +101,7 @@ class TestOverdrawnAccounts(TestBase):
         self.assertEqual(c.issues, target)
 
         # Add some cash a week ago
-        with p.get_session() as s:
+        with p.begin_session() as s:
             txn = Transaction(
                 account_id=acct_checking_id,
                 date=today - datetime.timedelta(days=7),
@@ -115,7 +114,6 @@ class TestOverdrawnAccounts(TestBase):
                 category_id=categories["Other Income"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = OverdrawnAccounts(p)
         c.test()

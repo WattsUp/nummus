@@ -48,7 +48,7 @@ def ctx_chart() -> dict[str, object]:
 
     accounts: list[AccountContext] = []
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
         if start is None:
             query = s.query(func.min(TransactionSplit.date_ord)).where(
@@ -218,7 +218,7 @@ def dashboard() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
         end = datetime.date.today()
         start = end - datetime.timedelta(days=90)

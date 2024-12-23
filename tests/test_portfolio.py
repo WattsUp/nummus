@@ -248,6 +248,9 @@ class TestPortfolio(TestBase):
         self.assertIsNone(result)
 
         with p.begin_session() as s:
+            result = p.find_account("Monkey Bank Checking", s)
+            self.assertIsNone(result)
+
             # Create accounts
             acct_checking = Account(
                 name="Monkey Bank Checking",
@@ -313,6 +316,10 @@ class TestPortfolio(TestBase):
         result = p.find_account("Gorilla Bank")
         self.assertEqual(result, acct_invest_1_id)
 
+        with p.begin_session() as s:
+            result = p.find_account("Gorilla Bank", s)
+            self.assertIsInstance(result, Account)
+
     def test_find_asset(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
@@ -321,6 +328,9 @@ class TestPortfolio(TestBase):
         self.assertIsNone(result)
 
         with p.begin_session() as s:
+            result = p.find_asset("BANANA", s)
+            self.assertIsNone(result)
+
             # Create assets
             a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
             a_apple_0 = Asset(name="Apple", category=AssetCategory.ITEM)
@@ -362,6 +372,10 @@ class TestPortfolio(TestBase):
         result = p.find_asset("APPLE")
         self.assertEqual(result, a_apple_1_id)
 
+        with p.begin_session() as s:
+            result = p.find_asset("APPLE", s)
+            self.assertIsInstance(result, Asset)
+
     def test_import_file(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
@@ -401,21 +415,22 @@ class TestPortfolio(TestBase):
             )
             s.add_all((acct_checking, acct_invest))
             s.flush()
+            acct_checking_id = acct_checking.id_
+            acct_invest_id = acct_invest.id_
 
-            # Still missing assets
-            self.assertRaises(KeyError, p.import_file, path, path_debug)
-            self.assertTrue(
-                path_debug.exists(),
-                "Debug file unexpectedly does not exists",
-            )
-            path_debug.unlink()
+        # Still missing assets
+        self.assertRaises(KeyError, p.import_file, path, path_debug)
+        self.assertTrue(
+            path_debug.exists(),
+            "Debug file unexpectedly does not exists",
+        )
+        path_debug.unlink()
 
+        with p.begin_session() as s:
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add(asset)
             s.flush()
             a_id = asset.id_
-            acct_checking_id = acct_checking.id_
-            acct_invest_id = acct_invest.id_
 
         # We good now
         p.import_file(path, path_debug)

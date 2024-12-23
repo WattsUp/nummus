@@ -29,7 +29,7 @@ class TestDuplicateTransactions(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -45,7 +45,7 @@ class TestDuplicateTransactions(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             amount = self.random_decimal(-1, 1)
@@ -62,7 +62,7 @@ class TestDuplicateTransactions(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             txn_id = txn.id_
 
@@ -71,7 +71,7 @@ class TestDuplicateTransactions(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -88,12 +88,11 @@ class TestDuplicateTransactions(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = DuplicateTransactions(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
             amount_raw = Transaction.amount.type.process_bind_param(amount, None)
@@ -109,17 +108,16 @@ class TestDuplicateTransactions(TestBase):
         self.assertEqual(c.issues, target)
 
         # If the date on one changes, the issue will be resolved
-        with p.get_session() as s:
+        with p.begin_session() as s:
             txn = s.query(Transaction).where(Transaction.id_ == txn_id).one()
 
             txn.date_ord = today_ord - 1
-            s.commit()
 
         c = DuplicateTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

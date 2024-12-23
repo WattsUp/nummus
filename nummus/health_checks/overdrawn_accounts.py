@@ -22,7 +22,7 @@ class OverdrawnAccounts(Base):
 
     @override
     def test(self) -> None:
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             # Get a list of accounts subject to overdrawn so not credit and loans
             categories_exclude = [
                 AccountCategory.CREDIT,

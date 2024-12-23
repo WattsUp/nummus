@@ -30,7 +30,7 @@ class TestTypos(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -46,7 +46,7 @@ class TestTypos(TestBase):
                 budgeted=True,
             )
             s.add(acct_0)
-            s.commit()
+            s.flush()
             acct_id_0 = acct_0.id_
 
             acct_1 = Account(
@@ -57,7 +57,7 @@ class TestTypos(TestBase):
                 budgeted=True,
             )
             s.add(acct_1)
-            s.commit()
+            s.flush()
             acct_id_1 = acct_1.id_
 
             a = Asset(
@@ -67,7 +67,7 @@ class TestTypos(TestBase):
                 description="Technologie//Stuff",
             )
             s.add(a)
-            s.commit()
+            s.flush()
             a_id = a.id_
 
             amount_0 = self.random_decimal(-1, 1)
@@ -86,7 +86,7 @@ class TestTypos(TestBase):
                 tag="Fruit",
             )
             s.add_all((txn_0, t_split_0))
-            s.commit()
+            s.flush()
             t_id_0 = t_split_0.id_
 
             amount_1 = self.random_decimal(-1, 1)
@@ -104,13 +104,13 @@ class TestTypos(TestBase):
                 tag="Fruiit",
             )
             s.add_all((txn_1, t_split_1))
-            s.commit()
+            s.flush()
             t_id_1 = t_split_1.id_
 
         c = Typos(p, no_description_typos=True)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Ignore description typos but issue still exists
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 5)
@@ -121,7 +121,7 @@ class TestTypos(TestBase):
         c = Typos(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 5)
 
@@ -178,7 +178,7 @@ class TestTypos(TestBase):
         self.assertEqual(c.issues, target)
 
         # Solve all issues
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(Account).where(Account.id_ == acct_id_0).update(
                 {
                     "name": "Monkey Bank Checking",
@@ -214,14 +214,12 @@ class TestTypos(TestBase):
                 },
             )
 
-            s.commit()
-
         c = Typos(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -234,7 +232,7 @@ class TestTypos(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -250,7 +248,6 @@ class TestTypos(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
 
         Typos.ignore(p, {"Bannke", "Moonkey"})
         c = Typos(p)

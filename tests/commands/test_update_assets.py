@@ -31,10 +31,9 @@ class TestUpdateAssets(TestBase):
 
         today = datetime.date.today()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Delete index assets
             s.query(Asset).delete()
-            s.commit()
 
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
@@ -50,7 +49,7 @@ class TestUpdateAssets(TestBase):
             )
 
             s.add_all((a, acct))
-            s.commit()
+            s.flush()
             a_id = a.id_
             acct_id = acct.id_
 
@@ -70,9 +69,8 @@ class TestUpdateAssets(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             a.update_splits()
-            s.commit()
 
         first_valuation_date = date - datetime.timedelta(days=7)
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
@@ -92,10 +90,9 @@ class TestUpdateAssets(TestBase):
         )
         self.assertEqual(fake_stdout, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = s.query(Asset).where(Asset.id_ == a_id).one()
             a.ticker = "BANANA"
-            s.commit()
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             c = update_assets.UpdateAssets(path_db, None)
@@ -116,7 +113,7 @@ class TestUpdateAssets(TestBase):
 
         # Sell asset so it should not include today
         last_valuation_date = date + datetime.timedelta(days=7)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             txn = Transaction(
                 account_id=acct_id,
                 date=date,
@@ -131,11 +128,10 @@ class TestUpdateAssets(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             a = s.query(Asset).where(Asset.id_ == a_id).one()
             a.update_splits()
-            s.commit()
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             c = update_assets.UpdateAssets(path_db, None)
@@ -155,10 +151,9 @@ class TestUpdateAssets(TestBase):
         self.assertEqual(fake_stdout, target)
 
         # Have a bad ticker
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = s.query(Asset).where(Asset.id_ == a_id).one()
             a.ticker = "ORANGE"
-            s.commit()
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             c = update_assets.UpdateAssets(path_db, None)

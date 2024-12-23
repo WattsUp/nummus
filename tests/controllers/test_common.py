@@ -38,7 +38,7 @@ class TestCommon(WebTestBase):
 
     def test_ctx_sidebar(self) -> None:
         p = self._portfolio
-        with p.get_session() as s:
+        with p.begin_session() as s:
             TransactionCategory.add_default(s)
 
         today = datetime.date.today()
@@ -57,7 +57,7 @@ class TestCommon(WebTestBase):
         }
         self.assertDictEqual(result, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_checking = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
@@ -73,7 +73,7 @@ class TestCommon(WebTestBase):
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
-            s.commit()
+            s.flush()
 
             acct_uri_checking = acct_checking.uri
             acct_uri_savings = acct_savings.uri
@@ -108,8 +108,6 @@ class TestCommon(WebTestBase):
                 category_id=t_cat.id_,
             )
             s.add_all((txn, t_split))
-
-            s.commit()
 
         target_accounts = [
             {
@@ -210,7 +208,7 @@ class TestCommon(WebTestBase):
             self.assertValidHTML(html)
             self.assertIn(e_str, html)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 t_cat = TransactionCategory(
                     group=TransactionCategoryGroup.TRANSFER,
                     locked=False,
@@ -219,20 +217,18 @@ class TestCommon(WebTestBase):
                     essential=False,
                 )
 
-                with self.assertRaises(exc.IntegrityError) as cm:
+                with self.assertRaises(exc.IntegrityError) as cm, s.begin_nested():
                     s.add(t_cat)
-                    s.commit()
                 e: exc.IntegrityError = cm.exception
                 e_str = "Transaction category name must not be empty"
                 html = common.error(e)
                 self.assertValidHTML(html)
                 self.assertIn(e_str, html)
-                s.rollback()
 
                 name = self.random_string()
                 t_cat.name = name
                 s.add(t_cat)
-                s.commit()
+                s.flush()
 
                 t_cat = TransactionCategory(
                     name=name,
@@ -242,15 +238,13 @@ class TestCommon(WebTestBase):
                     asset_linked=False,
                     essential=False,
                 )
-                with self.assertRaises(exc.IntegrityError) as cm:
+                with self.assertRaises(exc.IntegrityError) as cm, s.begin_nested():
                     s.add(t_cat)
-                    s.commit()
                 e: exc.IntegrityError = cm.exception
                 e_str = "Transaction category name must be unique"
                 html = common.error(e)
                 self.assertValidHTML(html)
                 self.assertIn(e_str, html)
-                s.rollback()
 
     def test_add_routes(self) -> None:
         controllers.add_routes(self._flask_app)
@@ -264,7 +258,7 @@ class TestCommon(WebTestBase):
     def test_follow_links(self) -> None:
         p = self._portfolio
         _ = self._setup_portfolio()
-        with p.get_session() as s:
+        with p.begin_session() as s:
             Asset.add_indices(s)
 
         # Recursively click on every link checking that it is a valid link and valid

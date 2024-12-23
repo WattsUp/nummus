@@ -31,7 +31,7 @@ class TestUnbalancedTransfers(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -55,7 +55,7 @@ class TestUnbalancedTransfers(TestBase):
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
-            s.commit()
+            s.flush()
             acct_checking_id = acct_checking.id_
             acct_savings_id = acct_savings.id_
 
@@ -72,7 +72,7 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             txn = Transaction(
                 account_id=acct_checking_id,
@@ -86,7 +86,7 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_1,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             txn = Transaction(
                 account_id=acct_savings_id,
@@ -100,7 +100,7 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             txn = Transaction(
                 account_id=acct_savings_id,
@@ -114,13 +114,13 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_split_savings_id = t_split.id_
 
         c = UnbalancedTransfers(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -140,14 +140,14 @@ class TestUnbalancedTransfers(TestBase):
         }
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_split_savings_id,
                 TransactionSplit.amount == Decimal(10),
             ).update(
                 {"category_id": t_cat_id_1},
             )
-            s.commit()
+            s.flush()
 
             # Add another bad transfer
             txn = Transaction(
@@ -162,7 +162,6 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
-            s.commit()
 
             txn = Transaction(
                 account_id=acct_savings_id,
@@ -176,13 +175,13 @@ class TestUnbalancedTransfers(TestBase):
                 category_id=t_cat_id_0,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_split_savings_id = t_split.id_
 
         c = UnbalancedTransfers(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -202,13 +201,12 @@ class TestUnbalancedTransfers(TestBase):
         }
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_split_savings_id,
             ).update(
                 {"amount": Decimal("-20")},
             )
-            s.commit()
 
         c = UnbalancedTransfers(p)
         c.test()

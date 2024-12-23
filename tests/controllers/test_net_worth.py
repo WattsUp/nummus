@@ -107,7 +107,7 @@ class TestNetWorth(WebTestBase):
 
         # Add a closed Account with no transactions
         acct_name = self.random_string()
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = Account(
                 name=acct_name,
                 institution=self.random_string(),
@@ -116,7 +116,7 @@ class TestNetWorth(WebTestBase):
                 budgeted=True,
             )
             s.add(a)
-            s.commit()
+            s.flush()
             acct_id = a.id_
 
         result, _ = self.web_get(
@@ -125,7 +125,7 @@ class TestNetWorth(WebTestBase):
         self.assertNotIn(acct_name, result)
 
         # With a Transaction, the closed account should show up
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -163,7 +163,6 @@ class TestNetWorth(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         queries = {
             "period": "custom",
@@ -200,14 +199,13 @@ class TestNetWorth(WebTestBase):
         self.assertNotIn(acct_name, result)
 
         # Add a valuation for the house with zero profit
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id_1,
                 date_ord=today_ord - 2,
                 value=10,
             )
             s.add(v)
-            s.commit()
 
         queries = {
             "period": "custom",

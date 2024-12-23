@@ -56,7 +56,7 @@ class TestExport(TestBase):
         today = datetime.date.today()
         yesterday = today - datetime.timedelta(days=1)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
 
@@ -75,11 +75,10 @@ class TestExport(TestBase):
                 budgeted=True,
             )
             s.add_all((acct_0, acct_1))
-            s.commit()
 
             a = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
             s.add(a)
-            s.commit()
+            s.flush()
 
             txn_0 = Transaction(
                 account_id=acct_0.id_,
@@ -96,7 +95,6 @@ class TestExport(TestBase):
                 tag="Engineer",
             )
             s.add_all((txn_0, t_split_0))
-            s.commit()
 
             txn_1 = Transaction(
                 account_id=acct_0.id_,
@@ -110,7 +108,6 @@ class TestExport(TestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn_1, t_split_1))
-            s.commit()
 
             txn_2 = Transaction(
                 account_id=acct_0.id_,
@@ -126,7 +123,6 @@ class TestExport(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn_2, t_split_2))
-            s.commit()
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             c = export.Export(path_db, None, path_csv, start=None, end=None)

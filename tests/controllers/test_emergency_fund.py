@@ -34,7 +34,7 @@ class TestEmergencyFund(WebTestBase):
         )
 
         # Add an emergency fund
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -85,7 +85,6 @@ class TestEmergencyFund(WebTestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
             # Add spending >3 months ago
             txn = Transaction(
@@ -100,7 +99,6 @@ class TestEmergencyFund(WebTestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("You have $10 in your emergency fund", result)
@@ -124,18 +122,16 @@ class TestEmergencyFund(WebTestBase):
             self.assertEqualWithinError(float(m[3]), 197.83, 0.01)
 
         # Increase fund to $100
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 100})
-            s.commit()
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("You have $100 in your emergency fund", result)
         self.assertIn("will cover 5.5 months", result)
         self.assertIn("good shape", result)
 
         # Increase fund to $200
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 200})
-            s.commit()
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("You have $200 in your emergency fund", result)
         self.assertIn("will cover 10.7 months", result)
@@ -160,7 +156,7 @@ class TestEmergencyFund(WebTestBase):
         )
 
         # Add an emergency fund
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -211,7 +207,6 @@ class TestEmergencyFund(WebTestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
             # Add spending >3 months ago
             txn = Transaction(
@@ -226,7 +221,6 @@ class TestEmergencyFund(WebTestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         result, _ = self.web_get(endpoint)
         self.assertIn("increase your fund to at least $39", result)
@@ -237,15 +231,13 @@ class TestEmergencyFund(WebTestBase):
         )
 
         # Increase fund to $100
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 100})
-            s.commit()
         result, _ = self.web_get(endpoint)
         self.assertIn("cover 5.5 months", result)
 
         # Increase fund to $200
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 200})
-            s.commit()
         result, _ = self.web_get(endpoint)
         self.assertIn("$88 could be invested", result)

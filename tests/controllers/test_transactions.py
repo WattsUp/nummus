@@ -19,10 +19,9 @@ class TestTransaction(WebTestBase):
     def test_page_all(self) -> None:
         p = self._portfolio
         self._setup_portfolio()
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).delete()
             s.query(Transaction).delete()
-            s.commit()
         endpoint = "transactions.page_all"
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
@@ -50,7 +49,7 @@ class TestTransaction(WebTestBase):
         a_uri_0 = d["a_uri_0"]
 
         # Unlink transaction 0
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(Transaction).where(
                 Transaction.id_ == Transaction.uri_to_id(t_0),
             )
@@ -58,7 +57,6 @@ class TestTransaction(WebTestBase):
             txn.linked = False
             for t_split in txn.splits:
                 t_split.parent = txn
-            s.commit()
 
         endpoint = "transactions.table"
         result, _ = self.web_get(endpoint)
@@ -227,7 +225,7 @@ class TestTransaction(WebTestBase):
         )
 
         # Add dividend transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             a_id_0 = Asset.uri_to_id(a_uri_0)
 
@@ -249,7 +247,7 @@ class TestTransaction(WebTestBase):
                 category_id=categories["Dividends Received"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             t_split_2 = t_split.uri
         queries = {
@@ -425,7 +423,7 @@ class TestTransaction(WebTestBase):
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
 
             query = s.query(Transaction)
@@ -471,7 +469,7 @@ class TestTransaction(WebTestBase):
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-transaction")
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
 
             query = s.query(Transaction)
@@ -496,7 +494,7 @@ class TestTransaction(WebTestBase):
         self.assertIn("Cannot delete linked transaction", result)
 
         # Unlink transaction 1
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(Transaction).where(
                 Transaction.id_ == Transaction.uri_to_id(t_1),
             )
@@ -505,12 +503,11 @@ class TestTransaction(WebTestBase):
             txn.linked = False
             for t_split in txn.splits:
                 t_split.parent = txn
-            s.commit()
 
         result, headers = self.web_delete((endpoint, {"uri": t_1}))
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-account")
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = (
                 s.query(Transaction)
                 .where(Transaction.id_ == Transaction.uri_to_id(t_1))
@@ -662,7 +659,7 @@ class TestTransaction(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         # Redirect to edit after creating
         self.assertIn("Edit transaction", result)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             txn = (
                 s.query(Transaction)

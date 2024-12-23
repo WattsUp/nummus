@@ -43,7 +43,7 @@ def account(uri: str) -> str | flask.Response:
     today = datetime.date.today()
     today_ord = today.toordinal()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
 
         values, _, _ = acct.get_value(today_ord, today_ord)
@@ -79,7 +79,6 @@ def account(uri: str) -> str | flask.Response:
             acct.category = category
             acct.closed = closed
             acct.budgeted = budgeted
-            s.commit()
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -339,7 +338,7 @@ def page(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
         txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
         title = f"Account {acct.name}," + title.removeprefix("Transactions")
@@ -369,7 +368,7 @@ def txns(uri: str) -> flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
 
         args = flask.request.args
@@ -441,7 +440,7 @@ def txns_options(uri: str, field: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
         args = flask.request.args
 

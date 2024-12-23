@@ -19,7 +19,7 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
         self._setup_portfolio()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = (
                 s.query(TransactionCategory)
                 .where(TransactionCategory.group != TransactionCategoryGroup.OTHER)
@@ -35,7 +35,7 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
         self._setup_portfolio()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n_before = s.query(TransactionCategory).count()
 
         endpoint = "transaction_categories.new"
@@ -47,7 +47,7 @@ class TestTransactionCategory(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn("Edit transaction categories", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n_after = s.query(TransactionCategory).count()
             self.assertEqual(n_after, n_before + 1)
 
@@ -55,7 +55,7 @@ class TestTransactionCategory(WebTestBase):
         result, _ = self.web_post(endpoint, data=form)
         self.assertIn(e_str, result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n_after = s.query(TransactionCategory).count()
             self.assertEqual(n_after, n_before + 1)
 
@@ -63,14 +63,13 @@ class TestTransactionCategory(WebTestBase):
         p = self._portfolio
         today = datetime.date.today()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.name == "Other Income")
             t_cat = query.one()
             t_cat.name = 'Other Income"'
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
-            s.commit()
 
         endpoint = "transaction_categories.category"
         url = endpoint, {"uri": t_cat_uri}
@@ -83,14 +82,12 @@ class TestTransactionCategory(WebTestBase):
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             t_cat = (
                 s.query(TransactionCategory)
                 .where(TransactionCategory.id_ == t_cat_id)
-                .first()
+                .one()
             )
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
             self.assertEqual(t_cat.name, name)
             self.assertEqual(t_cat.emoji, "😀")
             self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
@@ -107,7 +104,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn(e_str, result)
 
         # Add transaction that needs to move
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
@@ -116,7 +113,7 @@ class TestTransactionCategory(WebTestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
 
             txn = Transaction(
                 account_id=acct.id_,
@@ -127,17 +124,17 @@ class TestTransactionCategory(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=t_cat.id_,
+                category_id=t_cat_id,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             t_split_id = t_split.id_
 
         result, _ = self.web_delete(url)
         self.assertIn("Edit transaction categories", result)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.id_ == t_split_id)
             t_split: TransactionSplit = query.scalar()
@@ -148,7 +145,7 @@ class TestTransactionCategory(WebTestBase):
 
             self.assertEqual(t_cat.name, "Uncategorized")
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             t_cat = (
                 s.query(TransactionCategory)
                 .where(TransactionCategory.locked.is_(True))
@@ -161,7 +158,7 @@ class TestTransactionCategory(WebTestBase):
         url = endpoint, {"uri": t_cat_uri}
         self.web_delete(url, rc=HTTP_CODE_FORBIDDEN)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.locked.is_(True))
             t_cat = query.first()
@@ -176,7 +173,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn("Edit transaction categories", result)
 
         # Only can edit emoji for a locked category
-        with p.get_session() as s:
+        with p.begin_session() as s:
             t_cat = (
                 s.query(TransactionCategory)
                 .where(TransactionCategory.id_ == t_cat_id)

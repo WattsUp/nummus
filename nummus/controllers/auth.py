@@ -106,7 +106,7 @@ def login() -> str | flask.Response:
     if not password:
         return common.error("Password must not be blank")
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         expected_encoded = (
             s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
         )

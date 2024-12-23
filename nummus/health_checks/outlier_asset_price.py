@@ -32,7 +32,7 @@ class OutlierAssetPrice(Base):
     def test(self) -> None:
         today = datetime.date.today()
         today_ord = today.toordinal()
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             start_ord = (
                 s.query(func.min(TransactionSplit.date_ord))
                 .where(TransactionSplit.asset_id.isnot(None))

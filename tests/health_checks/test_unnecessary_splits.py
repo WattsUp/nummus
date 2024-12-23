@@ -28,7 +28,7 @@ class TestUnnecessarySplits(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -44,7 +44,7 @@ class TestUnnecessarySplits(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             amount = self.random_decimal(-1, 1)
@@ -61,14 +61,13 @@ class TestUnnecessarySplits(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = UnnecessarySplits(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -98,14 +97,14 @@ class TestUnnecessarySplits(TestBase):
                 category_id=categories["General Merchandise"],
             )
             s.add_all((txn, t_split_0, t_split_1, t_split_2))
-            s.commit()
+            s.flush()
             t_id = txn.id_
             t_split_id_0 = t_split_0.id_
 
         c = UnnecessarySplits(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -124,7 +123,7 @@ class TestUnnecessarySplits(TestBase):
         self.assertEqual(c.issues, target)
 
         # If the category on one changes, the issue will be resolved
-        with p.get_session() as s:
+        with p.begin_session() as s:
             t_split = (
                 s.query(TransactionSplit)
                 .where(TransactionSplit.id_ == t_split_id_0)
@@ -132,13 +131,12 @@ class TestUnnecessarySplits(TestBase):
             )
 
             t_split.category_id = categories["General Merchandise"]
-            s.commit()
 
         c = UnnecessarySplits(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

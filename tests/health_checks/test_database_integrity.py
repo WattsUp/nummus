@@ -21,7 +21,7 @@ class TestDatabaseIntegrity(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -40,7 +40,6 @@ class TestDatabaseIntegrity(TestBase):
                 budgeted=True,
             )
             s.add_all((acct_checking, acct_savings))
-            s.commit()
 
         c = DatabaseIntegrity(p)
         c.test()
@@ -50,7 +49,7 @@ class TestDatabaseIntegrity(TestBase):
         # Simulating a corrupt database is difficult
         # Instead update the Account schema to have unique constraint
         # PRAGMA integrity_check should catch duplicates
-        with p.get_session() as s:
+        with p.begin_session() as s:
             index_name = f"{Account.__tablename__}_99"
             index_loc = f"{Account.__tablename__}({Account.institution.key})"
 
@@ -68,12 +67,11 @@ class TestDatabaseIntegrity(TestBase):
                     WHERE type = 'index' AND name = '{index_name}';""",
             )
             s.execute(sqlalchemy.text(query))
-            s.commit()
 
         c = DatabaseIntegrity(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 

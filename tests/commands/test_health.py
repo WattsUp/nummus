@@ -95,7 +95,7 @@ class TestHealth(TestBase):
                 rc = c.run()
             self.assertNotEqual(rc, 0)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 n = s.query(HealthCheckIssue).count()
                 self.assertEqual(n, 2)
 
@@ -135,7 +135,7 @@ class TestHealth(TestBase):
                 rc = c.run()
             self.assertEqual(rc, 0)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 c = s.query(HealthCheckIssue).one()
                 self.assertEqual(c.check, "Mock Check")
                 self.assertEqual(c.value, "0")
@@ -161,7 +161,7 @@ class TestHealth(TestBase):
                 rc = c.run()
             self.assertNotEqual(rc, 0)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 c = s.query(HealthCheckIssue).one()
                 self.assertEqual(c.check, "Mock Check")
                 self.assertEqual(c.value, "0")
@@ -195,7 +195,7 @@ class TestHealth(TestBase):
                 rc = c.run()
             self.assertNotEqual(rc, 0)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 c = s.query(HealthCheckIssue).one()
                 self.assertEqual(c.check, "Mock Check")
                 self.assertEqual(c.value, "0")
@@ -231,7 +231,7 @@ class TestHealth(TestBase):
                 rc = c.run()
             self.assertEqual(rc, 0)
 
-            with p.get_session() as s:
+            with p.begin_session() as s:
                 n = s.query(HealthCheckIssue).count()
                 self.assertEqual(n, 0)
 

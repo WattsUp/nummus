@@ -35,7 +35,7 @@ def page(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
         val_table, title = ctx_valuations(a)
         title = f"Asset {a.name}"
@@ -106,7 +106,7 @@ def txns_options(field: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         args = flask.request.args
 
         id_mapping = None
@@ -148,7 +148,7 @@ def asset(uri: str) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
 
         if flask.request.method == "GET":
@@ -168,12 +168,12 @@ def asset(uri: str) -> str | flask.Response:
             return common.error("Asset category must not be None")
 
         try:
-            # Make the changes
-            a.name = name
-            a.description = description
-            a.ticker = ticker
-            a.category = category
-            s.commit()
+            with s.begin_nested():
+                # Make the changes
+                a.name = name
+                a.description = description
+                a.ticker = ticker
+                a.category = category
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -192,7 +192,7 @@ def valuation(uri: str) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         v = web_utils.find(s, AssetValuation, uri)
 
         if flask.request.method == "GET":
@@ -202,7 +202,6 @@ def valuation(uri: str) -> str | flask.Response:
             )
         if flask.request.method == "DELETE":
             s.delete(v)
-            s.commit()
             return common.overlay_swap(event="update-valuation")
 
         form = flask.request.form
@@ -214,10 +213,10 @@ def valuation(uri: str) -> str | flask.Response:
             return common.error("Asset valuation value must not be empty")
 
         try:
-            # Make the changes
-            v.date_ord = date.toordinal()
-            v.value = value
-            s.commit()
+            with s.begin_nested():
+                # Make the changes
+                v.date_ord = date.toordinal()
+                v.value = value
         except exc.IntegrityError as e:
             # Get the line that starts with (...IntegrityError)
             orig = str(e.orig)
@@ -260,7 +259,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     try:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = web_utils.find(s, Asset, uri)
             v = AssetValuation(
                 asset_id=a.id_,
@@ -268,7 +267,6 @@ def new_valuation(uri: str) -> str | flask.Response:
                 value=value,
             )
             s.add(v)
-            s.commit()
     except exc.IntegrityError as e:
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
@@ -330,7 +328,7 @@ def valuations(uri: str) -> flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
 
         args = flask.request.args
@@ -465,7 +463,7 @@ def ctx_valuations(
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         args = flask.request.args
         page_len = 25
         offset = int(args.get("offset", 0))

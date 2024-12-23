@@ -121,7 +121,7 @@ class Summarize(Base):
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             accts = {acct.id_: acct for acct in s.query(Account).all()}
             assets = {
                 a.id_: a

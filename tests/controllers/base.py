@@ -14,7 +14,7 @@ import autodict
 import flask
 import flask.testing
 
-from nummus import portfolio, sql, web
+from nummus import portfolio, web
 from nummus.models import (
     Account,
     AccountCategory,
@@ -126,7 +126,7 @@ class WebTestBase(TestBase):
 
         tag_1 = self.random_string()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = Account(
                 name=acct_name,
                 institution="Monkey Bank",
@@ -135,7 +135,7 @@ class WebTestBase(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
 
             acct_uri = acct.uri
 
@@ -162,7 +162,7 @@ class WebTestBase(TestBase):
                 category_id=categories[cat_0],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             t_0_uri = txn.uri
             t_split_0_uri = t_split.uri
@@ -183,7 +183,7 @@ class WebTestBase(TestBase):
                 tag=tag_1,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             t_1_uri = txn.uri
             t_split_1_uri = t_split.uri
@@ -194,7 +194,7 @@ class WebTestBase(TestBase):
             a_1 = Asset(name=a_name_1, category=AssetCategory.REAL_ESTATE)
 
             s.add_all((a_0, a_1))
-            s.commit()
+            s.flush()
             a_uri_0 = a_0.uri
             a_uri_1 = a_1.uri
 
@@ -232,11 +232,10 @@ class WebTestBase(TestBase):
             Account,
             BudgetGroup,
         ]
-        with self._portfolio.get_session() as s:
+        with self._portfolio.begin_session() as s:
             for model in models:
                 for instance in s.query(model).all():
                     s.delete(instance)
-                s.commit()
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -266,7 +265,6 @@ class WebTestBase(TestBase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        sql.drop_session()
         cls._clean_test_root()
         super().tearDownClass()
 
