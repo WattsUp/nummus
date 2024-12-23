@@ -162,7 +162,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
         Dict{account name: id}
     """
     accounts: dict[str, int] = {}
-    with p.get_session() as s:
+    with p.begin_session() as s:
         checking = Account(
             name="Checking",
             institution="Monkey Bank",
@@ -214,7 +214,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
 
         accts = [checking, savings, cc_0, cc_1, mortgage, retirement, real_estate]
         s.add_all(accts)
-        s.commit()
+        s.flush()
 
         accounts["checking"] = checking.id_
         accounts["savings"] = savings.id_
@@ -239,7 +239,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
         Dict{asset name: id}
     """
     assets: dict[str, int] = {}
-    with p.get_session() as s:
+    with p.begin_session() as s:
         growth = Asset(
             name="GROWTH",
             description="Growth ETF",
@@ -296,7 +296,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
         s.add_all(v[0] for v in stocks.values())
         s.add_all(v[0] for v in real_estate.values())
         s.add_all((sp500, apple))
-        s.commit()
+        s.flush()
 
         start = datetime.date(BIRTH_YEAR, 1, 1)
         date = start
@@ -325,7 +325,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
                 item[1] = v
 
             date += datetime.timedelta(days=1)
-        s.commit()
+        s.flush()
         print(f"{Fore.CYAN}  Valued stocks")
 
         # Real estate valued once a month
@@ -350,7 +350,7 @@ def make_assets(p: Portfolio) -> dict[str, int]:
             y = date.year
             m = date.month
             date = datetime.date(y + m // 12, m % 12 + 1, 1)
-        s.commit()
+        s.flush()
         print(f"{Fore.CYAN}  Valued real estate")
 
         assets = {k: v[0].id_ for k, v in stocks.items()}  # type: ignore[attr-defined]
@@ -371,7 +371,7 @@ def generate_early_savings(p: Portfolio, accts: dict[str, int]) -> None:
         p: Portfolio to edit
         accts: Account IDs to use
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct: Account = s.query(Account).where(Account.id_ == accts["savings"]).scalar()  # type: ignore[attr-defined]
@@ -393,7 +393,6 @@ def generate_early_savings(p: Portfolio, accts: dict[str, int]) -> None:
                 description=txn.statement,
             )
             s.add_all((txn, txn_split))
-        s.commit()
     print(f"{Fore.GREEN}Generated early savings")
 
 
@@ -409,7 +408,7 @@ def generate_income(
         accts: Account IDs to use
         assets: Asset IDs to use
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         a_growth: Asset = s.query(Asset).where(Asset.id_ == assets["growth"]).scalar()  # type: ignore[attr-defined]
@@ -594,11 +593,10 @@ def generate_income(
                     )
                     s.add_all((txn, txn_split_0, txn_split_1))
 
-        s.commit()
+        s.flush()
 
         a_growth.update_splits()
         a_value.update_splits()
-        s.commit()
 
     print(f"{Fore.GREEN}Generated income")
 
@@ -615,7 +613,7 @@ def generate_housing(
         accts: Account IDs to use
         assets: Asset IDs to use
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         house_1: Asset = (
@@ -762,7 +760,7 @@ def generate_housing(
             pmi = round(Decimal(0.01) * pi * 12, 2)
             pmi_threshold = Decimal(0.8) * price
 
-            s.commit()
+            s.flush()
             print(f"{Fore.CYAN}  Bought {house.description}")
             return p, r, pi, pmi, pmi_threshold
 
@@ -876,7 +874,7 @@ def generate_housing(
                 )
                 s.add_all((txn, txn_split))
 
-            s.commit()
+            s.flush()
             print(f"{Fore.CYAN}  Sold {house.description}")
 
         def monthly_payment(
@@ -1174,7 +1172,6 @@ def generate_housing(
                 r = max(0, INTEREST_RATES[year])
                 escrow = round(escrow * (1 + r), 2)
 
-        s.commit()
     print(f"{Fore.GREEN}Generated housing")
 
 
@@ -1185,7 +1182,7 @@ def generate_food(p: Portfolio, accts: dict[str, int]) -> None:
         p: Portfolio to edit
         accts: Account IDs to use
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct_cc_0: Account = (
@@ -1310,7 +1307,6 @@ def generate_food(p: Portfolio, accts: dict[str, int]) -> None:
                     )
                     s.add_all((txn, txn_split))
 
-        s.commit()
     print(f"{Fore.GREEN}Generated food")
 
 
@@ -1322,7 +1318,7 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
         accts: Account IDs to use
         assets: Asset IDs to use
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct_checking: Account = (
@@ -1403,7 +1399,7 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
 
         sell_asset(a_growth, asset_qty[a_growth.id_][0])
         sell_asset(a_value, asset_qty[a_value.id_][0])
-        s.commit()
+        s.flush()
 
         # Buy 1 share of AAPL on 2001-01-03 for $99.50 with a Y2K bonus
         # World was ending, so boss gave a bonus, sure... idk lore
@@ -1439,7 +1435,6 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
             description=txn.statement,
         )
         s.add_all((txn, txn_split))
-        s.commit()
 
 
 def add_interest(p: Portfolio, acct_id: int) -> None:
@@ -1449,7 +1444,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
         p: Portfolio to edit
         acct_id: Account to generate for
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct: Account = s.query(Account).where(Account.id_ == acct_id).scalar()
@@ -1503,7 +1498,6 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
             date = next_date
             total_interest += interest
 
-        s.commit()
         print(f"{Fore.GREEN}Added interest for {acct.name}")
 
 
@@ -1515,7 +1509,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         acct_id: Account to generate for
         acct_id_fund: Account to withdraw funds from
     """
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = {cat.name: cat for cat in s.query(TransactionCategory).all()}
 
         acct: Account = s.query(Account).where(Account.id_ == acct_id).scalar()
@@ -1583,7 +1577,6 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
             date = next_date
             total_payment += -balance
 
-        s.commit()
         print(f"{Fore.GREEN}Added CC payments for {acct.name}")
 
 
