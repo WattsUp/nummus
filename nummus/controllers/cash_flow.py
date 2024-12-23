@@ -44,7 +44,7 @@ def ctx_chart() -> dict[str, object]:
     period = args.get("period", DEFAULT_PERIOD)
     start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         if start is None:
             query = s.query(TransactionSplit)
             query = query.where(TransactionSplit.asset_id.is_(None))
@@ -335,7 +335,7 @@ def txns_options(field: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         args = flask.request.args
 
         id_mapping = None

@@ -12,6 +12,7 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 import tqdm
@@ -32,6 +33,9 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    import contextlib
 
 
 class Portfolio:
@@ -71,6 +75,7 @@ class Portfolio:
         else:
             msg = f"Portfolio at {self._path_db} does have salt file"
             raise FileNotFoundError(msg)
+        self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
         self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
@@ -130,8 +135,6 @@ class Portfolio:
         if path_db.exists():
             msg = f"Database already exists at {path_db}"
             raise FileExistsError(msg)
-        # Drop any existing engine to database
-        sql.drop_session(path_db)
         name = path_db.with_suffix("").name
         path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
@@ -161,39 +164,41 @@ class Portfolio:
         else:
             test_value = enc.encrypt(Portfolio._ENCRYPTION_TEST_VALUE)
 
-        with sql.get_session(path_db, enc) as s:
-            models.metadata_create_all(s)
+        engine = sql.get_engine(path_db, enc)
+        with orm.Session(engine) as s:
+            with s.begin():
+                models.metadata_create_all(s)
 
-            c_version = Config(
-                key=ConfigKey.VERSION,
-                value=str(version.__version__),
-            )
-            c_enc_test = Config(
-                key=ConfigKey.ENCRYPTION_TEST,
-                value=test_value,
-            )
-            c_cipher = Config(
-                key=ConfigKey.CIPHER,
-                value=cipher_b64,
-            )
-            c_key = Config(
-                key=ConfigKey.SECRET_KEY,
-                value=secrets.token_hex(),
-            )
-
-            s.add_all((c_version, c_enc_test, c_cipher, c_key))
-
-            if enc is not None and key is not None:
-                c_web_key = Config(
-                    key=ConfigKey.WEB_KEY,
-                    value=enc.encrypt(key),
+            with s.begin():
+                c_version = Config(
+                    key=ConfigKey.VERSION,
+                    value=str(version.__version__),
                 )
-                s.add(c_web_key)
-            s.commit()
+                c_enc_test = Config(
+                    key=ConfigKey.ENCRYPTION_TEST,
+                    value=test_value,
+                )
+                c_cipher = Config(
+                    key=ConfigKey.CIPHER,
+                    value=cipher_b64,
+                )
+                c_key = Config(
+                    key=ConfigKey.SECRET_KEY,
+                    value=secrets.token_hex(),
+                )
+
+                s.add_all((c_version, c_enc_test, c_cipher, c_key))
+
+                if enc is not None and key is not None:
+                    c_web_key = Config(
+                        key=ConfigKey.WEB_KEY,
+                        value=enc.encrypt(key),
+                    )
+                    s.add(c_web_key)
         path_db.chmod(0o600)  # Only owner can read/write
 
         p = Portfolio(path_db, key)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             TransactionCategory.add_default(s)
             Asset.add_indices(s)
         return p
@@ -205,10 +210,8 @@ class Portfolio:
             UnlockingError if database file fails to open
             ProtectedObjectNotFoundError if URI cipher is missing
         """
-        # Drop any open session
-        sql.drop_session(self._path_db)
         try:
-            with self.get_session() as s:
+            with self.begin_session() as s:
                 try:
                     value: str = (
                         s.query(Config.value)
@@ -233,7 +236,7 @@ class Portfolio:
             msg = "Test value did not match"
             raise exc.UnlockingError(msg)
         # Load Cipher
-        with self.get_session() as s:
+        with self.begin_session() as s:
             try:
                 cipher_b64: str = (
                     s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
@@ -244,13 +247,13 @@ class Portfolio:
             models.load_cipher(base64.b64decode(cipher_b64))
         # All good :)
 
-    def get_session(self) -> orm.Session:
+    def begin_session(self) -> contextlib.AbstractContextManager[orm.Session]:
         """Get SQL Session to the database.
 
         Returns:
             Open Session
         """
-        return sql.get_session(self._path_db, self._enc)
+        return self._session_maker.begin()
 
     def encrypt(self, secret: bytes | str) -> str:
         """Encrypt a secret using the key.
@@ -315,7 +318,7 @@ class Portfolio:
             sha.update(file.read())
         h = sha.hexdigest()
         if not force:
-            with self.get_session() as s:
+            with self.begin_session() as s:
                 try:
                     existing_date_ord: int = (
                         s.query(ImportedFile.date_ord)
@@ -335,7 +338,7 @@ class Portfolio:
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
         today = datetime.date.today()
 
-        with self.get_session() as s:
+        with self.begin_session() as s:
             categories: dict[str, TransactionCategory] = {
                 cat.name: cat for cat in s.query(TransactionCategory).all()
             }
@@ -535,9 +538,7 @@ class Portfolio:
             # Add file hash to prevent importing again
             if force:
                 s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
-                s.commit()
             s.add(ImportedFile(hash_=h))
-            s.commit()
 
             # Update splits on each touched
             query = s.query(Asset).where(
@@ -545,7 +546,6 @@ class Portfolio:
             )
             for asset in query.all():
                 asset.update_splits()
-            s.commit()
 
         # If successful, delete the temp file
         path_debug.unlink()
@@ -607,7 +607,7 @@ class Portfolio:
             return None
 
         if session is None:
-            with self.get_session() as s:
+            with self.begin_session() as s:
                 return _find(s)
         a_id = _find(session)
         if a_id is None:
@@ -664,7 +664,7 @@ class Portfolio:
             return None
 
         if session is None:
-            with self.get_session() as s:
+            with self.begin_session() as s:
                 return _find(s)
         acct_id = _find(session)
         if acct_id is None:
@@ -676,14 +676,14 @@ class Portfolio:
         txn: Transaction,
         *,
         cache_ok: bool = True,
-        do_commit: bool = True,
+        set_property: bool = True,
     ) -> int | None:
         """Find the most similar Transaction.
 
         Args:
             txn: Transaction to compare to
             cache_ok: If available, use Transaction.similar_txn_id
-            do_commit: If match found, set similar_txn_id and commit
+            set_property: If match found, set similar_txn_id
 
         Returns:
             Most similar Transaction.id_
@@ -705,11 +705,11 @@ class Portfolio:
             txn.amount + utils.MATCH_ABSOLUTE,
         )
 
-        def commit_match(matching_row: int | Row[tuple[int]]) -> int:
+        def set_match(matching_row: int | Row[tuple[int]]) -> int:
             id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
-            if do_commit:
+            if set_property:
                 txn.similar_txn_id = id_
-                s.commit()
+                s.flush()
             return id_
 
         # Convert txn.amount to the raw SQL value to make a raw query
@@ -739,7 +739,7 @@ class Portfolio:
         )
         row = query.first()
         if row is not None:
-            return commit_match(row)
+            return set_match(row)
 
         # Maybe exact statement but different account
         query = (
@@ -755,7 +755,7 @@ class Portfolio:
         )
         row = query.first()
         if row is not None:
-            return commit_match(row)
+            return set_match(row)
 
         # Maybe exact statement but different amount
         query = (
@@ -769,7 +769,7 @@ class Portfolio:
         )
         row = query.first()
         if row is not None:
-            return commit_match(row)
+            return set_match(row)
 
         # No statements match, choose highest fuzzy matching statement
         query = (
@@ -845,7 +845,7 @@ class Portfolio:
 
         # Sort by best score and return best id
         best_id = sorted(matches_bonus.items(), key=lambda item: -item[1])[0][0]
-        return commit_match(best_id)
+        return set_match(best_id)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.
@@ -942,16 +942,14 @@ class Portfolio:
         size_before = self._path_db.stat().st_size
 
         # Prune unused AssetValuations
-        with self.get_session() as s:
+        with self.begin_session() as s:
             for asset in s.query(Asset).yield_per(YIELD_PER):
                 asset.prune_valuations()
                 asset.autodetect_interpolate()
-            s.commit()
 
         # Optimize database
-        with self.get_session() as s:
+        with self.begin_session() as s:
             s.execute(sqlalchemy.text("VACUUM"))
-            s.commit()
 
         path_backup_optimized, _ = self.backup()
         size_after = self._path_db.stat().st_size
@@ -1017,9 +1015,6 @@ class Portfolio:
         if not path_backup.exists():
             msg = f"Backup does not exist {path_backup}"
             raise FileNotFoundError(msg)
-
-        # Drop any dangling sessions
-        sql.drop_session(path_db)
 
         # tar archive preserved owner and mode so no need to set these
         with tarfile.open(path_backup, "r") as tar:
@@ -1124,7 +1119,7 @@ class Portfolio:
             ]
         ] = []
 
-        with self.get_session() as s:
+        with self.begin_session() as s:
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
             ids = [asset.id_ for asset in assets]
 
@@ -1151,12 +1146,9 @@ class Portfolio:
                         updated.append((name, ticker, start, end, None))
                     # start & end are None if there are no transactions for the Asset
 
-            s.commit()
-
             # Auto update if asset needs interpolation
             for asset in s.query(Asset).all():
                 asset.autodetect_interpolate()
-            s.commit()
 
         return updated
 
@@ -1221,7 +1213,7 @@ class Portfolio:
             conn_dst.commit()
 
         # Use new encryption key
-        with self.get_session() as s:
+        with self.begin_session() as s:
             value_encrypted: str | None = (
                 s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
             )
@@ -1234,6 +1226,7 @@ class Portfolio:
 
         # Test unlock
         self._enc = dst._enc  # noqa: SLF001
+        self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
         self._unlock()
 
         # And delete temporary
@@ -1246,8 +1239,7 @@ class Portfolio:
             key: New web key
         """
         key_encrypted = self.encrypt(key)
-        with self.get_session() as s:
+        with self.begin_session() as s:
             s.query(Config).where(Config.key == ConfigKey.WEB_KEY).update(
                 {Config.value: key_encrypted},
             )
-            s.commit()

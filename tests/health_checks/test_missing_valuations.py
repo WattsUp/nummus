@@ -34,7 +34,7 @@ class TestMissingValuations(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -50,7 +50,7 @@ class TestMissingValuations(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             a = Asset(
@@ -59,7 +59,7 @@ class TestMissingValuations(TestBase):
                 interpolate=False,
             )
             s.add(a)
-            s.commit()
+            s.flush()
             a_id = a.id_
             a_uri = a.uri
 
@@ -78,12 +78,11 @@ class TestMissingValuations(TestBase):
                 asset_quantity_unadjusted=self.random_decimal(1, 10),
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = MissingAssetValuations(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -98,19 +97,18 @@ class TestMissingValuations(TestBase):
         self.assertEqual(c.issues, target)
 
         # Add a valuation but after the transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id,
                 date_ord=today_ord,
                 value=self.random_decimal(1, 10),
             )
             s.add(v)
-            s.commit()
 
         c = MissingAssetValuations(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -128,19 +126,18 @@ class TestMissingValuations(TestBase):
         self.assertEqual(c.issues, target)
 
         # Add a valuation on the transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id,
                 date_ord=yesterday_ord,
                 value=self.random_decimal(1, 10),
             )
             s.add(v)
-            s.commit()
 
         c = MissingAssetValuations(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 

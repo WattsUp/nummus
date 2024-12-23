@@ -30,7 +30,7 @@ class TestMissingAssetLink(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -46,7 +46,7 @@ class TestMissingAssetLink(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             a = Asset(
@@ -55,7 +55,7 @@ class TestMissingAssetLink(TestBase):
                 interpolate=False,
             )
             s.add(a)
-            s.commit()
+            s.flush()
             a_id = a.id_
 
             # Securities Traded expect an asset
@@ -73,7 +73,7 @@ class TestMissingAssetLink(TestBase):
                 asset_quantity_unadjusted=1,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_stocks_id = t_split.id_
             t_stocks_uri = t_split.uri
 
@@ -91,14 +91,14 @@ class TestMissingAssetLink(TestBase):
                 asset_id=a_id,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_interest_id = t_split.id_
             t_interest_uri = t_split.uri
 
         c = MissingAssetLink(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -129,19 +129,18 @@ class TestMissingAssetLink(TestBase):
         }
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_stocks_id,
             ).update({"asset_id": a_id})
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_interest_id,
             ).update({"asset_id": None})
-            s.commit()
 
         c = MissingAssetLink(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 

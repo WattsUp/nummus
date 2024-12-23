@@ -49,7 +49,7 @@ def ctx_chart() -> dict[str, object]:
 
     accounts: list[AccountContext] = []
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         if start is None:
             query = s.query(func.min(TransactionSplit.date_ord)).where(
                 TransactionSplit.asset_id.is_(None),
@@ -305,7 +305,7 @@ def page() -> str:
     today = datetime.date.today()
     today_ord = today.toordinal()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
         current = sum(item[0] for item in acct_values.values())
     return common.page(
@@ -340,7 +340,7 @@ def dashboard() -> str:
     today = datetime.date.today()
     today_ord = today.toordinal()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         end_ord = today_ord
         start = utils.date_add_months(today, -8)
         start_ord = start.toordinal()

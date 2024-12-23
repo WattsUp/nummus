@@ -95,7 +95,7 @@ def table_options(field: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         args = flask.request.args
 
         id_mapping = None
@@ -304,7 +304,7 @@ def ctx_table(
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         args = flask.request.args
         search_str = args.get("search", "").strip()
         locked = utils.parse_bool(args.get("locked"))
@@ -532,7 +532,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         accounts = Account.map_name(s)
         if flask.request.method == "GET":
 
@@ -579,21 +579,21 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             raise exc.ProtectedObjectNotFoundError(msg)
 
         try:
-            txn = Transaction(
-                account_id=accounts_rev[account],
-                date=date,
-                amount=amount,
-                statement=statement or "Manually added",
-                locked=False,
-                linked=False,
-            )
-            t_split = TransactionSplit(
-                parent=txn,
-                amount=amount,
-                category_id=category_id,
-            )
-            s.add_all((txn, t_split))
-            s.commit()
+            with s.begin_nested():
+                txn = Transaction(
+                    account_id=accounts_rev[account],
+                    date=date,
+                    amount=amount,
+                    statement=statement or "Manually added",
+                    locked=False,
+                    linked=False,
+                )
+                t_split = TransactionSplit(
+                    parent=txn,
+                    amount=amount,
+                    category_id=category_id,
+                )
+                s.add_all((txn, t_split))
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -620,7 +620,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         try:
             parent = web_utils.find(s, Transaction, uri)
         except exc.http.BadRequest:
@@ -665,7 +665,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             )
 
             # Run transaction
-            similar_id = p.find_similar_transaction(parent, do_commit=False)
+            similar_id = p.find_similar_transaction(parent, set_property=False)
             similar_uri = similar_id and Transaction.id_to_uri(similar_id)
 
             return flask.render_template(
@@ -684,65 +684,65 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 TransactionSplit.parent_id == parent.id_,
             ).delete()
             s.delete(parent)
-            s.commit()
             # Adding transactions update account cause the balance changes
             return common.overlay_swap(event="update-account")
 
         try:
-            form = flask.request.form
+            with s.begin_nested():
+                form = flask.request.form
 
-            date = utils.parse_date(form.get("date"))
-            if date is None:
-                return common.error("Transaction date must not be empty")
-            parent.date = date
-            parent.locked = "locked" in form
+                date = utils.parse_date(form.get("date"))
+                if date is None:
+                    return common.error("Transaction date must not be empty")
+                parent.date = date
+                parent.locked = "locked" in form
 
-            payee = form.getlist("payee")
-            description = form.getlist("description")
-            category = form.getlist("category")
-            tag = form.getlist("tag")
-            amount = [utils.parse_real(x) for x in form.getlist("amount")]
+                payee = form.getlist("payee")
+                description = form.getlist("description")
+                category = form.getlist("category")
+                tag = form.getlist("tag")
+                amount = [utils.parse_real(x) for x in form.getlist("amount")]
 
-            if sum(filter(None, amount)) != parent.amount:
-                msg = "Non-zero remaining amount to be assigned"
-                return common.error(msg)
+                if sum(filter(None, amount)) != parent.amount:
+                    msg = "Non-zero remaining amount to be assigned"
+                    return common.error(msg)
 
-            if len(payee) < 1:
-                msg = "Transaction must have at least one split"
-                return common.error(msg)
+                if len(payee) < 1:
+                    msg = "Transaction must have at least one split"
+                    return common.error(msg)
 
-            splits = parent.splits
+                splits = parent.splits
 
-            # Add or remove splits to match desired
-            n_add = len(payee) - len(splits)
-            while n_add > 0:
-                splits.append(TransactionSplit())
-                n_add -= 1
-            if n_add < 0:
-                for t_split in splits[n_add:]:
-                    s.delete(t_split)
-                splits = splits[:n_add]
+                # Add or remove splits to match desired
+                n_add = len(payee) - len(splits)
+                while n_add > 0:
+                    splits.append(TransactionSplit())
+                    n_add -= 1
+                if n_add < 0:
+                    for t_split in splits[n_add:]:
+                        s.delete(t_split)
+                    splits = splits[:n_add]
 
-            # Reverse categories for LUT
-            categories_rev = {v: k for k, v in categories.items()}
+                # Reverse categories for LUT
+                categories_rev = {v: k for k, v in categories.items()}
 
-            # Update parent properties
-            for i, t_split in enumerate(splits):
-                t_split.parent = parent
+                # Update parent properties
+                for i, t_split in enumerate(splits):
+                    t_split.parent = parent
 
-                try:
-                    t_split.payee = payee[i]
-                    t_split.description = description[i]
-                    t_split.category_id = categories_rev[category[i]]
-                    t_split.tag = tag[i]
-                    a = amount[i]
-                except IndexError:
-                    return common.error("Transaction split missing properties")
-                if a is None:
-                    return common.error("Transaction split amount must not be empty")
-                t_split.amount = a
-
-            s.commit()
+                    try:
+                        t_split.payee = payee[i]
+                        t_split.description = description[i]
+                        t_split.category_id = categories_rev[category[i]]
+                        t_split.tag = tag[i]
+                        a = amount[i]
+                    except IndexError:
+                        return common.error("Transaction split missing properties")
+                    if a is None:
+                        return common.error(
+                            "Transaction split amount must not be empty",
+                        )
+                    t_split.amount = a
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -761,7 +761,7 @@ def split(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories = TransactionCategory.map_name(s)
 
     form = flask.request.form
@@ -786,7 +786,7 @@ def split(uri: str) -> str:
         tag = []
         amount = []
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             parent_id = Transaction.uri_to_id(flask.request.args["similar"])
             query = (
                 s.query(TransactionSplit)
@@ -848,7 +848,7 @@ def split(uri: str) -> str:
         parent={"uri": uri},
     )
     if flask.request.method in ["GET", "DELETE"]:
-        with p.get_session() as s:
+        with p.begin_session() as s:
             parent = web_utils.find(s, Transaction, uri)
             current = sum(filter(None, amount))
             html += flask.render_template(
@@ -871,7 +871,7 @@ def remaining(uri: str) -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         parent = web_utils.find(s, Transaction, uri)
         form = flask.request.form
 

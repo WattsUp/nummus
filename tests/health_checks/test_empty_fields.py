@@ -30,7 +30,7 @@ class TestEmptyFields(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -47,7 +47,7 @@ class TestEmptyFields(TestBase):
                 # missing number
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
             acct_uri = acct.uri
 
@@ -58,7 +58,7 @@ class TestEmptyFields(TestBase):
                 # missing description
             )
             s.add(a)
-            s.commit()
+            s.flush()
             a_id = a.id_
             a_uri = a.uri
 
@@ -78,14 +78,14 @@ class TestEmptyFields(TestBase):
                 # missing description
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_id = t_split.id_
             t_uri = t_split.uri
 
         c = EmptyFields(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 5)
 
@@ -140,7 +140,7 @@ class TestEmptyFields(TestBase):
         self.assertEqual(c.issues, target)
 
         # Solve all issues
-        with p.get_session() as s:
+        with p.begin_session() as s:
             t_cat_id = (
                 s.query(TransactionCategory.id_)
                 .where(
@@ -163,13 +163,12 @@ class TestEmptyFields(TestBase):
                     "description": self.random_string(),
                 },
             )
-            s.commit()
 
         c = EmptyFields(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

@@ -23,7 +23,7 @@ class TestImport(TestBase):
         path_debug = path_db.with_suffix(".importer_debug")
 
         # Create Accounts and Assets
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_checking = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
@@ -72,7 +72,7 @@ class TestImport(TestBase):
         self.assertEqual(fake_stdout, target)
 
         # Check file_a was not imported
-        with p.get_session() as s:
+        with p.begin_session() as s:
             transactions = s.query(Transaction).all()
             self.assertEqual(len(transactions), 0)
 
@@ -94,7 +94,7 @@ class TestImport(TestBase):
         self.assertEqual(fake_stdout, target)
 
         # Check file_a was not imported
-        with p.get_session() as s:
+        with p.begin_session() as s:
             transactions = s.query(Transaction).all()
             self.assertEqual(len(transactions), 0)
 
@@ -114,7 +114,7 @@ class TestImport(TestBase):
         self.assertEqual(fake_stdout, target)
 
         # Check all transactions were imported
-        with p.get_session() as s:
+        with p.begin_session() as s:
             transactions = s.query(Transaction).all()
             self.assertEqual(len(transactions), 6 + 4)
 

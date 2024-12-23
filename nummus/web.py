@@ -162,7 +162,7 @@ class Server:
         with self._app.app_context():
             flask.current_app.portfolio = p  # type: ignore[attr-defined]
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             secret_key = (
                 s.query(Config.value).where(Config.key == ConfigKey.SECRET_KEY).scalar()
             )

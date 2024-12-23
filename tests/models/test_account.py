@@ -327,6 +327,7 @@ class TestAccount(TestBase):
         s.commit()
 
         categories = TransactionCategory.add_default(s)
+        s.commit()
         categories = {name: t_cat.id_ for name, t_cat in categories.items()}
 
         target_values = [0] * 7
@@ -693,6 +694,7 @@ class TestAccount(TestBase):
         s.commit()
 
         categories = TransactionCategory.add_default(s)
+        s.commit()
         t_cat_fund = categories["Transfers"]
         t_cat_trade = categories["Securities Traded"]
 

@@ -79,7 +79,7 @@ class Export(Base):
         if self._p is None:  # pragma: no cover
             return 1
 
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             query = (
                 s.query(TransactionSplit)
                 .where(

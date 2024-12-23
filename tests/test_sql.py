@@ -29,19 +29,14 @@ class Child(ORMBase):
 
 
 class TestSQL(TestBase):
-    def test_get_session_unencrypted(self) -> None:
+    def test_get_engine_unencrypted(self) -> None:
         # Relative file
         path = self._TEST_ROOT.joinpath("unencrypted.db").relative_to(
             Path.cwd(),
         )
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path)
-        self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
-
-        s2 = sql.get_session(path)
-        self.assertNotEqual(s2, s)  # Different sessions
-        self.assertEqual(s2.get_bind(), s.get_bind())  # But same engine
+        e = sql.get_engine(path)
+        s = orm.Session(e)
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
@@ -50,16 +45,6 @@ class TestSQL(TestBase):
         c = Child()
         s.add(c)
         s.commit()
-
-        s = None
-        s2 = None
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
-
-        sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
-        # Able to call drop after it has been dropped
-        sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
         with path.open("rb") as file:
             data = file.read()
@@ -70,27 +55,18 @@ class TestSQL(TestBase):
         # Absolute file
         path = self._TEST_ROOT.joinpath("unencrypted.db").absolute()
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path)
-        self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
+        e = sql.get_engine(path)
+        s = orm.Session(e)
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
 
-        s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
-
-        sql.drop_session()
-        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
-
         with path.open("rb") as file:
             data = file.read()
             self.assertIn(b"SQLite", data)
 
-        self._clean_test_root()
-
-    def test_get_session_encrypted(self) -> None:
+    def test_get_engine_encrypted(self) -> None:
         if not encryption.AVAILABLE:
             self.skipTest("Encryption is not installed")
         key = self.random_string().encode()
@@ -99,20 +75,12 @@ class TestSQL(TestBase):
         # Relative file
         path = self._TEST_ROOT.joinpath("encrypted.db").relative_to(Path.cwd())
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-
-        s = sql.get_session(path, enc)
-        self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
+        e = sql.get_engine(path, enc)
+        s = orm.Session(e)
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
-
-        s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
-
-        sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
 
         with path.open("rb") as file:
             data = file.read()
@@ -123,22 +91,13 @@ class TestSQL(TestBase):
         # Absolute file
         path = self._TEST_ROOT.joinpath("encrypted.db").absolute()
         self._TEST_ROOT.mkdir(parents=True, exist_ok=True)
-        s = sql.get_session(path, enc)
-        self.assertIsNotNone(s)
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
+        e = sql.get_engine(path, enc)
+        s = orm.Session(e)
 
         self.assertIn("child", ORMBase.metadata.tables)
         ORMBase.metadata.create_all(s.get_bind())
         s.commit()
 
-        s = None
-        self.assertEqual(len(sql._ENGINES), 1)  # noqa: SLF001
-
-        sql.drop_session(path)
-        self.assertEqual(len(sql._ENGINES), 0)  # noqa: SLF001
-
         with path.open("rb") as file:
             data = file.read()
             self.assertNotIn(b"SQLite", data)
-
-        self._clean_test_root()

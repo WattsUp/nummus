@@ -82,7 +82,7 @@ def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
     }
 
     n_closed = 0
-    with p.get_session() as s:
+    with p.begin_session() as s:
         # Get basic info
         accounts: dict[int, AccountContext] = {}
         query = s.query(Account).with_entities(

@@ -50,7 +50,7 @@ class TestSummarize(TestBase):
         today = datetime.date.today()
         today_ord = today.toordinal()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
 
@@ -69,7 +69,7 @@ class TestSummarize(TestBase):
                 budgeted=True,
             )
             s.add_all((acct_0, acct_1))
-            s.commit()
+            s.flush()
 
             acct_0_id = acct_0.id_
             acct_1_id = acct_1.id_
@@ -83,7 +83,7 @@ class TestSummarize(TestBase):
                 ticker="APPLE",
             )
             s.add_all((a_banana, a_apple_0, a_apple_1))
-            s.commit()
+            s.flush()
 
             a_apple_0_id = a_apple_0.id_
             a_apple_1_id = a_apple_1.id_
@@ -102,7 +102,7 @@ class TestSummarize(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn_0, t_split_0))
-            s.commit()
+            s.flush()
 
             txn_1 = Transaction(
                 account_id=acct_0.id_,
@@ -118,7 +118,7 @@ class TestSummarize(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn_1, t_split_1))
-            s.commit()
+            s.flush()
 
             txn_2 = Transaction(
                 account_id=acct_0.id_,
@@ -132,7 +132,7 @@ class TestSummarize(TestBase):
                 category_id=categories["Uncategorized"],
             )
             s.add_all((txn_2, t_split_2))
-            s.commit()
+            s.flush()
 
             av = AssetValuation(
                 asset_id=a_apple_0.id_,
@@ -140,7 +140,7 @@ class TestSummarize(TestBase):
                 value=37,
             )
             s.add(av)
-            s.commit()
+            s.flush()
             v_apple_0 = av.value * (t_split_0.asset_quantity or 0)
             profit_apple_0 = v_apple_0 + 100
 
@@ -150,7 +150,7 @@ class TestSummarize(TestBase):
                 value=14,
             )
             s.add(av)
-            s.commit()
+            s.flush()
             v_apple_1 = av.value * (t_split_1.asset_quantity or 0)
             profit_apple_1 = v_apple_1 - 10
 
@@ -206,7 +206,7 @@ class TestSummarize(TestBase):
         self.assertEqual(result, target)
 
         # Sell a_apple_1 and close credit account
-        with p.get_session() as s:
+        with p.begin_session() as s:
             txn_1 = Transaction(
                 account_id=acct_0_id,
                 date=today,
@@ -221,11 +221,11 @@ class TestSummarize(TestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn_1, t_split_1))
-            s.commit()
+            s.flush()
 
             acct = s.query(Account).where(Account.id_ == acct_1_id).one()
             acct.closed = True
-            s.commit()
+            s.flush()
 
             av = AssetValuation(
                 asset_id=a_apple_1_id,
@@ -233,7 +233,6 @@ class TestSummarize(TestBase):
                 value=0,
             )
             s.add(av)
-            s.commit()
 
         value += 10 - v_apple_0 - v_apple_1
         target = {

@@ -21,7 +21,7 @@ class TestPerformance(WebTestBase):
     def test_page(self) -> None:
         p = self._portfolio
         _ = self._setup_portfolio()
-        with p.get_session() as s:
+        with p.begin_session() as s:
             Asset.add_indices(s)
 
         endpoint = "performance.page"
@@ -49,7 +49,7 @@ class TestPerformance(WebTestBase):
         a_id_1 = Asset.uri_to_id(a_uri_1)
 
         acct_name_0 = "Monkey Bank Investing"
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_0 = Account(
                 name=acct_name_0,
                 institution="Monkey Bank",
@@ -58,7 +58,7 @@ class TestPerformance(WebTestBase):
                 budgeted=True,
             )
             s.add(acct_0)
-            s.commit()
+            s.flush()
             acct_id_0 = acct_0.id_
             acct_uri_0 = acct_0.uri
 
@@ -81,7 +81,7 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Transfers"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             # Buy the house
             txn = Transaction(
@@ -98,7 +98,6 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         endpoint = "performance.chart"
         result, _ = self.web_get(
@@ -135,14 +134,13 @@ class TestPerformance(WebTestBase):
             r"(Total).*(\$1,000\.00).*(\$0\.00).*(\$0\.00).*(-\$1,000\.00).*(-100\.00%)",
         )
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             av = AssetValuation(
                 asset_id=a_id_1,
                 date_ord=today_ord - 100,
                 value=1000,
             )
             s.add(av)
-            s.commit()
 
             # Add index valuations
             a_index_id = s.query(Asset.id_).where(Asset.name == "S&P 500").one()[0]
@@ -158,7 +156,6 @@ class TestPerformance(WebTestBase):
                 value=101,
             )
             s.add(av)
-            s.commit()
 
             # Sell the house
             txn = Transaction(
@@ -175,7 +172,6 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         result, _ = self.web_get(
             (endpoint, {"period": "30-days"}),
@@ -230,7 +226,7 @@ class TestPerformance(WebTestBase):
 
         # Add a closed Account with no transactions
         acct_name_1 = self.random_string()
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = Account(
                 name=acct_name_1,
                 institution=self.random_string(),
@@ -239,7 +235,7 @@ class TestPerformance(WebTestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id_1 = acct.id_
             acct_uri_1 = acct.uri
 
@@ -249,7 +245,7 @@ class TestPerformance(WebTestBase):
         self.assertNotIn(acct_name_1, result)
 
         # With a Transaction, the closed account should show up
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -287,7 +283,6 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         queries = {
             "period": "custom",
@@ -342,7 +337,7 @@ class TestPerformance(WebTestBase):
         a_id_1 = Asset.uri_to_id(a_uri_1)
 
         acct_name_0 = "Monkey Bank Investing"
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_0 = Account(
                 name=acct_name_0,
                 institution="Monkey Bank",
@@ -351,7 +346,7 @@ class TestPerformance(WebTestBase):
                 budgeted=True,
             )
             s.add(acct_0)
-            s.commit()
+            s.flush()
             acct_id_0 = acct_0.id_
 
             Asset.add_indices(s)
@@ -373,7 +368,7 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Transfers"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             # Buy the house
             txn = Transaction(
@@ -390,7 +385,7 @@ class TestPerformance(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             # Add index valuations
             a_index_id = s.query(Asset.id_).where(Asset.name == "S&P 500").one()[0]
@@ -406,7 +401,7 @@ class TestPerformance(WebTestBase):
                 value=101,
             )
             s.add(av)
-            s.commit()
+            s.flush()
 
             indices = [
                 name

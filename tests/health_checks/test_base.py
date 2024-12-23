@@ -57,14 +57,14 @@ class TestCheckBase(TestBase):
         uri_0 = self.random_string()
         uri_1 = self.random_string()
         MockCheck.ignore(p, {uri_0})
-        with p.get_session() as s:
+        with p.begin_session() as s:
             i = s.query(HealthCheckIssue).one()
             self.assertEqual(i.check, name)
             self.assertEqual(i.value, uri_0)
             self.assertTrue(i.ignore, "Issue is not ignored")
 
         MockCheck.ignore(p, [uri_0, uri_1])
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -74,7 +74,7 @@ class TestCheckBase(TestBase):
             self.assertTrue(i.ignore, "Issue is not ignored")
 
         MockCheck.ignore(p, [])
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -108,7 +108,7 @@ class TestCheckBase(TestBase):
         c = MockCheck(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -132,7 +132,7 @@ class TestCheckBase(TestBase):
         c = MockCheck(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -153,7 +153,7 @@ class TestCheckBase(TestBase):
         c = MockCheck(p, no_ignores=True)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 2)
 
@@ -177,7 +177,7 @@ class TestCheckBase(TestBase):
         c = MockCheck(p, no_ignores=True)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 

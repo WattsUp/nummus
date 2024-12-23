@@ -383,7 +383,7 @@ def page() -> str:
     )
     sidebar_uri = args.get("sidebar") or None
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
@@ -418,7 +418,7 @@ def assign(uri: str) -> str:
     form = flask.request.form
     amount = utils.parse_real(form.get("amount")) or Decimal(0)
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         cat = web_utils.find(s, TransactionCategory, uri)
         if amount == 0:
             s.query(BudgetAssignment).where(
@@ -443,7 +443,6 @@ def assign(uri: str) -> str:
                 s.add(a)
             else:
                 a.amount = amount
-        s.commit()
 
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
@@ -476,7 +475,7 @@ def overspending(uri: str) -> str | flask.Response:
     month = datetime.date.fromisoformat(month_str + "-01")
     month_ord = month.toordinal()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         t_cat: TransactionCategory | None
         t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
@@ -536,7 +535,6 @@ def overspending(uri: str) -> str | flask.Response:
                 else:
                     a.amount -= to_move
 
-            s.commit()
             return common.overlay_swap(event="update-budget")
 
         category_names = TransactionCategory.map_name(s)
@@ -590,7 +588,7 @@ def move(uri: str) -> str | flask.Response:
     month = datetime.date.fromisoformat(month_str + "-01")
     month_ord = month.toordinal()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         t_cat: TransactionCategory | None
         t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
@@ -648,7 +646,6 @@ def move(uri: str) -> str | flask.Response:
                 else:
                     a.amount += to_move
 
-            s.commit()
             return common.overlay_swap(event="update-budget")
 
         category_names = TransactionCategory.map_name(s)
@@ -698,7 +695,7 @@ def reorder() -> str:
     row_uris = form.getlist("row_uri")
     groups = form.getlist("group")
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         g_positions = {
             BudgetGroup.uri_to_id(g_uri): i for i, g_uri in enumerate(group_uris)
         }
@@ -762,7 +759,6 @@ def reorder() -> str:
                     ),
                 },
             )
-            s.commit()
 
         month_str = form.get("month")
         month = (
@@ -799,13 +795,12 @@ def group(uri: str) -> str:
         if uri != "ungrouped":
             name = form["name"]
 
-            with p.get_session() as s:
-                g = web_utils.find(s, BudgetGroup, uri)
-                try:
+            try:
+                with p.begin_session() as s:
+                    g = web_utils.find(s, BudgetGroup, uri)
                     g.name = name
-                    s.commit()
-                except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                    return common.error(e)
+            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                return common.error(e)
 
         groups_closed: list[str] = flask.session.get("groups_closed", [])
         groups_closed = [x for x in groups_closed if x != uri]
@@ -813,7 +808,7 @@ def group(uri: str) -> str:
             groups_closed.append(uri)
         flask.session["groups_closed"] = groups_closed
     elif flask.request.method == "DELETE":
-        with p.get_session() as s:
+        with p.begin_session() as s:
             g = web_utils.find(s, BudgetGroup, uri)
             s.query(TransactionCategory).where(
                 TransactionCategory.budget_group_id == g.id_,
@@ -832,7 +827,6 @@ def group(uri: str) -> str:
             )
             for g in query.yield_per(YIELD_PER):
                 g.position -= 1
-            s.commit()
     else:
         raise NotImplementedError
 
@@ -844,7 +838,7 @@ def group(uri: str) -> str:
     )
     sidebar_uri = form.get("sidebar") or None
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
@@ -870,14 +864,13 @@ def new_group() -> str:
     form = flask.request.form
     name = form["name"]
 
-    with p.get_session() as s:
-        n = s.query(BudgetGroup).count()
-        try:
+    try:
+        with p.begin_session() as s:
+            n = s.query(BudgetGroup).count()
             g = BudgetGroup(name=name, position=n)
             s.add(g)
-            s.commit()
-        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+        return common.error(e)
 
     month_str = form.get("month")
     month = (
@@ -887,7 +880,7 @@ def new_group() -> str:
     )
     sidebar_uri = form.get("sidebar") or None
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
@@ -913,7 +906,7 @@ def target(uri: str) -> str | flask.Response:
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
     today = datetime.date.today()
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         try:
             tar = web_utils.find(s, Target, uri)
             t_cat_id = tar.category_id
@@ -950,7 +943,6 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            s.commit()
             return common.overlay_swap(event="update-budget")
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
@@ -1002,13 +994,12 @@ def target(uri: str) -> str | flask.Response:
         elif tar.period == TargetPeriod.WEEK:
             tar.repeat_every = 1
 
+        if flask.request.method == "PUT":
+            return common.overlay_swap(event="update-budget")
         try:
-            if flask.request.method == "PUT":
-                s.commit()
-                return common.overlay_swap(event="update-budget")
             if flask.request.method == "POST":
-                s.add(tar)
-                s.commit()
+                with s.begin_nested():
+                    s.add(tar)
                 return common.overlay_swap(event="update-budget")
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
@@ -1035,6 +1026,8 @@ def target(uri: str) -> str | flask.Response:
             "weekdays": utils.WEEKDAYS,
             "months": utils.MONTHS,
         }
+        # Don't make the changes
+        s.rollback()
 
         return flask.render_template(
             "budgeting/target.jinja",
@@ -1148,7 +1141,7 @@ def sidebar() -> flask.Response:
     )
     uri = args.get("uri")
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         categories, _, future_assigned = BudgetAssignment.get_monthly_available(
             s,
             month,

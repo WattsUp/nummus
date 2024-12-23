@@ -28,7 +28,7 @@ class TestChangePassword(TestBase):
         p = MockPortfolio(path_db, None)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             expected_encrypted = (
                 s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
             )
@@ -130,7 +130,7 @@ class TestChangePassword(TestBase):
         path_db.unlink()
         MockPortfolio.create(path_db, key)
         p = MockPortfolio(path_db, key)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             expected_encrypted = (
                 s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
             )

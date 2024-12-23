@@ -67,7 +67,7 @@ def main(command_line: list[str] | None = None) -> int:
     if p is None:
         return 1
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         # Get start date
         query = s.query(TransactionSplit)
         query = query.where(TransactionSplit.asset_id.is_(None))

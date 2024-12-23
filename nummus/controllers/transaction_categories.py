@@ -56,7 +56,7 @@ def overlay() -> str:
         emoji: str | None
         locked: bool
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         income: list[CategoryContext] = []
         expense: list[CategoryContext] = []
         transfer: list[CategoryContext] = []
@@ -144,7 +144,7 @@ def new() -> str | flask.Response:
     try:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-        with p.get_session() as s:
+        with p.begin_session() as s:
             cat = TransactionCategory(
                 name=name,
                 emoji=emoji,
@@ -155,7 +155,6 @@ def new() -> str | flask.Response:
                 essential=essential,
             )
             s.add(cat)
-            s.commit()
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
 
@@ -174,7 +173,7 @@ def category(uri: str) -> str | flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         cat = web_utils.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
@@ -220,7 +219,6 @@ def category(uri: str) -> str | flask.Response:
                 TransactionSplit.category_id == cat.id_,
             ).update({"category_id": uncategorized_id})
             s.delete(cat)
-            s.commit()
 
             return common.overlay_swap(overlay(), event="update-transaction")
 
@@ -234,16 +232,16 @@ def category(uri: str) -> str | flask.Response:
         name, emoji = _clean_emoji(name)
 
         try:
-            cat.emoji = emoji
-            if not cat.locked:
-                # Locked categorys can only change emoji
-                cat.name = name
-                if group is None:
-                    return common.error("Transaction group must not be None")
-                cat.group = group
-                cat.is_profit_loss = is_profit_loss
-            cat.essential = essential
-            s.commit()
+            with s.begin_nested():
+                cat.emoji = emoji
+                if not cat.locked:
+                    # Locked categorys can only change emoji
+                    cat.name = name
+                    if group is None:
+                        return common.error("Transaction group must not be None")
+                    cat.group = group
+                    cat.is_profit_loss = is_profit_loss
+                cat.essential = essential
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 

@@ -108,7 +108,7 @@ class Health(Base):
 
         if self._p is None:  # pragma: no cover
             return 1
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             if self._clear_ignores:
                 s.query(HealthCheckIssue).delete()
             elif self._ignores:
@@ -117,7 +117,6 @@ class Health(Base):
                 s.query(HealthCheckIssue).where(HealthCheckIssue.id_.in_(ids)).update(
                     {HealthCheckIssue.ignore: True},
                 )
-            s.commit()
 
         limit = max(1, self._limit)
         any_issues = False

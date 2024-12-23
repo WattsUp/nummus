@@ -26,16 +26,15 @@ class TestUnusedCategories(TestBase):
         today = datetime.date.today()
 
         # Lock all categories
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionCategory).update({"locked": True})
-            s.commit()
 
         c = UnusedCategories(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -44,14 +43,14 @@ class TestUnusedCategories(TestBase):
             ).delete()
             t_cat = s.query(TransactionCategory).one()
             t_cat.locked = False
-            s.commit()
+            s.flush()
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
         c = UnusedCategories(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -65,7 +64,7 @@ class TestUnusedCategories(TestBase):
         }
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = Account(
                 name="Monkey Bank Checking",
                 institution="Monkey Bank",
@@ -74,7 +73,7 @@ class TestUnusedCategories(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             txn = Transaction(
@@ -91,14 +90,13 @@ class TestUnusedCategories(TestBase):
                 category_id=t_cat_id,
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         c = UnusedCategories(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -116,13 +114,12 @@ class TestUnusedCategories(TestBase):
                 category_id=t_cat_id,
             )
             s.add(a)
-            s.commit()
 
         c = UnusedCategories(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

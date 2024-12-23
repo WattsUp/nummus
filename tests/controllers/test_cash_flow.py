@@ -107,7 +107,7 @@ class TestCashFlow(WebTestBase):
         self.assertIn('"date_mode": null', result)
 
         # Add an expense transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = s.query(Account.id_).scalar()
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
@@ -126,7 +126,6 @@ class TestCashFlow(WebTestBase):
                 category_id=categories["Groceries"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         result, _ = self.web_get(
             (endpoint, {"period": "all"}),
@@ -144,7 +143,7 @@ class TestCashFlow(WebTestBase):
 
         # Add a closed Account with no transactions
         t_cat = "Other Income"
-        with p.get_session() as s:
+        with p.begin_session() as s:
             a = Account(
                 name=self.random_string(),
                 institution=self.random_string(),
@@ -153,7 +152,7 @@ class TestCashFlow(WebTestBase):
                 budgeted=True,
             )
             s.add(a)
-            s.commit()
+            s.flush()
             acct_id = a.id_
 
         result, _ = self.web_get(
@@ -162,7 +161,7 @@ class TestCashFlow(WebTestBase):
         self.assertNotIn(t_cat, result)
 
         # With a Transaction, the closed account should show up
-        with p.get_session() as s:
+        with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -182,7 +181,6 @@ class TestCashFlow(WebTestBase):
                 category_id=categories[t_cat],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         queries = {
             "period": "custom",

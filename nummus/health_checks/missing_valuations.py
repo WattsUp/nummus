@@ -20,7 +20,7 @@ class MissingAssetValuations(Base):
 
     @override
     def test(self) -> None:
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             assets = Asset.map_name(s)
 
             query = (

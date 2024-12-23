@@ -40,12 +40,11 @@ class Base(ABC):
         self._p = p
 
         # Remove any unignored issues
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(HealthCheckIssue).where(
                 HealthCheckIssue.ignore.is_(False),
                 HealthCheckIssue.check == self._NAME,
             ).delete()
-            s.commit()
 
     @property
     def name(self) -> str:
@@ -85,7 +84,7 @@ class Base(ABC):
             p: Portfolio to test
             values: List of issues to ignore
         """
-        with p.get_session() as s:
+        with p.begin_session() as s:
             query = s.query(HealthCheckIssue.value).where(
                 HealthCheckIssue.check == cls._NAME,
                 HealthCheckIssue.value.in_(values),
@@ -96,11 +95,10 @@ class Base(ABC):
             for v in values:
                 c = HealthCheckIssue(check=cls._NAME, value=v, ignore=True)
                 s.add(c)
-            s.commit()
 
     def _commit_issues(self) -> None:
         """Commit issues to Portfolio."""
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             query = s.query(HealthCheckIssue).where(
                 HealthCheckIssue.check == self._NAME,
                 HealthCheckIssue.ignore.is_(True),
@@ -123,5 +121,5 @@ class Base(ABC):
             for i in ignores.values():
                 s.delete(i)
 
-            s.commit()
+            s.flush()
             self._issues = {i.uri: issue for i, issue in issues}

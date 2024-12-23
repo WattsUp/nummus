@@ -43,7 +43,7 @@ class TestAccount(WebTestBase):
         self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
         self.assertEqual(headers["HX-Trigger"], "update-account")
         self.assertNotIn("<svg", result)  # No error SVG
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = s.query(Account).first()
             if acct is None:
                 self.fail("Account is missing")
@@ -62,7 +62,7 @@ class TestAccount(WebTestBase):
         result, _ = self.web_put(url, data=form)
         e_str = "Cannot close Account with non-zero balance"
         self.assertIn(e_str, result)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = s.query(Account).first()
             if acct is None:
                 self.fail("Account is missing")
@@ -77,7 +77,7 @@ class TestAccount(WebTestBase):
         result, _ = self.web_put(url, data=form)
         e_str = "Account name must be at least 2 characters long"
         self.assertIn(e_str, result)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = s.query(Account).first()
             if acct is None:
                 self.fail("Account is missing")
@@ -94,7 +94,7 @@ class TestAccount(WebTestBase):
         self.assertIn(e_str, result)
 
         # Cancel balance
-        with p.get_session() as s:
+        with p.begin_session() as s:
             today = datetime.date.today()
 
             categories = TransactionCategory.map_name(s)
@@ -120,7 +120,6 @@ class TestAccount(WebTestBase):
                 category_id=categories[cat_1],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         form = {
             "institution": institution,
@@ -131,7 +130,7 @@ class TestAccount(WebTestBase):
         }
         result, _ = self.web_put(url, data=form)
         self.assertNotIn("<svg", result)  # No error SVG
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct = s.query(Account).first()
             if acct is None:
                 self.fail("Account is missing")
@@ -258,7 +257,7 @@ class TestAccount(WebTestBase):
         self.assertIn('"date_mode": "years"', result)
 
         # Add an asset transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             a_id_1 = Asset.uri_to_id(a_uri_1)
 
@@ -281,7 +280,6 @@ class TestAccount(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         headers = {"HX-Trigger": "txn-table"}
         result, _ = self.web_get(
@@ -305,14 +303,13 @@ class TestAccount(WebTestBase):
         self.assertRegex(result_total, r"(Total).*(\$80\.00).*(-\$10\.00)[^0-9]*")
 
         # Add a valuation for the house with zero profit
-        with p.get_session() as s:
+        with p.begin_session() as s:
             v = AssetValuation(
                 asset_id=a_id_1,
                 date_ord=today_ord - 2,
                 value=10,
             )
             s.add(v)
-            s.commit()
 
         result, _ = self.web_get(
             (endpoint, {"uri": acct_uri, "period": "all"}),
@@ -335,7 +332,7 @@ class TestAccount(WebTestBase):
         self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
 
         # Sell house for $20
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
 
             categories = TransactionCategory.map_name(s)
@@ -356,7 +353,6 @@ class TestAccount(WebTestBase):
                 category_id=categories["Securities Traded"],
             )
             s.add_all((txn, t_split))
-            s.commit()
 
         queries = {
             "period": "custom",
@@ -466,7 +462,7 @@ class TestAccount(WebTestBase):
         result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
         # Redirect to edit after creating
         self.assertIn("Edit transaction", result)
-        with p.get_session() as s:
+        with p.begin_session() as s:
             acct_id = Account.uri_to_id(acct_uri)
             txn = (
                 s.query(Transaction)

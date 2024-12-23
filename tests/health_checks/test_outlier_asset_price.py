@@ -36,7 +36,7 @@ class TestOutlierAssetPrice(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -52,7 +52,7 @@ class TestOutlierAssetPrice(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             a = Asset(
@@ -61,7 +61,7 @@ class TestOutlierAssetPrice(TestBase):
                 interpolate=False,
             )
             s.add(a)
-            s.commit()
+            s.flush()
             a_id = a.id_
 
             # Transactions with zero quantity are exempt
@@ -79,7 +79,7 @@ class TestOutlierAssetPrice(TestBase):
                 asset_quantity_unadjusted=0,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
 
             txn = Transaction(
                 account_id=acct_id,
@@ -95,13 +95,13 @@ class TestOutlierAssetPrice(TestBase):
                 asset_quantity_unadjusted=1,
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_uri = t_split.uri
 
         c = OutlierAssetPrice(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -119,7 +119,7 @@ class TestOutlierAssetPrice(TestBase):
         self.assertEqual(c.issues, target)
 
         # Add a valuation but after the transaction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Bought asset for 10/share but valuation is at 5/share
             v = AssetValuation(
                 asset_id=a_id,
@@ -127,12 +127,11 @@ class TestOutlierAssetPrice(TestBase):
                 value=20,
             )
             s.add(v)
-            s.commit()
 
         c = OutlierAssetPrice(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -149,7 +148,7 @@ class TestOutlierAssetPrice(TestBase):
         }
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Add the 2:1 split that was missing
             a_split = AssetSplit(
                 asset_id=a_id,
@@ -157,16 +156,15 @@ class TestOutlierAssetPrice(TestBase):
                 multiplier=Decimal("0.5"),
             )
             s.add(a_split)
-            s.commit()
+            s.flush()
 
             a = s.query(Asset).where(Asset.id_ == a_id).one()
             a.update_splits()
-            s.commit()
 
         c = OutlierAssetPrice(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 

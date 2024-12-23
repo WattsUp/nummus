@@ -29,7 +29,7 @@ class TestCategoryDirection(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -45,7 +45,7 @@ class TestCategoryDirection(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             txn = Transaction(
@@ -61,14 +61,14 @@ class TestCategoryDirection(TestBase):
                 category_id=categories["Other Income"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_id = t_split.id_
             t_uri = t_split.uri
 
         c = CategoryDirection(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -84,19 +84,18 @@ class TestCategoryDirection(TestBase):
         self.assertEqual(c.issues, target)
 
         # Check other direction
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(10),
                     "category_id": categories["General Merchandise"],
                 },
             )
-            s.commit()
 
         c = CategoryDirection(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -112,20 +111,19 @@ class TestCategoryDirection(TestBase):
         self.assertEqual(c.issues, target)
 
         # Fix issues
-        with p.get_session() as s:
+        with p.begin_session() as s:
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(-10),
                     "category_id": categories["General Merchandise"],
                 },
             )
-            s.commit()
 
         c = CategoryDirection(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

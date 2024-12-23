@@ -37,7 +37,7 @@ def ctx_page() -> dict[str, object]:
     start_ord = start.toordinal()
     n = today_ord - start_ord + 1
 
-    with p.get_session() as s:
+    with p.begin_session() as s:
         accounts: dict[int, str] = dict(
             s.query(Account)  # type: ignore[attr-defined]
             .with_entities(Account.id_, Account.name)

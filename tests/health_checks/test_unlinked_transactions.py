@@ -28,7 +28,7 @@ class TestUnlinkedTransactions(TestBase):
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)
 
@@ -44,7 +44,7 @@ class TestUnlinkedTransactions(TestBase):
                 budgeted=True,
             )
             s.add(acct)
-            s.commit()
+            s.flush()
             acct_id = acct.id_
 
             txn = Transaction(
@@ -61,14 +61,14 @@ class TestUnlinkedTransactions(TestBase):
                 category_id=categories["Transfers"],
             )
             s.add_all((txn, t_split))
-            s.commit()
+            s.flush()
             t_id = t_split.id_
             t_uri = t_split.uri
 
         c = UnlinkedTransactions(p)
         c.test()
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 1)
 
@@ -83,18 +83,17 @@ class TestUnlinkedTransactions(TestBase):
         self.assertEqual(c.issues, target)
 
         # Solve all issues
-        with p.get_session() as s:
+        with p.begin_session() as s:
             # Should link the parent and the child but okay for this test
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {"linked": True},
             )
-            s.commit()
 
         c = UnlinkedTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
 
-        with p.get_session() as s:
+        with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
             self.assertEqual(n, 0)

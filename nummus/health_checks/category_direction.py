@@ -30,7 +30,7 @@ class CategoryDirection(Base):
 
     @override
     def test(self) -> None:
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             accounts = Account.map_name(s)
             if len(accounts) == 0:
                 self._commit_issues()

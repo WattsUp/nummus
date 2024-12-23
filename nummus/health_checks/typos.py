@@ -51,7 +51,7 @@ class Typos(Base):
     def test(self) -> None:
         spell = spellchecker.SpellChecker()
 
-        with self._p.get_session() as s:
+        with self._p.begin_session() as s:
             accounts = Account.map_name(s)
             assets = Asset.map_name(s)
             issues: dict[str, tuple[str, str, str]] = {}
