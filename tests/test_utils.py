@@ -145,6 +145,29 @@ class TestUtils(TestBase):
         finally:
             mock.builtins.input = original_input  # type: ignore[attr-defined]
 
+    def test_evaluate_real_statement(self) -> None:
+        result = utils.evaluate_real_statement(None)
+        self.assertIsNone(result)
+
+        s = "(+21.3e-5*-.1234e5/81.7)*100"
+        result = utils.evaluate_real_statement(s)
+        target = Decimal("21.3e-5") * Decimal("-.1234e5") / Decimal("81.7") * 100
+        self.assertEqual(result, round(target, 2))
+
+        # Incomplete
+        s = "(+21.3e-5*-.1234e5/81.7)*"
+        result = utils.evaluate_real_statement(s)
+        self.assertIsNone(result)
+
+        # Unsupported operator
+        s = "2>3"
+        result = utils.evaluate_real_statement(s)
+        self.assertIsNone(result)
+
+        s = "__import__('os').system('rm -rf /')"
+        result = utils.evaluate_real_statement(s)
+        self.assertIsNone(result)
+
     def test_parse_real(self) -> None:
         result = utils.parse_real(None)
         self.assertIsNone(result)

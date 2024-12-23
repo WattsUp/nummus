@@ -283,7 +283,7 @@ class TestBudgeting(WebTestBase):
 
         endpoint = "budgeting.assign"
         url = endpoint, {"uri": t_cat_uri, "month": month_str}
-        form = {"amount": "10"}
+        form = {"amount": "5*2"}
         result, _ = self.web_put(url, data=form)
         with p.begin_session() as s:
             a = s.query(BudgetAssignment).first()

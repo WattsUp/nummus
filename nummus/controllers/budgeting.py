@@ -416,7 +416,7 @@ def assign(uri: str) -> str:
     month_ord = month.toordinal()
 
     form = flask.request.form
-    amount = utils.parse_real(form.get("amount")) or Decimal(0)
+    amount = utils.evaluate_real_statement(form.get("amount")) or Decimal(0)
 
     with p.begin_session() as s:
         cat = web_utils.find(s, TransactionCategory, uri)
@@ -599,7 +599,7 @@ def move(uri: str) -> str | flask.Response:
             else:
                 _, _, available, _ = categories[t_cat.id_]
             dest = flask.request.form["destination"]
-            to_move = utils.parse_real(flask.request.form.get("amount"))
+            to_move = utils.evaluate_real_statement(flask.request.form.get("amount"))
             if to_move is None:
                 return common.error("Amount to move must not be blank")
 
@@ -955,7 +955,7 @@ def target(uri: str) -> str | flask.Response:
         due = args.get("due") or None
         if "change" in args:
             due = "0" if tar.period == TargetPeriod.WEEK else today.isoformat()
-        amount = utils.parse_real(args.get("amount"))
+        amount = utils.evaluate_real_statement(args.get("amount"))
         if amount is not None:
             tar.amount = amount
         tar_type = args.get("type", type=TargetType)
