@@ -75,7 +75,7 @@ class BuildAssets(build_py.build_py):
 
     def __init__(self, dist: setuptools.Distribution) -> None:
         """Initialize BuildAssets."""
-        if pytailwindcss is None or jsmin is None:
+        if pytailwindcss is None or jsmin is None:  # pragma: no cover
             msg = "Filters not installed for BuildAssets"
             raise ImportError(msg)
         super().__init__(dist)
