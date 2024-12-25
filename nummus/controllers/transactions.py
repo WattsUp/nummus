@@ -164,7 +164,7 @@ def ctx_options(
             continue
         name = id_mapping[id_] if id_mapping else id_
         label = label_mapping[id_] if label_mapping else name
-        name_clean = web_utils.strip_emojis(name).lower()
+        name_clean = utils.strip_emojis(name).lower()
         item: _OptionContex = {
             "name": name,
             "label": label,

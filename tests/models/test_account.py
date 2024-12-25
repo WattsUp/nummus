@@ -134,7 +134,7 @@ class TestAccount(TestBase):
             )
             assets.append(new_asset)
         t_cat = TransactionCategory(
-            name="Securities Traded",
+            emoji_name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,

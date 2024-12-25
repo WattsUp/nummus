@@ -13,6 +13,7 @@ import sys
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import emoji as emoji_mod
 from colorama import Fore
 from rapidfuzz import process
 from scipy import optimize
@@ -904,3 +905,16 @@ def clamp(
     if value < c_min:
         return c_min
     return value
+
+
+def strip_emojis(text: str) -> str:
+    """Remove all emojis from string.
+
+    Args:
+        text: String to clean
+
+    Returns:
+        String without any emojis
+    """
+    tokens = list(emoji_mod.analyze(text, non_emoji=True))
+    return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()

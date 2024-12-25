@@ -1178,3 +1178,11 @@ class TestUtils(TestBase):
         result = utils.clamp(Decimal(-150), c_min=Decimal(-100))
         target = Decimal(-100)
         self.assertEqual(result, target)
+
+    def test_strip_emojis(self) -> None:
+        text = self.random_string()
+        result = utils.strip_emojis(text)
+        self.assertEqual(result, text)
+
+        result = utils.strip_emojis(text + "😀")
+        self.assertEqual(result, text)

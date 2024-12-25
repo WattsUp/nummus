@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from nummus import controllers
 from nummus import exceptions as exc
-from nummus import portfolio, utils, version, web_utils
+from nummus import portfolio, utils, version
 from nummus.controllers import auth
 from nummus.models import Config, ConfigKey
 
@@ -228,7 +228,7 @@ class Server:
         self._app.jinja_env.filters["pnl_color"] = lambda x: (
             "black" if x is None or x == 0 else ("green-600" if x > 0 else "red-600")
         )
-        self._app.jinja_env.filters["no_emojis"] = web_utils.strip_emojis
+        self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
 
         if not p.ssl_cert_path.exists():
             print(

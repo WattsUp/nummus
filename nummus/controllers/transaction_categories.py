@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
-import emoji as emoji_mod
 import flask
 
 from nummus import exceptions as exc
-from nummus import portfolio, web_utils
+from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
 from nummus.models import (
     TransactionCategory,
@@ -19,24 +18,6 @@ from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
-
-
-def _clean_emoji(text: str) -> tuple[str, str | None]:
-    """Clean a string to a single emoji.
-
-    Args:
-        text: Text to Clean
-
-    Returns:
-        (ASCII text, First emoji or None)
-    """
-    # Grab only the first emoji
-    tokens = list(emoji_mod.analyze(text, non_emoji=True))
-    text_e = "".join(
-        t.value.emoji for t in tokens if isinstance(t.value, emoji_mod.EmojiMatch)
-    )
-    text_t = "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
-    return text_t, text_e
 
 
 def overlay() -> str:
@@ -53,7 +34,7 @@ def overlay() -> str:
 
         uri: str | None
         name: str
-        emoji: str | None
+        emoji_name: str | None
         locked: bool
 
     with p.begin_session() as s:
@@ -61,7 +42,6 @@ def overlay() -> str:
         expense: list[CategoryContext] = []
         transfer: list[CategoryContext] = []
 
-        any_emojis = False
         query = s.query(TransactionCategory).where(
             TransactionCategory.group != TransactionCategoryGroup.OTHER,
         )
@@ -69,10 +49,9 @@ def overlay() -> str:
             cat_d: CategoryContext = {
                 "uri": cat.uri,
                 "name": cat.name,
-                "emoji": cat.emoji,
+                "emoji_name": cat.emoji_name,
                 "locked": cat.locked,
             }
-            any_emojis = any_emojis or cat.emoji
             if cat.group == TransactionCategoryGroup.INCOME:
                 income.append(cat_d)
             elif cat.group == TransactionCategoryGroup.EXPENSE:
@@ -102,7 +81,6 @@ def overlay() -> str:
 
     return flask.render_template(
         "transaction_categories/table.jinja",
-        any_emojis=any_emojis,
         categories=ctx,
         uncategorized=uncategorized_uri,
     )
@@ -139,15 +117,12 @@ def new() -> str | flask.Response:
     is_profit_loss = "is-pnl" in form
     essential = "essential" in form
 
-    name, emoji = _clean_emoji(name)
-
     try:
         with flask.current_app.app_context():
             p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
         with p.begin_session() as s:
             cat = TransactionCategory(
-                name=name,
-                emoji=emoji,
+                emoji_name=name,
                 group=group,
                 locked=False,
                 is_profit_loss=is_profit_loss,
@@ -179,8 +154,7 @@ def category(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             ctx: dict[str, object] = {
                 "uri": uri,
-                "name": cat.name,
-                "emoji": cat.emoji,
+                "name": cat.emoji_name,
                 "group": cat.group,
                 "group_type": sorted(
                     (
@@ -225,20 +199,22 @@ def category(uri: str) -> str | flask.Response:
         form = flask.request.form
         name = form["name"]
         group_s = form.get("group")
-        group = TransactionCategoryGroup(group_s) if group_s else None
+        group = (
+            TransactionCategoryGroup(group_s)
+            if group_s
+            else TransactionCategoryGroup.TRANSFER
+        )
         is_profit_loss = "is-pnl" in form
         essential = "essential" in form
 
-        name, emoji = _clean_emoji(name)
+        name_clean = utils.strip_emojis(name).strip()
+        if cat.locked and name_clean != cat.name:
+            return common.error("Can only add/remove emojis on locked category")
 
         try:
             with s.begin_nested():
-                cat.emoji = emoji
+                cat.emoji_name = name
                 if not cat.locked:
-                    # Locked categorys can only change emoji
-                    cat.name = name
-                    if group is None:
-                        return common.error("Transaction group must not be None")
                     cat.group = group
                     cat.is_profit_loss = is_profit_loss
                 cat.essential = essential

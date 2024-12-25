@@ -352,7 +352,7 @@ class TestAsset(TestBase):
         s.commit()
 
         t_cat = TransactionCategory(
-            name="Securities Traded",
+            emoji_name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
@@ -552,7 +552,7 @@ class TestAsset(TestBase):
             budgeted=False,
         )
         t_cat = TransactionCategory(
-            name="Securities Traded",
+            emoji_name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,
@@ -755,7 +755,7 @@ class TestAsset(TestBase):
             budgeted=False,
         )
         t_cat = TransactionCategory(
-            name="Securities Traded",
+            emoji_name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,

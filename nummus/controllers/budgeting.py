@@ -914,13 +914,11 @@ def target(uri: str) -> str | flask.Response:
             t_cat_id = TransactionCategory.uri_to_id(uri)
             tar = s.query(Target).where(Target.category_id == t_cat_id).one_or_none()
 
-        emoji, name = (
-            s.query(TransactionCategory)
-            .with_entities(TransactionCategory.emoji, TransactionCategory.name)
+        emoji_name = (
+            s.query(TransactionCategory.emoji_name)
             .where(TransactionCategory.id_ == t_cat_id)
-            .one()
+            .one()[0]
         )
-        emoji_name = f"{emoji} {name}" if emoji else name
 
         period_options = {
             TargetPeriod.ONCE: "Once",

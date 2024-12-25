@@ -29,8 +29,7 @@
                             {% with class="w-[24px] h-[24px] block fill-white transition-colors p-1 md:group-hover:fill-black shrink-0" %}
                                 {% include "svg/pencil.svg" %}
                             {% endwith %}
-                            {{ item["emoji"] or "" }}
-                            {{ item["name"] }}
+                            {{ item["emoji_name"] }}
                         </div>
                     {% endfor %}
                 </div>

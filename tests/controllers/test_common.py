@@ -226,12 +226,12 @@ class TestCommon(WebTestBase):
                 self.assertIn(e_str, html)
 
                 name = self.random_string()
-                t_cat.name = name
+                t_cat.emoji_name = name
                 s.add(t_cat)
                 s.flush()
 
                 t_cat = TransactionCategory(
-                    name=name,
+                    emoji_name=name,
                     group=TransactionCategoryGroup.TRANSFER,
                     locked=False,
                     is_profit_loss=False,
