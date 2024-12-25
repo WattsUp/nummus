@@ -67,7 +67,7 @@ class TestTransactionCategory(WebTestBase):
             query = s.query(TransactionCategory)
             query = query.where(TransactionCategory.name == "Other Income")
             t_cat = query.one()
-            t_cat.name = 'Other Income"'
+            t_cat.emoji_name = 'Other Income"'
             t_cat_id = t_cat.id_
             t_cat_uri = t_cat.uri
 
@@ -78,7 +78,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn('value="Other Income&#34;"', result)
 
         name = self.random_string()
-        form = {"name": name + "😀", "group": "transfer", "essential": True}
+        form = {"name": name + " 😀", "group": "transfer", "essential": True}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
@@ -89,17 +89,12 @@ class TestTransactionCategory(WebTestBase):
                 .one()
             )
             self.assertEqual(t_cat.name, name)
-            self.assertEqual(t_cat.emoji, "😀")
+            self.assertEqual(t_cat.emoji_name, name + " 😀")
             self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
             self.assertTrue(t_cat.essential)
 
         e_str = "Transaction category name must be at least 2 characters long"
         form = {"name": "a", "group": "other"}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn(e_str, result)
-
-        e_str = "Transaction group must not be None"
-        form = {"name": "ab", "group": ""}
         result, _ = self.web_put(url, data=form)
         self.assertIn(e_str, result)
 
@@ -170,6 +165,11 @@ class TestTransactionCategory(WebTestBase):
         url = endpoint, {"uri": t_cat_uri}
         form = {"name": "😀", "group": "other"}
         result, _ = self.web_put(url, data=form)
+        self.assertIn("Can only add/remove emojis on locked category", result)
+
+        url = endpoint, {"uri": t_cat_uri}
+        form = {"name": "😀 Dividends Received 😀", "group": "other"}
+        result, _ = self.web_put(url, data=form)
         self.assertIn("Edit transaction categories", result)
 
         # Only can edit emoji for a locked category
@@ -181,6 +181,6 @@ class TestTransactionCategory(WebTestBase):
             )
             if t_cat is None:
                 self.fail("TransactionCategory is missing")
-            self.assertNotEqual(t_cat.name, "abc")
-            self.assertEqual(t_cat.emoji, "😀")
+            self.assertEqual(t_cat.name, "Dividends Received")
+            self.assertEqual(t_cat.emoji_name, "😀 Dividends Received 😀")
             self.assertNotEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)

@@ -2,18 +2,17 @@
 
 from __future__ import annotations
 
-import emoji as emoji_mod
 from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 from typing_extensions import override
 
 from nummus import exceptions as exc
+from nummus import utils
 from nummus.models.base import (
     Base,
     BaseEnum,
     ORMBool,
     ORMIntOpt,
     ORMStr,
-    ORMStrOpt,
     SQLEnum,
     string_column_args,
 )
@@ -35,7 +34,7 @@ class TransactionCategory(Base):
         id: TransactionCategory unique identifier
         uri: TransactionCategory unique identifier
         name: Name of category
-        emoji: Emoji(s) to prepend to name
+        name_with_emojis: Name with optional emojis
         group: Type of category
         locked: True will prevent any changes being made, okay to change emoji
         is_profit_loss: True will include category in profit loss calculations
@@ -48,7 +47,7 @@ class TransactionCategory(Base):
     __table_id__ = 0x00000000
 
     name: ORMStr = orm.mapped_column(unique=True)
-    emoji: ORMStrOpt
+    emoji_name: ORMStr
     group: orm.Mapped[TransactionCategoryGroup] = orm.mapped_column(
         SQLEnum(TransactionCategoryGroup),
     )
@@ -62,7 +61,7 @@ class TransactionCategory(Base):
 
     __table_args__ = (
         *string_column_args("name"),
-        *string_column_args("emoji", short_check=False),
+        *string_column_args("emoji_name"),
         CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
@@ -70,45 +69,20 @@ class TransactionCategory(Base):
         UniqueConstraint("budget_group_id", "budget_position"),
     )
 
-    @orm.validates("name")
-    def validate_name(self, key: str, field: str | None) -> str | None:
-        """Validates name is long enough and doesn't contains emojis.
+    @override
+    def __setattr__(self, name: str, value: object) -> None:
+        if name == "name":
+            msg = "Call TransactionSplit.emoji_name = x. Do not set name directly"
+            raise exc.ParentAttributeError(msg)
+        if name == "emoji_name" and isinstance(value, str):
+            value_no_emojis = utils.strip_emojis(value).strip()
+            super().__setattr__("name", value_no_emojis)
+        super().__setattr__(name, value)
 
-        Args:
-            key: Field being updated
-            field: Updated value
-
-        Returns:
-            field
-
-        Raises:
-            InvalidORMValueError if field is too short or has emojies
-        """
-        cleaned = self.clean_strings(key, field)
-        if cleaned is not None and emoji_mod.emoji_count(cleaned) > 0:
-            msg = "Transaction category name must not have emojis"
-            raise exc.InvalidORMValueError(msg)
-        return cleaned
-
-    @orm.validates("emoji")
-    def validate_emoji(self, key: str, field: str | None) -> str | None:
-        """Validate emoji contains exactly one emoji.
-
-        Args:
-            key: Field being updated
-            field: Updated value
-
-        Returns:
-            field
-
-        Raises:
-            InvalidORMValueError if field is not a single emoji
-        """
-        cleaned = self.clean_strings(key, field, short_check=False)
-        if cleaned is not None and not emoji_mod.purely_emoji(cleaned):
-            msg = "Transaction category emoji must only be emojis"
-            raise exc.InvalidORMValueError(msg)
-        return cleaned
+    @orm.validates("name", "emoji_name")
+    def validate_strings(self, key: str, field: str | None) -> str | None:
+        """Validates string fields satisfy constraints."""
+        return self.clean_strings(key, field)
 
     @orm.validates("essential")
     def validate_essential(self, _: str, field: bool | None) -> bool | None:
@@ -130,11 +104,6 @@ class TransactionCategory(Base):
             msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)
         return field
-
-    @property
-    def emoji_name(self) -> str:
-        """Name of category with emoji."""
-        return f"{self.emoji} {self.name}" if self.emoji else self.name
 
     @staticmethod
     def add_default(s: orm.Session) -> dict[str, TransactionCategory]:
@@ -229,7 +198,7 @@ class TransactionCategory(Base):
                 essential,
             ) in categories.items():
                 cat = TransactionCategory(
-                    name=name,
+                    emoji_name=name,
                     group=group,
                     locked=locked,
                     is_profit_loss=is_profit_loss,
@@ -295,14 +264,10 @@ class TransactionCategory(Base):
             s.query(TransactionCategory)
             .with_entities(
                 TransactionCategory.id_,
-                TransactionCategory.name,
-                TransactionCategory.emoji,
+                TransactionCategory.emoji_name,
             )
             .order_by(TransactionCategory.name)
         )
         if no_asset_linked:
             query = query.where(TransactionCategory.asset_linked.is_(False))
-        return {
-            t_cat_id: (f"{emoji} {name}" if emoji else name)
-            for t_cat_id, name, emoji in query.all()
-        }
+        return dict(query.all())  # type: ignore[attr-defined]

@@ -98,12 +98,12 @@ def ctx_page() -> dict[str, object]:
             .with_entities(
                 TransactionCategory.id_,
                 TransactionCategory.name,
-                TransactionCategory.emoji,
+                TransactionCategory.emoji_name,
             )
             .where(TransactionCategory.essential)
         )
-        for t_cat_id, name, emoji in query.all():
-            categories[t_cat_id] = (name, f"{emoji} {name}" if emoji else name)
+        for t_cat_id, name, emoji_name in query.all():
+            categories[t_cat_id] = name, emoji_name
             categories_total[t_cat_id] = Decimal(0)
 
         query = (

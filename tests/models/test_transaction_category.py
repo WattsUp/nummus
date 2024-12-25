@@ -16,9 +16,9 @@ class TestTransactionCategory(TestBase):
         s.commit()
         g_id = g.id_
 
+        name = self.random_string()
         d = {
-            "name": self.random_string(),
-            "emoji": "😀",
+            "emoji_name": f"😀{name}😀",
             "group": TransactionCategoryGroup.INCOME,
             "locked": False,
             "is_profit_loss": False,
@@ -30,51 +30,34 @@ class TestTransactionCategory(TestBase):
         s.add(t_cat)
         s.commit()
 
-        self.assertEqual(t_cat.name, d["name"])
+        self.assertEqual(t_cat.name, name)
+        self.assertEqual(t_cat.emoji_name, d["emoji_name"])
         self.assertEqual(t_cat.group, d["group"])
         self.assertEqual(t_cat.locked, d["locked"])
         self.assertEqual(t_cat.is_profit_loss, d["is_profit_loss"])
         self.assertEqual(t_cat.asset_linked, d["asset_linked"])
         self.assertEqual(t_cat.essential, d["essential"])
 
-        # Short strings are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "name", "b")
-
-        # No strings are bad
-        t_cat.name = ""
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
-
-        # Non-emojis are bad
+        # Setting name directly is bad
         self.assertRaises(
-            exc.InvalidORMValueError,
-            setattr,
-            t_cat,
-            "emoji",
-            self.random_string(),
-        )
-
-        # Emojis and text not allowed
-        self.assertRaises(
-            exc.InvalidORMValueError,
+            exc.ParentAttributeError,
             setattr,
             t_cat,
             "name",
-            self.random_string() + "😀",
+            self.random_string(),
         )
 
-        # Emojis and text not allowed
+        # Short strings are bad
+        self.assertRaises(exc.InvalidORMValueError, setattr, t_cat, "emoji_name", "b")
+
+        # No strings are bad
         self.assertRaises(
             exc.InvalidORMValueError,
             setattr,
             t_cat,
-            "emoji",
-            self.random_string() + "😀",
+            "emoji_name",
+            "😀",
         )
-
-        # No emoji okay
-        t_cat.emoji = None
-        s.commit()
 
         # Just budget_group bad
         t_cat.budget_group_id = g_id
@@ -166,11 +149,11 @@ class TestTransactionCategory(TestBase):
             .one()[0]
         )
         s.query(TransactionCategory).where(TransactionCategory.id_ == t_cat_id).update(
-            {"emoji": "🤷"},
+            {"emoji_name": "🤷 Uncategorized 🤷"},
         )
 
         target = TransactionCategory.map_name(s)
-        target[t_cat_id] = "🤷 Uncategorized"
+        target[t_cat_id] = "🤷 Uncategorized 🤷"
         result = TransactionCategory.map_name_emoji(s)
         self.assertEqual(result, target)
 

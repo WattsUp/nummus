@@ -134,11 +134,3 @@ class TestWebUtils(TestBase):
         req = flask.Request({"CONTENT_TYPE": "image/png", "CONTENT_LENGTH": "1000000"})
         suffix = web_utils.validate_image_upload(req)
         self.assertEqual(suffix, ".png")
-
-    def test_strip_emojis(self) -> None:
-        text = self.random_string()
-        result = web_utils.strip_emojis(text)
-        self.assertEqual(result, text)
-
-        result = web_utils.strip_emojis(text + "😀")
-        self.assertEqual(result, text)

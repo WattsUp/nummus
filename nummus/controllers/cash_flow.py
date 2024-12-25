@@ -77,22 +77,22 @@ def ctx_chart() -> dict[str, object]:
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.name,
-            TransactionCategory.emoji,
+            TransactionCategory.emoji_name,
             TransactionCategory.group,
         )
         categories_income: dict[int, tuple[str, str]] = {}
         categories_expense: dict[int, tuple[str, str]] = {}
-        for cat_id, name, emoji, group in query.all():
+        for cat_id, name, emoji_name, group in query.all():
             if group == TransactionCategoryGroup.INCOME:
-                categories_income[cat_id] = name, emoji
+                categories_income[cat_id] = name, emoji_name
             elif group == TransactionCategoryGroup.EXPENSE:
-                categories_expense[cat_id] = name, emoji
+                categories_expense[cat_id] = name, emoji_name
 
         class CategoryContext(TypedDict):
             """Type definition for category context."""
 
             name: str
-            emoji: str | None
+            emoji_name: str
             amount: Decimal
 
         query = (
@@ -117,7 +117,7 @@ def ctx_chart() -> dict[str, object]:
                 income_categorized.append(
                     {
                         "name": categories_income[cat_id][0],
-                        "emoji": categories_income[cat_id][1],
+                        "emoji_name": categories_income[cat_id][1],
                         "amount": amount,
                     },
                 )
@@ -126,7 +126,7 @@ def ctx_chart() -> dict[str, object]:
                 expense_categorized.append(
                     {
                         "name": categories_expense[cat_id][0],
-                        "emoji": categories_expense[cat_id][1],
+                        "emoji_name": categories_expense[cat_id][1],
                         "amount": amount,
                     },
                 )

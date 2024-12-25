@@ -16,18 +16,10 @@
         <div class="flex flex-wrap gap-1 min-h-7 items-center">
             <div class="w-44">Category Name</div>
             <div class="grow">
-                {% if category["locked"] %}
-                    <input name="name"
-                           value="{{ category["emoji"] or "" }}"
-                           class="w-16"
-                           autocomplete="off">
-                    {{ category["name"] or "" }}
-                {% else %}
-                    <input name="name"
-                           value="{{ category["emoji"] + " " if category["emoji"] }}{{ (category["name"] or "") | e }}"
-                           class="w-full"
-                           autocomplete="off">
-                {% endif %}
+                <input name="name"
+                       value="{{ category["name"] | e }}"
+                       class="w-full"
+                       autocomplete="off">
             </div>
         </div>
         <div class="flex gap-1 min-h-7 items-center">

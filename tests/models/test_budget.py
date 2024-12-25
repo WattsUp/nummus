@@ -65,7 +65,7 @@ class TestBudgetAssignment(TestBase):
         models.metadata_create_all(s)
 
         t_cat = TransactionCategory(
-            name="Securities Traded",
+            emoji_name="Securities Traded",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,

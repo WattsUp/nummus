@@ -83,7 +83,7 @@ class TestUtils(TestBase):
         s.commit()
 
         t_cat = TransactionCategory(
-            name="Uncategorized",
+            emoji_name="Uncategorized",
             group=TransactionCategoryGroup.OTHER,
             locked=False,
             is_profit_loss=False,

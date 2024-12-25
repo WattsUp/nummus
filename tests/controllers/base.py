@@ -146,7 +146,7 @@ class WebTestBase(TestBase):
 
             s.query(TransactionCategory).where(
                 TransactionCategory.name == cat_0,
-            ).update({"emoji": "😀"})
+            ).update({"emoji_name": "😀 " + cat_0})
 
             txn = Transaction(
                 account_id=acct.id_,
