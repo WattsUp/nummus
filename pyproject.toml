@@ -22,8 +22,6 @@ dependencies = [
   "flask>=3",
   "flask-assets",
   "flask-login",
-  "pytailwindcss",
-  "jsmin",
   "typing-extensions",
   "pdfplumber",
   "yfinance",
@@ -70,6 +68,8 @@ test = [
   "time-machine",
   "tomli",
   "numpy-financial",
+  "pytailwindcss",
+  "jsmin",
 ]
 dev = [
   "nummus[test]",     # Development needs tests too
