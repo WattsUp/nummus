@@ -13,6 +13,7 @@ from unittest import mock
 import autodict
 import flask
 import flask.testing
+import sqlalchemy
 
 from nummus import portfolio, web
 from nummus.models import (
@@ -20,10 +21,6 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
-    AssetValuation,
-    BudgetAssignment,
-    BudgetGroup,
-    Target,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -221,21 +218,11 @@ class WebTestBase(TestBase):
         """Clear all content from portfolio."""
         # Clean portfolio
         # In order of deletion, so children models first
-        models = [
-            Target,
-            AssetValuation,
-            BudgetAssignment,
-            TransactionSplit,
-            Transaction,
-            TransactionCategory,
-            Asset,
-            Account,
-            BudgetGroup,
-        ]
         with self._portfolio.begin_session() as s:
-            for model in models:
-                for instance in s.query(model).all():
-                    s.delete(instance)
+            metadata = sqlalchemy.MetaData()
+            metadata.reflect(bind=s.get_bind())
+            for table in reversed(metadata.sorted_tables):
+                s.query(table).delete()
 
     @classmethod
     def setUpClass(cls) -> None:
