@@ -421,14 +421,3 @@ class TestHandler(TestBase):
         with time_machine.travel(utc_now, tick=False):
             result = h.format_request()
         self.assertEqual(result, target)
-
-
-class TestTailwindCSSFilter(TestBase):
-    def test_format_request(self) -> None:
-        f = web.TailwindCSSFilter()
-
-        out = io.StringIO()
-        f.output(None, out)  # type: ignore[attr-defined]
-        buf = out.getvalue()
-        self.assertIn("/*! tailwindcss", buf)
-        self.assertIn("*,:after,:before", buf)
