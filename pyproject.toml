@@ -1,5 +1,13 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools-scm>=8", "wheel"]
+requires = [
+  "setuptools>=64",
+  "setuptools-scm>=8",
+  "wheel",
+  "flask",
+  "flask-assets",
+  "pytailwindcss",
+  "jsmin",
+]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -250,6 +258,18 @@ runtime-evaluated-base-classes = [
 
 [tool.ruff.lint.isort]
 required-imports = ["from __future__ import annotations"]
+
+[tool.setuptools]
+packages = ["nummus"]
+
+[tool.setuptools.cmdclass]
+build_py = "nummus.web_assets.BuildAssets"
+
+[tool.setuptools.package-data]
+nummus = ["static/dist/*", "templates/*"]
+
+[tool.setuptools.exclude-package-data]
+nummus = ["static/src/*", "static/plugins/*", "static/tailwind.config.js"]
 
 [tool.setuptools_scm]
 version_file = "nummus/version.py"

@@ -5,15 +5,11 @@ from __future__ import annotations
 import datetime
 import sys
 import types
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
-import flask_assets
 import flask_login
 import gevent.pywsgi
-import pytailwindcss
-import webassets.filter
 from colorama import Back, Fore
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -21,12 +17,12 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from nummus import controllers
 from nummus import exceptions as exc
-from nummus import portfolio, utils, version
+from nummus import portfolio, utils, version, web_assets
 from nummus.controllers import auth
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
-    import io
+    from pathlib import Path
 
 
 class Handler(gevent.pywsgi.WSGIHandler):
@@ -114,24 +110,6 @@ class Handler(gevent.pywsgi.WSGIHandler):
         )
 
 
-class TailwindCSSFilter(webassets.filter.Filter):
-    """webassets Filter for running tailwindcss over."""
-
-    def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
-        """Run filter and generate output file.
-
-        Args:
-            out: Output buffer
-        """
-        path_web = Path(__file__).parent.resolve()
-        path_config = path_web.joinpath("static", "tailwind.config.js")
-        path_in = path_web.joinpath("static", "src", "main.css")
-
-        args = ["-c", str(path_config), "-i", str(path_in), "--minify"]
-        built_css = pytailwindcss.run(args, auto_install=True)
-        out.write(built_css)
-
-
 class Server:
     """HTTP server that serves a nummus Portfolio."""
 
@@ -198,24 +176,7 @@ class Server:
             self._app.before_request(auth.default_login_required)
 
         # Setup environment and static file bundles
-        env_assets = flask_assets.Environment(self._app)
-
-        bundle_css = flask_assets.Bundle(
-            "src/main.css",
-            output="dist/main.css",
-            filters=(TailwindCSSFilter,),
-        )
-        env_assets.register("css", bundle_css)
-        bundle_css.build()
-
-        bundle_js = flask_assets.Bundle(
-            "src/*.js",
-            "src/**/*.js",
-            output="dist/main.js",
-            filters=None if self._app.debug else "jsmin",
-        )
-        env_assets.register("js", bundle_js)
-        bundle_js.build()
+        web_assets.build_bundles(self._app, debug=self._app.debug)
 
         self._app.jinja_env.filters["money"] = utils.format_financial
         self._app.jinja_env.filters["money0"] = lambda x: utils.format_financial(x, 0)
