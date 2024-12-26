@@ -320,6 +320,9 @@ const netWorth = {
             document.removeEventListener(
                 'nummus-chart-after-settle', netWorth.updateDashboardEvent);
             netWorth.updateDashboardEvent = null;
+            // TODO (WattsUp): This doesn't quite work when multiple
+            // simultaneous requests Maybe check which request triggered this
+            // and which settled
         }
         if (nummusChart.pendingSwap) {
             netWorth.updateDashboardEvent = () => {
