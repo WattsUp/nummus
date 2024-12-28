@@ -26,9 +26,7 @@
         {% endassets %}
     </head>
     <body class="antialiased bg-grey-100 h-screen w-screen relative text-black"
-          hx-swap="outerHTML"
-          hx-on::before-swap="nummusChart.pendingSwap=true"
-          hx-on::after-settle="nummusChart.afterSettle()">
+          hx-swap="outerHTML">
         {% block header %}
             {% include "/shared/header.jinja" %}
         {% endblock header %}

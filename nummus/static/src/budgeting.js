@@ -402,19 +402,6 @@ const budgeting = {
      * @param {Boolean} onTrack True if target is on track
      */
     update: function(assigned, targetAmount, onTrack) {
-        if (budgeting.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', budgeting.updateEvent);
-            budgeting.updateEvent = null;
-        }
-        if (nummusChart.pendingSwap) {
-            budgeting.updateEvent = () => {
-                budgeting.update(assigned, targetAmount, onTrack);
-            };
-            document.addEventListener(
-                'nummus-chart-after-settle', budgeting.updateEvent);
-            return;
-        }
         const remaining = targetAmount - assigned;
         const percent = Math.min(100, assigned / targetAmount * 100);
 
