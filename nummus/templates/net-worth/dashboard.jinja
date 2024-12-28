@@ -1,4 +1,10 @@
-<div class="bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem] md:col-span-2">
+<div id="dashboard-net-worth"
+     class="relative bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem] md:col-span-2"
+     hx-get="{{ url_for('net_worth.dashboard') }}"
+     hx-trigger="update-asset from:body"
+     hx-target="#dashboard-net-worth"
+     hx-indicator="next .spinner">
+    <div>{% include "shared/spinner.jinja" %}</div>
     <a class="w-full flex space-between cursor-pointer group"
        href="{{ url_for('net_worth.page') }}"
        hx-get="{{ url_for('net_worth.page') }}"
@@ -10,7 +16,7 @@
         </h1>
         <h1 class="text-lg">{{ chart["current"] | money }}</h1>
     </a>
-    <div class="w-full grow">
+    <div class="w-full grow dashboard relative min-h-0">
         <canvas id="net-worth-chart-canvas"></canvas>
     </div>
     <div id="net-worth-chart-data">

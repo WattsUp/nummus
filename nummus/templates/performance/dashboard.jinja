@@ -1,4 +1,10 @@
-<div class="bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem]">
+<div id="dashboard-performance"
+     class="relative bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem]"
+     hx-get="{{ url_for('performance.dashboard') }}"
+     hx-trigger="update-asset from:body"
+     hx-target="#dashboard-performance"
+     hx-indicator="next .spinner">
+    <div>{% include "shared/spinner.jinja" %}</div>
     <a class="w-full flex space-between cursor-pointer group"
        href="{{ url_for('performance.page') }}"
        hx-get="{{ url_for('performance.page') }}"

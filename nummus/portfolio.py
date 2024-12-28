@@ -1081,9 +1081,7 @@ class Portfolio:
         """Get path to SSL certificate key."""
         return self._path_ssl.joinpath("key.pem")
 
-    def update_assets(
-        self,
-    ) -> list[
+    def update_assets(self, *, no_bars: bool = False) -> list[
         tuple[
             str,
             str,
@@ -1093,6 +1091,9 @@ class Portfolio:
         ]
     ]:
         """Update asset valuations using web sources.
+
+        Args:
+            no_bars: True disables progress bars
 
         Returns:
             Assets that were updated
@@ -1131,7 +1132,7 @@ class Portfolio:
                     if a_id in ids and qty[0] != 0:
                         currently_held_assets.add(a_id)
 
-            bar = tqdm.tqdm(assets, desc="Updating Assets")
+            bar = tqdm.tqdm(assets, desc="Updating Assets", disable=no_bars)
             for asset in bar:
                 name = asset.name
                 ticker = asset.ticker or ""

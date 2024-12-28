@@ -4,7 +4,6 @@
  *
  */
 const nummusChart = {
-    pendingSwap: false,
     /**
      * Create a new chart
      *
@@ -283,13 +282,5 @@ const nummusChart = {
         chart.config.options.plugins.doughnutText.text =
             formatterF0.format(total);
         chart.update();
-    },
-    /**
-     * After DOM settle, trigger any chart updates
-     */
-    afterSettle: function() {
-        this.pendingSwap = false;
-        const event = new CustomEvent('nummus-chart-after-settle');
-        document.dispatchEvent(event);
     },
 };

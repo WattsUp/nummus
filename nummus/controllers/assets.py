@@ -547,6 +547,50 @@ def ctx_valuation(
     }
 
 
+def update() -> str | flask.Response:
+    """GET & POST /h/assets/update.
+
+    Returns:
+        HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        n = s.query(Asset).where(Asset.ticker.is_not(None)).count()
+    if flask.request.method == "GET":
+        return flask.render_template(
+            "assets/update.jinja",
+            n_to_update=n,
+        )
+
+    updated = p.update_assets(no_bars=True)
+
+    if len(updated) == 0:
+        return flask.render_template(
+            "assets/update.jinja",
+            n_to_update=n,
+            error=common.error("No assets were updated"),
+        )
+
+    updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
+    failed_tickers: dict[str, str] = {}
+    successful_tickers: list[str] = []
+    for _, ticker, _, _, error in updated:
+        if error is not None:
+            failed_tickers[ticker] = error
+        else:
+            successful_tickers.append(ticker)
+    html = flask.render_template(
+        "assets/update.jinja",
+        failed_tickers=failed_tickers,
+        successful_tickers=successful_tickers,
+    )
+    response = flask.make_response(html)
+    response.headers["HX-Trigger"] = "update-asset"
+    return response
+
+
 ROUTES: Routes = {
     "/assets/<path:uri>": (page, ["GET"]),
     "/assets/transactions": (page_transactions, ["GET"]),
@@ -556,4 +600,5 @@ ROUTES: Routes = {
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
     "/h/assets/v/<path:uri>": (valuation, ["GET", "PUT", "DELETE"]),
+    "/h/assets/update": (update, ["GET", "POST"]),
 }

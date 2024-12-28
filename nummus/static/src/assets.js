@@ -7,19 +7,6 @@ const assets = {
      * @param {Object} raw Raw data from assets controller
      */
     update: function(raw) {
-        if (assets.updateEvent) {
-            document.removeEventListener(
-                'nummus-chart-after-settle', assets.updateEvent);
-            assets.updateEvent = null;
-        }
-        if (nummusChart.pendingSwap) {
-            assets.updateEvent = () => {
-                assets.update(raw);
-            };
-            document.addEventListener(
-                'nummus-chart-after-settle', assets.updateEvent);
-            return;
-        }
         const labels = raw.labels;
         const dateMode = raw.date_mode;
         const values = raw.values.map(v => Number(v));

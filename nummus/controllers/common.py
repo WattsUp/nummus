@@ -227,6 +227,10 @@ def ctx_base() -> dict[str, object]:
             "transaction_categories.overlay",
             LinkType.OVERLAY,
         ),
+        "Update Asset Valuations": (
+            "assets.update",
+            LinkType.OVERLAY,
+        ),
     }
     return {
         "pages": {k: v for k, v in pages.items() if v},
