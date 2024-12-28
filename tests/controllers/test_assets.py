@@ -511,3 +511,79 @@ class TestAsset(WebTestBase):
         with p.begin_session() as s:
             n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
             self.assertEqual(n, 0)
+
+    def test_update(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+
+        acct_uri = d["acct_uri"]
+        a_uri_0 = d["a_uri_0"]
+        a_uri_1 = d["a_uri_1"]
+        acct_id = Account.uri_to_id(acct_uri)
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+        a_id_1 = Asset.uri_to_id(a_uri_1)
+
+        endpoint = "assets.update"
+        result, _ = self.web_get(endpoint)
+        self.assertIn("Update Assets", result)
+        self.assertIn("There are no assets to update", result)
+
+        result, _ = self.web_post(endpoint)
+        self.assertIn("No assets were updated", result)
+
+        with p.begin_session() as s:
+            s.query(Asset).where(Asset.id_ == a_id_0).update({"ticker": "BANANA"})
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+            t_cat_id = categories["Securities Traded"]
+
+            date = datetime.date(2023, 5, 1)
+            txn = Transaction(
+                account_id=acct_id,
+                date=date,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_id_0,
+                asset_quantity_unadjusted=-1,
+                category_id=t_cat_id,
+            )
+            s.add_all((txn, t_split))
+            txn = Transaction(
+                account_id=acct_id,
+                date=date,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_id_1,
+                asset_quantity_unadjusted=-1,
+                category_id=t_cat_id,
+            )
+            s.add_all((txn, t_split))
+
+        result, _ = self.web_get(endpoint)
+        self.assertIn("There is one asset", result)
+
+        result, _ = self.web_post(endpoint)
+        self.assertIn("The assets with the following tickers were updated", result)
+        self.assertIn("BANANA", result)
+
+        with p.begin_session() as s:
+            s.query(Asset).where(Asset.id_ == a_id_1).update({"ticker": "ORANGE"})
+
+        result, _ = self.web_get(endpoint)
+        self.assertIn("There are 2 assets", result)
+
+        result, _ = self.web_post(endpoint)
+        self.assertIn(
+            "ORANGE failed: ORANGE: No timezone found, symbol may be delisted",
+            result,
+        )

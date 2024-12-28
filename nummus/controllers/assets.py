@@ -564,14 +564,7 @@ def update() -> str | flask.Response:
             n_to_update=n,
         )
 
-    try:
-        updated = p.update_assets()
-    except Exception as e:  # noqa: BLE001
-        return flask.render_template(
-            "assets/update.jinja",
-            n_to_update=n,
-            error=common.error(e),
-        )
+    updated = p.update_assets(no_bars=True)
 
     if len(updated) == 0:
         return flask.render_template(

@@ -21,7 +21,11 @@
         {% elif n_to_update == 0 %}
             <p>There are no assets to update, set ticker on edit asset page.</p>
         {% else %}
-            <p>There are {{ n_to_update }} {{ "asset" if n_to_update == 1 else "assets" }} with ticker to update.</p>
+            {% if n_to_update == 1 %}
+                <p>There is one asset with ticker to update.</p>
+            {% else %}
+                <p>There are {{ n_to_update }} assets with tickers to update.</p>
+            {% endif %}
             <button hx-post="{{ url_for('assets.update') }}"
                     hx-target="#overlay"
                     class="button bg-green text-xl mx-auto"
