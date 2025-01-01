@@ -231,6 +231,7 @@ def ctx_base() -> dict[str, object]:
             "assets.update",
             LinkType.OVERLAY,
         ),
+        "Heath Checks": ("health.page", LinkType.PAGE),
     }
     return {
         "pages": {k: v for k, v in pages.items() if v},

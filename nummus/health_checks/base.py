@@ -39,13 +39,6 @@ class Base(ABC):
         self._no_ignores = no_ignores
         self._p = p
 
-        # Remove any unignored issues
-        with p.begin_session() as s:
-            s.query(HealthCheckIssue).where(
-                HealthCheckIssue.ignore.is_(False),
-                HealthCheckIssue.check == self._NAME,
-            ).delete()
-
     @property
     def name(self) -> str:
         """Health check name."""
@@ -58,7 +51,7 @@ class Base(ABC):
 
     @property
     def issues(self) -> dict[str, str]:
-        """List of issues this check found."""
+        """List of issues this check found, dict{uri: msg}."""
         return self._issues
 
     @property
@@ -99,27 +92,41 @@ class Base(ABC):
     def _commit_issues(self) -> None:
         """Commit issues to Portfolio."""
         with self._p.begin_session() as s:
+            issues: list[tuple[HealthCheckIssue, str]] = []
+
+            raw = dict(self._issues_raw)
+            leftovers: list[HealthCheckIssue] = []
             query = s.query(HealthCheckIssue).where(
                 HealthCheckIssue.check == self._NAME,
-                HealthCheckIssue.ignore.is_(True),
             )
-            ignores = {i.value: i for i in query.yield_per(YIELD_PER)}
+            for i in query.yield_per(YIELD_PER):
+                msg = raw.pop(i.value)
+                if msg is None:
+                    leftovers.append(i)
+                else:
+                    issues.append((i, msg))
 
-            issues: list[tuple[HealthCheckIssue, str]] = []
-            for value, issue in self._issues_raw.items():
-                i = ignores.pop(value, None)
-                if i is None:
-                    # Not ignored
-                    i = HealthCheckIssue(check=self._NAME, value=value, ignore=False)
+            for value, msg in raw.items():
+                if len(leftovers) == 0:
+                    i = HealthCheckIssue(
+                        check=self._NAME,
+                        value=value,
+                        msg=msg,
+                        ignore=False,
+                    )
                     s.add(i)
-                    issues.append((i, issue))
-                elif self._no_ignores:
-                    # No ignores, add the issue to the list
-                    issues.append((i, issue))
+                    issues.append((i, msg))
+                else:
+                    i = leftovers.pop(0)
+                    i.value = value
+                    i.ignore = False
+                    i.msg = msg
 
-            # Any leftover ignores are no longer needed, delete them
-            for i in ignores.values():
+            # Remaining need to be deleted
+            for i in leftovers:
                 s.delete(i)
 
             s.flush()
-            self._issues = {i.uri: issue for i, issue in issues}
+            self._issues = {
+                i.uri: issue for i, issue in issues if self._no_ignores or not i.ignore
+            }

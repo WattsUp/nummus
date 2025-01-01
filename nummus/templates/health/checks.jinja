@@ -1,0 +1,42 @@
+<div id="health-checks" class="w-full relative">
+    {% for check in checks %}
+        <div class="w-full mb-2">
+            <input class="health-check-toggle hidden"
+                   id="toggle-{{ loop.index0 }}"
+                   checked
+                   type="checkbox"
+                   name="closed"
+                   autocomplete="off">
+            {% if check["issues"] %}
+                {% set color = "red" if check["is_severe"] else "yellow" %}
+            {% else %}
+                {% set color = "green" %}
+            {% endif %}
+            <label class="health-check-toggle-label bg-{{ color }}-200"
+                   for="toggle-{{ loop.index0 }}">
+                <span>{{ check["name"] }}</span>
+                <span>
+                    {% if check["issues"] %}{{ check["issues"] | length }} Issues{% endif %}
+                </span>
+            </label>
+            <div class="health-check-fold">
+                <p class="italic">
+                    {{ check["description"] }}
+                    {% if check["is_severe"] %}
+                        Issues found here might indicate inaccurate balances.
+                    {% else %}
+                        Issues found here might indicate inconsistent data.
+                    {% endif %}
+                </p>
+                <div class="max-h-96 overflow-y-auto">
+                    {% if check["issues"] %}
+                        {% for issue in check["issues"] %}<div>{{ issue }}</div>{% endfor %}
+                    {% else %}
+                        No issues found
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    {% include "shared/spinner.jinja" %}
+</div>
