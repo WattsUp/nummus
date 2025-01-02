@@ -103,8 +103,10 @@ class Health(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
+        import datetime
+
         from nummus import health_checks
-        from nummus.models import HealthCheckIssue
+        from nummus.models import Config, ConfigKey, HealthCheckIssue
 
         if self._p is None:  # pragma: no cover
             return 1
@@ -148,6 +150,23 @@ class Health(Base):
                     break
                 line = f"[{uri}] {issue}"
                 print(textwrap.indent(line, "  "))
+
+            # Update LAST_HEALTH_CHECK_TS
+            utc_now = datetime.datetime.now(datetime.timezone.utc)
+            with self._p.begin_session() as s:
+                c = (
+                    s.query(Config)
+                    .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
+                    .one_or_none()
+                )
+                if c is None:
+                    c = Config(
+                        key=ConfigKey.LAST_HEALTH_CHECK_TS,
+                        value=utc_now.isoformat(),
+                    )
+                    s.add(c)
+                else:
+                    c.value = utc_now.isoformat()
 
             if n_issues > limit:
                 print(

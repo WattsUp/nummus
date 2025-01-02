@@ -1,6 +1,16 @@
+{% if oob %}
+    <div id="health-checks-update" hx-swap-oob="true">
+        {% if checks["last_update_ago"] %}
+            Last checks ran {{ checks["last_update_ago"] }} ago
+        {% else %}
+            Health checks never ran
+        {% endif %}
+    </div>
+{% endif %}
 <div id="health-checks" class="w-full relative">
-    {% for check in checks %}
+    {% for check in checks["checks"] %}
         <div class="w-full mb-2">
+            {# TODO(WattsUp): Add open state to cookie #}
             <input class="health-check-toggle hidden"
                    id="toggle-{{ loop.index0 }}"
                    checked
@@ -30,7 +40,17 @@
                 </p>
                 <div class="max-h-96 overflow-y-auto">
                     {% if check["issues"] %}
-                        {% for issue in check["issues"] %}<div>{{ issue }}</div>{% endfor %}
+                        {% for uri, issue in check["issues"].items() %}
+                            <div class="flex items-center">
+                                <div class="cursor-pointer"
+                                     hx-post="{{ url_for('health.ignore', uri=uri) }}">
+                                    {% with class = "w-6 h-6" %}
+                                        {% include "svg/hide.svg" %}
+                                    {% endwith %}
+                                </div>
+                                {{ issue }}
+                            </div>
+                        {% endfor %}
                     {% else %}
                         No issues found
                     {% endif %}

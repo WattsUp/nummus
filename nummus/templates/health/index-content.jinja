@@ -1,10 +1,19 @@
-<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full">
-    <div class="w-full flex justify-between items-center">
-        <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Health Checks</h1>
-        <div class="button bg-blue text-xl md:text-2xl cursor-pointer"
-             hx-target="#health-checks"
-             hx-post="{{ url_for('health.refresh') }}"
-             hx-indicator=".spinner">Refresh</div>
+<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
+         hx-target="#health-checks">
+    <div class="w-full flex justify-between">
+        <h1 class="text-2xl md:text-3xl align-left font-serif text-green-600">Health Checks</h1>
+        <div class="flex flex-col items-end">
+            <div class="button bg-blue text-xl md:text-2xl cursor-pointer"
+                 hx-post="{{ url_for('health.refresh') }}"
+                 hx-indicator=".spinner">Refresh</div>
+            <div id="health-checks-update">
+                {% if checks["last_update_ago"] %}
+                    Last checks ran {{ checks["last_update_ago"] }} ago
+                {% else %}
+                    Health checks never ran
+                {% endif %}
+            </div>
+        </div>
     </div>
     <p>These inspect the portfolio for import issues, checking for anything that looks out of place.</p>
     {% include "health/checks.jinja" %}
