@@ -5,6 +5,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
+from nummus import utils
 from nummus.models import HealthCheckIssue, YIELD_PER
 
 if TYPE_CHECKING:
@@ -14,7 +15,6 @@ if TYPE_CHECKING:
 class Base(ABC):
     """Base health check class."""
 
-    _NAME: str = ""
     _DESC: str = ""
     _SEVERE: bool = False
 
@@ -42,7 +42,7 @@ class Base(ABC):
     @property
     def name(self) -> str:
         """Health check name."""
-        return self._NAME
+        return utils.camel_to_snake(self.__class__.__name__).replace("_", " ").title()
 
     @property
     def description(self) -> str:
@@ -79,14 +79,14 @@ class Base(ABC):
         """
         with p.begin_session() as s:
             query = s.query(HealthCheckIssue.value).where(
-                HealthCheckIssue.check == cls._NAME,
+                HealthCheckIssue.check == cls.__name__,
                 HealthCheckIssue.value.in_(values),
                 HealthCheckIssue.ignore.is_(True),
             )
             duplicates = [row[0] for row in query.yield_per(YIELD_PER)]
             values = [v for v in values if v not in duplicates]
             for v in values:
-                c = HealthCheckIssue(check=cls._NAME, value=v, ignore=True)
+                c = HealthCheckIssue(check=cls.__name__, value=v, ignore=True)
                 s.add(c)
 
     def _commit_issues(self) -> None:
@@ -97,7 +97,7 @@ class Base(ABC):
             raw = dict(self._issues_raw)
             leftovers: list[HealthCheckIssue] = []
             query = s.query(HealthCheckIssue).where(
-                HealthCheckIssue.check == self._NAME,
+                HealthCheckIssue.check == self.__class__.__name__,
             )
             for i in query.yield_per(YIELD_PER):
                 msg = raw.pop(i.value)
@@ -109,7 +109,7 @@ class Base(ABC):
             for value, msg in raw.items():
                 if len(leftovers) == 0:
                     i = HealthCheckIssue(
-                        check=self._NAME,
+                        check=self.__class__.__name__,
                         value=value,
                         msg=msg,
                         ignore=False,

@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 class UnlinkedTransactions(Base):
     """Checks for unlinked transactions."""
 
-    _NAME = "Unlinked transactions"
     _DESC = textwrap.dedent(
         """\
         Linked transactions have been imported from bank statements.

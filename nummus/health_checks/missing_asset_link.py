@@ -18,7 +18,6 @@ if TYPE_CHECKING:
 class MissingAssetLink(Base):
     """Checks for transactions that should be linked to an asset that aren't."""
 
-    _NAME = "Missing Asset Link"
     _DESC = "Checks for transactions that should be linked to an asset that aren't"
     _SEVERE = False
 

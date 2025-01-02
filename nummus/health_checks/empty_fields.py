@@ -20,7 +20,6 @@ from nummus.models import (
 class EmptyFields(Base):
     """Checks for empty fields that are better when populated."""
 
-    _NAME = "Empty Fields"
     _DESC = "Checks for empty fields that are better when populated"
     _SEVERE = False
 

@@ -13,9 +13,10 @@
             {# TODO(WattsUp): Add open state to cookie #}
             <input class="health-check-toggle hidden"
                    id="toggle-{{ loop.index0 }}"
-                   checked
+                   {% if check["is_closed"] %}checked{% endif %}
                    type="checkbox"
                    name="closed"
+                   hx-put="{{ url_for('health.check', name=check["name"]) }}"
                    autocomplete="off">
             {% if check["issues"] %}
                 {% set color = "red" if check["is_severe"] else "yellow" %}
@@ -43,7 +44,7 @@
                         {% for uri, issue in check["issues"].items() %}
                             <div class="flex items-center">
                                 <div class="cursor-pointer"
-                                     hx-post="{{ url_for('health.ignore', uri=uri) }}">
+                                     hx-put="{{ url_for('health.ignore', uri=uri) }}">
                                     {% with class = "w-6 h-6" %}
                                         {% include "svg/hide.svg" %}
                                     {% endwith %}

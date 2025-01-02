@@ -20,6 +20,7 @@ class HealthCheckContext(TypedDict):
     """Type definition for health check context."""
 
     name: str
+    is_closed: bool
     description: str
     is_severe: bool
     issues: dict[str, str]
@@ -38,6 +39,7 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     utc_now = datetime.datetime.now(datetime.timezone.utc)
+    checks_open: list[str] = flask.session.get("checks_open", [])
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     with p.begin_session() as s:
@@ -79,11 +81,12 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
             c.test()
             c_issues = c.issues
         else:
-            c_issues = issues[c.name]
+            c_issues = issues[c.__class__.__name__]
 
         checks.append(
             {
                 "name": c.name,
+                "is_closed": c.name not in checks_open,
                 "description": c.description,
                 "is_severe": c.is_severe,
                 "issues": dict(sorted(c_issues.items(), key=lambda item: item[1])),
@@ -125,6 +128,27 @@ def refresh() -> str:
     )
 
 
+def check(name: str) -> str:
+    """POST /h/health/c/<name>.
+
+    Returns:
+        string HTML response
+    """
+    is_open = "closed" not in flask.request.form
+
+    checks_open: list[str] = flask.session.get("checks_open", [])
+    checks_open = [x for x in checks_open if x != name]
+    if is_open:
+        checks_open.append(name)
+    flask.session["checks_open"] = checks_open
+
+    return flask.render_template(
+        "health/checks.jinja",
+        checks=ctx_checks(run=False),
+        oob=True,
+    )
+
+
 def ignore(uri: str) -> str:
     """POST /h/health/i/<uri>/ignore.
 
@@ -152,5 +176,6 @@ def ignore(uri: str) -> str:
 ROUTES: Routes = {
     "/health": (page, ["GET"]),
     "/h/health/refresh": (refresh, ["POST"]),
-    "/h/health/i/<path:uri>/ignore": (ignore, ["POST"]),
+    "/h/health/c/<path:name>": (check, ["PUT"]),
+    "/h/health/i/<path:uri>/ignore": (ignore, ["PUT"]),
 }

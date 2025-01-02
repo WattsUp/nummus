@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 class UnlockedTransactions(Base):
     """Checks for unlocked transactions."""
 
-    _NAME = "Unlocked transactions"
     _DESC = textwrap.dedent(
         """\
         Locked transactions have been manually verified.
