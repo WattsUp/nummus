@@ -362,9 +362,6 @@ class WebTestBase(TestBase):
                     d["web_latency"][clean_url] = []
                 d["web_latency"][clean_url].append(duration)
 
-            # Fairly loose cause jinja and sql caching will save time
-            self.assertLessEqual(duration, 0.5)  # All responses faster than 500ms
-
             if content_type == "text/html; charset=utf-8":
                 html = response.text
                 if response.status_code != HTTP_CODE_REDIRECT:

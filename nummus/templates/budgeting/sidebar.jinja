@@ -41,12 +41,41 @@
 <div id="budgeting-sidebar-target"
      class="bg-grey-100 p-2 mt-2 empty:hidden"
      hx-swap-oob="{{ oob }}"
-     hx-include="#budgeting-month,#budgeting-sidebar"
-     hx-on::after-settle="console.log(event)">
-    {%- if budget_sidebar["uri"] is not none -%}
+     hx-include="#budgeting-month,#budgeting-sidebar">
+    {% if budget_sidebar["uri"] is none %}
+        <div class="font-bold">Targets</div>
+        <div class="flex gap-1 flex-wrap min-h-7 items-center">
+            <div class="w-40 shrink-1">Total to go</div>
+            <div class="grow text-right pr-1">{{ budget_sidebar["to_go"] | money }}</div>
+        </div>
+        <div>New target</div>
+        <select class="w-full" autocomplete="off">
+            {# djlint: off #}
+            <option></option>
+            {# djlint: on #}
+            {% for uri, name in budget_sidebar["no_target"].items() %}
+                <option value="{{ uri }}"
+                        hx-target="#overlay"
+                        hx-swap="innerHTML"
+                        hx-include="unset"
+                        hx-get="{{ url_for('budgeting.target', uri=uri) }}">{{ name }}</option>
+            {% endfor %}
+        </select>
+    {% else %}
         {% if budget_sidebar["target"] %}
             {% set target = budget_sidebar["target"] %}
-            <div class="font-bold">Target</div>
+            <div class="font-bold flex justify-between">
+                <div>Target</div>
+                <div class="cursor-pointer"
+                     hx-get="{{ url_for('budgeting.sidebar') }}"
+                     hx-target="#budgeting-sidebar"
+                     hx-swap="outerHTML"
+                     hx-include="#budgeting-month">
+                    {% with class="w-[24px] h-[24px]" %}
+                        {% include "svg/x.svg" %}
+                    {% endwith %}
+                </div>
+            </div>
             <div class="font-bold border-b">{{ budget_sidebar["name"] }}</div>
             {% set money_suffix = ("/week" if target["period"] == "WEEK") %}
             {% if target["type"] == "BALANCE" %}
@@ -102,12 +131,23 @@
                     }, 20);
             </script>
         {% else %}
-            <div class="font-bold border-b">Target</div>
+            <div class="font-bold border-b flex justify-between">
+                <div>Target</div>
+                <div class="cursor-pointer"
+                     hx-get="{{ url_for('budgeting.sidebar') }}"
+                     hx-target="#budgeting-sidebar"
+                     hx-swap="outerHTML"
+                     hx-include="#budgeting-month">
+                    {% with class="w-[24px] h-[24px]" %}
+                        {% include "svg/x.svg" %}
+                    {% endwith %}
+                </div>
+            </div>
             <div class="font-bold">How much is needed for</div>
             <div class="font-bold">{{ budget_sidebar["name"] }}?</div>
             <div>With a target, nummus can guide you to stay on track over time.</div>
             <button class="button bg-blue text-center w-full"
                     hx-get="{{ url_for('budgeting.target', uri=budget_sidebar["uri"]) }}">Create Target</button>
         {% endif %}
-    {%- endif -%}
+    {% endif %}
 </div>
