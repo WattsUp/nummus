@@ -93,11 +93,13 @@
             </div>
             <button class="button bg-blue text-center w-full"
                     hx-get="{{ url_for('budgeting.target', uri=budget_sidebar["uri"]) }}">Edit Target</button>
-            <script>budgeting.update(
-                        {{ target["total_assigned"] }},
-                        {{ target["total_target"] }},
-                        {{ target["on_track"] | lower }},
-                    )
+            <script>setTimeout(function() {
+                        budgeting.update(
+                            {{ target["total_assigned"] }},
+                            {{ target["total_target"] }},
+                            {{ target["on_track"] | lower }},
+                        );
+                    }, 20);
             </script>
         {% else %}
             <div class="font-bold border-b">Target</div>
