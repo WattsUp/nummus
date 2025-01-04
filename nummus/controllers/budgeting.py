@@ -1056,6 +1056,7 @@ def ctx_sidebar(
     month_str = month.isoformat()[:7]
     if uri is None:
         total_available = Decimal(0)
+        total_to_go = Decimal(0)
         total_leftover = Decimal(0)
         total_assigned = Decimal(0)
         total_activity = Decimal(0)
@@ -1065,6 +1066,11 @@ def ctx_sidebar(
         )
         income_ids = {row[0] for row in query.all()}
 
+        targets: dict[int, Target] = {
+            t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
+        }
+        no_target: set[int] = set()
+
         for t_cat_id, item in categories.items():
             if t_cat_id in income_ids:
                 continue
@@ -1073,6 +1079,34 @@ def ctx_sidebar(
             total_activity += activity
             total_available += available
             total_leftover += leftover
+
+            tar = targets.get(t_cat_id)
+            if tar is None:
+                no_target.add(t_cat_id)
+            else:
+                target_ctx = ctx_target(
+                    tar,
+                    month,
+                    assigned,
+                    available,
+                    leftover,
+                )
+                total_to_go += target_ctx["to_go"]
+
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+            )
+            .where(TransactionCategory.id_.in_(no_target))
+            .order_by(TransactionCategory.name)
+        )
+        no_target_names = {
+            TransactionCategory.id_to_uri(t_cat_id): name
+            for t_cat_id, name in query.all()
+        }
+
         return {
             "uri": None,
             "name": None,
@@ -1082,6 +1116,8 @@ def ctx_sidebar(
             "assigned": total_assigned,
             "future_assigned": future_assigned,
             "activity": total_activity,
+            "to_go": total_to_go,
+            "no_target": no_target_names,
             "target": None,
         }
     t_cat = web_utils.find(s, TransactionCategory, uri)
