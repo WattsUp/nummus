@@ -235,3 +235,10 @@ class TestBaseEnum(TestBase):
 
         for s, e in Derived._lut().items():  # noqa: SLF001
             self.assertEqual(Derived(s.upper()), e)
+
+    def test_comparators(self) -> None:
+        self.assertEqual(Derived.RED, Derived.RED)
+        self.assertEqual(Derived.RED, "RED")
+
+        self.assertNotEqual(Derived.RED, Derived.BLUE)
+        self.assertNotEqual(Derived.RED, "BLUE")

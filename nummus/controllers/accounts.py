@@ -25,7 +25,6 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "this-month"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
@@ -132,7 +131,7 @@ def ctx_chart(acct: Account) -> dict[str, object]:
     """
     args = flask.request.args
 
-    period = args.get("period", DEFAULT_PERIOD)
+    period = args.get("period", transactions.DEFAULT_PERIOD)
     start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None:
         opened_on_ord = acct.opened_on_ord
@@ -207,7 +206,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     """
     args = flask.request.args
 
-    period = args.get("period", DEFAULT_PERIOD)
+    period = args.get("period", transactions.DEFAULT_PERIOD)
     start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
     if start is None:
         opened_on_ord = acct.opened_on_ord
@@ -340,7 +339,7 @@ def page(uri: str) -> str:
 
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
-        txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
+        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
         title = f"Account {acct.name}," + title.removeprefix("Transactions")
         return common.page(
             "accounts/index-content.jinja",
@@ -372,7 +371,7 @@ def txns(uri: str) -> flask.Response:
         acct = web_utils.find(s, Account, uri)
 
         args = flask.request.args
-        period = args.get("period", DEFAULT_PERIOD)
+        period = args.get("period", transactions.DEFAULT_PERIOD)
         start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
         if start is None:
             opened_on_ord = acct.opened_on_ord
@@ -381,7 +380,7 @@ def txns(uri: str) -> flask.Response:
                 if opened_on_ord is None
                 else datetime.date.fromordinal(opened_on_ord)
             )
-        txn_table, title = transactions.ctx_table(acct, DEFAULT_PERIOD)
+        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
         title = f"Account {acct.name}," + title.removeprefix("Transactions")
         html = f"<title>{title}</title>\n" + flask.render_template(
             "transactions/table.jinja",

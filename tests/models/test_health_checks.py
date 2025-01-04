@@ -14,6 +14,7 @@ class TestHealthCheckIssue(TestBase):
         d = {
             "check": self.random_string(),
             "value": self.random_string(),
+            "msg": self.random_string(),
             "ignore": False,
         }
 
@@ -23,7 +24,14 @@ class TestHealthCheckIssue(TestBase):
 
         self.assertEqual(i.check, d["check"])
         self.assertEqual(i.value, d["value"])
+        self.assertEqual(i.msg, d["msg"])
         self.assertEqual(i.ignore, d["ignore"])
+
+        # Duplicate values are bad
+        i_dup = HealthCheckIssue(**d)
+        s.add(i_dup)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
         # Short strings are bad
         self.assertRaises(exc.InvalidORMValueError, setattr, i, "check", "a")

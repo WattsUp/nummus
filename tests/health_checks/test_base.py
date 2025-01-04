@@ -15,11 +15,9 @@ class TestCheckBase(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        name = self.random_string()
         desc = self.random_string()
 
         class MockCheck(Base):
-            _NAME = name
             _DESC = desc
             _SEVERE = True
 
@@ -28,7 +26,7 @@ class TestCheckBase(TestBase):
                 self._issues_raw = {}
 
         c = MockCheck(p)
-        self.assertEqual(c.name, name)
+        self.assertEqual(c.name, "Mock Check")
         self.assertEqual(c.description, desc)
         self.assertFalse(c.any_issues, "Check has an issue")
         self.assertTrue(c.is_severe, "Check is not severe")
@@ -42,11 +40,9 @@ class TestCheckBase(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        name = self.random_string()
         desc = self.random_string()
 
         class MockCheck(Base):
-            _NAME = name
             _DESC = desc
             _SEVERE = True
 
@@ -58,10 +54,25 @@ class TestCheckBase(TestBase):
         uri_1 = self.random_string()
         MockCheck.ignore(p, {uri_0})
         with p.begin_session() as s:
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, name)
-            self.assertEqual(i.value, uri_0)
-            self.assertTrue(i.ignore, "Issue is not ignored")
+            # No issues to ignore
+            n = s.query(HealthCheckIssue).count()
+            self.assertEqual(n, 0)
+
+            i = HealthCheckIssue(
+                check=MockCheck.name,
+                value=uri_0,
+                msg=self.random_string(),
+                ignore=False,
+            )
+            s.add(i)
+
+            i = HealthCheckIssue(
+                check=MockCheck.name,
+                value=uri_1,
+                msg=self.random_string(),
+                ignore=False,
+            )
+            s.add(i)
 
         MockCheck.ignore(p, [uri_0, uri_1])
         with p.begin_session() as s:
@@ -69,7 +80,7 @@ class TestCheckBase(TestBase):
             self.assertEqual(n, 2)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
-            self.assertEqual(i.check, name)
+            self.assertEqual(i.check, MockCheck.name)
             self.assertEqual(i.value, uri_1)
             self.assertTrue(i.ignore, "Issue is not ignored")
 
@@ -79,7 +90,7 @@ class TestCheckBase(TestBase):
             self.assertEqual(n, 2)
 
             c = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
-            self.assertEqual(c.check, name)
+            self.assertEqual(c.check, MockCheck.name)
             self.assertEqual(c.value, uri_1)
             self.assertTrue(c.ignore, "Issue is not ignored")
 
@@ -87,7 +98,6 @@ class TestCheckBase(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        name = self.random_string()
         desc = self.random_string()
 
         d = {
@@ -96,7 +106,6 @@ class TestCheckBase(TestBase):
         }
 
         class MockCheck(Base):
-            _NAME = name
             _DESC = desc
             _SEVERE = True
 

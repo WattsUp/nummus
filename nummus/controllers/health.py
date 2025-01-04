@@ -75,20 +75,20 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
 
     checks: list[HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
-        c = check_type(p)
 
         if run:
+            c = check_type(p)
             c.test()
             c_issues = c.issues
         else:
-            c_issues = issues[c.__class__.__name__]
+            c_issues = issues[check_type.name]
 
         checks.append(
             {
-                "name": c.name,
-                "is_closed": c.name not in checks_open,
-                "description": c.description,
-                "is_severe": c.is_severe,
+                "name": check_type.name,
+                "is_closed": check_type.name not in checks_open,
+                "description": check_type.description,
+                "is_severe": check_type.is_severe,
                 "issues": dict(sorted(c_issues.items(), key=lambda item: item[1])),
             },
         )
@@ -129,7 +129,7 @@ def refresh() -> str:
 
 
 def check(name: str) -> str:
-    """POST /h/health/c/<name>.
+    """PUT /h/health/c/<name>.
 
     Returns:
         string HTML response

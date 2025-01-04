@@ -936,6 +936,30 @@ class TestBudgeting(WebTestBase):
             }
             self.assertEqual(ctx, target)
 
+            # Funded but spent a lot
+            ctx = budgeting.ctx_target(
+                tar,
+                month,
+                assigned=Decimal(100),
+                available=Decimal(20),
+                leftover=Decimal(10),
+            )
+            self.maxDiff = None
+            target: budgeting.TargetContext = {
+                "target_assigned": Decimal(90),
+                "total_assigned": Decimal(20),
+                "to_go": Decimal(80),
+                "on_track": False,
+                "next_due_date": None,
+                "progress_bars": [Decimal(100)],
+                "target": Decimal(100),
+                "total_target": Decimal(100),
+                "total_to_go": Decimal(80),
+                "period": tar.period,
+                "type": tar.type_,
+            }
+            self.assertEqual(ctx, target)
+
             # BALANCE target, due in 12 months
             tar.due_date_ord = next_year.toordinal()
             s.flush()

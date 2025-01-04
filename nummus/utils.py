@@ -11,7 +11,7 @@ import re
 import shutil
 import sys
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import Generic, TYPE_CHECKING, TypeVar
 
 import emoji as emoji_mod
 from colorama import Fore
@@ -918,3 +918,27 @@ def strip_emojis(text: str) -> str:
     """
     tokens = list(emoji_mod.analyze(text, non_emoji=True))
     return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
+
+
+T = TypeVar("T")
+
+
+class classproperty(Generic[T]):  # noqa: N801
+    """Decorator for @property but on classes not instances."""
+
+    def __init__(self, fget: Callable) -> None:
+        """Initialize classproperty."""
+        self.fget = fget
+        self.__doc__ = fget.__doc__
+
+    def __get__(self, _: object, cls: type | None = None) -> T:
+        """Get classproperty value."""
+        if cls is None:  # pragma: no cover
+            # Don't need to test debug code
+            msg = "Decorator not on a class"
+            raise TypeError(msg)
+        if self.fget is None:  # pragma: no cover
+            # Don't need to test debug code
+            msg = "No fget set"
+            raise TypeError(msg)
+        return self.fget(cls)
