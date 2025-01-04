@@ -54,7 +54,8 @@ class TestBudgeting(WebTestBase):
             r"<div.*>-\$10.00</div>",
         )
         self.assertRegex(result, r"hx-get=.*>-\$10.00</span>")
-        self.assertNotIn("General Merchandise", result)
+        self.assertIn("Total to go", result)
+        self.assertIn("<select", result)
         self.assertRegex(
             result,
             r"<div>\$100.00</div>[ \n]+<div .*>Ready to assign</div>[ \n]+",
@@ -784,31 +785,33 @@ class TestBudgeting(WebTestBase):
             t_cat.budget_group_id = g_id_0
             t_cat.budget_position = 0
 
+        group_name = "Shopping Group"
+
         endpoint = "budgeting.group"
         url = endpoint, {"uri": g_uri_0}
         form = {"name": ""}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Budget group name must not be empty", result)
 
-        form = {"name": "Bills", "closed": ""}
+        form = {"name": group_name, "closed": ""}
         result, _ = self.web_put(url, data=form)
         self.assertIn('<div id="budget-table"', result)
-        self.assertIn("Bills", result)
+        self.assertIn(group_name, result)
         self.assertEqual(result.count("checked"), 1)
 
-        form = {"name": "Bills"}
+        form = {"name": group_name}
         result, _ = self.web_put(url, data=form)
         self.assertIn('<div id="budget-table"', result)
-        self.assertIn("Bills", result)
+        self.assertIn(group_name, result)
         self.assertEqual(result.count("checked"), 0)
 
         with p.begin_session() as s:
             name = s.query(BudgetGroup.name).where(BudgetGroup.id_ == g_id_0).scalar()
-            self.assertEqual(name, "Bills")
+            self.assertEqual(name, group_name)
 
         result, _ = self.web_delete(url, data=form)
         self.assertIn('<div id="budget-table"', result)
-        self.assertNotIn("Bills", result)
+        self.assertNotIn(group_name, result)
 
         with p.begin_session() as s:
             t_cat = (
@@ -826,7 +829,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(position, 0)
 
         url = endpoint, {"uri": g_uri_1}
-        form = {"name": "Bills", "closed": ""}
+        form = {"name": group_name, "closed": ""}
         result, _ = self.web_put(url, data=form)
         self.assertIn('<div id="budget-table"', result)
         self.assertEqual(result.count("checked"), 1)
@@ -1528,12 +1531,14 @@ class TestBudgeting(WebTestBase):
         # No category selected
         endpoint = "budgeting.sidebar"
         result, _ = self.web_get(endpoint)
-        self.assertNotIn("General Merchandise", result)
-        self.assertNotIn("Create Target", result)
+        self.assertIn("Total to go", result)
+        self.assertIn("<select", result)
 
         # Category selected without target
         url = (endpoint, {"uri": t_cat_uri})
         result, _ = self.web_get(url)
+        self.assertNotIn("Total to go", result)
+        self.assertNotIn("<select", result)
         self.assertIn("General Merchandise", result)
         self.assertIn("Create Target", result)
 
