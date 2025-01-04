@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 class CategoryDirection(Base):
     """Checks for direction (inflow/outflow) of transactions match category."""
 
-    _NAME = "Category direction"
     _DESC = textwrap.dedent(
         """\
         Transactions with income group category should have a positive amount.

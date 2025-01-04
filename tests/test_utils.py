@@ -1186,3 +1186,14 @@ class TestUtils(TestBase):
 
         result = utils.strip_emojis(text + "😀")
         self.assertEqual(result, text)
+
+    def test_classproperty(self) -> None:
+
+        class Color:
+
+            @utils.classproperty
+            def name(cls) -> str:  # noqa: N805
+                return "RED"
+
+        self.assertEqual(Color.name, "RED")
+        self.assertEqual(Color().name, "RED")

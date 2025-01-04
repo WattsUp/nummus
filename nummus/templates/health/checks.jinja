@@ -1,0 +1,63 @@
+{% if oob %}
+    <div id="health-checks-update" hx-swap-oob="true">
+        {% if checks["last_update_ago"] %}
+            Last checks ran {{ checks["last_update_ago"] }} ago
+        {% else %}
+            Health checks never ran
+        {% endif %}
+    </div>
+{% endif %}
+<div id="health-checks" class="w-full relative">
+    {% for check in checks["checks"] %}
+        <div class="w-full mb-2">
+            {# TODO(WattsUp): Add open state to cookie #}
+            <input class="health-check-toggle hidden"
+                   id="toggle-{{ loop.index0 }}"
+                   {% if check["is_closed"] %}checked{% endif %}
+                   type="checkbox"
+                   name="closed"
+                   hx-put="{{ url_for('health.check', name=check["name"]) }}"
+                   autocomplete="off">
+            {% if check["issues"] %}
+                {% set color = "red" if check["is_severe"] else "yellow" %}
+            {% else %}
+                {% set color = "green" %}
+            {% endif %}
+            <label class="health-check-toggle-label bg-{{ color }}-200"
+                   for="toggle-{{ loop.index0 }}">
+                <span>{{ check["name"] }}</span>
+                <span>
+                    {% if check["issues"] %}{{ check["issues"] | length }} Issues{% endif %}
+                </span>
+            </label>
+            <div class="health-check-fold">
+                <p class="italic">
+                    {{ check["description"] }}
+                    {% if check["is_severe"] %}
+                        Issues found here might indicate inaccurate balances.
+                    {% else %}
+                        Issues found here might indicate inconsistent data.
+                    {% endif %}
+                </p>
+                <div class="max-h-96 overflow-y-auto">
+                    {% if check["issues"] %}
+                        {% for uri, issue in check["issues"].items() %}
+                            <div class="flex items-center">
+                                <div class="cursor-pointer"
+                                     hx-put="{{ url_for('health.ignore', uri=uri) }}">
+                                    {% with class = "w-6 h-6" %}
+                                        {% include "svg/hide.svg" %}
+                                    {% endwith %}
+                                </div>
+                                {{ issue }}
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        No issues found
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    {% include "shared/spinner.jinja" %}
+</div>

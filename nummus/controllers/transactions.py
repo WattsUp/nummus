@@ -28,6 +28,9 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
+DEFAULT_PERIOD = "30-days"
+
+
 class _OptionContex(TypedDict):
     """Type definition for option context."""
 
@@ -205,7 +208,7 @@ def ctx_options(
 def table_unfiltered_query(
     s: orm.Session,
     acct: Account | None = None,
-    default_period: str = "this-month",
+    default_period: str = DEFAULT_PERIOD,
     *,
     cash_flow: bool = False,
     asset_transactions: bool = False,
@@ -284,7 +287,7 @@ def table_unfiltered_query(
 
 def ctx_table(
     acct: Account | None = None,
-    default_period: str = "this-month",
+    default_period: str = DEFAULT_PERIOD,
     *,
     cash_flow: bool = False,
     asset_transactions: bool = False,

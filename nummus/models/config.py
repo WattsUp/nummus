@@ -15,6 +15,7 @@ class ConfigKey(BaseEnum):
     CIPHER = 3
     SECRET_KEY = 4
     WEB_KEY = 5
+    LAST_HEALTH_CHECK_TS = 6
 
 
 class Config(Base):

@@ -59,7 +59,6 @@ module.exports = {
                         900 : '#7a2e0d',
                         950 : '#461502',
             },
-
             grey : {
                 50 : '#f6f6f6',
                 100 : '#e7e7e7',
@@ -119,6 +118,9 @@ module.exports = {
                  'bg-green',
                  'bg-yellow',
                  'bg-red',
+                 'bg-green-200',
+                 'bg-yellow-200',
+                 'bg-red-200',
              ],
     plugins : [require('./plugins/tailwindcss-bg-patterns')],
 };

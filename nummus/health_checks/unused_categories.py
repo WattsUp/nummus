@@ -11,7 +11,6 @@ from nummus.models import BudgetAssignment, TransactionCategory, TransactionSpli
 class UnusedCategories(Base):
     """Checks for categories without transactions or budget assignment."""
 
-    _NAME = "Unused category"
     _DESC = "Checks for categories without transactions or budget assignments."
     _SEVERE = False
 

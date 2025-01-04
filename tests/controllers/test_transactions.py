@@ -63,7 +63,7 @@ class TestTransaction(WebTestBase):
         self.assertEqual(len(re.findall(r'<div id="txn-[a-f0-9]{8}"', result)), 2)
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
-        self.assertRegex(result, r"<title>Transactions This Month \| nummus</title>")
+        self.assertRegex(result, r"<title>Transactions 30 Days \| nummus</title>")
 
         result, _ = self.web_get(
             (endpoint, {"period": "all", "account": "None selected"}),
@@ -100,7 +100,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {payee_0} \| nummus</title>",
+            rf"<title>Transactions 30 Days, {payee_0} \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -110,7 +110,7 @@ class TestTransaction(WebTestBase):
         self.assertIn("No matching transactions for given query filters", result)
         self.assertRegex(
             result,
-            r"<title>Transactions This Month \| nummus</title>",
+            r"<title>Transactions 30 Days \| nummus</title>",
         )
 
         result, headers = self.web_get(
@@ -120,7 +120,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {payee_1} \| nummus</title>",
+            rf"<title>Transactions 30 Days, {payee_1} \| nummus</title>",
         )
         self.assertEqual(
             headers["HX-Push-Url"].split("?")[1],
@@ -134,7 +134,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {cat_0} \| nummus</title>",
+            rf"<title>Transactions 30 Days, {cat_0} \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -144,7 +144,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
+            rf"<title>Transactions 30 Days, {tag_1} \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -154,7 +154,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_0}"')
         self.assertRegex(
             result,
-            r"<title>Transactions This Month \| nummus</title>",
+            r"<title>Transactions 30 Days \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -165,7 +165,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            rf"<title>Transactions This Month, {tag_1} \| nummus</title>",
+            rf"<title>Transactions 30 Days, {tag_1} \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -175,7 +175,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            r"<title>Transactions This Month, Locked \| nummus</title>",
+            r"<title>Transactions 30 Days, Locked \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -185,7 +185,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            r"<title>Transactions This Month, Linked \| nummus</title>",
+            r"<title>Transactions 30 Days, Linked \| nummus</title>",
         )
 
         result, _ = self.web_get(
@@ -195,7 +195,7 @@ class TestTransaction(WebTestBase):
         self.assertRegex(result, rf'<div id="txn-{t_split_1}"')
         self.assertRegex(
             result,
-            rf'<title>Transactions This Month, "{payee_1}" \| nummus</title>',
+            rf'<title>Transactions 30 Days, "{payee_1}" \| nummus</title>',
         )
 
         result, _ = self.web_get(

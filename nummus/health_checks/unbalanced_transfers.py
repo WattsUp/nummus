@@ -17,7 +17,6 @@ from nummus.models.transaction_category import TransactionCategoryGroup
 class UnbalancedTransfers(Base):
     """Checks for non-zero net transfers."""
 
-    _NAME = "Unbalanced transfers"
     _DESC = textwrap.dedent(
         """\
         Transfers move money between accounts so none should be lost.

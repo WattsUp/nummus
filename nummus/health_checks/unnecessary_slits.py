@@ -14,7 +14,6 @@ from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_
 class UnnecessarySplits(Base):
     """Checks for split transactions with same payee, category, and tag."""
 
-    _NAME = "Unnecessary Splits"
     _DESC = "Checks for split transactions with same payee, category, and tag."
     _SEVERE = False
 

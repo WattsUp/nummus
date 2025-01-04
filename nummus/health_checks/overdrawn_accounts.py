@@ -16,7 +16,6 @@ from nummus.models import Account, AccountCategory, TransactionSplit, YIELD_PER
 class OverdrawnAccounts(Base):
     """Checks for accounts that had a negative cash balance when they shouldn't."""
 
-    _NAME = "Overdrawn Accounts"
     _DESC = "Checks for accounts that had a negative cash balance when they shouldn't"
     _SEVERE = True
 

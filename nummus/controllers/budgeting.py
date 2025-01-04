@@ -132,12 +132,13 @@ def ctx_target(
         # This is a BALANCE target
         n_months = max(0, utils.date_months_between(month, due_date))
         target_assigned = (tar.amount - leftover) / (n_months + 1)
+        target_available = leftover + target_assigned
         total_to_go = tar.amount - available
         return {
             "target_assigned": target_assigned,
             "total_assigned": available,
-            "to_go": target_assigned - assigned,
-            "on_track": assigned >= target_assigned,
+            "to_go": target_available - available,
+            "on_track": available >= target_available,
             "next_due_date": f"{due_date:%B %Y}",
             "progress_bars": [tar.amount],
             "target": tar.amount,

@@ -19,7 +19,6 @@ if TYPE_CHECKING:
 class DuplicateTransactions(Base):
     """Checks for transactions with same amount, date, and statement."""
 
-    _NAME = "Duplicate Transactions"
     _DESC = "Checks for transactions with same amount, date, and statement."
     _SEVERE = True
 

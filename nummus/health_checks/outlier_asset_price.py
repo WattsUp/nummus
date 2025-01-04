@@ -17,7 +17,6 @@ from nummus.models import Asset, TransactionSplit, YIELD_PER
 class OutlierAssetPrice(Base):
     """Checks if an asset was bought/sold at an outlier price."""
 
-    _NAME = "Outlier asset price"
     _DESC = textwrap.dedent(
         """\
         Checks if an asset was bought/sold at an outlier price.

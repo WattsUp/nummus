@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import orm
+from sqlalchemy import orm, UniqueConstraint
 
 from nummus.models.base import Base, ORMBool, ORMStr, string_column_args
 
@@ -13,6 +13,7 @@ class HealthCheckIssue(Base):
     Attributes:
         check: Name of check
         value: Identifier of failure
+        msg: User message of failure
         ignore: True will ignore this issue
     """
 
@@ -20,9 +21,11 @@ class HealthCheckIssue(Base):
 
     check: ORMStr
     value: ORMStr
+    msg: ORMStr
     ignore: ORMBool
 
     __table_args__ = (
+        UniqueConstraint("check", "value"),
         *string_column_args("check"),
         *string_column_args("value", short_check=False),
     )

@@ -354,6 +354,22 @@
     .bar-fg.yellow {
         @apply pattern-yellow-100 pattern-bg-yellow-300;
     }
+
+    .health-check-toggle-label {
+        @apply block relative pl-5 pr-2 py-1 text-xl font-serif w-full cursor-pointer flex justify-between;
+    }
+
+    .health-check-toggle-label::after {
+        @apply content-["▼"] absolute left-1 top-[5px] cursor-pointer text-grey-800 md:hover:text-green font-sans text-base;
+    }
+
+    input[type=checkbox].health-check-toggle:checked~.health-check-fold {
+        @apply hidden;
+    }
+
+    input[type=checkbox].health-check-toggle:checked~.health-check-toggle-label::after {
+        @apply content-["►"];
+    }
 }
 
 @font-face {

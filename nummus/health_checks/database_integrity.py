@@ -11,7 +11,6 @@ from nummus.health_checks.base import Base
 class DatabaseIntegrity(Base):
     """Checks for issues in the underlying SQL database."""
 
-    _NAME = "Database integrity"
     _DESC = "Checks for issues in the underlying SQL database."
     _SEVERE = True
 

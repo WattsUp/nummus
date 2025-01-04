@@ -24,7 +24,6 @@ _LIMIT_FREQUENCY = 10
 class Typos(Base):
     """Checks for very similar fields and common typos."""
 
-    _NAME = "Typos"
     _DESC = "Checks for very similar fields and common typos."
     _SEVERE = False
 

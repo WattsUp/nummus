@@ -14,7 +14,6 @@ from nummus.models import Asset, AssetValuation, TransactionSplit, YIELD_PER
 class MissingAssetValuations(Base):
     """Checks if an asset is held without any valuations."""
 
-    _NAME = "Missing asset valuations"
     _DESC = "Checks if an asset is held without any valuations"
     _SEVERE = True
 
