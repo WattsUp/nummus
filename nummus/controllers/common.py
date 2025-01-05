@@ -227,6 +227,7 @@ def ctx_base() -> dict[str, object]:
             "transaction_categories.overlay",
             LinkType.OVERLAY,
         ),
+        "Import File": ("import_file.import_file", LinkType.OVERLAY),
         "Update Asset Valuations": (
             "assets.update",
             LinkType.OVERLAY,

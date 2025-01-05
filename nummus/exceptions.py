@@ -76,6 +76,7 @@ class FileAlreadyImportedError(Exception):
             date: Date on which file was already imported
             path: Path to duplicate file
         """
+        self.date = date
         msg = f"Already imported {path} on {date}"
         super().__init__(msg)
 
@@ -103,6 +104,7 @@ class EmptyImportError(Exception):
             path: Path to empty file
             importer: Importer used on file
         """
+        self.importer = importer.__class__.__name__
         msg = (
             f"No transactions imported for {path} using importer "
             f"{importer.__class__.__name__}"
@@ -120,6 +122,7 @@ class FailedImportError(Exception):
             path: Path to empty file
             importer: Importer used on file
         """
+        self.importer = importer.__class__.__name__
         msg = f"{importer.__class__.__name__} failed to import {path}"
         super().__init__(msg)
 
