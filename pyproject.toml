@@ -31,6 +31,7 @@ dependencies = [
   "scipy",
   "emoji",
   "werkzeug>=3",
+  "prometheus-flask-exporter",
 ]
 description = "A personal financial information aggregator and planning tool"
 license = { file = "LICENSE" }

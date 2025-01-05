@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 import flask
 import flask_login
 import gevent.pywsgi
+import prometheus_client
+import prometheus_flask_exporter
 from colorama import Back, Fore
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -132,6 +134,13 @@ class Server:
         self._portfolio = p
 
         self._app = flask.Flask(__name__)
+        self._metrics = prometheus_flask_exporter.PrometheusMetrics(
+            self._app,
+            excluded_paths="/static",
+            metrics_decorator=auth.login_exempt,
+            registry=prometheus_client.CollectorRegistry(auto_describe=True),
+        )
+        self._metrics.info("nummus_info", "nummus info", version=version.version)
 
         # HTML pages routing
         controllers.add_routes(self._app)

@@ -350,3 +350,14 @@ class TestCommon(WebTestBase):
         result, _ = self.web_get(endpoint)
         self.assertIn("<title>", result)
         self.assertIn("<html", result)
+
+    def test_metrics(self) -> None:
+        endpoint = "prometheus_metrics"
+        result, _ = self.web_get(
+            endpoint,
+            content_type="text/plain; version=0.0.4; charset=utf-8",
+        )
+        if isinstance(result, bytes):
+            result = result.decode()
+        self.assertIn("flask_exporter_info", result)
+        self.assertIn("nummus_info", result)
