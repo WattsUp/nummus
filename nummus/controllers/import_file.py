@@ -33,17 +33,13 @@ def import_file() -> str | flask.Response:
     if file is None or file.filename == "":
         return common.error("No file selected")
 
-    filename = Path(werkzeug.utils.secure_filename(file.filename or ""))
-    with tempfile.NamedTemporaryFile(
-        "wb",
-        delete=False,
-        delete_on_close=False,
-        suffix=filename.suffix,
-    ) as file_local:
-        path_file_local = Path(file_local.name)
-        file_local.write(file.stream.read())
-
     force = "force" in flask.request.form
+
+    filename = Path(werkzeug.utils.secure_filename(file.filename or ""))
+    path_file_local = Path(tempfile.mkstemp(suffix=filename.suffix)[1])
+
+    with path_file_local.open("wb") as file_local:
+        file_local.write(file.stream.read())
 
     error: str | None = None
     path_debug = p.path.with_suffix(".importer_debug")
@@ -65,7 +61,8 @@ def import_file() -> str | flask.Response:
         error = f"{e.importer} did not import any transactions for file"
     except Exception as e:  # noqa: BLE001
         return common.error(e)
-    path_file_local.unlink()
+    finally:
+        path_file_local.unlink()
 
     if error:
         return common.error(error)
