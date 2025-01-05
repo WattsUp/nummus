@@ -299,3 +299,16 @@ function merge(target, ...sources) {
     }
     return merge(target, ...sources);
 }
+
+function nummusSendError(event) {
+    const url = event.detail.pathInfo.finalRequestPath;
+    const e = document.querySelector('#header-error');
+    e.classList.remove('hidden');
+    e.querySelector('span').innerHTML = `Failed to send request for '${url}'`
+}
+
+function nummusResponseError(event) {
+    const e = document.querySelector('#header-error');
+    e.classList.remove('hidden');
+    e.querySelector('span').innerHTML = event.detail.error;
+}

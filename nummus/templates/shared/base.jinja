@@ -26,7 +26,9 @@
         {% endassets %}
     </head>
     <body class="antialiased bg-grey-100 h-screen w-screen relative text-black"
-          hx-swap="outerHTML">
+          hx-swap="outerHTML"
+          hx-on::send-error="nummusSendError(event)"
+          hx-on::response-error="nummusResponseError(event)">
         {% block header %}
             {% include "/shared/header.jinja" %}
         {% endblock header %}
