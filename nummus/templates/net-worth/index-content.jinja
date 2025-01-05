@@ -10,13 +10,13 @@
         </h2>
     </div>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="total-chart-canvas"></canvas>
+        <canvas id="total-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     {% include "net-worth/chart-config.jinja" %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="assets-chart-canvas"></canvas>
+        <canvas id="assets-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     {% with assets = chart["assets"] %}
@@ -24,17 +24,17 @@
     {% endwith %}
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="liabilities-chart-canvas"></canvas>
+        <canvas id="liabilities-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
     <div class="flex space justify-between relative max-md:flex-col">
         <div class="md:w-[49%] max-h-[80vh] flex flex-col">
-            <canvas id="assets-pie-chart-canvas" class="mb-2"></canvas>
+            <canvas id="assets-pie-chart-canvas" class="mb-2" hx-preserve></canvas>
             <div id="assets-breakdown" class="overflow-y-scroll min-h-0"></div>
         </div>
         <div class="md:w-[49%] max-h-[80vh] flex flex-col">
-            <canvas id="liabilities-pie-chart-canvas" class="mb-2"></canvas>
+            <canvas id="liabilities-pie-chart-canvas" class="mb-2" hx-preserve></canvas>
             <div id="liabilities-breakdown" class="overflow-y-scroll min-h-0"></div>
         </div>
         {% include "shared/spinner.jinja" %}

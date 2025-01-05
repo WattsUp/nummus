@@ -88,7 +88,7 @@
             <div class="font-bold">{{ money_prefix }} {{ target["target"] | money }}{{ money_suffix }}</div>
             <div class="border-b">By {{ target["next_due_date"] }}</div>
             <div class="w-full my-1 relative">
-                <canvas id="budget-sidebar-canvas"></canvas>
+                <canvas id="budget-sidebar-canvas" hx-preserve></canvas>
             </div>
             {% if target["total_to_go"] == 0 %}
                 <div class="bg-green-200 p-1 text-center w-full">Target is achieved</div>
@@ -122,13 +122,11 @@
             </div>
             <button class="button bg-blue text-center w-full"
                     hx-get="{{ url_for('budgeting.target', uri=budget_sidebar["uri"]) }}">Edit Target</button>
-            <script>setTimeout(function() {
-                        budgeting.update(
-                            {{ target["total_assigned"] }},
-                            {{ target["total_target"] }},
-                            {{ target["on_track"] | lower }},
-                        );
-                    }, 20);
+            <script>budgeting.update(
+                        {{ target["total_assigned"] }},
+                        {{ target["total_target"] }},
+                        {{ target["on_track"] | lower }},
+                    );
             </script>
         {% else %}
             <div class="font-bold border-b flex justify-between">

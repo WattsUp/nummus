@@ -24,7 +24,7 @@
         </div>
     </div>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="account-chart-canvas"></canvas>
+        <canvas id="account-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     {% if assets %}
@@ -42,7 +42,7 @@
               hx-push-url="false">here</span>.
     </p>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="profit-chart-canvas"></canvas>
+        <canvas id="profit-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     {% include "accounts/chart-data.jinja" %}

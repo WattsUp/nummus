@@ -10,7 +10,7 @@
         <span class="underline decoration-2 decoration-dotted decoration-yellow">Market Indices</span>
     </div>
     <div class="w-full h-60 md:h-96 relative">
-        <canvas id="performance-chart-canvas"></canvas>
+        <canvas id="performance-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
     {% include "performance/chart-config.jinja" %}
