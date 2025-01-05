@@ -114,4 +114,11 @@
             </div>
         </div>
     </div>
+    <div id="header-error"
+         class="bg-red flex items-center justify-center text-black p-2 hidden">
+        {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
+            {% include "svg/error.svg" %}
+        {% endwith %}
+        <span>Failed to send request for '/portforio'</span>
+    </div>
 </header>
