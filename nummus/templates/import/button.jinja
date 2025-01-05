@@ -1,0 +1,11 @@
+<div id="import-button"
+     class="flex flex-col gap-4"
+     hx-swap-oob="{{ oob }}">
+    {% if force %}
+        <p>Force importing may result in duplicate transactions.</p>
+        <input type="hidden" name="force" value="true">
+        <button class="button bg-blue text-xl mx-auto">Force Import</button>
+    {% else %}
+        <button class="button bg-green text-xl mx-auto">Upload</button>
+    {% endif %}
+</div>

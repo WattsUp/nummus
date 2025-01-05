@@ -319,16 +319,12 @@ class Portfolio:
         h = sha.hexdigest()
         if not force:
             with self.begin_session() as s:
-                try:
-                    existing_date_ord: int = (
-                        s.query(ImportedFile.date_ord)
-                        .where(ImportedFile.hash_ == h)
-                        .one()[0]
-                    )
-                except exc.NoResultFound:
-                    # No conflicts
-                    pass
-                else:
+                existing_date_ord: int | None = (
+                    s.query(ImportedFile.date_ord)
+                    .where(ImportedFile.hash_ == h)
+                    .scalar()
+                )
+                if existing_date_ord is not None:
                     date = datetime.date.fromordinal(existing_date_ord)
                     raise exc.FileAlreadyImportedError(date, path)
 
