@@ -39,12 +39,15 @@
             {% endwith %}
         </div>
     </div>
-    <div class="w-full max-w-72 max-lg:hidden"
+    <div class="w-full max-w-72"
          hx-target="#overlay"
          hx-swap="innerHTML"
          hx-include="unset">
         {% include "budgeting/table-status.jinja" %}
         {% include "budgeting/sidebar.jinja" %}
     </div>
-    <script>budgeting.setup()</script>
+    <script>
+        budgeting.setup();
+        editor.addListeners("budget-table")
+    </script>
 </div>
