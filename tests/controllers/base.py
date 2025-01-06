@@ -7,6 +7,7 @@ import shutil
 import time
 import urllib.parse
 import warnings
+from collections import defaultdict
 from typing import TYPE_CHECKING
 from unittest import mock
 
@@ -86,6 +87,14 @@ class WebTestBase(TestBase):
         if parent is not None:
             parent: dict[str, object]
             self.assertEqual(parent.keys(), {"__parent__", "html"})
+
+        # Find all DOM ids and validate no duplicates
+        ids: list[str] = re.findall(r'id="([^"]+)"', s)
+        id_counts: dict[str, int] = defaultdict(int)
+        for e_id in ids:
+            id_counts[e_id] += 1
+        duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
+        self.assertEqual(duplicates, set(), "Duplicate element ids")
 
     def _setup_portfolio(self) -> dict[str, str]:
         """Create accounts and transactions to test with.
