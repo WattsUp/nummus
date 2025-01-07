@@ -12,7 +12,7 @@
         <h1 class="text-lg">{{ e_fund["current"] | money0 }}</h1>
     </a>
     <div class="w-full grow dashboard">
-        <canvas id="e-fund-chart-canvas" hx-preserve></canvas>
+        <canvas id="e-fund-chart-canvas-dashboard" hx-preserve></canvas>
     </div>
     <div id="e-fund-chart-data">
         <script>emergencyFund.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>

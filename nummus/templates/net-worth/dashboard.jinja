@@ -17,7 +17,7 @@
         <h1 class="text-lg">{{ chart["current"] | money }}</h1>
     </a>
     <div class="w-full grow dashboard relative min-h-0">
-        <canvas id="net-worth-chart-canvas" hx-preserve></canvas>
+        <canvas id="net-worth-chart-canvas-dashboard" hx-preserve></canvas>
     </div>
     <div id="net-worth-chart-data">
         <script>netWorth.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>

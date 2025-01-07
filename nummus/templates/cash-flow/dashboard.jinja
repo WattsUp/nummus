@@ -11,7 +11,7 @@
         </h1>
     </a>
     <div class="w-full grow relative">
-        <canvas id="cash-flow-chart-canvas" hx-preserve></canvas>
+        <canvas id="cash-flow-chart-canvas-dashboard" hx-preserve></canvas>
     </div>
     <div id="cash-flow-chart-data">
         <script>cashFlow.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>

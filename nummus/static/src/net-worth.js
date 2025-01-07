@@ -310,7 +310,8 @@ const netWorth = {
         const blue = getThemeColor('blue');
         const yellow = getThemeColor('yellow');
 
-        const canvas = document.getElementById('net-worth-chart-canvas');
+        const canvas =
+            document.getElementById('net-worth-chart-canvas-dashboard');
         const ctx = canvas.getContext('2d');
         const dataset = {
             label: 'Total',
