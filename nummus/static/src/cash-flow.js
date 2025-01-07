@@ -225,7 +225,8 @@ const cashFlow = {
         const green = getThemeColor('green');
         const red = getThemeColor('red');
 
-        const canvas = document.getElementById('cash-flow-chart-canvas');
+        const canvas =
+            document.getElementById('cash-flow-chart-canvas-dashboard');
         const ctx = canvas.getContext('2d');
         const datasets = [
             {

@@ -90,7 +90,7 @@ const emergencyFund = {
         const blue = getThemeColor('blue');
         const yellow = getThemeColor('yellow');
 
-        const canvas = document.getElementById('e-fund-chart-canvas');
+        const canvas = document.getElementById('e-fund-chart-canvas-dashboard');
         const ctx = canvas.getContext('2d');
         const datasets = [
             {
