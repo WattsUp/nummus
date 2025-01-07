@@ -61,7 +61,7 @@ Repository = "https://github.com/WattsUp/nummus.git"
 Issues = "https://github.com/WattsUp/nummus/issues"
 
 [project.optional-dependencies]
-encrypt = ["sqlcipher3", "Cipher", "pycryptodome"]
+encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodome"]
 test = [
   "AutoDict",
   "coverage",
