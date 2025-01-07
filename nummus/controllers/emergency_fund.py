@@ -82,8 +82,8 @@ def ctx_page() -> dict[str, object]:
             date_ord += 1
 
         n_smoothing = 15
-        n_lower = 91
-        n_upper = 182
+        n_lower = utils.DAYS_IN_QUARTER
+        n_upper = utils.DAYS_IN_QUARTER * 2
 
         categories: dict[int, tuple[str, str]] = {}
         categories_total: dict[int, Decimal] = {}
@@ -180,22 +180,16 @@ def ctx_page() -> dict[str, object]:
         emoji_name: str
         name: str
         monthly: Decimal
-        lower: Decimal
-        upper: Decimal
 
     category_infos: list[CategoryInfo] = []
     for t_cat_id, (name, emoji_name) in categories.items():
         x_daily = -categories_total[t_cat_id] / n
-        x_lower = x_daily * n_lower
-        x_upper = x_daily * n_upper
-        x_monthly = x_upper / 6
+        x_monthly = x_daily * utils.DAYS_IN_YEAR / 12
         category_infos.append(
             {
                 "emoji_name": emoji_name,
                 "name": name,
                 "monthly": x_monthly,
-                "lower": x_lower,
-                "upper": x_upper,
             },
         )
     category_infos = sorted(

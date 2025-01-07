@@ -62,15 +62,11 @@
         <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-[600px]">
             <div class="w-48 shrink-0 p-1 grow-[4]">Category</div>
             <div class="w-32 shrink-0 p-1 grow text-right">Monthly Spending</div>
-            <div class="w-32 shrink-0 p-1 grow text-right">3-Month Spending</div>
-            <div class="w-32 shrink-0 p-1 grow text-right">6-Month Spending</div>
         </div>
         {% for info in e_fund["categories"] %}
             <div class="w-full flex even:bg-grey-50 md:hover:bg-grey-100 min-w-[600px]">
                 <div class="w-48 shrink-0 p-1 grow-[4]">{{ info["emoji_name"] }}</div>
                 <div class="w-32 shrink-0 p-1 grow text-right">{{ info["monthly"] | money }}</div>
-                <div class="w-32 shrink-0 p-1 grow text-right">{{ info["lower"] | money }}</div>
-                <div class="w-32 shrink-0 p-1 grow text-right">{{ info["upper"] | money }}</div>
             </div>
         {% endfor %}
     </div>

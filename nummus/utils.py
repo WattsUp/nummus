@@ -52,7 +52,7 @@ THRESHOLD_WEEKS = 4 * 2
 THRESHOLD_DAYS = 7 * 1.5
 
 MONTHS_IN_YEAR = 12
-DAYS_IN_YEAR = 365.25
+DAYS_IN_YEAR = Decimal("365.25")
 DAYS_IN_WEEK = 7
 
 DAYS_IN_QUARTER = int(DAYS_IN_YEAR // 4)
@@ -747,12 +747,12 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
     cash_flows[n - 1] = float(values[-1]) + cash_flows.get(n - 1, 0)
     if len(cash_flows) == 1:
         r = profit[-1] / (values[-1] - profit[-1]) + 1
-        return round(r ** Decimal(DAYS_IN_YEAR) - 1, 6)
+        return round(r**DAYS_IN_YEAR - 1, 6)
 
     def xnpv(r: float, cfs: dict[int, float]) -> float:
         if r <= 0:
             return float("inf")
-        return sum((cf / r ** (i / DAYS_IN_YEAR) for i, cf in cfs.items()))
+        return sum((cf / r ** (i / float(DAYS_IN_YEAR)) for i, cf in cfs.items()))
 
     result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
     if not isinstance(result, float):  # pragma: no cover

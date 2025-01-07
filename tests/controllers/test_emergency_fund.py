@@ -110,7 +110,7 @@ class TestEmergencyFund(WebTestBase):
         )
         self.assertIn("Groceries", result)
         m = re.search(
-            r"Groceries.*\$(\d+\.\d+).*\$(\d+\.\d+).*\$(\d+\.\d+)",
+            r"Groceries.*\$(\d+\.\d+)",
             result,
             re.S,
         )
@@ -118,8 +118,6 @@ class TestEmergencyFund(WebTestBase):
             self.fail("Could not find Groceries row")
         else:
             self.assertEqualWithinError(float(m[1]), 32.97, 0.01)
-            self.assertEqualWithinError(float(m[2]), 98.91, 0.01)
-            self.assertEqualWithinError(float(m[3]), 197.83, 0.01)
 
         # Increase fund to $100
         with p.begin_session() as s:
