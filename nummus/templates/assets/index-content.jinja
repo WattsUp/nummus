@@ -1,7 +1,7 @@
 <section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
          hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
          hx-include="#val-config,#val-header"
-         hx-trigger="update-asset from:body"
+         hx-trigger="update-asset from:body, update-valuation from:body"
          hx-target="#main"
          hx-swap="innerHTML">
     <div class="w-full flex flex-col">
