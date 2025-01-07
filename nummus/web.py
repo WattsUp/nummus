@@ -62,7 +62,9 @@ class Handler(gevent.pywsgi.WSGIHandler):
         else:
             delta = "[delta t]"
 
-        if self.client_address is None:
+        if "X-Real-IP" in self.headers:
+            client_address = self.headers["X-Real-IP"]
+        elif self.client_address is None:
             client_address = "[client address]"
         elif isinstance(self.client_address, tuple):
             client_address = self.client_address[0]
