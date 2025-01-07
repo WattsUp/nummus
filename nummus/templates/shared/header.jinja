@@ -81,15 +81,19 @@
                             {% for title, item in subpages.items() %}
                                 <div class="ml-2 border-l-green-800 border-l-4 whitespace-nowrap"
                                      onclick="navigation.closeDropdown()">
-                                    {% if item[1] %}
+                                    {% if item[1] == "PAGE" %}
+                                        <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                           href="{{ url_for(item[0]) }}"
+                                           hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                    {% elif item[1] == "OVERLAY" %}
                                         <div class="inset-0 px-2 py-1 block cursor-pointer"
                                              hx-get="{{ url_for(item[0]) }}"
                                              hx-target="#overlay"
                                              hx-push-url="false">{{ title }}</div>
-                                    {% else %}
-                                        <a class="inset-0 px-2 py-1 block cursor-pointer"
-                                           href="{{ url_for(item[0]) }}"
-                                           hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                    {% elif item[1] == "HX_POST" %}
+                                        <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                             hx-post="{{ url_for(item[0]) }}"
+                                             hx-push-url="false">{{ title }}</div>
                                     {% endif %}
                                 </div>
                             {% endfor %}
@@ -97,15 +101,19 @@
                         <div class="bg-green-800 h-px m-1"></div>
                         {% for title, item in base["menu"].items() %}
                             <div class="whitespace-nowrap" onclick="navigation.closeDropdown()">
-                                {% if item[1] %}
+                                {% if item[1] == "PAGE" %}
+                                    <a class="inset-0 px-2 py-1 block cursor-pointer"
+                                       href="{{ url_for(item[0]) }}"
+                                       hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                {% elif item[1] == "OVERLAY" %}
                                     <div class="inset-0 px-2 py-1 block cursor-pointer"
                                          hx-get="{{ url_for(item[0]) }}"
                                          hx-target="#overlay"
                                          hx-push-url="false">{{ title }}</div>
-                                {% else %}
-                                    <a class="inset-0 px-2 py-1 block cursor-pointer"
-                                       href="{{ url_for(item[0]) }}"
-                                       hx-get="{{ url_for(item[0]) }}">{{ title }}</a>
+                                {% elif item[1] == "HX_POST" %}
+                                    <div class="inset-0 px-2 py-1 block cursor-pointer"
+                                         hx-post="{{ url_for(item[0]) }}"
+                                         hx-push-url="false">{{ title }}</div>
                                 {% endif %}
                             </div>
                         {% endfor %}
