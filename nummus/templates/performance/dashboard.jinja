@@ -3,14 +3,14 @@
      hx-get="{{ url_for('performance.dashboard') }}"
      hx-trigger="update-asset from:body"
      hx-target="#dashboard-performance"
-     hx-indicator="next .spinner">
-    <div>{% include "shared/spinner.jinja" %}</div>
+     hx-indicator="find .spinner">
     <a class="w-full flex space-between cursor-pointer group"
        href="{{ url_for('performance.page') }}"
        hx-get="{{ url_for('performance.page') }}"
        hx-target="#main"
        hx-swap="innerHTML"
-       hx-push-url="true">
+       hx-push-url="true"
+       hx-indicator="next .spinner">
         <h1 class="text-xl align-left grow font-serif text-green-600 md:group-hover:underline md:group-hover:after:content-['»']">
             90-Day Performance
         </h1>
@@ -35,4 +35,5 @@
             </a>
         {% endfor %}
     </div>
+    <div>{% include "shared/spinner.jinja" %}</div>
 </div>

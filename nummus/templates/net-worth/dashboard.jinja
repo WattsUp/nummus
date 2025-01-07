@@ -3,14 +3,14 @@
      hx-get="{{ url_for('net_worth.dashboard') }}"
      hx-trigger="update-asset from:body"
      hx-target="#dashboard-net-worth"
-     hx-indicator="next .spinner">
-    <div>{% include "shared/spinner.jinja" %}</div>
+     hx-indicator="find .spinner">
     <a class="w-full flex space-between cursor-pointer group"
        href="{{ url_for('net_worth.page') }}"
        hx-get="{{ url_for('net_worth.page') }}"
        hx-target="#main"
        hx-swap="innerHTML"
-       hx-push-url="true">
+       hx-push-url="true"
+       hx-indicator="next .spinner">
         <h1 class="text-xl align-left w-full font-serif text-green-600 md:group-hover:underline md:group-hover:after:content-['»']">
             Net Worth
         </h1>
@@ -22,4 +22,5 @@
     <div id="net-worth-chart-data">
         <script>netWorth.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'))</script>
     </div>
+    <div>{% include "shared/spinner.jinja" %}</div>
 </div>
