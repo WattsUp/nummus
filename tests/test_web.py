@@ -409,10 +409,11 @@ class TestHandler(TestBase):
             result = h.format_request()
         self.assertEqual(result, target)
 
+        h.headers["X-Real-IP"] = "192.168.1.2"
         h.requestline = "GOT /h/sidebar HTTP/1.1"
         h.code = 600
         target = (
-            f"127.0.0.1 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
+            f"192.168.1.2 [{now}] {Fore.GREEN}0.050000s{Fore.RESET} "
             "GOT "
             f"{Fore.CYAN}/h/sidebar{Fore.RESET} "
             "HTTP/1.1 1000B "
