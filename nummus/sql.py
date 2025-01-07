@@ -33,6 +33,8 @@ def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
     """
     cursor = db_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
+    # Suppress logging from sqlcipher
+    cursor.execute("PRAGMA cipher_log_source=NONE")
     cursor.close()
 
 
