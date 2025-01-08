@@ -102,6 +102,95 @@ class TestAsset(WebTestBase):
         self.assertIn("10.00", result)
         self.assertIn(f"as of {today}", result)
 
+    def test_page_all(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+
+        today = datetime.date.today()
+
+        acct_uri = d["acct_uri"]
+        a_0 = d["a_0"]
+        a_uri_0 = d["a_uri_0"]
+        a_1 = d["a_1"]
+        a_uri_1 = d["a_uri_1"]
+        acct_id = Account.uri_to_id(acct_uri)
+        a_id_0 = Asset.uri_to_id(a_uri_0)
+
+        with p.begin_session() as s:
+            s.query(Asset).where(Asset.id_ == a_id_0).update({"ticker": "BANANA"})
+
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+            t_cat_id = categories["Securities Traded"]
+
+            txn = Transaction(
+                account_id=acct_id,
+                date=today,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_id_0,
+                asset_quantity_unadjusted=1,
+                category_id=t_cat_id,
+            )
+            s.add_all((txn, t_split))
+
+        endpoint = "assets.page_all"
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(endpoint, headers=headers)
+        self.assertIn("BANANA", result)
+        self.assertIn("Item Assets", result)
+        self.assertIn(a_0, result)
+        self.assertIn(a_uri_0, result)
+        self.assertNotIn("Real Estate Assets", result)
+        self.assertNotIn(a_1, result)
+        self.assertNotIn(a_uri_1, result)
+        self.assertIn("Show assets not currently held", result)
+
+        result, _ = self.web_get(
+            (endpoint, {"include-not-held": True}),
+            headers=headers,
+        )
+        self.assertIn("Item Assets", result)
+        self.assertIn("BANANA", result)
+        self.assertIn(a_0, result)
+        self.assertIn(a_uri_0, result)
+        self.assertIn("Real Estate Assets", result)
+        self.assertIn(a_1, result)
+        self.assertIn(a_uri_1, result)
+        self.assertIn("Only show assets currently held", result)
+
+        with p.begin_session() as s:
+            # Sell asset
+            txn = Transaction(
+                account_id=acct_id,
+                date=today,
+                amount=self.random_decimal(-1, 1),
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                amount=txn.amount,
+                parent=txn,
+                asset_id=a_id_0,
+                asset_quantity_unadjusted=-1,
+                category_id=t_cat_id,
+            )
+            s.add_all((txn, t_split))
+
+        result, _ = self.web_get(endpoint, headers=headers)
+        self.assertNotIn("BANANA", result)
+        self.assertNotIn("Item Assets", result)
+        self.assertNotIn(a_0, result)
+        self.assertNotIn(a_uri_0, result)
+        self.assertNotIn("Real Estate Assets", result)
+        self.assertNotIn(a_1, result)
+        self.assertNotIn(a_uri_1, result)
+        self.assertIn("Show assets not currently held", result)
+
     def test_page_transactions(self) -> None:
         _ = self._setup_portfolio()
 

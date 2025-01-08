@@ -1,0 +1,40 @@
+<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
+         hx-get="{{ url_for('assets.page_all', **{"include-not-held": include_not_held or None}) }}"
+         hx-trigger="update-asset from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <div class="w-full flex justify-between text-2xl md:text-3xl font-serif text-green-600">
+        <h1>Assets</h1>
+        {% if include_not_held %}
+            <button class="button bg-blue text-xl"
+                    hx-get="{{ url_for('assets.page_all') }}"
+                    hx-push-url="true">Only show assets currently held</button>
+        {% else %}
+            <button class="button bg-blue text-xl"
+                    hx-get="{{ url_for('assets.page_all') }}?include-not-held"
+                    hx-push-url="true">Show assets not currently held</button>
+        {% endif %}
+    </div>
+    {% for category, assets in categories.items() %}
+        <h1 class="text-xl md:text-2xl align-left w-full font-serif text-green-600 mt-1">
+            {{ category | enum | title }} Assets
+        </h1>
+        <div class="w-full max-h-[50vh] overflow-y-auto">
+            <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-min">
+                <div class="w-24 shrink-0 p-1">Ticker</div>
+                <div class="w-60 shrink-0 p-1 max-md:grow">Name</div>
+                <div class="w-60 shrink-0 p-1 grow max-md:hidden">Description</div>
+            </div>
+            {% set class = "w-full flex odd:bg-grey-50 md:hover:bg-grey-100 cursor-pointer min-w-min" %}
+            {% for asset in assets %}
+                <div class="{{ class }}"
+                     hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
+                     hx-push-url="true">
+                    <div class="w-24 shrink-0 p-1">{{ asset["ticker"] or "" }}</div>
+                    <div class="w-60 shrink-0 p-1 max-md:grow">{{ asset["name"] }}</div>
+                    <div class="w-60 shrink-0 p-1 grow max-md:hidden">{{ asset["desc"] or "" }}</div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</section>
