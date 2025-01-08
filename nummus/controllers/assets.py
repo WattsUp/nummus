@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import flask
@@ -11,8 +12,14 @@ from sqlalchemy import orm
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common, transactions
-from nummus.models import Account, Asset, AssetCategory, paginate
-from nummus.models.asset import AssetValuation
+from nummus.models import (
+    Account,
+    Asset,
+    AssetCategory,
+    AssetValuation,
+    paginate,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -21,6 +28,57 @@ if TYPE_CHECKING:
 
 DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
+
+
+def page_all() -> str:
+    """GET /assets.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    include_not_held = "include-not-held" in flask.request.args
+
+    with p.begin_session() as s:
+        categories: dict[AssetCategory, list[dict[str, object]]] = defaultdict(list)
+
+        query = (
+            s.query(Asset)
+            .where(Asset.category != AssetCategory.INDEX)
+            .order_by(Asset.category, Asset.name)
+        )
+        if not include_not_held:
+            today = datetime.date.today()
+            today_ord = today.toordinal()
+
+            asset_ids: set[int] = set()
+            for asset_qtys in Account.get_asset_qty_all(
+                s,
+                today_ord,
+                today_ord,
+            ).values():
+                for a_id, values in asset_qtys.items():
+                    if values[0]:
+                        asset_ids.add(a_id)
+            query = query.where(Asset.id_.in_(asset_ids))
+        for a in query.yield_per(YIELD_PER):
+            categories[a.category].append(
+                {
+                    "uri": a.uri,
+                    "name": a.name,
+                    "desc": a.description,
+                    "ticker": a.ticker,
+                },
+            )
+
+    return common.page(
+        "assets/index-content-all.jinja",
+        title="Assets",
+        categories=categories,
+        include_not_held=include_not_held,
+    )
 
 
 def page(uri: str) -> str:
@@ -592,6 +650,7 @@ def update() -> str | flask.Response:
 
 
 ROUTES: Routes = {
+    "/assets": (page_all, ["GET"]),
     "/assets/<path:uri>": (page, ["GET"]),
     "/assets/transactions": (page_transactions, ["GET"]),
     "/h/assets/txns": (txns, ["GET"]),
