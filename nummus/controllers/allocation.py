@@ -26,11 +26,11 @@ def page() -> str:
     return common.page(
         "allocation/index-content.jinja",
         title="Asset Allocation",
-        chart=ctx_chart(),
+        allocation=ctx_allocation(),
     )
 
 
-def ctx_chart() -> dict[str, object]:
+def ctx_allocation() -> dict[str, object]:
     """Get the context to build the allocation chart.
 
     Returns:
@@ -88,8 +88,10 @@ def ctx_chart() -> dict[str, object]:
             category_values[category] += asset_values[a_id]
 
     return {
-        "categories": categories,
-        "category_values": category_values,
+        "categories": {cat.pretty: assets for cat, assets in categories.items()},
+        "category_values": {
+            cat.pretty: value for cat, value in category_values.items()
+        },
     }
 
 

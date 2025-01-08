@@ -8,22 +8,22 @@
         <canvas id="allocation-chart-canvas" hx-preserve></canvas>
         {% include "shared/spinner.jinja" %}
     </div>
-    <div class="w-full max-h-[50vh] overflow-y-auto">
+    <div class="w-full max-h-[40vh] overflow-y-auto">
         <div class="w-full flex font-bold border-b border-b-grey-200">
             <div class="w-32 shrink-0 grow p-1">Name</div>
-            <div class="w-32 shrink-0 p-1 text-right">Quantity</div>
-            <div class="w-32 shrink-0 p-1 text-right">Price</div>
+            <div class="w-32 shrink-0 p-1 text-right max-md:hidden">Quantity</div>
+            <div class="w-32 shrink-0 p-1 text-right max-md:hidden">Price</div>
             <div class="w-32 shrink-0 p-1 text-right">Value</div>
         </div>
-        {% set class = "w-full flex odd:bg-grey-50 hover:bg-grey-100 min-w-[500px]" %}
-        {% for category, value in chart["category_values"].items() %}
+        {% set class = "w-full flex odd:bg-grey-50 hover:bg-grey-100" %}
+        {% for category, value in allocation["category_values"].items() %}
             <div class="{{ class }} font-bold">
-                <div class="w-32 shrink-0 grow p-1">{{ category | enum | title }}</div>
-                <div class="w-32 shrink-0 p-1 text-right"></div>
-                <div class="w-32 shrink-0 p-1 text-right"></div>
+                <div class="w-32 shrink-0 grow p-1">{{ category }}</div>
+                <div class="w-32 shrink-0 p-1 text-right max-md:hidden"></div>
+                <div class="w-32 shrink-0 p-1 text-right max-md:hidden"></div>
                 <div class="w-32 shrink-0 p-1 text-right">{{ value | money }}</div>
             </div>
-            {% for asset in chart["categories"][category] %}
+            {% for asset in allocation["categories"][category] %}
                 <a class="{{ class }}"
                    hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
                    href="{{ url_for('assets.page', uri=asset['uri']) }}"
@@ -31,12 +31,13 @@
                    hx-swap="innerHTML"
                    hx-include="unset"
                    hx-push-url="true">
-                    <div class="w-32 shrink-0 grow p-1 pl-8">{{ asset["name"] }}</div>
-                    <div class="w-32 shrink-0 p-1 text-right">{{ asset["qty"] | qty }}</div>
-                    <div class="w-32 shrink-0 p-1 text-right">{{ asset["price"] | money }}</div>
+                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">{{ asset["name"] }}</div>
+                    <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["qty"] | qty }}</div>
+                    <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["price"] | money }}</div>
                     <div class="w-32 shrink-0 p-1 text-right">{{ asset["value"] | money }}</div>
                 </a>
             {% endfor %}
         {% endfor %}
     </div>
+    {% include "allocation/chart-data.jinja" %}
 </section>

@@ -283,4 +283,76 @@ const nummusChart = {
             formatterF0.format(total);
         chart.update();
     },
+    /**
+     * Create a new tree chart
+     *
+     * @param {Object} ctx Canvas context to use
+     * @param {Array} datasets Array of datasets
+     * @param {Array} plugins Array of plugins
+     * @param {Object} options override
+     * @return {Object} Chart object
+     */
+    createTree: function(ctx, datasets, plugins, options) {
+        'use strict';
+        setChartDefaults();
+
+        const pluginObjects = [];
+        const pluginOptions = {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    title: function() {
+                        return 'Asset Value';
+                    },
+                    label: function(context) {
+                        const obj = context.raw._data;
+                        let label = obj.name || obj.category;
+                        return label + ': ' + formatterF2.format(obj.value);
+                    }
+                },
+            }
+        };
+        if (plugins) {
+            for (const item of plugins) {
+                const plugin = item[0];
+                pluginObjects.push(plugin);
+                pluginOptions[plugin.id] = item[1];
+            }
+        }
+
+        options = merge(
+            {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: pluginOptions,
+            },
+            options ?? {},
+        );
+
+        return new Chart(ctx, {
+            type: 'treemap',
+            data: {datasets: datasets},
+            options: options,
+            plugins: pluginObjects,
+        });
+    },
+    /**
+     * Update existing tree chart
+     *
+     * @param {Object} chart Chart object
+     * @param {Array} datasets Array of datasets
+     */
+    update: function(chart, datasets) {
+        'use strict';
+        if (chart.data.datasets.length == datasets.length) {
+            for (let i = 0; i < datasets.length; ++i) {
+                chart.data.datasets[i].data = datasets[i].data;
+            }
+        } else {
+            chart.data.datasets = datasets;
+        }
+        chart.update();
+    },
 };

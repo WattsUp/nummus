@@ -17,10 +17,11 @@ function getThemeColor(name) {
  * @param {Number} i Index of color to get
  * @return {String} Hex string of color
  */
-function getChartColor(i) {
+function getChartColor(i, spin) {
     'use strict';
     const base = getThemeColor('green');
-    return tinycolor(base).spin(i * 22).toHexString();
+    spin = spin ?? 22
+    return tinycolor(base).spin(i * spin).toHexString();
 }
 
 /**

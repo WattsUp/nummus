@@ -220,6 +220,11 @@ class BaseEnum(enum.IntEnum):
         """Hashing function for dictionary keys."""
         return self.value
 
+    @property
+    def pretty(self) -> str:
+        """Prettify enum value."""
+        return self.name.replace("_", " ").title()
+
 
 class SQLEnum(types.TypeDecorator):
     """SQL type for enumeration, stores as integer."""
