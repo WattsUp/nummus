@@ -52,9 +52,30 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         force: True will force build bundles
     """
     env_assets = flask_assets.Environment(app)
+    stub_dist_css = "dist/main.css"
+    stub_dist_js = "dist/main.js"
+
+    path_static = Path(app.static_folder or "static")
+    path_src = path_static.joinpath("src")
+    path_dist_css = path_static.joinpath(stub_dist_css)
+    path_dist_js = path_static.joinpath(stub_dist_js)
+    if not path_src.exists():  # pragma: no cover
+        # Too difficult to test for simple logic, skip tests
+        if not path_dist_css.exists() or not path_dist_js.exists():
+            msg = "Static source folder does not exists and neither does dist"
+            raise FileNotFoundError(msg)
+        if debug:
+            msg = "Static source folder does not exists but running in debug"
+            raise FileNotFoundError(msg)
+
+        # Use dist directly
+        env_assets.register("css", stub_dist_css)
+        env_assets.register("js", stub_dist_js)
+        return
+
     bundle_css = flask_assets.Bundle(
         "src/*.css",
-        output="dist/main.css",
+        output=stub_dist_css,
         filters=None if pytailwindcss is None else (TailwindCSSFilter,),
     )
     env_assets.register("css", bundle_css)
@@ -67,7 +88,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         "src/3rd-party/chart.min.js",
         "src/*.js",
         "src/**/*.js",
-        output="dist/main.js",
+        output=stub_dist_js,
         filters=None if jsmin is None or debug else "jsmin",
     )
     env_assets.register("js", bundle_js)
