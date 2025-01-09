@@ -352,6 +352,18 @@ class TestCommon(WebTestBase):
         self.assertIn("<html", result)
 
     def test_metrics(self) -> None:
+        d = self._setup_portfolio()
+
+        acct_uri = d["acct_uri"]
+
+        # Visit account page
+        endpoint = "accounts.page"
+        headers = {"Hx-Request": "true"}  # Fetch main content only
+        self.web_get((endpoint, {"uri": acct_uri}), headers=headers)
+
+        endpoint = "accounts.txns"
+        self.web_get((endpoint, {"uri": acct_uri}))
+
         endpoint = "prometheus_metrics"
         result, _ = self.web_get(
             endpoint,
@@ -361,3 +373,6 @@ class TestCommon(WebTestBase):
             result = result.decode()
         self.assertIn("flask_exporter_info", result)
         self.assertIn("nummus_info", result)
+        self.assertIn("flask_http_request_duration_seconds_count", result)
+        self.assertIn('endpoint="accounts.page"', result)
+        self.assertIn('endpoint="accounts.txns"', result)
