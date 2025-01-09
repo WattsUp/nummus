@@ -1260,7 +1260,7 @@ class TestPortfolio(TestBase):
             s.flush()
 
             # txn_2 is closer so more points being closer
-            txn_2.amount = Decimal(8.5)
+            txn_2.amount = Decimal("8.5")
             txn_2.account_id = acct_0.id_
             s.flush()
             result = p.find_similar_transaction(txn_0, set_property=True)

@@ -114,12 +114,12 @@ BIRTHDAYS: dict[str, datetime.date] = {
 }
 
 INTEREST_RATES: dict[int, Decimal] = {
-    y: 10 ** rng_uniform(Decimal(-3), Decimal(-1.3))
+    y: 10 ** rng_uniform(Decimal(-3), Decimal("-1.3"))
     for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
 }
 
 INFLATION_RATES: dict[int, Decimal] = {
-    y: rng_normal(Decimal(0.0376), Decimal(0.0278))
+    y: rng_normal(Decimal("0.0376"), Decimal("0.0278"))
     for y in range(BIRTH_YEAR, BIRTH_YEAR + FINAL_AGE + 1)
 }
 
@@ -285,13 +285,28 @@ def make_assets(p: Portfolio) -> dict[str, int]:
 
         # Name: [Asset, current price, growth mean, growth stddev]
         stocks: dict[str, list[Asset | Decimal]] = {
-            "growth": [growth, Decimal(100), Decimal(0.07), Decimal(0.2)],
-            "value": [value, Decimal(100), Decimal(0.05), Decimal(0.05)],
+            "growth": [growth, Decimal(100), Decimal("0.07"), Decimal("0.2")],
+            "value": [value, Decimal(100), Decimal("0.05"), Decimal("0.05")],
         }
         real_estate: dict[str, list[Asset | Decimal]] = {
-            "house_main": [house_main, Decimal(1.5e3), Decimal(0.05), Decimal(0.02)],
-            "house_second": [house_second, Decimal(3e3), Decimal(0.06), Decimal(0.02)],
-            "house_third": [house_third, Decimal(5e3), Decimal(0.07), Decimal(0.02)],
+            "house_main": [
+                house_main,
+                Decimal("1.5e3"),
+                Decimal("0.05"),
+                Decimal("0.02"),
+            ],
+            "house_second": [
+                house_second,
+                Decimal("3e3"),
+                Decimal("0.06"),
+                Decimal("0.02"),
+            ],
+            "house_third": [
+                house_third,
+                Decimal("5e3"),
+                Decimal("0.07"),
+                Decimal("0.02"),
+            ],
         }
         s.add_all(v[0] for v in stocks.values())
         s.add_all(v[0] for v in real_estate.values())
@@ -443,8 +458,8 @@ def generate_income(
             salary = Decimal(salary)
             amount = round(salary / 24, 2)
             # At age 24, decide to start contributing to retirement
-            savings = round(amount * Decimal(0.1), 2)
-            retirement = 0 if age < 24 else round(amount * Decimal(0.1), 2)
+            savings = round(amount * Decimal("0.1"), 2)
+            retirement = 0 if age < 24 else round(amount * Decimal("0.1"), 2)
             paycheck = amount - savings - retirement
 
             # Paychecks on the 5th and 20th unless that day falls on a weekend
@@ -514,11 +529,11 @@ def generate_income(
 
                     # Now buy stocks with that funding
                     if age < 30:
-                        cost_growth = round(retirement * Decimal(0.9), 2)
+                        cost_growth = round(retirement * Decimal("0.9"), 2)
                     elif age < 40:
-                        cost_growth = round(retirement * Decimal(0.5), 2)
+                        cost_growth = round(retirement * Decimal("0.5"), 2)
                     else:
-                        cost_growth = round(retirement * Decimal(0.1), 2)
+                        cost_growth = round(retirement * Decimal("0.1"), 2)
                     cost_value = retirement - cost_growth
 
                     a_values_i = (date - a_values_start).days
@@ -667,19 +682,19 @@ def generate_housing(
             """
             date_ord = date.toordinal()
             values, _, _ = acct_savings.get_value(date_ord, date_ord)
-            closing_costs = round(price * Decimal(0.05), 2)
+            closing_costs = round(price * Decimal("0.05"), 2)
             max_dp = values[0] - closing_costs
-            no_pmi_dp = price * Decimal(0.2)
+            no_pmi_dp = price * Decimal("0.2")
             if max_dp < no_pmi_dp:
                 # Clear out savings to avoid PMI
                 down_payment = round(max_dp, 2)
             else:
                 # Pay 20% unless there is more than 50k of excess cash
-                down_payment = round(max(no_pmi_dp, max_dp - Decimal(50e3)), 2)
+                down_payment = round(max(no_pmi_dp, max_dp - Decimal("50e3")), 2)
             down_payment = min(down_payment, round(price, 2))
 
             p = price - down_payment
-            r = round(rng_uniform(Decimal(0.03), Decimal(0.1)), 4) / 12
+            r = round(rng_uniform(Decimal("0.03"), Decimal("0.1")), 4) / 12
             pi = round(p * (r * (1 + r) ** 360) / ((1 + r) ** 360 - 1), 2)
 
             # Pay down payment and closing costs
@@ -757,8 +772,8 @@ def generate_housing(
             )
             s.add_all((txn, txn_split))
 
-            pmi = round(Decimal(0.01) * pi * 12, 2)
-            pmi_threshold = Decimal(0.8) * price
+            pmi = round(Decimal("0.01") * pi * 12, 2)
+            pmi_threshold = Decimal("0.8") * price
 
             s.flush()
             print(f"{Fore.CYAN}  Bought {house.description}")
@@ -779,7 +794,7 @@ def generate_housing(
                 balance: Remaining mortgage balance
             """
             date_ord = date.toordinal()
-            closing_costs = round(price * Decimal(0.08), 2)
+            closing_costs = round(price * Decimal("0.08"), 2)
 
             # Pay down payment and closing costs
             txn = Transaction(
@@ -967,7 +982,7 @@ def generate_housing(
 
             utilities = max(
                 10,
-                round(payment * rng_normal(Decimal(0.1), Decimal(0.01)), 2),
+                round(payment * rng_normal(Decimal("0.1"), Decimal("0.01")), 2),
             )
 
             txn = Transaction(
@@ -988,7 +1003,7 @@ def generate_housing(
 
             # Adds a repair cost 25% of the time with an average cost target_price
             # per month
-            target_price = payment * Decimal(0.05)
+            target_price = payment * Decimal("0.05")
             repair_cost = round(target_price / np.sqrt(rng_uniform(1e-5, 1)), 2)  # type: ignore[attr-defined]
             if repair_cost > (2 * target_price):
                 acct = acct_cc_0
@@ -1081,7 +1096,7 @@ def generate_housing(
                         house_1,
                         price,
                     )
-                    escrow = round(price * Decimal(0.02) / 12, 2)
+                    escrow = round(price * Decimal("0.02") / 12, 2)
                     bought_1 = True
 
                 # Pay monthly payment
@@ -1117,7 +1132,7 @@ def generate_housing(
                         house_2,
                         price,
                     )
-                    escrow = round(price * Decimal(0.02) / 12, 2)
+                    escrow = round(price * Decimal("0.02") / 12, 2)
                     bought_2 = True
 
                 # Pay monthly payment
@@ -1153,7 +1168,7 @@ def generate_housing(
                         house_3,
                         price,
                     )
-                    escrow = round(price * Decimal(0.02) / 12, 2)
+                    escrow = round(price * Decimal("0.02") / 12, 2)
                     bought_3 = True
 
                 # Pay monthly payment

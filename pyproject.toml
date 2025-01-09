@@ -74,7 +74,7 @@ test = [
 ]
 dev = [
   "nummus[test]",     # Development needs tests too
-  "ruff>=0.8.2",
+  "ruff>=0.9.0",
   "codespell>=2.3.0",
   "black",
   "isort",
