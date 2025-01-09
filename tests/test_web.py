@@ -275,11 +275,6 @@ class TestServer(TestBase):
             result = flask.render_template_string("{{ number | percent }}", **context)
             self.assertEqual(result, target)
 
-            context = {"var": Derived.SEAFOAM_GREEN}
-            target = "SEAFOAM GREEN"
-            result = flask.render_template_string("{{ var | enum }}", **context)
-            self.assertEqual(result, target)
-
 
 class TestHandler(TestBase):
     def test_format_request(self) -> None:

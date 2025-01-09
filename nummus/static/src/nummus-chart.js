@@ -388,7 +388,7 @@ const nummusChart = {
      * @param {Object} chart Chart object
      * @param {Array} datasets Array of datasets
      */
-    update: function(chart, datasets) {
+    updateTree: function(chart, datasets) {
         'use strict';
         if (chart.data.datasets.length == datasets.length) {
             for (let i = 0; i < datasets.length; ++i) {

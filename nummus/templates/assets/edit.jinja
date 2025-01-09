@@ -54,10 +54,8 @@
                     <select class="w-full" name="category" autocomplete="off">
                         {% for cat in asset["category_type"] %}
                             {% if cat != "INDEX" %}
-                                <option value="{{ cat | enum }}"
-                                        {% if cat == asset["category"] %}selected{% endif %}>
-                                    {{ cat | enum | title }}
-                                </option>
+                                <option value="{{ cat.name }}"
+                                        {% if cat == asset["category"] %}selected{% endif %}>{{ cat.pretty }}</option>
                             {% endif %}
                         {% endfor %}
                     </select>

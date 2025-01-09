@@ -258,6 +258,10 @@ class TestBaseEnum(TestBase):
         self.assertNotEqual(Derived.RED, Derived.BLUE)
         self.assertNotEqual(Derived.RED, "BLUE")
 
+    def test_str(self) -> None:
+        self.assertEqual(str(Derived.RED), "Derived.RED")
+        self.assertEqual(str(Derived.SEAFOAM_GREEN), "Derived.SEAFOAM_GREEN")
+
     def test_pretty(self) -> None:
         self.assertEqual(Derived.RED.pretty, "Red")
         self.assertEqual(Derived.SEAFOAM_GREEN.pretty, "Seafoam Green")

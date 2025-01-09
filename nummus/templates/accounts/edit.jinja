@@ -85,10 +85,8 @@
                 <div class="grow">
                     <select class="w-full" name="category" autocomplete="off">
                         {% for cat in account["category_type"] %}
-                            <option value="{{ cat | enum }}"
-                                    {% if cat == account["category"] %}selected{% endif %}>
-                                {{ cat | enum | title }}
-                            </option>
+                            <option value="{{ cat.name }}"
+                                    {% if cat == account["category"] %}selected{% endif %}>{{ cat.pretty }}</option>
                         {% endfor %}
                     </select>
                 </div>

@@ -9,7 +9,7 @@
        hx-include="unset"
        hx-push-url="true">
         {% block row %}
-            <div class="w-24 shrink-0 grow p-1 truncate max-md:hidden">{{ asset["category"] | enum | title }}</div>
+            <div class="w-24 shrink-0 grow p-1 truncate max-md:hidden">{{ asset["category"].pretty }}</div>
             <div class="w-32 shrink-0 grow-[4] p-1 truncate">{{ asset["name"] }}</div>
             <div class="w-28 shrink-0 grow p-1 text-right max-md:hidden">
                 {% if asset["end_qty"] is not none %}{{ asset["end_qty"] | qty }}{% endif %}

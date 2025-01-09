@@ -26,14 +26,12 @@
             <div class="w-44 shrink-1">Group</div>
             <div class="grow">
                 {% if category["locked"] %}
-                    {{ category["group"] | enum | title }}
+                    {{ category["group"].pretty }}
                 {% else %}
                     <select name="group" autocomplete="off" class="w-full">
                         {% for group in category["group_type"] %}
-                            <option value="{{ group | enum }}"
-                                    {% if group == category["group"] %}selected{% endif %}>
-                                {{ group | enum | title }}
-                            </option>
+                            <option value="{{ group.name }}"
+                                    {% if group == category["group"] %}selected{% endif %}>{{ group.pretty }}</option>
                         {% endfor %}
                     </select>
                 {% endif %}
