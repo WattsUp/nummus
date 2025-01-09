@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import re
 import string
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import spellchecker
@@ -58,7 +59,7 @@ class Typos(Base):
             # Create a dict of every word found with the first instance detected
             # Dictionary {word.lower(): (word, source, field)}
             words: dict[str, tuple[str, str, str]] = {}
-            frequency: dict[str, int] = {}
+            frequency: dict[str, int] = defaultdict(int)
             proper_nouns: set[str] = {*accounts.values(), *assets.values()}
 
             def add(s: str, source: str, field: str, count: int) -> None:
@@ -75,7 +76,6 @@ class Typos(Base):
                     return
                 if s not in words:
                     words[s] = (s, source, field)
-                    frequency[s] = 0
                 frequency[s] += count
 
             def check_duplicates() -> None:

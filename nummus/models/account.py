@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -120,22 +121,20 @@ class Account(Base):
             Also returns profit & loss for each Account
             Also returns value by Assets, Accounts holding same Assets will sum
             (
-                dict{Account.id_: list[values]},
-                dict{Account.id_: list[profit]},
-                dict{Asset.id_: list[values]},
+                dict{Account.id_: list[values]} with defaultdict,
+                dict{Account.id_: list[profit]} with defaultdict,
+                dict{Asset.id_: list[values]} with defaultdict,
             )
+            Accounts and assets with zero values omitted
         """
         n = end_ord - start_ord + 1
 
-        cash_flow_accounts: dict[int, list[Decimal | None]]
-        if ids is not None:
-            cash_flow_accounts = {acct_id: [None] * n for acct_id in ids}
-        else:
-            cash_flow_accounts = {
-                acct_id: [None] * n for acct_id, in s.query(Account.id_).all()
-            }
-        cost_basis_accounts: dict[int, list[Decimal | None]]
-        cost_basis_accounts = {acct_id: [None] * n for acct_id in cash_flow_accounts}
+        cash_flow_accounts: dict[int, list[Decimal | None]] = defaultdict(
+            lambda: [None] * n,
+        )
+        cost_basis_accounts: dict[int, list[Decimal | None]] = defaultdict(
+            lambda: [None] * n,
+        )
 
         # Profit = Interest + dividends + rewards + change in asset value - fees
         # Dividends, fees, and change in value can be assigned to an asset
@@ -243,17 +242,14 @@ class Account(Base):
         )
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
-        assets_day_zero: dict[int, dict[int, Decimal]] = {
-            acct_id: {} for acct_id in cash_flow_accounts
-        }
+        assets_day_zero: dict[int, dict[int, Decimal]] = defaultdict(
+            lambda: defaultdict(Decimal),
+        )
         for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
             a_id: int
             qty: Decimal
-            try:
-                assets_day_zero[acct_id][a_id] += qty
-            except KeyError:
-                assets_day_zero[acct_id][a_id] = qty
+            assets_day_zero[acct_id][a_id] += qty
 
         # Skip assets with zero quantity
         a_ids: set[int] = set()
@@ -273,10 +269,8 @@ class Account(Base):
 
         asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
 
-        acct_values: dict[int, list[Decimal]] = {}
-        asset_values: dict[int, list[Decimal]] = {
-            a_id: [Decimal(0)] * n for a_id in a_ids
-        }
+        acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
+        asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for acct_id, cash_flow in cash_flow_accounts.items():
             assets = assets_accounts[acct_id]
             cash = utils.integrate(cash_flow)
@@ -298,7 +292,7 @@ class Account(Base):
 
             acct_values[acct_id] = summed
 
-        acct_profit: dict[int, list[Decimal]] = {}
+        acct_profit: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for acct_id, values in acct_values.items():
             cost_basis_flow = cost_basis_accounts[acct_id]
             v = cost_basis_flow[0]
@@ -331,7 +325,6 @@ class Account(Base):
             Also returns profit & loss
             Also returns value by Asset
             (list[values], list[profit], dict{Asset.id_: list[values]})
-
         """
         s = orm.object_session(self)
         if s is None:
@@ -362,14 +355,12 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
-            dict{TransactionCategory: list[values]}
+            dict{TransactionCategory: list[values]} with defaultdict
+            Accounts with zero values omitted
         """
         n = end_ord - start_ord + 1
 
-        categories: dict[int, list[Decimal]] = {
-            cat_id: [Decimal(0)] * n
-            for cat_id, in s.query(TransactionCategory.id_).all()
-        }
+        categories: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
 
         # Transactions between start and end
         query = (
@@ -437,15 +428,12 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
-            dict{Account.id_: dict{Asset.id_: list[values]}}
+            dict{Account.id_: dict{Asset.id_: list[values]}} with defaultdict
+            Assets with zero values omitted
         """
         n = end_ord - start_ord + 1
 
-        iv_accounts: dict[int, dict[int, Decimal]] = {}
-        if ids is not None:
-            iv_accounts = {acct_id: {} for acct_id in ids}
-        else:
-            iv_accounts = {acct_id: {} for acct_id, in s.query(Account.id_).all()}
+        iv_accounts: dict[int, dict[int, Decimal]] = defaultdict(dict)
 
         # Get Asset quantities on start date
         query = (
@@ -471,20 +459,16 @@ class Account(Base):
             acct_id: int
             a_id: int
             qty: Decimal
-            try:
-                iv_accounts[acct_id][a_id] = qty
-            except KeyError:  # pragma: no cover
-                # All accounts already created in iv_accounts
-                iv_accounts[acct_id] = {a_id: qty}
+            iv_accounts[acct_id][a_id] = qty
 
         # Daily delta in qty
-        deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = {}
+        deltas_accounts: dict[int, dict[int, list[Decimal | None]]] = defaultdict(
+            lambda: defaultdict(lambda: [None] * n),
+        )
         for acct_id, iv in iv_accounts.items():
-            deltas: dict[int, list[Decimal | None]] = {}
+            deltas = deltas_accounts[acct_id]
             for a_id, v in iv.items():
-                deltas[a_id] = [None] * n
                 deltas[a_id][0] = v
-            deltas_accounts[acct_id] = deltas
 
         if start_ord != end_ord:
             # Transactions between start and end
@@ -519,21 +503,14 @@ class Account(Base):
 
                 if acct_id != current_acct_id:
                     current_acct_id = acct_id
-                    try:
-                        deltas = deltas_accounts[acct_id]
-                    except KeyError:  # pragma: no cover
-                        # Should not happen cause delta_accounts is initialized with all
-                        deltas = {}
-                        deltas_accounts[acct_id] = deltas
-                try:
-                    v = deltas[a_id][i]
-                    deltas[a_id][i] = qty if v is None else v + qty
-                except KeyError:
-                    deltas[a_id] = [None] * n
-                    deltas[a_id][i] = qty
+                    deltas = deltas_accounts[acct_id]
+                v = deltas[a_id][i]
+                deltas[a_id][i] = qty if v is None else v + qty
 
         # Integrate deltas
-        qty_accounts: dict[int, dict[int, list[Decimal]]] = {}
+        qty_accounts: dict[int, dict[int, list[Decimal]]] = defaultdict(
+            lambda: defaultdict(lambda: [Decimal(0) * n]),
+        )
         for acct_id, deltas in deltas_accounts.items():
             qty_assets: dict[int, list[Decimal]] = {}
             for a_id, delta in deltas.items():
@@ -579,7 +556,8 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
-            dict{Asset.id_: profit}
+            dict{Asset.id_: profit} with defaultdict
+            Assets with zero values omitted
         """
         # Get Asset quantities on start date
         query = (
@@ -597,9 +575,10 @@ class Account(Base):
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        initial_qty: dict[int, Decimal] = {
-            a_id: qty for a_id, qty in query.yield_per(YIELD_PER) if qty != 0
-        }
+        initial_qty: dict[int, Decimal] = defaultdict(
+            Decimal,
+            {a_id: qty for a_id, qty in query.yield_per(YIELD_PER) if qty != 0},
+        )
 
         query = (
             s.query(TransactionSplit)
@@ -617,24 +596,20 @@ class Account(Base):
         if ids is not None:
             query = query.where(TransactionSplit.account_id.in_(ids))
 
-        cost_basis: dict[int, Decimal] = {a_id: Decimal(0) for a_id in initial_qty}
-        end_qty: dict[int, Decimal] = dict(initial_qty)
+        cost_basis: dict[int, Decimal] = defaultdict(Decimal)
+        end_qty: dict[int, Decimal] = initial_qty.copy()
         for a_id, qty, amount in query.yield_per(YIELD_PER):
             a_id: int
             qty: Decimal
             amount: Decimal
-            try:
-                end_qty[a_id] += qty
-                cost_basis[a_id] += amount
-            except KeyError:
-                end_qty[a_id] = qty
-                cost_basis[a_id] = amount
+            end_qty[a_id] += qty
+            cost_basis[a_id] += amount
         a_ids = set(end_qty)
 
         initial_price = Asset.get_value_all(s, start_ord, start_ord, ids=a_ids)
         end_price = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
 
-        profits: dict[int, Decimal] = {}
+        profits: dict[int, Decimal] = defaultdict(Decimal)
         for a_id in a_ids:
             i_value = initial_qty.get(a_id, 0) * initial_price[a_id][0]
             e_value = end_qty[a_id] * end_price[a_id][0]

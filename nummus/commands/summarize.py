@@ -151,13 +151,12 @@ class Summarize(Base):
 
             net_worth = Decimal(0)
             summary_accts: list[_AccountSummary] = []
-            for acct_id, values in value_accts.items():
-                acct = accts[acct_id]
+            for acct_id, acct in accts.items():
                 if not self._include_all and acct.closed:
                     continue
 
+                v = value_accts[acct_id][-1]
                 profit = profit_accts[acct_id][-1]
-                v = values[-1]
                 net_worth += v
                 summary_accts.append(
                     {

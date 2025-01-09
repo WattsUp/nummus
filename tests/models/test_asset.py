@@ -329,7 +329,8 @@ class TestAsset(TestBase):
         self.assertEqual(r_values, [Decimal(0)])
 
         r_values = Asset.get_value_all(s, long_ago, long_ago)
-        self.assertEqual(r_values, {a.id_: [Decimal(0)]})
+        self.assertEqual(len(r_values), 0)
+        self.assertEqual(r_values[a.id_], [Decimal(0)])
 
         # Test interpolation
         a.interpolate = True
