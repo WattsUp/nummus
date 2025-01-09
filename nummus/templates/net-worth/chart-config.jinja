@@ -12,8 +12,8 @@
                 autocomplete="off">
             <option value="" {% if not chart["category"] %}selected{% endif %}>All</option>
             {% for cat in chart["category_type"] %}
-                <option value="{{ cat | enum }}"
-                        {% if chart["category"] == cat %}selected{% endif %}>{{ cat | enum | title }}</option>
+                <option value="{{ cat.name }}"
+                        {% if chart["category"] == cat %}selected{% endif %}>{{ cat.pretty }}</option>
             {% endfor %}
         </select>
     </div>

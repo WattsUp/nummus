@@ -220,6 +220,10 @@ class BaseEnum(enum.IntEnum):
         """Hashing function for dictionary keys."""
         return self.value
 
+    def __str__(self) -> str:
+        """String representation."""
+        return f"{self.__class__.__name__}.{self.name}"
+
     @property
     def pretty(self) -> str:
         """Prettify enum value."""
