@@ -31,7 +31,10 @@
                    hx-swap="innerHTML"
                    hx-include="unset"
                    hx-push-url="true">
-                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">{{ asset["name"] }}</div>
+                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">
+                        {% if asset["ticker"] %}<span class="min-w-20 inline-block italic">{{ asset["ticker"] }}:</span>{% endif %}
+                        {{ asset["name"] }}
+                    </div>
                     <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["qty"] | qty }}</div>
                     <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["price"] | money }}</div>
                     <div class="w-32 shrink-0 p-1 text-right">{{ asset["value"] | money }}</div>
@@ -64,7 +67,10 @@
                    hx-swap="innerHTML"
                    hx-include="unset"
                    hx-push-url="true">
-                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">{{ asset["name"] }}</div>
+                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">
+                        {% if asset["ticker"] %}<span class="min-w-20 inline-block italic">{{ asset["ticker"] }}:</span>{% endif %}
+                        {{ asset["name"] }}
+                    </div>
                     <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["weight"] | percent }}</div>
                     <div class="w-32 shrink-0 p-1 text-right">{{ asset["value"] | money }}</div>
                 </a>

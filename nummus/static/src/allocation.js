@@ -10,69 +10,85 @@ const allocation = {
      * @param {Object} rawSectors Raw sector data from allocation controller
      */
     update: function(rawCategories, rawSectors) {
-        const categoryTree = [];
+        const categoryTree = {};
         const categoryColors = {};
         const categoryEntries = Object.entries(rawCategories);
         categoryEntries.forEach(([category, assets], i) => {
             const color = getChartColor(i, 360 / categoryEntries.length);
             categoryColors[category] =
                 [color, tinycolor(color).isDark() ? 'white' : 'black'];
+
+            categoryTree[category] = {};
             assets.forEach((asset) => {
-                categoryTree.push({
+                categoryTree[category][asset.name] = {
                     category: category,
                     name: asset.name,
+                    ticker: asset.ticker,
                     value: Number(asset.value),
-                });
+                };
             });
         });
 
-        const sectorTree = [];
+        const sectorTree = {};
         const sectorColors = {};
-        const sectorWeights = {};
         const sectorEntries = Object.entries(rawSectors);
         sectorEntries.forEach(([sector, assets], i) => {
             const color = getChartColor(i, 360 / sectorEntries.length);
             sectorColors[sector] =
                 [color, tinycolor(color).isDark() ? 'white' : 'black'];
-            sectorWeights[sector] = {};
+
+            sectorTree[sector] = {};
             assets.forEach((asset) => {
-                const weight = Number(asset.weight);
-                sectorWeights[sector][asset.name] = weight;
-                sectorTree.push({
+                sectorTree[sector][asset.name] = {
                     sector: sector,
                     name: asset.name,
-                    weight: weight,
+                    ticker: asset.ticker,
+                    weight: Number(asset.weight) * 100,
                     value: Number(asset.value),
-                });
+                };
             });
         });
 
         const labelPadding = 2;
 
-        function word_wrap(label, maxWidth, ctx) {
-            const words = label.split(' ');
+        function word_wrap(rawLines, maxWidth, maxLines, ctx) {
+            if (maxLines < 1) {
+                return [];
+            }
             const lines = [];
-            let currentLine = null;
-            for (const word of words) {
-                const newLine = currentLine ? currentLine + ' ' + word : word;
-                const width = ctx.chart.ctx.measureText(newLine).width;
-                if (width < maxWidth) {
-                    currentLine = newLine;
-                } else if (currentLine) {
-                    const wordWidth = ctx.chart.ctx.measureText(word).width;
-                    if (wordWidth >= maxWidth) {
+            for (const rawLine of rawLines) {
+                if (!rawLine) {
+                    continue;
+                }
+                const words = rawLine.split(' ');
+                let currentLine = null;
+                for (const word of words) {
+                    const newLine =
+                        currentLine ? currentLine + ' ' + word : word;
+                    const width = ctx.measureText(newLine).width;
+                    if (width < maxWidth) {
+                        currentLine = newLine;
+                    } else if (currentLine) {
+                        const wordWidth = ctx.measureText(word).width;
+                        if (wordWidth >= maxWidth) {
+                            return lines;
+                        }
+                        lines.push(currentLine);
+                        if (lines.length == maxLines) {
+                            return lines;
+                        }
+                        currentLine = word;
+                    } else {
+                        // word alone doesn't fit
                         return lines;
                     }
-
-                    lines.push(currentLine);
-                    currentLine = word;
-                } else {
-                    // word alone doesn't fit
-                    return lines;
                 }
-            }
-            if (currentLine) {
-                lines.push(currentLine);
+                if (currentLine) {
+                    lines.push(currentLine);
+                    if (lines.length == maxLines) {
+                        return lines;
+                    }
+                }
             }
             return lines;
         }
@@ -82,46 +98,48 @@ const allocation = {
             const ctx = canvas.getContext('2d');
             const datasets = [{
                 key: 'value',
-                groups: ['category', 'name'],
+                groups: [0, 'name'],
                 tree: categoryTree,
+                treeLeafKey: 'name',
                 borderWidth: 0,
                 spacing: 1,
-                captions: {
-                    align: 'center',
-                },
                 backgroundColor: function(context) {
                     if (context.type != 'data') {
                         return 'transparent';
                     }
                     const obj = context.raw._data;
+                    const category = obj[0];
                     if (obj.name) {
-                        return categoryColors[obj.category][0] + 'D0';
+                        return categoryColors[category][0] + 'D0';
                     }
-                    return categoryColors[obj.category][0] + '40';
+                    return categoryColors[category][0] + '40';
                 },
                 labels: {
                     display: true,
                     padding: labelPadding,
                     formatter: function(context) {
-                        const obj = context.raw._data;
-                        const maxWidth = context.raw.w - labelPadding * 2;
-                        const font =
-                            Chart.helpers.toFont(context.chart.ctx.font);
+                        const rawObj = context.raw._data;
+                        const obj = categoryTree[rawObj[0]][rawObj.name];
+                        const ctx = context.chart.ctx;
+                        const zoom = context.chart.getZoomLevel();
+
+                        const maxWidth =
+                            context.raw.w * zoom - labelPadding * 2;
+                        const font = Chart.helpers.toFont(ctx.font);
                         const maxLines = Math.floor(
-                            (context.raw.h - labelPadding * 2) /
+                            (context.raw.h * zoom - labelPadding * 2) /
                             font.lineHeight);
-                        let lines = word_wrap(obj.name, maxWidth, context);
-                        const strValue = formatterF2.format(obj.value);
-                        if (context.chart.ctx.measureText(strValue).width <
-                            maxWidth) {
-                            lines.push(strValue);
-                        }
-                        return lines.slice(0, maxLines);
+
+                        let lines = [
+                            obj.ticker, obj.name, formatterF2.format(obj.value)
+                        ];
+                        return word_wrap(lines, maxWidth, maxLines, ctx);
                     },
                     color: function(context) {
                         const obj = context.raw._data;
                         if (obj.name) {
-                            return categoryColors[obj.category][1];
+                            const category = obj[0];
+                            return categoryColors[category][1];
                         }
                         return 'black';
                     },
@@ -142,49 +160,52 @@ const allocation = {
             const ctx = canvas.getContext('2d');
             const datasets = [{
                 key: 'value',
-                groups: ['sector', 'name'],
+                groups: [0, 'name'],
                 tree: sectorTree,
+                treeLeafKey: 'name',
                 borderWidth: 0,
                 spacing: 1,
-                captions: {
-                    align: 'center',
-                },
                 backgroundColor: function(context) {
                     if (context.type != 'data') {
                         return 'transparent';
                     }
                     const obj = context.raw._data;
+                    const sector = obj[0];
                     if (obj.name) {
-                        return sectorColors[obj.sector][0] + 'D0';
+                        return sectorColors[sector][0] + 'D0';
                     }
-                    return sectorColors[obj.sector][0] + '40';
+                    return sectorColors[sector][0] + '40';
                 },
                 labels: {
                     display: true,
                     padding: labelPadding,
                     formatter: function(context) {
-                        const obj = context.raw._data;
-                        const weight =
-                            sectorWeights[obj.sector][obj.name] * 100;
-                        const maxWidth = context.raw.w - labelPadding * 2;
-                        const font =
-                            Chart.helpers.toFont(context.chart.ctx.font);
+                        const rawObj = context.raw._data;
+                        const obj = sectorTree[rawObj[0]][rawObj.name];
+                        const ctx = context.chart.ctx;
+                        const zoom = context.chart.getZoomLevel();
+
+                        const maxWidth =
+                            context.raw.w * zoom - labelPadding * 2;
+                        const font = Chart.helpers.toFont(ctx.font);
                         const maxLines = Math.floor(
-                            (context.raw.h - labelPadding * 2) /
+                            (context.raw.h * zoom - labelPadding * 2) /
                             font.lineHeight);
-                        let lines = word_wrap(obj.name, maxWidth, context);
-                        const strValue = formatterF2.format(obj.value);
-                        if (lines.length > 0 && lines.length < maxLines &&
-                            context.chart.ctx.measureText(strValue).width <
-                                maxWidth) {
-                            lines.push(strValue);
-                        }
-                        return lines.slice(0, maxLines);
+
+                        let lines = [
+                            obj.ticker,
+                            obj.name,
+                            (obj.weight == 100) ? null :
+                                                  obj.weight.toFixed(2) + '%',
+                            formatterF2.format(obj.value),
+                        ];
+                        return word_wrap(lines, maxWidth, maxLines, ctx);
                     },
                     color: function(context) {
                         const obj = context.raw._data;
                         if (obj.name) {
-                            return sectorColors[obj.sector][1];
+                            const sector = obj[0];
+                            return sectorColors[sector][1];
                         }
                         return 'black';
                     },
@@ -193,32 +214,24 @@ const allocation = {
             if (this.chartSector && ctx == this.chartSector.ctx) {
                 nummusChart.updateTree(this.chartSector, datasets);
             } else {
+                const callbacks = {
+                    label: function(context) {
+                        const obj = context.raw._data;
+                        const sector = obj[0];
+                        const label = obj.name || sector;
+                        const value = formatterF2.format(obj.value);
+                        if (obj.name) {
+                            const weight = sectorTree[sector][obj.name].weight;
+                            return `${label} (${weight.toFixed(2)}%): ${value}`;
+                        }
+                        return `${label}: ${value}`;
+                    }
+                };
                 this.chartSector = nummusChart.createTree(
                     ctx,
                     datasets,
                     null,
-                    {
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    label: function(context) {
-                                        const obj = context.raw._data;
-                                        const label = obj.name || obj.sector;
-                                        const value =
-                                            formatterF2.format(obj.value);
-                                        if (obj.name) {
-                                            const weight =
-                                                sectorWeights[obj.sector][obj.name] *
-                                                100;
-                                            return `${label} (${
-                                                weight.toFixed(2)}%): ${value}`;
-                                        }
-                                        return `${label}: ${value}`;
-                                    }
-                                },
-                            }
-                        }
-                    },
+                    {plugins: {tooltip: {callbacks: callbacks}}},
                 );
             }
         }

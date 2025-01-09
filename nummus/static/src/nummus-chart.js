@@ -308,11 +308,26 @@ const nummusChart = {
                     },
                     label: function(context) {
                         const obj = context.raw._data;
-                        let label = obj.name || obj.category;
+                        let label = obj.name || obj[0];
                         return label + ': ' + formatterF2.format(obj.value);
                     }
                 },
-            }
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'xy',
+                },
+                limits: {
+                    x: {min: 'original', max: 'original'},
+                    y: {min: 'original', max: 'original'},
+                },
+                zoom: {
+                    wheel: {enabled: true},
+                    pinch: {enabled: true},
+                    mode: 'xy',
+                },
+            },
         };
         if (plugins) {
             for (const item of plugins) {
@@ -328,6 +343,34 @@ const nummusChart = {
                 maintainAspectRatio: false,
                 animations: false,
                 plugins: pluginOptions,
+                elements: {
+                    treemap: {
+                        captions: {
+                            align: 'center',
+                            formatter: function(context) {
+                                const rawObj = context.raw._data;
+                                if (rawObj.name) {
+                                    return null;
+                                }
+                                let sector = rawObj[0];
+                                let label = sector;
+                                const ctx = context.chart.ctx;
+                                const zoom = context.chart.getZoomLevel();
+
+                                const labelPadding = 2;
+                                const maxWidth =
+                                    context.raw.w * zoom - labelPadding * 2;
+                                let width = ctx.measureText(label).width;
+                                while (sector && width >= maxWidth) {
+                                    sector = sector.slice(0, -1);
+                                    label = sector + '...';
+                                    width = ctx.measureText(label).width;
+                                }
+                                return label;
+                            },
+                        },
+                    },
+                },
             },
             options ?? {},
         );

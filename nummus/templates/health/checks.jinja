@@ -10,7 +10,6 @@
 <div id="health-checks" class="w-full relative">
     {% for check in checks["checks"] %}
         <div class="w-full mb-2">
-            {# TODO(WattsUp): Add open state to cookie #}
             <input class="health-check-toggle hidden"
                    id="toggle-{{ loop.index0 }}"
                    {% if check["is_closed"] %}checked{% endif %}

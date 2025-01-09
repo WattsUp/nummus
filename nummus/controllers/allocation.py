@@ -81,20 +81,22 @@ def ctx_allocation() -> dict[str, object]:
         sector_values: dict[USSector, Decimal] = defaultdict(Decimal)
         query = (
             s.query(Asset)
-            .with_entities(Asset.id_, Asset.name, Asset.category)
+            .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
             .where(Asset.id_.in_(asset_qtys))
             .order_by(Asset.name)
         )
-        for a_id, name, category in query.yield_per(YIELD_PER):
+        for a_id, name, category, ticker in query.yield_per(YIELD_PER):
             a_id: int
             name: str
             category: AssetCategory
+            ticker: str | None
             value = asset_values[a_id]
             a_uri = Asset.id_to_uri(a_id)
 
             ctx = {
                 "uri": a_uri,
                 "name": name,
+                "ticker": ticker,
                 "qty": asset_qtys[a_id],
                 "price": asset_prices[a_id],
                 "value": value,
@@ -107,6 +109,7 @@ def ctx_allocation() -> dict[str, object]:
                 ctx = {
                     "uri": a_uri,
                     "name": name,
+                    "ticker": ticker,
                     "weight": weight,
                     "value": sector_value,
                 }
