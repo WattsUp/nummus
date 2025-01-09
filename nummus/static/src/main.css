@@ -13,6 +13,18 @@
         @apply h-[1.75rem] border px-1 bg-transparent resize-none;
     }
 
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+
+    input[type=number] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+
     svg {
         @apply fill-black;
     }

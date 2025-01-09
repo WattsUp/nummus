@@ -35,6 +35,7 @@
                    class="w-32 shrink-0 grow p-1 truncate"
                    autocomplete="off">
             <input name="amount"
+                   type="number"
                    value="{{ "%.2f" % txn["amount"] if txn["amount"] }}"
                    placeholder="Amount"
                    class="w-24 shrink-0 text-right grow p-1 truncate"
