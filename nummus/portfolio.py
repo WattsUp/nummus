@@ -1132,6 +1132,7 @@ class Portfolio:
             for asset in bar:
                 name = asset.name
                 ticker = asset.ticker or ""
+                asset.update_sectors()
                 try:
                     start, end = asset.update_valuations(
                         through_today=asset.id_ in currently_held_assets,

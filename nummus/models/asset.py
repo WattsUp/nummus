@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
-import yfinance as yf
+import yfinance
+import yfinance.exceptions
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
 
 from nummus import exceptions as exc
@@ -27,7 +28,7 @@ from nummus.models.base import (
 from nummus.models.transaction import TransactionSplit
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 
 class USSector(BaseEnum):
@@ -44,6 +45,13 @@ class USSector(BaseEnum):
     REAL_ESTATE = 9
     TECHNOLOGY = 10
     UTILITIES = 11
+
+    @override
+    @classmethod
+    def _lut(cls) -> Mapping[str, BaseEnum]:
+        return {
+            "realestate": USSector.REAL_ESTATE,
+        }
 
 
 class AssetSector(Base):
@@ -475,8 +483,6 @@ class Asset(Base):
     ) -> tuple[datetime.date | None, datetime.date | None]:
         """Update valuations from web sources.
 
-        Does not commit changes, call s.commit() afterwards.
-
         Args:
             through_today: True will force end date to today (for when currently
                 holding any quantity)
@@ -523,7 +529,7 @@ class Asset(Base):
         start = datetime.date.fromordinal(start_ord)
         end = datetime.date.fromordinal(end_ord)
 
-        yf_ticker = yf.Ticker(self.ticker)
+        yf_ticker = yfinance.Ticker(self.ticker)
         try:
             # Need to fetch all the way to today to get all splits
             raw = yf_ticker.history(
@@ -586,6 +592,62 @@ class Asset(Base):
         self.update_splits()
 
         return start, end
+
+    def update_sectors(self) -> None:
+        """Update AssetSector from web sources.
+
+        Raises:
+            NoAssetWebSourceError if Asset has no ticker
+            AssetWebError if failed to download data
+        """
+        if self.ticker is None:
+            raise exc.NoAssetWebSourceError
+
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        yf_ticker = yfinance.Ticker(self.ticker)
+        funds = yf_ticker.funds_data
+        try:
+            weights = {
+                USSector(sector): Decimal(weight)
+                for sector, weight in funds.sector_weightings.items()
+                if weight
+            }
+        except yfinance.exceptions.YFDataException:
+            # Not a fund
+            sector = yf_ticker.info.get("sector")
+            if sector is None:
+                s.query(AssetSector).where(AssetSector.asset_id == self.id_).delete()
+                return
+            weights = {USSector(sector): Decimal(1)}
+
+        leftovers: list[AssetSector] = []
+        query = s.query(AssetSector).where(AssetSector.asset_id == self.id_)
+        for a_sector in query.all():
+            weight = weights.pop(a_sector.sector, None)
+            if weight is None:
+                leftovers.append(a_sector)
+            elif weight != a_sector.weight:
+                a_sector.weight = weight
+
+        for sector, weight in weights.items():
+            if leftovers:
+                a_sector = leftovers.pop(0)
+                a_sector.sector = sector
+                a_sector.weight = weight
+            else:
+                a_sector = AssetSector(
+                    asset_id=self.id_,
+                    sector=sector,
+                    weight=weight,
+                )
+                s.add(a_sector)
+
+        # Remaining need to be deleted
+        for a_sector in leftovers:
+            s.delete(a_sector)
 
     @classmethod
     def index_twrr(
