@@ -326,6 +326,7 @@ const nummusChart = {
             {
                 responsive: true,
                 maintainAspectRatio: false,
+                animations: false,
                 plugins: pluginOptions,
             },
             options ?? {},

@@ -30,6 +30,46 @@ if TYPE_CHECKING:
     from collections.abc import Iterable
 
 
+class USSector(BaseEnum):
+    """US Sector enumeration."""
+
+    BASIC_MATERIALS = 1
+    COMMUNICATION_SERVICES = 2
+    CONSUMER_CYCLICAL = 3
+    CONSUMER_DEFENSIVE = 4
+    ENERGY = 5
+    FINANCIAL_SERVICES = 6
+    HEALTHCARE = 7
+    INDUSTRIALS = 8
+    REAL_ESTATE = 9
+    TECHNOLOGY = 10
+    UTILITIES = 11
+
+
+class AssetSector(Base):
+    """Asset Sector model for storing relating Asset to USSector.
+
+    Attributes:
+        asset_id: Asset unique identifier
+        sector: USSector
+        weight: Amount of Asset that is this USSector
+    """
+
+    __table_id__ = None
+
+    asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
+    sector: orm.Mapped[USSector] = orm.mapped_column(SQLEnum(USSector))
+    weight: ORMReal = orm.mapped_column(
+        Decimal6,
+        CheckConstraint(
+            "weight > 0",
+            "asset_sector.weight must be positive",
+        ),
+    )
+
+    __table_args__ = (UniqueConstraint("asset_id", "sector"),)
+
+
 class AssetSplit(Base):
     """Asset Split model for storing a split of an asset on a specific date.
 
