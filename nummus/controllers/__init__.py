@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from nummus import exceptions as exc
 from nummus.controllers import (
     accounts,
+    allocation,
     assets,
     auth,
     budgeting,
@@ -36,6 +37,7 @@ def add_routes(app: flask.Flask) -> None:
     """
     module = [
         accounts,
+        allocation,
         assets,
         auth,
         budgeting,

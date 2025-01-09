@@ -6,7 +6,14 @@ from typing import TYPE_CHECKING
 
 from nummus.models import base_uri
 from nummus.models.account import Account, AccountCategory
-from nummus.models.asset import Asset, AssetCategory, AssetSplit, AssetValuation
+from nummus.models.asset import (
+    Asset,
+    AssetCategory,
+    AssetSector,
+    AssetSplit,
+    AssetValuation,
+    USSector,
+)
 from nummus.models.base import Base, BaseEnum, YIELD_PER
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import (
@@ -35,6 +42,7 @@ __all__ = [
     "AccountCategory",
     "Asset",
     "AssetCategory",
+    "AssetSector",
     "AssetSplit",
     "AssetValuation",
     "Base",
@@ -53,6 +61,7 @@ __all__ = [
     "TransactionCategory",
     "TransactionCategoryGroup",
     "TransactionSplit",
+    "USSector",
     "load_cipher",
     "metadata_create_all",
     "paginate",
@@ -63,6 +72,7 @@ __all__ = [
 _MODELS: list[type[Base]] = [
     Account,
     Asset,
+    AssetSector,
     AssetSplit,
     AssetValuation,
     BudgetAssignment,

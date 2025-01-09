@@ -24,6 +24,7 @@ class Bytes:
 class Derived(base.BaseEnum):
     RED = 1
     BLUE = 2
+    SEAFOAM_GREEN = 3
 
     @classmethod
     def _lut(cls) -> Mapping[str, Derived]:
@@ -67,6 +68,10 @@ class Child(base.Base):
     @orm.validates("height")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
         return self.clean_decimals(key, field)
+
+
+class NoURI(base.Base):
+    __table_id__ = None
 
 
 class TestORMBase(TestBase):
@@ -114,6 +119,9 @@ class TestORMBase(TestBase):
         s.commit()
         self.assertIsInstance(child.color, Derived)
         self.assertEqual(child.color, Derived.RED)
+
+        no_uri = NoURI()
+        self.assertRaises(exc.NoURIError, getattr, no_uri, "uri")
 
     def test_comparators(self) -> None:
         s = self.get_session()
@@ -223,6 +231,13 @@ class TestORMBase(TestBase):
 
 
 class TestBaseEnum(TestBase):
+    def test_hasable(self) -> None:
+        d = {
+            Derived.RED: "red",
+            Derived.BLUE: "blue",
+        }
+        self.assertIsInstance(d, dict)
+
     def test_missing(self) -> None:
         self.assertRaises(ValueError, Derived, None)
         self.assertRaises(ValueError, Derived, "")
@@ -242,3 +257,7 @@ class TestBaseEnum(TestBase):
 
         self.assertNotEqual(Derived.RED, Derived.BLUE)
         self.assertNotEqual(Derived.RED, "BLUE")
+
+    def test_pretty(self) -> None:
+        self.assertEqual(Derived.RED.pretty, "Red")
+        self.assertEqual(Derived.SEAFOAM_GREEN.pretty, "Seafoam Green")

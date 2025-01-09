@@ -283,4 +283,120 @@ const nummusChart = {
             formatterF0.format(total);
         chart.update();
     },
+    /**
+     * Create a new tree chart
+     *
+     * @param {Object} ctx Canvas context to use
+     * @param {Array} datasets Array of datasets
+     * @param {Array} plugins Array of plugins
+     * @param {Object} options override
+     * @return {Object} Chart object
+     */
+    createTree: function(ctx, datasets, plugins, options) {
+        'use strict';
+        setChartDefaults();
+
+        const pluginObjects = [];
+        const pluginOptions = {
+            legend: {
+                display: false,
+            },
+            tooltip: {
+                callbacks: {
+                    title: function() {
+                        return 'Asset Value';
+                    },
+                    label: function(context) {
+                        const obj = context.raw._data;
+                        let label = obj.name || obj[0];
+                        return label + ': ' + formatterF2.format(obj.value);
+                    }
+                },
+            },
+            zoom: {
+                pan: {
+                    enabled: true,
+                    mode: 'xy',
+                },
+                limits: {
+                    x: {min: 'original', max: 'original'},
+                    y: {min: 'original', max: 'original'},
+                },
+                zoom: {
+                    wheel: {enabled: true},
+                    pinch: {enabled: true},
+                    mode: 'xy',
+                },
+            },
+        };
+        if (plugins) {
+            for (const item of plugins) {
+                const plugin = item[0];
+                pluginObjects.push(plugin);
+                pluginOptions[plugin.id] = item[1];
+            }
+        }
+
+        options = merge(
+            {
+                responsive: true,
+                maintainAspectRatio: false,
+                animations: false,
+                plugins: pluginOptions,
+                elements: {
+                    treemap: {
+                        captions: {
+                            align: 'center',
+                            formatter: function(context) {
+                                const rawObj = context.raw._data;
+                                if (rawObj.name) {
+                                    return null;
+                                }
+                                let sector = rawObj[0];
+                                let label = sector;
+                                const ctx = context.chart.ctx;
+                                const zoom = context.chart.getZoomLevel();
+
+                                const labelPadding = 2;
+                                const maxWidth =
+                                    context.raw.w * zoom - labelPadding * 2;
+                                let width = ctx.measureText(label).width;
+                                while (sector && width >= maxWidth) {
+                                    sector = sector.slice(0, -1);
+                                    label = sector + '...';
+                                    width = ctx.measureText(label).width;
+                                }
+                                return label;
+                            },
+                        },
+                    },
+                },
+            },
+            options ?? {},
+        );
+
+        return new Chart(ctx, {
+            type: 'treemap',
+            data: {datasets: datasets},
+            options: options,
+            plugins: pluginObjects,
+        });
+    },
+    /**
+     * Update existing tree chart
+     *
+     * @param {Object} chart Chart object
+     * @param {Array} datasets Array of datasets
+     */
+    update: function(chart, datasets) {
+        'use strict';
+        if (chart.data.datasets.length == datasets.length) {
+            for (let i = 0; i < datasets.length; ++i) {
+                chart.data.datasets[i].data = datasets[i].data;
+            }
+        } else {
+            chart.data.datasets = datasets;
+        }
+        chart.update();
+    },
 };

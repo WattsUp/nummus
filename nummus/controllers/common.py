@@ -207,8 +207,7 @@ def ctx_base() -> dict[str, object]:
             "Assets": ("assets.page_all", LinkType.PAGE),
             "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
             "Performance": ("performance.page", LinkType.PAGE),
-            "Allocation": None,
-            "US Sectors": None,
+            "Allocation": ("allocation.page", LinkType.PAGE),
         },
         "Planning": {
             "Future Net Worth": None,

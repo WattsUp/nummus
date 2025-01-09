@@ -735,7 +735,7 @@ class TestUtils(TestBase):
         target = [
             Decimal(0),
             Decimal(4),
-            Decimal(-0.5),
+            Decimal("-0.5"),
             Decimal(0),
         ]
         result = utils.twrr(values, profit)
@@ -1159,15 +1159,15 @@ class TestUtils(TestBase):
         self.assertEqual(result, target)
 
     def test_clamp(self) -> None:
-        result = utils.clamp(Decimal(0.5))
-        target = Decimal(0.5)
+        result = utils.clamp(Decimal("0.5"))
+        target = Decimal("0.5")
         self.assertEqual(result, target)
 
-        result = utils.clamp(Decimal(-0.5))
+        result = utils.clamp(Decimal("-0.5"))
         target = Decimal(0)
         self.assertEqual(result, target)
 
-        result = utils.clamp(Decimal(1.5))
+        result = utils.clamp(Decimal("1.5"))
         target = Decimal(1)
         self.assertEqual(result, target)
 

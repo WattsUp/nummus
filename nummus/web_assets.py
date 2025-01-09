@@ -61,6 +61,10 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     bundle_css.build(force=force)
 
     bundle_js = flask_assets.Bundle(
+        # hammer.js needs to be before chart.js
+        "src/3rd-party/hammer.js",
+        # chart.js needs to be before plugins
+        "src/3rd-party/chart.min.js",
         "src/*.js",
         "src/**/*.js",
         output="dist/main.js",

@@ -1,0 +1,81 @@
+{% set class = "w-full flex odd:bg-grey-50 hover:bg-grey-100" %}
+<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
+         hx-get="{{ url_for('allocation.page') }}"
+         hx-trigger="update-account from:body, update-asset from:body, update-valuation from:body"
+         hx-target="#main"
+         hx-swap="innerHTML">
+    <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Allocation by Category</h1>
+    <div class="w-full h-60 md:h-96 relative">
+        <canvas id="allocation-chart-canvas" hx-preserve></canvas>
+        {% include "shared/spinner.jinja" %}
+    </div>
+    <div class="w-full max-h-[40vh] overflow-y-auto">
+        <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white">
+            <div class="w-32 shrink-0 grow p-1">Name</div>
+            <div class="w-32 shrink-0 p-1 text-right max-md:hidden">Quantity</div>
+            <div class="w-32 shrink-0 p-1 text-right max-md:hidden">Price</div>
+            <div class="w-32 shrink-0 p-1 text-right">Value</div>
+        </div>
+        {% for category, value in allocation["category_values"].items() %}
+            <div class="{{ class }} font-bold">
+                <div class="w-32 shrink-0 grow p-1">{{ category }}</div>
+                <div class="w-32 shrink-0 p-1 text-right max-md:hidden"></div>
+                <div class="w-32 shrink-0 p-1 text-right max-md:hidden"></div>
+                <div class="w-32 shrink-0 p-1 text-right">{{ value | money }}</div>
+            </div>
+            {% for asset in allocation["categories"][category] %}
+                <a class="{{ class }}"
+                   hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
+                   href="{{ url_for('assets.page', uri=asset['uri']) }}"
+                   hx-target="#main"
+                   hx-swap="innerHTML"
+                   hx-include="unset"
+                   hx-push-url="true">
+                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">
+                        {% if asset["ticker"] %}<span class="min-w-20 inline-block italic">{{ asset["ticker"] }}:</span>{% endif %}
+                        {{ asset["name"] }}
+                    </div>
+                    <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["qty"] | qty }}</div>
+                    <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["price"] | money }}</div>
+                    <div class="w-32 shrink-0 p-1 text-right">{{ asset["value"] | money }}</div>
+                </a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Allocation by US Sector</h1>
+    <div class="w-full h-60 md:h-96 relative">
+        <canvas id="sector-chart-canvas" hx-preserve></canvas>
+        {% include "shared/spinner.jinja" %}
+    </div>
+    <div class="w-full max-h-[40vh] overflow-y-auto">
+        <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white">
+            <div class="w-32 shrink-0 grow p-1">Name</div>
+            <div class="w-32 shrink-0 p-1 text-right max-md:hidden">Asset Share</div>
+            <div class="w-32 shrink-0 p-1 text-right">Value</div>
+        </div>
+        {% for sector, value in allocation["sector_values"].items() %}
+            <div class="{{ class }} font-bold">
+                <div class="w-32 shrink-0 grow p-1">{{ sector }}</div>
+                <div class="w-32 shrink-0 p-1 text-right max-md:hidden"></div>
+                <div class="w-32 shrink-0 p-1 text-right">{{ value | money }}</div>
+            </div>
+            {% for asset in allocation["sectors"][sector] %}
+                <a class="{{ class }}"
+                   hx-get="{{ url_for('assets.page', uri=asset['uri']) }}"
+                   href="{{ url_for('assets.page', uri=asset['uri']) }}"
+                   hx-target="#main"
+                   hx-swap="innerHTML"
+                   hx-include="unset"
+                   hx-push-url="true">
+                    <div class="w-32 shrink-0 grow p-1 pl-8 truncate">
+                        {% if asset["ticker"] %}<span class="min-w-20 inline-block italic">{{ asset["ticker"] }}:</span>{% endif %}
+                        {{ asset["name"] }}
+                    </div>
+                    <div class="w-32 shrink-0 p-1 text-right max-md:hidden">{{ asset["weight"] | percent }}</div>
+                    <div class="w-32 shrink-0 p-1 text-right">{{ asset["value"] | money }}</div>
+                </a>
+            {% endfor %}
+        {% endfor %}
+    </div>
+    {% include "allocation/chart-data.jinja" %}
+</section>
