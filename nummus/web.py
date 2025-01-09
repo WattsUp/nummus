@@ -139,6 +139,7 @@ class Server:
         self._metrics = prometheus_flask_exporter.PrometheusMetrics(
             self._app,
             excluded_paths="/static",
+            group_by="endpoint",
             metrics_decorator=auth.login_exempt,
             registry=prometheus_client.CollectorRegistry(auto_describe=True),
         )
