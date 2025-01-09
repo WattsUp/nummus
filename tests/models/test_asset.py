@@ -12,14 +12,62 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    AssetSector,
     AssetSplit,
     AssetValuation,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
+    USSector,
 )
 from tests.base import TestBase
+
+
+class TestUSSector(TestBase):
+    def test_init_properties(self) -> None:
+        s = USSector("realestate")
+        self.assertEqual(s, USSector.REAL_ESTATE)
+
+
+class TestAssetSector(TestBase):
+    def test_init_properties(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        a = Asset(name=self.random_string(), category=AssetCategory.CASH)
+        s.add(a)
+        s.commit()
+
+        d = {
+            "asset_id": a.id_,
+            "sector": USSector.REAL_ESTATE,
+            "weight": self.random_decimal(0, 1),
+        }
+
+        v = AssetSector(**d)
+        s.add(v)
+        s.commit()
+
+        self.assertEqual(v.asset_id, d["asset_id"])
+        self.assertEqual(v.sector, d["sector"])
+        self.assertEqual(v.weight, d["weight"])
+
+        # Negative weights are bad
+        v.weight = Decimal(-1)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Zero weightsare bad
+        v.weight = Decimal(0)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
+
+        # Duplicate sectors are bad
+        v = AssetSector(**d)
+        s.add(v)
+        self.assertRaises(exc.IntegrityError, s.commit)
+        s.rollback()
 
 
 class TestAssetSplit(TestBase):
@@ -935,6 +983,82 @@ class TestAsset(TestBase):
         s.commit()
         self.assertEqual(r_start, date - datetime.timedelta(days=7))
         self.assertEqual(r_end, today)
+
+    def test_update_sectors(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+
+        # Create assets and accounts
+        a = Asset(name="Banana Inc.", category=AssetCategory.ITEM)
+        acct = Account(
+            name="Monkey Bank Checking",
+            institution="Monkey Bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            budgeted=False,
+        )
+        s.add_all((a, acct))
+        s.commit()
+
+        # No ticker should fail
+        self.assertRaises(exc.NoAssetWebSourceError, a.update_sectors)
+
+        a.ticker = "BANANA"
+        a.update_sectors()
+        s.commit()
+        query = (
+            s.query(AssetSector)
+            .with_entities(AssetSector.sector, AssetSector.weight)
+            .where(AssetSector.asset_id == a.id_)
+        )
+        sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+        target = {
+            USSector.HEALTHCARE: Decimal(1),
+        }
+        self.assertEqual(sectors, target)
+
+        a.ticker = "ORANGE_ETF"
+        a.update_sectors()
+        s.commit()
+        query = (
+            s.query(AssetSector)
+            .with_entities(AssetSector.sector, AssetSector.weight)
+            .where(AssetSector.asset_id == a.id_)
+        )
+        sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+        target = {
+            USSector.REAL_ESTATE: Decimal("0.1"),
+            USSector.TECHNOLOGY: Decimal("0.5"),
+            USSector.FINANCIAL_SERVICES: Decimal("0.4"),
+        }
+        self.assertEqual(sectors, target)
+
+        a.ticker = "BANANA_ETF"
+        a.update_sectors()
+        s.commit()
+        query = (
+            s.query(AssetSector)
+            .with_entities(AssetSector.sector, AssetSector.weight)
+            .where(AssetSector.asset_id == a.id_)
+        )
+        sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+        target = {
+            USSector.REAL_ESTATE: Decimal("0.1"),
+            USSector.ENERGY: Decimal("0.9"),
+        }
+        self.assertEqual(sectors, target)
+
+        a.ticker = "ORANGE"
+        a.update_sectors()
+        s.commit()
+        query = (
+            s.query(AssetSector)
+            .with_entities(AssetSector.sector, AssetSector.weight)
+            .where(AssetSector.asset_id == a.id_)
+        )
+        sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+        target = {}
+        self.assertEqual(sectors, target)
 
     def test_index_twrr(self) -> None:
         s = self.get_session()

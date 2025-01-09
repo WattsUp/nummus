@@ -19,12 +19,14 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    AssetSector,
     AssetValuation,
     Config,
     ConfigKey,
     Transaction,
     TransactionCategory,
     TransactionSplit,
+    USSector,
 )
 from tests.base import TestBase
 from tests.importers.test_raw_csv import TRANSACTIONS_EXTRAS
@@ -1012,6 +1014,19 @@ class TestPortfolio(TestBase):
         fake_stderr = fake_stderr.getvalue()
         self.assertIn("Updating Assets:", fake_stderr)
         self.assertEqual(result, [])
+
+        # Sectors were updated
+        with p.begin_session() as s:
+            query = (
+                s.query(AssetSector)
+                .with_entities(AssetSector.sector, AssetSector.weight)
+                .where(AssetSector.asset_id == a_id)
+            )
+            sectors: dict[USSector, Decimal] = dict(query.all())  # type: ignore[attr-defined]
+            target = {
+                USSector.HEALTHCARE: Decimal(1),
+            }
+            self.assertEqual(sectors, target)
 
         with p.begin_session() as s:
             # Add a transaction

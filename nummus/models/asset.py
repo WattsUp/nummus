@@ -629,7 +629,7 @@ class Asset(Base):
             weight = weights.pop(a_sector.sector, None)
             if weight is None:
                 leftovers.append(a_sector)
-            elif weight != a_sector.weight:
+            else:
                 a_sector.weight = weight
 
         for sector, weight in weights.items():

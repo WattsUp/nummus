@@ -110,8 +110,8 @@ class TestAsset(WebTestBase):
 
         acct_uri = d["acct_uri"]
         a_0 = d["a_0"]
-        a_uri_0 = d["a_uri_0"]
         a_1 = d["a_1"]
+        a_uri_0 = d["a_uri_0"]
         a_uri_1 = d["a_uri_1"]
         acct_id = Account.uri_to_id(acct_uri)
         a_id_0 = Asset.uri_to_id(a_uri_0)
@@ -143,10 +143,10 @@ class TestAsset(WebTestBase):
         headers = {"Hx-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("BANANA", result)
-        self.assertIn("Item Assets", result)
+        self.assertIn("Item", result)
         self.assertIn(a_0, result)
         self.assertIn(a_uri_0, result)
-        self.assertNotIn("Real Estate Assets", result)
+        self.assertNotIn("Real Estate", result)
         self.assertNotIn(a_1, result)
         self.assertNotIn(a_uri_1, result)
         self.assertIn("Show assets not currently held", result)
@@ -155,11 +155,11 @@ class TestAsset(WebTestBase):
             (endpoint, {"include-not-held": True}),
             headers=headers,
         )
-        self.assertIn("Item Assets", result)
+        self.assertIn("Item", result)
         self.assertIn("BANANA", result)
         self.assertIn(a_0, result)
         self.assertIn(a_uri_0, result)
-        self.assertIn("Real Estate Assets", result)
+        self.assertIn("Real Estate", result)
         self.assertIn(a_1, result)
         self.assertIn(a_uri_1, result)
         self.assertIn("Only show assets currently held", result)
@@ -183,10 +183,10 @@ class TestAsset(WebTestBase):
 
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertNotIn("BANANA", result)
-        self.assertNotIn("Item Assets", result)
+        self.assertNotIn("Item", result)
         self.assertNotIn(a_0, result)
         self.assertNotIn(a_uri_0, result)
-        self.assertNotIn("Real Estate Assets", result)
+        self.assertNotIn("Real Estate", result)
         self.assertNotIn(a_1, result)
         self.assertNotIn(a_uri_1, result)
         self.assertIn("Show assets not currently held", result)

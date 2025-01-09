@@ -13,7 +13,8 @@ from typing import TYPE_CHECKING
 import autodict
 import numpy as np
 import pandas as pd
-import yfinance as yf
+import yfinance
+import yfinance.exceptions
 from sqlalchemy import orm, pool
 
 from nummus import exceptions as exc
@@ -25,9 +26,39 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+class MockFunds:
+    def __init__(self, symbol: str) -> None:
+        self._symbol = symbol
+
+    @property
+    def sector_weightings(self) -> dict[str, float]:
+        if self._symbol == "BANANA_ETF":
+            return {
+                "realestate": 0.1,
+                "energy": 0.9,
+            }
+        if self._symbol == "ORANGE_ETF":
+            return {
+                "realestate": 0.1,
+                "technology": 0.5,
+                "financial_services": 0.4,
+            }
+        raise yfinance.exceptions.YFDataException
+
+
 class MockTicker:
     def __init__(self, symbol: str) -> None:
         self._symbol = symbol
+
+    @property
+    def info(self) -> dict[str, object]:
+        if self._symbol == "BANANA":
+            return {"sector": "Healthcare"}
+        return {}
+
+    @property
+    def funds_data(self) -> MockFunds:
+        return MockFunds(self._symbol)
 
     def history(
         self,
@@ -195,8 +226,8 @@ class TestBase(unittest.TestCase):
         self._original_sleep = time.sleep
         time.sleep = lambda *_: None
 
-        self._original_ticker = yf.Ticker
-        yf.Ticker = MockTicker
+        self._original_ticker = yfinance.Ticker
+        yfinance.Ticker = MockTicker
 
         self._test_start = time.perf_counter()
 
@@ -212,7 +243,7 @@ class TestBase(unittest.TestCase):
 
         # Restore sleeping
         time.sleep = self._original_sleep
-        yf.Ticker = self._original_ticker
+        yfinance.Ticker = self._original_ticker
 
     def log_speed(self, slow_duration: float, fast_duration: float) -> None:
         """Log the duration of a slow/fast A/B comparison test.
