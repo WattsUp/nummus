@@ -47,6 +47,36 @@ const allocation = {
             });
         });
 
+        const labelPadding = 2;
+
+        function word_wrap(label, maxWidth, ctx) {
+            const words = label.split(' ');
+            const lines = [];
+            let currentLine = null;
+            for (const word of words) {
+                const newLine = currentLine ? currentLine + ' ' + word : word;
+                const width = ctx.chart.ctx.measureText(newLine).width;
+                if (width < maxWidth) {
+                    currentLine = newLine;
+                } else if (currentLine) {
+                    const wordWidth = ctx.chart.ctx.measureText(word).width;
+                    if (wordWidth >= maxWidth) {
+                        return lines;
+                    }
+
+                    lines.push(currentLine);
+                    currentLine = word;
+                } else {
+                    // word alone doesn't fit
+                    return lines;
+                }
+            }
+            if (currentLine) {
+                lines.push(currentLine);
+            }
+            return lines;
+        }
+
         {
             const canvas = document.getElementById('allocation-chart-canvas');
             const ctx = canvas.getContext('2d');
@@ -71,13 +101,22 @@ const allocation = {
                 },
                 labels: {
                     display: true,
-                    overflow: 'hidden',
+                    padding: labelPadding,
                     formatter: function(context) {
                         const obj = context.raw._data;
-                        return [
-                            obj.name,
-                            formatterF2.format(obj.value),
-                        ]
+                        const maxWidth = context.raw.w - labelPadding * 2;
+                        const font =
+                            Chart.helpers.toFont(context.chart.ctx.font);
+                        const maxLines = Math.floor(
+                            (context.raw.h - labelPadding * 2) /
+                            font.lineHeight);
+                        let lines = word_wrap(obj.name, maxWidth, context);
+                        const strValue = formatterF2.format(obj.value);
+                        if (context.chart.ctx.measureText(strValue).width <
+                            maxWidth) {
+                            lines.push(strValue);
+                        }
+                        return lines.slice(0, maxLines);
                     },
                     color: function(context) {
                         const obj = context.raw._data;
@@ -122,16 +161,25 @@ const allocation = {
                 },
                 labels: {
                     display: true,
-                    overflow: 'hidden',
+                    padding: labelPadding,
                     formatter: function(context) {
                         const obj = context.raw._data;
                         const weight =
                             sectorWeights[obj.sector][obj.name] * 100;
-                        return [
-                            weight.toFixed(2) + '% of',
-                            obj.name,
-                            formatterF2.format(obj.value),
-                        ]
+                        const maxWidth = context.raw.w - labelPadding * 2;
+                        const font =
+                            Chart.helpers.toFont(context.chart.ctx.font);
+                        const maxLines = Math.floor(
+                            (context.raw.h - labelPadding * 2) /
+                            font.lineHeight);
+                        let lines = word_wrap(obj.name, maxWidth, context);
+                        const strValue = formatterF2.format(obj.value);
+                        if (lines.length > 0 && lines.length < maxLines &&
+                            context.chart.ctx.measureText(strValue).width <
+                                maxWidth) {
+                            lines.push(strValue);
+                        }
+                        return lines.slice(0, maxLines);
                     },
                     color: function(context) {
                         const obj = context.raw._data;
