@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
@@ -205,12 +206,13 @@ class Asset(Base):
             ids: Limit results to specific Assets by ID
 
         Returns:
-            dict{Asset.id_: list[values]}
+            dict{Asset.id_: list[values]} with defaultdict
+            Assets with zero values omitted
         """
         n = end_ord - start_ord + 1
 
         # Get a list of valuations (date offset, value) for each Asset
-        valuations_assets: dict[int, list[tuple[int, Decimal]]] = {}
+        valuations_assets: dict[int, list[tuple[int, Decimal]]] = defaultdict(list)
         interpolated_assets: set[int] = set()
         query = s.query(Asset).with_entities(Asset.id_, Asset.interpolate)
         if ids is not None:
@@ -218,7 +220,6 @@ class Asset(Base):
         for a_id, interpolate in query.all():
             a_id: int
             interpolate: bool
-            valuations_assets[a_id] = []
             if interpolate:
                 interpolated_assets.add(a_id)
 
@@ -263,14 +264,8 @@ class Asset(Base):
                 a_id: int
                 date_ord: int
                 v: Decimal
-
                 i = date_ord - start_ord
-
-                try:
-                    valuations_assets[a_id].append((i, v))
-                except KeyError:  # pragma: no cover
-                    # Should not happen cause delta_accounts is initialized with all
-                    valuations_assets[a_id] = [(i, v)]
+                valuations_assets[a_id].append((i, v))
 
         # Get interpolation point for assets with interpolation
         query = (
@@ -293,7 +288,7 @@ class Asset(Base):
             i = date_ord - start_ord
             valuations_assets[a_id].append((i, v))
 
-        assets_values: dict[int, list[Decimal]] = {}
+        assets_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for a_id, valuations in valuations_assets.items():
             valuations_sorted = sorted(valuations, key=lambda item: item[0])
             if a_id in interpolated_assets:

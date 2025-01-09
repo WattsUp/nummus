@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from decimal import Decimal
 
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
@@ -181,9 +182,7 @@ class BudgetAssignment(Base):
             prior_activity[cat_id][m_ord] = amount
 
         # Carry over leftover to next months to get current month's leftover amounts
-        categories_leftover: dict[int, Decimal] = {
-            t_cat_id: Decimal(0) for t_cat_id in budget_categories
-        }
+        categories_leftover: dict[int, Decimal] = defaultdict(Decimal)
         date = datetime.date.fromordinal(min_month_ord)
         while date < month:
             date_ord = date.toordinal()

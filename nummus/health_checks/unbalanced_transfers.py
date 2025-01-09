@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import textwrap
+from collections import defaultdict
 from decimal import Decimal
 
 from typing_extensions import override
@@ -95,10 +96,8 @@ class UnbalancedTransfers(Base):
                 .order_by(TransactionSplit.date_ord)
             )
             current_date_ord: int | None = None
-            total = {t_cat_id: Decimal(0) for t_cat_id in cat_transfers_ids}
-            current_splits: dict[int, list[tuple[str, Decimal]]] = {
-                t_cat_id: [] for t_cat_id in cat_transfers_ids
-            }
+            total = defaultdict(Decimal)
+            current_splits: dict[int, list[tuple[str, Decimal]]] = defaultdict(list)
             for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
                 acct_id: int
                 date_ord: int
@@ -109,8 +108,8 @@ class UnbalancedTransfers(Base):
                     if any(v != 0 for v in total.values()):
                         add_issue(current_date_ord, current_splits)
                     current_date_ord = date_ord
-                    total = {t_cat_id: Decimal(0) for t_cat_id in cat_transfers_ids}
-                    current_splits = {t_cat_id: [] for t_cat_id in cat_transfers_ids}
+                    total = defaultdict(Decimal)
+                    current_splits = defaultdict(list)
 
                 total[t_cat_id] += amount
                 current_splits[t_cat_id].append((accounts[acct_id], amount))

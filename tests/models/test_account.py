@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from decimal import Decimal
 
 from nummus import exceptions as exc
@@ -152,9 +153,9 @@ class TestAccount(TestBase):
         end = today_ord + 3
 
         result_qty = acct.get_asset_qty(start, end)
-        self.assertEqual(result_qty, target_qty)
+        self.assertEqual(len(result_qty), 0)
         result_qty = Account.get_asset_qty_all(s, start, end)
-        self.assertEqual(result_qty, {acct.id_: target_qty})
+        self.assertEqual(len(result_qty), 0)
 
         # Fund account on second day
         txn = Transaction(
@@ -342,9 +343,11 @@ class TestAccount(TestBase):
         self.assertEqual(r_assets, target_assets)
 
         r_values, r_profit, r_assets = Account.get_value_all(s, start, end)
-        self.assertEqual(r_values, {acct.id_: target_values})
-        self.assertEqual(r_profit, {acct.id_: target_profit})
-        self.assertEqual(r_assets, target_assets)
+        self.assertEqual(len(r_values), 0)
+        self.assertEqual(len(r_profit), 0)
+        self.assertEqual(len(r_assets), 0)
+        self.assertEqual(r_values[acct.id_], target_values)
+        self.assertEqual(r_profit[acct.id_], target_profit)
 
         r_values, r_profit, r_assets = Account.get_value_all(
             s,
@@ -352,14 +355,16 @@ class TestAccount(TestBase):
             end,
             ids=[acct.id_],
         )
-        self.assertEqual(r_values, {acct.id_: target_values})
-        self.assertEqual(r_profit, {acct.id_: target_profit})
-        self.assertEqual(r_assets, target_assets)
+        self.assertEqual(len(r_values), 0)
+        self.assertEqual(len(r_profit), 0)
+        self.assertEqual(len(r_assets), 0)
+        self.assertEqual(r_values[acct.id_], target_values)
+        self.assertEqual(r_profit[acct.id_], target_profit)
 
         r_values, r_profit, r_assets = Account.get_value_all(s, start, end, ids=[])
-        self.assertEqual(r_values, {})
-        self.assertEqual(r_profit, {})
-        self.assertEqual(r_assets, {})
+        self.assertEqual(len(r_values), 0)
+        self.assertEqual(len(r_profit), 0)
+        self.assertEqual(len(r_assets), 0)
 
         # Fund account on second day with interest
         t_fund = self.random_decimal(10, 100)
@@ -554,7 +559,7 @@ class TestAccount(TestBase):
         r_values, r_profit, r_assets = acct.get_value(end - 1, end - 1)
         self.assertEqual(r_values, [target_values[5]])
         self.assertEqual(r_profit, [t1 - q0 * prices[5]])
-        self.assertEqual(r_assets, {assets[0].id_: [asset_values[5]]})
+        self.assertEqual(len(r_assets), 0)
 
         # Transactions not included in profit & loss affect value but not profit
         t2 = self.random_decimal(1, 10)
@@ -698,14 +703,13 @@ class TestAccount(TestBase):
         t_cat_fund = categories["Transfers"]
         t_cat_trade = categories["Securities Traded"]
 
-        target_categories = {cat.id_: [Decimal(0)] * 7 for cat in categories.values()}
         start = today_ord - 3
         end = today_ord + 3
 
         r_categories = acct.get_cash_flow(start, end)
-        self.assertEqual(r_categories, target_categories)
+        self.assertEqual(len(r_categories), 0)
         r_categories = Account.get_cash_flow_all(s, start, end)
-        self.assertEqual(r_categories, target_categories)
+        self.assertEqual(len(r_categories), 0)
 
         # Fund account on second day
         t_fund = self.random_decimal(10, 100)
@@ -723,6 +727,7 @@ class TestAccount(TestBase):
         s.add_all((txn, t_split))
         s.commit()
 
+        target_categories = defaultdict(lambda: [Decimal(0)] * 7)
         target_categories[t_cat_fund.id_][1] += t_fund
 
         r_categories = acct.get_cash_flow(start, end)
@@ -778,15 +783,12 @@ class TestAccount(TestBase):
 
         # Test single value
         r_categories = acct.get_cash_flow(today_ord, today_ord)
-        self.assertEqual(
-            r_categories,
-            {cat: [v[3]] for cat, v in target_categories.items()},
-        )
+        self.assertEqual(len(r_categories), 0)
 
         r_categories = acct.get_cash_flow(end, end)
         self.assertEqual(
             r_categories,
-            {cat: [v[-1]] for cat, v in target_categories.items()},
+            {t_cat_trade.id_: [t1]},
         )
 
         # Create an unrelated account
