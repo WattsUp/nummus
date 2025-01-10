@@ -1,6 +1,7 @@
 'use strict';
 const numpad = {
     currentFocus: null,
+    debounceTimer: null,
     /**
      * Add event listeners to form inputs
      *
@@ -58,27 +59,44 @@ const numpad = {
      * @param {string} c Character to add to input
      */
     input: function(c) {
+        clearTimeout(numpad.debounceTimer);
         if (numpad.currentFocus) {
-            // TODO (WattsUp): Care for cursor location
-            numpad.currentFocus.focus();
-            // Simulate keyboard
-            const event = new KeyboardEvent('keyup');
-            numpad.currentFocus.dispatchEvent(event);
+            numpad.debounceTimer = setTimeout(() => {
+                const i = numpad.currentFocus.selectionStart;
+                const v = numpad.currentFocus.value
+                // Simulate keyboard
+                const event = new KeyboardEvent('keyup');
+                numpad.currentFocus.dispatchEvent(event);
 
-            numpad.currentFocus.value += c;
+                numpad.currentFocus.value = v.slice(0, i) + c + v.slice(i);
+
+                // Reset focus
+                numpad.currentFocus.focus();
+                numpad.currentFocus.setSelectionRange(i + 1, i + 1);
+            }, 100);
         }
     },
     /**
      * On numpad backspace, remove last character
      */
     backspace: function() {
+        clearTimeout(numpad.debounceTimer);
         if (numpad.currentFocus) {
-            numpad.currentFocus.focus();
-            // Simulate keyboard
-            const event = new KeyboardEvent('keyup');
-            numpad.currentFocus.dispatchEvent(event);
+            numpad.debounceTimer = setTimeout(() => {
+                const i = numpad.currentFocus.selectionStart;
+                const v = numpad.currentFocus.value
+                // Simulate keyboard
+                const event = new KeyboardEvent('keyup');
+                numpad.currentFocus.dispatchEvent(event);
 
-            numpad.currentFocus.value = numpad.currentFocus.value.slice(0, -1);
+                if (i > 0) {
+                    numpad.currentFocus.value = v.slice(0, i - 1) + v.slice(i);
+                }
+
+                // Reset focus
+                numpad.currentFocus.focus();
+                numpad.currentFocus.setSelectionRange(i - 1, i - 1);
+            }, 100);
         }
     },
 };
