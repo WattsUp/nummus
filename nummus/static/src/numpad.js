@@ -59,6 +59,8 @@ const numpad = {
      */
     input: function(c) {
         if (numpad.currentFocus) {
+            // TODO (WattsUp): Care for cursor location
+            numpad.currentFocus.focus();
             // Simulate keyboard
             const event = new KeyboardEvent('keyup');
             numpad.currentFocus.dispatchEvent(event);
@@ -71,6 +73,7 @@ const numpad = {
      */
     backspace: function() {
         if (numpad.currentFocus) {
+            numpad.currentFocus.focus();
             // Simulate keyboard
             const event = new KeyboardEvent('keyup');
             numpad.currentFocus.dispatchEvent(event);

@@ -34,7 +34,7 @@
                    list="tags"
                    class="w-32 shrink-0 grow p-1 truncate"
                    autocomplete="off">
-            <input type="number"
+            <input inputmode="none"
                    name="amount"
                    value="{{ "%.2f" % txn["amount"] if txn["amount"] }}"
                    placeholder="Amount"
