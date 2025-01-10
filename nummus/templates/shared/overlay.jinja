@@ -1,5 +1,5 @@
 <div id="overlay"
-     class="absolute inset-0 z-50 flex empty:hidden"
+     class="absolute inset-0 z-40 flex empty:hidden"
      hx-swap-oob="{{ oob }}"
      hx-target="#overlay"
      hx-on::oob-before-swap="overlayEditor.anyPendingChanges = false">{{ content | safe }}</div>
