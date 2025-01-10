@@ -37,7 +37,8 @@
                    name="amount"
                    placeholder="0.00"
                    value="{{ "%.2f" % target["amount"] if target["amount"] }}"
-                   hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                   hx-target="#budgeting-desc"
+                   hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}"
                    hx-trigger="change, keyup changed delay:100ms">
         </div>
         {% if target["period"] == "WEEK" %}
@@ -59,7 +60,8 @@
                     <input type="checkbox"
                            name="has-due"
                            {% if target["due_date"] %}checked{% endif %}
-                           hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}"
+                           hx-target="#budgeting-desc"
+                           hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}"
                            autocomplete="off">
                     {% with class = "w-6 h-6" %}
                         {% include "svg/check.svg" %}
@@ -99,14 +101,11 @@
                 <div class="w-32 shrink-1">Next {{ next_period }}</div>
                 <select class="grow"
                         name="type"
-                        hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}">
+                        hx-target="#budgeting-desc"
+                        hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}">
                     <option value="accumulate"
-                            {% if target["type"] == "ACCUMULATE" %}selected{% endif %}>
-                        Add {{ target["amount"] | money }}{{ money_period }} more
-                    </option>
-                    <option value="refill" {% if target["type"] == "REFILL" %}selected{% endif %}>
-                        Refill up to {{ target["amount"] | money }}{{ money_period }}
-                    </option>
+                            {% if target["type"] == "ACCUMULATE" %}selected{% endif %}>Add more</option>
+                    <option value="refill" {% if target["type"] == "REFILL" %}selected{% endif %}>Refill up</option>
                 </select>
             </div>
         {% endif %}
@@ -118,34 +117,11 @@
                        type="number"
                        min="1"
                        value="{{ target["repeat_every"] }}"
-                       hx-get="{{ url_for('budgeting.target', uri=target['uri']) }}">
+                       hx-target="#budgeting-desc"
+                       hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}">
             </div>
         {% endif %}
-        <div>
-            {% if target["type"] == "ACCUMULATE" %}
-                <p>
-                    {% if target["repeat_every"] > 1 %}
-                        Every {{ target["repeat_every"] }} {{ next_period }}s
-                    {% else %}
-                        Each {{ next_period }}
-                    {% endif %}
-                    assign {{ target["amount"] | money }}{{ money_period }}.
-                    This accumulates the any unspent amount.
-                </p>
-                <p class="italic">Use for: bills, subscriptions, savings</p>
-            {% elif target["type"] == "REFILL" %}
-                <p>
-                    {% if target["repeat_every"] > 1 %}
-                        Every {{ target["repeat_every"] }} {{ next_period }}s
-                    {% else %}
-                        Each {{ next_period }}
-                    {% endif %}
-                    have {{ target["amount"] | money }}{{ money_period }} on hand.
-                    Any unspent amount applies to next {{ next_period }}'s {{ target["amount"] | money }}{{ money_period }}.
-                </p>
-                <p class="italic">Use for: gasoline, fun money, dining out</p>
-            {% endif %}
-        </div>
+        {% include "budgeting/target-desc.jinja" %}
     </div>
     <div id="overlay-error"
          class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
