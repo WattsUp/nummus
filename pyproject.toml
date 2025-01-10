@@ -80,7 +80,7 @@ dev = [
   "isort",
   "viztracer",
   "pre-commit",
-  "djlint>=1.35.2",
+  "djlint>=1.36.4",
   "pyright>=1.1.387",
   "taplo",
 ]
