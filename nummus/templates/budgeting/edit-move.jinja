@@ -19,7 +19,7 @@
         <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-16 shrink-1">Move:</div>
             <input class="grow"
-                   type="number"
+                   inputmode="none"
                    value="{{ "%.2f" % category["available"] }}"
                    name="amount">
         </div>
@@ -42,5 +42,8 @@
                 hx-include="#form-edit-budget"
                 class="button bg-green">Save</button>
     </div>
-    <script>overlayEditor.addListeners("form-edit-budget");</script>
+    <script>
+        overlayEditor.addListeners("form-edit-budget");
+        numpad.addListeners("form-edit-budget");
+    </script>
 </div>

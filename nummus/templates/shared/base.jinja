@@ -8,7 +8,7 @@
         </title>
         <meta charset="utf-8">
         <meta name="viewport"
-              content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+              content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
         <meta name="description"
               content="A personal financial information aggregator and planning tool." />
         <meta name="keywords" content="">
@@ -55,5 +55,63 @@
             </div>
         </div>
         {% include "/shared/overlay.jinja" %}
+        <div id="virtual-numpad"
+             class="grid grid-cols-4 gap-3 bg-grey-900 w-full fixed bottom-0 text-white p-2 text-lg md:hidden h-72 transition-transform duration-300 translate-y-72 z-50"
+             disabled>
+            {% set class = "h-11 rounded-xl flex items-center justify-center" %}
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input('(')">(</button>
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input(')')">)</button>
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input('*')">*</button>
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input('/')">/</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('1')">1</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('2')">2</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('3')">3</button>
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input('+')">+</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('4')">4</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('5')">5</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('6')">6</button>
+            <button class="{{ class }} bg-grey-700 active:bg-grey-600"
+                    onclick="numpad.input('-')">-</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('7')">7</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('8')">8</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('9')">9</button>
+            <button class="{{ class }} bg-yellow text-black active:bg-yellow-400"
+                    onclick="numpad.backspace()">
+                {% with class="w-[32px] h-[32px]" %}
+                    {% include "svg/undo.svg" %}
+                {% endwith %}
+            </button>
+            <button class="{{ class }} bg-blue active:bg-blue-700"
+                    onclick="numpad.close()">
+                {% with class="w-[32px] h-[32px] fill-white" %}
+                    {% include "svg/arrow-down.svg" %}
+                {% endwith %}
+            </button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('0')">0</button>
+            <button class="{{ class }} bg-grey-800 active:bg-grey-600"
+                    onclick="numpad.input('.')">.</button>
+            {#
+            <button class="{{ class }} bg-green text-black active:bg-green-600" onclick="numpad.enter()">
+                {% with class="w-[32px] h-[32px]" %}
+                    {% include "svg/enter.svg" %}
+                {% endwith %}
+            </button>
+            #}
+        </div>
     </body>
 </html>
