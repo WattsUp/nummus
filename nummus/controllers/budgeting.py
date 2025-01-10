@@ -1024,12 +1024,18 @@ def target(uri: str) -> str | flask.Response:
             "amount": tar.amount,
             "weekdays": utils.WEEKDAYS,
             "months": utils.MONTHS,
+            "from_amount": flask.request.headers.get("HX-Trigger")
+            == "budgeting-amount",
         }
         # Don't make the changes
         s.rollback()
 
         return flask.render_template(
-            "budgeting/target.jinja",
+            (
+                "budgeting/target-desc.jinja"
+                if "desc" in args
+                else "budgeting/target.jinja"
+            ),
             target=ctx,
         )
 
