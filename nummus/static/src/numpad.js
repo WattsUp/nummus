@@ -32,8 +32,10 @@ const numpad = {
      */
     onFocus: function(event) {
         numpad.currentFocus = event.target;
-        document.querySelector('#overlay').style.paddingBottom = '18rem';
-        document.body.style.paddingBottom = '18rem';
+        if (window.screen.width < 768) {
+            document.querySelector('#overlay').style.paddingBottom = '18rem';
+            document.body.style.paddingBottom = '18rem';
+        }
         document.querySelector('#virtual-numpad')
             .classList.remove('translate-y-72');
     },
