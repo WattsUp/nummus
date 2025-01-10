@@ -390,13 +390,8 @@ const nummusChart = {
      */
     updateTree: function(chart, datasets) {
         'use strict';
-        if (chart.data.datasets.length == datasets.length) {
-            for (let i = 0; i < datasets.length; ++i) {
-                chart.data.datasets[i].data = datasets[i].data;
-            }
-        } else {
-            chart.data.datasets = datasets;
-        }
+        // Just swap datasets, no animations
+        chart.data.datasets = datasets;
         chart.update();
     },
 };
