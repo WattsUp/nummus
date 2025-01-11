@@ -43,6 +43,22 @@ class TailwindCSSFilter(webassets.filter.Filter):
         out.write(built_css)
 
 
+class JSMinFilter(webassets.filter.Filter):
+    """webassets Filter for running jsmin over."""
+
+    def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
+        """Run filter and generate output file.
+
+        Args:
+            out: Output buffer
+        """
+        if jsmin is None:
+            raise NotImplementedError
+        # Add back tick to quote_chars for template strings
+        minifier = jsmin.JavascriptMinify(quote_chars="'\"`")
+        minifier.minify(_in, out)
+
+
 def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None:
     """Build asset bundles.
 
@@ -89,7 +105,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         "src/*.js",
         "src/**/*.js",
         output=stub_dist_js,
-        filters=None if jsmin is None or debug else "jsmin",
+        filters=(None if jsmin is None or debug else (JSMinFilter,)),
     )
     env_assets.register("js", bundle_js)
     bundle_js.build(force=force)

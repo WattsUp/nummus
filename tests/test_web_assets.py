@@ -21,6 +21,16 @@ class TestWebAssets(TestBase):
         self.assertIn("/*! tailwindcss", buf)
         self.assertIn("*,:after,:before", buf)
 
+    def test_jsmin_filter(self) -> None:
+        f = web_assets.JSMinFilter()
+
+        _in = io.StringIO("const abc = 123;  \nconst string = `${abc} = abc`")
+        out = io.StringIO()
+        f.output(_in, out)
+        buf = out.getvalue()
+        target = "const abc=123;const string=`${abc} = abc`"
+        self.assertEqual(buf, target)
+
     def test_build_bundles(self) -> None:
         app = flask.Flask(__name__, root_path=str(Path(web_assets.__file__).parent))
 
