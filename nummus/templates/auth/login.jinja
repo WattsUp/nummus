@@ -4,7 +4,7 @@
         <title>Login | nummus</title>
         <meta charset="utf-8">
         <meta name="viewport"
-              content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+              content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
         <meta name="description"
               content="A personal financial information aggregator and planning tool." />
         <meta name="keywords" content="">
@@ -21,9 +21,8 @@
             <script>htmx.config.methodsThatUseUrlParams = ["get"]</script>
         {% endassets %}
     </head>
-    <body class="antialiased bg-green-300 h-screen w-screen relative text-black flex flex-col">
-        <main class="overflow-y-scroll grow max-w-[100vw] flex justify-center items-center"
-              id="main">
+    <body class="antialiased bg-green-300 h-screen w-screen relative text-black flex flex-col overflow-y-auto">
+        <main class="grow max-w-[100vw] flex justify-center items-center" id="main">
             {# Dummy sidebar element so the JS listener doesn't complain #}
             <div id="sidebar" hidden></div>
             <div id="form-login"
