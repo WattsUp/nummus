@@ -12,7 +12,8 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
+from nummus.web_utils import HTTP_CODE_BAD_REQUEST
+from tests.controllers.base import WebTestBase
 
 
 class TestTransaction(WebTestBase):
@@ -23,7 +24,7 @@ class TestTransaction(WebTestBase):
             s.query(TransactionSplit).delete()
             s.query(Transaction).delete()
         endpoint = "transactions.page_all"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn('id="txn-config"', result)
         self.assertIn('id="txn-paging"', result)

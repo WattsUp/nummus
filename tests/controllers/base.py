@@ -26,6 +26,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 from tests import TEST_LOG
 from tests.base import TestBase
 
@@ -40,11 +41,6 @@ ResultType = dict[str, object] | str | bytes
 Tree = dict[str, "TreeNode"]
 TreeNode = Tree | tuple[str, Tree] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
-
-HTTP_CODE_OK = 200
-HTTP_CODE_REDIRECT = 302
-HTTP_CODE_BAD_REQUEST = 400
-HTTP_CODE_FORBIDDEN = 403
 
 
 class WebTestBase(TestBase):

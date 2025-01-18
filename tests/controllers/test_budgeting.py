@@ -42,7 +42,7 @@ class TestBudgeting(WebTestBase):
             )
 
         endpoint = "budgeting.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Budgeting", result)
         self.assertIn(month_str, result)

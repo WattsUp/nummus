@@ -12,7 +12,8 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
+from nummus.web_utils import HTTP_CODE_BAD_REQUEST
+from tests.controllers.base import WebTestBase
 
 
 class TestAsset(WebTestBase):
@@ -140,7 +141,7 @@ class TestAsset(WebTestBase):
             s.add_all((txn, t_split))
 
         endpoint = "assets.page_all"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("BANANA", result)
         self.assertIn("Item", result)
@@ -195,7 +196,7 @@ class TestAsset(WebTestBase):
         _ = self._setup_portfolio()
 
         endpoint = "assets.page_transactions"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("No matching transactions", result)
 
@@ -210,7 +211,7 @@ class TestAsset(WebTestBase):
         a_id_0 = Asset.uri_to_id(a_uri_0)
 
         endpoint = "assets.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0}),
             headers=headers,
@@ -233,7 +234,7 @@ class TestAsset(WebTestBase):
             v_uri = v.uri
 
         endpoint = "assets.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(
             (endpoint, {"uri": a_uri_0}),
             headers=headers,

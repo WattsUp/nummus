@@ -20,7 +20,7 @@ class TestNetWorth(WebTestBase):
         _ = self._setup_portfolio()
 
         endpoint = "net_worth.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Today's Balance <b>$90.00</b>", result)
         self.assertRegex(

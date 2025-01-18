@@ -20,7 +20,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from nummus import controllers
 from nummus import exceptions as exc
 from nummus import portfolio, utils, version, web_assets
-from nummus.controllers import auth
+from nummus.controllers import auth, common
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
@@ -164,7 +164,13 @@ class Server:
             SESSION_COOKIE_SECURE=True,
             SESSION_COOKIE_HTTPONLY=True,
             SESSION_COOKIE_SAMESITE="Lax",
+            REMEMBER_COOKIE_SECURE=True,
+            REMEMBER_COOKIE_HTTPONLY=True,
+            REMEMBER_COOKIE_SAMESITE="Lax",
+            REMEMBER_COOKIE_DURATION=datetime.timedelta(days=28),
         )
+        self._app.after_request(common.change_redirect_to_htmx)
+
         login_manager = flask_login.LoginManager()
         login_manager.init_app(self._app)
         login_manager.user_loader(auth.get_user)

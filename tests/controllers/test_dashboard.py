@@ -13,7 +13,7 @@ class TestDashboard(WebTestBase):
         self.assertEqual(result[-len(target) :], target)
 
         # If request is a HTMX request, should only return main section, not whole page
-        result, _ = self.web_get(endpoint, headers={"Hx-Request": "true"})
+        result, _ = self.web_get(endpoint, headers={"HX-Request": "true"})
         target = '<!DOCTYPE html>\n<html lang="en-US">'
         self.assertNotEqual(result[: len(target)], target)
         target = "</html>"

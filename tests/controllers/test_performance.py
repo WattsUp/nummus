@@ -25,7 +25,7 @@ class TestPerformance(WebTestBase):
             Asset.add_indices(s)
 
         endpoint = "performance.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         result = result.replace("\n", " ")
         self.assertRegex(

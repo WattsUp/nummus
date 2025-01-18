@@ -19,7 +19,7 @@ class TestHealth(WebTestBase):
     def test_page(self) -> None:
         self._setup_portfolio()
         endpoint = "health.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Health checks never ran", result)
 

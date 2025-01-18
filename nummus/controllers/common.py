@@ -13,6 +13,7 @@ from sqlalchemy import func
 from nummus import exceptions as exc
 from nummus import models
 from nummus.models import Account, AccountCategory, Transaction
+from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
     from nummus import portfolio
@@ -325,7 +326,7 @@ def page(content_template: str, title: str, **context: object) -> str:
         title: Title of the page
         context: context passed to render_template
     """
-    if flask.request.headers.get("Hx-Request", "false") == "true":
+    if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
         html_title = f"<title>{title}</title>\n"
         return html_title + flask.render_template(content_template, **context)
@@ -342,6 +343,27 @@ def page(content_template: str, title: str, **context: object) -> str:
         base=ctx_base(),
         **context,
     )
+
+
+def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
+    """Change redirect responses to HX-Redirect.
+
+    Args:
+        response: HTTP response
+
+    Returns:
+        Modified HTTP response
+    """
+    if (
+        response.status_code == HTTP_CODE_REDIRECT
+        and flask.request.headers.get("HX-Request", "false") == "true"
+    ):
+        # If a redirect is issued to a HX-Request, send OK and HX-Redirect
+        location = response.headers["Location"]
+        response.headers["HX-Redirect"] = location
+        response.status_code = HTTP_CODE_OK
+
+    return response
 
 
 ROUTES: Routes = {
