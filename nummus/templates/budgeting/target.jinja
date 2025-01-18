@@ -32,7 +32,7 @@
         <div class="flex gap-1 flex-wrap min-h-7 items-center">
             <div class="w-32 shrink-1">Amount</div>
             <input id="budgeting-amount"
-                   inputmode="none"
+                   inputmode="tel"
                    class="grow"
                    name="amount"
                    placeholder="0.00"
@@ -114,7 +114,7 @@
                 <div class="w-32 shrink-1">Repeat every</div>
                 <input class="grow"
                        name="repeat"
-                       inputmode="none"
+                       inputmode="tel"
                        min="1"
                        value="{{ target["repeat_every"] }}"
                        hx-target="#budgeting-desc"
@@ -151,8 +151,5 @@
                     class="button bg-green">Save</button>
         {% endif %}
     </div>
-    <script>
-        overlayEditor.addListeners("form-edit-target");
-        numpad.addListeners("form-edit-target");
-    </script>
+    <script>overlayEditor.addListeners("form-edit-target");</script>
 </div>
