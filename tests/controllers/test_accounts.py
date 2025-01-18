@@ -14,7 +14,8 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import HTTP_CODE_BAD_REQUEST, WebTestBase
+from nummus.web_utils import HTTP_CODE_BAD_REQUEST
+from tests.controllers.base import WebTestBase
 
 
 class TestAccount(WebTestBase):
@@ -144,7 +145,7 @@ class TestAccount(WebTestBase):
         t_split_1 = d["t_split_1"]
 
         endpoint = "accounts.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(
             (endpoint, {"uri": acct_uri}),
             headers=headers,

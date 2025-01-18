@@ -290,7 +290,7 @@ class TestCommon(WebTestBase):
                             method=method,
                             buffered=False,
                             follow_redirects=False,
-                            headers={"Hx-Request": "true"} if hx else None,
+                            headers={"HX-Request": "true"} if hx else None,
                             data=data,
                         )
                     stderr = stderr.getvalue()
@@ -342,7 +342,7 @@ class TestCommon(WebTestBase):
         _ = self._setup_portfolio()
 
         endpoint = "dashboard.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("<title>", result)
         self.assertNotIn("<html", result)
@@ -358,7 +358,7 @@ class TestCommon(WebTestBase):
 
         # Visit account page
         endpoint = "accounts.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         self.web_get((endpoint, {"uri": acct_uri}), headers=headers)
 
         endpoint = "accounts.txns"

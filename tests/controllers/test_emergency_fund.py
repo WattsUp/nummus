@@ -25,7 +25,7 @@ class TestEmergencyFund(WebTestBase):
 
         # No emergency fund should not error out
         endpoint = "emergency_fund.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("No spending", result)
         self.assertRegex(

@@ -11,7 +11,8 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
-from tests.controllers.base import HTTP_CODE_FORBIDDEN, WebTestBase
+from nummus.web_utils import HTTP_CODE_FORBIDDEN
+from tests.controllers.base import WebTestBase
 
 
 class TestTransactionCategory(WebTestBase):

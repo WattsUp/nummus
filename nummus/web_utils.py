@@ -31,6 +31,12 @@ LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the
 LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
 # else tick each day
 
+HTTP_CODE_OK = 200
+HTTP_CODE_REDIRECT = 302
+HTTP_CODE_BAD_REQUEST = 400
+HTTP_CODE_FORBIDDEN = 403
+
+
 T = TypeVar("T", bound=Base)
 
 

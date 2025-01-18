@@ -120,7 +120,7 @@ def login() -> str | flask.Response:
             return common.error("Bad password")
 
         web_user = WebUser()
-        flask_login.login_user(web_user)
+        flask_login.login_user(web_user, remember=True)
 
         next_url = form.get("next")
         if next_url is None:

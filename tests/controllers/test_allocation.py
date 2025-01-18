@@ -28,7 +28,7 @@ class TestAllocation(WebTestBase):
         a_id_0 = Asset.uri_to_id(a_uri_0)
 
         endpoint = "allocation.page"
-        headers = {"Hx-Request": "true"}  # Fetch main content only
+        headers = {"HX-Request": "true"}  # Fetch main content only
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertNotIn(a_0, result)
         self.assertNotIn("Item", result)
