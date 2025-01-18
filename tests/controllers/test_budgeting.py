@@ -1259,7 +1259,7 @@ class TestBudgeting(WebTestBase):
             tar.period = TargetPeriod.MONTH
             tar.type_ = TargetType.REFILL
             tar.due_date_ord = today.toordinal()
-            tar.repeat_every = 2
+            tar.repeat_every = 6
             s.flush()
 
             # Underfunded
@@ -1288,21 +1288,21 @@ class TestBudgeting(WebTestBase):
             # Underfunded
             ctx = budgeting.ctx_target(
                 tar,
-                utils.date_add_months(month, 1),
-                assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
-                leftover=Decimal(10),
+                utils.date_add_months(month, 3),
+                assigned=Decimal(0),
+                available=Decimal(20),
+                leftover=Decimal(20),
             )
             target: budgeting.TargetContext = {
-                "target_assigned": Decimal(45),
-                "total_assigned": Decimal(30),
-                "to_go": Decimal(25),
+                "target_assigned": Decimal(20),
+                "total_assigned": Decimal(20),
+                "to_go": Decimal(20),
                 "on_track": False,
-                "next_due_date": utils.date_add_months(today, 2),
+                "next_due_date": utils.date_add_months(today, 6),
                 "progress_bars": [Decimal(100)],
                 "target": Decimal(100),
                 "total_target": Decimal(100),
-                "total_to_go": Decimal(70),
+                "total_to_go": Decimal(80),
                 "period": tar.period,
                 "type": tar.type_,
             }
