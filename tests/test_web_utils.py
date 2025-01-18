@@ -43,6 +43,9 @@ class TestWebUtils(TestBase):
         result = web_utils.parse_period("custom", None, None)
         self.assertEqual(result, (today, today))
 
+        result = web_utils.parse_period("custom", "", "")
+        self.assertEqual(result, (today, today))
+
         start = datetime.date(today.year, today.month, 4)
         end = datetime.date(today.year, today.month, 10)
         result = web_utils.parse_period("custom", start, end)
