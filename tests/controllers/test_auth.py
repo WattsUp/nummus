@@ -58,6 +58,17 @@ class TestAuth(WebTestBase):
         )
         self.assertEqual(headers["Location"], url_login_next)
 
+        # With HX-Request, return OK with HX-Redirect
+        headers = {"HX-Request": "true"}
+        response, headers = self.web_get(endpoint, headers=headers)
+        self.assertEqual(response, "")
+        self.assertIn(
+            "HX-Redirect",
+            headers,
+            msg=f"Response lack Location {response}",
+        )
+        self.assertEqual(headers["HX-Redirect"], url_login_next)
+
         # Static pages aren't protected
         self.web_get(
             ("static", {"filename": "img/favicon.ico"}),

@@ -362,6 +362,9 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
         location = response.headers["Location"]
         response.headers["HX-Redirect"] = location
         response.status_code = HTTP_CODE_OK
+        # werkzeug redirect doesn't have close tags
+        # clear body
+        response.data = ""
 
     return response
 
