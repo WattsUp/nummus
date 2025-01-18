@@ -34,7 +34,7 @@ const netWorth = {
 
         const ticksEnabled = window.screen.width >= 768;
 
-        const width = 60;
+        const width = 62;
 
         {
             const canvas = document.getElementById('total-chart-canvas');

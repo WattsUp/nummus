@@ -13,6 +13,8 @@
            value="{{ val_table["start"] }}"
            hx-get="{{ url_for('assets.valuations', period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
+           hx-validate="true"
+           hx-on::validation:failed="event.target.classList.add('border-red')"
            autocomplete="off">
     to
     <input type="date"
@@ -20,5 +22,7 @@
            value="{{ val_table["end"] }}"
            hx-get="{{ url_for('assets.valuations', period='custom', **url_args) }}"
            hx-trigger="blur changed,keyup[keyCode==13] changed"
+           hx-validate="true"
+           hx-on::validation:failed="event.target.classList.add('border-red')"
            autocomplete="off">
 </div>

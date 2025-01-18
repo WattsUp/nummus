@@ -25,6 +25,8 @@
                value="{{ txn_table["start"] }}"
                hx-get="{{ url_for(endpoint, period='custom', **url_args) }}"
                hx-trigger="blur changed,keyup[keyCode==13] changed"
+               hx-validate="true"
+               hx-on::validation:failed="event.target.classList.add('border-red')"
                autocomplete="off">
         to
         <input id="txn-config-end"
@@ -33,6 +35,8 @@
                value="{{ txn_table["end"] }}"
                hx-get="{{ url_for(endpoint, period='custom', **url_args) }}"
                hx-trigger="blur changed,keyup[keyCode==13] changed"
+               hx-validate="true"
+               hx-on::validation:failed="event.target.classList.add('border-red')"
                autocomplete="off">
     </div>
 </div>
