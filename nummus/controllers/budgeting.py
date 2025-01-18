@@ -176,7 +176,7 @@ def ctx_target(
         "target_assigned": target_assigned,
         "total_assigned": total_assigned,
         "to_go": target_assigned - assigned,
-        "on_track": total_assigned >= target_assigned,
+        "on_track": assigned >= target_assigned,
         "next_due_date": due_date,
         "progress_bars": progress_bars,
         "target": tar.amount,
