@@ -78,9 +78,15 @@ def parse_period(
         start is None for "all"
     """
     if isinstance(start_custom, str):
-        start_custom = datetime.date.fromisoformat(start_custom)
+        try:
+            start_custom = datetime.date.fromisoformat(start_custom)
+        except ValueError:
+            start_custom = None
     if isinstance(end_custom, str):
-        end_custom = datetime.date.fromisoformat(end_custom)
+        try:
+            end_custom = datetime.date.fromisoformat(end_custom)
+        except ValueError:
+            end_custom = None
 
     today = datetime.date.today()
     if period == "custom":
