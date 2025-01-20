@@ -11,10 +11,12 @@ const budgeting = {
     dragItemParent: null,
     dragItemSibling: null,
     dragItemGroup: null,
+    scrollContainer: null,
     staticItems: [],
     staticItemsY: [],
     initialX: null,
     initialY: null,
+    initialScroll: null,
     initialMouseX: null,
     initialMouseY: null,
     mouseOffsetX: null,
@@ -28,6 +30,7 @@ const budgeting = {
         this.table = document.querySelector('#budget-table');
         this.trash = document.querySelector('#budget-trash');
         this.trashSVG = this.trash.querySelector('svg');
+        this.scrollContainer = document.querySelector('#main').parentNode;
 
         // Remove any that exist
         this.table.removeEventListener('mousedown', this.dragStart);
@@ -96,6 +99,7 @@ const budgeting = {
         budgeting.mouseOffsetY = event.clientY - rect.y;
         budgeting.initialMouseX = event.clientX;
         budgeting.initialMouseY = event.clientY;
+        budgeting.initialScroll = budgeting.scrollContainer.scrollTop;
 
         // Make nothing selectable
         budgeting.table.classList.add('select-none');
@@ -109,7 +113,8 @@ const budgeting = {
      */
     dragStartTest(event) {
         const dx = event.clientX - budgeting.initialMouseX;
-        const dy = event.clientY - budgeting.initialMouseY;
+        const dy = (event.clientY - budgeting.initialMouseY) +
+            (budgeting.scrollContainer.scrollTop - budgeting.initialScroll);
         const delta = Math.sqrt(dx * dx + dy * dy);
 
         if (delta < 10) {
@@ -171,9 +176,11 @@ const budgeting = {
      */
     drag: function(event) {
         const offsetX = event.clientX - budgeting.initialX;
-        const offsetY = event.clientY - budgeting.initialY;
+        const scrollY =
+            budgeting.scrollContainer.scrollTop - budgeting.initialScroll
+        const offsetY = (event.clientY - budgeting.initialY) + scrollY;
         const dragItemY = event.clientY - budgeting.mouseOffsetY -
-            budgeting.dragItemHeight / 2;
+            budgeting.dragItemHeight / 2 + scrollY;
 
         if (budgeting.isGroup && event.clientX >= budgeting.trashRect.left &&
             event.clientX <= budgeting.trashRect.right &&
