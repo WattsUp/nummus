@@ -266,22 +266,6 @@ def overlay_swap(
     return response
 
 
-def redirect(
-    url: str,
-) -> flask.Response:
-    """Create a response to redirect to url.
-
-    Args:
-        url: URL to redirect to
-
-    Returns:
-        Response that causes a full page reload to URL
-    """
-    response = flask.make_response("")
-    response.headers["HX-Redirect"] = url
-    return response
-
-
 def error(e: str | Exception) -> str:
     """Convert exception into an readable error string.
 
