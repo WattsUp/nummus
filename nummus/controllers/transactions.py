@@ -42,7 +42,7 @@ class _OptionContex(TypedDict):
     score: int
 
 
-def page_all() -> str:
+def page_all() -> flask.Response:
     """GET /transactions.
 
     Returns:

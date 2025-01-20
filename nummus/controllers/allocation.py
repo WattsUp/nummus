@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /allocation.
 
     Returns:

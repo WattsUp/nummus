@@ -366,7 +366,7 @@ def ctx_table(
     }, title
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /budgeting.
 
     Returns:

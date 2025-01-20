@@ -7,10 +7,12 @@ from typing import TYPE_CHECKING
 from nummus.controllers import common
 
 if TYPE_CHECKING:
+    import flask
+
     from nummus.controllers.base import Routes
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /.
 
     Returns:

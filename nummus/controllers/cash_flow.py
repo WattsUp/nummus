@@ -262,7 +262,7 @@ def sum_income_expense(
     return income, expense
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /cash-flow.
 
     Returns:

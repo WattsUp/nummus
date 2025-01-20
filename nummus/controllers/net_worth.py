@@ -294,7 +294,7 @@ def ctx_assets(
     }
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /net-worth.
 
     Returns:

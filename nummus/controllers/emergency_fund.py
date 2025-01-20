@@ -215,7 +215,7 @@ def ctx_page() -> dict[str, object]:
     }
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /emergency-fund.
 
     Returns:

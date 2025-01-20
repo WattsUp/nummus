@@ -30,7 +30,7 @@ DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
-def page_all() -> str:
+def page_all() -> flask.Response:
     """GET /assets.
 
     Returns:
@@ -81,7 +81,7 @@ def page_all() -> str:
     )
 
 
-def page(uri: str) -> str:
+def page(uri: str) -> flask.Response:
     """GET /assets/<uri>.
 
     Args:
@@ -107,7 +107,7 @@ def page(uri: str) -> str:
         )
 
 
-def page_transactions() -> str:
+def page_transactions() -> flask.Response:
     """GET /assets/transactions.
 
     Returns:

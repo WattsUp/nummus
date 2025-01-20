@@ -325,7 +325,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     }
 
 
-def page(uri: str) -> str:
+def page(uri: str) -> flask.Response:
     """GET /accounts/<uri>.
 
     Args:
