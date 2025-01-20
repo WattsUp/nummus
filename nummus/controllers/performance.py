@@ -183,7 +183,7 @@ def ctx_chart() -> dict[str, object]:
     }
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /performance.
 
     Returns:

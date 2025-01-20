@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import re
+import textwrap
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -302,7 +303,7 @@ def error(e: str | Exception) -> str:
     return flask.render_template("shared/error.jinja", error=str(e))
 
 
-def page(content_template: str, title: str, **context: object) -> str:
+def page(content_template: str, title: str, **context: object) -> flask.Response:
     """Render a page with a given content template.
 
     Args:
@@ -313,20 +314,30 @@ def page(content_template: str, title: str, **context: object) -> str:
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
         html_title = f"<title>{title}</title>\n"
-        return html_title + flask.render_template(content_template, **context)
-    return flask.render_template_string(
-        f"""{{% extends "shared/base.jinja" %}}
-{{% block title %}}
-{title}
-{{% endblock title %}}
-{{% block content %}}
-{{% include "{content_template}" %}}
-{{% endblock content %}}
-""",
-        sidebar=ctx_sidebar(),
-        base=ctx_base(),
-        **context,
-    )
+        html = html_title + flask.render_template(content_template, **context)
+    else:
+        html = flask.render_template_string(
+            textwrap.dedent(
+                f"""\
+                {{% extends "shared/base.jinja" %}}
+                {{% block title %}}
+                {title}
+                {{% endblock title %}}
+                {{% block content %}}
+                {{% include "{content_template}" %}}
+                {{% endblock content %}}
+                """,
+            ),
+            sidebar=ctx_sidebar(),
+            base=ctx_base(),
+            **context,
+        )
+
+    # Create response and add Vary: HX-Request
+    # Since the cache needs to cache both
+    response = flask.make_response(html)
+    response.headers["Vary"] = "HX-Request"
+    return response
 
 
 def change_redirect_to_htmx(response: flask.Response) -> flask.Response:

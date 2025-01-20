@@ -102,7 +102,7 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
     }
 
 
-def page() -> str:
+def page() -> flask.Response:
     """GET /health.
 
     Returns:

@@ -332,13 +332,17 @@ class TestCommon(WebTestBase):
 
         endpoint = "dashboard.page"
         headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
+        result, headers = self.web_get(endpoint, headers=headers)
         self.assertIn("<title>", result)
         self.assertNotIn("<html", result)
+        self.assertIn("Vary", headers, msg=f"Response lack Vary {result}")
+        self.assertIn("HX-Request", headers["Vary"])
 
-        result, _ = self.web_get(endpoint)
+        result, headers = self.web_get(endpoint)
         self.assertIn("<title>", result)
         self.assertIn("<html", result)
+        self.assertIn("Vary", headers, msg=f"Response lack Vary {result}")
+        self.assertIn("HX-Request", headers["Vary"])
 
     def test_metrics(self) -> None:
         d = self._setup_portfolio()
