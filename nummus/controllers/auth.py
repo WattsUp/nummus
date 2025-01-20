@@ -15,6 +15,8 @@ from nummus.models import Config, ConfigKey
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import werkzeug
+
     from nummus.controllers.base import Routes
 
 
@@ -77,13 +79,18 @@ def get_user(username: str) -> flask_login.UserMixin | flask_login.AnonymousUser
 
 
 @login_exempt
-def page_login() -> str:
+def page_login() -> str | werkzeug.Response:
     """GET /login.
 
     Returns:
         HTML response
     """
     next_url = flask.request.args.get("next")
+    if flask_login.current_user.is_authenticated:
+        # If already authenticated, skip login page
+        if next_url is None:
+            return flask.redirect(flask.url_for("dashboard.page"))
+        return flask.redirect(next_url)
     return flask.render_template(
         "auth/login.jinja",
         next_url=next_url,
@@ -91,7 +98,7 @@ def page_login() -> str:
 
 
 @login_exempt
-def login() -> str | flask.Response:
+def login() -> str | werkzeug.Response:
     """POST /h/login.
 
     Returns:
@@ -124,18 +131,18 @@ def login() -> str | flask.Response:
 
         next_url = form.get("next")
         if next_url is None:
-            return common.redirect(flask.url_for("dashboard.page"))
-        return common.redirect(next_url)
+            return flask.redirect(flask.url_for("dashboard.page"))
+        return flask.redirect(next_url)
 
 
-def logout() -> str | flask.Response:
+def logout() -> str | werkzeug.Response:
     """POST /h/logout.
 
     Returns:
         HTML response
     """
     flask_login.logout_user()
-    return common.redirect(flask.url_for("auth.page_login"))
+    return flask.redirect(flask.url_for("auth.page_login"))
 
 
 ROUTES: Routes = {

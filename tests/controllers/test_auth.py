@@ -59,8 +59,8 @@ class TestAuth(WebTestBase):
         self.assertEqual(headers["Location"], url_login_next)
 
         # With HX-Request, return OK with HX-Redirect
-        headers = {"HX-Request": "true"}
-        response, headers = self.web_get(endpoint, headers=headers)
+        send_headers = {"HX-Request": "true"}
+        response, headers = self.web_get(endpoint, headers=send_headers)
         self.assertEqual(response, "")
         self.assertIn(
             "HX-Redirect",
@@ -81,17 +81,17 @@ class TestAuth(WebTestBase):
 
         # Do login
         form = {}
-        response, _ = self.web_post("auth.login", data=form)
+        response, _ = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertIn("Password must not be blank", response)
 
         # Wrong password
         form = {"password": self.random_string()}
-        response, _ = self.web_post("auth.login", data=form)
+        response, _ = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertIn("Bad password", response)
 
         # Good password no next, goes to dashboard
         form = {"password": key}
-        response, headers = self.web_post("auth.login", data=form)
+        response, headers = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertEqual("", response)
         self.assertIn(
             "HX-Redirect",
@@ -102,7 +102,7 @@ class TestAuth(WebTestBase):
 
         # Good password with next
         form = {"password": key, "next": url_next}
-        response, headers = self.web_post("auth.login", data=form)
+        response, headers = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertEqual("", response)
         self.assertIn(
             "HX-Redirect",
@@ -115,8 +115,38 @@ class TestAuth(WebTestBase):
         response, _ = self.web_get("dashboard.page")
         self.assertIn("Net Worth", response)
 
+        # Login page while authenticated redirects to next
+        response, headers = self.web_get(
+            ("auth.page_login", {"next": url_next}),
+            rc=HTTP_CODE_REDIRECT,
+        )
+        self.assertIn(url_next, response)
+        self.assertIn(
+            "Location",
+            headers,
+            msg=f"Response lack Location {response}",
+        )
+        self.assertEqual(headers["Location"], url_next)
+
+        # No next goes to dashboard
+        response, headers = self.web_get(
+            "auth.page_login",
+            rc=HTTP_CODE_REDIRECT,
+        )
+        self.assertIn(url_dashboard, response)
+        self.assertIn(
+            "Location",
+            headers,
+            msg=f"Response lack Location {response}",
+        )
+        self.assertEqual(headers["Location"], url_dashboard)
+
         # Logging out should redirect to login page
-        response, headers = self.web_post("auth.logout", data=form)
+        response, headers = self.web_post(
+            "auth.logout",
+            headers=send_headers,
+            data=form,
+        )
         self.assertEqual("", response)
         self.assertIn(
             "HX-Redirect",
