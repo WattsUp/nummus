@@ -37,6 +37,7 @@ class TestCashFlow(WebTestBase):
         t_split_0 = d["t_split_0"]
         t_split_1 = d["t_split_1"]
         cat_0_emoji = d["cat_0_emoji"]
+        tag_1 = d["tag_1"]
 
         endpoint = "cash_flow.txns"
         result, _ = self.web_get(
@@ -62,6 +63,14 @@ class TestCashFlow(WebTestBase):
         self.assertRegex(result, r"<div .*>\$100.00</div>")
         self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
         self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
+        m = re.search(
+            r'<script>cashFlow\.update\(.*"expense_tagged": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        tags = m[1] if m else ""
+        self.assertIn(tag_1, tags)
+        self.assertIn("-10.00", tags)
 
         result, _ = self.web_get(
             (endpoint, {"period": "all"}),
@@ -114,6 +123,7 @@ class TestCashFlow(WebTestBase):
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
+            tag_2 = self.random_string()
             txn = Transaction(
                 account_id=acct_id,
                 date=today,
@@ -125,6 +135,7 @@ class TestCashFlow(WebTestBase):
                 parent=txn,
                 payee=self.random_string(),
                 category_id=categories["Groceries"],
+                tag=tag_2,
             )
             s.add_all((txn, t_split))
 
@@ -134,6 +145,14 @@ class TestCashFlow(WebTestBase):
         self.assertIn("Interest", result)
         self.assertIn("Groceries", result)
         self.assertNotIn("Uncategorized", result)
+        m = re.search(
+            r'<script>cashFlow\.update\(.*"income_tagged": \[([^\]]+)\].*\)</script>',
+            result,
+        )
+        self.assertIsNotNone(m)
+        tags = m[1] if m else ""
+        self.assertIn(tag_2, tags)
+        self.assertIn("100.00", tags)
 
         result, _ = self.web_get(
             (endpoint, {"period": "1-year"}),

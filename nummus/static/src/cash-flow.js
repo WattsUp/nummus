@@ -5,6 +5,8 @@ const cashFlow = {
     chartExpense: null,
     chartPieIncome: null,
     chartPieExpense: null,
+    chartPieIncomeTag: null,
+    chartPieExpenseTag: null,
     /**
      * Create Cash Flow Chart
      *
@@ -26,6 +28,14 @@ const cashFlow = {
             a.amount = -Number(a.amount);
             return a;
         });
+        const incomeTagged = raw.income_tagged.map(a => {
+            a.amount = Number(a.amount);
+            return a;
+        });
+        const expenseTagged = raw.expense_tagged.map(a => {
+            a.amount = -Number(a.amount);
+            return a;
+        });
 
         // Set a color for each category
         incomeCategorized.forEach((a, i) => {
@@ -33,6 +43,16 @@ const cashFlow = {
             a.color = c;
         });
         expenseCategorized.forEach((a, i) => {
+            const c = getChartColor(i);
+            a.color = c;
+        });
+
+        // Set a color for each tag
+        incomeTagged.forEach((a, i) => {
+            const c = getChartColor(i);
+            a.color = c;
+        });
+        expenseTagged.forEach((a, i) => {
             const c = getChartColor(i);
             a.color = c;
         });
@@ -132,6 +152,20 @@ const cashFlow = {
         }
 
         {
+            const breakdown = document.getElementById('income-tag-breakdown');
+            if (this.chartPieIncomeTag)
+                pluginHoverHighlight.removeListeners(this.chartPieIncomeTag);
+            this.createBreakdown(breakdown, incomeTagged);
+        }
+
+        {
+            const breakdown = document.getElementById('expense-tag-breakdown');
+            if (this.chartPieExpenseTag)
+                pluginHoverHighlight.removeListeners(this.chartPieExpenseTag);
+            this.createBreakdown(breakdown, expenseTagged);
+        }
+
+        {
             const canvas = document.getElementById('income-pie-chart-canvas');
             const ctx = canvas.getContext('2d');
             if (this.chartPieIncome && ctx == this.chartPieIncome.ctx) {
@@ -162,6 +196,44 @@ const cashFlow = {
                 this.chartPieExpense = nummusChart.createPie(
                     ctx,
                     expenseCategorized,
+                    plugins,
+                );
+            }
+        }
+
+        {
+            const canvas =
+                document.getElementById('income-tag-pie-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (this.chartPieIncomeTag && ctx == this.chartPieIncomeTag.ctx) {
+                nummusChart.updatePie(this.chartPieIncomeTag, incomeTagged);
+                pluginHoverHighlight.addListeners(this.chartPieIncomeTag);
+            } else {
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'income-tag-breakdown'}],
+                ];
+                this.chartPieIncomeTag = nummusChart.createPie(
+                    ctx,
+                    incomeTagged,
+                    plugins,
+                );
+            }
+        }
+
+        {
+            const canvas =
+                document.getElementById('expense-tag-pie-chart-canvas');
+            const ctx = canvas.getContext('2d');
+            if (this.chartPieExpenseTag && ctx == this.chartPieExpenseTag.ctx) {
+                nummusChart.updatePie(this.chartPieExpenseTag, expenseTagged);
+                pluginHoverHighlight.addListeners(this.chartPieExpenseTag);
+            } else {
+                const plugins = [
+                    [pluginHoverHighlight, {parent: 'expense-tag-breakdown'}],
+                ];
+                this.chartPieExpenseTag = nummusChart.createPie(
+                    ctx,
+                    expenseTagged,
                     plugins,
                 );
             }

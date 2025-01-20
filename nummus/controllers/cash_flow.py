@@ -101,9 +101,11 @@ def ctx_chart() -> dict[str, object]:
                 TransactionSplit.category_id,
                 func.sum(TransactionSplit.amount),
             )
-            .where(TransactionSplit.account_id.in_(ids))
-            .where(TransactionSplit.date_ord >= start_ord)
-            .where(TransactionSplit.date_ord <= end_ord)
+            .where(
+                TransactionSplit.account_id.in_(ids),
+                TransactionSplit.date_ord >= start_ord,
+                TransactionSplit.date_ord <= end_ord,
+            )
             .group_by(TransactionSplit.category_id)
         )
         income_categorized: list[CategoryContext] = []
@@ -137,6 +139,49 @@ def ctx_chart() -> dict[str, object]:
         )
         expense_categorized = sorted(
             expense_categorized,
+            key=lambda item: item["amount"],
+        )
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.tag,
+                func.sum(TransactionSplit.amount),
+            )
+            .where(
+                TransactionSplit.account_id.in_(ids),
+                TransactionSplit.date_ord >= start_ord,
+                TransactionSplit.date_ord <= end_ord,
+                TransactionSplit.tag.is_not(None),
+            )
+            .group_by(TransactionSplit.tag)
+        )
+        income_tagged: list[CategoryContext] = []
+        expense_tagged: list[CategoryContext] = []
+        for tag, amount in query.yield_per(YIELD_PER):
+            tag: str
+            if amount > 0:
+                income_tagged.append(
+                    {
+                        "name": tag,
+                        "emoji_name": tag,
+                        "amount": amount,
+                    },
+                )
+            else:
+                expense_tagged.append(
+                    {
+                        "name": tag,
+                        "emoji_name": tag,
+                        "amount": amount,
+                    },
+                )
+        income_tagged = sorted(
+            income_tagged,
+            key=lambda item: -item["amount"],
+        )
+        expense_tagged = sorted(
+            expense_tagged,
             key=lambda item: item["amount"],
         )
 
@@ -209,6 +254,8 @@ def ctx_chart() -> dict[str, object]:
             "total_expense": total_expense,
             "income_categorized": income_categorized,
             "expense_categorized": expense_categorized,
+            "income_tagged": income_tagged,
+            "expense_tagged": expense_tagged,
             "chart_bars": chart_bars,
             "labels": labels,
             "date_mode": date_mode,
