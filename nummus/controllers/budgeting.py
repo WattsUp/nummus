@@ -303,9 +303,10 @@ def ctx_table(
         bars: list[tuple[Decimal, Decimal, Decimal, str, str]] = []
         bar_start = Decimal(0)
         total_assigned = available - activity
-        if total_assigned > bar_dollars_sum:
-            bar_dollars[-1] += total_assigned - bar_dollars_sum
-            bar_dollars_sum = total_assigned
+        max_bar_dollars = max(total_assigned, -activity)
+        if max_bar_dollars > bar_dollars_sum:
+            bar_dollars[-1] += max_bar_dollars - bar_dollars_sum
+            bar_dollars_sum = max_bar_dollars
         for v in bar_dollars:
             bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
 
