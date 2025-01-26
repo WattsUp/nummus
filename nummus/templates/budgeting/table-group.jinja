@@ -97,14 +97,24 @@
                     </div>
                     <div class="w-24 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
                     <div class="w-24 shrink-0 text-right" hx-target="#overlay">
-                        {% if category["available"] == 0 %}
-                            <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
-                        {% elif category["available"] > 0 %}
-                            <span class="p-1 rounded bg-green-200 transition-colors hover:bg-green-900 hover:text-white cursor-pointer"
-                                  hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
-                        {% else %}
-                            <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white cursor-pointer"
+                        {% set class = "p-1 rounded transition-colors md:hover:text-white cursor-pointer" %}
+                        {% if category["available"] < 0 %}
+                            <span class="{{ class }} bg-red-200 md:hover:bg-red-900"
                                   hx-get="{{ url_for('budgeting.overspending', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                        {% elif category["target"] and category["target"]["to_go"] > 0 %}
+                            {% if category["available"] == 0 %}
+                                <span class="p-1 rounded bg-yellow-200">{{ category["available"] | money }}</span>
+                            {% else %}
+                                <span class="{{ class }} bg-yellow-200 md:hover:bg-yellow-900"
+                                      hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                            {% endif %}
+                        {% else %}
+                            {% if category["available"] == 0 %}
+                                <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
+                            {% else %}
+                                <span class="{{ class }} bg-green-200 md:hover:bg-green-900"
+                                      hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                            {% endif %}
                         {% endif %}
                     </div>
                     <div class="w-6 shrink-0 cursor-grab budget-row-handle max-md:hidden">
