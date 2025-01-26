@@ -13,7 +13,6 @@
                hx-put="{{ url_for('budgeting.group', uri=group["uri"]) }}"
                hx-include="#name-{{ group["uri"] }},#budgeting-month"
                hx-target="#sidebar-error"
-               hx-trigger="click, toggle-header"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-{{ group["uri"] }}"></label>
     {% else %}
@@ -25,7 +24,6 @@
                hx-put="{{ url_for('budgeting.group', uri="ungrouped") }}"
                hx-include="#budgeting-month"
                hx-target="#sidebar-error"
-               hx-trigger="click, toggle-header"
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>
     {% endif %}
@@ -63,7 +61,7 @@
         {% for category in group["categories"] %}
             <div id="category-{{ category["uri"] }}"
                  class="w-full relative will-change-transform budget-row max-md:pb-1 max-md:[&:not(:last-child)]:border-b border-grey-300"
-                 onclick="budgeting.onClickRow('{{ category['uri'] }}', event)"
+                 onclick="budgeting.onClickRow('{{ category['uri'] }}', event, {{ category['target']['to_go'] or '0' }})"
                  hx-include="#budgeting-sidebar">
                 <div class="w-full h-8 flex gap-1 items-center relative">
                     <input name="row_uri" value="{{ category["uri"] }}" hidden>
@@ -74,7 +72,8 @@
                          hx-get="{{ url_for('budgeting.sidebar', uri=category['uri'], month= table["month"]) }}">
                         {% include "budgeting/table-row-title.jinja" %}
                     </div>
-                    <div class="w-24 shrink-0 grow cursor-pointer max-md:hidden lg:hidden"
+                    <div id="target-{{ category["uri"] }}"
+                         class="w-24 shrink-0 grow cursor-pointer max-md:hidden lg:hidden"
                          hx-target="#overlay"
                          hx-swap="innerHTML"
                          hx-include="unset"
@@ -84,7 +83,7 @@
                     <div class="w-24 shrink-0 grow md:hidden truncate">{{ category["emoji_name"] }}</div>
                     <div class="w-24 shrink-0 text-right hover-edit">
                         <input id="amount-{{ category["uri"] }}"
-                               class="w-full text-right budgeting-amount"
+                               class="w-full text-right budgeting-amount scroll-mb-28 scroll-mt-4"
                                inputmode="tel"
                                placeholder="0.00"
                                value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
@@ -116,6 +115,9 @@
                                       hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
                             {% endif %}
                         {% endif %}
+                        <div id="move-{{ category["uri"] }}"
+                             class="hidden"
+                             hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}"></div>
                     </div>
                     <div class="w-6 shrink-0 cursor-grab budget-row-handle max-md:hidden">
                         {% with class = "w-[24px] h-[24px]" %}

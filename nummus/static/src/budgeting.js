@@ -460,7 +460,7 @@ const budgeting = {
         const toggleId = uri ? `#toggle-${uri}` : '#toggle-ungrouped';
         const toggle = document.querySelector(toggleId);
         toggle.checked = !toggle.checked;
-        htmx.trigger(toggleId, 'toggle-header');
+        htmx.trigger(toggleId, 'click');
     },
     /**
      * On click of budgeting row, focus assignment
@@ -468,7 +468,7 @@ const budgeting = {
      * @param {String} uri Category URI
      * @param {Event} event Triggering event
      */
-    onClickRow: function(uri, event) {
+    onClickRow: function(uri, event, toGo) {
         // Only do stuff for mobile
         if (window.screen.width >= 768) {
             return;
@@ -482,14 +482,32 @@ const budgeting = {
         }
         // Not a click meant for something else, toggle group
         const activity = document.querySelector(`#amount-${uri}`);
+        const buttons = document.querySelector('#budgeting-buttons');
+        const status = document.querySelector('#budgeting-buttons-status');
+        const footer = document.querySelector('#footer');
         if (activity.parentNode.classList.contains('hover-active')) {
+            buttons.classList.add('hidden');
+            footer.classList.remove('h-28');
+
             activity.parentNode.classList.remove('hover-active');
             activity.blur();
+
+            budgeting.activeCategory = null;
         } else {
+            status.innerHTML = toGo > 0 ?
+                `Assign $${toGo.toFixed(2)} more to reach your target` :
+                '';
+
+            buttons.classList.remove('hidden');
+            footer.classList.add('h-28');
+
             activity.parentNode.classList.add('hover-active');
-            activity.focus();
+            activity.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+            activity.focus({preventScroll: true});
             activity.selectionStart = activity.value.length;
             activity.selectionEnd = activity.value.length;
+
+            budgeting.activeCategory = uri;
         }
     },
     /**
@@ -501,12 +519,32 @@ const budgeting = {
         if (!event ||
             !event.target.matches('.budgeting-amount, .budgeting-amount *')) {
             const targetRow = event.target.closest('.budget-row');
+            let anyActive = false;
             document.querySelectorAll('.hover-active').forEach((e) => {
                 const row = e.closest('.budget-row');
-                if (targetRow != row) {
+                if (targetRow == row) {
+                    anyActive = true;
+                } else {
                     e.classList.remove('hover-active');
                 }
             });
+            if (!anyActive) {
+                const buttons = document.querySelector('#budgeting-buttons');
+                const footer = document.querySelector('#footer');
+
+                buttons.classList.add('hidden');
+                footer.classList.remove('h-28');
+            }
+        }
+    },
+    onClickMove: function() {
+        if (budgeting.activeCategory) {
+            htmx.trigger(`#move-${budgeting.activeCategory}`, 'click');
+        }
+    },
+    onClickTarget: function() {
+        if (budgeting.activeCategory) {
+            htmx.trigger(`#target-${budgeting.activeCategory}`, 'click');
         }
     },
 };

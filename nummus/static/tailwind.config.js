@@ -121,6 +121,7 @@ module.exports = {
                  'bg-green-200',
                  'bg-yellow-200',
                  'bg-red-200',
+                 'h-28',
              ],
     plugins : [require('./plugins/tailwindcss-bg-patterns')],
 };
