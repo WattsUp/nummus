@@ -484,21 +484,24 @@ const budgeting = {
         const activity = document.querySelector(`#amount-${uri}`);
         const buttons = document.querySelector('#budgeting-buttons');
         const status = document.querySelector('#budgeting-buttons-status');
-        const footer = document.querySelector('#footer');
+        const newTxn = document.querySelector('#budgeting-new-txn');
         if (activity.parentNode.classList.contains('hover-active')) {
             buttons.classList.add('hidden');
-            footer.classList.remove('h-28');
 
             activity.parentNode.classList.remove('hover-active');
             activity.blur();
 
             budgeting.activeCategory = null;
+
+            setTimeout(() => {
+                newTxn.classList.add('sticky');
+            }, 150)
         } else {
             status.innerHTML = toGo > 0 ?
                 `Assign $${toGo.toFixed(2)} more to reach your target` :
                 '';
 
-            footer.classList.add('h-28');
+            newTxn.classList.remove('sticky');
 
             activity.parentNode.classList.add('hover-active');
             activity.focus({preventScroll: true});
@@ -534,10 +537,12 @@ const budgeting = {
             });
             if (!anyActive) {
                 const buttons = document.querySelector('#budgeting-buttons');
-                const footer = document.querySelector('#footer');
+                const newTxn = document.querySelector('#budgeting-new-txn');
 
+                setTimeout(() => {
+                    newTxn.classList.add('sticky');
+                }, 150)
                 buttons.classList.add('hidden');
-                footer.classList.remove('h-28');
             }
         }
     },

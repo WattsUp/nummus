@@ -7,6 +7,17 @@
      hx-include="this"
      hx-swap-oob="{{ oob }}">
     <input id="budgeting-month" name="month" value="{{ table["month"] }}" hidden>
+    <button id="budgeting-new-txn"
+            class="md:hidden button bg-blue flex flex-col items-center mx-auto rounded-xl sticky bottom-2 z-20"
+            hx-target="#overlay"
+            hx-swap="innerHTML"
+            hx-include="unset"
+            hx-get="{{ url_for('transactions.new', budgeted=True) }}">
+        {% with class = "w-8 h-8 fill-white" %}
+            {% include "svg/plus.svg" %}
+        {% endwith %}
+        New Transaction
+    </button>
     <div id="budget-table-root"
          class="grow max-lg:w-full"
          hx-include="#budgeting-month,#budgeting-sidebar">
@@ -51,7 +62,7 @@
         editor.addListeners("budget-table")
     </script>
     <div id="budgeting-buttons"
-         class="md:hidden w-full fixed bottom-0 bg-grey-950 hidden">
+         class="md:hidden w-full fixed bottom-0 bg-grey-950 hidden z-30">
         <div id="budgeting-buttons-status"
              class="text-center mx-4 my-2 bg-yellow-200 rounded-lg empty:hidden"></div>
         <div class="my-2 w-full flex justify-center gap-2 px-4">

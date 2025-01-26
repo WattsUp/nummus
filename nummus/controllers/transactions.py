@@ -23,6 +23,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
+from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
@@ -536,7 +537,15 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
-        accounts = Account.map_name(s)
+        if "budgeted" in flask.request.args:
+            query = (
+                s.query(Account)
+                .with_entities(Account.id_, Account.name)
+                .where(Account.budgeted)
+            )
+            accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+        else:
+            accounts = Account.map_name(s)
         if flask.request.method == "GET":
 
             ctx_parent = {

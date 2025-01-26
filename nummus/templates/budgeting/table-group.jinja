@@ -1,5 +1,5 @@
 <div id="budget-group-{{ group["uri"] or "" }}"
-     class="w-full relative will-change-transform budget-group"
+     class="w-full relative budget-group"
      hx-target="#sidebar-error"
      hx-swap="innerHTML"
      hx-trigger="trash-group"
@@ -60,7 +60,7 @@
     <div class="w-full pb-1 budget-group-fold">
         {% for category in group["categories"] %}
             <div id="category-{{ category["uri"] }}"
-                 class="w-full relative will-change-transform budget-row max-md:pb-1 max-md:[&:not(:last-child)]:border-b border-grey-300"
+                 class="w-full relative budget-row max-md:pb-1 max-md:[&:not(:last-child)]:border-b border-grey-300"
                  onclick="budgeting.onClickRow('{{ category['uri'] }}', event, {{ category['target']['to_go'] or '0' }})"
                  hx-include="#budgeting-sidebar">
                 <div class="w-full h-8 flex gap-1 items-center relative">
