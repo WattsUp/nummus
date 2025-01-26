@@ -1,0 +1,11 @@
+<div class="h-[5px] w-full flex gap-1">
+    {% for bar_w, bg_fill_w, fg_fill_w, bg, fg in category["bars"] %}
+        <div class="h-full rounded grow relative bg-grey-400"
+             style="width: {{ bar_w | percent }}">
+            <div class="h-full rounded absolute top-0 left-0 bg-{{ bg }}"
+                 style="width: {{ bg_fill_w | percent }}"></div>
+            <div class="h-full rounded absolute top-0 left-0 bar-fg {{ fg }}"
+                 style="width: {{ fg_fill_w | percent }}"></div>
+        </div>
+    {% endfor %}
+</div>

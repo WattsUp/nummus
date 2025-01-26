@@ -443,4 +443,72 @@ const budgeting = {
             );
         }
     },
+
+    /**
+     * On click of budgeting header, toggle group
+     *
+     * @param {String} uri Group URI
+     * @param {Event} event Triggering event
+     */
+    onClickHeader: function(uri, event) {
+        const target = event.target;
+        if (target.matches(
+                'input, .budget-group-handle, .budget-group-handle *')) {
+            return;
+        }
+        // Not a click meant for something else, toggle group
+        const toggleId = uri ? `#toggle-${uri}` : '#toggle-ungrouped';
+        const toggle = document.querySelector(toggleId);
+        toggle.checked = !toggle.checked;
+        htmx.trigger(toggleId, 'toggle-header');
+    },
+    /**
+     * On click of budgeting row, focus assignment
+     *
+     * @param {String} uri Category URI
+     * @param {Event} event Triggering event
+     */
+    onClickRow: function(uri, event) {
+        // Only do stuff for mobile
+        if (window.screen.width >= 768) {
+            return;
+        }
+        const target = event.target;
+        if (target.matches('input, .budget-row-handle, .budget-row-handle *')) {
+            return;
+        }
+        if (target.hasAttribute('hx-get')) {
+            return;
+        }
+        // Not a click meant for something else, toggle group
+        const activity = document.querySelector(`#amount-${uri}`);
+        if (activity.parentNode.classList.contains('hover-active')) {
+            activity.parentNode.classList.remove('hover-active');
+            activity.blur();
+        } else {
+            activity.parentNode.classList.add('hover-active');
+            activity.focus();
+            activity.selectionStart = activity.value.length;
+            activity.selectionEnd = activity.value.length;
+        }
+    },
+    /**
+     * On click of outside of row activity, blur input
+     *
+     * @param {Event} event Triggering event
+     */
+    closeRow: function(event) {
+        if (!event ||
+            !event.target.matches('.budgeting-amount, .budgeting-amount *')) {
+            const targetRow = event.target.closest('.budget-row');
+            document.querySelectorAll('.hover-active').forEach((e) => {
+                const row = e.closest('.budget-row');
+                if (targetRow != row) {
+                    e.classList.remove('hover-active');
+                }
+            });
+        }
+    },
 };
+
+window.addEventListener('click', budgeting.closeRow);
