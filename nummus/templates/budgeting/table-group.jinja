@@ -83,7 +83,7 @@
                     <div class="w-24 shrink-0 grow md:hidden truncate">{{ category["emoji_name"] }}</div>
                     <div class="w-24 shrink-0 text-right hover-edit">
                         <input id="amount-{{ category["uri"] }}"
-                               class="w-full text-right budgeting-amount scroll-mb-28 scroll-mt-4"
+                               class="w-full text-right budgeting-amount scroll-mb-28 scroll-mt-12"
                                inputmode="tel"
                                placeholder="0.00"
                                value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"

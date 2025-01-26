@@ -10,7 +10,7 @@
     <div id="budget-table-root"
          class="grow max-lg:w-full"
          hx-include="#budgeting-month,#budgeting-sidebar">
-        <div class="w-full flex gap-1 p-1 h-8 items-center justify-end">
+        <div class="w-full flex gap-1 p-1 h-8 items-center justify-end sticky top-0 bg-white z-30 border-b border-grey-100">
             <div class="w-24 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
                 {% with class = "w-[24px] h-[24px]" %}
                     {% include "svg/plus.svg" %}
@@ -76,6 +76,5 @@
                 Edit Target
             </button>
         </div>
-        {# assign, move, details, target status#}
     </div>
 </div>

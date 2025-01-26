@@ -498,16 +498,20 @@ const budgeting = {
                 `Assign $${toGo.toFixed(2)} more to reach your target` :
                 '';
 
-            buttons.classList.remove('hidden');
             footer.classList.add('h-28');
 
             activity.parentNode.classList.add('hover-active');
-            activity.scrollIntoView({block: 'nearest', behavior: 'smooth'});
             activity.focus({preventScroll: true});
             activity.selectionStart = activity.value.length;
             activity.selectionEnd = activity.value.length;
 
             budgeting.activeCategory = uri;
+
+            // Add a delay to allow keyboard to animate up
+            setTimeout(() => {
+                buttons.classList.remove('hidden');
+                activity.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+            }, 150);
         }
     },
     /**
