@@ -39,7 +39,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
         path_in = path_web.joinpath("static", "src", "main.css")
 
         args = ["-c", str(path_config), "-i", str(path_in), "--minify"]
-        built_css = pytailwindcss.run(args, auto_install=True)
+        built_css = pytailwindcss.run(args, auto_install=True, version="v3.4.17")
         out.write(built_css)
 
 
