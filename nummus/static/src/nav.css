@@ -1,0 +1,60 @@
+@layer components {
+
+    /* TODO(WattsUp): Can these directly use the utility classes or custom utility? */
+    .nav-folder>.nav-dropdown {
+        @apply scale-y-0 transition-transform origin-top duration-300;
+    }
+
+    .nav-folder.open>.nav-dropdown {
+        @apply scale-y-100;
+    }
+
+    .nav-folder.open>.nav-button {
+        @apply bg-green-800;
+    }
+
+    .nav-button>.nav-hamburger {
+        @apply -translate-x-1/2 w-[24px] md:w-[32px] border-t-[3px] md:border-t-4 border-white absolute left-1/2 top-[15px] md:top-[20px] transition-transform;
+    }
+
+    .nav-button>.nav-hamburger:nth-child(1) {
+        @apply translate-y-[-8px] md:translate-y-[-10px];
+    }
+
+    .nav-button>.nav-hamburger:nth-child(3) {
+        @apply translate-y-[8px] md:translate-y-[10px];
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(1) {
+        @apply translate-y-0 rotate-45;
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(2) {
+        @apply scale-x-0;
+    }
+
+    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(3) {
+        @apply translate-y-0 -rotate-45;
+    }
+
+    .sidebar {
+        @apply h-full w-[18rem] shrink-0;
+    }
+
+    /* TODO(WattsUp): Does not work as expected */
+    .sidebar.unpinned {
+        @apply fixed transition-transform -translate-x-full duration-300 z-10 top-0 pt-8 md:pt-12;
+    }
+
+    .sidebar.unpinned.open {
+        @apply translate-x-0;
+    }
+
+    .sidebar+.sidebar-spacer {
+        @apply w-10 bg-green-300 hidden shrink-0;
+    }
+
+    .sidebar.unpinned+.sidebar-spacer {
+        @apply md:block;
+    }
+}

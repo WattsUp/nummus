@@ -1,0 +1,77 @@
+@layer components {
+    .budget-group-toggle-label {
+        @apply absolute z-40;
+    }
+
+    .budget-group-toggle-label::after {
+        @apply content-["▼"] absolute top-[3px] cursor-pointer text-grey-500 md:hover:text-green;
+    }
+
+    .dragging {
+        @apply z-50;
+    }
+
+    .dragging::before {
+        @apply content-[""] absolute -inset-1 bg-white border-2 border-grey-500 shadow-xl z-[-1];
+    }
+
+    input[type=checkbox].budget-group-toggle:checked~.budget-group-fold {
+        @apply hidden;
+    }
+
+    input[type=checkbox].budget-group-toggle:checked~.budget-group-toggle-label::after {
+        @apply content-["►"];
+    }
+
+    .bar-fg {
+        @apply pattern-diagonal-lines pattern-size-2 pattern-opacity-100;
+    }
+
+    .bar-fg.green {
+        @apply pattern-green-100 pattern-bg-green-400;
+    }
+
+    .bar-fg.yellow {
+        @apply pattern-yellow-100 pattern-bg-yellow-300;
+    }
+
+    .health-check-toggle-label {
+        @apply block relative pl-5 pr-2 py-1 text-xl font-serif w-full cursor-pointer flex justify-between;
+    }
+
+    .health-check-toggle-label::after {
+        @apply content-["▼"] absolute left-1 top-[5px] cursor-pointer text-grey-800 md:hover:text-green font-sans text-base;
+    }
+
+    input[type=checkbox].health-check-toggle:checked~.health-check-fold {
+        @apply hidden;
+    }
+
+    input[type=checkbox].health-check-toggle:checked~.health-check-toggle-label::after {
+        @apply content-["►"];
+    }
+}
+
+/* TODO(WattsUp): Max a PR in upstream for this migration? */
+@utility pattern-diagonal-lines {
+    opacity: var(--pattern-opacity, 0.4);
+    backgroundColor: var(--pattern-bg-color, transparent);
+    background:
+        repeating-linear-gradient(45deg, var(--pattern-color), var(--pattern-color) calc(var(--pattern-size, 40px) * 0.2), var(--pattern-bg-color, transparent) calc(var(--pattern-size, 40px) * 0.2), var(--pattern-bg-color) var(--pattern-size, 40px));
+}
+
+@utility pattern-size-* {
+    --pattern-size: calc(var(--spacing) * --value(integer));
+}
+
+@utility pattern-opacity-* {
+    --pattern-opacity: calc(--value(integer) * 1%);
+}
+
+@utility pattern-* {
+    --pattern-color: --value(--color-*);
+}
+
+@utility pattern-bg-* {
+    --pattern-bg-color: --value(--color-*);
+}

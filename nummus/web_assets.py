@@ -26,6 +26,8 @@ if TYPE_CHECKING:
 class TailwindCSSFilter(webassets.filter.Filter):
     """webassets Filter for running tailwindcss over."""
 
+    DEBUG = False
+
     def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
         """Run filter and generate output file.
 
@@ -35,12 +37,21 @@ class TailwindCSSFilter(webassets.filter.Filter):
         if pytailwindcss is None:
             raise NotImplementedError
         path_web = Path(__file__).parent.resolve()
-        path_config = path_web.joinpath("static", "tailwind.config.js")
         path_in = path_web.joinpath("static", "src", "main.css")
 
-        args = ["-c", str(path_config), "-i", str(path_in), "--minify"]
-        built_css = pytailwindcss.run(args, auto_install=True, version="v3.4.17")
+        args = [
+            "-i",
+            str(path_in),
+            "--optimize" if self.DEBUG else "--minify",
+        ]
+        built_css = pytailwindcss.run(args, auto_install=True)
         out.write(built_css)
+
+
+class TailwindCSSFilterDebug(webassets.filter.Filter):
+    """webassets Filter for running tailwindcss over."""
+
+    DEBUG = True
 
 
 class JSMinFilter(webassets.filter.Filter):
@@ -92,7 +103,11 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     bundle_css = flask_assets.Bundle(
         "src/*.css",
         output=stub_dist_css,
-        filters=None if pytailwindcss is None else (TailwindCSSFilter,),
+        filters=(
+            None
+            if pytailwindcss is None
+            else (TailwindCSSFilterDebug if debug else TailwindCSSFilter,)
+        ),
     )
     env_assets.register("css", bundle_css)
     bundle_css.build(force=force)

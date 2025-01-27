@@ -23,21 +23,18 @@ def main() -> None:
     """Main program entry."""
     folder = Path(nummus.__file__).parent.resolve().joinpath("static")
 
-    path_config = folder.joinpath("tailwind.config.js")
     path_in = folder.joinpath("src", "main.css")
     path_out = folder.joinpath("dist", "main.css")
 
-    path = pytailwindcss.get_bin_path("v3.4.17")
+    path = pytailwindcss.get_bin_path()
 
     args = [
         path,
-        "-c",
-        str(path_config),
         "-i",
         str(path_in),
         "-o",
         str(path_out),
-        "--minify",
+        "--optimize",
     ]
     args.extend(sys.argv[1:])
     with subprocess.Popen(  # noqa: S603
