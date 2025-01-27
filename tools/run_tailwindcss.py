@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import colorama
+import pytailwindcss
 from colorama import Fore
 
 import nummus
@@ -26,8 +27,10 @@ def main() -> None:
     path_in = folder.joinpath("src", "main.css")
     path_out = folder.joinpath("dist", "main.css")
 
+    path = pytailwindcss.get_bin_path("v3.4.17")
+
     args = [
-        "tailwindcss",
+        path,
         "-c",
         str(path_config),
         "-i",

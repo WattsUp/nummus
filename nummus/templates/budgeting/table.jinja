@@ -7,10 +7,21 @@
      hx-include="this"
      hx-swap-oob="{{ oob }}">
     <input id="budgeting-month" name="month" value="{{ table["month"] }}" hidden>
+    <button id="budgeting-new-txn"
+            class="md:hidden button bg-blue flex flex-col items-center mx-auto rounded-xl sticky bottom-2 z-20"
+            hx-target="#overlay"
+            hx-swap="innerHTML"
+            hx-include="unset"
+            hx-get="{{ url_for('transactions.new', budgeted=True) }}">
+        {% with class = "w-8 h-8 fill-white" %}
+            {% include "svg/plus.svg" %}
+        {% endwith %}
+        New Transaction
+    </button>
     <div id="budget-table-root"
          class="grow max-lg:w-full"
          hx-include="#budgeting-month,#budgeting-sidebar">
-        <div class="w-full flex gap-1 p-1 h-8 items-center justify-end">
+        <div class="w-full flex gap-1 p-1 h-8 items-center justify-end sticky top-0 bg-white z-30 border-b border-grey-100">
             <div class="w-24 shrink-0 grow pl-1 hover-edit flex items-center max-md:hidden">
                 {% with class = "w-[24px] h-[24px]" %}
                     {% include "svg/plus.svg" %}
@@ -23,7 +34,7 @@
                        hx-swap="innerHTML">
                 <span class="w-full">New Group</span>
             </div>
-            <div class="w-24 shrink-0 text-right max-md:hidden">Assigned</div>
+            <div class="w-24 shrink-0 text-right">Assigned</div>
             <div class="w-24 shrink-0 text-right max-md:hidden">Activity</div>
             <div class="w-24 shrink-0 text-right">Available</div>
             <div class="w-6 shrink-0 max-md:hidden"></div>
@@ -50,4 +61,31 @@
         budgeting.setup();
         editor.addListeners("budget-table")
     </script>
+    <div id="budgeting-buttons"
+         class="md:hidden w-full fixed bottom-0 bg-grey-950 hidden z-30">
+        <div id="budgeting-buttons-status"
+             class="text-center mx-4 my-2 bg-yellow-200 rounded-lg empty:hidden"></div>
+        <div class="my-2 w-full flex justify-center gap-2 px-4">
+            <button class="button bg-blue-900 border-blue-900 text-white flex flex-col items-center w-1/3">
+                {% with class = "w-8 h-8 fill-white" %}
+                    {% include "svg/wallet.svg" %}
+                {% endwith %}
+                Assign
+            </button>
+            <button class="button bg-blue flex flex-col items-center w-1/3"
+                    onclick="budgeting.onClickMove()">
+                {% with class = "w-8 h-8 fill-white" %}
+                    {% include "svg/move-vert.svg" %}
+                {% endwith %}
+                Move Money
+            </button>
+            <button class="button bg-blue flex flex-col items-center w-1/3"
+                    onclick="budgeting.onClickTarget()">
+                {% with class = "w-8 h-8 fill-white" %}
+                    {% include "svg/pencil.svg" %}
+                {% endwith %}
+                Edit Target
+            </button>
+        </div>
+    </div>
 </div>

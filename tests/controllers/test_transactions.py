@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from nummus.models import (
     Account,
+    AccountCategory,
     Asset,
     Transaction,
     TransactionCategory,
@@ -628,10 +629,31 @@ class TestTransaction(WebTestBase):
         acct = d["acct"]
         acct_uri = d["acct_uri"]
 
+        # Add non budgeted account
+        with p.begin_session() as s:
+            acct_not_budgeted = self.random_string()
+            s.add(
+                Account(
+                    name=acct_not_budgeted,
+                    institution=self.random_string(),
+                    category=AccountCategory.CASH,
+                    closed=False,
+                    budgeted=False,
+                ),
+            )
+
         endpoint = "transactions.new"
         result, _ = self.web_get(endpoint)
         self.assertIn("New transaction", result)
         self.assertNotIn(f"selected>{acct}", result)
+        self.assertIn(acct, result)
+        self.assertIn(acct_not_budgeted, result)
+
+        result, _ = self.web_get((endpoint, {"budgeted": True}))
+        self.assertIn("New transaction", result)
+        self.assertNotIn(f"selected>{acct}", result)
+        self.assertIn(acct, result)
+        self.assertNotIn(acct_not_budgeted, result)
 
         form = {}
         result, _ = self.web_post(endpoint, data=form)

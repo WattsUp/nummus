@@ -443,4 +443,119 @@ const budgeting = {
             );
         }
     },
+
+    /**
+     * On click of budgeting header, toggle group
+     *
+     * @param {String} uri Group URI
+     * @param {Event} event Triggering event
+     */
+    onClickHeader: function(uri, event) {
+        const target = event.target;
+        if (target.matches(
+                'input, .budget-group-handle, .budget-group-handle *')) {
+            return;
+        }
+        // Not a click meant for something else, toggle group
+        const toggleId = uri ? `#toggle-${uri}` : '#toggle-ungrouped';
+        const toggle = document.querySelector(toggleId);
+        toggle.checked = !toggle.checked;
+        htmx.trigger(toggleId, 'click');
+    },
+    /**
+     * On click of budgeting row, focus assignment
+     *
+     * @param {String} uri Category URI
+     * @param {Event} event Triggering event
+     */
+    onClickRow: function(uri, event, toGo) {
+        // Only do stuff for mobile
+        if (window.screen.width >= 768) {
+            return;
+        }
+        const target = event.target;
+        if (target.matches('input, .budget-row-handle, .budget-row-handle *')) {
+            return;
+        }
+        if (target.hasAttribute('hx-get')) {
+            return;
+        }
+        // Not a click meant for something else, toggle group
+        const activity = document.querySelector(`#amount-${uri}`);
+        const buttons = document.querySelector('#budgeting-buttons');
+        const status = document.querySelector('#budgeting-buttons-status');
+        const newTxn = document.querySelector('#budgeting-new-txn');
+        if (activity.parentNode.classList.contains('hover-active')) {
+            buttons.classList.add('hidden');
+
+            activity.parentNode.classList.remove('hover-active');
+            activity.blur();
+
+            budgeting.activeCategory = null;
+
+            setTimeout(() => {
+                newTxn.classList.add('sticky');
+            }, 150)
+        } else {
+            status.innerHTML = toGo > 0 ?
+                `Assign $${toGo.toFixed(2)} more to reach your target` :
+                '';
+
+            newTxn.classList.remove('sticky');
+
+            activity.parentNode.classList.add('hover-active');
+            activity.focus({preventScroll: true});
+            activity.selectionStart = activity.value.length;
+            activity.selectionEnd = activity.value.length;
+
+            budgeting.activeCategory = uri;
+
+            // Add a delay to allow keyboard to animate up
+            setTimeout(() => {
+                buttons.classList.remove('hidden');
+                activity.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+            }, 150);
+        }
+    },
+    /**
+     * On click of outside of row activity, blur input
+     *
+     * @param {Event} event Triggering event
+     */
+    closeRow: function(event) {
+        if (!event ||
+            !event.target.matches('.budgeting-amount, .budgeting-amount *')) {
+            const targetRow = event.target.closest('.budget-row');
+            let anyActive = false;
+            document.querySelectorAll('.hover-active').forEach((e) => {
+                const row = e.closest('.budget-row');
+                if (targetRow == row) {
+                    anyActive = true;
+                } else {
+                    e.classList.remove('hover-active');
+                }
+            });
+            if (!anyActive) {
+                const buttons = document.querySelector('#budgeting-buttons');
+                const newTxn = document.querySelector('#budgeting-new-txn');
+
+                setTimeout(() => {
+                    newTxn.classList.add('sticky');
+                }, 150)
+                buttons.classList.add('hidden');
+            }
+        }
+    },
+    onClickMove: function() {
+        if (budgeting.activeCategory) {
+            htmx.trigger(`#move-${budgeting.activeCategory}`, 'click');
+        }
+    },
+    onClickTarget: function() {
+        if (budgeting.activeCategory) {
+            htmx.trigger(`#target-${budgeting.activeCategory}`, 'click');
+        }
+    },
 };
+
+window.addEventListener('click', budgeting.closeRow);

@@ -336,11 +336,11 @@
     }
 
     .budget-group-toggle-label {
-        @apply absolute;
+        @apply absolute z-40;
     }
 
     .budget-group-toggle-label::after {
-        @apply content-["▼"] absolute -left-4 cursor-pointer text-grey-500 md:hover:text-green;
+        @apply content-["▼"] absolute top-[3px] cursor-pointer text-grey-500 md:hover:text-green;
     }
 
     .dragging {
@@ -360,17 +360,25 @@
     }
 
 
-    .hover-edit>input,
-    .hover-edit:hover>span {
+    .hover-edit>input {
         @apply hidden;
     }
 
+    .hover-edit:hover>span {
+        @apply md:hidden;
+    }
+
     .hover-edit>span,
-    .hover-edit:hover>input,
-    .hover-edit>input:focus {
+    .hover-edit:hover>input {
+        @apply md:inline;
+    }
+
+    .hover-edit>input:focus,
+    .hover-edit.hover-active>input {
         @apply inline;
     }
 
+    .hover-edit.hover-active>span,
     .hover-edit>input:focus+span {
         @apply hidden;
     }

@@ -162,7 +162,7 @@ def ctx_target(
     target_assigned = tar.amount
     total_assigned = assigned
     progress_bars = [leftover, tar.amount]
-    if tar.type_ == TargetType.REFILL or not last_repeat_last_month:
+    if tar.type_ == TargetType.REFILL or not last_repeat_last_month or leftover == 0:
         # Adjust leftover to/from everything
         target_assigned -= leftover
         total_assigned += leftover

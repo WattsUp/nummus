@@ -1,5 +1,5 @@
 <div id="budget-group-{{ group["uri"] or "" }}"
-     class="w-full pl-4 relative will-change-transform budget-group"
+     class="w-full relative budget-group"
      hx-target="#sidebar-error"
      hx-swap="innerHTML"
      hx-trigger="trash-group"
@@ -27,8 +27,9 @@
                autocomplete="off">
         <label class="budget-group-toggle-label" for="toggle-ungrouped"></label>
     {% endif %}
-    <div class="w-full flex gap-1 py-1 bg-grey-100 items-center h-8 budget-group-header">
-        <div class="w-24 shrink-0 grow pl-1 hover-edit">
+    <div class="w-full flex gap-1 py-1 bg-grey-100 items-center h-8 budget-group-header cursor-pointer"
+         onclick="budgeting.onClickHeader({%- if group['uri'] -%}'{{ group['uri'] }}'{%- else -%}null{%- endif -%}, event)">
+        <div class="pl-4 w-24 shrink-0 grow hover-edit">
             {% if group["uri"] %}
                 <input class="w-full"
                        id="name-{{ group["uri"] }}"
@@ -44,7 +45,7 @@
                 Ungrouped
             {% endif %}
         </div>
-        <div class="w-24 shrink-0 text-right max-md:hidden">{{ group["assigned"] | money }}</div>
+        <div class="w-24 shrink-0 text-right">{{ group["assigned"] | money }}</div>
         <div class="w-24 shrink-0 text-right max-md:hidden">{{ group["activity"] | money }}</div>
         <div class="w-24 shrink-0 text-right px-1">{{ group["available"] | money }}</div>
         <div class="w-6 shrink-0 cursor-grab budget-group-handle max-md:hidden">
@@ -59,52 +60,75 @@
     <div class="w-full pb-1 budget-group-fold">
         {% for category in group["categories"] %}
             <div id="category-{{ category["uri"] }}"
-                 class="w-full flex gap-1 pt-1 items-center relative will-change-transform budget-row"
+                 class="w-full relative budget-row max-md:pb-1 max-md:[&:not(:last-child)]:border-b border-grey-300"
+                 onclick="budgeting.onClickRow('{{ category['uri'] }}', event, {{ category['target']['to_go'] or '0' }})"
                  hx-include="#budgeting-sidebar">
-                <input name="row_uri" value="{{ category["uri"] }}" hidden>
-                <div class="w-24 shrink-0 grow cursor-pointer max-lg:hidden"
-                     hx-target="#budgeting-sidebar"
-                     hx-swap="outerHTML"
-                     hx-include="unset"
-                     hx-get="{{ url_for('budgeting.sidebar', uri=category['uri'], month= table["month"]) }}">
-                    {% include "budgeting/table-row-title.jinja" %}
+                <div class="w-full h-8 flex gap-1 items-center relative">
+                    <input name="row_uri" value="{{ category["uri"] }}" hidden>
+                    <div class="w-24 shrink-0 grow cursor-pointer max-lg:hidden"
+                         hx-target="#budgeting-sidebar"
+                         hx-swap="outerHTML"
+                         hx-include="unset"
+                         hx-get="{{ url_for('budgeting.sidebar', uri=category['uri'], month= table["month"]) }}">
+                        {% include "budgeting/table-row-title.jinja" %}
+                    </div>
+                    <div id="target-{{ category["uri"] }}"
+                         class="w-24 shrink-0 grow cursor-pointer max-md:hidden lg:hidden"
+                         hx-target="#overlay"
+                         hx-swap="innerHTML"
+                         hx-include="unset"
+                         hx-get="{{ url_for('budgeting.target', uri=category['uri']) }}">
+                        {% include "budgeting/table-row-title.jinja" %}
+                    </div>
+                    <div class="w-24 shrink-0 grow md:hidden truncate">{{ category["emoji_name"] }}</div>
+                    <div class="w-24 shrink-0 text-right hover-edit">
+                        <input id="amount-{{ category["uri"] }}"
+                               class="w-full text-right budgeting-amount scroll-mb-28 scroll-mt-12"
+                               inputmode="tel"
+                               placeholder="0.00"
+                               value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
+                               name="amount"
+                               hx-target="#budget-table"
+                               hx-swap="outerHTML"
+                               hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}"
+                               autocomplete="off">
+                        <span class="w-full text-right">{{ category["assigned"] | money }}</span>
+                    </div>
+                    <div class="w-24 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
+                    <div class="w-24 shrink-0 text-right" hx-target="#overlay">
+                        {% set class = "p-1 rounded transition-colors md:hover:text-white cursor-pointer" %}
+                        {% if category["available"] < 0 %}
+                            <span class="{{ class }} bg-red-200 md:hover:bg-red-900"
+                                  hx-get="{{ url_for('budgeting.overspending', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                        {% elif category["target"] and category["target"]["to_go"] > 0 %}
+                            {% if category["available"] == 0 %}
+                                <span class="p-1 rounded bg-yellow-200">{{ category["available"] | money }}</span>
+                            {% else %}
+                                <span class="{{ class }} bg-yellow-200 md:hover:bg-yellow-900"
+                                      hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                            {% endif %}
+                        {% else %}
+                            {% if category["available"] == 0 %}
+                                <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
+                            {% else %}
+                                <span class="{{ class }} bg-green-200 md:hover:bg-green-900"
+                                      hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
+                            {% endif %}
+                        {% endif %}
+                        <div id="move-{{ category["uri"] }}"
+                             class="hidden"
+                             hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}"></div>
+                    </div>
+                    <div class="w-6 shrink-0 cursor-grab budget-row-handle max-md:hidden">
+                        {% with class = "w-[24px] h-[24px]" %}
+                            {% include "svg/drag.svg" %}
+                        {% endwith %}
+                    </div>
                 </div>
-                <div class="w-24 shrink-0 grow cursor-pointer lg:hidden"
-                     hx-target="#overlay"
-                     hx-swap="innerHTML"
-                     hx-include="unset"
-                     hx-get="{{ url_for('budgeting.target', uri=category['uri']) }}">
-                    {% include "budgeting/table-row-title.jinja" %}
-                </div>
-                <div class="w-24 shrink-0 text-right max-md:hidden hover-edit">
-                    <input class="w-full text-right"
-                           inputmode="tel"
-                           placeholder="0.00"
-                           value="{{ "%.2f" % category["assigned"] if category["assigned"] }}"
-                           name="amount"
-                           hx-target="#budget-table"
-                           hx-swap="outerHTML"
-                           hx-put="{{ url_for('budgeting.assign', uri=category['uri'], month=table['month']) }}"
-                           autocomplete="off">
-                    <span class="w-full text-right">{{ category["assigned"] | money }}</span>
-                </div>
-                <div class="w-24 shrink-0 text-right max-md:hidden">{{ category["activity"] | money }}</div>
-                <div class="w-24 shrink-0 text-right" hx-target="#overlay">
-                    {% if category["available"] == 0 %}
-                        <span class="p-1 rounded bg-grey-50 text-grey-600">{{ category["available"] | money }}</span>
-                    {% elif category["available"] > 0 %}
-                        <span class="p-1 rounded bg-green-200 transition-colors hover:bg-green-900 hover:text-white cursor-pointer"
-                              hx-get="{{ url_for('budgeting.move', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
-                    {% else %}
-                        <span class="p-1 rounded bg-red-200 transition-colors hover:bg-red-900 hover:text-white cursor-pointer"
-                              hx-get="{{ url_for('budgeting.overspending', uri=category['uri'], month=table['month']) }}">{{ category["available"] | money }}</span>
-                    {% endif %}
-                </div>
-                <div class="w-6 shrink-0 cursor-grab budget-row-handle max-md:hidden">
-                    {% with class = "w-[24px] h-[24px]" %}
-                        {% include "svg/drag.svg" %}
-                    {% endwith %}
-                </div>
+                <div class="md:hidden">{% include "budgeting/table-row-bar.jinja" %}</div>
+                {% if category["target"] and category["target"]["to_go"] > 0 %}
+                    <div class="md:hidden text-grey-600 truncate text-sm">{{ category["target"]["to_go"] | money }} more needed</div>
+                {% endif %}
             </div>
         {% endfor %}
     </div>
