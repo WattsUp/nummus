@@ -540,9 +540,13 @@ const budgeting = {
                 const newTxn = document.querySelector('#budgeting-new-txn');
 
                 setTimeout(() => {
-                    newTxn.classList.add('sticky');
+                    if (newTxn) {
+                        newTxn.classList.add('sticky');
+                    }
                 }, 150)
-                buttons.classList.add('hidden');
+                if (buttons) {
+                    buttons.classList.add('hidden');
+                }
             }
         }
     },

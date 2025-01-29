@@ -1,59 +1,38 @@
 <!DOCTYPE html>
+{# djlint: off #}
+{# ignore missing <head> #}
 <html lang="en-US">
-    <head>
-        <title>
-            {% block title %}
-                nummus
-            {% endblock title %}
-        </title>
-        <meta charset="utf-8">
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-        <meta name="description"
-              content="A personal financial information aggregator and planning tool." />
-        <meta name="keywords" content="">
-        <link rel="icon"
-              type="image/x-icon"
-              href="{{ url_for('static', filename='img/favicon.ico') }}">
-        {% assets "css" %}
-            <link rel="stylesheet" href="{{ ASSET_URL }}">
-        {% endassets %}
-        {% assets "js" %}
-            <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-            {# DELETE is supposed to use request parameters but form is way better #}
-            {# htmx 2.x followed the spec properly, revert #}
-            <script>htmx.config.methodsThatUseUrlParams = ["get"]</script>
-        {% endassets %}
-    </head>
-    <body class="antialiased bg-grey-100 h-screen w-screen relative text-black"
-          hx-swap="outerHTML"
-          hx-on::send-error="nummusSendError(event)"
-          hx-on::response-error="nummusResponseError(event)">
-        {% block header %}
-            {% include "/shared/header.jinja" %}
-        {% endblock header %}
-        <div class="pt-8 md:pt-12 h-full flex">
-            {% block sidebar %}
-                {% include "/shared/sidebar.jinja" %}
-            {% endblock sidebar %}
-            <div class="sidebar-spacer">
-                <div class="sidebar-opener p-1 md:hover:bg-green-100 text-center group transition cursor-pointer"
-                     onclick="navigation.openSidebar()">
-                    {% with class="w-[32px] h-[32px] fill-green-800" %}
-                        {% include "svg/dock-left.svg" %}
-                    {% endwith %}
-                </div>
-            </div>
-            <div class="grow flex flex-col overflow-y-auto">
-                <main class="md:p-2 grow max-w-[100vw]" id="main">
-                    {% block content %}
-                    {% endblock content %}
-                </main>
-                {% block footer %}
-                    {% include "/shared/footer.jinja" %}
-                {% endblock footer %}
+{# djlint: on #}
+{% include "/shared/head.jinja" %}
+<body class="antialiased bg-grey-100 h-screen w-screen relative text-black"
+      hx-swap="outerHTML"
+      hx-on::send-error="nummusSendError(event)"
+      hx-on::response-error="nummusResponseError(event)">
+    {% block header %}
+        {% include "/shared/header.jinja" %}
+    {% endblock header %}
+    <div class="pt-8 md:pt-12 h-full flex">
+        {% block sidebar %}
+            {% include "/shared/sidebar.jinja" %}
+        {% endblock sidebar %}
+        <div class="sidebar-spacer">
+            <div class="sidebar-opener p-1 md:hover:bg-green-100 text-center group transition cursor-pointer"
+                 onclick="navigation.openSidebar()">
+                {% with class="w-[32px] h-[32px] fill-green-800" %}
+                    {% include "svg/dock-left.svg" %}
+                {% endwith %}
             </div>
         </div>
-        {% include "/shared/overlay.jinja" %}
-    </body>
+        <div class="grow flex flex-col overflow-y-auto">
+            <main class="md:p-2 grow max-w-[100vw]" id="main">
+                {% block content %}
+                {% endblock content %}
+            </main>
+            {% block footer %}
+                {% include "/shared/footer.jinja" %}
+            {% endblock footer %}
+        </div>
+    </div>
+    {% include "/shared/overlay.jinja" %}
+</body>
 </html>

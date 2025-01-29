@@ -4,7 +4,7 @@
     }
 
     .budget-group-toggle-label::after {
-        @apply content-["▼"] absolute top-[3px] cursor-pointer text-grey-500 md:hover:text-green;
+        @apply content-["▼"] absolute top-[3px] cursor-pointer text-grey-500 md:hover:text-green-500;
     }
 
     .dragging {
@@ -40,7 +40,7 @@
     }
 
     .health-check-toggle-label::after {
-        @apply content-["▼"] absolute left-1 top-[5px] cursor-pointer text-grey-800 md:hover:text-green font-sans text-base;
+        @apply content-["▼"] absolute left-1 top-[5px] cursor-pointer text-grey-800 md:hover:text-green-500 font-sans text-base;
     }
 
     input[type=checkbox].health-check-toggle:checked~.health-check-fold {

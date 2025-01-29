@@ -313,3 +313,9 @@ function nummusResponseError(event) {
     e.classList.remove('hidden');
     e.querySelector('span').innerHTML = event.detail.error;
 }
+
+/*
+ * DELETE is supposed to use request parameters but form is way better
+ * htmx 2.x followed the spec properly, revert
+ */
+htmx.config.methodsThatUseUrlParams = ['get'];

@@ -1,8 +1,33 @@
 <footer id="footer"
-        class="bg-green-300 mt-auto border-t-green-800 border-t-4 text-center text-sm md:text-base shrink-0">
-    <p class="pt-2">Copyright © {{ current_year }} nummus</p>
-    <p class="pb-2">
+        class="bg-green-300 dark:bg-grey-950 border-green-800 dark:border-green-900 border-t-4 text-left md:text-center text-sm shrink-0 relative p-2">
+    <p>Copyright © {{ current_year }} nummus</p>
+    <p>
         Version:
         {{ version }}
     </p>
+    <fieldset class="absolute right-2 top-2.5 radioset-green">
+        <input id="theme-system"
+               type="radio"
+               name="theme"
+               value="system"
+               autocomplete="off"
+               onclick="updateTheme('system')">
+        <label for="theme-system">{% include "/svg/desktop.svg" %}</label>
+        <input id="theme-light"
+               type="radio"
+               name="theme"
+               value="light"
+               autocomplete="off"
+               onclick="updateTheme('light')">
+        <label for="theme-light">{% include "/svg/sun.svg" %}</label>
+        <input id="theme-dark"
+               type="radio"
+               name="theme"
+               value="dark"
+               autocomplete="off"
+               onclick="updateTheme('dark')">
+        <label for="theme-dark">{% include "/svg/moon.svg" %}</label>
+    </fieldset>
+    {# Set radio buttons once buttons load #}
+    <script>updateTheme();</script>
 </footer>

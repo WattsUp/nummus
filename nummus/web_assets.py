@@ -37,7 +37,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
         if pytailwindcss is None:
             raise NotImplementedError
         path_web = Path(__file__).parent.resolve()
-        path_in = path_web.joinpath("static", "src", "main.css")
+        path_in = path_web.joinpath("static", "src", "css", "main.css")
 
         args = [
             "-i",
@@ -48,7 +48,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
         out.write(built_css)
 
 
-class TailwindCSSFilterDebug(webassets.filter.Filter):
+class TailwindCSSFilterDebug(TailwindCSSFilter):
     """webassets Filter for running tailwindcss over."""
 
     DEBUG = True
@@ -102,6 +102,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
 
     bundle_css = flask_assets.Bundle(
         "src/*.css",
+        "src/**/*.css",
         output=stub_dist_css,
         filters=(
             None
@@ -117,6 +118,8 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         "src/3rd-party/hammer.js",
         # chart.js needs to be before plugins
         "src/3rd-party/chart.min.js",
+        # 3rd-party needs to be before 1st-party
+        "src/3rd-party/*.js",
         "src/*.js",
         "src/**/*.js",
         output=stub_dist_js,

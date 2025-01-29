@@ -1,0 +1,53 @@
+<head>
+    <title>
+        {% block title %}
+            {{ title or "nummus" }}
+        {% endblock title %}
+    </title>
+    <meta charset="utf-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-{{ resizes or 'content' }}" />
+    <meta name="description"
+          content="A personal financial information aggregator and planning tool." />
+    <meta name="keywords" content="">
+    <link rel="icon"
+          type="image/x-icon"
+          href="{{ url_for('static', filename='img/favicon.ico') }}">
+    {% assets "css" %}
+        <link rel="stylesheet" href="{{ ASSET_URL }}">
+    {% endassets %}
+    {% assets "js" %}
+        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    {% endassets %}
+    <script>
+        {# Embed directly to avoid FOUC #}
+        function updateTheme(selection) {
+            if (selection == 'system') {
+                localStorage.removeItem('currentTheme');
+            } else if (selection != null) {
+                localStorage.currentTheme = selection;
+            }
+
+            let radioBtn = null;
+            if (localStorage.currentTheme === 'dark') {
+                radioBtn = document.querySelector('#theme-dark');
+            } else if (localStorage.currentTheme === 'light') {
+                radioBtn = document.querySelector('#theme-light');
+            } else {
+                radioBtn = document.querySelector('#theme-system');
+            }
+            if (radioBtn) {
+                radioBtn.checked = true;
+            }
+
+            document.documentElement.classList.toggle(
+                'dark',
+                localStorage.currentTheme === 'dark' ||
+                    (!('currentTheme' in localStorage) &&
+                    window.matchMedia('(prefers-color-scheme: dark)').matches),
+            );
+        }
+
+        updateTheme();
+    </script>
+</head>

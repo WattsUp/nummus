@@ -1,14 +1,15 @@
 /* static/src/main.css */
 
 @import "tailwindcss";
+
 @import "./fonts.css";
-@import "./nav.css";
-@import "./spinner.css";
-@import "./budgeting.css";
-@import "./transactions.css";
+@import "./buttons.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-    --color-green: #33ba33;
+    /* default 500 */
+    /* TODO (WattsUp): fix default color */
     --color-green-50: #f2fcf1;
     --color-green-100: #e0f9df;
     --color-green-200: #c2f1c1;
@@ -21,7 +22,7 @@
     --color-green-900: #1a4d1b;
     --color-green-950: #092a0b;
 
-    --color-blue: #4472c4;
+    /* default 600 */
     --color-blue-50: #f2f6fc;
     --color-blue-100: #e2ecf7;
     --color-blue-200: #cbdef2;
@@ -34,7 +35,7 @@
     --color-blue-900: #324776;
     --color-blue-950: #222d49;
 
-    --color-red: #ee7674;
+    /* default 400 */
     --color-red-50: #fdf3f3;
     --color-red-100: #fce4e4;
     --color-red-200: #facfce;
@@ -47,7 +48,7 @@
     --color-red-900: #782524;
     --color-red-950: #410f0e;
 
-    --color-yellow: #ffd166;
+    /* default 300 */
     --color-yellow-50: #fffaeb;
     --color-yellow-100: #fff0c6;
     --color-yellow-200: #ffdf88;
@@ -60,7 +61,7 @@
     --color-yellow-900: #7a2e0d;
     --color-yellow-950: #461502;
 
-    --color-grey: #6d6d6d;
+    /* default 500 */
     --color-grey-50: #f6f6f6;
     --color-grey-100: #e7e7e7;
     --color-grey-200: #d1d1d1;
@@ -73,9 +74,19 @@
     --color-grey-900: #3d3d3d;
     --color-grey-950: #282828;
 
-    --color-white: #ffffff;
-    --color-black: #282828;
+    --color-gray-50: var(--color-grey-50);
+    --color-gray-100: var(--color-grey-100);
+    --color-gray-200: var(--color-grey-200);
+    --color-gray-300: var(--color-grey-300);
+    --color-gray-400: var(--color-grey-400);
+    --color-gray-500: var(--color-grey-500);
+    --color-gray-600: var(--color-grey-600);
+    --color-gray-700: var(--color-grey-700);
+    --color-gray-800: var(--color-grey-800);
+    --color-gray-900: var(--color-grey-900);
+    --color-gray-950: var(--color-grey-950);
 
+    /* Chart colors */
     --color-c0: #4472c4;
     --color-c2: #966bc2;
     --color-c2: #c16794;
@@ -93,7 +104,7 @@
     input,
     select,
     textarea {
-        @apply h-[1.75rem] border px-1 bg-transparent resize-none;
+        @apply h-[1.75rem] border px-1 bg-transparent resize-none rounded;
     }
 
     input::-webkit-outer-spin-button,
@@ -108,90 +119,17 @@
         -moz-appearance: textfield;
     }
 
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+
     svg {
-        @apply fill-black;
+        @apply fill-current;
     }
 }
 
 @layer components {
-
-    /* TODO(WattsUp): Can button become a utility? */
-    .button {
-        @apply px-2 rounded border transition-colors;
-    }
-
-    .button svg {
-        @apply transition-colors;
-    }
-
-    .button:hover svg {
-        @apply md:fill-white;
-    }
-
-    .button:active svg {
-        @apply fill-white;
-    }
-
-    .button.bg-green {
-        @apply text-white border-green md:hover:border-green-900 md:hover:bg-green-900;
-        @apply active:border-green-900 active:bg-green-900;
-    }
-
-    .button.hover-green {
-        @apply md:hover:border-green-900 md:hover:bg-green-900 md:hover:text-white;
-        @apply active:border-green-900 active:bg-green-900 active:text-white;
-    }
-
-    .button.bg-red {
-        @apply text-black border-red md:hover:border-red-900 md:hover:bg-red-900 md:hover:text-white;
-        @apply active:border-red-900 active:bg-red-900 active:text-white;
-    }
-
-    .button.hover-red {
-        @apply md:hover:border-red-900 md:hover:bg-red-900 md:hover:text-white;
-        @apply active:border-red-900 active:bg-red-900 active:text-white;
-    }
-
-    .button.bg-blue {
-        @apply text-white border-blue md:hover:border-blue-900 md:hover:bg-blue-900;
-        @apply active:border-blue-900 active:bg-blue-900;
-    }
-
-    .button.hover-blue {
-        @apply md:hover:border-blue-900 md:hover:bg-blue-900 md:hover:text-white;
-        @apply active:border-blue-900 active:bg-blue-900 active:text-white;
-    }
-
-    .button.bg-white {
-        @apply text-black border-white md:hover:text-white md:hover:border-green-900 md:hover:bg-green-900;
-        @apply active:text-white active:border-green-900 active:bg-green-900;
-    }
-
-    .button.bg-yellow {
-        @apply text-black border-yellow md:hover:border-yellow-400 md:hover:bg-yellow-400;
-        @apply active:border-yellow-400 active:bg-yellow-400;
-    }
-
-    .button.hover-yellow {
-        @apply md:hover:border-yellow-400 md:hover:bg-yellow-400;
-        @apply active:border-yellow-400 active:bg-yellow-400;
-    }
-
-    .button.bg-yellow:hover svg,
-    .button.hover-yellow:hover svg {
-        @apply md:fill-black;
-    }
-
-    .button.bg-yellow:active svg,
-    .button.hover-yellow:active svg {
-        @apply fill-black;
-    }
-
-
-    .button:disabled {
-        @apply cursor-auto bg-grey-200 text-black border-black md:hover:bg-grey-200 md:hover:text-black md:hover:border-black;
-        @apply active:bg-grey-200 active:text-black active:border-black;
-    }
 
     .checkbox {
         @apply cursor-pointer relative;
@@ -210,7 +148,7 @@
     }
 
     .checkbox input:checked~svg {
-        @apply bg-green fill-white;
+        @apply bg-green-500 fill-white;
     }
 
     .tooltip {

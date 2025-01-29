@@ -23,7 +23,7 @@ def main() -> None:
     """Main program entry."""
     folder = Path(nummus.__file__).parent.resolve().joinpath("static")
 
-    path_in = folder.joinpath("src", "main.css")
+    path_in = folder.joinpath("src", "css", "main.css")
     path_out = folder.joinpath("dist", "main.css")
 
     path = pytailwindcss.get_bin_path()
