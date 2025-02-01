@@ -30,10 +30,18 @@
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
     }
 
@@ -49,10 +57,18 @@
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 38%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 40%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
     }
 
@@ -68,10 +84,18 @@
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
     }
 
@@ -88,11 +112,19 @@
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
             --btn-border-color: var(--btn-bg-color);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
             --btn-border-color: var(--btn-bg-color);
+
+            & icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
     }
 
@@ -172,10 +204,18 @@
 
             @variant hover {
                 background-color: color-mix(in oklab, var(--radioset-base-color) 15%, transparent);
+
+                & icon {
+                    font-variation-settings: 'FILL' 1;
+                }
             }
 
             @variant active {
                 background-color: color-mix(in oklab, var(--radioset-base-color) 20%, transparent);
+
+                & icon {
+                    font-variation-settings: 'FILL' 1;
+                }
             }
         }
 

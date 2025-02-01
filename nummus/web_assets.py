@@ -82,7 +82,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     stub_dist_css = "dist/main.css"
     stub_dist_js = "dist/main.js"
 
-    path_static = Path(app.static_folder or "static")
+    path_static = Path(app.static_folder or "static").resolve()
     path_src = path_static.joinpath("src")
     path_dist_css = path_static.joinpath(stub_dist_css)
     path_dist_js = path_static.joinpath(stub_dist_js)
@@ -127,8 +127,6 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     )
     env_assets.register("js", bundle_js)
     bundle_js.build(force=force)
-
-    # TODO (WattsUp): Download optimized material icons if not debug, all if debug
 
 
 class BuildAssets(build_py.build_py):
