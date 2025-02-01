@@ -25,12 +25,17 @@
             <div id="login-error"
                  class="bg-red-400 dark:bg-red-800 p-1 text-xl empty:hidden my-1 rounded-md"></div>
             {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-            <h2 class="text-lg">Enter Password:</h2>
-            <input class="w-full my-2 scroll-mb-20"
-                   type="password"
-                   name="password"
-                   placeholder="Password"
-                   enterkeyhint="go">
+            <label class="input-outlined input-bg-grey-100 dark:input-bg-grey-900 w-full my-2">
+                <input class="scroll-mb-20"
+                       type="password"
+                       name="password"
+                       enterkeyhint="go"
+                       placeholder=""
+                       autofocus>
+                <div>
+                    <div>Password</div>
+                </div>
+            </label>
             <button class="btn-filled-green font-serif btn-size-lg">
                 Login
                 <icon>login</icon>

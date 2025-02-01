@@ -4,6 +4,7 @@
 
 @import "./fonts.css";
 @import "./buttons.css";
+@import "./inputs.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -94,30 +95,6 @@
 }
 
 @layer base {
-
-    /* TODO (WattsUp): Create outlined text field */
-    input,
-    select,
-    textarea {
-        @apply h-[1.75rem] border px-1 bg-transparent resize-none rounded;
-    }
-
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
-
-    input[type=number] {
-        appearance: textfield;
-        -moz-appearance: textfield;
-    }
-
-    button:not(:disabled),
-    [role="button"]:not(:disabled) {
-        cursor: pointer;
-    }
 
     icon {
         user-select: none;

@@ -1,5 +1,14 @@
 /* CSS Buttons */
 
+@layer base {
+
+    button:not(:disabled),
+    [role="button"]:not(:disabled) {
+        cursor: pointer;
+    }
+
+}
+
 @theme {
     --btn-px: calc(var(--spacing) * 4);
     --btn-py: calc(var(--spacing) * 0.5);

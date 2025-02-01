@@ -1,0 +1,118 @@
+@layer base {
+
+    input {
+        @apply border px-2 py-1 rounded-md;
+    }
+
+    /* No up/down button on number input */
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+
+    input[type=number] {
+        appearance: textfield;
+        -moz-appearance: textfield;
+    }
+}
+
+@utility input-outlined {
+    @apply relative;
+
+    &>div {
+        @apply absolute left-2 top-0 border border-transparent;
+
+        &::before {
+            @apply block w-full h-4 absolute -top-2 transition-transform scale-x-0;
+
+            content: "";
+
+            background-color: var(--input-bg-color);
+        }
+    }
+
+    &>div>div {
+        @apply py-1 px-1 transition;
+
+        transition-property: transform, translate, font-size;
+    }
+
+    &>input {
+        @apply w-full;
+
+        &:not(:placeholder-shown) {
+            &+div {
+                @apply before:scale-x-100;
+            }
+
+            &+div>div {
+                @apply text-sm -translate-y-1/2;
+            }
+        }
+
+        @variant disabled {
+            @apply border-grey-500/50 text-grey-700;
+
+            &+div {
+                @apply text-grey-700;
+            }
+        }
+
+        @variant not-disabled {
+            @apply cursor-text;
+
+            &+div {
+                @apply cursor-text;
+            }
+        }
+    }
+
+
+    @variant focus {
+        &>input {
+            @variant not-disabled {
+                &+div {
+                    @apply before:scale-x-100;
+                }
+
+                &+div>div {
+                    @apply text-sm -translate-y-1/2;
+                }
+            }
+        }
+    }
+
+    @variant focus-within {
+        &>input {
+            @variant not-disabled {
+                &+div {
+                    @apply before:scale-x-100;
+                }
+
+                &+div>div {
+                    @apply text-sm -translate-y-1/2;
+                }
+            }
+        }
+    }
+
+    @variant active {
+        &>input {
+            @variant not-disabled {
+                &+div {
+                    @apply before:scale-x-100;
+                }
+
+                &+div>div {
+                    @apply text-sm -translate-y-1/2;
+                }
+            }
+        }
+    }
+}
+
+@utility input-bg-* {
+    --input-bg-color: --value(--color-*);
+}
