@@ -6,8 +6,17 @@
 {% with title="Login | nummus", resizes="visual" %}
     {% include "/shared/head.jinja" %}
 {% endwith %}
-<body class="antialiased h-screen w-screen relative bg-green-300 dark:bg-grey-950 text-black dark:text-white flex flex-col scroll-smooth">
-    {# TODO (WattsUp): Add hx error bar here too #}
+<body class="antialiased h-screen w-screen relative bg-green-300 dark:bg-grey-950 text-black dark:text-white flex flex-col scroll-smooth"
+      hx-swap="outerHTML"
+      hx-on::send-error="nummusSendError(event)"
+      hx-on::response-error="nummusResponseError(event)">
+    <div id="header-error"
+         class="bg-red-500 flex items-center justify-center text-black p-2 hidden">
+        <icon>error</icon>
+        {# djlint: off #}
+        <span></span>
+        {# djlint: on #}
+    </div>
     <main id="main" class="grow flex flex-col justify-center items-center">
         {# Dummy sidebar element so the JS listener doesn't complain #}
         <div id="sidebar" hidden></div>
