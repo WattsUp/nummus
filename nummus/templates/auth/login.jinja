@@ -7,6 +7,7 @@
     {% include "/shared/head.jinja" %}
 {% endwith %}
 <body class="antialiased h-screen w-screen relative bg-green-300 dark:bg-grey-950 text-black dark:text-white flex flex-col scroll-smooth">
+    {# TODO (WattsUp): Add hx error bar here too #}
     <main id="main" class="grow flex flex-col justify-center items-center">
         {# Dummy sidebar element so the JS listener doesn't complain #}
         <div id="sidebar" hidden></div>
@@ -29,11 +30,10 @@
                    type="password"
                    name="password"
                    placeholder="Password"
-                   autofocus
                    enterkeyhint="go">
-            <button class="btn-green btn-size-xl font-serif">
+            <button class="btn-filled-green font-serif btn-size-lg">
                 Login
-                {% include "/svg/login.svg" %}
+                <icon>login</icon>
             </button>
         </form>
     </main>

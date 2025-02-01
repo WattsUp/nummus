@@ -5,9 +5,12 @@
 @import "./fonts.css";
 @import "./buttons.css";
 
+/* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+    --color-*: initial;
+
     /* default 500 */
     /* TODO (WattsUp): fix default color */
     --color-green-50: #f2fcf1;
@@ -74,17 +77,8 @@
     --color-grey-900: #3d3d3d;
     --color-grey-950: #282828;
 
-    --color-gray-50: var(--color-grey-50);
-    --color-gray-100: var(--color-grey-100);
-    --color-gray-200: var(--color-grey-200);
-    --color-gray-300: var(--color-grey-300);
-    --color-gray-400: var(--color-grey-400);
-    --color-gray-500: var(--color-grey-500);
-    --color-gray-600: var(--color-grey-600);
-    --color-gray-700: var(--color-grey-700);
-    --color-gray-800: var(--color-grey-800);
-    --color-gray-900: var(--color-grey-900);
-    --color-gray-950: var(--color-grey-950);
+    --color-white: #fff;
+    --color-black: #000;
 
     /* Chart colors */
     --color-c0: #4472c4;
@@ -101,6 +95,7 @@
 
 @layer base {
 
+    /* TODO (WattsUp): Create outlined text field */
     input,
     select,
     textarea {
@@ -124,8 +119,22 @@
         cursor: pointer;
     }
 
-    svg {
-        @apply fill-current;
+    icon {
+        user-select: none;
+        font-family: "material-icons-outlined";
+        font-weight: normal;
+        font-style: normal;
+        font-size: 24px;
+        line-height: 1;
+        letter-spacing: normal;
+        text-transform: none;
+        display: inline-block;
+        white-space: nowrap;
+        word-wrap: normal;
+        direction: ltr;
+        -moz-font-feature-settings: "liga";
+        font-feature-settings: "liga";
+        -moz-osx-font-smoothing: grayscale;
     }
 }
 

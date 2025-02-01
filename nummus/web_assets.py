@@ -128,6 +128,8 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     env_assets.register("js", bundle_js)
     bundle_js.build(force=force)
 
+    # TODO (WattsUp): Download optimized material icons if not debug, all if debug
+
 
 class BuildAssets(build_py.build_py):
     """Build assets during build command."""

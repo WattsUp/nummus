@@ -1,20 +1,16 @@
 /* CSS Buttons */
 
 @theme {
-    --btn-px: calc(var(--spacing) * 2);
-    --btn-py: 0;
-    --btn-radius: var(--spacing);
-    --btn-svg-size: calc(var(--spacing) * 6);
+    --btn-px: calc(var(--spacing) * 4);
+    --btn-py: calc(var(--spacing) * 0.5);
 
-    --radioset-p: calc(var(--spacing) * 0.5);
-    --radioset-svg-p: var(--spacing);
-    --radioset-svg-size: calc(var(--spacing) * 6);
+    --radioset-p: calc(var(--spacing) * 1);
 }
 
 @utility btn {
-    @apply border transition-colors flex items-center;
+    @apply border transition-colors flex gap-2 items-center;
 
-    border-radius: var(--btn-radius);
+    border-radius: 50em;
 
     padding-inline: var(--btn-px);
     padding-block: var(--btn-py);
@@ -22,186 +18,195 @@
     border-color: var(--btn-border-color);
     background-color: var(--btn-bg-color);
 
-    &>svg {
-        @apply transition-colors fill-current;
-
-        width: var(--btn-svg-size);
-        height: var(--btn-svg-size);
+    @variant disabled {
+        @apply cursor-auto text-grey-700;
     }
+}
 
-    @variant hover {
-        border-color: var(--btn-hover-bg-color);
-        background-color: var(--btn-hover-bg-color);
-        color: var(--btn-hover-color);
+@utility btn-filled {
+    --btn-bg-color: var(--btn-base-color);
+    --btn-border-color: transparent;
 
-        @variant not-disabled {
-            &>svg {
-                fill: var(--btn-hover-color);
-            }
+    @variant not-disabled {
+        @variant hover {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, transparent);
         }
-    }
 
-    @variant active {
-        border-color: var(--btn-hover-bg-color);
-        background-color: var(--btn-hover-bg-color);
-        color: var(--btn-hover-color);
-
-        @variant not-disabled {
-            &>svg {
-                fill: var(--btn-hover-color);
-            }
+        @variant active {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, transparent);
         }
     }
 
     @variant disabled {
-        @apply cursor-auto;
-
-        --btn-bg-color: var(--color-grey-200);
+        @apply bg-grey-500/20 border-grey-500/20;
     }
 }
 
+@utility btn-tonal {
+    --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 30%, transparent);
+    --btn-border-color: transparent;
 
-@utility btn-hover-* {
-    --btn-hover-color: --value(--color-*);
+    @variant not-disabled {
+        @variant hover {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 38%, transparent);
+        }
+
+        @variant active {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 40%, transparent);
+        }
+    }
+
+    @variant disabled {
+        @apply bg-grey-500/20 border-grey-500/20;
+    }
 }
 
-@utility btn-hover-bg-* {
-    --btn-hover-bg-color: --value(--color-*);
+@utility btn-outlined {
+    --btn-bg-color: transparent;
+    --btn-border-color: var(--color-grey-500);
+
+    @variant not-disabled {
+        @variant hover {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
+        }
+
+        @variant active {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
+        }
+    }
+
+    @variant disabled {
+        @apply text-grey-500;
+    }
 }
 
-@utility btn-bg-* {
-    --btn-bg-color: --value(--color-*);
-    --btn-border-color: --value(--color-*);
+@utility btn-text {
+    --btn-bg-color: transparent;
+    --btn-border-color: transparent;
+
+    @variant not-disabled {
+        @variant hover {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
+            --btn-border-color: var(--btn-bg-color);
+        }
+
+        @variant active {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
+            --btn-border-color: var(--btn-bg-color);
+        }
+    }
+
+    @variant disabled {
+        @apply text-grey-500;
+    }
+}
+
+@utility btn-base-* {
+    --btn-base-color: --value(--color-*);
 }
 
 @utility btn-size-lg {
     @apply text-2xl;
 
-    --btn-px: calc(var(--spacing) * 2);
-    --btn-py: calc(var(--spacing) * 0.5);
-    --btn-radius: calc(var(--spacing) * 2);
+    --btn-px: calc(var(--spacing) * 5);
+    --btn-py: calc(var(--spacing) * 1);
+
+    & icon {
+        font-size: 28px;
+    }
 }
 
 @utility btn-size-xl {
     @apply text-3xl;
 
-    --btn-px: calc(var(--spacing) * 3);
+    --btn-px: calc(var(--spacing) * 7);
     --btn-py: calc(var(--spacing) * 1.5);
-    --btn-radius: calc(var(--spacing) * 3);
-    --btn-svg-size: calc(var(--spacing) * 8);
-}
 
-@utility btn-green {
-    @apply btn btn-bg-green-500 btn-hover-bg-green-900 btn-hover-white;
-
-    @variant dark {
-        @apply btn-bg-green-800 btn-hover-bg-green-500 btn-hover-black;
+    & icon {
+        font-size: 32px;
     }
 }
 
-@utility btn-blue {
-    @apply btn btn-bg-blue-600 btn-hover-bg-blue-600 btn-hover-white;
+/* Premade buttons */
+@utility btn-filled-green {
+    @apply btn btn-filled btn-base-green-600 dark:btn-base-green-400 text-white dark:text-green-900;
 }
 
-@utility btn-red {
-    @apply btn btn-bg-red-400 btn-hover-bg-red-900 btn-hover-white;
+@utility btn-tonal-green {
+    @apply btn btn-tonal btn-base-green-400 text-green-900 dark:btn-base-green-600 dark:text-green-100;
 }
 
-@utility btn-yellow {
-    @apply btn btn-bg-yellow-200 btn-hover-bg-yellow-400;
+@utility btn-outlined-green {
+    @apply btn btn-outlined btn-base-green-600 text-green-900 dark:text-green-200;
 }
 
-@utility btn-hover-green {
-    @apply btn btn-hover-bg-green-900 btn-hover-white;
+@utility btn-text-green {
+    @apply btn btn-text btn-base-green-600 text-green-900 dark:text-green-200;
 }
 
-@utility btn-hover-blue {
-    @apply btn btn-hover-bg-blue-900 btn-hover-white;
-}
-
-@utility btn-hover-red {
-    @apply btn btn-hover-bg-red-900 btn-hover-white;
-}
-
-@utility btn-hover-yellow {
-    @apply btn btn-hover-bg-yellow-400;
-}
+/* radioset is a set of radio buttons like a three way toggle */
 
 @utility radioset {
-    @apply flex gap-0.5;
+    @apply flex gap-0.5 border-2;
 
     padding: var(--radioset-p);
 
-    border-radius: calc(var(--radioset-svg-size) / 2 + var(--radioset-p) + var(--radioset-svg-p));
-
-    background-color: var(--radioset-bg-color);
+    border-radius: 50em;
 
     &>input {
         @apply hidden;
-
-        @variant checked {
-            &+label {
-
-                background-color: var(--radioset-hover-bg-color);
-
-                &>svg {
-
-                    fill: var(--radioset-hover-color);
-                }
-            }
-        }
     }
 
     &>label {
-        @apply cursor-pointer transition-colors;
+        @apply cursor-pointer transition-colors box-content;
 
-        padding: var(--radioset-svg-p);
+        height: 24px;
+
+        padding: var(--radioset-p);
 
         border-radius: 50%;
+    }
 
-        @variant hover {
-            background-color: var(--radioset-hover-bg-color);
+    @variant not-disabled {
+        &>label {
 
-            &>svg {
-                fill: var(--radioset-hover-color);
+            @variant hover {
+                background-color: color-mix(in oklab, var(--radioset-base-color) 15%, transparent);
+            }
+
+            @variant active {
+                background-color: color-mix(in oklab, var(--radioset-base-color) 20%, transparent);
             }
         }
 
-        @variant active {
-            background-color: var(--radioset-hover-bg-color);
+        &>input:checked+label {
+            color: var(--radioset-checked-text);
+            background-color: var(--radioset-base-color);
+        }
+    }
 
-            &>svg {
-                fill: var(--radioset-hover-color);
-            }
+    @variant disabled {
+        @apply bg-grey-500/20;
+
+        &>label {
+            @apply cursor-auto;
         }
 
-    }
-
-    & svg {
-        @apply transition-colors fill-current;
-
-        width: var(--radioset-svg-size);
-        height: var(--radioset-svg-size);
+        &>input:checked+label {
+            @apply bg-grey-500/40;
+        }
     }
 }
 
-@utility radioset-hover-* {
-    --radioset-hover-color: --value(--color-*);
+@utility radioset-base-* {
+    --radioset-base-color: --value(--color-*);
 }
 
-@utility radioset-hover-bg-* {
-    --radioset-hover-bg-color: --value(--color-*);
-}
-
-@utility radioset-bg-* {
-    --radioset-bg-color: --value(--color-*);
-    --radioset-border-color: --value(--color-*);
+@utility radioset-checked-text-* {
+    --radioset-checked-text: --value(--color-*);
 }
 
 @utility radioset-green {
-    @apply radioset radioset-bg-green-500 radioset-hover-bg-green-900 radioset-hover-white;
-
-    @variant dark {
-        @apply radioset-bg-green-800 radioset-hover-bg-green-500 radioset-hover-black;
-    }
+    @apply radioset radioset-base-green-600 text-green-900 dark:radioset-base-green-400 dark:text-green-200;
+    @apply radioset-checked-text-green-100 dark:radioset-checked-text-green-900;
 }
