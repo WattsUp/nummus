@@ -1,0 +1,33 @@
+<div id="nav-rail">
+    <a href="{{ url_for('dashboard.page') }}"
+       hx-target="#main"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       hx-get="{{ url_for('dashboard.page') }}">nummus</a>
+    <section>
+        <label class="mb-4">
+            <button class="btn-text-green text-grey-900 dark:text-white">
+                <icon>menu</icon>
+            </button>
+        </label>
+        <label title="Add Transaction">
+            <button class="fab-green">
+                <icon>add</icon>
+            </button>
+        </label>
+    </section>
+    <section>
+        {% with (group_label, group) = nav_items[0] %}
+            {% if group_label %}<h1>{{ group_label }}</h1>{% endif %}
+            {% for label, (icon, endpoint, link, is_active) in group.items() %}
+                {% set btn = "btn-tonal-green" if is_active else "btn-text-green" %}
+                <label class="{{ 'font-bold' if is_active }}">
+                    <button class="{{ btn }} {{ 'text-grey-900 dark:text-white' if not is_active }}">
+                        <icon class="{{ 'filled' if is_active }}">{{ icon }}</icon>
+                    </button>
+                    <div>{{ label }}</div>
+                </label>
+            {% endfor %}
+        {% endwith %}
+    </section>
+</div>

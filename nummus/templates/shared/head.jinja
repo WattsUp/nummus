@@ -6,7 +6,7 @@
     </title>
     <meta charset="utf-8">
     <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-{{ resizes or 'content' }}" />
+          content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual" />
     <meta name="description"
           content="A personal financial information aggregator and planning tool." />
     <meta name="keywords" content="">
@@ -28,16 +28,18 @@
                 localStorage.currentTheme = selection;
             }
 
-            let radioBtn = null;
+            let radioBtns = null;
             if (localStorage.currentTheme === 'dark') {
-                radioBtn = document.querySelector('#theme-dark');
+                radioBtns = document.querySelectorAll('.theme-dark');
             } else if (localStorage.currentTheme === 'light') {
-                radioBtn = document.querySelector('#theme-light');
+                radioBtns = document.querySelectorAll('.theme-light');
             } else {
-                radioBtn = document.querySelector('#theme-system');
+                radioBtns = document.querySelectorAll('.theme-system');
             }
-            if (radioBtn) {
-                radioBtn.checked = true;
+            if (radioBtns) {
+                radioBtns.forEach((e) => {
+                    e.checked = true;
+                });
             }
 
             document.documentElement.classList.toggle(

@@ -194,49 +194,81 @@ def ctx_base() -> dict[str, object]:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    pages: dict[str, dict[str, None | tuple[str, LinkType]]] = {
-        "Overview": {
-            "Dashboard": ("dashboard.page", LinkType.PAGE),
-            "Net Worth": ("net_worth.page", LinkType.PAGE),
-            "Transactions": ("transactions.page_all", LinkType.PAGE),
-            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
-        },
-        "Banking": {
-            "Cash Flow": ("cash_flow.page", LinkType.PAGE),
-            "Budgeting": ("budgeting.page", LinkType.PAGE),
-        },
-        "Investing": {
-            "Assets": ("assets.page_all", LinkType.PAGE),
-            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
-            "Performance": ("performance.page", LinkType.PAGE),
-            "Allocation": ("allocation.page", LinkType.PAGE),
-        },
-        "Planning": {
-            "Future Net Worth": None,
-            "Retirement": None,
-            "Emergency Fund": ("emergency_fund.page", LinkType.PAGE),
-            "Investment": None,
-        },
-    }
-    for section, subpages in pages.items():
-        pages[section] = {k: v for k, v in subpages.items() if v}
+    # list[(group label, subpages {label: (icon name, endpoint, link type)})]
+    nav_items: list[tuple[str, dict[str, None | tuple[str, str, LinkType]]]] = [
+        (
+            "",
+            {
+                "Home": ("home", "dashboard.page", LinkType.PAGE),
+                "Budget": ("wallet", "budget.page", LinkType.PAGE),
+                "Transactions": (
+                    "receipt_long",
+                    "transactions.page_all",
+                    LinkType.PAGE,
+                ),
+                "Accounts": ("account_balance", "budget.page", LinkType.PAGE),
+                "Insights": ("search_insights", "net_worth.page", LinkType.PAGE),
+            },
+        ),
+        (
+            "Investing",
+            {
+                "Assets": ("inventory_2", "assets.page_all", LinkType.PAGE),
+                "Performance": ("ssid_chart", "performance.page", LinkType.PAGE),
+                "Allocation": (
+                    "full_stacked_bar_chart",
+                    "allocation.page",
+                    LinkType.PAGE,
+                ),
+            },
+        ),
+        (
+            "Planning",
+            {
+                "Retirement": None,
+                "Emergency Fund": ("emergency", "emergency_fund.page", LinkType.PAGE),
+            },
+        ),
+        (
+            "",
+            {
+                "Logout": (
+                    ("logout", "auth.logout", LinkType.HX_POST)
+                    if p.is_encrypted
+                    else None
+                ),
+                "Edit Categories": (
+                    "category",
+                    "Transaction_categories.overlay",
+                    LinkType.OVERLAY,
+                ),
+                "Import File": ("upload", "import_file.import_file", LinkType.OVERLAY),
+                "Update Assets": ("update", "assets.update", LinkType.OVERLAY),
+                "Health Checks": ("health_metrics", "health.page", LinkType.PAGE),
+            },
+        ),
+    ]
 
-    menu: dict[str, None | tuple[str, LinkType]] = {
-        "Logout": ("auth.logout", LinkType.HX_POST) if p.is_encrypted else None,
-        "Edit Transaction Categories": (
-            "transaction_categories.overlay",
-            LinkType.OVERLAY,
-        ),
-        "Import File": ("import_file.import_file", LinkType.OVERLAY),
-        "Update Asset Valuations": (
-            "assets.update",
-            LinkType.OVERLAY,
-        ),
-        "Heath Checks": ("health.page", LinkType.PAGE),
-    }
+    nav_items_filtered: list[tuple[str, dict[str, tuple[str, str, LinkType, bool]]]] = (
+        []
+    )
+    for label, subpages in nav_items:
+        subpages_filtered = {}
+        for sub_label, item in subpages.items():
+            if item is None:
+                continue
+            icon, endpoint, link_type = item
+            subpages_filtered[sub_label] = (
+                icon,
+                endpoint,
+                link_type,
+                endpoint == flask.request.endpoint,
+            )
+        if subpages_filtered:
+            nav_items_filtered.append((label, subpages_filtered))
+
     return {
-        "pages": {k: v for k, v in pages.items() if v},
-        "menu": {k: v for k, v in menu.items() if v},
+        "nav_items": nav_items_filtered,
     }
 
 
@@ -329,7 +361,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
                 """,
             ),
             sidebar=ctx_sidebar(),
-            base=ctx_base(),
+            **ctx_base(),
             **context,
         )
 

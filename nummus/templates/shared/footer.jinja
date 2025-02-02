@@ -5,35 +5,7 @@
         Version:
         {{ version }}
     </p>
-    <fieldset class="absolute right-2 top-2.5 radioset-green">
-        <input id="theme-system"
-               type="radio"
-               name="theme"
-               value="system"
-               autocomplete="off"
-               onclick="updateTheme('system')">
-        <label for="theme-system">
-            <icon>devices</icon>
-        </label>
-        <input id="theme-light"
-               type="radio"
-               name="theme"
-               value="light"
-               autocomplete="off"
-               onclick="updateTheme('light')">
-        <label for="theme-light">
-            <icon>light_mode</icon>
-        </label>
-        <input id="theme-dark"
-               type="radio"
-               name="theme"
-               value="dark"
-               autocomplete="off"
-               onclick="updateTheme('dark')">
-        <label for="theme-dark">
-            <icon>dark_mode</icon>
-        </label>
-    </fieldset>
+    {% include "/shared/theme-selector.jinja" %}
     {# Set radio buttons once buttons load #}
     <script>updateTheme();</script>
 </footer>

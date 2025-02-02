@@ -1,0 +1,17 @@
+<div id="nav-bar">
+    {% for label, (icon, endpoint, link, is_active) in nav_items[0][1].items() %}
+        {% set btn = "btn-tonal-green" if is_active else "btn-text-green" %}
+        <label class="{{ 'font-bold' if is_active }}">
+            <button class="{{ btn }} {{ 'text-grey-900 dark:text-white' if not is_active }}">
+                <icon class="{{ 'filled' if is_active }}">{{ icon }}</icon>
+            </button>
+            {{ label }}
+        </label>
+    {% endfor %}
+    <label>
+        <button title="Add Transaction">
+            <icon>add</icon>
+        </button>
+    </label>
+    {# TODO (WattsUp): Hide nav-bar and nav-header on scroll down, reappear on scroll up #}
+</div>

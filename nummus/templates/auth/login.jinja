@@ -3,25 +3,19 @@
 {# ignore missing <head> #}
 <html lang="en-US">
 {# djlint: on #}
-{% with title="Login | nummus", resizes="visual" %}
+{% with title="Login | nummus" %}
     {% include "/shared/head.jinja" %}
 {% endwith %}
 <body class="antialiased h-screen w-screen relative bg-green-300 dark:bg-grey-950 text-black dark:text-white flex flex-col scroll-smooth"
       hx-swap="outerHTML"
       hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)">
-    <div id="header-error"
-         class="bg-red-500 flex items-center justify-center text-black p-2 hidden">
-        <icon>error</icon>
-        {# djlint: off #}
-        <span></span>
-        {# djlint: on #}
-    </div>
+    {% include "/shared/hx-error.jinja" %}
     <main id="main" class="grow flex flex-col justify-center items-center">
         {# Dummy sidebar element so the JS listener doesn't complain #}
         <div id="sidebar" hidden></div>
         <form id="form-login"
-              class="w-full max-w-96 h-full max-h-96 bg-grey-100 dark:bg-grey-900 p-2 flex flex-col items-center rounded-2xl dark:border-green-900 mx-2 my-8"
+              class="w-full max-w-96 h-full max-h-96 bg-grey-50 dark:bg-grey-900 p-2 flex flex-col items-center rounded-2xl dark:border-green-900 mx-2 my-8"
               hx-post="{{ url_for('auth.login') }}"
               hx-target="#login-error"
               hx-include="this">

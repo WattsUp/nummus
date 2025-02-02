@@ -6,6 +6,8 @@
 @import "./buttons.css";
 @import "./inputs.css";
 
+@import "./nav.css";
+
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -112,6 +114,10 @@
         -moz-font-feature-settings: "liga";
         font-feature-settings: "liga";
         -moz-osx-font-smoothing: grayscale;
+    }
+
+    icon.filled {
+        font-variation-settings: 'FILL' 1;
     }
 }
 

@@ -17,9 +17,10 @@
 }
 
 @utility btn {
-    @apply border transition-colors flex gap-2 items-center;
+    @apply border transition-colors flex gap-2 items-center whitespace-nowrap;
 
-    border-radius: 50em;
+    /* big radius to get pill shape */
+    border-radius: 100em;
 
     padding-inline: var(--btn-px);
     padding-block: var(--btn-py);
@@ -36,9 +37,13 @@
     --btn-bg-color: var(--btn-base-color);
     --btn-border-color: transparent;
 
+    color: var(--btn-text-color);
+
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -47,6 +52,8 @@
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -63,9 +70,13 @@
     --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 30%, transparent);
     --btn-border-color: transparent;
 
+    color: var(--btn-text-color);
+
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 38%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -74,6 +85,8 @@
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 40%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -90,9 +103,13 @@
     --btn-bg-color: transparent;
     --btn-border-color: var(--color-grey-500);
 
+    color: var(--btn-text-color);
+
     @variant not-disabled {
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -101,6 +118,8 @@
 
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -117,10 +136,15 @@
     --btn-bg-color: transparent;
     --btn-border-color: transparent;
 
+    color: var(--btn-text-color);
+
     @variant not-disabled {
+
         @variant hover {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
             --btn-border-color: var(--btn-bg-color);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -130,6 +154,8 @@
         @variant active {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
             --btn-border-color: var(--btn-bg-color);
+
+            color: var(--btn-text-color);
 
             & icon {
                 font-variation-settings: 'FILL' 1;
@@ -144,6 +170,10 @@
 
 @utility btn-base-* {
     --btn-base-color: --value(--color-*);
+}
+
+@utility btn-text-* {
+    --btn-text-color: --value(--color-*);
 }
 
 @utility btn-size-lg {
@@ -170,19 +200,27 @@
 
 /* Premade buttons */
 @utility btn-filled-green {
-    @apply btn btn-filled btn-base-green-600 dark:btn-base-green-400 text-white dark:text-green-900;
+    @apply btn btn-filled btn-base-green-600 dark:btn-base-green-400 btn-text-white dark:btn-text-green-900;
 }
 
 @utility btn-tonal-green {
-    @apply btn btn-tonal btn-base-green-400 text-green-900 dark:btn-base-green-600 dark:text-green-100;
+    @apply btn btn-tonal btn-base-green-400 btn-text-green-900 dark:btn-base-green-600 dark:btn-text-green-100;
 }
 
 @utility btn-outlined-green {
-    @apply btn btn-outlined btn-base-green-600 text-green-900 dark:text-green-200;
+    @apply btn btn-outlined btn-base-green-600 btn-text-green-900 dark:btn-text-green-200;
 }
 
 @utility btn-text-green {
-    @apply btn btn-text btn-base-green-600 text-green-900 dark:text-green-200;
+    @apply btn btn-text btn-base-green-600 btn-text-green-900 dark:btn-text-green-200;
+}
+
+/* Floating action buttons (FAB) */
+
+@utility fab-green {
+    @apply btn-filled-green p-4;
+
+    border-radius: 1em;
 }
 
 /* radioset is a set of radio buttons like a three way toggle */
@@ -192,14 +230,19 @@
 
     padding: var(--radioset-p);
 
-    border-radius: 50em;
+    /* big radius to get pill shape */
+    border-radius: 100em;
 
-    &>input {
+    & input {
         @apply hidden;
     }
 
-    &>label {
-        @apply cursor-pointer transition-colors box-content;
+    & label {
+        @apply cursor-pointer;
+    }
+
+    & icon {
+        @apply transition-colors box-content;
 
         height: 24px;
 
@@ -212,23 +255,21 @@
         &>label {
 
             @variant hover {
-                background-color: color-mix(in oklab, var(--radioset-base-color) 15%, transparent);
-
                 & icon {
+                    background-color: color-mix(in oklab, var(--radioset-base-color) 15%, transparent);
                     font-variation-settings: 'FILL' 1;
                 }
             }
 
             @variant active {
-                background-color: color-mix(in oklab, var(--radioset-base-color) 20%, transparent);
-
                 & icon {
+                    background-color: color-mix(in oklab, var(--radioset-base-color) 20%, transparent);
                     font-variation-settings: 'FILL' 1;
                 }
             }
         }
 
-        &>input:checked+label {
+        & input:checked+icon {
             color: var(--radioset-checked-text);
             background-color: var(--radioset-base-color);
         }
@@ -241,7 +282,7 @@
             @apply cursor-auto;
         }
 
-        &>input:checked+label {
+        & input:checked+icon {
             @apply bg-grey-500/40;
         }
     }

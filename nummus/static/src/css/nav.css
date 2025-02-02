@@ -1,60 +1,116 @@
-@layer components {
+@utility nav-section {
+    @apply flex items-center;
 
-    /* TODO(WattsUp): Can these directly use the utility classes or custom utility? */
-    .nav-folder>.nav-dropdown {
-        @apply scale-y-0 transition-transform origin-top duration-300;
+    &>h1 {
+        @apply px-3 border border-transparent w-full;
     }
 
-    .nav-folder.open>.nav-dropdown {
-        @apply scale-y-100;
+    &>label {
+        @apply block cursor-pointer text-center not-dark:text-grey-900 w-full;
+
+        &>button {
+            @apply mx-auto;
+        }
+
+        &>div {
+            @apply text-sm;
+        }
+    }
+}
+
+@utility nav-rail {
+    @apply h-full shrink-0 flex flex-col p-1 overflow-y-auto;
+    @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
+
+    &>a {
+        @apply hidden md:flex flex-col justify-end mx-auto h-12;
+        @apply cursor-pointer font-title text-xl;
+        @apply hover:text-green-900 active:text-green-900 transition-colors;
+
+        @variant dark {
+            @apply hover:text-green-200 active:text-green-200;
+        }
     }
 
-    .nav-folder.open>.nav-button {
-        @apply bg-green-800;
+    &>section {
+        @apply nav-section;
+        @apply flex-col gap-1 py-1;
+
+        @variant first-of-type {
+            @apply my-8;
+        }
+
+        @variant last-of-type {
+            @apply grow;
+        }
+
+    }
+}
+
+#nav-rail {
+    @apply nav-rail max-md:hidden lg:hidden;
+}
+
+#nav-drawer {
+    @apply nav-rail w-52 px-2;
+
+    @variant max-lg {
+        @apply fixed transition-transform -translate-x-full;
+
     }
 
-    .nav-button>.nav-hamburger {
-        @apply -translate-x-1/2 w-[24px] md:w-[32px] border-t-[3px] md:border-t-4 border-white absolute left-1/2 top-[15px] md:top-[20px] transition-transform;
+    &>a {
+        @apply text-5xl;
     }
 
-    .nav-button>.nav-hamburger:nth-child(1) {
-        @apply translate-y-[-8px] md:translate-y-[-10px];
+    &>section>label>button {
+        @apply p-3 w-full;
+    }
+}
+
+#nav-bar {
+    @apply w-full shrink-0 pt-2 md:hidden;
+    @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
+
+    @apply nav-section;
+
+    &>label {
+        @apply text-sm not-last:w-1/5 last:w-min;
+
+        &>button {
+            @apply btn-size-lg;
+        }
+
+        @variant last {
+            @apply w-min absolute right-3 bottom-19.5;
+
+            &>button {
+                @apply fab-green;
+            }
+
+        }
+    }
+}
+
+#nav-header {
+    @apply relative w-full fixed top-0 z-40 md:hidden;
+    @apply bg-green-600 dark:bg-green-400 text-white dark:text-green-900;
+
+    &>* {
+        @apply cursor-pointer;
+        @apply hover:text-green-900 active:text-green-900 transition-colors;
+
+        @variant dark {
+            @apply hover:text-green-100 active:text-green-100;
+        }
     }
 
-    .nav-button>.nav-hamburger:nth-child(3) {
-        @apply translate-y-[8px] md:translate-y-[10px];
+    &>icon {
+        @apply absolute text-[36px] p-0.5;
     }
 
-    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(1) {
-        @apply translate-y-0 rotate-45;
-    }
-
-    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(2) {
-        @apply scale-x-0;
-    }
-
-    .nav-folder.open>.nav-button>.nav-hamburger:nth-child(3) {
-        @apply translate-y-0 -rotate-45;
-    }
-
-    .sidebar {
-        @apply h-full w-[18rem] shrink-0;
-    }
-
-    /* TODO(WattsUp): Does not work as expected */
-    .sidebar.unpinned {
-        @apply fixed transition-transform -translate-x-full duration-300 z-10 top-0 pt-8 md:pt-12;
-    }
-
-    .sidebar.unpinned.open {
-        @apply translate-x-0;
-    }
-
-    .sidebar+.sidebar-spacer {
-        @apply w-10 bg-green-300 hidden shrink-0;
-    }
-
-    .sidebar.unpinned+.sidebar-spacer {
-        @apply md:block;
+    &>a {
+        @apply block w-min px-2;
+        @apply font-title text-4xl mx-auto;
     }
 }
