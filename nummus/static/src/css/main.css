@@ -10,6 +10,7 @@
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant open (&:where(.open, .open *));
 
 @theme {
     --color-*: initial;

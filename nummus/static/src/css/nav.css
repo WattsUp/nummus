@@ -22,6 +22,10 @@
     @apply h-full shrink-0 flex flex-col p-1 overflow-y-auto;
     @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
 
+    &>* {
+        @apply shrink-0;
+    }
+
     &>a {
         @apply hidden md:flex flex-col justify-end mx-auto h-12;
         @apply cursor-pointer font-title text-xl;
@@ -54,9 +58,19 @@
 #nav-drawer {
     @apply nav-rail w-52 px-2;
 
+    /* Modal nav-drawer */
     @variant max-lg {
-        @apply fixed transition-transform -translate-x-full;
+        @apply fixed top-0 z-50 rounded-r-3xl;
+        @apply transition-transform -translate-x-full duration-300;
 
+        @variant open {
+            @apply translate-x-0;
+
+            &+#nav-scrim {
+                @apply translate-x-0 opacity-100;
+                transition: opacity 0.3s, translate 0s;
+            }
+        }
     }
 
     &>a {
@@ -113,4 +127,13 @@
         @apply block w-min px-2;
         @apply font-title text-4xl mx-auto;
     }
+}
+
+#nav-scrim {
+    @apply absolute inset-0 z-45 lg:hidden;
+    @apply -translate-x-full;
+    @apply bg-grey-500/50 opacity-0;
+
+    /* delay translate until opacity finishes */
+    transition: opacity 0.3s, translate 0s 0.3s;
 }

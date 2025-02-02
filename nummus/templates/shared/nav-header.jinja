@@ -1,5 +1,5 @@
 <header id="nav-header">
-    <icon>menu</icon>
+    <icon class="nav-opener" onclick="nav.openDrawer()">menu</icon>
     <a href="{{ url_for('dashboard.page') }}"
        hx-target="#main"
        hx-swap="innerHTML"
