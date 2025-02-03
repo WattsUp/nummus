@@ -4,22 +4,22 @@
 <html lang="en-US">
 {# djlint: on #}
 {% include "/shared/head.jinja" %}
-<body class="antialiased h-screen w-screen relative flex flex-col bg-grey-50 dark:bg-grey-950 text-black dark:text-white scroll-smooth"
-      hx-swap="outerHTML"
+<body hx-swap="outerHTML"
       hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)">
     {% include "/shared/hx-error.jinja" %}
     {% include "/shared/nav-header.jinja" %}
-    <div class="flex grow min-h-0">
-        {% include "/shared/nav-rail.jinja" %}
-        {% include "/shared/nav-drawer.jinja" %}
-        <main id="main" class="grow overflow-y-auto">
-            {% for _ in range(100) %}
-                Main content
-                <br>
-            {% endfor %}
-        </main>
-    </div>
+    {% include "/shared/nav-rail.jinja" %}
+    {% include "/shared/nav-drawer.jinja" %}
+    <main id="main">
+        First line
+        <br>
+        {% for _ in range(100) %}
+            Main content
+            <br>
+        {% endfor %}
+        Last line
+    </main>
     {% include "/shared/nav-bar.jinja" %}
 </body>
 </html>

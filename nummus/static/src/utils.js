@@ -301,6 +301,11 @@ function merge(target, ...sources) {
     return merge(target, ...sources);
 }
 
+/**
+ * On htmx send error, show error bar
+ *
+ * @param {Event} event Triggering event
+ */
 function nummusSendError(event) {
     const url = event.detail.pathInfo.finalRequestPath;
     const e = document.querySelector('#hx-error');
@@ -308,6 +313,11 @@ function nummusSendError(event) {
     e.querySelector('span').innerHTML = `Failed to send request for '${url}'`
 }
 
+/**
+ * On htmx response error, show error bar
+ *
+ * @param {Event} event Triggering event
+ */
 function nummusResponseError(event) {
     const e = document.querySelector('#hx-error');
     e.classList.remove('hidden');

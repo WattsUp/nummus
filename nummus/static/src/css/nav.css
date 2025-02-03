@@ -19,7 +19,8 @@
 }
 
 @utility nav-rail {
-    @apply h-full shrink-0 flex flex-col p-1 overflow-y-auto;
+    @apply w-22 h-full shrink-0 flex flex-col p-1 overflow-y-auto;
+    @apply fixed left-0;
     @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
 
     &>* {
@@ -83,7 +84,8 @@
 }
 
 #nav-bar {
-    @apply w-full shrink-0 pt-2 md:hidden;
+    @apply w-full fixed bottom-0 pt-2 md:hidden;
+    transition: translate 0.5s;
     @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
 
     @apply nav-section;
@@ -97,6 +99,7 @@
 
         @variant last {
             @apply w-min absolute right-3 bottom-19.5;
+            transition: translate 0.5s;
 
             &>button {
                 @apply fab-green;
@@ -107,8 +110,10 @@
 }
 
 #nav-header {
-    @apply relative w-full fixed top-0 z-40 md:hidden;
+    @apply w-full fixed top-0 z-40 md:hidden;
     @apply bg-green-600 dark:bg-green-400 text-white dark:text-green-900;
+
+    transition: translate 0.5s;
 
     &>* {
         @apply cursor-pointer;
@@ -136,4 +141,9 @@
 
     /* delay translate until opacity finishes */
     transition: opacity 0.3s, translate 0s 0.3s;
+}
+
+#main {
+    @apply max-md:mt-10 max-md:mb-16.5;
+    @apply md:ml-22 lg:ml-52;
 }

@@ -120,6 +120,15 @@
     icon.filled {
         font-variation-settings: 'FILL' 1;
     }
+
+    html {
+        @apply scroll-smooth;
+    }
+
+    body {
+        @apply antialiased min-h-screen w-screen relative;
+        @apply bg-grey-50 dark:bg-grey-950 text-black dark:text-white;
+    }
 }
 
 @layer components {
