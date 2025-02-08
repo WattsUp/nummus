@@ -29,7 +29,7 @@
 @utility input-outlined {
     @apply relative block;
 
-    &>div {
+    &>div:first-of-type {
         @apply absolute left-2 top-0 border border-transparent;
 
         &::before {
@@ -41,7 +41,7 @@
         }
     }
 
-    &>div>div {
+    &>div:first-of-type>div {
         @apply py-1 px-1 transition;
 
         transition-property: transform, translate, font-size;
@@ -72,7 +72,7 @@
 
     &>select:has(option:checked:not([value])),
     &>select:has(option:checked:not([value=""])) {
-        @apply not-disabled:input-outlined-active;
+        @apply input-outlined-active;
     }
 
 
@@ -100,10 +100,21 @@
         }
     }
 
-    &>error {
+
+    &>div:not(:first-of-type) {
         @apply block ml-2 h-5;
         @apply text-sm;
-        @apply text-red-600 dark:text-red-400;
+        @apply text-grey-500;
+
+        &>error {
+            @apply text-red-600 dark:text-red-400;
+
+            @variant not-empty {
+                &+span {
+                    @apply hidden;
+                }
+            }
+        }
     }
 }
 

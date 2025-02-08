@@ -83,6 +83,21 @@ const dialog = {
         });
     },
     /**
+     * On load of a dialog, addListeners and autofocus
+     */
+    onLoad: function() {
+        dialog.addListeners();
+        // Only autofocus for not mobile
+        if (window.screen.width >= 768) {
+            const firstInput = htmx.find('#dialog input, #dialog select');
+            firstInput.focus();
+            if (firstInput.type == 'text') {
+                const n = firstInput.value.length;
+                firstInput.setSelectionRange(n, n);
+            }
+        }
+    },
+    /**
      * Create confirm dialog
      *
      * @param {String} headline Headline text

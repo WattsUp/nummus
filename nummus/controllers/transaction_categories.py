@@ -84,14 +84,7 @@ def new() -> str | flask.Response:
             "name": None,
             "emoji": None,
             "group": None,
-            "group_type": sorted(
-                (
-                    g
-                    for g in TransactionCategoryGroup
-                    if g != TransactionCategoryGroup.OTHER
-                ),
-                key=lambda g: g.name,
-            ),
+            "group_type": TransactionCategoryGroup,
             "locked": False,
         }
 
@@ -142,14 +135,7 @@ def category(uri: str) -> str | flask.Response:
                 "uri": uri,
                 "name": cat.emoji_name,
                 "group": cat.group,
-                "group_type": sorted(
-                    (
-                        g
-                        for g in TransactionCategoryGroup
-                        if g != TransactionCategoryGroup.OTHER
-                    ),
-                    key=lambda g: g.name,
-                ),
+                "group_type": TransactionCategoryGroup,
                 "locked": cat.locked,
                 "is_profit_loss": cat.is_profit_loss,
                 "essential": cat.essential,
@@ -193,7 +179,7 @@ def category(uri: str) -> str | flask.Response:
         is_profit_loss = "is-pnl" in form
         essential = "essential" in form
 
-        name_clean = utils.strip_emojis(name).strip()
+        name_clean = TransactionCategory.clean_emoji_name(name)
         if cat.locked and name_clean != cat.name:
             return common.error("Can only add/remove emojis on locked category")
 
@@ -220,6 +206,8 @@ def validation() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     args = flask.request.args
+    uri = args.get("uri")
+    category_id = uri and TransactionCategory.uri_to_id(uri)
     if "name" in args:
         name = TransactionCategory.clean_emoji_name(args["name"])
         if name == "":
@@ -227,9 +215,23 @@ def validation() -> str:
         if len(name) < utils.MIN_STR_LEN:
             return f"At least {utils.MIN_STR_LEN} characters required"
         with p.begin_session() as s:
+            # Only get original name if locked
+            locked_name = (
+                s.query(TransactionCategory.name)
+                .where(
+                    TransactionCategory.id_ == category_id,
+                    TransactionCategory.locked,
+                )
+                .scalar()
+            )
+            if locked_name and locked_name != name:
+                return "May only add/remove emojis"
             n = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name == name)
+                .where(
+                    TransactionCategory.name == name,
+                    TransactionCategory.id_ != category_id,
+                )
                 .count()
             )
             if n != 0:

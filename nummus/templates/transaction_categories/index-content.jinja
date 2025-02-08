@@ -36,7 +36,6 @@
                         <div>{{ cat.name }}</div>
                         <button class="btn-text-green btn-sq"
                                 hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
-                            {# TODO (WattsUp): Add edit dialog #}
                             <icon>edit</icon>
                         </button>
                     </label>
@@ -46,7 +45,8 @@
                 {% with cat = items[-1] %}
                     <label class="{{ row_class }}">
                         <div>{{ cat.name }}</div>
-                        <button class="btn-text-green btn-sq">
+                        <button class="btn-text-green btn-sq"
+                                hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
                             <icon>edit</icon>
                         </button>
                     </label>
