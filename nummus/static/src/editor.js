@@ -129,11 +129,3 @@ const overlayEditor = {
         document.querySelector('#overlay').innerHTML = '';
     },
 };
-
-
-window.addEventListener('beforeunload', (e) => {
-    if (overlayEditor.anyPendingChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-    }
-});

@@ -1,5 +1,3 @@
-/* CSS Buttons */
-
 @layer base {
 
     button:not(:disabled),
@@ -17,7 +15,7 @@
 }
 
 @utility btn {
-    @apply border transition-colors flex gap-2 items-center whitespace-nowrap;
+    @apply border transition-colors flex gap-1 items-center whitespace-nowrap;
 
     /* big radius to get pill shape */
     border-radius: 100em;
@@ -30,6 +28,15 @@
 
     @variant disabled {
         @apply cursor-auto text-grey-700;
+    }
+}
+
+@utility btn-stacked {
+    @apply mb-6;
+
+    &>div {
+        @apply absolute left-1/2 -bottom-6 -translate-x-1/2;
+        @apply text-sm text-center;
     }
 }
 
@@ -196,6 +203,10 @@
     & icon {
         font-size: 32px;
     }
+}
+
+@utility btn-sq {
+    --btn-px: var(--btn-py);
 }
 
 /* Premade buttons */

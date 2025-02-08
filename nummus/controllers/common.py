@@ -181,7 +181,7 @@ class LinkType(models.BaseEnum):
     """Header link type."""
 
     PAGE = 1
-    OVERLAY = 2
+    DIALOG = 2
     HX_POST = 3
 
 
@@ -200,70 +200,56 @@ def ctx_base() -> dict[str, object]:
             "",
             {
                 "Home": ("home", "dashboard.page", LinkType.PAGE),
-                "Budget": ("wallet", "budget.page", LinkType.PAGE),
-                "Transactions": (
-                    "receipt_long",
-                    "transactions.page_all",
-                    LinkType.PAGE,
-                ),
-                "Accounts": ("account_balance", "budget.page", LinkType.PAGE),
-                "Insights": ("search_insights", "net_worth.page", LinkType.PAGE),
+                "Budget": None,  # wallet
+                # TODO (WattsUp): Change to receipt_long and add_receipt_long if
+                # request gets fulfilled
+                "Transactions": None,  # note_stack
+                "Accounts": None,  # account_balance
+                "Insights": None,  # search_insights
             },
         ),
         (
             "Investing",
             {
-                "Assets": ("inventory_2", "assets.page_all", LinkType.PAGE),
-                "Performance": ("ssid_chart", "performance.page", LinkType.PAGE),
-                "Allocation": (
-                    "full_stacked_bar_chart",
-                    "allocation.page",
-                    LinkType.PAGE,
-                ),
+                "Assets": None,  # inventory_2
+                "Performance": None,  # ssid_chart
+                "Allocation": None,  # full_stacked_bar_chart
             },
         ),
         (
             "Planning",
             {
-                "Retirement": None,
-                "Emergency Fund": ("emergency", "emergency_fund.page", LinkType.PAGE),
+                "Retirement": None,  # person_play
+                "Emergency Fund": None,  # emergency
             },
         ),
         (
-            "",
+            "Utilities",
             {
                 "Logout": (
                     ("logout", "auth.logout", LinkType.HX_POST)
                     if p.is_encrypted
                     else None
                 ),
-                "Edit Categories": (
+                "Categories": (
                     "category",
-                    "Transaction_categories.overlay",
-                    LinkType.OVERLAY,
+                    "transaction_categories.page",
+                    LinkType.PAGE,
                 ),
-                "Import File": ("upload", "import_file.import_file", LinkType.OVERLAY),
-                "Update Assets": ("update", "assets.update", LinkType.OVERLAY),
-                "Health Checks": ("health_metrics", "health.page", LinkType.PAGE),
+                "Import File": None,  # upload
+                "Update Assets": None,  # update
+                "Health Checks": None,  # health_metrics
             },
         ),
     ]
 
-    nav_items_filtered: list[tuple[str, dict[str, tuple[str, str, LinkType, bool]]]] = (
-        []
-    )
+    nav_items_filtered: list[tuple[str, dict[str, tuple[str, str, LinkType]]]] = []
     for label, subpages in nav_items:
         subpages_filtered = {}
         for sub_label, item in subpages.items():
             if item is None:
                 continue
-            icon, endpoint, link_type = item
-            subpages_filtered[sub_label] = (
-                icon,
-                endpoint,
-                link_type,
-                endpoint == flask.request.endpoint,
-            )
+            subpages_filtered[sub_label] = item
         if subpages_filtered:
             nav_items_filtered.append((label, subpages_filtered))
 
@@ -272,21 +258,21 @@ def ctx_base() -> dict[str, object]:
     }
 
 
-def overlay_swap(
+def dialog_swap(
     content: str | None = None,
     event: str | list[str] | None = None,
 ) -> flask.Response:
-    """Create a response to close the overlay and trigger listeners.
+    """Create a response to close the dialog and trigger listeners.
 
     Args:
-        content: Content of overlay to swap to, None will close overlay
+        content: Content of dialog to swap to, None will close dialog
         event: Event or list of events to trigger
 
     Returns:
-        Response that updates overlay OOB and triggers events
+        Response that updates dialog OOB and triggers events
     """
     html = flask.render_template(
-        "shared/overlay.jinja",
+        "shared/dialog.jinja",
         oob=True,
         content=content or "",
     )
@@ -308,6 +294,7 @@ def error(e: str | Exception) -> str:
     Returns:
         HTML string response
     """
+    icon = "<icon>error</icon>"
     if isinstance(e, exc.IntegrityError):
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
@@ -329,10 +316,10 @@ def error(e: str | Exception) -> str:
         else:  # pragma: no cover
             # Don't need to test fallback
             msg = orig
-        return flask.render_template("shared/error.jinja", error=msg)
+        return icon + msg
 
     # Default return exception's string
-    return flask.render_template("shared/error.jinja", error=str(e))
+    return icon + str(e)
 
 
 def page(content_template: str, title: str, **context: object) -> flask.Response:
@@ -346,7 +333,9 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
         html_title = f"<title>{title}</title>\n"
-        html = html_title + flask.render_template(content_template, **context)
+        nav_trigger = "<script>nav.update()</script>\n"
+        content = flask.render_template(content_template, **context)
+        html = html_title + nav_trigger + content
     else:
         html = flask.render_template_string(
             textwrap.dedent(
@@ -398,4 +387,5 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
 
 ROUTES: Routes = {
     "/h/sidebar": (sidebar, ["GET"]),
+    # TODO (WattsUp): Add a style test page
 }

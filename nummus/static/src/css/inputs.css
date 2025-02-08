@@ -1,25 +1,33 @@
 @layer base {
 
-    input {
-        @apply border px-2 py-1 rounded-md;
+    input,
+    select {
+        @apply px-2 py-1 rounded-md;
+        @apply border border-grey-500;
     }
-
-    /* No up/down button on number input */
-    input::-webkit-outer-spin-button,
-    input::-webkit-inner-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
-
 
     input[type=number] {
         appearance: textfield;
-        -moz-appearance: textfield;
+    }
+
+    select {
+        appearance: menulist-button;
+    }
+}
+
+@utility input-outlined-active {
+    &~div {
+        @apply before:scale-x-100;
+    }
+
+    &~div>div {
+        @apply text-sm -translate-y-1/2;
+        @apply text-grey-700 dark:text-grey-300;
     }
 }
 
 @utility input-outlined {
-    @apply relative;
+    @apply relative block;
 
     &>div {
         @apply absolute left-2 top-0 border border-transparent;
@@ -39,80 +47,179 @@
         transition-property: transform, translate, font-size;
     }
 
-    &>input {
+    &>input,
+    &>select {
         @apply w-full;
-
-        &:not(:placeholder-shown) {
-            &+div {
-                @apply before:scale-x-100;
-            }
-
-            &+div>div {
-                @apply text-sm -translate-y-1/2;
-            }
-        }
 
         @variant disabled {
             @apply border-grey-500/50 text-grey-700;
 
-            &+div {
+            &~div {
                 @apply text-grey-700;
             }
         }
 
-        @variant not-disabled {
-            @apply cursor-text;
 
-            &+div {
-                @apply cursor-text;
-            }
+        /* No clicking the label */
+        &~div {
+            @apply pointer-events-none;
         }
+    }
+
+    &>input {
+        @apply not-placeholder-shown:input-outlined-active;
+    }
+
+    &>select:has(option:checked:not([value])),
+    &>select:has(option:checked:not([value=""])) {
+        @apply not-disabled:input-outlined-active;
     }
 
 
     @variant focus {
-        &>input {
-            @variant not-disabled {
-                &+div {
-                    @apply before:scale-x-100;
-                }
 
-                &+div>div {
-                    @apply text-sm -translate-y-1/2;
-                }
-            }
+        &>input,
+        &>select {
+            @apply not-disabled:input-outlined-active;
         }
     }
 
     @variant focus-within {
-        &>input {
-            @variant not-disabled {
-                &+div {
-                    @apply before:scale-x-100;
-                }
 
-                &+div>div {
-                    @apply text-sm -translate-y-1/2;
-                }
-            }
+        &>input,
+        &>select {
+            @apply not-disabled:input-outlined-active;
         }
     }
 
     @variant active {
-        &>input {
-            @variant not-disabled {
-                &+div {
-                    @apply before:scale-x-100;
-                }
 
-                &+div>div {
-                    @apply text-sm -translate-y-1/2;
-                }
-            }
+        &>input,
+        &>select {
+            @apply not-disabled:input-outlined-active;
         }
     }
 }
 
 @utility input-bg-* {
     --input-bg-color: --value(--color-*);
+}
+
+@utility toggle {
+    @apply flex justify-between items-center;
+
+    &>input {
+        @apply hidden;
+
+        @variant disabled {
+            &~div {
+                @apply text-grey-500/80;
+
+                &>span {
+                    @variant not-first {
+                        @apply text-grey-500/80;
+                    }
+                }
+            }
+
+            &~switch {
+                @apply border-grey-400/50 dark:border-grey-600/50;
+                @apply bg-grey-200/50 dark:bg-grey-800/50;
+                @apply after:bg-grey-400/50 dark:after:bg-grey-600/50;
+            }
+
+            @variant checked {
+                &~switch {
+                    @apply border-transparent;
+                    @apply bg-grey-300/50 dark:bg-grey-700/50;
+                    @apply after:bg-grey-600/50;
+                }
+            }
+        }
+
+        @variant not-disabled {
+
+            &~div,
+            &~switch {
+                @apply cursor-pointer;
+            }
+
+            @variant checked {
+                &~switch {
+                    @apply border-transparent;
+                    background-color: var(--toggle-bg-color);
+
+                    &::after {
+                        background-color: var(--toggle-handle-color);
+                    }
+                }
+            }
+        }
+
+        @variant checked {
+            &~switch::after {
+                @apply translate-x-3.5;
+            }
+        }
+
+    }
+
+    &>div {
+        @apply flex flex-col justify-center;
+
+        &>span {
+            @variant not-first {
+                @apply text-sm text-grey-700 dark:text-grey-300;
+            }
+        }
+    }
+
+    &>switch {
+        @apply w-12 h-8.5 relative;
+        @apply border-2 border-grey-400;
+        @apply bg-grey-200 dark:bg-grey-800;
+
+        /* big radius to get pill shape */
+        border-radius: 100em;
+
+        &::after {
+            @apply block;
+            @apply w-4 h-4 absolute top-1.75 left-1.75;
+            @apply transition-transform origin-center;
+            @apply bg-grey-400;
+
+            content: "";
+            border-radius: 50%;
+        }
+
+    }
+
+    @variant active {
+        &>input:not(:disabled) {
+            &~switch::after {
+                @apply scale-175;
+            }
+        }
+    }
+
+    @variant not-active {
+        &>input:checked {
+            &~switch::after {
+                @apply scale-150;
+            }
+        }
+
+    }
+}
+
+@utility toggle-bg-* {
+    --toggle-bg-color: --value(--color-*);
+}
+
+@utility toggle-handle-* {
+    --toggle-handle-color: --value(--color-*);
+}
+
+@utility toggle-green {
+    @apply toggle toggle-bg-green-600 toggle-handle-white dark:toggle-bg-green-200 dark:toggle-handle-green-600;
 }

@@ -6,45 +6,43 @@
 {% with title="Login | nummus" %}
     {% include "/shared/head.jinja" %}
 {% endwith %}
-<body class="antialiased h-screen w-screen relative bg-green-300 dark:bg-grey-950 text-black dark:text-white flex flex-col scroll-smooth"
-      hx-swap="outerHTML"
+<body class="not-dark:bg-green-300"
       hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)">
     {% include "/shared/hx-error.jinja" %}
-    <main id="main" class="grow flex flex-col justify-center items-center">
-        {# Dummy sidebar element so the JS listener doesn't complain #}
-        <div id="sidebar" hidden></div>
-        <form id="form-login"
-              class="w-full max-w-96 h-full max-h-96 bg-grey-50 dark:bg-grey-900 p-2 flex flex-col items-center rounded-2xl dark:border-green-900 mx-2 my-8"
-              hx-post="{{ url_for('auth.login') }}"
-              hx-target="#login-error"
-              hx-include="this">
-            <h1 class="font-title text-7xl dark:text-green-400">nummus</h1>
-            <p class="text-center grow">
-                A personal financial information aggregator and planning tool.
-                Collects and categorizes transactions, manages budgets, tracks investments,
-                calculates net worth, and predicts future performance.
-            </p>
-            <div id="login-error"
-                 class="bg-red-400 dark:bg-red-800 p-1 text-xl empty:hidden my-1 rounded-md"></div>
-            {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
-            <label class="input-outlined input-bg-grey-100 dark:input-bg-grey-900 w-full my-2">
-                <input class="scroll-mb-20"
-                       type="password"
-                       name="password"
-                       enterkeyhint="go"
-                       placeholder=""
-                       autofocus>
-                <div>
-                    <div>Password</div>
-                </div>
-            </label>
-            <button class="btn-filled-green font-serif btn-size-lg">
-                Login
-                <icon>login</icon>
-            </button>
-        </form>
-    </main>
+    <div id="main-sizer" class="p-0 pb-28">
+        <main id="main" class="flex flex-col justify-center items-center">
+            <form id="form-login"
+                  class="w-full max-w-96 grow max-h-96 bg-grey-50 dark:bg-grey-900 p-2 flex flex-col items-center rounded-2xl dark:border-green-900 mx-2 my-8"
+                  hx-post="{{ url_for('auth.login') }}"
+                  hx-target="#login-error"
+                  hx-include="this">
+                <h1 class="font-title text-7xl dark:text-green-400">nummus</h1>
+                <p class="text-center grow">
+                    A personal financial information aggregator and planning tool.
+                    Collects and categorizes transactions, manages budgets, tracks investments,
+                    calculates net worth, and predicts future performance.
+                </p>
+                <div id="login-error" class="error"></div>
+                {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+                <label class="input-outlined input-bg-grey-50 dark:input-bg-grey-900 w-full my-2">
+                    <input class="scroll-mb-20"
+                           type="password"
+                           name="password"
+                           enterkeyhint="go"
+                           placeholder=""
+                           autofocus>
+                    <div>
+                        <div>Password</div>
+                    </div>
+                </label>
+                <button class="btn-filled-green font-serif btn-size-lg">
+                    Login
+                    <icon>login</icon>
+                </button>
+            </form>
+        </main>
+    </div>
     {% block footer %}
         {% include "/shared/footer.jinja" %}
     {% endblock footer %}

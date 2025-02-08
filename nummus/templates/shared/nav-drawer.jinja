@@ -1,29 +1,39 @@
-<div id="nav-drawer">
+<nav id="nav-drawer"
+     hx-target="#main"
+     hx-push-url="true"
+     onclick="nav.closeDrawer(event)">
     <a href="{{ url_for('dashboard.page') }}"
-       hx-target="#main"
-       hx-swap="innerHTML"
-       hx-push-url="true"
        hx-get="{{ url_for('dashboard.page') }}">nummus</a>
     <section class="w-min">
-        <label>
-            <button class="fab-green">
-                <icon>add</icon>
-                <div>Transaction</div>
-            </button>
-        </label>
+        <button class="fab-green">
+            <icon>note_stack_add</icon>
+            <div>Transaction</div>
+        </button>
     </section>
     {% for group_label, group in nav_items %}
         {% if not loop.first %}<div class="h-px bg-grey-900 dark:bg-white"></div>{% endif %}
         <section>
             {% if group_label %}<h1>{{ group_label }}</h1>{% endif %}
-            {% for label, (icon, endpoint, link, is_active) in group.items() %}
-                {% set btn = "btn-tonal-green" if is_active else "btn-text-green" %}
-                <label class="{{ 'font-bold' if is_active }}">
-                    <button class="{{ btn }} {{ 'text-grey-900 dark:text-white' if not is_active }}">
-                        <icon class="{{ 'filled' if is_active }}">{{ icon }}</icon>
+            {% for label, (icon, endpoint, link) in group.items() %}
+                {% if link == "PAGE" %}
+                    <a href="{{ url_for(endpoint) }}" hx-get="{{ url_for(endpoint) }}">
+                        <icon>{{ icon }}</icon>
+                        <div>{{ label }}</div>
+                    </a>
+                {% elif link == "DIALOG" %}
+                    <button hx-get="{{ url_for(endpoint) }}"
+                            hx-target="#dialog"
+                            hx-trigger="load, click"
+                            hx-push-url="false">
+                        <icon>{{ icon }}</icon>
                         <div>{{ label }}</div>
                     </button>
-                </label>
+                {% elif link == "HX_POST" %}
+                    <button hx-post="{{ url_for(endpoint) }}" hx-push-url="false">
+                        <icon>{{ icon }}</icon>
+                        <div>{{ label }}</div>
+                    </button>
+                {% endif %}
             {% endfor %}
         </section>
     {% endfor %}
@@ -37,5 +47,4 @@
         {# Set radio buttons once buttons load #}
         <script>updateTheme();</script>
     </div>
-</div>
-<div id="nav-scrim"></div>
+</nav>

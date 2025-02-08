@@ -20,11 +20,24 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-def overlay() -> str:
-    """GET /h/txn-categories.
+def page() -> flask.Response:
+    """GET /txn-categories.
 
     Returns:
         string HTML response
+    """
+    return common.page(
+        "transaction_categories/index-content.jinja",
+        "Transaction Categories",
+        categories=ctx_categories(),
+    )
+
+
+def ctx_categories() -> dict[str, object]:
+    """Get the context required to build the categories table.
+
+    Returns:
+        List of HTML context
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -34,56 +47,29 @@ def overlay() -> str:
 
         uri: str | None
         name: str
-        emoji_name: str | None
-        locked: bool
 
     with p.begin_session() as s:
-        income: list[CategoryContext] = []
-        expense: list[CategoryContext] = []
-        transfer: list[CategoryContext] = []
-
-        query = s.query(TransactionCategory).where(
-            TransactionCategory.group != TransactionCategoryGroup.OTHER,
-        )
+        groups: dict[TransactionCategoryGroup, list[CategoryContext]] = {
+            TransactionCategoryGroup.INCOME: [],
+            TransactionCategoryGroup.EXPENSE: [],
+            TransactionCategoryGroup.TRANSFER: [],
+            TransactionCategoryGroup.OTHER: [],
+        }
+        query = s.query(TransactionCategory).order_by(TransactionCategory.name)
         for cat in query.yield_per(YIELD_PER):
             cat_d: CategoryContext = {
                 "uri": cat.uri,
-                "name": cat.name,
-                "emoji_name": cat.emoji_name,
-                "locked": cat.locked,
+                "name": cat.emoji_name,
             }
-            if cat.group == TransactionCategoryGroup.INCOME:
-                income.append(cat_d)
-            elif cat.group == TransactionCategoryGroup.EXPENSE:
-                expense.append(cat_d)
-            elif cat.group == TransactionCategoryGroup.TRANSFER:
-                transfer.append(cat_d)
-            else:  # pragma: no cover
-                msg = f"Unknown category type: {cat.group}"
-                raise ValueError(msg)
+            if (
+                cat.group != TransactionCategoryGroup.OTHER
+                or cat.name == "Uncategorized"
+            ):
+                groups[cat.group].append(cat_d)
 
-        income = sorted(income, key=lambda cat: cat["name"])
-        expense = sorted(expense, key=lambda cat: cat["name"])
-        transfer = sorted(transfer, key=lambda cat: cat["name"])
-
-        ctx = {"Income": income, "Expense": expense, "Transfer": transfer}
-
-        query = s.query(TransactionCategory.id_).where(
-            TransactionCategory.name == "Uncategorized",
-        )
-        try:
-            uncategorized_id: int = query.one()[0]
-        except exc.NoResultFound as e:  # pragma: no cover
-            # Uncategorized is locked and cannot be deleted
-            msg = "Could not find Uncategorized id"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-        uncategorized_uri = TransactionCategory.id_to_uri(uncategorized_id)
-
-    return flask.render_template(
-        "transaction_categories/table.jinja",
-        categories=ctx,
-        uncategorized=uncategorized_uri,
-    )
+    return {
+        "groups": groups,
+    }
 
 
 def new() -> str | flask.Response:
@@ -133,7 +119,7 @@ def new() -> str | flask.Response:
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
 
-    return common.overlay_swap(overlay())
+    return common.dialog_swap()
 
 
 def category(uri: str) -> str | flask.Response:
@@ -194,7 +180,7 @@ def category(uri: str) -> str | flask.Response:
             ).update({"category_id": uncategorized_id})
             s.delete(cat)
 
-            return common.overlay_swap(overlay(), event="update-transaction")
+            return common.dialog_swap(event="update-transaction")
 
         form = flask.request.form
         name = form["name"]
@@ -221,11 +207,11 @@ def category(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(overlay(), event="update-transaction")
+        return common.dialog_swap(event="update-transaction")
 
 
 ROUTES: Routes = {
-    "/h/txn-categories": (overlay, ["GET"]),
+    "/txn-categories": (page, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
     "/h/txn-categories/c/<path:uri>": (category, ["GET", "PUT", "DELETE"]),
 }

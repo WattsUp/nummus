@@ -5,18 +5,20 @@
 @import "./fonts.css";
 @import "./buttons.css";
 @import "./inputs.css";
+@import "./prose.css";
 
 @import "./nav.css";
+@import "./dialog.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
-@custom-variant open (&:where(.open, .open *));
 
 @theme {
     --color-*: initial;
 
     /* default 500 */
     /* TODO (WattsUp): fix default color */
+    /* TODO (WattsUp): Use color roles */
     --color-green-50: #f2fcf1;
     --color-green-100: #e0f9df;
     --color-green-200: #c2f1c1;
@@ -122,13 +124,41 @@
     }
 
     html {
-        @apply scroll-smooth;
+        @apply scroll-smooth overscroll-y-contain;
     }
 
     body {
-        @apply antialiased min-h-screen w-screen relative;
+        @apply antialiased h-screen w-screen relative overscroll-y-contain;
         @apply bg-grey-50 dark:bg-grey-950 text-black dark:text-white;
     }
+
+}
+
+@layer components {
+    .scrim {
+        @apply absolute inset-0 z-45 cursor-pointer;
+        @apply -translate-x-full;
+        @apply bg-grey-500/50 opacity-0;
+
+        /* delay translate until opacity finishes */
+        transition: opacity 0.3s, translate 0s 0.3s;
+    }
+
+    #main-sizer {
+        @apply h-screen overflow-y-auto;
+        @apply max-md:pt-10 max-md:pb-16.5;
+        @apply md:pl-24 lg:pl-52;
+    }
+
+    #main {
+        @apply p-2 min-h-full;
+    }
+}
+
+@utility error {
+    @apply flex items-center justify-center gap-1 p-1 rounded-md;
+    @apply empty:hidden;
+    @apply bg-red-400 dark:bg-red-800;
 }
 
 @layer components {

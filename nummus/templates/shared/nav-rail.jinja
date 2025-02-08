@@ -1,33 +1,38 @@
-<div id="nav-rail">
+<nav id="nav-rail" hx-target="#main" hx-push-url="true">
     <a href="{{ url_for('dashboard.page') }}"
-       hx-target="#main"
-       hx-swap="innerHTML"
-       hx-push-url="true"
        hx-get="{{ url_for('dashboard.page') }}">nummus</a>
     <section>
-        <label class="mb-4 nav-opener" onclick="nav.openDrawer()">
-            <button class="btn-text-green text-grey-900 dark:text-white">
-                <icon>menu</icon>
-            </button>
-        </label>
-        <label title="Add Transaction">
-            <button class="fab-green">
-                <icon>add</icon>
-            </button>
-        </label>
+        <button class="btn-text-green text-grey-900 dark:text-white"
+                onclick="nav.openDrawer()">
+            <icon>menu</icon>
+        </button>
+        <button class="fab-green" title="Add Transaction">
+            <icon>note_stack_add</icon>
+        </button>
     </section>
     <section>
         {% with (group_label, group) = nav_items[0] %}
             {% if group_label %}<h1>{{ group_label }}</h1>{% endif %}
-            {% for label, (icon, endpoint, link, is_active) in group.items() %}
-                {% set btn = "btn-tonal-green" if is_active else "btn-text-green" %}
-                <label class="{{ 'font-bold' if is_active }}">
-                    <button class="{{ btn }} {{ 'text-grey-900 dark:text-white' if not is_active }}">
-                        <icon class="{{ 'filled' if is_active }}">{{ icon }}</icon>
+            {% for label, (icon, endpoint, link) in group.items() %}
+                {% if link == "PAGE" %}
+                    <a href="{{ url_for(endpoint) }}" hx-get="{{ url_for(endpoint) }}">
+                        <icon>{{ icon }}</icon>
+                        <div>{{ label }}</div>
+                    </a>
+                {% elif link == "DIALOG" %}
+                    <button hx-get="{{ url_for(endpoint) }}"
+                            hx-target="#dialog"
+                            hx-push-url="false">
+                        <icon>{{ icon }}</icon>
+                        <div>{{ label }}</div>
                     </button>
-                    <div>{{ label }}</div>
-                </label>
+                {% elif link == "HX_POST" %}
+                    <button hx-post="{{ url_for(endpoint) }}" hx-push-url="false">
+                        <icon>{{ icon }}</icon>
+                        <div>{{ label }}</div>
+                    </button>
+                {% endif %}
             {% endfor %}
         {% endwith %}
     </section>
-</div>
+</nav>

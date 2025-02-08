@@ -1,10 +1,13 @@
 'use strict';
 const nav = {
-    lastScroll: null,
-    headerHeight: null,
-    headerTranslate: 0,
-    barRatio: null,
+    barOn: true,
+    lastToggleY: null,
+    barHeight: null,
+    barTranslate: 0,
     fabRatio: null,
+    mainSizer: null,
+    bar: null,
+    fab: null,
     /**
      * On click, open nav-drawer
      */
@@ -12,15 +15,31 @@ const nav = {
         htmx.addClass(htmx.find('#nav-drawer'), 'open');
     },
     /**
-     * On click of outside of nav-drawer, close nav-drawer
+     * On click of scrim, close nav-drawer
      *
-     * @param {Event} event Triggering event
+     * @param {Event} evt Triggering event
      */
-    closeDrawer: function(event) {
-        const query = '#nav-drawer, #nav-drawer *, .nav-opener, .nav-opener *';
-        if (!event || !event.target.matches(query)) {
+    closeDrawer: function(evt) {
+        // if no event or clicking a label, close drawer
+        if (!evt || evt.target.matches('label, label *')) {
             htmx.removeClass(htmx.find('#nav-drawer'), 'open');
         }
+    },
+    /**
+     * On new page, update nav buttons to indicate active page
+     */
+    update: function() {
+        const query = 'nav button, nav a';
+        const currentPath = window.location.pathname;
+        htmx.findAll(query).forEach((e) => {
+            const url =
+                e && (e.getAttribute('hx-get') || e.getAttribute('hx-post'));
+            const path = url && url.split('?')[0];
+            if (path && path == currentPath)
+                htmx.addClass(e, 'nav-current');
+            else
+                htmx.removeClass(e, 'nav-current');
+        });
     },
     /**
      * On scroll down, hide nav elements. On up, show
@@ -30,42 +49,54 @@ const nav = {
         if (window.screen.width >= 768) {
             return;
         }
-        const dy = window.scrollY - (nav.lastScroll ?? window.scrollY);
-        nav.lastScroll = window.scrollY;
+        if (nav.mainSizer == null) nav.mainSizer = htmx.find('#main-sizer');
+        const scrollY = nav.mainSizer.scrollTop;
 
-        const header = htmx.find('#nav-header');
-        if (nav.headerHeight == null) {
-            const rect = header.getBoundingClientRect();
-            nav.headerHeight = rect.height;
+        if (nav.bar == null) nav.bar = htmx.find('#nav-bar');
+        if (nav.barHeight == null) {
+            const rect = nav.bar.getBoundingClientRect();
+            nav.barHeight = rect.height;
         }
 
-        const bar = htmx.find('#nav-bar');
-        if (nav.barRatio == null) {
-            const rect = bar.getBoundingClientRect();
-            nav.barRatio = rect.height / nav.headerHeight;
-        }
-
-        const fab = htmx.find('#nav-fab');
+        if (nav.fab == null) nav.fab = htmx.find('#nav-fab');
         if (nav.fabRatio == null) {
-            const rect = fab.getBoundingClientRect();
-            nav.fabRatio = (rect.width + window.screen.width - rect.right) /
-                nav.headerHeight;
+            const rect = nav.fab.getBoundingClientRect();
+            nav.fabRatio =
+                (rect.width + window.screen.width - rect.right) / nav.barHeight;
         }
 
-        if (dy > 0) {
-            nav.headerTranslate = nav.headerHeight * 1.1;
-        } else if (window.scrollY == 0 || dy < 0) {
-            nav.headerTranslate = 0;
+
+        const hyst = 20;
+        if (nav.lastToggleY == null) {
+            nav.lastToggleY = scrollY;
         }
 
-        barTranslate = nav.headerTranslate * nav.barRatio;
-        fabTranslate = nav.headerTranslate * nav.fabRatio;
+        let change = false;
+        if (nav.barOn) {
+            nav.lastToggleY = Math.min(scrollY, nav.lastToggleY ?? scrollY);
+            if (scrollY > (nav.lastToggleY + hyst)) {
+                nav.barTranslate = nav.barHeight * 1.1;
+                nav.barOn = false;
+                change = true;
+            }
+        } else {
+            nav.lastToggleY = Math.max(scrollY, nav.lastToggleY ?? scrollY);
+            if (scrollY < (nav.lastToggleY - hyst)) {
+                nav.barTranslate = 0;
+                nav.barOn = true;
+                change = true;
+            }
+        }
 
-        header.style.translate = `0 ${- nav.headerTranslate}px`;
-        bar.style.translate = `0 ${barTranslate}px`;
-        fab.style.translate = `${fabTranslate}px ${- barTranslate}px`;
+        if (change) {
+            fabTranslate = nav.barTranslate * nav.fabRatio;
+
+            nav.bar.style.translate = `0 ${nav.barTranslate}px`;
+            nav.fab.style.translate =
+                `${fabTranslate}px ${- nav.barTranslate}px`;
+        }
     },
 };
 
-htmx.on('click', nav.closeDrawer);
-htmx.on(window, 'scroll', nav.onScroll);
+htmx.on('#main-sizer', 'scroll', nav.onScroll);
+htmx.onLoad(nav.update);

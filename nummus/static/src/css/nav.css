@@ -1,3 +1,6 @@
+@custom-variant open (&:where(.open, .open *));
+@custom-variant nav-current (&:where(.nav-current, .nav-current *));
+
 @utility nav-section {
     @apply flex items-center;
 
@@ -5,21 +8,28 @@
         @apply px-3 border border-transparent w-full;
     }
 
-    &>label {
-        @apply block cursor-pointer text-center not-dark:text-grey-900 w-full;
+    &>button,
+    &>a {
+        @apply w-min mx-auto btn-text-green relative;
 
-        &>button {
-            @apply mx-auto;
+        @variant nav-current {
+            @apply btn-tonal-green font-bold;
+
+            &>icon {
+                font-variation-settings: 'FILL' 1;
+            }
         }
 
-        &>div {
-            @apply text-sm;
+        @variant not-nav-current {
+            @apply text-grey-900 dark:text-white;
         }
+
     }
+
 }
 
 @utility nav-rail {
-    @apply w-22 h-full shrink-0 flex flex-col p-1 overflow-y-auto;
+    @apply w-24 h-full shrink-0 flex flex-col p-1 overflow-y-auto;
     @apply fixed left-0;
     @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
 
@@ -52,98 +62,91 @@
     }
 }
 
-#nav-rail {
-    @apply nav-rail max-md:hidden lg:hidden;
-}
+@layer components {
+    #nav-rail {
+        @apply nav-rail max-md:hidden lg:hidden;
 
-#nav-drawer {
-    @apply nav-rail w-52 px-2;
+        &>section>button,
+        &>section>a {
+            @apply btn-stacked;
+        }
+    }
 
-    /* Modal nav-drawer */
-    @variant max-lg {
-        @apply fixed top-0 z-50 rounded-r-3xl;
-        @apply transition-transform -translate-x-full duration-300;
+    #nav-drawer {
+        @apply nav-rail w-52 px-2;
 
-        @variant open {
-            @apply translate-x-0;
+        /* Modal nav-drawer */
+        @variant max-lg {
+            @apply fixed top-0 z-50 rounded-r-3xl;
+            @apply transition-transform -translate-x-full duration-300;
 
-            &+#nav-scrim {
-                @apply translate-x-0 opacity-100;
-                transition: opacity 0.3s, translate 0s;
+            @variant open {
+                @apply translate-x-0;
+
+                &~#scrim {
+                    @apply translate-x-0 opacity-100;
+                    transition: opacity 0.3s, translate 0s;
+                }
             }
         }
-    }
 
-    &>a {
-        @apply text-5xl;
-    }
-
-    &>section>label>button {
-        @apply p-3 w-full;
-    }
-}
-
-#nav-bar {
-    @apply w-full fixed bottom-0 pt-2 md:hidden;
-    transition: translate 0.5s;
-    @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
-
-    @apply nav-section;
-
-    &>label {
-        @apply text-sm not-last:w-1/5 last:w-min;
-
-        &>button {
-            @apply btn-size-lg;
+        &>a {
+            @apply text-5xl;
         }
 
-        @variant last {
-            @apply w-min absolute right-3 bottom-19.5;
-            transition: translate 0.5s;
+        &>section>button,
+        &>section>a {
+            @apply p-3 w-full;
+        }
+    }
 
-            &>button {
+    #nav-bar {
+        @apply nav-section;
+        @apply w-full fixed bottom-0 pt-2 md:hidden justify-evenly;
+        @apply bg-grey-100 dark:bg-grey-900 not-dark:text-grey-900;
+
+        transition: translate 0.5s;
+
+        &>button,
+        &>a {
+            @apply btn-stacked btn-size-lg last:w-min mx-0;
+
+            @variant last {
+                @apply w-min absolute right-3 bottom-19.5;
                 @apply fab-green;
+                transition: translate 0.5s;
             }
-
-        }
-    }
-}
-
-#nav-header {
-    @apply w-full fixed top-0 z-40 md:hidden;
-    @apply bg-green-600 dark:bg-green-400 text-white dark:text-green-900;
-
-    transition: translate 0.5s;
-
-    &>* {
-        @apply cursor-pointer;
-        @apply hover:text-green-900 active:text-green-900 transition-colors;
-
-        @variant dark {
-            @apply hover:text-green-100 active:text-green-100;
         }
     }
 
-    &>icon {
-        @apply absolute text-[36px] p-0.5;
+    #nav-header {
+        @apply w-full fixed top-0 z-40 md:hidden;
+        @apply bg-green-600 dark:bg-green-400 text-white dark:text-green-900;
+
+        transition: translate 0.5s;
+
+        &>* {
+            @apply cursor-pointer;
+            @apply hover:text-green-900 active:text-green-900 transition-colors;
+
+            @variant dark {
+                @apply hover:text-green-100 active:text-green-100;
+            }
+        }
+
+        &>icon {
+            @apply absolute text-[36px] p-0.5;
+        }
+
+        &>a {
+            @apply block w-min px-2;
+            @apply font-title text-4xl mx-auto;
+        }
     }
 
-    &>a {
-        @apply block w-min px-2;
-        @apply font-title text-4xl mx-auto;
+    #nav-footer {
+        @apply fixed w-full h-28 p-2 bottom-0;
+        @apply bg-green-300 dark:bg-grey-950 border-green-800 dark:border-green-900;
+        @apply border-t-4 text-left md:text-center text-sm;
     }
-}
-
-#nav-scrim {
-    @apply absolute inset-0 z-45 lg:hidden;
-    @apply -translate-x-full;
-    @apply bg-grey-500/50 opacity-0;
-
-    /* delay translate until opacity finishes */
-    transition: opacity 0.3s, translate 0s 0.3s;
-}
-
-#main {
-    @apply max-md:mt-10 max-md:mb-16.5;
-    @apply md:ml-22 lg:ml-52;
 }
