@@ -3,6 +3,12 @@
         <icon>close</icon>
     </button>
     <h1>{{ headline }}</h1>
-    {# TODO (WattsUp): Enable when all required fields are filled #}
-    <button disabled>Save</button>
+    {% if save_url %}
+        <button id="dialog-save"
+                disabled
+                {{ 'hx-' + (save_method or 'post') + '="' + save_url + '"' }}
+                hx-target="#dialog-error"
+                hx-include="next form">Save
+        </button>
+    {% endif %}
 </div>

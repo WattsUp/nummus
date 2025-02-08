@@ -1,22 +1,37 @@
-{% with headline=("Edit" if category["uri"] else "New") +" category" %}
-    {% include "/shared/dialog-headline.jinja" %}
-{% endwith %}
-<form class="grid gap-2">
+{% if category["uri"] %}
+    {% with headline="Edit category", save_url=url_for("transaction_categories.category", uri=category["uri"]) %}
+        {% include "/shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% else %}
+    {% with headline="New category", save_url=url_for("transaction_categories.new"), save_method="post" %}
+        {% include "/shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% endif %}
+<form class="grid gap-2" onsubmit="return false">
     <label class="input-outlined input-bg-grey-50 dark:input-bg-grey-950">
-        {# TODO (WattsUp): Move to next field on enter #}
         <input name="name"
                required
                enterkeyhint="next"
                placeholder=""
                value="{{ category["name"] or "" }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               hx-get="{{ url_for('transaction_categories.validation', uri=category['uri']) }}"
                autocomplete="off"
                autofocus>
         <div>
             <div>Name</div>
         </div>
+        {# djlint: off #}
+        <error></error>
+        {# djlint: on #}
     </label>
     <label class="input-outlined input-bg-grey-50 dark:input-bg-grey-950 col-start-2">
-        <select name="group" required autocomplete="off">
+        <select name="group"
+                required
+                autocomplete="off"
+                onchange="txnCat.updateEssential()">
             <option value=""
                     disabled
                     hidden
@@ -45,10 +60,10 @@
     </label>
     <label class="toggle-green col-span-2">
         <input type="checkbox"
-               name="is-essential"
+               name="essential"
                autocomplete="off"
-               {% if category["is_essential"] %}checked{% endif %}
-               disabled>
+               {% if category["essential"] %}checked{% endif %}
+               {% if category["group"] == "INCOME" %}disabled{% endif %}>
         <div>
             <span>Essential spending</span>
             <span>For emergency fund estimation</span>
@@ -63,3 +78,5 @@
     <icon>delete</icon>Delete
 </button>
 #}
+<div id="dialog-error" class="error"></div>
+<script>dialog.addListeners()</script>

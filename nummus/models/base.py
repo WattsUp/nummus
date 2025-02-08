@@ -182,6 +182,18 @@ class Base(orm.DeclarativeBase):
         # Call truncate using the proper Decimal precision
         return getattr(cls, key).type.truncate(field)
 
+    @classmethod
+    def clean_emoji_name(cls, s: str) -> str:
+        """Clean emoji_name into name.
+
+        Args:
+            s: String to strip
+
+        Returns:
+            s without emojis and in lowercase
+        """
+        return utils.strip_emojis(s).strip().lower()
+
 
 class BaseEnum(enum.IntEnum):
     """Enum class with a parser."""

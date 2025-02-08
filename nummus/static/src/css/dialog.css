@@ -13,10 +13,10 @@
         }
 
         &>div:first-child {
-            @apply flex justify-between items-center gap-1 mb-2;
+            @apply flex items-center gap-1 mb-2;
 
             &>h1 {
-                @apply font-serif text-green-600 text-2xl whitespace-nowrap mr-12;
+                @apply font-serif text-green-600 text-2xl whitespace-nowrap mr-12 grow;
             }
 
             &>button {

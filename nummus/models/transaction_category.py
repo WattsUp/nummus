@@ -6,7 +6,6 @@ from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 from typing_extensions import override
 
 from nummus import exceptions as exc
-from nummus import utils
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -62,6 +61,8 @@ class TransactionCategory(Base):
     __table_args__ = (
         *string_column_args("name"),
         *string_column_args("emoji_name"),
+        # TODO (WattsUp): Add CheckConstraint for essential
+        # TODO (WattsUp): Add CheckConstraint for name is all lower
         CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
@@ -75,8 +76,7 @@ class TransactionCategory(Base):
             msg = "Call TransactionSplit.emoji_name = x. Do not set name directly"
             raise exc.ParentAttributeError(msg)
         if name == "emoji_name" and isinstance(value, str):
-            value_no_emojis = utils.strip_emojis(value).strip()
-            super().__setattr__("name", value_no_emojis)
+            super().__setattr__("name", self.clean_emoji_name(value))
         super().__setattr__(name, value)
 
     @orm.validates("name", "emoji_name")

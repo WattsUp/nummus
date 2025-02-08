@@ -2,4 +2,5 @@
      class="dialog"
      hx-swap-oob="{{ oob }}"
      hx-target="#dialog"
-     hx-on::oob-before-swap="dialog.reset()">{{ content | safe }}</div>
+     hx-on::oob-before-swap="dialog.reset()"
+     hx-on::after-settle="dialog.updateSave()">{{ content | safe }}</div>

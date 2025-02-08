@@ -99,6 +99,12 @@
             @apply not-disabled:input-outlined-active;
         }
     }
+
+    &>error {
+        @apply block ml-2 h-5;
+        @apply text-sm;
+        @apply text-red-600 dark:text-red-400;
+    }
 }
 
 @utility input-bg-* {
@@ -106,10 +112,10 @@
 }
 
 @utility toggle {
-    @apply flex justify-between items-center;
+    @apply flex items-center;
 
     &>input {
-        @apply hidden;
+        @apply opacity-0 w-0 h-0;
 
         @variant disabled {
             &~div {
@@ -154,6 +160,12 @@
                     }
                 }
             }
+
+            @variant focus {
+                &~switch {
+                    @apply shadow shadow-green-500;
+                }
+            }
         }
 
         @variant checked {
@@ -165,7 +177,7 @@
     }
 
     &>div {
-        @apply flex flex-col justify-center;
+        @apply flex flex-col justify-center grow;
 
         &>span {
             @variant not-first {

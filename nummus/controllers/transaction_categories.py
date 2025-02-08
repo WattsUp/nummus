@@ -210,8 +210,38 @@ def category(uri: str) -> str | flask.Response:
         return common.dialog_swap(event="update-transaction")
 
 
+def validation() -> str:
+    """GET /h/txn-categories/validation.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    args = flask.request.args
+    if "name" in args:
+        name = TransactionCategory.clean_emoji_name(args["name"])
+        if name == "":
+            return "Required"
+        if len(name) < utils.MIN_STR_LEN:
+            return f"At least {utils.MIN_STR_LEN} characters required"
+        with p.begin_session() as s:
+            n = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.name == name)
+                .count()
+            )
+            if n != 0:
+                return "Must be unique"
+    else:
+        raise NotImplementedError
+    return ""
+
+
 ROUTES: Routes = {
     "/txn-categories": (page, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
     "/h/txn-categories/c/<path:uri>": (category, ["GET", "PUT", "DELETE"]),
+    "/h/txn-categories/validation": (validation, ["GET"]),
 }
