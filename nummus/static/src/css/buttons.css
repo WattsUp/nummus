@@ -226,6 +226,10 @@
     @apply btn btn-text btn-base-green-600 btn-text-green-900 dark:btn-text-green-200;
 }
 
+@utility btn-text-red {
+    @apply btn btn-text btn-base-red-600 btn-text-red-900 dark:btn-text-red-200;
+}
+
 /* Floating action buttons (FAB) */
 
 @utility fab-green {

@@ -33,7 +33,7 @@
         @apply absolute left-2 top-0 border border-transparent;
 
         &::before {
-            @apply block w-full h-4 absolute -top-2 transition-transform scale-x-0;
+            @apply block w-full h-3 absolute -top-1.5 transition-transform scale-x-0;
 
             content: "";
 

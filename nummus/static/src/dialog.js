@@ -2,14 +2,16 @@ const dialog = {
     pending: false,
     /**
      * Close dialog if no pending changes
+     *
+     * @param {boolean} force true will ignore pending changes
      */
-    close: function() {
-        if (dialog.pending) {
-            var result = window.confirm(
-                'There are pending changes. Are you sure you want to cancel edits?');
-            if (!result) {
-                return
-            }
+    close: function(force) {
+        if (!force && dialog.pending) {
+            dialog.confirm('Discard draft?', 'Discard', () => {
+                dialog.pending = false;
+                htmx.find('#dialog').innerHTML = '';
+            });
+            return;
         }
         dialog.pending = false;
         htmx.find('#dialog').innerHTML = '';
@@ -46,9 +48,11 @@ const dialog = {
      * Update dialog save button
      */
     updateSave: function() {
+        const saveBtn = htmx.find('#dialog-save');
+        if (!saveBtn) return;
         const allFilled = dialog.checkRequired();
         const anyInvalid = htmx.find('#dialog input~error:not(:empty)') != null;
-        htmx.find('#dialog-save').disabled = !allFilled || anyInvalid;
+        saveBtn.disabled = !allFilled || anyInvalid;
     },
     /**
      * Add event listeners to the dialog
@@ -69,12 +73,41 @@ const dialog = {
             }
         };
         htmx.findAll('#dialog input, #dialog select').forEach((e) => {
-            e.addEventListener('keypress', (evt) => {
+            htmx.on(e, 'input', dialog.changes);
+            htmx.on(e, 'keypress', (evt) => {
                 if (evt.key == 'Enter') {
                     evt.preventDefault();
                     focusNext(e);
                 }
             });
         });
+    },
+    /**
+     * Create confirm dialog
+     *
+     * @param {String} headline Headline text
+     * @param {String} actionLabel Label for the action button
+     * @param {Function} action Event handler for the action button
+     * @param {String} details Explanation text
+     */
+    confirm: function(headline, actionLabel, action, details) {
+        const e = htmx.find('#confirm-dialog');
+        e.innerHTML = `
+            <div><h1>${headline}</h1></div>
+            <p>${details ?? ''}</p>
+            <div class="flex justify-end">
+                <button class="btn-text-green" onclick="dialog.closeConfirm()">Cancel</button>
+                <button class="btn-text-green" onclick="dialog.closeConfirm()">
+                    ${actionLabel}
+                </button>
+            </div>
+            `;
+        htmx.on(htmx.find(e, 'button:last-child'), 'click', action);
+    },
+    /**
+     * Close confirm dialog
+     */
+    closeConfirm: function() {
+        htmx.find('#confirm-dialog').innerHTML = '';
     },
 };

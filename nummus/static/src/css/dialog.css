@@ -1,7 +1,8 @@
 @layer components {
 
     .dialog {
-        @apply absolute m-auto z-50 empty:hidden p-3 rounded-3xl;
+        @apply absolute m-auto empty:hidden p-3 rounded-3xl;
+        @apply min-w-64;
         @apply bg-grey-50 dark:bg-grey-950;
         @apply left-[50vw] top-[50vh] -translate-x-1/2 -translate-y-1/2;
 

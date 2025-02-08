@@ -136,7 +136,7 @@
 
 @layer components {
     .scrim {
-        @apply absolute inset-0 z-45 cursor-pointer;
+        @apply absolute inset-0 cursor-pointer;
         @apply -translate-x-full;
         @apply bg-grey-500/50 opacity-0;
 

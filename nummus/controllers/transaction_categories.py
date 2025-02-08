@@ -63,7 +63,7 @@ def ctx_categories() -> dict[str, object]:
             }
             if (
                 cat.group != TransactionCategoryGroup.OTHER
-                or cat.name == "Uncategorized"
+                or cat.name == "uncategorized"
             ):
                 groups[cat.group].append(cat_d)
 
@@ -119,7 +119,7 @@ def new() -> str | flask.Response:
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
 
-    return common.dialog_swap()
+    return common.dialog_swap(event="update-category")
 
 
 def category(uri: str) -> str | flask.Response:
@@ -164,15 +164,15 @@ def category(uri: str) -> str | flask.Response:
             if cat.locked:
                 msg = f"Locked category {cat.name} cannot be modified"
                 raise exc.http.Forbidden(msg)
-            # Move all transactions to Uncategorized
+            # Move all transactions to uncategorized
             query = s.query(TransactionCategory.id_).where(
-                TransactionCategory.name == "Uncategorized",
+                TransactionCategory.name == "uncategorized",
             )
             try:
                 uncategorized_id: int = query.one()[0]
             except exc.NoResultFound as e:  # pragma: no cover
                 # Uncategorized is locked and cannot be deleted
-                msg = "Could not find Uncategorized id"
+                msg = "Could not find uncategorized id"
                 raise exc.ProtectedObjectNotFoundError(msg) from e
 
             s.query(TransactionSplit).where(
@@ -180,7 +180,7 @@ def category(uri: str) -> str | flask.Response:
             ).update({"category_id": uncategorized_id})
             s.delete(cat)
 
-            return common.dialog_swap(event="update-transaction")
+            return common.dialog_swap(event="update-category")
 
         form = flask.request.form
         name = form["name"]
@@ -207,7 +207,7 @@ def category(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-transaction")
+        return common.dialog_swap(event="update-category")
 
 
 def validation() -> str:

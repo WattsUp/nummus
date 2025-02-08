@@ -19,7 +19,8 @@
                hx-include="this"
                hx-get="{{ url_for('transaction_categories.validation', uri=category['uri']) }}"
                autocomplete="off"
-               autofocus>
+               autofocus
+               onFocus="event.currentTarget.setSelectionRange(event.currentTarget.value.length, event.currentTarget.value.length)">
         <div>
             <div>Name</div>
         </div>
@@ -73,10 +74,11 @@
         {# djlint: on #}
     </label>
 </form>
-{# TODO (WattsUp): Add delete with confirmation dialog
-<button class="btn-text-green">
-    <icon>delete</icon>Delete
-</button>
-#}
+{% if category["uri"] %}
+    <button class="btn-text-red mx-auto"
+            onclick="txnCat.confirmDelete(event)"
+            hx-trigger="delete"
+            hx-delete="{{ url_for('transaction_categories.category', uri=category['uri']) }}">Delete</button>
+{% endif %}
 <div id="dialog-error" class="error"></div>
 <script>dialog.addListeners()</script>

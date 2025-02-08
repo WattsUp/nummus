@@ -19,6 +19,12 @@
     </div>
     {% include "/shared/nav-bar.jinja" %}
     {% include "/shared/dialog.jinja" %}
-    <div id="scrim" class="scrim" onclick="dialog.close();nav.closeDrawer()"></div>
+    <div id="scrim"
+         class="scrim z-47"
+         onclick="dialog.close();nav.closeDrawer()"></div>
+    <div id="confirm-dialog" class="dialog z-50 max-w-80"></div>
+    <div id="confirm-scrim"
+         class="scrim z-49"
+         onclick="dialog.close('confirm-dialog')"></div>
 </body>
 </html>

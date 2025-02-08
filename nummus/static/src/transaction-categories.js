@@ -11,4 +11,14 @@ const txnCat = {
         essential.disabled = isIncome;
         essential.checked = !isIncome && essential.checked;
     },
+    confirmDelete: function(evt) {
+        dialog.confirm(
+            'Delete Category',
+            'Delete',
+            () => {
+                htmx.trigger(evt.target, 'delete');
+            },
+            'Any transactions assigned to this category will revert to uncategorized.',
+        );
+    }
 }
