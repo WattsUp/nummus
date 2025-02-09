@@ -5,6 +5,7 @@
     <h1 class="text-3xl font-serif text-pri">Transaction categories</h1>
     <button class="btn-tonal"
             hx-target="#dialog"
+            hx-disabled-elt="this"
             hx-get="{{ url_for('transaction_categories.new') }}">
         <icon>add</icon>New
     </button>
@@ -33,6 +34,7 @@
                     <label class="{{ row_class }} border-b border-outline-var">
                         <div>{{ cat.name }}</div>
                         <button class="btn-text btn-sq"
+                                hx-disabled-elt="this"
                                 hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
                             <icon>edit</icon>
                         </button>
@@ -44,6 +46,7 @@
                     <label class="{{ row_class }}">
                         <div>{{ cat.name }}</div>
                         <button class="btn-text btn-sq"
+                                hx-disabled-elt="this"
                                 hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
                             <icon>edit</icon>
                         </button>

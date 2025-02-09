@@ -1,9 +1,29 @@
-<nav id="nav-bar">
+<nav id="nav-bar" hx-target="#main" hx-push-url="true">
     {% for label, (icon, endpoint, link) in nav_items[0][1].items() %}
-        <button>
-            <icon>{{ icon }}</icon>
-            <div>{{ label }}</div>
-        </button>
+        {% if link == "PAGE" %}
+            <a href="{{ url_for(endpoint) }}"
+               hx-get="{{ url_for(endpoint) }}"
+               hx-disabled-elt="this">
+                <icon>{{ icon }}</icon>
+                <div>{{ label }}</div>
+            </a>
+        {% elif link == "DIALOG" %}
+            <button hx-get="{{ url_for(endpoint) }}"
+                    hx-target="#dialog"
+                    hx-trigger="load, click"
+                    hx-push-url="false"
+                    hx-disabled-elt="this">
+                <icon>{{ icon }}</icon>
+                <div>{{ label }}</div>
+            </button>
+        {% elif link == "HX_POST" %}
+            <button hx-post="{{ url_for(endpoint) }}"
+                    hx-push-url="false"
+                    hx-disabled-elt="this">
+                <icon>{{ icon }}</icon>
+                <div>{{ label }}</div>
+            </button>
+        {% endif %}
     {% endfor %}
     <button title="Add Transaction" id="nav-fab">
         <icon>note_stack_add</icon>

@@ -2,46 +2,33 @@
 
 /* Default colors are theme grey */
 @utility prose {
-    --tw-prose-body: var(--color-grey);
-    --tw-prose-headings: var(--color-grey-900);
-    --tw-prose-lead: var(--color-grey-600);
-    --tw-prose-links: var(--color-grey-900);
-    --tw-prose-bold: var(--color-grey-900);
-    --tw-prose-counters: var(--color-grey-500);
-    --tw-prose-bullets: var(--color-grey-300);
-    --tw-prose-hr: var(--color-grey-200);
-    --tw-prose-quotes: var(--color-grey-900);
-    --tw-prose-quote-borders: var(--color-grey-200);
-    --tw-prose-captions: var(--color-grey-500);
-    --tw-prose-kbd: var(--color-grey-900);
-    --tw-prose-kbd-shadows: hexToRgb(var(--color-grey-900));
-    --tw-prose-code: var(--color-grey-900);
-    --tw-prose-pre-code: var(--color-grey-200);
-    --tw-prose-pre-bg: var(--color-grey-800);
-    --tw-prose-th-borders: var(--color-grey-300);
-    --tw-prose-td-borders: var(--color-grey-200);
-    --tw-prose-invert-body: var(--color-grey-300);
-    --tw-prose-invert-headings: var(--color-white);
-    --tw-prose-invert-lead: var(--color-grey-400);
-    --tw-prose-invert-links: var(--color-white);
-    --tw-prose-invert-bold: var(--color-white);
-    --tw-prose-invert-counters: var(--color-grey-400);
-    --tw-prose-invert-bullets: var(--color-grey-600);
-    --tw-prose-invert-hr: var(--color-grey-700);
-    --tw-prose-invert-quotes: var(--color-grey-100);
-    --tw-prose-invert-quote-borders: var(--color-grey-700);
-    --tw-prose-invert-captions: var(--color-grey-400);
-    --tw-prose-invert-kbd: var(--color-white);
-    --tw-prose-invert-kbd-shadows: hexToRgb(colors.white);
-    --tw-prose-invert-code: var(--color-white);
-    --tw-prose-invert-pre-code: var(--color-grey-300);
-    --tw-prose-invert-pre-bg: 'rgb(0 0 0 / 50%)';
-    --tw-prose-invert-th-borders: var(--color-grey-600);
-    --tw-prose-invert-td-borders: var(--color-grey-700);
+    --tw-prose-body: var(--color-on-surface);
+    --tw-prose-headings: var(--color-on-surface-var);
+    --tw-prose-lead: var(--color-on-surface-var);
+    --tw-prose-links: var(--color-on-surface-var);
+    --tw-prose-bold: var(--color-on-surface-var);
+
+    --tw-prose-counters: var(--color-sec);
+    --tw-prose-bullets: var(--color-sec);
+    --tw-prose-hr: var(--color-outline-var);
+    --tw-prose-quotes: var(--color-pri);
+    --tw-prose-quote-borders: var(--color-outline-var);
+
+    --tw-prose-captions: var(--color-on-surface-var);
+    --tw-prose-kbd: var(--color-sec);
+    --tw-prose-kbd-shadows: 0 0 0;
+    --tw-prose-code: var(--color-on-surface-var);
+    --tw-prose-pre-code: var(--color-on-surface-var);
+    --tw-prose-pre-bg: var(--color-surface-cont-high);
+    --tw-prose-th-borders: var(--color-outline);
+    --tw-prose-td-borders: var(--color-outline-var);
+
+    @variant dark {
+        --tw-prose-kbd-shadows: 255 255 255;
+    }
 
     h1,
-    h2,
-    h3 {
-        @apply font-serif;
+    h2 {
+        @apply font-serif text-pri;
     }
 }

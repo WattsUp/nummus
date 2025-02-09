@@ -1,6 +1,7 @@
 <nav id="nav-rail" hx-target="#main" hx-push-url="true">
     <a href="{{ url_for('dashboard.page') }}"
-       hx-get="{{ url_for('dashboard.page') }}">nummus</a>
+       hx-get="{{ url_for('dashboard.page') }}"
+       hx-disabled-elt="this">nummus</a>
     <section>
         <button class="btn-text text-on-surface" onclick="nav.openDrawer()">
             <icon>menu</icon>
@@ -14,19 +15,24 @@
             {% if group_label %}<h1>{{ group_label }}</h1>{% endif %}
             {% for label, (icon, endpoint, link) in group.items() %}
                 {% if link == "PAGE" %}
-                    <a href="{{ url_for(endpoint) }}" hx-get="{{ url_for(endpoint) }}">
+                    <a href="{{ url_for(endpoint) }}"
+                       hx-get="{{ url_for(endpoint) }}"
+                       hx-disabled-elt="this">
                         <icon>{{ icon }}</icon>
                         <div>{{ label }}</div>
                     </a>
                 {% elif link == "DIALOG" %}
                     <button hx-get="{{ url_for(endpoint) }}"
                             hx-target="#dialog"
-                            hx-push-url="false">
+                            hx-push-url="false"
+                            hx-disabled-elt="this">
                         <icon>{{ icon }}</icon>
                         <div>{{ label }}</div>
                     </button>
                 {% elif link == "HX_POST" %}
-                    <button hx-post="{{ url_for(endpoint) }}" hx-push-url="false">
+                    <button hx-post="{{ url_for(endpoint) }}"
+                            hx-push-url="false"
+                            hx-disabled-elt="this">
                         <icon>{{ icon }}</icon>
                         <div>{{ label }}</div>
                     </button>

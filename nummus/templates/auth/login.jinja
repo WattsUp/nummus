@@ -16,7 +16,8 @@
                   class="w-full max-w-96 grow max-h-96 bg-surface p-2 flex flex-col items-center rounded-2xl mx-2 my-8"
                   hx-post="{{ url_for('auth.login') }}"
                   hx-target="#login-error"
-                  hx-include="this">
+                  hx-include="this"
+                  hx-disable-etl="button">
                 <h1 class="font-title text-7xl">nummus</h1>
                 <p class="text-center grow">
                     A personal financial information aggregator and planning tool.

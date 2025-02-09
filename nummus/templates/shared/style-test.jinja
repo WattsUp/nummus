@@ -1,33 +1,10 @@
 <h1 class="text-3xl font-serif text-pri">Style Test</h1>
-<h2 class="text-2xl font-serif text-pri">Prose</h2>
 <div class="prose mx-auto">
     <p>
         This page has most commonents in most states to test their styling.
         Style is based off of Google's <a href="https://m3.material.io/">Material 3 Design</a>.
         Icons use the <a href="https://fonts.google.com/icons">Material Design Icons</a>
         delivered as a variable font for filled and unfilled states.
-    </p>
-    <h1>Heading 1</h1>
-    <p>
-        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-        Donec hendrerit lectus sit amet mi tincidunt, eget pretium mi tempor.
-        Maecenas dapibus diam id leo dictum posuere.
-        Suspendisse eget maximus lacus, sit amet ultrices justo.
-    </p>
-    <h2>Heading 2</h2>
-    <p>
-        Morbi ornare vehicula erat, sodales efficitur lacus consequat a.
-        Aenean leo urna, efficitur eu libero eget, volutpat tincidunt mauris.
-        Integer ac erat aliquam, finibus tellus non, eleifend nisl.
-        Suspendisse mi massa, imperdiet vitae eros bibendum, pellentesque elementum neque.
-        Praesent sit amet est finibus, pretium nisl et, hendrerit tortor.
-    </p>
-    <p>
-        Aliquam erat volutpat. Cras dictum erat non luctus elementum.
-        Aenean vel velit sed justo placerat dignissim.
-        Sed malesuada est eros, ac aliquam felis pellentesque at.
-        Ut ut augue vitae nibh scelerisque posuere at et nibh.
-        Quisque nec ullamcorper nibh. Sed lobortis sapien sit amet metus efficitur mattis.
     </p>
 </div>
 <h2 class="text-2xl font-serif text-pri">Colors</h2>
@@ -117,6 +94,86 @@
         <div class="bg-scrim text-white p-2 w-1/2">Scrim</div>
         <div class="bg-shadow text-white p-2 w-1/2">Shadow</div>
     </div>
+</div>
+<h2 class="text-2xl font-serif text-pri">Prose</h2>
+<div class="prose mx-auto">
+    <h1>Heading 1</h1>
+    <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        <q>Quote Donec</q> hendrerit lectus sit amet mi tincidunt, eget pretium mi tempor.
+        Maecenas dapibus diam id leo dictum posuere.
+        <b>Bold Suspendisse</b> eget maximus lacus, sit amet ultrices justo.
+    </p>
+    <h2>Heading 2</h2>
+    <p class="lead">
+        Lead: Morbi ornare vehicula erat, sodales efficitur lacus consequat a.
+        Aenean leo urna, efficitur eu libero eget, volutpat tincidunt mauris.
+    </p>
+    <hr>
+    <p>
+        Integer ac erat aliquam, finibus tellus non, eleifend nisl.
+        <code>import antigravity</code>
+        Suspendisse mi massa, imperdiet vitae eros bibendum, pellentesque elementum neque.
+    </p>
+    <blockquote>
+        "blockquote: Praesent sit amet est finibus, pretium nisl et, hendrerit tortor."
+    </blockquote>
+    <p>
+        Aliquam erat volutpat. Cras dictum erat non luctus elementum.
+        Aenean vel velit sed justo placerat dignissim.
+        Sed malesuada est eros, ac aliquam felis pellentesque at.
+        Ut ut augue vitae nibh scelerisque posuere at et nibh.
+        Quisque nec ullamcorper nibh. Sed lobortis sapien sit amet metus efficitur mattis.
+        Press <kbd>Enter</kbd>.
+    </p>
+    <h3>Heading 3</h3>
+    <pre><code>&lt;blockquote&gt;
+    "Praesent sit amet est finibus, pretium nisl et, hendrerit tortor."
+&lt;/blockquote&gt;
+&lt;p&gt;
+    Aliquam erat volutpat. Cras dictum erat non luctus elementum.
+    Aenean vel velit sed justo placerat dignissim.
+    Sed malesuada est eros, ac aliquam felis pellentesque at.
+    Ut ut augue vitae nibh scelerisque posuere at et nibh.
+    Quisque nec ullamcorper nibh. Sed lobortis sapien sit amet metus efficitur mattis.
+&lt;/p&gt;</code></pre>
+    <h4>Heading 4</h4>
+    <ul>
+        <li>Apples</li>
+        <li>Bananas</li>
+    </ul>
+    <ol>
+        <li>Apples</li>
+        <li>Bananas</li>
+    </ol>
+    <table>
+        <thead>
+            <tr>
+                <th>Column 1</th>
+                <th>Column 2</th>
+                <th>Column 3</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Row 1 Column 1</td>
+                <td>Row 1 Column 2</td>
+                <td>Row 1 Column 3</td>
+            </tr>
+            <tr>
+                <td>Row 2 Column 1</td>
+                <td>Row 2 Column 2</td>
+                <td>Row 2 Column 3</td>
+            </tr>
+        </tbody>
+    </table>
+    <figure>
+        <svg viewbox="0 0 220 100">
+            <rect width="100" height="100" />
+            <rect x="120" width="100" height="100" rx="15" />
+        </svg>
+        <figcaption>Caption for figure</figcaption>
+    </figure>
 </div>
 <h2 class="text-2xl font-serif text-pri">Buttons</h2>
 <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">

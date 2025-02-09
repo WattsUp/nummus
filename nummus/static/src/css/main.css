@@ -203,5 +203,5 @@
 @utility error {
     @apply flex items-center justify-center gap-1 p-1 rounded-md;
     @apply empty:hidden;
-    @apply bg-error text-on-error;
+    @apply bg-error-cont text-on-error-cont;
 }
