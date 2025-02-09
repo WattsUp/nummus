@@ -38,4 +38,10 @@
     --tw-prose-invert-pre-bg: 'rgb(0 0 0 / 50%)';
     --tw-prose-invert-th-borders: var(--color-grey-600);
     --tw-prose-invert-td-borders: var(--color-grey-700);
+
+    h1,
+    h2,
+    h3 {
+        @apply font-serif;
+    }
 }

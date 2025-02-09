@@ -27,7 +27,7 @@
 }
 
 @utility input-outlined {
-    @apply relative block;
+    @apply relative block mt-1;
 
     &>div:first-of-type {
         @apply absolute left-2 top-0 border border-transparent;

@@ -239,6 +239,11 @@ def ctx_base() -> dict[str, object]:
                 "Import File": None,  # upload
                 "Update Assets": None,  # update
                 "Health Checks": None,  # health_metrics
+                "Style Test": (
+                    ("style", "common.page_style_test", LinkType.PAGE)
+                    if flask.current_app.debug
+                    else None
+                ),
             },
         ),
     ]
@@ -385,7 +390,19 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     return response
 
 
+def page_style_test() -> flask.Response:
+    """GET /style-test.
+
+    Returns:
+        string HTML response
+    """
+    return page(
+        "shared/style-test.jinja",
+        "Style Menu",
+    )
+
+
 ROUTES: Routes = {
+    "/d/style-test": (page_style_test, ["GET"]),
     "/h/sidebar": (sidebar, ["GET"]),
-    # TODO (WattsUp): Add a style test page
 }

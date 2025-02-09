@@ -146,7 +146,7 @@ class Server:
         self._metrics.info("nummus_info", "nummus info", version=version.version)
 
         # HTML pages routing
-        controllers.add_routes(self._app)
+        controllers.add_routes(self._app, debug=debug)
 
         # Add Portfolio to context for controllers
         with self._app.app_context():
