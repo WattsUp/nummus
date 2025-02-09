@@ -2,8 +2,8 @@
      hx-target="#main"
      hx-trigger="update-category from:body"
      hx-get="{{ url_for('transaction_categories.page') }}">
-    <h1 class="text-3xl font-serif text-green-600 dark:text-green-400">Transaction categories</h1>
-    <button class="btn-tonal-green"
+    <h1 class="text-3xl font-serif text-pri">Transaction categories</h1>
+    <button class="btn-tonal"
             hx-target="#dialog"
             hx-get="{{ url_for('transaction_categories.new') }}">
         <icon>add</icon>New
@@ -28,13 +28,11 @@
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
             {# Split items so sticky label stops above last item #}
             <div class="w-full">
-                <h1 class="sticky top-0 bottom-8 p-1 text-2xl font-serif text-green-600 dark:text-green-400 bg-grey-50 dark:bg-grey-950">
-                    {{ group.pretty }}
-                </h1>
+                <h1 class="sticky top-0 bottom-8 p-1 text-2xl font-serif text-pri bg-surface">{{ group.pretty }}</h1>
                 {% for cat in items[:-1] %}
-                    <label class="{{ row_class }} border-b border-grey-500/50">
+                    <label class="{{ row_class }} border-b border-outline-var">
                         <div>{{ cat.name }}</div>
-                        <button class="btn-text-green btn-sq"
+                        <button class="btn-text btn-sq"
                                 hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
                             <icon>edit</icon>
                         </button>
@@ -45,7 +43,7 @@
                 {% with cat = items[-1] %}
                     <label class="{{ row_class }}">
                         <div>{{ cat.name }}</div>
-                        <button class="btn-text-green btn-sq"
+                        <button class="btn-text btn-sq"
                                 hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
                             <icon>edit</icon>
                         </button>

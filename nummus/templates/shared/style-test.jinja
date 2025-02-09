@@ -1,0 +1,392 @@
+<h1 class="text-3xl font-serif text-pri">Style Test</h1>
+<h2 class="text-2xl font-serif text-pri">Prose</h2>
+<div class="prose mx-auto">
+    <p>
+        This page has most commonents in most states to test their styling.
+        Style is based off of Google's <a href="https://m3.material.io/">Material 3 Design</a>.
+        Icons use the <a href="https://fonts.google.com/icons">Material Design Icons</a>
+        delivered as a variable font for filled and unfilled states.
+    </p>
+    <h1>Heading 1</h1>
+    <p>
+        Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+        Donec hendrerit lectus sit amet mi tincidunt, eget pretium mi tempor.
+        Maecenas dapibus diam id leo dictum posuere.
+        Suspendisse eget maximus lacus, sit amet ultrices justo.
+    </p>
+    <h2>Heading 2</h2>
+    <p>
+        Morbi ornare vehicula erat, sodales efficitur lacus consequat a.
+        Aenean leo urna, efficitur eu libero eget, volutpat tincidunt mauris.
+        Integer ac erat aliquam, finibus tellus non, eleifend nisl.
+        Suspendisse mi massa, imperdiet vitae eros bibendum, pellentesque elementum neque.
+        Praesent sit amet est finibus, pretium nisl et, hendrerit tortor.
+    </p>
+    <p>
+        Aliquam erat volutpat. Cras dictum erat non luctus elementum.
+        Aenean vel velit sed justo placerat dignissim.
+        Sed malesuada est eros, ac aliquam felis pellentesque at.
+        Ut ut augue vitae nibh scelerisque posuere at et nibh.
+        Quisque nec ullamcorper nibh. Sed lobortis sapien sit amet metus efficitur mattis.
+    </p>
+</div>
+<h2 class="text-2xl font-serif text-pri">Colors</h2>
+<div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2 p-2">
+    <div class="col-start-1">
+        <div class="h-30 bg-pri text-on-pri p-2">Primary</div>
+        <div class="h-20 bg-on-pri text-pri p-2">On Primary</div>
+    </div>
+    <div>
+        <div class="h-30 bg-sec text-on-sec p-2">Secondary</div>
+        <div class="h-20 bg-on-sec text-sec p-2">On Secondary</div>
+    </div>
+    <div>
+        <div class="h-30 bg-tert text-on-tert p-2">Tertiary</div>
+        <div class="h-20 bg-on-tert text-tert p-2">On Tertiary</div>
+    </div>
+    <div>
+        <div class="h-30 bg-error text-on-error p-2">Error</div>
+        <div class="h-20 bg-on-error text-error p-2">On Error</div>
+    </div>
+    <div class="col-start-1">
+        <div class="h-30 bg-pri-cont text-on-pri-cont p-2">Primary Container</div>
+        <div class="h-20 bg-on-pri-cont text-pri-cont p-2">On Primary Container</div>
+    </div>
+    <div>
+        <div class="h-30 bg-sec-cont text-on-sec-cont p-2">Secondary Container</div>
+        <div class="h-20 bg-on-sec-cont text-sec-cont p-2">On Secondary Container</div>
+    </div>
+    <div>
+        <div class="h-30 bg-tert-cont text-on-tert-cont p-2">Tertiary Container</div>
+        <div class="h-20 bg-on-tert-cont text-tert-cont p-2">On Tertiary Container</div>
+    </div>
+    <div>
+        <div class="h-30 bg-error-cont text-on-error-cont p-2">Error Container</div>
+        <div class="h-20 bg-on-error-cont text-error-cont p-2">On Error Container</div>
+    </div>
+    <div class="col-start-1">
+        <div class="h-30 text-on-pri-fixed flex">
+            <div class="w-1/2 bg-pri-fixed p-2">Primary Fixed</div>
+            <div class="w-1/2 bg-pri-fixed-dim p-2">Primary Fixed Dim</div>
+        </div>
+        <div class="h-20 bg-on-pri-fixed text-pri-fixed p-2">On Primary Fixed</div>
+        <div class="h-20 bg-on-pri-fixed-var text-pri-fixed p-2">On Primary Fixed Variant</div>
+    </div>
+    <div>
+        <div class="h-30 text-on-sec-fixed flex">
+            <div class="w-1/2 bg-sec-fixed p-2">Secondary Fixed</div>
+            <div class="w-1/2 bg-sec-fixed-dim p-2">Secondary Fixed Dim</div>
+        </div>
+        <div class="h-20 bg-on-sec-fixed text-sec-fixed p-2">On Secondary Fixed</div>
+        <div class="h-20 bg-on-sec-fixed-var text-sec-fixed p-2">On Secondary Fixed Variant</div>
+    </div>
+    <div>
+        <div class="h-30 text-on-tert-fixed flex">
+            <div class="w-1/2 bg-tert-fixed p-2">Tertiary Fixed</div>
+            <div class="w-1/2 bg-tert-fixed-dim p-2">Tertiary Fixed Dim</div>
+        </div>
+        <div class="h-20 bg-on-tert-fixed text-tert-fixed p-2">On Tertiary Fixed</div>
+        <div class="h-20 bg-on-tert-fixed-var text-tert-fixed p-2">On Tertiary Fixed Variant</div>
+    </div>
+    <div class="col-start-1 col-span-3 flex">
+        <div class="bg-surface-dim text-on-surface p-2 w-1/3">Surface Dim</div>
+        <div class="bg-surface text-on-surface p-2 w-1/3">Surface</div>
+        <div class="bg-surface-bright text-on-surface p-2 w-1/3">Surface Bright</div>
+    </div>
+    <div>
+        <div class="bg-inv-surface text-inv-on-surface p-2">Inverse Surface</div>
+        <div class="bg-inv-on-surface text-inv-surface p-2">Inverse On Surface</div>
+    </div>
+    <div class="col-start-1 col-span-3 flex">
+        <div class="bg-surface-cont-lowest text-on-surface p-2 w-1/5">Surface Container Lowest</div>
+        <div class="bg-surface-cont-low text-on-surface p-2 w-1/5">Surface Container Low</div>
+        <div class="bg-surface-cont text-on-surface p-2 w-1/5">Surface Container</div>
+        <div class="bg-surface-cont-high text-on-surface p-2 w-1/5">Surface Container High</div>
+        <div class="bg-surface-cont-highest text-on-surface p-2 w-1/5">Surface Container Highest</div>
+    </div>
+    <div>
+        <div class="bg-inv-pri text-on-pri-fixed p-2">Inverse Primary</div>
+    </div>
+    <div class="col-start-1 col-span-3 flex">
+        <div class="bg-on-surface text-surface p-2 w-1/4">On Surface</div>
+        <div class="bg-on-surface-var text-surface p-2 w-1/4">On Surface Variant</div>
+        <div class="bg-outline text-surface p-2 w-1/4">Outline</div>
+        <div class="bg-outline-var text-on-surface p-2 w-1/4">Outline Variant</div>
+    </div>
+    <div class="flex gap-2">
+        <div class="bg-scrim text-white p-2 w-1/2">Scrim</div>
+        <div class="bg-shadow text-white p-2 w-1/2">Shadow</div>
+    </div>
+</div>
+<h2 class="text-2xl font-serif text-pri">Buttons</h2>
+<div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+    <button class="btn-filled">
+        <icon>mouse</icon>Filled
+    </button>
+    <button class="btn-tonal">
+        <icon>mouse</icon>Tonal
+    </button>
+    <button class="btn-outlined">
+        <icon>mouse</icon>Outlined
+    </button>
+    <button class="btn-text">
+        <icon>mouse</icon>Text
+    </button>
+    <button class="btn-filled" disabled>
+        <icon>mouse</icon>Filled
+    </button>
+    <button class="btn-tonal" disabled>
+        <icon>mouse</icon>Tonal
+    </button>
+    <button class="btn-outlined" disabled>
+        <icon>mouse</icon>Outlined
+    </button>
+    <button class="btn-text" disabled>
+        <icon>mouse</icon>Text
+    </button>
+    <button class="btn-filled">Filled</button>
+    <button class="btn-tonal">Tonal</button>
+    <button class="btn-outlined">Outlined</button>
+    <button class="btn-text">Text</button>
+</div>
+<h3 class="text-xl font-serif text-pri">Icon only Buttons</h3>
+<div class="flex gap-2 flex-wrap">
+    <button class="btn-filled btn-sq">
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-tonal btn-sq">
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-outlined btn-sq">
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-text btn-sq">
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-filled btn-sq" disabled>
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-tonal btn-sq" disabled>
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-outlined btn-sq" disabled>
+        <icon>mouse</icon>
+    </button>
+    <button class="btn-text btn-sq" disabled>
+        <icon>mouse</icon>
+    </button>
+</div>
+<h3 class="text-xl font-serif text-pri">Floating Action Buttons (FAB)</h3>
+<div class="flex gap-2 flex-wrap">
+    <button class="fab">
+        <icon>mouse</icon>
+    </button>
+    <button class="fab" disabled>
+        <icon>mouse</icon>
+    </button>
+    <button class="fab">
+        <icon>mouse</icon>Extended FAB
+    </button>
+    <button class="fab" disabled>
+        <icon>mouse</icon>Extended FAB
+    </button>
+</div>
+<h3 class="text-xl font-serif text-pri">Radioset</h3>
+<div class="flex gap-2 flex-wrap">
+    <fieldset class="radioset">
+        <label>
+            <input name="radioset" type="radio" autocomplete="off" checked>
+            <icon>devices</icon>
+        </label>
+        <label>
+            <input name="radioset" type="radio" autocomplete="off">
+            <icon>light_mode</icon>
+        </label>
+        <label>
+            <input name="radioset" type="radio" autocomplete="off">
+            <icon>dark_mode</icon>
+        </label>
+    </fieldset>
+    <fieldset class="radioset" disabled>
+        <label>
+            <input name="radioset-2" type="radio" autocomplete="off" checked>
+            <icon>devices</icon>
+        </label>
+        <label>
+            <input name="radioset-2" type="radio" autocomplete="off">
+            <icon>light_mode</icon>
+        </label>
+        <label>
+            <input name="radioset-2" type="radio" autocomplete="off">
+            <icon>dark_mode</icon>
+        </label>
+    </fieldset>
+</div>
+<h2 class="text-2xl font-serif text-pri">Inputs</h2>
+<div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+    <label class="input-outlined col-start-1">
+        <input enterkeyhint="next" placeholder="" autocomplete="off">
+        <div>
+            <div>Text</div>
+        </div>
+        <div>
+            {# djlint: off #}
+            <error></error>
+            {# djlint: on #}
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <input enterkeyhint="next" placeholder="" autocomplete="off" value="Banana">
+        <div>
+            <div>Text with value</div>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <input enterkeyhint="next"
+               placeholder=""
+               autocomplete="off"
+               value="Banana"
+               disabled>
+        <div>
+            <div>Text disabled</div>
+        </div>
+        <div>
+            {# djlint: off #}
+            <error></error>
+            {# djlint: on #}
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined col-start-1">
+        <input enterkeyhint="next" placeholder="" autocomplete="off">
+        <div>
+            <div>Text</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <input enterkeyhint="next" placeholder="" autocomplete="off" value="Banana">
+        <div>
+            <div>Text with value</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined col-start-1">
+        <select autocomplete="off">
+            <option value="" disabled hidden selected></option>
+            <option value="apple">Apple</option>
+            <option value="banana">Banana</option>
+        </select>
+        <div>
+            <div>Select</div>
+        </div>
+        <div>
+            {# djlint: off #}
+            <error></error>
+            {# djlint: on #}
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <select autocomplete="off">
+            <option value="" disabled hidden></option>
+            <option value="apple" selected>Apple</option>
+            <option value="banana">Banana</option>
+        </select>
+        <div>
+            <div>Select with value</div>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <select autocomplete="off" disabled>
+            <option value="" disabled hidden></option>
+            <option value="apple" selected>Apple</option>
+            <option value="banana">Banana</option>
+        </select>
+        <div>
+            <div>Select disabled</div>
+        </div>
+        <div>
+            {# djlint: off #}
+            <error></error>
+            {# djlint: on #}
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined col-start-1">
+        <select autocomplete="off">
+            <option value="" disabled hidden selected></option>
+            <option value="apple">Apple</option>
+            <option value="banana">Banana</option>
+        </select>
+        <div>
+            <div>Select</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <select autocomplete="off">
+            <option value="" disabled hidden></option>
+            <option value="apple" selected>Apple</option>
+            <option value="banana">Banana</option>
+        </select>
+        <div>
+            <div>Select</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="toggle col-start-1">
+        <input type="checkbox" autocomplete="off">
+        <div>Toggle switch off</div>
+        {# djlint: off #}
+        <switch></switch>
+        {# djlint: on #}
+    </label>
+    <label class="toggle">
+        <input type="checkbox" autocomplete="off" checked>
+        <div>
+            <span>Toggle switch on</span>
+            <span>Supporting text</span>
+        </div>
+        {# djlint: off #}
+        <switch></switch>
+        {# djlint: on #}
+    </label>
+    <label class="toggle">
+        <input type="checkbox" autocomplete="off" disabled>
+        <div>
+            <span>Toggle switch off</span>
+            <span>Disabled</span>
+        </div>
+        {# djlint: off #}
+        <switch></switch>
+        {# djlint: on #}
+    </label>
+    <label class="toggle">
+        <input type="checkbox" autocomplete="off" checked disabled>
+        <div>
+            <span>Toggle switch on</span>
+            <span>Disabled</span>
+        </div>
+        {# djlint: off #}
+        <switch></switch>
+        {# djlint: on #}
+    </label>
+</div>
+<h2 class="text-2xl font-serif text-pri">Errors</h2>
+<div class="error">
+    <icon>error</icon>Something went wrong
+</div>

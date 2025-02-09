@@ -111,8 +111,8 @@ const dialog = {
             <div><h1>${headline}</h1></div>
             <p>${details ?? ''}</p>
             <div class="flex justify-end">
-                <button class="btn-text-green" onclick="dialog.closeConfirm()">Cancel</button>
-                <button class="btn-text-green" onclick="dialog.closeConfirm()">
+                <button class="btn-text" onclick="dialog.closeConfirm()">Cancel</button>
+                <button class="btn-text" onclick="dialog.closeConfirm()">
                     ${actionLabel}
                 </button>
             </div>

@@ -10,6 +10,7 @@
 @theme {
     --btn-px: calc(var(--spacing) * 4);
     --btn-py: calc(var(--spacing) * 0.5);
+    --btn-focus-indicator-color: var(--color-sec);
 
     --radioset-p: calc(var(--spacing) * 1);
 }
@@ -26,8 +27,21 @@
     border-color: var(--btn-border-color);
     background-color: var(--btn-bg-color);
 
+    color: var(--btn-text-color);
+
     @variant disabled {
-        @apply cursor-auto text-grey-700;
+        @apply cursor-auto text-on-surface/38;
+    }
+
+    @variant focus-visible {
+        @apply outline outline-3;
+        outline-color: var(--btn-focus-indicator-color);
+    }
+}
+
+@utility btn-icon-filled {
+    & icon {
+        font-variation-settings: 'FILL' 1;
     }
 }
 
@@ -41,146 +55,107 @@
 }
 
 @utility btn-filled {
+    @apply btn;
+
+    --btn-base-color: var(--color-pri);
+    --btn-text-color: var(--color-on-pri);
+    --btn-state-color: var(--color-on-pri);
+
     --btn-bg-color: var(--btn-base-color);
     --btn-border-color: transparent;
 
-    color: var(--btn-text-color);
-
     @variant not-disabled {
         @variant hover {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+            @apply btn-icon-filled shadow-md;
         }
 
-        @variant active {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+        @variant [:active, :focus, :focus-visible, :focus-within] {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
     }
 
     @variant disabled {
-        @apply bg-grey-500/20;
+        @apply bg-on-surface/12;
     }
 }
 
 @utility btn-tonal {
-    --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 30%, transparent);
-    --btn-border-color: transparent;
+    @apply btn;
 
-    color: var(--btn-text-color);
+    --btn-base-color: var(--color-sec-cont);
+    --btn-text-color: var(--color-on-sec-cont);
+    --btn-state-color: var(--color-on-sec-cont);
+
+    --btn-bg-color: var(--btn-base-color);
+    --btn-border-color: transparent;
 
     @variant not-disabled {
         @variant hover {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 38%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+            @apply btn-icon-filled shadow-md;
         }
 
-        @variant active {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 40%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+        @variant [:active, :focus, :focus-visible, :focus-within] {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
     }
 
     @variant disabled {
-        @apply bg-grey-500/10;
+        @apply bg-on-surface/12;
     }
 }
 
 @utility btn-outlined {
-    --btn-bg-color: transparent;
-    --btn-border-color: var(--color-grey-500);
+    @apply btn;
 
-    color: var(--btn-text-color);
+    --btn-base-color: var(--color-pri);
+    --btn-text-color: var(--color-pri);
+    --btn-state-color: transparent;
+
+    --btn-bg-color: transparent;
+    --btn-border-color: var(--color-outline);
 
     @variant not-disabled {
         @variant hover {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
 
-        @variant active {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+        @variant [:active, :focus, :focus-visible, :focus-within] {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
     }
 
     @variant disabled {
-        @apply text-grey-500;
+        @apply border-on-surface/12;
     }
 }
 
 @utility btn-text {
+    @apply btn;
+
+    --btn-base-color: var(--color-pri);
+    --btn-text-color: var(--color-pri);
+    --btn-state-color: transparent;
+
     --btn-bg-color: transparent;
     --btn-border-color: transparent;
 
-    color: var(--btn-text-color);
-
     @variant not-disabled {
-
         @variant hover {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, transparent);
-            --btn-border-color: var(--btn-bg-color);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
 
-        @variant active {
-            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, transparent);
-            --btn-border-color: var(--btn-bg-color);
-
-            color: var(--btn-text-color);
-
-            & icon {
-                font-variation-settings: 'FILL' 1;
-            }
+        @variant [:active, :focus, :focus-visible, :focus-within] {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
+            @apply btn-icon-filled;
         }
     }
-
-    @variant disabled {
-        @apply text-grey-500;
-    }
-}
-
-@utility btn-base-* {
-    --btn-base-color: --value(--color-*);
-}
-
-@utility btn-text-* {
-    --btn-text-color: --value(--color-*);
 }
 
 @utility btn-size-lg {
@@ -209,33 +184,42 @@
     --btn-px: var(--btn-py);
 }
 
-/* Premade buttons */
-@utility btn-filled-green {
-    @apply btn btn-filled btn-base-green-600 dark:btn-base-green-400 btn-text-white dark:btn-text-green-900;
-}
-
-@utility btn-tonal-green {
-    @apply btn btn-tonal btn-base-green-400 btn-text-green-900 dark:btn-base-green-600 dark:btn-text-green-100;
-}
-
-@utility btn-outlined-green {
-    @apply btn btn-outlined btn-base-green-600 btn-text-green-900 dark:btn-text-green-200;
-}
-
-@utility btn-text-green {
-    @apply btn btn-text btn-base-green-600 btn-text-green-900 dark:btn-text-green-200;
-}
-
-@utility btn-text-red {
-    @apply btn btn-text btn-base-red-600 btn-text-red-900 dark:btn-text-red-200;
+/* Other colors */
+@utility btn-text-error {
+    @apply btn-text;
+    --btn-base-color: var(--color-error);
+    --btn-text-color: var(--color-error);
 }
 
 /* Floating action buttons (FAB) */
 
-@utility fab-green {
-    @apply btn-filled-green p-4;
+@utility fab {
+    @apply btn p-4 shadow-lg;
 
     border-radius: 1em;
+
+    --btn-base-color: var(--color-pri-cont);
+    --btn-text-color: var(--color-on-pri-cont);
+    --btn-state-color: var(--color-on-pri-cont);
+
+    --btn-bg-color: var(--btn-base-color);
+    --btn-border-color: transparent;
+
+    @variant not-disabled {
+        @variant hover {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+            @apply btn-icon-filled;
+        }
+
+        @variant [:active, :focus, :focus-visible, :focus-within] {
+            --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+            @apply btn-icon-filled;
+        }
+    }
+
+    @variant disabled {
+        @apply bg-on-surface/12;
+    }
 }
 
 /* radioset is a set of radio buttons like a three way toggle */
@@ -243,13 +227,18 @@
 @utility radioset {
     @apply flex gap-0.5 border-2;
 
+    --radioset-base-color: var(--color-pri);
+    --radioset-text-color: var(--color-pri);
+    --radioset-state-color: transparent;
+
     padding: var(--radioset-p);
+    color: var(--radioset-text-color);
 
     /* big radius to get pill shape */
     border-radius: 100em;
 
     & input {
-        @apply hidden;
+        @apply opacity-0 w-0 h-0;
     }
 
     & label {
@@ -260,9 +249,7 @@
         @apply transition-colors box-content;
 
         height: 24px;
-
         padding: var(--radioset-p);
-
         border-radius: 50%;
     }
 
@@ -271,47 +258,38 @@
 
             @variant hover {
                 & icon {
-                    background-color: color-mix(in oklab, var(--radioset-base-color) 15%, transparent);
+                    background-color: color-mix(in oklab, var(--radioset-base-color) 16%, var(--radioset-state-color));
                     font-variation-settings: 'FILL' 1;
                 }
             }
 
             @variant active {
                 & icon {
-                    background-color: color-mix(in oklab, var(--radioset-base-color) 20%, transparent);
+                    background-color: color-mix(in oklab, var(--radioset-base-color) 20%, var(--radioset-state-color));
                     font-variation-settings: 'FILL' 1;
                 }
             }
+
         }
 
         & input:checked+icon {
-            color: var(--radioset-checked-text);
-            background-color: var(--radioset-base-color);
+            background-color: color-mix(in oklab, var(--radioset-base-color) 20%, var(--radioset-state-color));
+        }
+
+        &:has(input:focus-visible) {
+            @apply outline-3 outline-sec;
         }
     }
 
     @variant disabled {
-        @apply bg-grey-500/20 border-grey-500 text-grey-500;
+        @apply cursor-auto text-on-surface/38;
 
         &>label {
             @apply cursor-auto;
         }
 
         & input:checked+icon {
-            @apply bg-grey-500/40;
+            @apply bg-on-surface/16;
         }
     }
-}
-
-@utility radioset-base-* {
-    --radioset-base-color: --value(--color-*);
-}
-
-@utility radioset-checked-text-* {
-    --radioset-checked-text: --value(--color-*);
-}
-
-@utility radioset-green {
-    @apply radioset radioset-base-green-600 text-green-900 dark:radioset-base-green-400 dark:text-green-200;
-    @apply radioset-checked-text-green-100 dark:radioset-checked-text-green-900;
 }

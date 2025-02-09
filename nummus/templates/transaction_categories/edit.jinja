@@ -8,7 +8,7 @@
     {% endwith %}
 {% endif %}
 <form class="grid gap-2 w-88" onsubmit="return false">
-    <label class="input-outlined input-bg-grey-50 dark:input-bg-grey-950">
+    <label class="input-outlined input-bg-surface-cont-high">
         <input name="name"
                required
                enterkeyhint="next"
@@ -29,7 +29,7 @@
             {% if category["locked"] %}<span>May only add/remove emojis</span>{% endif %}
         </div>
     </label>
-    <label class="input-outlined input-bg-grey-50 dark:input-bg-grey-950 col-start-2">
+    <label class="input-outlined input-bg-surface-cont-high col-start-2">
         <select name="group"
                 required
                 autocomplete="off"
@@ -49,7 +49,7 @@
             <div>Group</div>
         </div>
     </label>
-    <label class="toggle-green col-span-2">
+    <label class="toggle col-span-2">
         <input type="checkbox"
                name="is-pnl"
                autocomplete="off"
@@ -63,7 +63,7 @@
         <switch></switch>
         {# djlint: on #}
     </label>
-    <label class="toggle-green col-span-2">
+    <label class="toggle col-span-2">
         <input type="checkbox"
                name="essential"
                autocomplete="off"
@@ -79,7 +79,7 @@
     </label>
 </form>
 {% if category["uri"] and not category["locked"] %}
-    <button class="btn-text-red mx-auto"
+    <button class="btn-text-error mx-auto"
             onclick="txnCat.confirmDelete(event)"
             hx-trigger="delete"
             hx-delete="{{ url_for('transaction_categories.category', uri=category['uri']) }}">Delete</button>
