@@ -1,12 +1,3 @@
-@layer base {
-
-    button:not(:disabled),
-    [role="button"]:not(:disabled) {
-        cursor: pointer;
-    }
-
-}
-
 @theme {
     --btn-px: calc(var(--spacing) * 4);
     --btn-py: calc(var(--spacing) * 0.5);
@@ -17,6 +8,7 @@
 
 @utility btn {
     @apply border transition-colors flex gap-1 items-center whitespace-nowrap;
+    @apply cursor-default;
 
     /* big radius to get pill shape */
     border-radius: 100em;
@@ -57,9 +49,9 @@
 @utility btn-filled {
     @apply btn;
 
-    --btn-base-color: var(--color-pri);
-    --btn-text-color: var(--color-on-pri);
-    --btn-state-color: var(--color-on-pri);
+    --btn-base-color: var(--color-primary);
+    --btn-text-color: var(--color-on-primary);
+    --btn-state-color: var(--color-on-primary);
 
     --btn-bg-color: var(--btn-base-color);
     --btn-border-color: transparent;
@@ -84,9 +76,9 @@
 @utility btn-tonal {
     @apply btn;
 
-    --btn-base-color: var(--color-sec-cont);
-    --btn-text-color: var(--color-on-sec-cont);
-    --btn-state-color: var(--color-on-sec-cont);
+    --btn-base-color: var(--color-secondary-container);
+    --btn-text-color: var(--color-on-secondary-container);
+    --btn-state-color: var(--color-on-secondary-container);
 
     --btn-bg-color: var(--btn-base-color);
     --btn-border-color: transparent;
@@ -111,8 +103,8 @@
 @utility btn-outlined {
     @apply btn;
 
-    --btn-base-color: var(--color-pri);
-    --btn-text-color: var(--color-pri);
+    --btn-base-color: var(--color-primary);
+    --btn-text-color: var(--color-primary);
     --btn-state-color: transparent;
 
     --btn-bg-color: transparent;
@@ -138,8 +130,8 @@
 @utility btn-text {
     @apply btn;
 
-    --btn-base-color: var(--color-pri);
-    --btn-text-color: var(--color-pri);
+    --btn-base-color: var(--color-primary);
+    --btn-text-color: var(--color-primary);
     --btn-state-color: transparent;
 
     --btn-bg-color: transparent;
@@ -198,9 +190,9 @@
 
     border-radius: 1em;
 
-    --btn-base-color: var(--color-pri-cont);
-    --btn-text-color: var(--color-on-pri-cont);
-    --btn-state-color: var(--color-on-pri-cont);
+    --btn-base-color: var(--color-primary-container);
+    --btn-text-color: var(--color-on-primary-container);
+    --btn-state-color: var(--color-on-primary-container);
 
     --btn-bg-color: var(--btn-base-color);
     --btn-border-color: transparent;
@@ -227,8 +219,8 @@
 @utility radioset {
     @apply flex gap-0.5 border-2;
 
-    --radioset-base-color: var(--color-pri);
-    --radioset-text-color: var(--color-pri);
+    --radioset-base-color: var(--color-primary);
+    --radioset-text-color: var(--color-primary);
     --radioset-state-color: transparent;
 
     padding: var(--radioset-p);
@@ -242,7 +234,7 @@
     }
 
     & label {
-        @apply cursor-pointer contents;
+        @apply contents;
     }
 
     & icon {
@@ -277,7 +269,7 @@
         }
 
         &:has(input:focus-visible) {
-            @apply outline-3 outline-sec;
+            @apply outline-3 outline-secondary;
         }
     }
 

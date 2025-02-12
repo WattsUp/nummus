@@ -1,73 +1,90 @@
-<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
-         hx-get="{{ url_for('emergency_fund.page') }}"
-         hx-trigger="update-account from:body, update-transaction from:body"
-         hx-target="#main"
-         hx-swap="innerHTML">
-    <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Emergency Fund</h1>
-    <div class="w-full flex justify-around text-lg">
-        <div class="text-center">
-            <h1 class="text-lg font-bold">Current Balance</h1>
-            <h1 class="text-2xl font-bold text-blue">{{ e_fund["current"] | money0 }}</h1>
-        </div>
-        <div class="text-center">
-            <h1 class="text-lg font-bold">Recommended Balance</h1>
-            <h1 class="text-2xl font-bold text-green-600">
-                {{ e_fund["target_lower"] | money0 }} - {{ e_fund["target_upper"] | money0 }}
-            </h1>
-        </div>
+<h1 class="text-3xl font-serif text-primary">Emergency fund</h1>
+<div class="flex justify-around font-bold">
+    <div class="text-center">
+        <h2 class="text-lg">Current Balance</h2>
+        <h1 class="text-2xl text-tertiary">{{ e_fund["current"] | money0 }}</h1>
     </div>
-    <div class="w-full h-60 md:h-96 relative">
-        <canvas id="e-fund-chart-canvas" hx-preserve></canvas>
+    <div class="text-center">
+        <h2 class="text-lg">Recommended Balance</h2>
+        <h1 class="text-2xl text-tertiary">{{ e_fund["target_lower"] | money0 }} - {{ e_fund["target_upper"] | money0 }}</h1>
     </div>
-    {% include "emergency-fund/chart-data.jinja" %}
-    <div>
-        <p>
-            {% if e_fund["months"] is none %}
-                No spending found to estimate emergency budget.
-            {% elif e_fund["delta_lower"] > 0 %}
-                You have {{ e_fund["current"] | money0 }} in your emergency fund.
-                You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
-                Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
-            {% elif e_fund["delta_upper"] > 0 %}
-                You have {{ e_fund["current"] | money0 }} in your emergency fund
-                which will cover {{ "%0.1f" % e_fund["months"] }} months of budgeted expenses.
-                You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
-                Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
-            {% else %}
-                You have {{ e_fund["current"] | money0 }} in your emergency fund
-                which will cover {{ "%0.1f" % e_fund["months"] }} months of budgeted expenses.
-                You are in good shape to cover the recommended 3 - 6 months of budgeted expenses.
-            {% endif %}
-            Edit emergency fund balance on the
-            <a class="underline text-blue cursor-pointer"
-               href="{{ url_for('budgeting.page') }}"
-               hx-get="{{ url_for('budgeting.page') }}"
-               hx-target="#main"
-               hx-swap="innerHTML"
-               hx-push-url="true">budgeting page</a>.
-        </p>
-    </div>
-    <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Essential Spending</h1>
-    <p class="italic text-sm">
-        Categories marked essential form the estimated monthly emergency budget.
-        Edit transaction categories
-        <span class="underline text-blue cursor-pointer"
-              hx-get="{{ url_for('transaction_categories.overlay') }}"
-              hx-target="#overlay"
-              hx-swap="innerHTML"
-              hx-push-url="false">here</span>.
-        Only transactions from budgeted accounts are included. To change which accounts are included in budgeting, edit account in the sidebar.
+</div>
+<div class="prose mx-auto">
+    <h2>What's an emergency fund?</h2>
+    <p>
+        An emergency fund is a cash reserve specifically set aside for unexpected expenses.
+        Some common examples include car repairs, home repairs, medical bills, or a loss of income.
     </p>
-    <div class="w-full max-h-[70vh] overflow-y-scroll">
-        <div class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-[600px]">
-            <div class="w-48 shrink-0 p-1 grow-[4]">Category</div>
-            <div class="w-32 shrink-0 p-1 grow text-right">Monthly Spending</div>
-        </div>
+    <p>
+        Without savings, an financial shock, large <i>or small,</i> can be difficult.
+        And if it turns into debt, it can potentially have a lasting impact.
+        An underfunded emergency fund <i>is an emergency.</i>
+    </p>
+    <h2>How much do I need?</h2>
+    <p>
+        Most experts recommend having 3-6 months of living expenses in your emergency fund.
+        nummus tracks the spending for categories marked "essential spending".
+        On the chart below is a region to aim to be within.
+        Having an emergency fund of that amount means you can last 3 to 6 months of
+        essential spending if a loss of income event happens.
+    </p>
+</div>
+<h1 class="text-2xl font-serif text-primary">Historical Balance</h1>
+<div class="w-full h-60 md:h-96 relative">
+    <canvas id="e-fund-chart-canvas" hx-preserve></canvas>
+</div>
+{% include "emergency-fund/chart-data.jinja" %}
+<div class="prose mx-auto">
+    <p>
+        {% if e_fund["months"] is none %}
+            No spending found to estimate emergency budget.
+        {% elif e_fund["delta_lower"] > 0 %}
+            You have {{ e_fund["current"] | money0 }} in your emergency fund.
+            You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
+            Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
+        {% elif e_fund["delta_upper"] > 0 %}
+            You have {{ e_fund["current"] | money0 }} in your emergency fund
+            which will cover {{ e_fund["days"] | days }} of budgeted expenses.
+            You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
+            Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
+        {% else %}
+            You have {{ e_fund["current"] | money0 }} in your emergency fund
+            which will cover {{ e_fund["days"] | days }} of budgeted expenses.
+            You are in good shape to cover the recommended 3 to 6 months of budgeted expenses.
+        {% endif %}
+        Edit emergency fund balance on the
+        <a href="{{ url_for('budgeting.page') }}"
+           hx-get="{{ url_for('budgeting.page') }}"
+           hx-push-url="true"
+           hx-swap="innerHTML show:window:top">budgeting page</a>.
+    </p>
+</div>
+<h1 class="text-2xl font-serif text-primary">Essential Spending</h1>
+<div class="prose mx-auto">
+    Categories marked essential form the estimated monthly emergency budget.
+    Edit transaction categories
+    <a href="{{ url_for('transaction_categories.page') }}"
+       hx-get="{{ url_for('transaction_categories.page') }}"
+       hx-push-url="true"
+       hx-swap="innerHTML show:window:top">here</a>.
+    {# TODO (WattsUp): Add link to accounts page
+        Only transactions from budgeted accounts are included.
+        To change which accounts are included in budgeting, edit account in the sidebar.
+    #}
+</div>
+<table class="w-full max-w-lg mx-auto">
+    <thead>
+        <tr>
+            <th>Category</th>
+            <th>Monthly Spending</th>
+        </tr>
+    </thead>
+    <tbody>
         {% for info in e_fund["categories"] %}
-            <div class="w-full flex even:bg-grey-50 md:hover:bg-grey-100 min-w-[600px]">
-                <div class="w-48 shrink-0 p-1 grow-[4]">{{ info["emoji_name"] }}</div>
-                <div class="w-32 shrink-0 p-1 grow text-right">{{ info["monthly"] | money }}</div>
-            </div>
+            <tr>
+                <td>{{ info["emoji_name"] }}</td>
+                <td class="text-right">{{ info["monthly"] | money }}</td>
+            </tr>
         {% endfor %}
-    </div>
-</section>
+    </tbody>
+</table>

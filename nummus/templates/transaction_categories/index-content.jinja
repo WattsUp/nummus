@@ -2,7 +2,7 @@
      hx-target="#main"
      hx-trigger="update-category from:body"
      hx-get="{{ url_for('transaction_categories.page') }}">
-    <h1 class="text-3xl font-serif text-pri">Transaction categories</h1>
+    <h1 class="text-3xl font-serif text-primary">Transaction categories</h1>
     <button class="btn-tonal"
             hx-target="#dialog"
             hx-disabled-elt="this"
@@ -29,9 +29,9 @@
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
             {# Split items so sticky label stops above last item #}
             <div class="w-full">
-                <h1 class="sticky top-0 bottom-8 p-1 text-2xl font-serif text-pri bg-surface">{{ group.pretty }}</h1>
+                <h1 class="sticky top-0 bottom-8 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
                 {% for cat in items[:-1] %}
-                    <label class="{{ row_class }} border-b border-outline-var">
+                    <label class="{{ row_class }} border-b border-outline-variant">
                         <div>{{ cat.name }}</div>
                         <button class="btn-text btn-sq"
                                 hx-disabled-elt="this"

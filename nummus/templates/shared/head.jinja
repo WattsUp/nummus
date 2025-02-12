@@ -1,9 +1,5 @@
 <head>
-    <title>
-        {% block title %}
-            {{ title or "nummus" }}
-        {% endblock title %}
-    </title>
+    <title>{{ title }}</title>
     <meta charset="utf-8">
     <meta name="viewport"
           content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-visual" />
@@ -48,6 +44,8 @@
                     (!('currentTheme' in localStorage) &&
                     window.matchMedia('(prefers-color-scheme: dark)').matches),
             );
+
+            if (pluginColor) pluginColor.update();
         }
 
         updateTheme();

@@ -13,10 +13,6 @@ const emergencyFund = {
         const spendingLower = raw.spending_lower.map(v => Number(v));
         const spendingUpper = raw.spending_upper.map(v => Number(v));
 
-        const green = getThemeColor('green');
-        const blue = getThemeColor('blue');
-        const yellow = getThemeColor('yellow');
-
         const canvas = document.getElementById('e-fund-chart-canvas');
         const ctx = canvas.getContext('2d');
         const datasets = [
@@ -24,23 +20,23 @@ const emergencyFund = {
                 label: 'Balance',
                 type: 'line',
                 data: values,
-                borderColor: getThemeColor('grey-500'),
-                backgroundColor: blue + '80',
+                borderColorRaw: 'outline',
+                backgroundColorRaw: ['tertiary-container', '80'],
                 borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,
                 fill: {
                     target: 'origin',
-                    above: blue + '80',
-                    below: yellow + '80',
+                    aboveRaw: ['tertiary-container', '80'],
+                    belowRaw: ['error-container', '80'],
                 },
             },
             {
                 label: '3-Month Spending',
                 type: 'line',
                 data: spendingLower,
-                borderColor: green,
-                backgroundColor: green + '80',
+                borderColorRaw: 'primary',
+                backgroundColorRaw: ['primary-container', '80'],
                 borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,
@@ -52,8 +48,8 @@ const emergencyFund = {
                 label: '6-Month Spending',
                 type: 'line',
                 data: spendingUpper,
-                borderColor: green,
-                backgroundColor: green + '80',
+                borderColorRaw: 'primary',
+                backgroundColorRaw: ['primary-container', '80'],
                 borderWidth: 2,
                 pointRadius: 0,
                 hoverRadius: 0,

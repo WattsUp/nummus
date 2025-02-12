@@ -220,7 +220,7 @@ def ctx_base() -> dict[str, object]:
             "Planning",
             {
                 "Retirement": None,  # person_play
-                "Emergency Fund": None,  # emergency
+                "Emergency Fund": ("emergency", "emergency_fund.page", LinkType.PAGE),
             },
         ),
         (
@@ -337,7 +337,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     """
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
-        html_title = f"<title>{title}</title>\n"
+        html_title = f"<title>{title} - nummus</title>\n"
         nav_trigger = "<script>nav.update()</script>\n"
         content = flask.render_template(content_template, **context)
         html = html_title + nav_trigger + content
@@ -346,14 +346,12 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
             textwrap.dedent(
                 f"""\
                 {{% extends "shared/base.jinja" %}}
-                {{% block title %}}
-                {title}
-                {{% endblock title %}}
                 {{% block content %}}
                 {{% include "{content_template}" %}}
                 {{% endblock content %}}
                 """,
             ),
+            title=f"{title} - nummus",
             sidebar=ctx_sidebar(),
             **ctx_base(),
             **context,
@@ -398,7 +396,7 @@ def page_style_test() -> flask.Response:
     """
     return page(
         "shared/style-test.jinja",
-        "Style Menu",
+        "Style Test",
     )
 
 

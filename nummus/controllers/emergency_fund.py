@@ -48,11 +48,11 @@ def ctx_page() -> dict[str, object]:
         try:
             t_cat_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Emergency Fund")
+                .where(TransactionCategory.name == "emergency fund")
                 .one()[0]
             )
         except exc.NoResultFound as e:  # pragma: no cover
-            msg = "Category Emergency Fund not found"
+            msg = "Category emergency fund not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
 
         balance = s.query(func.sum(BudgetAssignment.amount)).where(
@@ -208,7 +208,7 @@ def ctx_page() -> dict[str, object]:
         "current": current,
         "target_lower": target_lower,
         "target_upper": target_upper,
-        "months": months,
+        "days": months and (months * utils.DAYS_IN_YEAR / utils.MONTHS_IN_YEAR),
         "delta_lower": delta_lower,
         "delta_upper": delta_upper,
         "categories": category_infos,
@@ -223,7 +223,7 @@ def page() -> flask.Response:
     """
     return common.page(
         "emergency-fund/index-content.jinja",
-        title="Emergency Fund | nummus",
+        "Emergency Fund",
         e_fund=ctx_page(),
     )
 

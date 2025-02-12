@@ -5,7 +5,6 @@ const nav = {
     barHeight: null,
     barTranslate: 0,
     fabRatio: null,
-    mainSizer: null,
     bar: null,
     fab: null,
     /**
@@ -21,7 +20,7 @@ const nav = {
      */
     closeDrawer: function(evt) {
         // if no event or clicking a label, close drawer
-        if (!evt || evt.target.matches('label, label *')) {
+        if (!evt || evt.target.matches('a, a *, button, button *')) {
             htmx.removeClass(htmx.find('#nav-drawer'), 'open');
         }
     },
@@ -49,8 +48,7 @@ const nav = {
         if (window.screen.width >= 768) {
             return;
         }
-        if (nav.mainSizer == null) nav.mainSizer = htmx.find('#main-sizer');
-        const scrollY = nav.mainSizer.scrollTop;
+        const scrollY = window.scrollY;
 
         if (nav.bar == null) nav.bar = htmx.find('#nav-bar');
         if (nav.barHeight == null) {
@@ -98,5 +96,5 @@ const nav = {
     },
 };
 
-htmx.on('#main-sizer', 'scroll', nav.onScroll);
+htmx.on(window, 'scroll', nav.onScroll);
 htmx.onLoad(nav.update);

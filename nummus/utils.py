@@ -311,7 +311,7 @@ def format_days(days: int, labels: list[str] | None = None) -> str:
         x mos
         x yrs
     """
-    labels = labels or ["days", "wks", "mos", "yrs"]
+    labels = labels or ["days", "weeks", "months", "years"]
     years = days / DAYS_IN_YEAR
     months = years * MONTHS_IN_YEAR
     if months > THRESHOLD_MONTHS:

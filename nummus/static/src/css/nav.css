@@ -39,8 +39,8 @@
 
     &>a {
         @apply hidden md:flex flex-col justify-end mx-auto h-12;
-        @apply cursor-pointer font-title text-xl;
-        @apply hover:text-pri active:text-pri transition-colors;
+        @apply font-title text-xl;
+        @apply hover:text-primary active:text-primary transition-colors;
     }
 
     &>section {
@@ -74,7 +74,7 @@
         @variant max-lg {
             @apply fixed top-0 z-50 rounded-r-3xl;
             @apply transition-transform -translate-x-full duration-300;
-            @apply bg-surface-cont-low;
+            @apply bg-surface-container-low;
 
             @variant open {
                 @apply translate-x-0;
@@ -99,7 +99,7 @@
     #nav-bar {
         @apply nav-section;
         @apply w-full fixed bottom-0 pt-2 md:hidden justify-evenly;
-        @apply bg-surface-cont;
+        @apply bg-surface-container;
 
         transition: translate 0.5s;
 
@@ -117,13 +117,12 @@
 
     #nav-header {
         @apply w-full fixed top-0 z-40 md:hidden;
-        @apply bg-pri text-on-pri;
+        @apply bg-primary text-on-primary;
 
         transition: translate 0.5s;
 
         &>* {
-            @apply cursor-pointer;
-            @apply hover:text-pri-cont active:text-pri-cont transition-colors;
+            @apply hover:text-primary-container active:text-primary-container transition-colors;
         }
 
         &>icon {
@@ -138,7 +137,7 @@
 
     #nav-footer {
         @apply fixed w-full h-28 p-2 bottom-0;
-        @apply bg-pri-cont border-pri;
+        @apply bg-primary-container border-primary;
         @apply border-t-4 text-left md:text-center text-sm;
     }
 }

@@ -19,7 +19,9 @@ const nummusChart = {
         'use strict';
         setChartDefaults();
 
-        const pluginObjects = [];
+        const pluginObjects = [
+            pluginColor,
+        ];
         const pluginOptions = {
             legend: {
                 display: false,
@@ -40,8 +42,10 @@ const nummusChart = {
                         const dataset = context.dataset;
                         let color = {
                             borderColor: dataset.borderColor,
-                            backgroundColor: dataset.backgroundColor,
-                            borderWidth: dataset.borderWidth,
+                            // Remove opacity
+                            backgroundColor:
+                                dataset.backgroundColor.slice(0, 7),
+                            borderWidth: 1,
                         };
                         // Only do this if only one dataset, if multiple,
                         // default is fine

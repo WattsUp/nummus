@@ -6,7 +6,7 @@
 {% with title="Login | nummus" %}
     {% include "/shared/head.jinja" %}
 {% endwith %}
-<body class="bg-pri-cont"
+<body class="bg-primary-container"
       hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)">
     {% include "/shared/hx-error.jinja" %}

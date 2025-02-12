@@ -200,6 +200,10 @@ class Server:
         self._app.jinja_env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         self._app.jinja_env.filters["money6"] = lambda x: utils.format_financial(x, 6)
         self._app.jinja_env.filters["days"] = utils.format_days
+        self._app.jinja_env.filters["days_abv"] = lambda x: utils.format_days(
+            x,
+            ["days", "wks", "mos", "yrs"],
+        )
         self._app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
         self._app.jinja_env.filters["qty"] = lambda x: f"{x:,.6f}"
         self._app.jinja_env.filters["percent"] = lambda x: f"{x * 100:5.2f}%"

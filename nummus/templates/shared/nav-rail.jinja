@@ -1,4 +1,4 @@
-<nav id="nav-rail" hx-target="#main" hx-push-url="true">
+<nav id="nav-rail" hx-push-url="true" hx-swap="innerHTML show:window:top">
     <a href="{{ url_for('dashboard.page') }}"
        hx-get="{{ url_for('dashboard.page') }}"
        hx-disabled-elt="this">nummus</a>

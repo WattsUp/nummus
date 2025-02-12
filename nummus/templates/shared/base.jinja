@@ -5,17 +5,21 @@
 {# djlint: on #}
 {% include "/shared/head.jinja" %}
 <body hx-on::send-error="nummusSendError(event)"
-      hx-on::response-error="nummusResponseError(event)">
+      hx-on::response-error="nummusResponseError(event)"
+      hx-target="#main">
     {% include "/shared/hx-error.jinja" %}
     {% include "/shared/nav-header.jinja" %}
     {% include "/shared/nav-rail.jinja" %}
     {% include "/shared/nav-drawer.jinja" %}
-    <div id="main-sizer">
+    <div id="main-wrapper">
         <main id="main">
-            {% block content %}
-                Nothing to see here
+            {% block content required %}
             {% endblock content %}
         </main>
+        <div id="main-footer">
+            <p>Copyright © {{ current_year }} nummus</p>
+            <p>Version: {{ version }}</p>
+        </div>
     </div>
     {% include "/shared/nav-bar.jinja" %}
     {% include "/shared/dialog.jinja" %}

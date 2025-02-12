@@ -33,7 +33,7 @@
     @apply relative block mt-1;
 
     --input-bg-color: var(--color-surface);
-    --input-label-color: var(--color-on-surface-var);
+    --input-label-color: var(--color-on-surface-variant);
 
     &>div {
         color: var(--input-label-color);
@@ -68,7 +68,7 @@
         @apply w-full;
 
         @variant focus-visible {
-            @apply outline-2 outline-pri;
+            @apply outline-2 outline-primary;
         }
 
         @variant not-disabled {
@@ -122,10 +122,10 @@
 
 
         @variant hover {
-            --input-border-color: var(--color-on-error-cont);
+            --input-border-color: var(--color-on-error-container);
 
             &>div:first-of-type {
-                @apply text-on-error-cont;
+                @apply text-on-error-container;
             }
         }
     }
@@ -138,10 +138,10 @@
 @utility toggle {
     @apply flex items-center;
 
-    --toggle-base-color: var(--color-pri);
-    --toggle-state-color: var(--color-on-pri);
+    --toggle-base-color: var(--color-primary);
+    --toggle-state-color: var(--color-on-primary);
 
-    --toggle-track-color: var(--color-surface-cont-highest);
+    --toggle-track-color: var(--color-surface-container-highest);
     --toggle-border-color: var(--color-outline);
     --toggle-handle-color: var(--color-outline);
 
@@ -167,7 +167,7 @@
 
             @variant not-checked {
                 &~switch {
-                    --toggle-track-color: color-mix(in oklab, var(--color-surface-cont-highest) 12%, transparent);
+                    --toggle-track-color: color-mix(in oklab, var(--color-surface-container-highest) 12%, transparent);
                     --toggle-border-color: color-mix(in oklab, var(--color-on-surface) 12%, transparent);
                     --toggle-handle-color: color-mix(in oklab, var(--color-on-surface) 32%, transparent);
                 }
@@ -175,11 +175,6 @@
         }
 
         @variant not-disabled {
-
-            &~div,
-            &~switch {
-                @apply cursor-pointer;
-            }
 
             @variant checked {
                 &~switch {
@@ -190,7 +185,7 @@
 
                 @variant hover {
                     &~switch {
-                        @apply after:bg-pri-cont;
+                        @apply after:bg-primary-container;
                     }
                 }
 
@@ -199,15 +194,15 @@
             @variant not-checked {
                 @variant hover {
                     &~switch {
-                        --toggle-track-color: color-mix(in oklab, var(--color-surface-cont-highest) 92%, var(--color-on-surface));
-                        --toggle-handle-color: var(--color-on-surface-var);
+                        --toggle-track-color: color-mix(in oklab, var(--color-surface-container-highest) 92%, var(--color-on-surface));
+                        --toggle-handle-color: var(--color-on-surface-variant);
                     }
                 }
             }
 
             @variant focus-visible {
                 &~switch {
-                    @apply outline-3 outline-sec;
+                    @apply outline-3 outline-secondary;
                 }
             }
         }
@@ -225,7 +220,7 @@
 
         &>span {
             @variant not-first {
-                @apply text-sm text-on-surface-var;
+                @apply text-sm text-on-surface-variant;
             }
         }
     }
