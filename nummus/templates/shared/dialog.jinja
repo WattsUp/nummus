@@ -1,6 +1,7 @@
 <div id="dialog"
      class="dialog z-48"
      hx-swap-oob="{{ oob }}"
-     hx-target="#dialog"
+     hx-target="#dialog-error"
      hx-on::oob-before-swap="dialog.reset()"
      hx-on::after-settle="dialog.updateSave()">{{ content | safe }}</div>
+{% if snackbar %}<script id="snackbar-script" hx-swap-oob="true">snackbar.show("{{ snackbar }}")</script>{% endif %}

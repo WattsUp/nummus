@@ -106,12 +106,14 @@ def ctx_base() -> dict[str, object]:
 def dialog_swap(
     content: str | None = None,
     event: str | list[str] | None = None,
+    snackbar: str | None = None,
 ) -> flask.Response:
     """Create a response to close the dialog and trigger listeners.
 
     Args:
         content: Content of dialog to swap to, None will close dialog
         event: Event or list of events to trigger
+        snackbar: Snackbar message to display
 
     Returns:
         Response that updates dialog OOB and triggers events
@@ -120,6 +122,7 @@ def dialog_swap(
         "shared/dialog.jinja",
         oob=True,
         content=content or "",
+        snackbar=snackbar,
     )
     response = flask.make_response(html)
     if event:

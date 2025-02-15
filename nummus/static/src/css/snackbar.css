@@ -1,0 +1,31 @@
+@utility snack {
+    @apply fixed z-40 bottom-44 md:bottom-4 right-1/2 md:right-4 translate-x-4/2 w-96;
+    @apply px-4 py-3 rounded cursor-default;
+    @apply text-inverse-on-surface transition-colors shadow-sm shadow-shadow/50;
+
+    --snack-base-color: var(--color-inverse-surface);
+    --snack-bg-color: var(--snack-base-color);
+
+    background-color: var(--snack-bg-color);
+
+    transition-property: background-color, translate;
+    transition-duration: var(--default-transition-duration), 0.5s;
+
+    @variant hover {
+        --snack-bg-color: color-mix(in oklab, var(--snack-base-color) 92%, var(--color-inverse-primary));
+    }
+
+    @variant active {
+        --snack-bg-color: color-mix(in oklab, var(--snack-base-color) 90%, var(--color-inverse-primary));
+    }
+
+    @variant open {
+        @apply translate-x-1/2 md:translate-x-0;
+    }
+}
+
+@layer components {
+    #snackbar {
+        @apply snack;
+    }
+}

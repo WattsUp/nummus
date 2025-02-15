@@ -83,7 +83,10 @@ def account(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-account")
+        return common.dialog_swap(
+            event="update-account",
+            snackbar="All changes saved",
+        )
 
 
 def ctx_account(

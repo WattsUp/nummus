@@ -9,6 +9,7 @@
 
 @import "./nav.css";
 @import "./dialog.css";
+@import "./snackbar.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));

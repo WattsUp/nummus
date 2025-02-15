@@ -112,7 +112,10 @@ def new() -> str | flask.Response:
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
 
-    return common.dialog_swap(event="update-category")
+    return common.dialog_swap(
+        event="update-category",
+        snackbar=f"Created category {name}",
+    )
 
 
 def category(uri: str) -> str | flask.Response:
@@ -166,7 +169,10 @@ def category(uri: str) -> str | flask.Response:
             ).update({"category_id": uncategorized_id})
             s.delete(cat)
 
-            return common.dialog_swap(event="update-category")
+            return common.dialog_swap(
+                event="update-category",
+                snackbar=f"Category {cat.emoji_name} deleted",
+            )
 
         form = flask.request.form
         name = form["name"]
@@ -193,7 +199,10 @@ def category(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-category")
+        return common.dialog_swap(
+            event="update-category",
+            snackbar="All changes saved",
+        )
 
 
 def validation() -> str:
