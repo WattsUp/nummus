@@ -1,0 +1,9 @@
+{% set extra_class = "border-b border-outline-variant" if not last %}
+<label class="py-0.5 flex justify-between items-center {{ extra_class }}">
+    <div>{{ cat.name }}</div>
+    <button class="btn-text btn-sq"
+            hx-disabled-elt="this"
+            hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
+        <icon>edit</icon>
+    </button>
+</label>

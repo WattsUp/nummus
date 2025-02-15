@@ -16,6 +16,7 @@ from colorama import Back, Fore
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from typing_extensions import override
 
 from nummus import controllers
 from nummus import exceptions as exc
@@ -114,6 +115,38 @@ class Handler(gevent.pywsgi.WSGIHandler):
         )
 
 
+class NummusApp(flask.Flask):
+    """nummus flask app."""
+
+    @override
+    def url_for(
+        self,
+        /,
+        endpoint: str,
+        *,
+        _anchor: str | None = None,
+        _method: str | None = None,
+        _scheme: str | None = None,
+        _external: bool | None = None,
+        **values: object,
+    ) -> str:
+        # Change snake case to kebab case
+        # Change bools to "" if True, omit if False
+        values = {
+            k.replace("_", "-"): ("" if isinstance(v, bool) else v)
+            for k, v in values.items()
+            if v
+        }
+        return super().url_for(
+            endpoint,
+            _anchor=_anchor,
+            _method=_method,
+            _scheme=_scheme,
+            _external=_external,
+            **values,
+        )
+
+
 class Server:
     """HTTP server that serves a nummus Portfolio."""
 
@@ -135,7 +168,7 @@ class Server:
         """
         self._portfolio = p
 
-        self._app = flask.Flask(__name__)
+        self._app = NummusApp(__name__)
         self._metrics = prometheus_flask_exporter.PrometheusMetrics(
             self._app,
             excluded_paths="/static",

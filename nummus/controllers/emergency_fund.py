@@ -222,9 +222,9 @@ def page() -> flask.Response:
         string HTML response
     """
     return common.page(
-        "emergency-fund/index-content.jinja",
+        "emergency-fund/page.jinja",
         "Emergency Fund",
-        e_fund=ctx_page(),
+        ctx=ctx_page(),
     )
 
 
@@ -236,7 +236,7 @@ def dashboard() -> str:
     """
     return flask.render_template(
         "emergency-fund/dashboard.jinja",
-        e_fund=ctx_page(),
+        ctx=ctx_page(),
     )
 
 

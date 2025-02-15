@@ -1,0 +1,80 @@
+<div class="flex justify-between items-center"
+     hx-target="#main"
+     hx-trigger="update-account from:body"
+     hx-get="{{ url_for('accounts.page_all') }}">
+    <h1 class="text-3xl font-serif text-primary">Accounts</h1>
+    <button class="btn-tonal"
+            hx-target="#dialog"
+            hx-disabled-elt="this"
+            hx-get="{{ url_for('accounts.new') }}"
+            disabled>
+        <icon>add</icon>New
+    </button>
+</div>
+<div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold">
+    <div class="max-md:col-span-2">
+        <h2 class="text-lg">Net Worth</h2>
+        <h1 class="text-2xl text-tertiary">{{ ctx.net_worth | money0 }}</h1>
+    </div>
+    <div>
+        <h2 class="text-lg">Assets</h2>
+        <h1 class="text-2xl text-tertiary">{{ ctx.assets | money0 }}</h1>
+        <div class="h-2 rounded-xl w-full border border-primary">
+            <div class="bg-primary h-full rounded-xl"
+                 style="width: {{ ctx.assets_w }}%"></div>
+        </div>
+    </div>
+    <div>
+        <h2 class="text-lg">Liabilites</h2>
+        <h1 class="text-2xl text-tertiary">{{ ctx.liabilities | money0 }}</h1>
+        <div class="h-2 rounded-xl w-full border border-primary">
+            <div class="bg-primary h-full rounded-xl"
+                 style="width: {{ ctx.liabilities_w }}%"></div>
+        </div>
+    </div>
+</div>
+<div class="prose mx-auto">
+    Assets are accounts with a positive valuation.
+    This is commonly cash, stocks, and other investments.
+    Liabilites are accounts with a negative valuation.
+    This is commonly lines of credit, mortgages, and other loans.
+    Net worth is the sum of all account valuations.
+</div>
+<div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
+     hx-push-url="true"
+     hx-swap="innerHTML show:window:top">
+    {% for category, (total, accounts) in ctx.categories.items() %}
+        <div class="mb-4">
+            <div class="w-full">
+                <div class="sticky top-10 md:top-0 flex justify-between text-2xl font-serif text-primary bg-surface">
+                    <span>{{ category.pretty }}</span>
+                    <span>{{ total | money }}</span>
+                </div>
+                {% for account in accounts[:-1] %}
+                    {% include "/accounts/account-row.jinja" %}
+                    <hr class="mx-4 my-1">
+                {% endfor %}
+            </div>
+            {% with account = accounts[-1] %}
+                {% include "/accounts/account-row.jinja" %}
+            {% endwith %}
+        </div>
+    {% endfor %}
+</div>
+<label class="toggle max-w-60">
+    <input type="checkbox"
+           autocomplete="off"
+           {% if ctx.include_closed %}checked{% endif %}
+           hx-push-url="true"
+           hx-get="{{ url_for('accounts.page_all', include_closed=not ctx.include_closed) }}">
+    <div>
+        {% if ctx.include_closed %}
+            Hide closed accounts
+        {% else %}
+            Show closed accounts
+        {% endif %}
+    </div>
+    {# djlint: off #}
+        <switch></switch>
+    {# djlint: on #}
+</label>

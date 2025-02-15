@@ -23,34 +23,19 @@
 </div>
 <div class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2"
      hx-target="#dialog">
-    {% for group, items in categories["groups"].items() %}
+    {% for group, items in ctx.groups.items() %}
         {# Set row span such that on md screen the third category will fit in dense #}
-        {% set row_class = "py-0.5 flex justify-between items-center cursor-pointer" %}
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
             {# Split items so sticky label stops above last item #}
             <div class="w-full">
-                <h1 class="sticky top-0 bottom-8 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
+                <h1 class="sticky top-10 md:top-0 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
                 {% for cat in items[:-1] %}
-                    <label class="{{ row_class }} border-b border-outline-variant">
-                        <div>{{ cat.name }}</div>
-                        <button class="btn-text btn-sq"
-                                hx-disabled-elt="this"
-                                hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
-                            <icon>edit</icon>
-                        </button>
-                    </label>
+                    {% include "/transaction-categories/category-row.jinja" %}
                 {% endfor %}
             </div>
             {% if items %}
-                {% with cat = items[-1] %}
-                    <label class="{{ row_class }}">
-                        <div>{{ cat.name }}</div>
-                        <button class="btn-text btn-sq"
-                                hx-disabled-elt="this"
-                                hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
-                            <icon>edit</icon>
-                        </button>
-                    </label>
+                {% with cat = items[-1], last=true %}
+                    {% include "/transaction-categories/category-row.jinja" %}
                 {% endwith %}
             {% endif %}
         </div>

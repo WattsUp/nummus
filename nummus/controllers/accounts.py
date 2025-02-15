@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -17,6 +18,7 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    Transaction,
     TransactionCategory,
     TransactionSplit,
     YIELD_PER,
@@ -81,7 +83,7 @@ def account(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(event="update-account")
+        return common.dialog_swap(event="update-account")
 
 
 def ctx_account(
@@ -325,6 +327,165 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     }
 
 
+def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
+    """Get the context to build the accounts table.
+
+    Args:
+        include_closed: True will include Accounts marked closed, False will exclude
+
+    Returns:
+        Dictionary HTML context
+    """
+    # Create sidebar context
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.date.today()
+    today_ord = today.toordinal()
+
+    assets = Decimal(0)
+    liabilities = Decimal(0)
+
+    class AccountContext(TypedDict):
+        """Type definition for Account context."""
+
+        uri: str | None
+        name: str
+        category: AccountCategory
+        closed: bool
+        updated_days_ago: int
+        n_today: int
+        change_today: Decimal
+        value: Decimal
+
+    categories_total: dict[AccountCategory, Decimal] = defaultdict(Decimal)
+    categories: dict[AccountCategory, list[AccountContext]] = defaultdict(list)
+
+    n_closed = 0
+    with p.begin_session() as s:
+        # Get basic info
+        accounts: dict[int, AccountContext] = {}
+        query = (
+            s.query(Account)
+            .with_entities(
+                Account.id_,
+                Account.name,
+                Account.category,
+                Account.closed,
+            )
+            .order_by(Account.category)
+        )
+        if not include_closed:
+            query = query.where(Account.closed.is_(False))
+        for acct_id, name, category, closed in query.all():
+            acct_id: int
+            name: str
+            category: AccountCategory
+            closed: bool
+            accounts[acct_id] = {
+                "uri": Account.id_to_uri(acct_id),
+                "name": name,
+                "category": category,
+                "closed": closed,
+                "updated_days_ago": 0,
+                "n_today": 0,
+                "change_today": Decimal(0),
+                "value": Decimal(0),
+            }
+            if closed:
+                n_closed += 1
+
+        # Get updated_on
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.account_id,
+                func.max(Transaction.date_ord),
+            )
+            .group_by(Transaction.account_id)
+            .where(Transaction.account_id.in_(accounts))
+        )
+        for acct_id, updated_on_ord in query.all():
+            acct_id: int
+            updated_on_ord: int
+            accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
+
+        # Get n_today
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.account_id,
+                func.count(Transaction.id_),
+                func.sum(Transaction.amount),
+            )
+            .where(Transaction.date_ord == today_ord)
+            .group_by(Transaction.account_id)
+            .where(Transaction.account_id.in_(accounts))
+        )
+        for acct_id, n_today, change_today in query.all():
+            acct_id: int
+            n_today: int
+            change_today: Decimal
+            accounts[acct_id]["n_today"] = n_today
+            accounts[acct_id]["change_today"] = change_today
+
+        # Get all Account values
+        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
+        for acct_id, ctx in accounts.items():
+            v = acct_values[acct_id][0]
+            if v > 0:
+                assets += v
+            else:
+                liabilities += v
+            ctx["value"] = v
+            category = ctx["category"]
+
+            categories_total[category] += v
+            categories[category].append(ctx)
+
+    bar_total = assets - liabilities
+    if bar_total == 0:
+        asset_width = 0
+        liabilities_width = 0
+    else:
+        asset_width = round(assets / (assets - liabilities) * 100, 2)
+        liabilities_width = 100 - asset_width
+
+    # Removed empty categories and sort
+    categories = {
+        cat: sorted(accounts, key=lambda acct: acct["name"])
+        for cat, accounts in categories.items()
+        if len(accounts) > 0
+    }
+
+    return {
+        "net_worth": assets + liabilities,
+        "assets": assets,
+        "liabilities": liabilities,
+        "assets_w": asset_width,
+        "liabilities_w": liabilities_width,
+        "categories": {
+            cat: (categories_total[cat], accounts)
+            for cat, accounts in categories.items()
+        },
+        "include_closed": include_closed,
+        "n_closed": n_closed,
+    }
+
+
+def page_all() -> flask.Response:
+    """GET /accounts.
+
+    Returns:
+        string HTML response
+    """
+    include_closed = "include-closed" in flask.request.args
+    return common.page(
+        "accounts/page-all.jinja",
+        "Accounts",
+        ctx=ctx_accounts(include_closed=include_closed),
+    )
+
+
 def page(uri: str) -> flask.Response:
     """GET /accounts/<uri>.
 
@@ -490,8 +651,19 @@ def new_txn(uri: str) -> str | flask.Response:
     return transactions.new(uri)
 
 
+def new() -> str:
+    """GET & POST /h/accounts/new.
+
+    Returns:
+        HTML response
+    """
+    raise NotImplementedError
+
+
 ROUTES: Routes = {
+    "/accounts": (page_all, ["GET"]),
     "/accounts/<path:uri>": (page, ["GET"]),
+    "/h/accounts/new": (new, ["GET", "POST"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
     "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),

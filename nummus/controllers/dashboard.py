@@ -18,7 +18,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page("index-content.jinja", title="Dashboard | nummus")
+    return common.page("page.jinja", title="Dashboard | nummus")
 
 
 ROUTES: Routes = {

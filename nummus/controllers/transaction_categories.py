@@ -27,9 +27,9 @@ def page() -> flask.Response:
         string HTML response
     """
     return common.page(
-        "transaction_categories/index-content.jinja",
+        "transaction-categories/page.jinja",
         "Transaction Categories",
-        categories=ctx_categories(),
+        ctx=ctx_categories(),
     )
 
 
@@ -88,7 +88,7 @@ def new() -> str | flask.Response:
             "locked": False,
         }
 
-        return flask.render_template("transaction_categories/edit.jinja", category=ctx)
+        return flask.render_template("transaction-categories/edit.jinja", category=ctx)
 
     form = flask.request.form
     name = form["name"].strip()
@@ -142,7 +142,7 @@ def category(uri: str) -> str | flask.Response:
             }
 
             return flask.render_template(
-                "transaction_categories/edit.jinja",
+                "transaction-categories/edit.jinja",
                 category=ctx,
             )
 

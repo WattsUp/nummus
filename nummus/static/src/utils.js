@@ -306,8 +306,8 @@ function merge(target, ...sources) {
  *
  * @param {Event} event Triggering event
  */
-function nummusSendError(event) {
-    const url = event.detail.pathInfo.finalRequestPath;
+function nummusSendError(evt) {
+    const url = evt.detail.pathInfo.finalRequestPath;
     const e = document.querySelector('#hx-error');
     e.classList.remove('hidden');
     e.querySelector('span').innerHTML = `Failed to send request for '${url}'`
@@ -318,10 +318,10 @@ function nummusSendError(event) {
  *
  * @param {Event} event Triggering event
  */
-function nummusResponseError(event) {
+function nummusResponseError(evt) {
     const e = document.querySelector('#hx-error');
     e.classList.remove('hidden');
-    e.querySelector('span').innerHTML = event.detail.error;
+    e.querySelector('span').innerHTML = evt.detail.error;
 }
 
 /*

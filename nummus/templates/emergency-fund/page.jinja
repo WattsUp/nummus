@@ -2,11 +2,11 @@
 <div class="flex justify-around font-bold">
     <div class="text-center">
         <h2 class="text-lg">Current Balance</h2>
-        <h1 class="text-2xl text-tertiary">{{ e_fund["current"] | money0 }}</h1>
+        <h1 class="text-2xl text-tertiary">{{ ctx.current | money0 }}</h1>
     </div>
     <div class="text-center">
         <h2 class="text-lg">Recommended Balance</h2>
-        <h1 class="text-2xl text-tertiary">{{ e_fund["target_lower"] | money0 }} - {{ e_fund["target_upper"] | money0 }}</h1>
+        <h1 class="text-2xl text-tertiary">{{ ctx.target_lower | money0 }} - {{ ctx.target_upper | money0 }}</h1>
     </div>
 </div>
 <div class="prose mx-auto">
@@ -36,20 +36,20 @@
 {% include "emergency-fund/chart-data.jinja" %}
 <div class="prose mx-auto">
     <p>
-        {% if e_fund["months"] is none %}
+        {% if ctx.months is none %}
             No spending found to estimate emergency budget.
-        {% elif e_fund["delta_lower"] > 0 %}
-            You have {{ e_fund["current"] | money0 }} in your emergency fund.
-            You need {{ e_fund["target_lower"] | money0 }} for emergencies to cover 3 months of budgeted expenses.
-            Consider increasing your emergency fund by {{ e_fund["delta_lower"] | money0 }}.
-        {% elif e_fund["delta_upper"] > 0 %}
-            You have {{ e_fund["current"] | money0 }} in your emergency fund
-            which will cover {{ e_fund["days"] | days }} of budgeted expenses.
-            You only need {{ e_fund["target_upper"] | money0 }} to cover 6 months of budgeted expenses.
-            Unless you have a planned spending goal this year, the extra {{ e_fund["delta_upper"] | money0 }} could be invested.
+        {% elif ctx.delta_lower > 0 %}
+            You have {{ ctx.current | money0 }} in your emergency fund.
+            You need {{ ctx.target_lower | money0 }} for emergencies to cover 3 months of budgeted expenses.
+            Consider increasing your emergency fund by {{ ctx.delta_lower | money0 }}.
+        {% elif ctx.delta_lower > 0 %}
+            You have {{ ctx.current | money0 }} in your emergency fund
+            which will cover {{ ctx.days | days }} of budgeted expenses.
+            You only need {{ ctx.target_upper | money0 }} to cover 6 months of budgeted expenses.
+            Unless you have a planned spending goal this year, the extra {{ ctx.delta_upper | money0 }} could be invested.
         {% else %}
-            You have {{ e_fund["current"] | money0 }} in your emergency fund
-            which will cover {{ e_fund["days"] | days }} of budgeted expenses.
+            You have {{ ctx.current | money0 }} in your emergency fund
+            which will cover {{ ctx.days | days }} of budgeted expenses.
             You are in good shape to cover the recommended 3 to 6 months of budgeted expenses.
         {% endif %}
         Edit emergency fund balance on the
@@ -67,10 +67,12 @@
        hx-get="{{ url_for('transaction_categories.page') }}"
        hx-push-url="true"
        hx-swap="innerHTML show:window:top">here</a>.
-    {# TODO (WattsUp): Add link to accounts page
-        Only transactions from budgeted accounts are included.
-        To change which accounts are included in budgeting, edit account in the sidebar.
-    #}
+    Only transactions from budgeted accounts are included.
+    To change which accounts are included in budgeting,
+    <a href="{{ url_for('accounts.page_all') }}"
+       hx-get="{{ url_for('accounts.page_all') }}"
+       hx-push-url="true"
+       hx-swap="innerHTML show:window:top">edit account</a>.
 </div>
 <table class="w-full max-w-lg mx-auto">
     <thead>
@@ -80,10 +82,10 @@
         </tr>
     </thead>
     <tbody>
-        {% for info in e_fund["categories"] %}
+        {% for info in ctx.categories %}
             <tr>
-                <td>{{ info["emoji_name"] }}</td>
-                <td class="text-right">{{ info["monthly"] | money }}</td>
+                <td>{{ info.emoji_name }}</td>
+                <td class="text-right">{{ info.monthly | money }}</td>
             </tr>
         {% endfor %}
     </tbody>

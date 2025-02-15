@@ -12,6 +12,7 @@
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant disabled (&:disabled, &[disabled]);
 
 @theme {
     --color-*: initial;
@@ -190,6 +191,14 @@
         @apply hover:bg-surface-container-high;
     }
 
+    hr {
+        @apply border-outline-variant;
+    }
+
+    * {
+        @apply disabled:pointer-events-none;
+    }
+
 }
 
 @layer components {
@@ -209,7 +218,7 @@
     }
 
     #main {
-        @apply p-2 min-h-full pb-20;
+        @apply pt-2 pb-20 px-2 md:px-4 min-h-full;
     }
 
     #main-footer {

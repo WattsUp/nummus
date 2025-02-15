@@ -2,179 +2,19 @@
 
 from __future__ import annotations
 
-import datetime
 import re
 import textwrap
-from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import flask
-from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import models
-from nummus.models import Account, AccountCategory, Transaction
 from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
     from nummus import portfolio
     from nummus.controllers.base import Routes
-
-
-def sidebar() -> str:
-    """GET /h/sidebar.
-
-    Returns:
-        HTML string response
-    """
-    args = flask.request.args
-    include_closed = args.get("closed") == "included"
-    is_open = "open" in args
-    return flask.render_template(
-        "shared/sidebar.jinja",
-        sidebar=ctx_sidebar(include_closed=include_closed),
-        is_open=is_open,
-    )
-
-
-def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
-    """Get the context to build the sidebar.
-
-    Args:
-        include_closed: True will include Accounts marked closed, False will exclude
-
-    Returns:
-        Dictionary HTML context
-    """
-    # Create sidebar context
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    assets = Decimal(0)
-    liabilities = Decimal(0)
-
-    sorted_categories: list[AccountCategory] = [
-        AccountCategory.CASH,
-        AccountCategory.CREDIT,
-        AccountCategory.INVESTMENT,
-        AccountCategory.MORTGAGE,
-        AccountCategory.LOAN,
-        AccountCategory.FIXED,
-        AccountCategory.OTHER,
-    ]
-
-    class AccountContext(TypedDict):
-        """Type definition for Account context."""
-
-        uri: str | None
-        name: str
-        institution: str
-        category: AccountCategory
-        closed: bool
-        updated_days_ago: int
-        value: Decimal
-
-    categories_total: dict[AccountCategory, Decimal] = {
-        cat: Decimal(0) for cat in sorted_categories
-    }
-    categories: dict[AccountCategory, list[AccountContext]] = {
-        cat: [] for cat in sorted_categories
-    }
-
-    n_closed = 0
-    with p.begin_session() as s:
-        # Get basic info
-        accounts: dict[int, AccountContext] = {}
-        query = s.query(Account).with_entities(
-            Account.id_,
-            Account.name,
-            Account.institution,
-            Account.category,
-            Account.closed,
-        )
-        for acct_id, name, institution, category, closed in query.all():
-            acct_id: int
-            name: str
-            institution: str
-            category: AccountCategory
-            closed: bool
-            accounts[acct_id] = {
-                "uri": Account.id_to_uri(acct_id),
-                "name": name,
-                "institution": institution,
-                "category": category,
-                "closed": closed,
-                "updated_days_ago": 0,
-                "value": Decimal(0),
-            }
-            if closed:
-                n_closed += 1
-
-        # Get updated_on
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.account_id,
-                func.max(Transaction.date_ord),
-            )
-            .group_by(Transaction.account_id)
-        )
-        for acct_id, updated_on_ord in query.all():
-            acct_id: int
-            updated_on_ord: int
-            accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
-
-        # Get all Account values
-        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
-        for acct_id, values in acct_values.items():
-            acct_dict = accounts[acct_id]
-            v = values[0]
-            if v > 0:
-                assets += v
-            else:
-                liabilities += v
-            acct_dict["value"] = v
-            category = acct_dict["category"]
-
-            categories_total[category] += v
-            categories[category].append(acct_dict)
-
-    bar_total = assets - liabilities
-    if bar_total == 0:
-        asset_width = 0
-        liabilities_width = 0
-    else:
-        asset_width = round(assets / (assets - liabilities) * 100, 2)
-        liabilities_width = 100 - asset_width
-
-    if not include_closed:
-        categories = {
-            cat: [acct for acct in accounts if not acct["closed"]]
-            for cat, accounts in categories.items()
-        }
-
-    # Removed empty categories and sort
-    categories = {
-        cat: sorted(accounts, key=lambda acct: acct["name"])
-        for cat, accounts in categories.items()
-        if len(accounts) > 0
-    }
-
-    return {
-        "net-worth": assets + liabilities,
-        "assets": assets,
-        "liabilities": liabilities,
-        "assets-w": asset_width,
-        "liabilities-w": liabilities_width,
-        "categories": {
-            cat: (categories_total[cat], accounts)
-            for cat, accounts in categories.items()
-        },
-        "include_closed": include_closed,
-        "n_closed": n_closed,
-    }
 
 
 class LinkType(models.BaseEnum):
@@ -204,7 +44,7 @@ def ctx_base() -> dict[str, object]:
                 # TODO (WattsUp): Change to receipt_long and add_receipt_long if
                 # request gets fulfilled
                 "Transactions": None,  # note_stack
-                "Accounts": None,  # account_balance
+                "Accounts": ("account_balance", "accounts.page_all", LinkType.PAGE),
                 "Insights": None,  # search_insights
             },
         ),
@@ -352,7 +192,6 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
                 """,
             ),
             title=f"{title} - nummus",
-            sidebar=ctx_sidebar(),
             **ctx_base(),
             **context,
         )
@@ -402,5 +241,4 @@ def page_style_test() -> flask.Response:
 
 ROUTES: Routes = {
     "/d/style-test": (page_style_test, ["GET"]),
-    "/h/sidebar": (sidebar, ["GET"]),
 }
