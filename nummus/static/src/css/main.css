@@ -10,6 +10,7 @@
 @import "./nav.css";
 @import "./dialog.css";
 @import "./snackbar.css";
+@import "./page-progress.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
