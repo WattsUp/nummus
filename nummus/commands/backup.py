@@ -33,7 +33,7 @@ class Backup(Base):
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
         """
-        super().__init__(path_db, path_password)
+        super().__init__(path_db, path_password, check_migration=False)
 
     @override
     @classmethod
@@ -124,6 +124,6 @@ class Restore(Base):
         except FileNotFoundError as e:
             print(f"{Fore.RED}{e}")
             return -1
-        p = unlock(self._path_db, self._path_password)
+        p = unlock(self._path_db, self._path_password, check_migration=False)
         print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
         return 0

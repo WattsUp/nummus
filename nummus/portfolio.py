@@ -14,6 +14,7 @@ import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import packaging.version
 import sqlalchemy
 import tqdm
 from rapidfuzz import process
@@ -21,7 +22,7 @@ from sqlalchemy import func, orm, Row
 
 from nummus import encryption
 from nummus import exceptions as exc
-from nummus import importers, models, sql, utils, version
+from nummus import importers, migrations, models, sql, utils, version
 from nummus.models import (
     Account,
     Asset,
@@ -46,15 +47,23 @@ class Portfolio:
 
     _ENCRYPTION_TEST_VALUE = "nummus encryption test string"
 
-    def __init__(self, path: str | Path, key: str | None) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        key: str | None,
+        *,
+        check_migration: bool = True,
+    ) -> None:
         """Initialize Portfolio.
 
         Args:
             path: Path to database file
             key: String password to unlock database encryption
+            check_migration: True will check if migration is required
 
         Raises:
             FileNotFoundError if database does not exist
+            MigrationRequiredError if migration is required
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
@@ -79,6 +88,10 @@ class Portfolio:
         self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
+
+        if check_migration and (v := self.migration_required()):
+            msg = f"Portfolio requires migration to v{v}"
+            raise exc.MigrationRequiredError(msg)
 
     @property
     def path(self) -> Path:
@@ -297,6 +310,38 @@ class Portfolio:
             decoded string
         """
         return self.decrypt(enc_secret).decode()
+
+    @property
+    def db_version(self) -> packaging.version.Version:
+        """Check the version of portfolio is current and does not need migration.
+
+        Returns:
+            Version of database
+        """
+        with self.begin_session() as s:
+            try:
+                v = (
+                    s.query(Config.value)
+                    .where(Config.key == ConfigKey.VERSION)
+                    .one()[0]
+                )
+            except exc.NoResultFound as e:
+                msg = "Config.VERSION not found"
+                raise exc.UnlockingError(msg) from e
+
+            return packaging.version.Version(v)
+
+    def migration_required(self) -> packaging.version.Version | None:
+        """Check if migration is required.
+
+        Returns:
+            Version to migrate to or None if migration not required
+        """
+        v_db = self.db_version
+        for m in migrations.MIGRATORS[::-1]:
+            if v_db < m.min_version:
+                return m.min_version
+        return None
 
     def import_file(self, path: Path, path_debug: Path, *, force: bool = False) -> None:
         """Import a file into the Portfolio.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
@@ -27,6 +28,7 @@ class Base(ABC):
         path_password: Path | None,
         *,
         do_unlock: bool = True,
+        check_migration: bool = True,
     ) -> None:
         """Initize base command.
 
@@ -34,6 +36,7 @@ class Base(ABC):
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             do_unlock: True will unlock portfolio, False will not
+            check_migration: True will check if migration is required
         """
         super().__init__()
 
@@ -44,8 +47,21 @@ class Base(ABC):
         self._path_db = path_db
         self._path_password = path_password
         self._p: Portfolio | None = None
+
+        # Defer for faster time to main
+        from nummus import exceptions as exc
+
         if do_unlock:
-            self._p = unlock(path_db, path_password)
+            try:
+                self._p = unlock(
+                    path_db,
+                    path_password,
+                    check_migration=check_migration,
+                )
+            except exc.MigrationRequiredError as e:
+                print(f"{Fore.RED}{e}")
+                print(f"{Fore.YELLOW}Run nummus migrate to resolve")
+                sys.exit(1)
 
     @classmethod
     @abstractmethod
@@ -71,12 +87,15 @@ class Base(ABC):
 def unlock(
     path_db: Path,
     path_password: Path | None,
+    *,
+    check_migration: bool = True,
 ) -> Portfolio | None:
     """Unlock an existing Portfolio.
 
     Args:
         path_db: Path to Portfolio DB to create
         path_password: Path to password file, None will prompt when necessary
+        check_migration: True will check if migration is required
 
     Returns:
         Unlocked Portfolio or None if unlocking failed
@@ -90,7 +109,7 @@ def unlock(
         return None
 
     if not portfolio.Portfolio.is_encrypted_path(path_db):
-        p = portfolio.Portfolio(path_db, None)
+        p = portfolio.Portfolio(path_db, None, check_migration=check_migration)
         print(f"{Fore.GREEN}Portfolio is unlocked")
         return p
 
@@ -103,7 +122,7 @@ def unlock(
     if key is not None:
         # Try once with password file
         try:
-            p = portfolio.Portfolio(path_db, key)
+            p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
         except exc.UnlockingError:
             print(f"{Fore.RED}Could not decrypt with password file")
             return None
@@ -117,7 +136,7 @@ def unlock(
         if key is None:
             return None
         try:
-            p = portfolio.Portfolio(path_db, key)
+            p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
         except exc.UnlockingError:
             print(f"{Fore.RED}Incorrect password")
             # Try again

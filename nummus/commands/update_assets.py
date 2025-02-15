@@ -43,23 +43,21 @@ class UpdateAssets(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
+        from nummus import exceptions as exc
         from nummus import portfolio
 
-        if self._p is None:  # pragma: no cover
+        p = self._p
+        if p is None:  # pragma: no cover
             return 1
         # Back up Portfolio
-        _, tar_ver = self._p.backup()
-        success = False
+        _, tar_ver = p.backup()
 
         try:
-            updated = self._p.update_assets()
-            success = True
-        finally:
-            # Restore backup if anything went really wrong
-            # Coverage gets confused with finally blocks
-            if not success:  # pragma: no cover
-                portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
-                print(f"{Fore.RED}Abandoned update-assets, restored from backup")
+            updated = p.update_assets()
+        except Exception as e:
+            portfolio.Portfolio.restore(p, tar_ver=tar_ver)
+            print(f"{Fore.RED}Abandoned update assets, restored from backup")
+            raise exc.FailedCommandError(self.NAME) from e
 
         if len(updated) == 0:
             print(

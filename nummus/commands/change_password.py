@@ -29,9 +29,11 @@ class ChangePassword(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
+        from nummus import exceptions as exc
         from nummus import portfolio, utils
 
-        if self._p is None:  # pragma: no cover
+        p = self._p
+        if p is None:  # pragma: no cover
             return 1
 
         new_db_key: str | None = None
@@ -44,7 +46,7 @@ class ChangePassword(Base):
 
         new_web_key: str | None = None
         change_web_key = False
-        if self._p.is_encrypted or change_db_key:
+        if p.is_encrypted or change_db_key:
             change_web_key = utils.confirm("Change web password?")
             if change_web_key:
                 new_web_key = utils.get_password()
@@ -57,23 +59,17 @@ class ChangePassword(Base):
             return -1
 
         # Back up Portfolio
-        _, tar_ver = self._p.backup()
-        success = False
-
+        _, tar_ver = p.backup()
         try:
             if change_db_key and new_db_key is not None:
-                self._p.change_key(new_db_key)
+                p.change_key(new_db_key)
 
             if change_web_key and new_web_key is not None:
-                self._p.change_web_key(new_web_key)
-
-            success = True
-        finally:
-            # Restore backup if anything went wrong
-            # Coverage gets confused with finally blocks
-            if not success:  # pragma: no cover
-                portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
-                print(f"{Fore.RED}Abandoned password change, restored from backup")
+                p.change_web_key(new_web_key)
+        except Exception as e:
+            portfolio.Portfolio.restore(p, tar_ver=tar_ver)
+            print(f"{Fore.RED}Abandoned password change, restored from backup")
+            raise exc.FailedCommandError(self.NAME) from e
         print(f"{Fore.GREEN}Changed password(s)")
         print(f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password")
         return 0

@@ -25,6 +25,7 @@ __all__ = [
     "DuplicateURLError",
     "EmptyImportError",
     "EvaluationError",
+    "FailedCommandError",
     "FailedImportError",
     "FileAlreadyImportedError",
     "FutureTransactionError",
@@ -33,6 +34,7 @@ __all__ = [
     "InvalidORMValueError",
     "InvalidTargetValueError",
     "InvalidURIError",
+    "MigrationRequiredError",
     "MissingAssetError",
     "MultipleResultsFound",
     "NoAssetWebSourceError",
@@ -230,3 +232,16 @@ class InvalidTargetValueError(Exception):
 
 class EvaluationError(Exception):
     """Error encountered when evaluating expression."""
+
+
+class MigrationRequiredError(Exception):
+    """Error when a migration is needed to operate."""
+
+
+class FailedCommandError(Exception):
+    """Error when a command fails."""
+
+    def __init__(self, cmd_name: str) -> None:
+        """Initialize FailedCommandError."""
+        msg = f"Command {cmd_name} failed"
+        super().__init__(msg)

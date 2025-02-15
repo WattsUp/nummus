@@ -64,15 +64,21 @@ class Import(Base):
         from nummus import exceptions as exc
         from nummus import portfolio
 
-        if self._p is None:  # pragma: no cover
+        p = self._p
+        if p is None:  # pragma: no cover
             return 1
         # Back up Portfolio
-        _, tar_ver = self._p.backup()
-        success = False
+        _, tar_ver = p.backup()
 
         count = 0
 
-        path_debug = self._p.path.with_suffix(".importer_debug")
+        path_debug = p.path.with_suffix(".importer_debug")
+
+        def restore() -> None:
+            portfolio.Portfolio.restore(p, tar_ver=tar_ver)
+            print(f"{Fore.RED}Abandoned import, restored from backup")
+            if path_debug.exists():
+                print(f"{Fore.YELLOW}Raw imported file may help at {path_debug}")
 
         try:
             for path in self._paths:
@@ -82,31 +88,26 @@ class Import(Base):
                 if path.is_dir():
                     for f in path.iterdir():
                         if f.is_file():
-                            self._p.import_file(f, path_debug, force=self._force)
+                            p.import_file(f, path_debug, force=self._force)
                             count += 1
                 else:
-                    self._p.import_file(path, path_debug, force=self._force)
+                    p.import_file(path, path_debug, force=self._force)
                     count += 1
-
-            success = True
         except exc.FileAlreadyImportedError as e:
             print(f"{Fore.RED}{e}")
             print(
                 f"{Fore.YELLOW}Delete file or run import with --force flag which "
                 "may create duplicate transactions.",
             )
+            restore()
             return -2
         except exc.UnknownImporterError as e:
             print(f"{Fore.RED}{e}")
-            print(f"{Fore.YELLOW}Create a custom importer in {self._p.importers_path}")
+            print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
+            restore()
             return -3
-        finally:
-            # Restore backup if anything went wrong
-            # Coverage gets confused with finally blocks
-            if not success:  # pragma: no cover
-                portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
-                print(f"{Fore.RED}Abandoned import, restored from backup")
-                if path_debug.exists():
-                    print(f"{Fore.YELLOW}Raw imported file may help at {path_debug}")
+        except Exception as e:
+            restore()
+            raise exc.FailedCommandError(self.NAME) from e
         print(f"{Fore.GREEN}Imported {count} files")
         return 0
