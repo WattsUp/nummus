@@ -1,7 +1,7 @@
 @theme {
     --btn-px: calc(var(--spacing) * 4);
     --btn-py: calc(var(--spacing) * 0.5);
-    --btn-focus-indicator-color: var(--color-sec);
+    --btn-focus-indicator-color: var(--color-secondary);
 
     --radioset-p: calc(var(--spacing) * 1);
 }
@@ -62,7 +62,7 @@
             @apply btn-icon-filled shadow-md;
         }
 
-        @variant [:active, :focus, :focus-visible, :focus-within] {
+        @variant [:active, :focus-visible] {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
             @apply btn-icon-filled;
         }
@@ -89,7 +89,7 @@
             @apply btn-icon-filled shadow-md;
         }
 
-        @variant [:active, :focus, :focus-visible, :focus-within] {
+        @variant [:active, :focus-visible] {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
             @apply btn-icon-filled;
         }
@@ -116,7 +116,7 @@
             @apply btn-icon-filled;
         }
 
-        @variant [:active, :focus, :focus-visible, :focus-within] {
+        @variant [:active, :focus-visible] {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
             @apply btn-icon-filled;
         }
@@ -143,7 +143,7 @@
             @apply btn-icon-filled;
         }
 
-        @variant [:active, :focus, :focus-visible, :focus-within] {
+        @variant [:active, :focus-visible] {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
             @apply btn-icon-filled;
         }
@@ -203,7 +203,7 @@
             @apply btn-icon-filled;
         }
 
-        @variant [:active, :focus, :focus-visible, :focus-within] {
+        @variant [:active, :focus-visible] {
             --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
             @apply btn-icon-filled;
         }

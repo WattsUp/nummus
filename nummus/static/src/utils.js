@@ -324,6 +324,13 @@ function nummusResponseError(evt) {
     e.querySelector('span').innerHTML = evt.detail.error;
 }
 
+/**
+ * On changes, clear all page history and force a cache miss
+ */
+function nummusClearHistory() {
+    localStorage.removeItem('htmx-history-cache');
+}
+
 /*
  * DELETE is supposed to use request parameters but form is way better
  * htmx 2.x followed the spec properly, revert

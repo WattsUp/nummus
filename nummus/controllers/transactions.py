@@ -252,7 +252,7 @@ def table_unfiltered_query(
         transaction_ids = {row[0] for row in query.all()}
     securities_traded_id = (
         s.query(TransactionCategory.id_)
-        .where(TransactionCategory.name == "Securities Traded")
+        .where(TransactionCategory.name == "securities traded")
         .one()[0]
     )
 
@@ -615,7 +615,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             msg = "Edit overlay did not return a string"
             raise TypeError(msg)
         # Adding transactions update account cause the balance changes
-        return common.overlay_swap(edit_overlay, event="update-account")
+        return common.dialog_swap(edit_overlay, event="update-account")
 
 
 def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
@@ -696,7 +696,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             ).delete()
             s.delete(parent)
             # Adding transactions update account cause the balance changes
-            return common.overlay_swap(event="update-account")
+            return common.dialog_swap(event="update-account")
 
         try:
             with s.begin_nested():
@@ -759,7 +759,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(event="update-transaction")
+        return common.dialog_swap(event="update-transaction")
 
 
 def split(uri: str) -> str:

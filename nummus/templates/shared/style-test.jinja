@@ -442,6 +442,34 @@
         <switch></switch>
         {# djlint: on #}
     </label>
+    <label class="toggle-visibility">
+        <input type="checkbox" autocomplete="off">
+        <span>xxxxx hidden</span>
+        <span>12347 not hidden</span>
+        <icon>visibility</icon>
+        <icon>visibility_off</icon>
+    </label>
+    <label class="toggle-visibility">
+        <input type="checkbox" autocomplete="off" checked>
+        <span>xxxxx hidden</span>
+        <span>12347 not hidden</span>
+        <icon>visibility</icon>
+        <icon>visibility_off</icon>
+    </label>
+    <label class="toggle-visibility">
+        <input type="checkbox" autocomplete="off" disabled>
+        <span>xxxxx hidden</span>
+        <span>12347 not hidden</span>
+        <icon>visibility</icon>
+        <icon>visibility_off</icon>
+    </label>
+    <label class="toggle-visibility">
+        <input type="checkbox" autocomplete="off" checked disabled>
+        <span>xxxxx hidden</span>
+        <span>12347 not hidden</span>
+        <icon>visibility</icon>
+        <icon>visibility_off</icon>
+    </label>
 </div>
 <h2 class="text-2xl font-serif text-primary">Snackbar</h2>
 <button class="btn-tonal" onclick="snackbar.show('All changes saved')">

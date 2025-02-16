@@ -1,19 +1,19 @@
 <a class="btn-text block relative group not-disabled:text-on-surface px-6"
-   href="{{ url_for('accounts.page', uri=account.uri) }}"
-   hx-get="{{ url_for('accounts.page', uri=account.uri) }}"
+   href="{{ url_for('accounts.page', uri=acct.uri) }}"
+   hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
    hx-disabled-elt="this">
     <div class="flex justify-between">
-        <b>{{ account.name }}</b>
-        <span>{{ account.value | money }}</span>
+        <b>{{ acct.name }}</b>
+        <span>{{ acct.value | money }}</span>
     </div>
     <div class="flex justify-between text-sm group-not-disabled:text-on-surface-variant">
-        {% if account.closed %}
-            <span class="not-disabled:text-error">Account was closed {{ account.updated_days_ago | days }} ago</span>
-        {% elif account.updated_days_ago == 0 %}
-            <span>{{ account.n_today }} transactions today</span>
-            <span>{{ account.change_today | money }}</span>
+        {% if acct.closed %}
+            <span class="not-disabled:text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
+        {% elif acct.updated_days_ago == 0 %}
+            <span>{{ acct.n_today }} transactions today</span>
+            <span>{{ acct.change_today | money }}</span>
         {% else %}
-            Updated {{ account.updated_days_ago | days }} ago
+            Updated {{ acct.updated_days_ago | days }} ago
         {% endif %}
     </div>
     <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>

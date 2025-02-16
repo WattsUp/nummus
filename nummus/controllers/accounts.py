@@ -30,6 +30,58 @@ if TYPE_CHECKING:
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
+def page_all() -> flask.Response:
+    """GET /accounts.
+
+    Returns:
+        string HTML response
+    """
+    include_closed = "include-closed" in flask.request.args
+    return common.page(
+        "accounts/page-all.jinja",
+        "Accounts",
+        ctx=ctx_accounts(include_closed=include_closed),
+    )
+
+
+def page(uri: str) -> flask.Response:
+    """GET /accounts/<uri>.
+
+    Args:
+        uri: Account URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        acct = web_utils.find(s, Account, uri)
+        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
+        title = f"Account {acct.name}," + title.removeprefix("Transactions")
+        return common.page(
+            "accounts/page.jinja",
+            title=title,
+            acct=ctx_account(acct),
+            txn_table=txn_table,
+            assets=ctx_assets(s, acct),
+            endpoint="accounts.txns",
+            endpoint_new="accounts.new_txn",
+            url_args={"uri": uri},
+            no_account_column=True,
+        )
+
+
+def new() -> str:
+    """GET & POST /h/accounts/new.
+
+    Returns:
+        HTML response
+    """
+    raise NotImplementedError
+
+
 def account(uri: str) -> str | flask.Response:
     """GET & POST /h/accounts/a/<uri>.
 
@@ -53,7 +105,7 @@ def account(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             return flask.render_template(
                 "accounts/edit.jinja",
-                account=ctx_account(acct, v),
+                acct=ctx_account(acct, v),
             )
 
         form = flask.request.form
@@ -67,19 +119,18 @@ def account(uri: str) -> str | flask.Response:
 
         if category is None:
             return common.error("Account category must not be None")
+        if closed and v != 0:
+            msg = "Cannot close Account with non-zero balance"
+            return common.error(msg)
 
         try:
-            if closed and v != 0:
-                msg = "Cannot close Account with non-zero balance"
-                return common.error(msg)
-
-            # Make the changes
-            acct.institution = institution
-            acct.name = name
-            acct.number = number
-            acct.category = category
-            acct.closed = closed
-            acct.budgeted = budgeted
+            with s.begin_nested():
+                acct.institution = institution
+                acct.name = name
+                acct.number = number
+                acct.category = category
+                acct.closed = closed
+                acct.budgeted = budgeted
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -87,6 +138,50 @@ def account(uri: str) -> str | flask.Response:
             event="update-account",
             snackbar="All changes saved",
         )
+
+
+def validation(uri: str) -> str:
+    """GET /h/accounts/a/<uri>/validation.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    # dict{key: (required, prop if unique required)}
+    properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
+        "name": (True, Account.name),
+        "institution": (True, None),
+        "number": (False, Account.number),
+    }
+
+    args = flask.request.args
+    acct_id = Account.uri_to_id(uri)
+    for key, (required, prop) in properties.items():
+        if key not in args:
+            continue
+        value = args[key].strip()
+        if value == "":
+            return "Required" if required else ""
+        if len(value) < utils.MIN_STR_LEN:
+            return f"At least {utils.MIN_STR_LEN} characters required"
+        if prop is not None:
+            with p.begin_session() as s:
+                n = (
+                    s.query(Account)
+                    .where(
+                        prop == value,
+                        Account.id_ != acct_id,
+                    )
+                    .count()
+                )
+                if n != 0:
+                    return "Must be unique"
+        return ""
+
+    msg = f"Account validation for {args} not implemented"
+    raise NotImplementedError(msg)
 
 
 def ctx_account(
@@ -122,80 +217,6 @@ def ctx_account(
         "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
         "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),
-    }
-
-
-def ctx_chart(acct: Account) -> dict[str, object]:
-    """Get the context to build the account chart.
-
-    Args:
-        acct: Account to generate context for
-
-    Returns:
-        Dictionary HTML context
-    """
-    args = flask.request.args
-
-    period = args.get("period", transactions.DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-    if start is None:
-        opened_on_ord = acct.opened_on_ord
-        start = (
-            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
-        )
-
-    PREVIOUS_PERIOD["start"] = start
-    PREVIOUS_PERIOD["end"] = end
-
-    start_ord = start.toordinal()
-    end_ord = end.toordinal()
-    n = end_ord - start_ord + 1
-
-    values, profit, _ = acct.get_value(start_ord, end_ord)
-
-    labels: list[str] = []
-    values_min: list[Decimal] | None = None
-    values_max: list[Decimal] | None = None
-    profit_min: list[Decimal] | None = None
-    profit_max: list[Decimal] | None = None
-    date_mode: str | None = None
-
-    if n > web_utils.LIMIT_DOWNSAMPLE:
-        # Downsample to min/avg/max by month
-        labels, values_min, values, values_max = utils.downsample(
-            start_ord,
-            end_ord,
-            values,
-        )
-        _, profit_min, profit, profit_max = utils.downsample(
-            start_ord,
-            end_ord,
-            profit,
-        )
-        date_mode = "years"
-    else:
-        labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
-        if n > web_utils.LIMIT_TICKS_MONTHS:
-            date_mode = "months"
-        elif n > web_utils.LIMIT_TICKS_WEEKS:
-            date_mode = "weeks"
-        else:
-            date_mode = "days"
-
-    return {
-        "start": start,
-        "end": end,
-        "period": period,
-        "data": {
-            "labels": labels,
-            "date_mode": date_mode,
-            "values": values,
-            "min": values_min,
-            "max": values_max,
-            "profit": profit,
-            "profit_min": profit_min,
-            "profit_max": profit_max,
-        },
     }
 
 
@@ -475,50 +496,6 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     }
 
 
-def page_all() -> flask.Response:
-    """GET /accounts.
-
-    Returns:
-        string HTML response
-    """
-    include_closed = "include-closed" in flask.request.args
-    return common.page(
-        "accounts/page-all.jinja",
-        "Accounts",
-        ctx=ctx_accounts(include_closed=include_closed),
-    )
-
-
-def page(uri: str) -> flask.Response:
-    """GET /accounts/<uri>.
-
-    Args:
-        uri: Account URI
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
-        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
-        title = f"Account {acct.name}," + title.removeprefix("Transactions")
-        return common.page(
-            "accounts/index-content.jinja",
-            title=title,
-            acct=ctx_account(acct),
-            chart=ctx_chart(acct),
-            txn_table=txn_table,
-            assets=ctx_assets(s, acct),
-            endpoint="accounts.txns",
-            endpoint_new="accounts.new_txn",
-            url_args={"uri": uri},
-            no_account_column=True,
-        )
-
-
 def txns(uri: str) -> flask.Response:
     """GET /h/accounts/a/<uri>/txns.
 
@@ -563,12 +540,6 @@ def txns(uri: str) -> flask.Response:
             # If same period and not being updated via update_transaction:
             # don't update the chart
             # aka if just the table changed pages or column filters
-            html += flask.render_template(
-                "accounts/chart-data.jinja",
-                oob=True,
-                chart=ctx_chart(acct),
-                url_args={"uri": uri},
-            )
             ctx = ctx_assets(s, acct)
             if ctx:
                 html += flask.render_template(
@@ -654,21 +625,13 @@ def new_txn(uri: str) -> str | flask.Response:
     return transactions.new(uri)
 
 
-def new() -> str:
-    """GET & POST /h/accounts/new.
-
-    Returns:
-        HTML response
-    """
-    raise NotImplementedError
-
-
 ROUTES: Routes = {
     "/accounts": (page_all, ["GET"]),
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/new": (new, ["GET", "POST"]),
+    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
+    "/h/accounts/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
-    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
     "/h/accounts/a/<path:uri>/new-txn": (new_txn, ["GET", "POST"]),
 }

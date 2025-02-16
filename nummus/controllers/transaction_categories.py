@@ -33,45 +33,6 @@ def page() -> flask.Response:
     )
 
 
-def ctx_categories() -> dict[str, object]:
-    """Get the context required to build the categories table.
-
-    Returns:
-        List of HTML context
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    class CategoryContext(TypedDict):
-        """Type definition for category context."""
-
-        uri: str | None
-        name: str
-
-    with p.begin_session() as s:
-        groups: dict[TransactionCategoryGroup, list[CategoryContext]] = {
-            TransactionCategoryGroup.INCOME: [],
-            TransactionCategoryGroup.EXPENSE: [],
-            TransactionCategoryGroup.TRANSFER: [],
-            TransactionCategoryGroup.OTHER: [],
-        }
-        query = s.query(TransactionCategory).order_by(TransactionCategory.name)
-        for cat in query.yield_per(YIELD_PER):
-            cat_d: CategoryContext = {
-                "uri": cat.uri,
-                "name": cat.emoji_name,
-            }
-            if (
-                cat.group != TransactionCategoryGroup.OTHER
-                or cat.name == "uncategorized"
-            ):
-                groups[cat.group].append(cat_d)
-
-    return {
-        "groups": groups,
-    }
-
-
 def new() -> str | flask.Response:
     """GET & POST /h/txn-categories/new.
 
@@ -248,6 +209,45 @@ def validation() -> str:
     else:
         raise NotImplementedError
     return ""
+
+
+def ctx_categories() -> dict[str, object]:
+    """Get the context required to build the categories table.
+
+    Returns:
+        List of HTML context
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    class CategoryContext(TypedDict):
+        """Type definition for category context."""
+
+        uri: str | None
+        name: str
+
+    with p.begin_session() as s:
+        groups: dict[TransactionCategoryGroup, list[CategoryContext]] = {
+            TransactionCategoryGroup.INCOME: [],
+            TransactionCategoryGroup.EXPENSE: [],
+            TransactionCategoryGroup.TRANSFER: [],
+            TransactionCategoryGroup.OTHER: [],
+        }
+        query = s.query(TransactionCategory).order_by(TransactionCategory.name)
+        for cat in query.yield_per(YIELD_PER):
+            cat_d: CategoryContext = {
+                "uri": cat.uri,
+                "name": cat.emoji_name,
+            }
+            if (
+                cat.group != TransactionCategoryGroup.OTHER
+                or cat.name == "uncategorized"
+            ):
+                groups[cat.group].append(cat_d)
+
+    return {
+        "groups": groups,
+    }
 
 
 ROUTES: Routes = {

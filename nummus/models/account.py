@@ -57,6 +57,7 @@ class Account(Base):
 
     __table_id__ = 0x00000000
 
+    # TODO (WattsUp): Add unique constraints: name & number
     name: ORMStr
     number: ORMStrOpt
     institution: ORMStr

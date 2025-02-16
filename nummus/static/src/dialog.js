@@ -52,7 +52,8 @@ const dialog = {
         const saveBtn = htmx.find('#dialog-save');
         if (!saveBtn) return;
         const allFilled = dialog.checkRequired();
-        const anyInvalid = htmx.find('#dialog input~error:not(:empty)') != null;
+        const anyInvalid =
+            htmx.find('#dialog input~div>error:not(:empty)') != null;
         saveBtn.disabled = !allFilled || anyInvalid;
     },
     /**

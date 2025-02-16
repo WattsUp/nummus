@@ -77,7 +77,7 @@
                 @apply border-on-surface;
             }
 
-            @variant [:active, :focus, :focus-visible, :focus-within] {
+            @variant [:active, :focus-visible] {
                 @apply input-outlined-translate;
                 --input-label-color: var(--color-on-surface-var);
             }
@@ -263,4 +263,78 @@
             }
         }
     }
+}
+
+@utility toggle-visibility {
+    @apply flex items-center;
+
+
+    --toggle-base-color: var(--color-primary);
+    --toggle-icon-color: var(--color-primary);
+    --toggle-state-color: transparent;
+
+    --toggle-bg-color: transparent;
+
+    &>icon {
+        @apply ml-2 p-1 transition-colors;
+        border-radius: 100em;
+        background-color: var(--toggle-bg-color);
+        color: var(--toggle-icon-color);
+    }
+
+    &>span {
+        @apply rounded-md;
+    }
+
+    &>input {
+        @apply opacity-0 w-0 h-0;
+
+        @variant disabled {
+
+            &~span,
+            &~icon {
+                @apply text-on-surface/38;
+            }
+
+        }
+
+        @variant not-disabled {
+            @variant hover {
+                &~icon {
+                    --toggle-bg-color: color-mix(in oklab, var(--toggle-base-color) 8%, var(--toggle-state-color));
+                    font-variation-settings: 'FILL' 1;
+                }
+            }
+
+            @variant [:active, :focus-visible] {
+                &~icon {
+                    --toggle-bg-color: color-mix(in oklab, var(--toggle-base-color) 10%, var(--toggle-state-color));
+                    font-variation-settings: 'FILL' 1;
+                }
+            }
+
+        }
+
+        @variant not-checked {
+
+            &~span:nth-of-type(2),
+            &~icon:nth-of-type(2) {
+                @apply hidden;
+            }
+        }
+
+        @variant checked {
+
+            &~span:nth-of-type(1),
+            &~icon:nth-of-type(1) {
+                @apply hidden;
+            }
+
+        }
+    }
+
+    &:has(input:focus-visible)>span {
+        @apply outline-3 outline-secondary;
+    }
+
 }

@@ -22,6 +22,31 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
+def page() -> flask.Response:
+    """GET /emergency-fund.
+
+    Returns:
+        string HTML response
+    """
+    return common.page(
+        "emergency-fund/page.jinja",
+        "Emergency Fund",
+        ctx=ctx_page(),
+    )
+
+
+def dashboard() -> str:
+    """GET /h/dashboard/emergency-fund.
+
+    Returns:
+        string HTML response
+    """
+    return flask.render_template(
+        "emergency-fund/dashboard.jinja",
+        ctx=ctx_page(),
+    )
+
+
 def ctx_page() -> dict[str, object]:
     """Get the context to build the emergency fund page.
 
@@ -213,31 +238,6 @@ def ctx_page() -> dict[str, object]:
         "delta_upper": delta_upper,
         "categories": category_infos,
     }
-
-
-def page() -> flask.Response:
-    """GET /emergency-fund.
-
-    Returns:
-        string HTML response
-    """
-    return common.page(
-        "emergency-fund/page.jinja",
-        "Emergency Fund",
-        ctx=ctx_page(),
-    )
-
-
-def dashboard() -> str:
-    """GET /h/dashboard/emergency-fund.
-
-    Returns:
-        string HTML response
-    """
-    return flask.render_template(
-        "emergency-fund/dashboard.jinja",
-        ctx=ctx_page(),
-    )
 
 
 ROUTES: Routes = {
