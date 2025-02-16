@@ -287,17 +287,17 @@
             <div>Text</div>
         </div>
         <div>
-            {# djlint: off #}
             <error></error>
-            {# djlint: on #}
             <span>Supporting text</span>
         </div>
+        <icon>search</icon>
     </label>
     <label class="input-outlined">
         <input enterkeyhint="next" placeholder="" autocomplete="off" value="Banana">
         <div>
             <div>Text with value</div>
         </div>
+        <icon>search</icon>
     </label>
     <label class="input-outlined">
         <input enterkeyhint="next"
@@ -309,11 +309,10 @@
             <div>Text disabled</div>
         </div>
         <div>
-            {# djlint: off #}
             <error></error>
-            {# djlint: on #}
             <span>Supporting text</span>
         </div>
+        <icon>search</icon>
     </label>
     <label class="input-outlined col-start-1">
         <input enterkeyhint="next" placeholder="" autocomplete="off">
@@ -324,6 +323,7 @@
             <error>Inline validation error</error>
             <span>Supporting text</span>
         </div>
+        <icon>search</icon>
     </label>
     <label class="input-outlined">
         <input enterkeyhint="next" placeholder="" autocomplete="off" value="Banana">
@@ -345,9 +345,7 @@
             <div>Select</div>
         </div>
         <div>
-            {# djlint: off #}
             <error></error>
-            {# djlint: on #}
             <span>Supporting text</span>
         </div>
     </label>
@@ -371,9 +369,7 @@
             <div>Select disabled</div>
         </div>
         <div>
-            {# djlint: off #}
             <error></error>
-            {# djlint: on #}
             <span>Supporting text</span>
         </div>
     </label>
@@ -408,9 +404,7 @@
     <label class="toggle col-start-1">
         <input type="checkbox" autocomplete="off">
         <div>Toggle switch off</div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
     <label class="toggle">
         <input type="checkbox" autocomplete="off" checked>
@@ -418,9 +412,7 @@
             <span>Toggle switch on</span>
             <span>Supporting text</span>
         </div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
     <label class="toggle">
         <input type="checkbox" autocomplete="off" disabled>
@@ -428,9 +420,7 @@
             <span>Toggle switch off</span>
             <span>Disabled</span>
         </div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
     <label class="toggle">
         <input type="checkbox" autocomplete="off" checked disabled>
@@ -438,37 +428,67 @@
             <span>Toggle switch on</span>
             <span>Disabled</span>
         </div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
-    <label class="toggle-visibility">
+    <label class="checkbox">
         <input type="checkbox" autocomplete="off">
-        <span>xxxxx hidden</span>
-        <span>12347 not hidden</span>
+        <div>
+            <span>xxxxx hidden</span>
+            <span>12347 not hidden</span>
+        </div>
         <icon>visibility</icon>
         <icon>visibility_off</icon>
     </label>
-    <label class="toggle-visibility">
+    <label class="checkbox">
         <input type="checkbox" autocomplete="off" checked>
-        <span>xxxxx hidden</span>
-        <span>12347 not hidden</span>
+        <div>
+            <span>xxxxx hidden</span>
+            <span>12347 not hidden</span>
+        </div>
         <icon>visibility</icon>
         <icon>visibility_off</icon>
     </label>
-    <label class="toggle-visibility">
+    <label class="checkbox">
         <input type="checkbox" autocomplete="off" disabled>
-        <span>xxxxx hidden</span>
-        <span>12347 not hidden</span>
+        <div>
+            <span>xxxxx hidden</span>
+            <span>12347 not hidden</span>
+        </div>
         <icon>visibility</icon>
         <icon>visibility_off</icon>
     </label>
-    <label class="toggle-visibility">
+    <label class="checkbox">
         <input type="checkbox" autocomplete="off" checked disabled>
-        <span>xxxxx hidden</span>
-        <span>12347 not hidden</span>
+        <div>
+            <span>xxxxx hidden</span>
+            <span>12347 not hidden</span>
+        </div>
         <icon>visibility</icon>
         <icon>visibility_off</icon>
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" autocomplete="off">
+        <div>Plain checkbox</div>
+        <icon>check_box_outline_blank</icon>
+        <icon>check_box</icon>
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" autocomplete="off" checked>
+        <div>Plain checkbox</div>
+        <icon>check_box_outline_blank</icon>
+        <icon>check_box</icon>
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" autocomplete="off" disabled>
+        <div>Plain checkbox</div>
+        <icon>check_box_outline_blank</icon>
+        <icon>check_box</icon>
+    </label>
+    <label class="checkbox">
+        <input type="checkbox" autocomplete="off" checked disabled>
+        <div>Plain checkbox</div>
+        <icon>check_box_outline_blank</icon>
+        <icon>check_box</icon>
     </label>
 </div>
 <h2 class="text-2xl font-serif text-primary">Snackbar</h2>

@@ -13,10 +13,12 @@
 <h2 class="text-sm text-on-surface-variant flex flex-wrap items-center gap-2">
     <span>@{{ acct.institution }}</span>
     {% if acct.number %}
-        <label class="toggle-visibility">
+        <label class="checkbox">
             <input type="checkbox" autocomplete="off">
-            <span>#xxxxxxx{{ acct.number[-4:] }}</span>
-            <span>#{{ acct.number }}</span>
+            <div>
+                <span>#xxxxxxx{{ acct.number[-4:] }}</span>
+                <span>#{{ acct.number }}</span>
+            </div>
             <icon>visibility</icon>
             <icon>visibility_off</icon>
         </label>
@@ -37,4 +39,16 @@
     <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
 </div>
 {# TODO (WattsUp): Add asset table #}
-{# TODO (WattsUp): Add transaction table #}
+<div class="flex justify-between items-center">
+    <h1 class="text-2xl font-serif text-primary">Transactions</h1>
+    <button class="btn-tonal"
+            hx-target="#dialog"
+            hx-disabled-elt="this"
+            hx-get="{{ url_for('transactions.new', account=acct.uri) }}"
+            disabled>
+        <icon>note_stack_add</icon>New
+    </button>
+</div>
+{% with ctx= txn_table %}
+    {% include "/transactions/table.jinja" %}
+{% endwith %}

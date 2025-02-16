@@ -23,9 +23,7 @@
             <div>Name</div>
         </div>
         <div>
-            {# djlint: off #}
             <error></error>
-            {# djlint: on #}
             {% if category.locked %}<span>May only add/remove emojis</span>{% endif %}
         </div>
     </label>
@@ -59,9 +57,7 @@
             <span>Include in profit &amp; loss</span>
             <span>Such as dividends &amp; fees</span>
         </div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
     <label class="toggle col-span-2">
         <input type="checkbox"
@@ -73,9 +69,7 @@
             <span>Essential spending</span>
             <span>For emergency fund estimation</span>
         </div>
-        {# djlint: off #}
         <switch></switch>
-        {# djlint: on #}
     </label>
 </form>
 {% if category.uri and not category.locked %}

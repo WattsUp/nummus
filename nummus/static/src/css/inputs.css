@@ -21,10 +21,10 @@
 @utility input-outlined-translate {
 
     &~div:first-of-type {
-        @apply before:scale-x-100;
+        @apply translate-x-2 delay-75 before:scale-x-100 before:delay-0;
 
         &>div {
-            @apply text-sm -translate-y-1/2;
+            @apply text-sm -translate-y-1/2 delay-0;
         }
     }
 }
@@ -35,23 +35,38 @@
     --input-bg-color: var(--color-surface);
     --input-label-color: var(--color-on-surface-variant);
 
+    --input-pl: calc(var(--spacing) * 2);
+
+    &:has(icon) {
+        --input-pl: calc(var(--spacing) * 8);
+    }
+
+    &>icon {
+        @apply absolute left-1 top-1 border border-transparent;
+        @apply text-on-surface-variant;
+    }
+
     &>div {
         color: var(--input-label-color);
     }
 
     /* label text */
     &>div:first-of-type {
-        @apply absolute left-2 top-0 border border-transparent;
+        @apply absolute left-0 top-0 border border-transparent;
+        @apply transition-transform;
+
+        translate: var(--input-pl) 0;
 
         &::before {
-            @apply block w-full h-3 absolute -top-1.5 transition-transform scale-x-0;
+            @apply block w-full h-3 absolute -top-1.5;
+            @apply transition-transform scale-x-0 delay-75;
 
             content: "";
             background-color: var(--input-bg-color);
         }
 
         &>div {
-            @apply py-1 px-1 transition;
+            @apply py-1 px-1 transition delay-75;
 
             transition-property: transform, translate, font-size;
         }
@@ -67,6 +82,8 @@
     &>select {
         @apply w-full;
 
+        padding-left: var(--input-pl);
+
         @variant focus-visible {
             @apply outline-2 outline-primary;
         }
@@ -77,7 +94,7 @@
                 @apply border-on-surface;
             }
 
-            @variant [:active, :focus-visible] {
+            @variant [:active, :focus-visible, :focus-within] {
                 @apply input-outlined-translate;
                 --input-label-color: var(--color-on-surface-var);
             }
@@ -90,6 +107,10 @@
 
             &~div {
                 --input-label-color: color-mix(in oklab, var(--color-on-surface) 38%, transparent);
+            }
+
+            &~icon {
+                color: color-mix(in oklab, var(--color-on-surface) 38%, transparent);
             }
         }
 
@@ -265,7 +286,7 @@
     }
 }
 
-@utility toggle-visibility {
+@utility checkbox {
     @apply flex items-center;
 
 
@@ -280,9 +301,13 @@
         border-radius: 100em;
         background-color: var(--toggle-bg-color);
         color: var(--toggle-icon-color);
+
+        @variant nth-of-type-2 {
+            font-variation-settings: 'FILL' 1;
+        }
     }
 
-    &>span {
+    &>div {
         @apply rounded-md;
     }
 
@@ -291,7 +316,7 @@
 
         @variant disabled {
 
-            &~span,
+            &~div,
             &~icon {
                 @apply text-on-surface/38;
             }
@@ -317,7 +342,7 @@
 
         @variant not-checked {
 
-            &~span:nth-of-type(2),
+            &~div>span:nth-of-type(2),
             &~icon:nth-of-type(2) {
                 @apply hidden;
             }
@@ -325,7 +350,7 @@
 
         @variant checked {
 
-            &~span:nth-of-type(1),
+            &~div>span:nth-of-type(1),
             &~icon:nth-of-type(1) {
                 @apply hidden;
             }
@@ -333,7 +358,7 @@
         }
     }
 
-    &:has(input:focus-visible)>span {
+    &:has(input:focus-visible)>div {
         @apply outline-3 outline-secondary;
     }
 

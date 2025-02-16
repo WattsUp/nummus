@@ -43,7 +43,7 @@ def ctx_base() -> dict[str, object]:
                 "Budget": None,  # wallet
                 # TODO (WattsUp): Change to receipt_long and add_receipt_long if
                 # request gets fulfilled
-                "Transactions": None,  # note_stack
+                "Transactions": ("note_stack", "transactions.page_all", LinkType.PAGE),
                 "Accounts": ("account_balance", "accounts.page_all", LinkType.PAGE),
                 "Insights": None,  # search_insights
             },

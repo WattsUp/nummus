@@ -1,9 +1,61 @@
-@layer components {
-    .txn-filter>.txn-filter-dropdown {
-        @apply absolute left-0 top-8 bg-white border border-white drop-shadow-md font-normal w-64 hidden;
+@utility txn-header {
+    @apply sticky top-10 md:top-0 z-10;
+    @apply font-bold;
+    @apply bg-surface;
+
+    &>div {
+        @apply px-2 py-1 rounded-md;
+        @apply bg-primary-container text-on-primary-container;
+    }
+}
+
+@utility txn {
+    @apply my-1 relative;
+
+    &>label {
+        @apply absolute top-0 left-0 bottom-0 w-10;
+
+        &>icon {
+            @apply m-0;
+        }
     }
 
-    .txn-filter.open>.txn-filter-dropdown {
-        @apply block;
+    &>div {
+        @apply w-full pl-10;
+        @apply rounded-md;
+        @apply transition-colors;
+
+        @variant hover {
+            background-color: color-mix(in oklab, var(--color-primary) 8%, transparent);
+        }
+
+        @variant active {
+            background-color: color-mix(in oklab, var(--color-primary) 10%, transparent);
+        }
+
+        &>div {
+            @apply flex items-center gap-2 h-6;
+
+            @variant first-of-type {
+                @apply font-bold;
+
+                &>div {
+                    @apply last-of-type:shrink-0;
+                }
+            }
+
+            @variant last-of-type {
+                @apply text-on-surface-variant text-sm;
+            }
+
+            &>div {
+                @apply truncate;
+                @apply first-of-type:grow;
+            }
+
+            & icon {
+                @apply block shrink-0 w-6;
+            }
+        }
     }
 }

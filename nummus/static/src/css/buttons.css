@@ -7,7 +7,7 @@
 }
 
 @utility btn {
-    @apply border transition-colors flex gap-1 items-center whitespace-nowrap;
+    @apply border transition flex gap-1 items-center whitespace-nowrap;
     @apply cursor-default;
 
     /* big radius to get pill shape */
@@ -20,6 +20,8 @@
     background-color: var(--btn-bg-color);
 
     color: var(--btn-text-color);
+
+    transition-property: color, background-color, box-shadow;
 
     @variant disabled {
         @apply cursor-auto text-on-surface/38;

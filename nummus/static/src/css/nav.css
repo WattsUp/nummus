@@ -72,7 +72,7 @@
 
         /* Modal nav-drawer */
         @variant max-lg {
-            @apply fixed top-0 z-50 rounded-r-3xl;
+            @apply fixed top-0 z-40 rounded-r-3xl;
             @apply transition-transform -translate-x-full duration-300;
             @apply bg-surface-container-low;
 
@@ -97,7 +97,7 @@
     }
 
     #nav-bar {
-        @apply nav-section;
+        @apply nav-section z-40;
         @apply w-full fixed bottom-0 pt-2 md:hidden justify-evenly;
         @apply bg-surface-container;
 

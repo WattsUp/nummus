@@ -1,48 +1,39 @@
-{% if include_oob %}
-    {% with oob = True %}
-        {% include "transactions/table-config.jinja" %}
-        {% include "transactions/table-paging.jinja" %}
-        {% include "transactions/table-locked.jinja" %}
-        {% include "transactions/table-linked.jinja" %}
-    {% endwith %}
-    {% if asset_transactions %}
-        {% set columns = ["account", "asset"] %}
-    {% elif no_account_column %}
-        {% set columns = ["payee", "category", "tag"] %}
-    {% else %}
-        {% set columns = ["account", "payee", "category", "tag"] %}
-    {% endif %}
-    {% for name in columns %}
-        <div id="txn-icon-{{ name }}" hx-swap-oob="insideHTML">
-            {% with any_filters = txn_table["any-filters-" + name] %}
-                {% include "transactions/table-options-icon.jinja" %}
-            {% endwith %}
+<div class="flex gap-2 items-start">
+    <label class="input-outlined grow">
+        <input name="q"
+               enterkeyhint="search"
+               placeholder=""
+               value=""
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               disabled
+               autocomplete="off">
+        <div>
+            <div>Search</div>
         </div>
-        <div id="txn-{{ name }}" hx-swap-oob="insideHTML">
-            {% with options = txn_table["options-" + name] %}
-                {% include "transactions/table-options.jinja" %}
-            {% endwith %}
+        <div>
+            <error></error>
         </div>
+        <icon>search</icon>
+    </label>
+    <button class="btn-tonal mt-1.5" disabled>
+        <icon>tune</icon>
+    </button>
+</div>
+<div>
+    {% for date, transactions in ctx.transactions.items() %}
+        <div>
+            <div class="txn-header">
+                <div>{{ date }}</div>
+            </div>
+            {% for txn in transactions[:-1] %}
+                {% include "/transactions/table-row.jinja" %}
+                <hr class="mx-4">
+            {% endfor %}
+        </div>
+        {% with txn = transactions[-1] %}
+            {% include "/transactions/table-row.jinja" %}
+        {% endwith %}
     {% endfor %}
-{% endif %}
-<div id="txn-table"
-     class="w-full flex flex-col grow min-h-80"
-     hx-get="{{ url_for(endpoint, offset=txn_table['offset'], **url_args) }}"
-     hx-trigger="update-transaction from:body, update-account from:body"
-     hx-indicator="unset">
-    {% if txn_table["transactions"] | length == 0 %}
-        <div class="text-center">No matching transactions for given query filters</div>
-    {% endif %}
-    {% for txn in txn_table["transactions"] %}
-        {% include "transactions/table-view.jinja" %}
-    {% endfor %}
-    <div class="grow"></div>
-    <div class="w-full flex justify-between font-bold border-t border-t-grey-200 min-w-[650px]">
-        <div class="p-1">Page Total</div>
-        <div class="p-1">{{ txn_table["page_total"] | money }}</div>
-    </div>
-    <div class="w-full flex justify-between font-bold min-w-[650px]">
-        <div class="p-1">Query Total</div>
-        <div class="p-1">{{ txn_table["query_total"] | money }}</div>
-    </div>
 </div>

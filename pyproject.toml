@@ -141,6 +141,7 @@ exclude_lines = [
 [tool.djlint]
 extension = "jinja"
 profile = "jinja"
+ignore = "H020"
 
 [tool.isort]
 profile = "black"
