@@ -1,3 +1,4 @@
+'use strict';
 const txnCat = {
     /**
      * Update is essential toggle when group changes
@@ -11,6 +12,11 @@ const txnCat = {
         essential.disabled = isIncome;
         essential.checked = !isIncome && essential.checked;
     },
+    /**
+     * On click of delete category, confirm action
+     *
+     * @param {Event} evt Triggering event
+     */
     confirmDelete: function(evt) {
         dialog.confirm(
             'Delete Category',
@@ -20,5 +26,5 @@ const txnCat = {
             },
             'Any transactions assigned to this category will revert to uncategorized.',
         );
-    }
-}
+    },
+};

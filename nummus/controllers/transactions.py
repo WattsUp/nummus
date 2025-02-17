@@ -76,18 +76,34 @@ def page_all() -> flask.Response:
     )
 
 
-def table() -> str:
+def table() -> str | flask.Response:
     """GET /h/transactions/table.
 
     Returns:
         HTML response with url set
     """
+    args = flask.request.args
+    first_page = "page" not in args
     txn_table = ctx_table()
-    return flask.render_template(
+    html = flask.render_template(
         "transactions/table-rows.jinja",
         ctx=txn_table,
         endpoint="transactions.table",
+        include_oob=first_page,
     )
+    if not first_page:
+        # Don't push URL for following pages
+        return html
+    response = flask.make_response(html)
+    response.headers["HX-Push-URL"] = flask.url_for(
+        "transactions.page_all",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        **flask.request.args,
+    )
+    return response
 
 
 def table_options(field: str) -> str:
@@ -672,11 +688,16 @@ def ctx_table(
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
+    today = datetime.date.today()
+    month = utils.start_of_month(today)
+
     with p.begin_session() as s:
         args = flask.request.args
-        # search_str = args.get("search", "").strip()
-        # locked = utils.parse_bool(args.get("locked"))
-        # linked = utils.parse_bool(args.get("linked"))
+        unlinked = "unlinked" in args
+        selected_account = (acct and acct.uri) or args.get("account")
+        selected_category = args.get("category")
+        selected_period = args.get("period")
+
         page_start_str = args.get("page")
         page_start_ord = (
             None
@@ -691,85 +712,94 @@ def ctx_table(
             r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
         }
 
-        query = table_unfiltered_query(s, acct)
+        query = s.query(TransactionSplit).order_by(
+            TransactionSplit.date_ord.desc(),
+            TransactionSplit.account_id,
+            TransactionSplit.payee,
+            TransactionSplit.category_id,
+            TransactionSplit.tag,
+            TransactionSplit.description,
+        )
 
-        # Get options with these filters
-        # options_account = ctx_options(query, "account", accounts)
-        # options_payee = ctx_options(query, "payee")
-        # options_category = ctx_options(query, "category", categories, categories_emoji)
-        # options_tag = ctx_options(query, "tag")
-        # options_asset = ctx_options(
-        #     query,
-        #     "asset",
-        #     {a_id: name for a_id, (name, _) in assets.items()},
-        # )
+        any_filters = False
 
-        # def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
-        #     options_flat = [option["name"] for option in options]
-        #     return [item for item in selected if item in options_flat]
+        # TODO (WattsUp): Update filter options as they are selected
+        start = None
+        end = None
+        if selected_period and selected_period != "all":
+            any_filters = True
+            if selected_period == "custom":
+                start = utils.parse_date(args.get("start"))
+                end = utils.parse_date(args.get("end"))
+            elif "-" in selected_period:
+                start = datetime.date.fromisoformat(selected_period + "-01")
+                end = utils.end_of_month(start)
+            else:
+                year = int(selected_period)
+                start = datetime.date(year, 1, 1)
+                end = datetime.date(year, 12, 31)
 
-        # selected_accounts = merge(options_account, args.getlist("account"))
-        # selected_payees = merge(options_payee, args.getlist("payee"))
-        # selected_categories = merge(options_category, args.getlist("category"))
-        # selected_tags = merge(options_tag, args.getlist("tag"))
-        # selected_assets = merge(options_asset, args.getlist("asset"))
+            if start:
+                query = query.where(
+                    TransactionSplit.date_ord >= start.toordinal(),
+                )
+            if end:
+                query = query.where(
+                    TransactionSplit.date_ord <= end.toordinal(),
+                )
 
-        # any_filters_accounts = len(selected_accounts) > 0
-        # any_filters_payees = len(selected_payees) > 0
-        # any_filters_categories = len(selected_categories) > 0
-        # any_filters_tags = len(selected_tags) > 0
-        # any_filters_assets = len(selected_assets) > 0
+        if selected_account:
+            any_filters |= acct is None
+            query = query.where(
+                TransactionSplit.account_id == Account.uri_to_id(selected_account),
+            )
 
-        # if acct is None and any_filters_accounts:
-        #     ids = [
-        #         acct_id
-        #         for acct_id, name in accounts.items()
-        #         if name in selected_accounts
-        #     ]
-        #     query = query.where(TransactionSplit.account_id.in_(ids))
+        if selected_category:
+            any_filters = True
+            cat_id = TransactionCategory.uri_to_id(selected_category)
+            query = query.where(TransactionSplit.category_id == cat_id)
 
-        # if any_filters_payees:
-        #     try:
-        #         selected_payees.remove("[blank]")
-        #         query = query.where(
-        #             TransactionSplit.payee.in_(selected_payees)
-        #             | TransactionSplit.payee.is_(None),
-        #         )
-        #     except ValueError:
-        #         query = query.where(TransactionSplit.payee.in_(selected_payees))
+        if unlinked:
+            any_filters = True
+            query = query.where(TransactionSplit.linked.is_(False))
 
-        # if any_filters_categories:
-        #     ids = [
-        #         cat_id
-        #         for cat_id, name in categories.items()
-        #         if name in selected_categories
-        #     ]
-        #     query = query.where(TransactionSplit.category_id.in_(ids))
+        last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
+        options_period = [
+            ("All time", "all"),
+            *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+            (str(month.year), str(month.year)),
+            (str(month.year - 1), str(month.year - 1)),
+            ("Custom date range", "custom"),
+        ]
 
-        # if any_filters_tags:
-        #     try:
-        #         selected_tags.remove("[blank]")
-        #     except ValueError:
-        #         query = query.where(TransactionSplit.tag.in_(selected_tags))
-        #     else:
-        #         query = query.where(
-        #             TransactionSplit.tag.in_(selected_tags)
-        #             | TransactionSplit.tag.is_(None),
-        #         )
+        query_options = query.with_entities(TransactionSplit.account_id).distinct()
+        options_account = sorted(
+            [
+                (accounts[acct_id], Account.id_to_uri(acct_id))
+                for acct_id, in query_options.yield_per(YIELD_PER)
+            ],
+            key=lambda item: item[0],
+        )
+        if len(options_account) == 0 and selected_account:
+            acct_id = Account.uri_to_id(selected_account)
+            options_account = [(accounts[acct_id], selected_account)]
 
-        # if any_filters_assets:
-        #     ids = [
-        #         asset_id for asset_id, name in assets.items() if name in selected_assets
-        #     ]
-        #     query = query.where(TransactionSplit.asset_id.in_(ids))
-
-        # if locked is not None:
-        #     query = query.where(TransactionSplit.locked == locked)
-        # if linked is not None:
-        #     query = query.where(TransactionSplit.linked == linked)
-
-        # if search_str != "":
-        #     query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
+        query_options = query.with_entities(TransactionSplit.category_id).distinct()
+        options_category = sorted(
+            [
+                (
+                    utils.strip_emojis(categories_emoji[cat_id]),
+                    TransactionCategory.id_to_uri(cat_id),
+                )
+                for cat_id, in query_options.yield_per(YIELD_PER)
+            ],
+            key=lambda item: item[0],
+        )
+        if len(options_category) == 0 and selected_category:
+            cat_id = TransactionCategory.uri_to_id(selected_category)
+            options_category = [
+                (utils.strip_emojis(categories_emoji[cat_id]), selected_category),
+            ]
 
         query_total = query.with_entities(func.sum(TransactionSplit.amount))
 
@@ -830,11 +860,22 @@ def ctx_table(
             "uri": None if acct is None else acct.uri,
             "transactions": t_splits_ctx,
             "query_total": query_total.scalar() or 0,
+            "no_matches": len(t_splits_ctx) == 0 and page_start_ord is None,
             "next_page": (
                 None
                 if no_more
                 else datetime.date.fromordinal(min(included_date_ords) - 1)
             ),
+            "any_filters": any_filters,
+            "options_period": options_period,
+            "options_account": options_account,
+            "options_category": options_category,
+            "selected_period": selected_period,
+            "selected_account": selected_account,
+            "selected_category": selected_category,
+            "unlinked": unlinked,
+            "start": start,
+            "end": end,
         }
 
 

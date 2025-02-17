@@ -1,0 +1,74 @@
+<form id="txn-filters"
+    {# innerHTML to preserve open state #}
+    hx-swap-oob="{{ 'innerHTML' if oob }}"
+    hx-target="#txn-table"
+    hx-get="{{ url_for('transactions.table') }}">
+    {# TODO (WattsUp): Style #}
+    <label class="input-outlined input-bg-surface-container">
+        <select name="period" autocomplete="off">
+            {% for label, value in ctx.options_period %}
+                <option value="{{ value }}"
+                        {% if value == ctx.selected_period %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div>
+            <div>Date range</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container">
+        <input name="start"
+               type="date"
+               autocomplete="off"
+               value="{{ ctx.start or '' }}">
+        <div>
+            <div>Start date</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container">
+        <input name="end" type="date" autocomplete="off" value="{{ ctx.end or '' }}">
+        <div>
+            <div>End date</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container">
+        <select name="account"
+                autocomplete="off"
+                {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}>
+            <option value=""></option>
+            {% for label, value in ctx.options_account %}
+                <option value="{{ value }}"
+                        {% if value == ctx.selected_account %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div>
+            <div>Account</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container">
+        <select name="category"
+                autocomplete="off"
+                {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}>
+            <option value=""></option>
+            {% for label, value in ctx.options_category %}
+                <option value="{{ value }}"
+                        {% if value == ctx.selected_category %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <div>
+            <div>Category</div>
+        </div>
+    </label>
+    <label class="toggle">
+        <input name="unlinked"
+               type="checkbox"
+               autocomplete="off"
+               {% if ctx.unlinked %}checked{% endif %}>
+        <div>Only unlinked transactions</div>
+        <switch></switch>
+    </label>
+    <button class="btn-filled">Apply filter</button>
+    <button class="btn-text"
+            type="button"
+            hx-include="unset"
+            hx-get="{{ url_for('transactions.table') }}">Clear all filters</button>
+</form>

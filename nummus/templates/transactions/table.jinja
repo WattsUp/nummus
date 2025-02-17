@@ -1,25 +1,5 @@
-<div class="flex gap-2 items-start">
-    <label class="input-outlined grow">
-        <input name="q"
-               enterkeyhint="search"
-               placeholder=""
-               value=""
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               disabled
-               autocomplete="off">
-        <div>
-            <div>Search</div>
-        </div>
-        <div>
-            <error></error>
-        </div>
-        <icon>search</icon>
-    </label>
-    <button class="btn-tonal mt-1.5" disabled>
-        <icon>tune</icon>
-    </button>
-</div>
+{% include "/transactions/table-header.jinja" %}
+{% include "/transactions/table-filters.jinja" %}
+{% include "/transactions/table-total.jinja" %}
 {# Display query total if filtered #}
 <div id="txn-table">{% include "/transactions/table-rows.jinja" %}</div>

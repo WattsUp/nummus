@@ -59,3 +59,13 @@
         }
     }
 }
+
+@layer components {
+    #txn-filters {
+        @apply p-2 mb-2 not-open:hidden;
+        @apply rounded-xl;
+        @apply bg-surface-container;
+
+        &>label {}
+    }
+}

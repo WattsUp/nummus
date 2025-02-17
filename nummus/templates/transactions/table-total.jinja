@@ -1,0 +1,3 @@
+<div id="txn-query-total" class="text-center my-1" hx-swap-oob="{{ oob }}">
+    {% if ctx.any_filters %}Sum of transactions for current query is {{ ctx.query_total | money }}{% endif %}
+</div>
