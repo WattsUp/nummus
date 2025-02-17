@@ -1,0 +1,25 @@
+{% for date, transactions in ctx.transactions.items() %}
+    <div>
+        <div class="txn-header">
+            <div>{{ date }}</div>
+        </div>
+        {% for txn in transactions[:-1] %}
+            {% include "/transactions/table-row.jinja" %}
+            <hr class="mx-4">
+        {% endfor %}
+    </div>
+    {% with txn = transactions[-1] %}
+        {% include "/transactions/table-row.jinja" %}
+    {% endwith %}
+    {% if loop.last %}
+        {% if ctx.next_page %}
+            <div hx-target="#txn-table"
+                 hx-swap="beforeend"
+                 hx-trigger="revealed"
+                 hx-get="{{ url_for(endpoint, page=ctx.next_page) }}"
+                 hx-on::after-request="this.remove()">{% include "/shared/spinner.jinja" %}</div>
+        {% else %}
+            <div class="text-center italic">no more transactions match query</div>
+        {% endif %}
+    {% endif %}
+{% endfor %}

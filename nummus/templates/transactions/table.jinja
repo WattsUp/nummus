@@ -21,19 +21,5 @@
         <icon>tune</icon>
     </button>
 </div>
-<div>
-    {% for date, transactions in ctx.transactions.items() %}
-        <div>
-            <div class="txn-header">
-                <div>{{ date }}</div>
-            </div>
-            {% for txn in transactions[:-1] %}
-                {% include "/transactions/table-row.jinja" %}
-                <hr class="mx-4">
-            {% endfor %}
-        </div>
-        {% with txn = transactions[-1] %}
-            {% include "/transactions/table-row.jinja" %}
-        {% endwith %}
-    {% endfor %}
-</div>
+{# Display query total if filtered #}
+<div id="txn-table">{% include "/transactions/table-rows.jinja" %}</div>

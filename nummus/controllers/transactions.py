@@ -17,11 +17,8 @@ from nummus.controllers import common
 from nummus.models import (
     Account,
     Asset,
-    paginate,
-    search,
     Transaction,
     TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
     YIELD_PER,
 )
@@ -29,8 +26,7 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-
-DEFAULT_PERIOD = "30-days"
+PAGE_LEN = 25
 
 
 class _OptionContex(TypedDict):
@@ -71,42 +67,27 @@ def page_all() -> flask.Response:
     Returns:
         string HTML response
     """
-    txn_table, title = ctx_table()
+    txn_table = ctx_table()
     return common.page(
         "transactions/page-all.jinja",
-        title=title,
+        title="Transactions",
         ctx=txn_table,
         endpoint="transactions.table",
-        endpoint_new="transactions.new",
     )
 
 
-def table() -> flask.Response:
+def table() -> str:
     """GET /h/transactions/table.
 
     Returns:
         HTML response with url set
     """
-    txn_table, title = ctx_table()
-    html_title = f"<title>{title}</title>\n"
-    html = html_title + flask.render_template(
-        "transactions/table.jinja",
-        txn_table=txn_table,
-        include_oob=True,
+    txn_table = ctx_table()
+    return flask.render_template(
+        "transactions/table-rows.jinja",
+        ctx=txn_table,
         endpoint="transactions.table",
-        endpoint_new="transactions.new",
     )
-    response = flask.make_response(html)
-    args = dict(flask.request.args.lists())
-    response.headers["HX-Push-Url"] = flask.url_for(
-        "transactions.page_all",
-        _anchor=None,
-        _method=None,
-        _scheme=None,
-        _external=False,
-        **args,
-    )
-    return response
 
 
 def table_options(field: str) -> str:
@@ -290,7 +271,8 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             splits = parent.splits
 
             ctx_splits: list[_SplitContext] = [
-                ctx_split(t_split, accounts, categories, assets) for t_split in splits
+                ctx_split(t_split, accounts, categories, assets, {parent.id_})
+                for t_split in splits
             ]
 
             query = s.query(TransactionSplit.payee).where(
@@ -536,6 +518,7 @@ def ctx_split(
     accounts: dict[int, str],
     categories: dict[int, str],
     assets: dict[int, tuple[str, str | None]],
+    split_parents: set[int],
 ) -> _SplitContext:
     """Get the context to build the transaction edit dialog.
 
@@ -544,6 +527,7 @@ def ctx_split(
         accounts: Dict {id: account name}
         categories: Dict {id: category name}
         assets: Dict {id: (asset name, ticker)}
+        split_parents: Set {Transaction.id_ that have more than 1 TransactionSplit}
 
     Returns:
         Dictionary HTML context
@@ -570,7 +554,7 @@ def ctx_split(
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
         "asset_quantity": qty,
-        "is_split": False,
+        "is_split": t_split.parent_id in split_parents,
     }
 
 
@@ -650,220 +634,175 @@ def ctx_options(
 def table_unfiltered_query(
     s: orm.Session,
     acct: Account | None = None,
-    default_period: str = DEFAULT_PERIOD,
-    *,
-    cash_flow: bool = False,
-) -> tuple[orm.Query, str, datetime.date | None, datetime.date]:
+) -> orm.Query:
     """Create transactions table query without any column filters.
 
     Args:
         s: SQL session to use
         acct: Account to get transactions for, None will use filter queries
-        default_period: Default period to use if no period given
-        cash_flow: True to only include INCOME and EXPENSE groups
 
     Returns:
-        (SQL query, period string, start date or None, end date)
+        SQL query
     """
-    args = flask.request.args
-
-    period = args.get("period", default_period)
-    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-    if start is None and acct is not None:
-        opened_on_ord = acct.opened_on_ord
-        start = (
-            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
-        )
-    end_ord = end.toordinal()
-
-    transaction_ids = None
-    if cash_flow:
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(TransactionCategory.id_)
-            .where(
-                TransactionCategory.group.in_(
-                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.EXPENSE),
-                ),
-            )
-        )
-        transaction_ids = {row[0] for row in query.all()}
-
-    query = (
-        s.query(TransactionSplit)
-        .where(
-            TransactionSplit.date_ord <= end_ord,
-        )
-        .order_by(
-            TransactionSplit.date_ord.desc(),
-            TransactionSplit.account_id,
-            TransactionSplit.payee,
-            TransactionSplit.category_id,
-            TransactionSplit.tag,
-            TransactionSplit.description,
-        )
+    query = s.query(TransactionSplit).order_by(
+        TransactionSplit.date_ord.desc(),
+        TransactionSplit.account_id,
+        TransactionSplit.payee,
+        TransactionSplit.category_id,
+        TransactionSplit.tag,
+        TransactionSplit.description,
     )
-    if start is not None:
-        start_ord = start.toordinal()
-        query = query.where(TransactionSplit.date_ord >= start_ord)
     if acct is not None:
         query = query.where(TransactionSplit.account_id == acct.id_)
-    if transaction_ids is not None:
-        query = query.where(TransactionSplit.category_id.in_(transaction_ids))
 
-    return query, period, start, end
+    return query
 
 
 def ctx_table(
     acct: Account | None = None,
-    default_period: str = DEFAULT_PERIOD,
-    *,
-    cash_flow: bool = False,
-) -> tuple[dict[str, object], str]:
+) -> dict[str, object]:
     """Get the context to build the transaction table.
 
     Args:
         acct: Account to get transactions for, None will use filter queries
-        default_period: Default period to use if no period given
-        cash_flow: True to only include INCOME and EXPENSE groups
 
     Returns:
-        Dictionary HTML context, title of page
+        Dictionary HTML context
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
         args = flask.request.args
-        search_str = args.get("search", "").strip()
-        locked = utils.parse_bool(args.get("locked"))
-        linked = utils.parse_bool(args.get("linked"))
-        page_len = 25
-        offset = int(args.get("offset", 0))
-        page_total = Decimal(0)
+        # search_str = args.get("search", "").strip()
+        # locked = utils.parse_bool(args.get("locked"))
+        # linked = utils.parse_bool(args.get("linked"))
+        page_start_str = args.get("page")
+        page_start_ord = (
+            None
+            if page_start_str is None
+            else datetime.date.fromisoformat(page_start_str).toordinal()
+        )
 
         accounts = Account.map_name(s)
-        categories = TransactionCategory.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)
-
         query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
         assets: dict[int, tuple[str, str | None]] = {
             r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
         }
 
-        query, period, start, end = table_unfiltered_query(
-            s,
-            acct,
-            default_period,
-            cash_flow=cash_flow,
-        )
+        query = table_unfiltered_query(s, acct)
 
         # Get options with these filters
-        options_account = ctx_options(query, "account", accounts)
-        options_payee = ctx_options(query, "payee")
-        options_category = ctx_options(query, "category", categories, categories_emoji)
-        options_tag = ctx_options(query, "tag")
-        options_asset = ctx_options(
-            query,
-            "asset",
-            {a_id: name for a_id, (name, _) in assets.items()},
-        )
+        # options_account = ctx_options(query, "account", accounts)
+        # options_payee = ctx_options(query, "payee")
+        # options_category = ctx_options(query, "category", categories, categories_emoji)
+        # options_tag = ctx_options(query, "tag")
+        # options_asset = ctx_options(
+        #     query,
+        #     "asset",
+        #     {a_id: name for a_id, (name, _) in assets.items()},
+        # )
 
-        def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
-            options_flat = [option["name"] for option in options]
-            return [item for item in selected if item in options_flat]
+        # def merge(options: list[_OptionContex], selected: list[str]) -> list[str]:
+        #     options_flat = [option["name"] for option in options]
+        #     return [item for item in selected if item in options_flat]
 
-        selected_accounts = merge(options_account, args.getlist("account"))
-        selected_payees = merge(options_payee, args.getlist("payee"))
-        selected_categories = merge(options_category, args.getlist("category"))
-        selected_tags = merge(options_tag, args.getlist("tag"))
-        selected_assets = merge(options_asset, args.getlist("asset"))
+        # selected_accounts = merge(options_account, args.getlist("account"))
+        # selected_payees = merge(options_payee, args.getlist("payee"))
+        # selected_categories = merge(options_category, args.getlist("category"))
+        # selected_tags = merge(options_tag, args.getlist("tag"))
+        # selected_assets = merge(options_asset, args.getlist("asset"))
 
-        any_filters_accounts = len(selected_accounts) > 0
-        any_filters_payees = len(selected_payees) > 0
-        any_filters_categories = len(selected_categories) > 0
-        any_filters_tags = len(selected_tags) > 0
-        any_filters_assets = len(selected_assets) > 0
+        # any_filters_accounts = len(selected_accounts) > 0
+        # any_filters_payees = len(selected_payees) > 0
+        # any_filters_categories = len(selected_categories) > 0
+        # any_filters_tags = len(selected_tags) > 0
+        # any_filters_assets = len(selected_assets) > 0
 
-        if acct is None and any_filters_accounts:
-            ids = [
-                acct_id
-                for acct_id, name in accounts.items()
-                if name in selected_accounts
-            ]
-            query = query.where(TransactionSplit.account_id.in_(ids))
+        # if acct is None and any_filters_accounts:
+        #     ids = [
+        #         acct_id
+        #         for acct_id, name in accounts.items()
+        #         if name in selected_accounts
+        #     ]
+        #     query = query.where(TransactionSplit.account_id.in_(ids))
 
-        if any_filters_payees:
-            try:
-                selected_payees.remove("[blank]")
-                query = query.where(
-                    TransactionSplit.payee.in_(selected_payees)
-                    | TransactionSplit.payee.is_(None),
-                )
-            except ValueError:
-                query = query.where(TransactionSplit.payee.in_(selected_payees))
+        # if any_filters_payees:
+        #     try:
+        #         selected_payees.remove("[blank]")
+        #         query = query.where(
+        #             TransactionSplit.payee.in_(selected_payees)
+        #             | TransactionSplit.payee.is_(None),
+        #         )
+        #     except ValueError:
+        #         query = query.where(TransactionSplit.payee.in_(selected_payees))
 
-        if any_filters_categories:
-            ids = [
-                cat_id
-                for cat_id, name in categories.items()
-                if name in selected_categories
-            ]
-            query = query.where(TransactionSplit.category_id.in_(ids))
+        # if any_filters_categories:
+        #     ids = [
+        #         cat_id
+        #         for cat_id, name in categories.items()
+        #         if name in selected_categories
+        #     ]
+        #     query = query.where(TransactionSplit.category_id.in_(ids))
 
-        if any_filters_tags:
-            try:
-                selected_tags.remove("[blank]")
-            except ValueError:
-                query = query.where(TransactionSplit.tag.in_(selected_tags))
-            else:
-                query = query.where(
-                    TransactionSplit.tag.in_(selected_tags)
-                    | TransactionSplit.tag.is_(None),
-                )
+        # if any_filters_tags:
+        #     try:
+        #         selected_tags.remove("[blank]")
+        #     except ValueError:
+        #         query = query.where(TransactionSplit.tag.in_(selected_tags))
+        #     else:
+        #         query = query.where(
+        #             TransactionSplit.tag.in_(selected_tags)
+        #             | TransactionSplit.tag.is_(None),
+        #         )
 
-        if any_filters_assets:
-            ids = [
-                asset_id for asset_id, name in assets.items() if name in selected_assets
-            ]
-            query = query.where(TransactionSplit.asset_id.in_(ids))
+        # if any_filters_assets:
+        #     ids = [
+        #         asset_id for asset_id, name in assets.items() if name in selected_assets
+        #     ]
+        #     query = query.where(TransactionSplit.asset_id.in_(ids))
 
-        if locked is not None:
-            query = query.where(TransactionSplit.locked == locked)
-        if linked is not None:
-            query = query.where(TransactionSplit.linked == linked)
+        # if locked is not None:
+        #     query = query.where(TransactionSplit.locked == locked)
+        # if linked is not None:
+        #     query = query.where(TransactionSplit.linked == linked)
 
-        if search_str != "":
-            query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
+        # if search_str != "":
+        #     query = search(query, TransactionSplit, search_str)  # type: ignore[attr-defined]
 
-        page, count, offset_next = paginate(query, page_len, offset)  # type: ignore[attr-defined]
+        query_total = query.with_entities(func.sum(TransactionSplit.amount))
 
-        query = query.with_entities(func.sum(TransactionSplit.amount))
-        query_total = query.scalar() or Decimal(0)
-
-        if start is None:
-            query = s.query(func.min(TransactionSplit.date_ord)).where(
-                TransactionSplit.asset_id.is_(None),
+        # Find the fewest dates to include that will make page at least PAGE_LEN long
+        included_date_ords: set[int] = set()
+        query_page_count = query.with_entities(
+            TransactionSplit.date_ord,
+            func.count(),
+        ).group_by(TransactionSplit.date_ord)
+        if page_start_ord:
+            query_page_count = query_page_count.where(
+                TransactionSplit.date_ord <= page_start_ord,
             )
-            start_ord = query.scalar()
-            start = (
-                datetime.date.fromordinal(start_ord)
-                if start_ord
-                else datetime.date(1970, 1, 1)
-            )
+        page_count = 0
+        # Limit to PAGE_LEN since at most there is one txn per day
+        for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(YIELD_PER):
+            included_date_ords.add(date_ord)
+            page_count += count
+            if page_count > PAGE_LEN:
+                break
 
-        transactions: dict[datetime.date, list[_SplitContext]] = defaultdict(list)
-        # TODO (WattsUp): Page by dates
-        # aka have all splits for a date included even if over page limit
+        query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+
+        # Iterate first to get required second queries
+        # 37ms without
+        t_splits: list[TransactionSplit] = []
         parent_ids: set[int] = set()
-        for t_split in page:  # type: ignore[attr-defined]
-            t_split: TransactionSplit
-            t_split_ctx = ctx_split(t_split, accounts, categories_emoji, assets)
-            page_total += t_split.amount
-
-            transactions[t_split_ctx["date"]].append(t_split_ctx)
-
+        for t_split in query.yield_per(YIELD_PER):
+            t_splits.append(t_split)
             parent_ids.add(t_split.parent_id)
+
+        # There are no more if there wasn't enough for a full page
+        no_more = len(t_splits) < PAGE_LEN
 
         query = (
             s.query(Transaction.id_)
@@ -874,70 +813,29 @@ def ctx_table(
             .group_by(Transaction.id_)
             .having(func.count() > 1)
         )
-        has_splits = {Transaction.id_to_uri(r[0]) for r in query.yield_per(YIELD_PER)}
-        for splits in transactions.values():
-            for t_split_ctx in splits:
-                t_split_ctx["is_split"] = t_split_ctx["parent_uri"] in has_splits
+        has_splits = {r[0] for r in query.yield_per(YIELD_PER)}
 
-        offset_last = max(0, int((count - 1) // page_len) * page_len)
-
-        if period == "custom":
-            title = f"{start} to {end}"
-        else:
-            title = period.replace("-", " ").title()
-        # Add filter if used
-        filters = [
-            *selected_accounts,
-            *selected_payees,
-            *selected_categories,
-            *selected_tags,
-        ]
-        if locked is not None:
-            filters.append("Locked" if locked else "Unlocked")
-        if linked is not None:
-            filters.append("Linked" if linked else "Unlinked")
-        if search_str:
-            filters.append(f'"{search_str}"')
-        n_filters = len(filters)
-        if n_filters > 0:
-            n_included = 2
-            title += ", " + ", ".join(filters[:n_included])
-            if n_filters > n_included:
-                title += f", & {n_filters-n_included} Filters"
-
-        title = f"Transactions {title} | nummus"
+        t_splits_ctx: dict[datetime.date, list[_SplitContext]] = defaultdict(list)
+        for t_split in t_splits:
+            t_split_ctx = ctx_split(
+                t_split,
+                accounts,
+                categories_emoji,
+                assets,
+                has_splits,
+            )
+            t_splits_ctx[t_split_ctx["date"]].append(t_split_ctx)
 
         return {
             "uri": None if acct is None else acct.uri,
-            "transactions": transactions,
-            "count": count,
-            "offset": offset,
-            "i_first": 0 if count == 0 else offset + 1,
-            "i_last": min(offset + page_len, count),
-            "page_len": page_len,
-            "page_total": page_total,
-            "query_total": query_total,
-            "offset_first": 0,
-            "offset_prev": max(0, offset - page_len),
-            "offset_next": offset_next or offset_last,
-            "offset_last": offset_last,
-            "start": start,
-            "end": end,
-            "period": period,
-            "search": search_str,
-            "locked": locked,
-            "linked": linked,
-            "options-account": options_account,
-            "options-payee": options_payee,
-            "options-category": options_category,
-            "options-tag": options_tag,
-            "options-asset": options_asset,
-            "any-filters-account": any_filters_accounts,
-            "any-filters-payee": any_filters_payees,
-            "any-filters-category": any_filters_categories,
-            "any-filters-tag": any_filters_tags,
-            "any-filters-asset": any_filters_assets,
-        }, title
+            "transactions": t_splits_ctx,
+            "query_total": query_total.scalar() or 0,
+            "next_page": (
+                None
+                if no_more
+                else datetime.date.fromordinal(min(included_date_ords) - 1)
+            ),
+        }
 
 
 ROUTES: Routes = {
