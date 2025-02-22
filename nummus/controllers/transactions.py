@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -693,6 +692,7 @@ def ctx_table(
 
     with p.begin_session() as s:
         args = flask.request.args
+        search_str = args.get("search")
         unlinked = "unlinked" in args
         selected_account = (acct and acct.uri) or args.get("account")
         selected_category = args.get("category")
@@ -788,43 +788,61 @@ def ctx_table(
         options_category = sorted(
             [
                 (
-                    utils.strip_emojis(categories_emoji[cat_id]),
+                    categories_emoji[cat_id],
                     TransactionCategory.id_to_uri(cat_id),
+                    utils.strip_emojis(categories_emoji[cat_id]),
                 )
                 for cat_id, in query_options.yield_per(YIELD_PER)
             ],
-            key=lambda item: item[0],
+            key=lambda item: item[2],
         )
         if len(options_category) == 0 and selected_category:
             cat_id = TransactionCategory.uri_to_id(selected_category)
             options_category = [
-                (utils.strip_emojis(categories_emoji[cat_id]), selected_category),
+                (categories_emoji[cat_id], selected_category, ""),
             ]
+
+        # Do search
+        matches = TransactionSplit.search(query, search_str) if search_str else None
+        if matches is not None:
+            query = query.where(TransactionSplit.id_.in_(matches))
+            t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
+        else:
+            t_split_order = {}
 
         query_total = query.with_entities(func.sum(TransactionSplit.amount))
 
-        # Find the fewest dates to include that will make page at least PAGE_LEN long
-        included_date_ords: set[int] = set()
-        query_page_count = query.with_entities(
-            TransactionSplit.date_ord,
-            func.count(),
-        ).group_by(TransactionSplit.date_ord)
-        if page_start_ord:
-            query_page_count = query_page_count.where(
-                TransactionSplit.date_ord <= page_start_ord,
-            )
-        page_count = 0
-        # Limit to PAGE_LEN since at most there is one txn per day
-        for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(YIELD_PER):
-            included_date_ords.add(date_ord)
-            page_count += count
-            if page_count > PAGE_LEN:
-                break
+        if matches is not None:
+            query = query.where(TransactionSplit.id_.in_(matches[:PAGE_LEN]))
+            # TODO (WattsUp):  paging
+            next_page = 25
+        else:
+            # Find the fewest dates to include that will make page at least
+            # PAGE_LEN long
+            included_date_ords: set[int] = set()
+            query_page_count = query.with_entities(
+                TransactionSplit.date_ord,
+                func.count(),
+            ).group_by(TransactionSplit.date_ord)
+            if page_start_ord:
+                query_page_count = query_page_count.where(
+                    TransactionSplit.date_ord <= page_start_ord,
+                )
+            page_count = 0
+            # Limit to PAGE_LEN since at most there is one txn per day
+            for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(
+                YIELD_PER,
+            ):
+                included_date_ords.add(date_ord)
+                page_count += count
+                if page_count > PAGE_LEN:
+                    break
 
-        query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+            query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+
+            next_page = datetime.date.fromordinal(min(included_date_ords) - 1)
 
         # Iterate first to get required second queries
-        # 37ms without
         t_splits: list[TransactionSplit] = []
         parent_ids: set[int] = set()
         for t_split in query.yield_per(YIELD_PER):
@@ -845,7 +863,7 @@ def ctx_table(
         )
         has_splits = {r[0] for r in query.yield_per(YIELD_PER)}
 
-        t_splits_ctx: dict[datetime.date, list[_SplitContext]] = defaultdict(list)
+        t_splits_flat: list[tuple[_SplitContext, int]] = []
         for t_split in t_splits:
             t_split_ctx = ctx_split(
                 t_split,
@@ -854,19 +872,36 @@ def ctx_table(
                 assets,
                 has_splits,
             )
-            t_splits_ctx[t_split_ctx["date"]].append(t_split_ctx)
+            t_splits_flat.append(
+                (t_split_ctx, t_split_order.get(t_split.id_, -t_split.date_ord)),
+            )
+
+        # sort by reverse date or search ranking
+        t_splits_flat = sorted(t_splits_flat, key=lambda item: item[1])
+
+        # Split by date boundaries but don't put dates together
+        # since that messes up search ranking
+        last_date: datetime.date | None = None
+        groups: list[tuple[datetime.date, list[_SplitContext]]] = []
+        current_group: list[_SplitContext] = []
+        for t_split_ctx, _ in t_splits_flat:
+            date = t_split_ctx["date"]
+            if last_date and date != last_date:
+                groups.append((last_date, current_group))
+                current_group = []
+            current_group.append(t_split_ctx)
+            last_date = date
+        if last_date and current_group:
+            groups.append((last_date, current_group))
 
         return {
             "uri": None if acct is None else acct.uri,
-            "transactions": t_splits_ctx,
+            "transactions": groups,
             "query_total": query_total.scalar() or 0,
-            "no_matches": len(t_splits_ctx) == 0 and page_start_ord is None,
-            "next_page": (
-                None
-                if no_more
-                else datetime.date.fromordinal(min(included_date_ords) - 1)
-            ),
+            "no_matches": len(t_splits_flat) == 0 and page_start_ord is None,
+            "next_page": None if no_more else next_page,
             "any_filters": any_filters,
+            "search": search_str,
             "options_period": options_period,
             "options_account": options_account,
             "options_category": options_category,

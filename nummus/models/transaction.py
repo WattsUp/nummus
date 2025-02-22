@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import datetime
+import re
+import shlex
+import string
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import sqlalchemy
@@ -23,7 +27,9 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     string_column_args,
+    YIELD_PER,
 )
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -185,6 +191,145 @@ class TransactionSplit(Base):
         super().__setattr__("locked", parent.locked)
         super().__setattr__("linked", parent.linked)
         super().__setattr__("account_id", parent.account_id)
+
+    @classmethod
+    def search(
+        cls,
+        query: orm.Query[TransactionSplit],
+        search_str: str,
+    ) -> list[int] | None:
+        """Search TransactionSplit text fields.
+
+        Args:
+            query: Original query, could be partially filtered
+            search_str: String to search
+
+        Returns:
+            Ordered list of matches, from best to worst
+            or None if search_str is invalid
+        """
+        # Clean a bit
+        for s in string.punctuation:
+            if s not in '"+-':
+                search_str = search_str.replace(s, " ")
+        for s in string.digits:
+            search_str = search_str.replace(s, " ")
+
+        # Replace +- not following a space with a space
+        search_str = re.sub(r"(?<! )[+-]", " ", search_str)
+
+        search_str = search_str.strip().lower()
+
+        if len(search_str) < utils.MIN_STR_LEN:
+            return None
+
+        # If unbalanced quote, remove right most one
+        n = search_str.count('"')
+        if (n % 2) == 1:
+            i = search_str.rfind('"')
+            search_str = search_str[:i] + search_str[i + 1 :]
+
+        # tokenize search_str
+        tokens_must: set[str] = set()
+        tokens_can: set[str] = set()
+        tokens_not: set[str] = set()
+
+        for raw in shlex.split(search_str):
+            if raw[0] == "+":
+                dest = tokens_must
+                token = raw[1:]
+            elif raw[0] == "-":
+                dest = tokens_not
+                token = raw[1:]
+            else:
+                dest = tokens_can
+                token = raw
+
+            token = re.sub(r"  +", " ", token.strip())
+            if token:
+                dest.add(token)
+
+        category_names = TransactionCategory.map_name(query.session)
+
+        query_modified = query.with_entities(
+            TransactionSplit.id_,
+            TransactionSplit.date_ord,
+            TransactionSplit.category_id,
+            TransactionSplit.payee,
+            TransactionSplit.description,
+            TransactionSplit.tag,
+        )
+
+        # Add tokens_must as an OR for each
+        for token in tokens_must:
+            clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                clauses_or.append(TransactionSplit.category_id.in_(categories))
+            clauses_or.append(TransactionSplit.payee.ilike(f"%{token}%"))
+            clauses_or.append(TransactionSplit.description.ilike(f"%{token}%"))
+            clauses_or.append(TransactionSplit.tag.ilike(f"%{token}%"))
+            if clauses_or:
+                query = query.where(sqlalchemy.or_(*clauses_or))
+
+        # Add tokens_not as an NAND for each
+        for token in tokens_not:
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                query = query.where(TransactionSplit.category_id.not_in(categories))
+            query = query.where(
+                TransactionSplit.payee.not_ilike(f"%{token}%"),
+                TransactionSplit.description.not_ilike(f"%{token}%"),
+                TransactionSplit.tag.not_ilike(f"%{token}%"),
+            )
+
+        full_texts: dict[str, list[tuple[int, int]]] = defaultdict(list)
+        for (
+            t_id,
+            date_ord,
+            cat_id,
+            payee,
+            desc,
+            tag,
+        ) in query_modified.yield_per(YIELD_PER):
+            t_id: int
+            date_ord: int
+            cat_id: int
+            payee: str | None
+            desc: str | None
+            tag: str | None
+
+            props = [category_names[cat_id], payee, desc, tag]
+
+            full_text = " ".join(s for s in props if s).lower()
+
+            # Clean a bit
+            for s in string.punctuation:
+                full_text = full_text.replace(s, "")
+            for s in string.digits:
+                full_text = full_text.replace(s, "")
+
+            full_texts[full_text].append((t_id, date_ord))
+
+        # Flatten into list[id, n token matches, date_ord]
+        matches: list[tuple[int, int, int]] = []
+        for full_text, ids in full_texts.items():
+            n = sum(full_text.count(token) for token in tokens_can)
+            if n != 0:
+                for t_id, date_ord in ids:
+                    matches.append((t_id, n, date_ord))
+
+        # Sort by n token matches then date
+        matches = sorted(matches, key=lambda item: (item[1], item[2]), reverse=True)
+        return [item[0] for item in matches]
 
 
 @event.listens_for(TransactionSplit, "before_insert")

@@ -1,21 +1,21 @@
 <div id="txn-header"
      hx-swap-oob="{{ oob }}"
-     class="flex gap-2 items-start">
+     class="flex gap-2 items-start max-w-2xl mx-auto mb-2">
     <label class="input-outlined grow">
-        <input name="q"
+        <input id="txn-search"
+               name="search"
                enterkeyhint="search"
                placeholder=""
-               value=""
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               disabled
-               autocomplete="off">
+               value="{{ (ctx.search or "") | e }}"
+               hx-trigger="keyup[keyCode==13]"
+               hx-include="#txn-filters"
+               hx-target="#txn-table"
+               hx-get="{{ url_for('transactions.table') }}"
+               hx-indicator="#txn-table,#txn-indicator"
+               autocomplete="off"
+               spellcheck="true">
         <div>
             <div>Search</div>
-        </div>
-        <div>
-            <error></error>
         </div>
         <icon>search</icon>
     </label>

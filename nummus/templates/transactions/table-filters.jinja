@@ -1,11 +1,13 @@
 <form id="txn-filters"
+    class="p-2 mb-2 grid gap-2 grid-cols-2 md:grid-cols-3 max-w-2xl mx-auto not-open:hidden rounded-xl bg-surface-container"
     {# innerHTML to preserve open state #}
     hx-swap-oob="{{ 'innerHTML' if oob }}"
+    hx-include="this,#txn-search"
     hx-target="#txn-table"
+    hx-indicator="#txn-table,#txn-indicator"
     hx-get="{{ url_for('transactions.table') }}">
-    {# TODO (WattsUp): Style #}
     <label class="input-outlined input-bg-surface-container">
-        <select name="period" autocomplete="off">
+        <select name="period" autocomplete="off" onchange="txn.changePeriod()">
             {% for label, value in ctx.options_period %}
                 <option value="{{ value }}"
                         {% if value == ctx.selected_period %}selected{% endif %}>{{ label }}</option>
@@ -19,18 +21,23 @@
         <input name="start"
                type="date"
                autocomplete="off"
-               value="{{ ctx.start or '' }}">
+               value="{{ ctx.start or '' }}"
+               {% if ctx.selected_period != "custom" %}disabled{% endif %}>
         <div>
             <div>Start date</div>
         </div>
     </label>
     <label class="input-outlined input-bg-surface-container">
-        <input name="end" type="date" autocomplete="off" value="{{ ctx.end or '' }}">
+        <input name="end"
+               type="date"
+               autocomplete="off"
+               value="{{ ctx.end or '' }}"
+               {% if ctx.selected_period != "custom" %}disabled{% endif %}>
         <div>
             <div>End date</div>
         </div>
     </label>
-    <label class="input-outlined input-bg-surface-container">
+    <label class="input-outlined input-bg-surface-container max-md:row-start-1 col-start-2 md:col-start-1">
         <select name="account"
                 autocomplete="off"
                 {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}>
@@ -44,12 +51,12 @@
             <div>Account</div>
         </div>
     </label>
-    <label class="input-outlined input-bg-surface-container">
+    <label class="input-outlined input-bg-surface-container col-span-2">
         <select name="category"
                 autocomplete="off"
                 {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}>
             <option value=""></option>
-            {% for label, value in ctx.options_category %}
+            {% for label, value, _ in ctx.options_category %}
                 <option value="{{ value }}"
                         {% if value == ctx.selected_category %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
@@ -58,17 +65,19 @@
             <div>Category</div>
         </div>
     </label>
-    <label class="toggle">
+    <label class="toggle col-start-1 col-span-full mx-auto gap-4">
         <input name="unlinked"
                type="checkbox"
                autocomplete="off"
                {% if ctx.unlinked %}checked{% endif %}>
-        <div>Only unlinked transactions</div>
+        <div>Only unlinked</div>
         <switch></switch>
     </label>
-    <button class="btn-filled">Apply filter</button>
-    <button class="btn-text"
-            type="button"
-            hx-include="unset"
-            hx-get="{{ url_for('transactions.table') }}">Clear all filters</button>
+    <div class="flex justify-around col-span-full">
+        <button class="btn-filled">Apply filter</button>
+        <button class="btn-text"
+                type="button"
+                hx-include="unset"
+                hx-get="{{ url_for('transactions.table') }}">Clear all filters</button>
+    </div>
 </form>

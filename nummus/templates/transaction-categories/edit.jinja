@@ -18,7 +18,8 @@
                hx-trigger="input delay:200ms"
                hx-include="this"
                hx-get="{{ url_for('transaction_categories.validation', uri=category.uri) }}"
-               autocomplete="off">
+               autocomplete="off"
+               spellcheck="true">
         <div>
             <div>Name</div>
         </div>

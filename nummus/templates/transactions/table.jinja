@@ -2,4 +2,5 @@
 {% include "/transactions/table-filters.jinja" %}
 {% include "/transactions/table-total.jinja" %}
 {# Display query total if filtered #}
-<div id="txn-table">{% include "/transactions/table-rows.jinja" %}</div>
+<div id="txn-table" class="max-w-3xl mx-auto">{% include "/transactions/table-rows.jinja" %}</div>
+<div id="txn-indicator">{% include "/shared/spinner.jinja" %}</div>

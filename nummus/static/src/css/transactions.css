@@ -1,7 +1,7 @@
 @utility txn-header {
     @apply sticky top-10 md:top-0 z-10;
     @apply font-bold;
-    @apply bg-surface;
+    @apply bg-surface border-t-8 border-surface;
 
     &>div {
         @apply px-2 py-1 rounded-md;
@@ -45,7 +45,7 @@
             }
 
             @variant last-of-type {
-                @apply text-on-surface-variant text-sm;
+                @apply text-on-surface-variant;
             }
 
             &>div {
@@ -61,11 +61,9 @@
 }
 
 @layer components {
-    #txn-filters {
-        @apply p-2 mb-2 not-open:hidden;
-        @apply rounded-xl;
-        @apply bg-surface-container;
 
-        &>label {}
+    #txn-table.htmx-request {
+        /* Hide table when query is in flight */
+        @apply hidden;
     }
 }

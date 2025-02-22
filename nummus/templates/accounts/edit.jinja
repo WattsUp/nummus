@@ -18,7 +18,8 @@
                hx-trigger="input delay:200ms"
                hx-include="this"
                hx-get="{{ url_for('accounts.validation', uri=acct.uri) }}"
-               autocomplete="off">
+               autocomplete="off"
+               spellcheck="true">
         <div>
             <div>Name</div>
         </div>
@@ -36,7 +37,8 @@
                hx-trigger="input delay:200ms"
                hx-include="this"
                hx-get="{{ url_for('accounts.validation', uri=acct.uri) }}"
-               autocomplete="off">
+               autocomplete="off"
+               spellcheck="true">
         <div>
             <div>Institution</div>
         </div>

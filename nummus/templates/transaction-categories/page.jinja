@@ -26,18 +26,11 @@
     {% for group, items in ctx.groups.items() %}
         {# Set row span such that on md screen the third category will fit in dense #}
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
-            {# Split items so sticky label stops above last item #}
-            <div class="w-full">
-                <h1 class="sticky top-10 md:top-0 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
-                {% for cat in items[:-1] %}
-                    {% include "/transaction-categories/category-row.jinja" %}
-                {% endfor %}
-            </div>
-            {% if items %}
-                {% with cat = items[-1], last=true %}
-                    {% include "/transaction-categories/category-row.jinja" %}
-                {% endwith %}
-            {% endif %}
+            <h1 class="sticky top-10 md:top-0 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
+            {% for cat in items %}
+                {% include "/transaction-categories/category-row.jinja" %}
+                {% if not loop.last %}<hr class="mx-2">{% endif %}
+            {% endfor %}
         </div>
     {% endfor %}
 </div>

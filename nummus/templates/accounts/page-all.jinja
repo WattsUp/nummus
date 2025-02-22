@@ -50,14 +50,11 @@
                     <span>{{ category.pretty }}</span>
                     <span>{{ total | money }}</span>
                 </div>
-                {% for acct in accounts[:-1] %}
+                {% for acct in accounts %}
                     {% include "/accounts/account-row.jinja" %}
-                    <hr class="mx-4 my-1">
+                    {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
                 {% endfor %}
             </div>
-            {% with acct = accounts[-1] %}
-                {% include "/accounts/account-row.jinja" %}
-            {% endwith %}
         </div>
     {% endfor %}
 </div>

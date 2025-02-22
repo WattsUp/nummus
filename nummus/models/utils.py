@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from collections import defaultdict
 
 import sqlalchemy
 from rapidfuzz import process
 from sqlalchemy import func, orm
+from typing_extensions import TypeVar
 
 from nummus import utils
 from nummus.models.account import Account
 from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
+from nummus.models.base import Base, YIELD_PER
 from nummus.models.transaction import TransactionSplit
-
-if TYPE_CHECKING:
-    from nummus.models.base import Base
 
 _SEARCH_PROPERTIES: dict[type[Base], list[str]] = {
     Account: ["name", "institution"],
@@ -24,11 +22,14 @@ _SEARCH_PROPERTIES: dict[type[Base], list[str]] = {
 }
 
 
+T = TypeVar("T", bound=Base)
+
+
 def search(
-    query: orm.Query[Base],
-    cls: type[Base],
+    query: orm.Query[T],
+    cls: type[T],
     search_str: str | None,
-) -> orm.Query[Base]:
+) -> orm.Query[T]:
     """Perform a fuzzy search and return matches.
 
     Args:
@@ -47,26 +48,23 @@ def search(
     entities.extend(getattr(cls, prop) for prop in _SEARCH_PROPERTIES[cls])
     query_unfiltered = query.with_entities(*entities)
 
-    strings: dict[int, str] = {}
+    strings: dict[str, list[int]] = defaultdict(list)
     for item in query_unfiltered.yield_per(YIELD_PER):
         item_id = item[0]
         item_str = " ".join(s for s in item[1:] if s is not None)
-        strings[item_id] = item_str
+        strings[item_str.lower()].append(item_id)
 
     extracted = process.extract(
         search_str,
-        strings,
-        limit=None,
-        processor=lambda s: s.lower(),
+        strings.keys(),
+        limit=5,
     )
-    matching_ids: list[int] = [
-        i for _, score, i in extracted if score > utils.SEARCH_THRESHOLD
-    ]
-    if len(matching_ids) == 0:
-        # Include poor matches to return something
-        matching_ids: list[int] = [i for _, _, i in extracted[:5]]
 
-    return query.session.query(cls).where(cls.id_.in_(matching_ids))
+    matching_ids: list[int] = []
+    for item_str, _, _ in extracted:
+        matching_ids.extend(strings[item_str])
+
+    return query.where(cls.id_.in_(matching_ids))
 
 
 def query_count(query: orm.Query[Base]) -> int:

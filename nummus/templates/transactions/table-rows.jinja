@@ -5,27 +5,25 @@
         {% include "/transactions/table-total.jinja" %}
     {% endwith %}
 {% endif %}
-{% for date, transactions in ctx.transactions.items() %}
+{% for date, transactions in ctx.transactions %}
     <div>
         <div class="txn-header">
             <div>{{ date }}</div>
         </div>
-        {% for txn in transactions[:-1] %}
+        {% for txn in transactions %}
             {% include "/transactions/table-row.jinja" %}
-            <hr class="mx-4">
+            {% if not loop.last %}<hr class="mx-4">{% endif %}
         {% endfor %}
     </div>
-    {% with txn = transactions[-1] %}
-        {% include "/transactions/table-row.jinja" %}
-    {% endwith %}
     {% if loop.last %}
         {% if ctx.next_page %}
             <div hx-target="#txn-table"
                  hx-swap="beforeend"
                  hx-trigger="revealed"
-                 hx-include="#txn-filters"
+                 hx-include="#txn-filters,#txn-search"
                  hx-get="{{ url_for(endpoint, page=ctx.next_page) }}"
-                 hx-on::after-request="this.remove()">{% include "/shared/spinner.jinja" %}</div>
+                 hx-indicator="#txn-indicator"
+                 hx-on::after-request="this.remove()"></div>
         {% else %}
             <div class="text-center italic">no more transactions match query</div>
         {% endif %}
