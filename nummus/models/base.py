@@ -404,6 +404,8 @@ def string_column_args(
                 f"{name} must be empty",
             )
         ),
+        # TODO (WattsUp): This check not needed anymore
+        # Remove all [blank] instances
         CheckConstraint(
             f"{name_col} != '[blank]'",
             f"{name} must not be '[blank]'",

@@ -48,6 +48,7 @@ class TransactionSplit(Base):
         payee: Name of payee (for outflow)/payer (for inflow)
         description: Description of exchange
         tag: Unique tag linked across datasets
+        text_fields: Join of all text fields for searching
         category: Type of Transaction
         parent: Parent Transaction
         date_ord: Date ordinal on which Transaction occurred
@@ -74,6 +75,8 @@ class TransactionSplit(Base):
     description: ORMStrOpt
     tag: ORMStrOpt
 
+    text_fields: ORMStrOpt
+
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
@@ -91,13 +94,14 @@ class TransactionSplit(Base):
         *string_column_args("payee"),
         *string_column_args("description"),
         *string_column_args("tag"),
+        *string_column_args("text_fields"),
         CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
         ),
     )
 
-    @orm.validates("payee", "description", "tag")
+    @orm.validates("payee", "description", "tag", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
         return self.clean_strings(key, field, short_check=key != "ticker")
@@ -128,7 +132,20 @@ class TransactionSplit(Base):
                 "Do not set property directly"
             )
             raise exc.ComputedColumnError(msg)
+        if name == "text_fields":
+            msg = (
+                "TransactionSplit.text_fields set automatically. "
+                "Do not set property directly"
+            )
+            raise exc.ComputedColumnError(msg)
+
         super().__setattr__(name, value)
+
+        # update text_fields
+        if name in ("payee", "description", "tag"):
+            field = [self.payee, self.description, self.tag]
+            text_fields = " ".join(f for f in field if f).lower()
+            super().__setattr__("text_fields", text_fields)
 
     @property
     def asset_quantity_unadjusted(self) -> Decimal | None:
@@ -216,7 +233,8 @@ class TransactionSplit(Base):
             search_str = search_str.replace(s, " ")
 
         # Replace +- not following a space with a space
-        search_str = re.sub(r"(?<! )[+-]", " ", search_str)
+        # Skip +- at start
+        search_str = re.sub(r"(?<!^)(?<! )[+-]", " ", search_str)
 
         search_str = search_str.strip().lower()
 
@@ -251,15 +269,6 @@ class TransactionSplit(Base):
 
         category_names = TransactionCategory.map_name(query.session)
 
-        query_modified = query.with_entities(
-            TransactionSplit.id_,
-            TransactionSplit.date_ord,
-            TransactionSplit.category_id,
-            TransactionSplit.payee,
-            TransactionSplit.description,
-            TransactionSplit.tag,
-        )
-
         # Add tokens_must as an OR for each
         for token in tokens_must:
             clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
@@ -270,11 +279,8 @@ class TransactionSplit(Base):
             }
             if categories:
                 clauses_or.append(TransactionSplit.category_id.in_(categories))
-            clauses_or.append(TransactionSplit.payee.ilike(f"%{token}%"))
-            clauses_or.append(TransactionSplit.description.ilike(f"%{token}%"))
-            clauses_or.append(TransactionSplit.tag.ilike(f"%{token}%"))
-            if clauses_or:
-                query = query.where(sqlalchemy.or_(*clauses_or))
+            clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
+            query = query.where(sqlalchemy.or_(*clauses_or))
 
         # Add tokens_not as an NAND for each
         for token in tokens_not:
@@ -285,31 +291,28 @@ class TransactionSplit(Base):
             }
             if categories:
                 query = query.where(TransactionSplit.category_id.not_in(categories))
-            query = query.where(
-                TransactionSplit.payee.not_ilike(f"%{token}%"),
-                TransactionSplit.description.not_ilike(f"%{token}%"),
-                TransactionSplit.tag.not_ilike(f"%{token}%"),
-            )
+            query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
+
+        query_modified = query.with_entities(
+            TransactionSplit.id_,
+            TransactionSplit.date_ord,
+            TransactionSplit.category_id,
+            TransactionSplit.text_fields,
+        ).order_by(None)
 
         full_texts: dict[str, list[tuple[int, int]]] = defaultdict(list)
         for (
             t_id,
             date_ord,
             cat_id,
-            payee,
-            desc,
-            tag,
+            text_fields,
         ) in query_modified.yield_per(YIELD_PER):
             t_id: int
             date_ord: int
             cat_id: int
-            payee: str | None
-            desc: str | None
-            tag: str | None
+            text_fields: str | None
 
-            props = [category_names[cat_id], payee, desc, tag]
-
-            full_text = " ".join(s for s in props if s).lower()
+            full_text = f"{category_names[cat_id]} {text_fields or ''}"
 
             # Clean a bit
             for s in string.punctuation:
@@ -322,7 +325,8 @@ class TransactionSplit(Base):
         # Flatten into list[id, n token matches, date_ord]
         matches: list[tuple[int, int, int]] = []
         for full_text, ids in full_texts.items():
-            n = sum(full_text.count(token) for token in tokens_can)
+            # No tokens_can should return all so set n to non-zero
+            n = sum(full_text.count(token) for token in tokens_can) if tokens_can else 1
             if n != 0:
                 for t_id, date_ord in ids:
                     matches.append((t_id, n, date_ord))
