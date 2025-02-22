@@ -699,14 +699,20 @@ def ctx_table(
         selected_period = args.get("period")
 
         page_start_str = args.get("page")
-        page_start_ord = (
-            None
-            if page_start_str is None
-            else datetime.date.fromisoformat(page_start_str).toordinal()
-        )
+        if page_start_str is None:
+            page_start = None
+        else:
+            try:
+                page_start = int(page_start_str)
+            except ValueError:
+                page_start = datetime.date.fromisoformat(page_start_str).toordinal()
 
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)
+        categories = {
+            cat_id: TransactionCategory.clean_emoji_name(name)
+            for cat_id, name in categories_emoji.items()
+        }
         query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
         assets: dict[int, tuple[str, str | None]] = {
             r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
@@ -803,7 +809,11 @@ def ctx_table(
             ]
 
         # Do search
-        matches = TransactionSplit.search(query, search_str) if search_str else None
+        matches = (
+            TransactionSplit.search(query, search_str, categories)
+            if search_str
+            else None
+        )
         if matches is not None:
             query = query.where(TransactionSplit.id_.in_(matches))
             t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
@@ -813,9 +823,10 @@ def ctx_table(
         query_total = query.with_entities(func.sum(TransactionSplit.amount))
 
         if matches is not None:
-            query = query.where(TransactionSplit.id_.in_(matches[:PAGE_LEN]))
-            # TODO (WattsUp):  paging
-            next_page = 25
+            i_start = page_start or 0
+            page = matches[i_start : i_start + PAGE_LEN]
+            query = query.where(TransactionSplit.id_.in_(page))
+            next_page = i_start + PAGE_LEN
         else:
             # Find the fewest dates to include that will make page at least
             # PAGE_LEN long
@@ -824,9 +835,9 @@ def ctx_table(
                 TransactionSplit.date_ord,
                 func.count(),
             ).group_by(TransactionSplit.date_ord)
-            if page_start_ord:
+            if page_start:
                 query_page_count = query_page_count.where(
-                    TransactionSplit.date_ord <= page_start_ord,
+                    TransactionSplit.date_ord <= page_start,
                 )
             page_count = 0
             # Limit to PAGE_LEN since at most there is one txn per day
@@ -898,7 +909,7 @@ def ctx_table(
             "uri": None if acct is None else acct.uri,
             "transactions": groups,
             "query_total": query_total.scalar() or 0,
-            "no_matches": len(t_splits_flat) == 0 and page_start_ord is None,
+            "no_matches": len(t_splits_flat) == 0 and page_start is None,
             "next_page": None if no_more else next_page,
             "any_filters": any_filters,
             "search": search_str,

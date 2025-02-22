@@ -214,12 +214,14 @@ class TransactionSplit(Base):
         cls,
         query: orm.Query[TransactionSplit],
         search_str: str,
+        category_names: dict[int, str] | None = None,
     ) -> list[int] | None:
         """Search TransactionSplit text fields.
 
         Args:
             query: Original query, could be partially filtered
             search_str: String to search
+            category_names: Provide category_names to save an extra query
 
         Returns:
             Ordered list of matches, from best to worst
@@ -267,7 +269,7 @@ class TransactionSplit(Base):
             if token:
                 dest.add(token)
 
-        category_names = TransactionCategory.map_name(query.session)
+        category_names = category_names or TransactionCategory.map_name(query.session)
 
         # Add tokens_must as an OR for each
         for token in tokens_must:
