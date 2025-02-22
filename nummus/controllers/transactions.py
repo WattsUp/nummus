@@ -7,7 +7,6 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from rapidfuzz import process
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
@@ -26,17 +25,6 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 PAGE_LEN = 25
-
-
-class _OptionContex(TypedDict):
-    """Type definition for option context."""
-
-    name: str
-    label: str
-    name_clean: str
-    checked: bool
-    hidden: bool
-    score: int
 
 
 class _SplitContext(TypedDict):
@@ -105,11 +93,8 @@ def table() -> str | flask.Response:
     return response
 
 
-def table_options(field: str) -> str:
-    """GET /h/transactions/options/<field>.
-
-    Args:
-        field: Name of field to get options for
+def table_options() -> str:
+    """GET /h/transactions/table-options.
 
     Returns:
         string HTML response
@@ -118,36 +103,47 @@ def table_options(field: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
+        accounts = Account.map_name(s)
+        categories_emoji = TransactionCategory.map_name_emoji(s)
+
         args = flask.request.args
+        unlinked = "unlinked" in args
+        selected_account = args.get("account")
+        selected_category = args.get("category")
+        selected_period = args.get("period")
+        selected_start = args.get("start")
+        selected_end = args.get("end")
 
-        id_mapping = None
-        label_mapping = None
-        if field == "account":
-            id_mapping = Account.map_name(s)
-        elif field == "category":
-            id_mapping = TransactionCategory.map_name(s)
-            label_mapping = TransactionCategory.map_name_emoji(s)
-        elif field not in {"payee", "tag"}:
-            msg = f"Unexpected txns options: {field}"
-            raise exc.http.BadRequest(msg)
-
-        query, _, _, _ = table_unfiltered_query(s)
-
-        search_str = args.get(f"search-{field}")
+        query, _ = table_query(
+            s,
+            None,
+            selected_account,
+            selected_period,
+            selected_start,
+            selected_end,
+            selected_category,
+            unlinked=unlinked,
+        )
+        options = ctx_options(
+            query,
+            accounts,
+            categories_emoji,
+            selected_account,
+            selected_category,
+        )
 
         return flask.render_template(
-            "transactions/table-options.jinja",
-            options=ctx_options(
-                query,
-                field,
-                id_mapping,
-                label_mapping=label_mapping,
-                search_str=search_str,
-            ),
-            name=field,
-            search_str=search_str,
-            endpoint="transactions.table",
-            endpoint_new="transactions.new",
+            "transactions/table-filters.jinja",
+            only_inner=True,
+            ctx={
+                **options,
+                "selected_period": selected_period,
+                "selected_account": selected_account,
+                "selected_category": selected_category,
+                "unlinked": unlinked,
+                "start": selected_start,
+                "end": selected_end,
+            },
         )
 
 
@@ -528,6 +524,86 @@ def remaining(uri: str) -> str:
         )
 
 
+def table_query(
+    s: orm.Session,
+    acct: Account | None = None,
+    selected_account: str | None = None,
+    selected_period: str | None = None,
+    selected_start: str | None = None,
+    selected_end: str | None = None,
+    selected_category: str | None = None,
+    *,
+    unlinked: bool | None = False,
+) -> tuple[orm.Query, bool]:
+    """Create transactions table query.
+
+    Args:
+        s: SQL session to use
+        acct: Account to filter to
+        selected_account: URI of account from args
+        selected_period: Name of period from args
+        selected_start: ISO date string of start from args
+        selected_end: ISO date string of end from args
+        selected_category: URI of category from args
+        unlinked: True will only query unlinked transactions
+
+    Returns:
+        (SQL query, any_filters)
+    """
+    selected_account = (acct and acct.uri) or selected_account
+    query = s.query(TransactionSplit).order_by(
+        TransactionSplit.date_ord.desc(),
+        TransactionSplit.account_id,
+        TransactionSplit.payee,
+        TransactionSplit.category_id,
+        TransactionSplit.tag,
+        TransactionSplit.description,
+    )
+
+    any_filters = False
+
+    start = None
+    end = None
+    if selected_period and selected_period != "all":
+        any_filters = True
+        if selected_period == "custom":
+            start = utils.parse_date(selected_start)
+            end = utils.parse_date(selected_end)
+        elif "-" in selected_period:
+            start = datetime.date.fromisoformat(selected_period + "-01")
+            end = utils.end_of_month(start)
+        else:
+            year = int(selected_period)
+            start = datetime.date(year, 1, 1)
+            end = datetime.date(year, 12, 31)
+
+        if start:
+            query = query.where(
+                TransactionSplit.date_ord >= start.toordinal(),
+            )
+        if end:
+            query = query.where(
+                TransactionSplit.date_ord <= end.toordinal(),
+            )
+
+    if selected_account:
+        any_filters |= acct is None
+        query = query.where(
+            TransactionSplit.account_id == Account.uri_to_id(selected_account),
+        )
+
+    if selected_category:
+        any_filters = True
+        cat_id = TransactionCategory.uri_to_id(selected_category)
+        query = query.where(TransactionSplit.category_id == cat_id)
+
+    if unlinked:
+        any_filters = True
+        query = query.where(TransactionSplit.linked.is_(False))
+
+    return query, any_filters
+
+
 def ctx_split(
     t_split: TransactionSplit,
     accounts: dict[int, str],
@@ -575,102 +651,71 @@ def ctx_split(
 
 def ctx_options(
     query: orm.Query,
-    field: str,
-    id_mapping: dict[int, str] | None = None,
-    label_mapping: dict[int, str] | None = None,
-    search_str: str | None = None,
-) -> list[_OptionContex]:
+    accounts: dict[int, str],
+    categories: dict[int, str],
+    selected_account: str | None = None,
+    selected_category: str | None = None,
+) -> dict[str, object]:
     """Get the context to build the options for table.
 
     Args:
         query: Query to use to get distinct values
-        field: TransactionSplit field to get options for
-        id_mapping: Item ID to name mapping
-        label_mapping: Item ID to label mapping, None will use id_mapping
-        search_str: Search options and hide non-matches
+        accounts: Account name mapping
+        categories: Account name mapping
+        selected_account: URI of account from args
+        selected_category: URI of category from args
 
     Returns:
         List of HTML context
     """
     query = query.order_by(None)
-    args = flask.request.args
-    selected: list[str] = args.getlist(field)
-    options_: list[_OptionContex] = []
-    entities = {
-        "account": TransactionSplit.account_id,
-        "payee": TransactionSplit.payee,
-        "category": TransactionSplit.category_id,
-        "tag": TransactionSplit.tag,
-        "asset": TransactionSplit.asset_id,
+
+    today = datetime.date.today()
+    month = utils.start_of_month(today)
+    last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
+    options_period = [
+        ("All time", "all"),
+        *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+        (str(month.year), str(month.year)),
+        (str(month.year - 1), str(month.year - 1)),
+        ("Custom date range", "custom"),
+    ]
+
+    query_options = query.with_entities(TransactionSplit.account_id).distinct()
+    options_account = sorted(
+        [
+            (accounts[acct_id], Account.id_to_uri(acct_id))
+            for acct_id, in query_options.yield_per(YIELD_PER)
+        ],
+        key=lambda item: item[0],
+    )
+    if len(options_account) == 0 and selected_account:
+        acct_id = Account.uri_to_id(selected_account)
+        options_account = [(accounts[acct_id], selected_account)]
+
+    query_options = query.with_entities(TransactionSplit.category_id).distinct()
+    options_category = sorted(
+        [
+            (
+                categories[cat_id],
+                TransactionCategory.id_to_uri(cat_id),
+                utils.strip_emojis(categories[cat_id]),
+            )
+            for cat_id, in query_options.yield_per(YIELD_PER)
+        ],
+        key=lambda item: item[2],
+    )
+    if len(options_category) == 0 and selected_category:
+        cat_id = TransactionCategory.uri_to_id(selected_category)
+        options_category = [
+            (categories[cat_id], selected_category, ""),
+        ]
+
+    return {
+        "options_period": options_period,
+        "options_account": options_account,
+        "options_category": options_category,
     }
-    for (id_,) in query.with_entities(entities[field]).distinct():
-        if id_ is None:
-            continue
-        name = id_mapping[id_] if id_mapping else id_
-        label = label_mapping[id_] if label_mapping else name
-        name_clean = utils.strip_emojis(name).lower()
-        item: _OptionContex = {
-            "name": name,
-            "label": label,
-            "name_clean": name_clean,
-            "checked": name in selected,
-            "hidden": False,
-            "score": 0,
-        }
-        options_.append(item)
-    if search_str not in [None, ""]:
-        names = {i: item["name_clean"] for i, item in enumerate(options_)}
-        extracted = process.extract(
-            search_str,
-            names,
-            limit=None,
-        )
-        for _, score, i in extracted:
-            options_[i]["score"] = int(score)
-            options_[i]["hidden"] = score < utils.SEARCH_THRESHOLD
-    if field in ["payee", "tag"]:
-        name = "[blank]"
-        item = {
-            "name": name,
-            "label": name,
-            "name_clean": name,
-            "checked": name in selected,
-            "hidden": search_str not in [None, ""],
-            "score": 100,
-        }
-        options_.append(item)
-
-    return sorted(
-        options_,
-        key=lambda item: (-item["score"], not item["checked"], item["name_clean"]),
-    )
-
-
-def table_unfiltered_query(
-    s: orm.Session,
-    acct: Account | None = None,
-) -> orm.Query:
-    """Create transactions table query without any column filters.
-
-    Args:
-        s: SQL session to use
-        acct: Account to get transactions for, None will use filter queries
-
-    Returns:
-        SQL query
-    """
-    query = s.query(TransactionSplit).order_by(
-        TransactionSplit.date_ord.desc(),
-        TransactionSplit.account_id,
-        TransactionSplit.payee,
-        TransactionSplit.category_id,
-        TransactionSplit.tag,
-        TransactionSplit.description,
-    )
-    if acct is not None:
-        query = query.where(TransactionSplit.account_id == acct.id_)
-
-    return query
 
 
 def ctx_table(
@@ -687,26 +732,7 @@ def ctx_table(
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    today = datetime.date.today()
-    month = utils.start_of_month(today)
-
     with p.begin_session() as s:
-        args = flask.request.args
-        search_str = args.get("search")
-        unlinked = "unlinked" in args
-        selected_account = (acct and acct.uri) or args.get("account")
-        selected_category = args.get("category")
-        selected_period = args.get("period")
-
-        page_start_str = args.get("page")
-        if page_start_str is None:
-            page_start = None
-        else:
-            try:
-                page_start = int(page_start_str)
-            except ValueError:
-                page_start = datetime.date.fromisoformat(page_start_str).toordinal()
-
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)
         categories = {
@@ -718,95 +744,41 @@ def ctx_table(
             r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
         }
 
-        query = s.query(TransactionSplit).order_by(
-            TransactionSplit.date_ord.desc(),
-            TransactionSplit.account_id,
-            TransactionSplit.payee,
-            TransactionSplit.category_id,
-            TransactionSplit.tag,
-            TransactionSplit.description,
+        args = flask.request.args
+        search_str = args.get("search")
+        unlinked = "unlinked" in args
+        selected_account = args.get("account")
+        selected_category = args.get("category")
+        selected_period = args.get("period")
+        selected_start = args.get("start")
+        selected_end = args.get("end")
+
+        page_start_str = args.get("page")
+        if page_start_str is None:
+            page_start = None
+        else:
+            try:
+                page_start = int(page_start_str)
+            except ValueError:
+                page_start = datetime.date.fromisoformat(page_start_str).toordinal()
+
+        query, any_filters = table_query(
+            s,
+            acct,
+            selected_account,
+            selected_period,
+            selected_start,
+            selected_end,
+            selected_category,
+            unlinked=unlinked,
         )
-
-        any_filters = False
-
-        # TODO (WattsUp): Update filter options as they are selected
-        start = None
-        end = None
-        if selected_period and selected_period != "all":
-            any_filters = True
-            if selected_period == "custom":
-                start = utils.parse_date(args.get("start"))
-                end = utils.parse_date(args.get("end"))
-            elif "-" in selected_period:
-                start = datetime.date.fromisoformat(selected_period + "-01")
-                end = utils.end_of_month(start)
-            else:
-                year = int(selected_period)
-                start = datetime.date(year, 1, 1)
-                end = datetime.date(year, 12, 31)
-
-            if start:
-                query = query.where(
-                    TransactionSplit.date_ord >= start.toordinal(),
-                )
-            if end:
-                query = query.where(
-                    TransactionSplit.date_ord <= end.toordinal(),
-                )
-
-        if selected_account:
-            any_filters |= acct is None
-            query = query.where(
-                TransactionSplit.account_id == Account.uri_to_id(selected_account),
-            )
-
-        if selected_category:
-            any_filters = True
-            cat_id = TransactionCategory.uri_to_id(selected_category)
-            query = query.where(TransactionSplit.category_id == cat_id)
-
-        if unlinked:
-            any_filters = True
-            query = query.where(TransactionSplit.linked.is_(False))
-
-        last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
-        options_period = [
-            ("All time", "all"),
-            *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
-            (str(month.year), str(month.year)),
-            (str(month.year - 1), str(month.year - 1)),
-            ("Custom date range", "custom"),
-        ]
-
-        query_options = query.with_entities(TransactionSplit.account_id).distinct()
-        options_account = sorted(
-            [
-                (accounts[acct_id], Account.id_to_uri(acct_id))
-                for acct_id, in query_options.yield_per(YIELD_PER)
-            ],
-            key=lambda item: item[0],
+        options = ctx_options(
+            query,
+            accounts,
+            categories_emoji,
+            selected_account,
+            selected_category,
         )
-        if len(options_account) == 0 and selected_account:
-            acct_id = Account.uri_to_id(selected_account)
-            options_account = [(accounts[acct_id], selected_account)]
-
-        query_options = query.with_entities(TransactionSplit.category_id).distinct()
-        options_category = sorted(
-            [
-                (
-                    categories_emoji[cat_id],
-                    TransactionCategory.id_to_uri(cat_id),
-                    utils.strip_emojis(categories_emoji[cat_id]),
-                )
-                for cat_id, in query_options.yield_per(YIELD_PER)
-            ],
-            key=lambda item: item[2],
-        )
-        if len(options_category) == 0 and selected_category:
-            cat_id = TransactionCategory.uri_to_id(selected_category)
-            options_category = [
-                (categories_emoji[cat_id], selected_category, ""),
-            ]
 
         # Do search
         matches = (
@@ -913,22 +885,20 @@ def ctx_table(
             "next_page": None if no_more else next_page,
             "any_filters": any_filters,
             "search": search_str,
-            "options_period": options_period,
-            "options_account": options_account,
-            "options_category": options_category,
+            **options,
             "selected_period": selected_period,
             "selected_account": selected_account,
             "selected_category": selected_category,
             "unlinked": unlinked,
-            "start": start,
-            "end": end,
+            "start": selected_start,
+            "end": selected_end,
         }
 
 
 ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
-    "/h/transactions/table-options/<path:field>": (table_options, ["GET"]),
+    "/h/transactions/table-options": (table_options, ["GET"]),
     "/h/transactions/new": (new, ["GET", "POST"]),
     "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/split": (split, ["GET", "POST", "DELETE"]),
