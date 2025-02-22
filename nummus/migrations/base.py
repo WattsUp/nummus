@@ -87,13 +87,17 @@ class Migrator(ABC):
         name = model.__tablename__
 
         # Turn on legacy_alter_table so renaming doesn't rename references
+        stmt = "PRAGMA foreign_keys = OFF"
+        s.execute(sqlalchemy.text(stmt))
         stmt = "PRAGMA legacy_alter_table = ON"
         s.execute(sqlalchemy.text(stmt))
 
         stmt = f"ALTER TABLE '{name}' RENAME TO migration_temp"
         s.execute(sqlalchemy.text(stmt))
 
-        # Reset it
+        # Reset
+        stmt = "PRAGMA foreign_keys = ON"
+        s.execute(sqlalchemy.text(stmt))
         stmt = "PRAGMA legacy_alter_table = OFF"
         s.execute(sqlalchemy.text(stmt))
 

@@ -188,9 +188,6 @@ class TestORMBase(TestBase):
         parent.name = "    "
         self.assertIsNone(parent.name)
 
-        parent.name = "[blank]"
-        self.assertIsNone(parent.name)
-
         field = self.random_string(3)
         parent.name = field
         self.assertEqual(parent.name, field)
@@ -202,10 +199,6 @@ class TestORMBase(TestBase):
         s.commit()
 
         u = {Parent.name: ""}
-        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
-        s.rollback()
-
-        u = {Parent.name: "[blank]"}
         self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
         s.rollback()
 

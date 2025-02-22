@@ -6,7 +6,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, orm
+from sqlalchemy import func, orm, UniqueConstraint
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -57,8 +57,7 @@ class Account(Base):
 
     __table_id__ = 0x00000000
 
-    # TODO (WattsUp): Add unique constraints: name & number
-    name: ORMStr
+    name: ORMStr = orm.mapped_column(unique=True)
     number: ORMStrOpt
     institution: ORMStr
     category: orm.Mapped[AccountCategory] = orm.mapped_column(SQLEnum(AccountCategory))
@@ -66,6 +65,7 @@ class Account(Base):
     budgeted: ORMBool
 
     __table_args__ = (
+        UniqueConstraint("number", "institution"),
         *string_column_args("name"),
         *string_column_args("number"),
         *string_column_args("institution"),

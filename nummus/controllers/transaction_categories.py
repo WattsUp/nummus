@@ -156,7 +156,7 @@ def category(uri: str) -> str | flask.Response:
                 if not cat.locked:
                     cat.group = group
                     cat.is_profit_loss = is_profit_loss
-                cat.essential = essential
+                    cat.essential = essential
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 

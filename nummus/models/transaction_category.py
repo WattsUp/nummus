@@ -59,10 +59,12 @@ class TransactionCategory(Base):
     budget_position: ORMIntOpt
 
     __table_args__ = (
-        *string_column_args("name"),
+        *string_column_args("name", lower_check=True),
         *string_column_args("emoji_name"),
-        # TODO (WattsUp): Add CheckConstraint for essential
-        # TODO (WattsUp): Add CheckConstraint for name is all lower
+        CheckConstraint(
+            f"not essential OR `group` != {TransactionCategoryGroup.INCOME.value}",
+            name="INCOME cannot be essential",
+        ),
         CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",

@@ -119,3 +119,24 @@ def paginate(
     next_offset = offset + n_current if remaining > 0 else None
 
     return results, count, next_offset
+
+
+def dump_table_configs(s: orm.Session, model: type[Base] | None = None) -> None:
+    """Get the table configs (columns and constraints) and print.
+
+    Args:
+        s: SQL session to use
+        model: Filter to specific table
+    """
+    table_filter = f"AND name='{model.__tablename__}'" if model else ""
+    stmt = f"""
+        SELECT sql
+        FROM sqlite_master
+        WHERE
+            type='table' {table_filter}
+        """.strip()  # noqa: S608
+    result = s.execute(sqlalchemy.text(stmt))
+    for (row,) in result.yield_per(YIELD_PER):
+        row: str
+        for line in row.splitlines():
+            print(line)

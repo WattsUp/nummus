@@ -15,7 +15,7 @@ from nummus import utils
 from nummus.models import base_uri
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping
+    from collections.abc import Iterable, Mapping
 
 
 # Yield per instead of fetch all is faster
@@ -159,7 +159,7 @@ class Base(orm.DeclarativeBase):
         if field is None:
             return None
         field = field.strip()
-        if field in ["", "[blank]"]:
+        if field == "":
             return None
         if short_check and len(field) < utils.MIN_STR_LEN:
             table: str = cls.__tablename__  # type: ignore[attr-defined]
@@ -381,18 +381,20 @@ def string_column_args(
     name: str,
     *,
     short_check: bool = True,
-) -> tuple[CheckConstraint, ...]:
+    lower_check: bool = False,
+) -> Iterable[CheckConstraint]:
     """Get table args for string column.
 
     Args:
         name: Name of string column
         short_check: True will add a check for MIN_STR_LEN
+        lower_check: True will add a check for all lower case
 
     Returns:
         Tuple of constraints
     """
     name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
-    return (
+    checks = [
         (
             CheckConstraint(
                 f"length({name_col}) >= {utils.MIN_STR_LEN}",
@@ -404,14 +406,16 @@ def string_column_args(
                 f"{name} must be empty",
             )
         ),
-        # TODO (WattsUp): This check not needed anymore
-        # Remove all [blank] instances
-        CheckConstraint(
-            f"{name_col} != '[blank]'",
-            f"{name} must not be '[blank]'",
-        ),
         CheckConstraint(
             f"{name_col} not like ' %' and {name_col} not like '% '",
             f"{name} must not have leading or trailing whitespace",
         ),
-    )
+    ]
+    if lower_check:
+        checks.append(
+            CheckConstraint(
+                f"{name_col} == lower({name_col})",
+                f"{name} must be lower case",
+            ),
+        )
+    return checks
