@@ -33,6 +33,7 @@ class Handler(gevent.pywsgi.WSGIHandler):
 
     REQ_TIME_BAD = 0.15
     REQ_TIME_WARN = 0.075
+    TIMEOUT = 5 * utils.SECONDS_IN_MINUTE
 
     _HTTP_CODE_COLORS = types.MappingProxyType(
         {
@@ -43,6 +44,19 @@ class Handler(gevent.pywsgi.WSGIHandler):
         },
     )
 
+    @override
+    def handle(self) -> None:
+        # Add a timeout to connections for client that don't close keep-alive
+        timeout = gevent.Timeout.start_new(self.TIMEOUT)
+        try:
+            super().handle()
+        except gevent.Timeout as e:
+            if e is timeout:
+                pass
+            else:
+                raise
+
+    @override
     def format_request(self) -> str:
         """Format request as a single line.
 
