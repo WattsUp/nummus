@@ -227,8 +227,6 @@ class TransactionSplit(Base):
         for s in string.punctuation:
             if s not in '"+-':
                 search_str = search_str.replace(s, " ")
-        for s in string.digits:
-            search_str = search_str.replace(s, " ")
 
         # Replace +- not following a space with a space
         # Skip +- at start
@@ -314,8 +312,6 @@ class TransactionSplit(Base):
 
             # Clean a bit
             for s in string.punctuation:
-                full_text = full_text.replace(s, "")
-            for s in string.digits:
                 full_text = full_text.replace(s, "")
 
             full_texts[full_text].append((t_id, date_ord))

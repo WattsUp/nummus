@@ -194,9 +194,10 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             )
             ctx = {
                 "uri": None,
-                "account": acct_uri,
+                "account": "",
+                "account_uri": acct_uri,
                 "accounts": [
-                    (Account.id_to_uri(acct_id), name)
+                    (Account.id_to_uri(acct_id), name, False)
                     for acct_id, name in accounts.items()
                 ],
                 "categories": [
@@ -283,6 +284,15 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child = web_utils.find(s, TransactionSplit, uri)
             parent = child.parent
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.name,
+            Account.closed,
+        )
+        accounts: dict[int, tuple[str, bool]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
+        account_names = {k: v[0] for k, v in accounts.items()}
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.emoji_name,
@@ -298,14 +308,12 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         }
 
         if force_get or flask.request.method == "GET":
-            accounts = Account.map_name(s)
-
             splits = parent.splits
 
             ctx_splits: list[_SplitContext] = [
                 ctx_split(
                     t_split,
-                    accounts,
+                    account_names,
                     category_names,
                     assets,
                     set(),
@@ -331,10 +339,11 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
 
             ctx = {
                 "uri": parent.uri,
-                "account": Account.id_to_uri(parent.account_id),
+                "account": accounts[parent.account_id][0],
+                "account_uri": Account.id_to_uri(parent.account_id),
                 "accounts": [
-                    (Account.id_to_uri(acct_id), name)
-                    for acct_id, name in accounts.items()
+                    (Account.id_to_uri(acct_id), name, closed)
+                    for acct_id, (name, closed) in accounts.items()
                 ],
                 "cleared": parent.cleared,
                 "date": datetime.date.fromordinal(parent.date_ord),
@@ -371,13 +380,22 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 parent.date = date
                 parent.payee = form.get("payee")
 
+                if not parent.cleared:
+                    amount = utils.evaluate_real_statement(form.get("amount"))
+                    if amount is None:
+                        return common.error("Transaction amount must not be empty")
+                    parent.amount = amount
+                    account = Account.uri_to_id(form["account"])
+                    parent.account_id = account
+
                 split_memos = form.getlist("memo")
                 split_categories = [
                     TransactionCategory.uri_to_id(x) for x in form.getlist("category")
                 ]
                 split_tags = form.getlist("tag")
                 split_amounts = [
-                    utils.evaluate_real_statement(x) for x in form.getlist("amount")
+                    utils.evaluate_real_statement(x)
+                    for x in form.getlist("split-amount")
                 ]
 
                 if len(split_categories) < 1:
@@ -824,6 +842,7 @@ def ctx_table(
             else None
         )
         if matches is not None:
+            any_filters = True
             query = query.where(TransactionSplit.id_.in_(matches))
             t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
         else:

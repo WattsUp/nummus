@@ -39,6 +39,9 @@
                     {{ txn.asset_price | money }}
                 {% else %}
                     {{ txn.category }}
+                    <span class="max-md:hidden">
+                        {% if txn.tag %}#{{ txn.tag }}{% endif %}
+                    </span>
                 {% endif %}
             </div>
             <div>{{ txn.account }}</div>

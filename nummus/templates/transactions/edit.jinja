@@ -14,28 +14,33 @@
     <datalist id="tags">
         {% for item in txn.tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
     </datalist>
-    {# TODO (WattsUp): If locked, cannot change amount and account #}
     {# TODO (WattsUp): If split, change to full screen dialog #}
     {# TODO (WattsUp): On larger screens, layout better #}
-    <label class="input-outlined input-bg-surface-container-high col-span-2">
-        <input name="amount"
-               required
-               enterkeyhint="next"
-               placeholder=""
-               value="{{ "%.2f" % txn.amount if txn.amount }}"
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               autocomplete="off">
-        <icon>attach_money</icon>
-        <div>
-            <div>Amount</div>
+    {% if txn.cleared %}
+        <div class="col-span-2 flex items-center gap-1">
+            <icon>attach_money</icon>Amount: {{ txn.amount | money }}
         </div>
-        <div>
-            <error></error>
-            <div>Positive for inflow, negative for outflow</div>
-        </div>
-    </label>
+    {% else %}
+        <label class="input-outlined input-bg-surface-container-high col-span-2">
+            <input name="amount"
+                   required
+                   enterkeyhint="next"
+                   placeholder=""
+                   value="{{ "%.2f" % txn.amount if txn.amount }}"
+                   hx-target="next error"
+                   hx-trigger="input delay:200ms"
+                   hx-include="this"
+                   autocomplete="off">
+            <icon>attach_money</icon>
+            <div>
+                <div>Amount</div>
+            </div>
+            <div>
+                <error></error>
+                <div>Positive for inflow, negative for outflow</div>
+            </div>
+        </label>
+    {% endif %}
     <label class="input-outlined input-bg-surface-container-high col-span-2">
         <input name="payee"
                required
@@ -53,18 +58,29 @@
             <div>Name of business transaction was made with</div>
         </div>
     </label>
-    <label class="input-outlined input-bg-surface-container-high col-span-2">
-        <select name="account" required autocomplete="off">
-            <option value="" disabled hidden {% if not txn.account %}selected{% endif %}></option>
-            {% for value, label in txn.accounts %}
-                <option value="{{ value }}" {% if value == txn.account %}selected{% endif %}>{{ label }}</option>
-            {% endfor %}
-        </select>
-        <icon>account_balance</icon>
-        <div>
-            <div>Account</div>
+    {% if txn.cleared %}
+        <div class="col-span-2 flex items-center gap-1">
+            <icon>account_balance</icon>Account: {{ txn.account }}
         </div>
-    </label>
+    {% else %}
+        <label class="input-outlined input-bg-surface-container-high col-span-2">
+            <select name="account" required autocomplete="off">
+                <option value=""
+                        disabled
+                        hidden
+                        {% if not txn.account_uri %}selected{% endif %}></option>
+                {% for value, label, disabled in txn.accounts %}
+                    <option value="{{ value }}"
+                            {% if disabled %}disabled hidden{% endif %}
+                            {% if value == txn.account_uri %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <icon>account_balance</icon>
+            <div>
+                <div>Account</div>
+            </div>
+        </label>
+    {% endif %}
     <label class="input-outlined input-bg-surface-container-high col-span-2">
         <input name="date"
                type="date"
@@ -84,6 +100,7 @@
     {% set is_split = (txn.splits | length) > 1 %}
     {% for split in txn.splits %}
         <hr>
+        {# TODO (WattsUp): If securities traded, different UI #}
         {% if is_split %}
             <div class="text-center italic text-on-surface-variant col-span-full">Split #{{ loop.index }}</div>
         {% endif %}
@@ -95,6 +112,7 @@
                         {% if not split.category_uri %}selected{% endif %}></option>
                 {% for value, label, disabled in txn.categories %}
                     <option value="{{ value }}"
+                            {% if disabled %}disabled hidden{% endif %}
                             {% if value == split.category_uri %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}
             </select>
