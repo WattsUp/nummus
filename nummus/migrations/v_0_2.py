@@ -39,6 +39,7 @@ class MigratorV0_2(Migrator):  # noqa: N801
         with p.begin_session() as s:
             # Update TransactionSplit to add text_fields
             self.add_column(s, TransactionSplit, TransactionSplit.text_fields)
+            self.rename_column(s, TransactionSplit, "description", "memo")
 
         with p.begin_session() as s:
             # Update Transaction to add payee
@@ -76,7 +77,7 @@ class MigratorV0_2(Migrator):  # noqa: N801
             query = s.query(TransactionSplit)
             for t_split in query.yield_per(YIELD_PER):
                 t_split.parent = t_split.parent
-                t_split.description = t_split.description
+                t_split.memo = t_split.memo
 
             # Update TransactionCategory.name to be filtered version of emoji_name
             query = s.query(TransactionCategory)

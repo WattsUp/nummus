@@ -45,7 +45,7 @@ class TransactionSplit(Base):
         uri: TransactionSplit unique identifier
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
-        description: Description of exchange
+        memo: Memo of exchange
         tag: Unique tag linked across datasets
         text_fields: Join of all text fields for searching
         category: Type of Transaction
@@ -71,7 +71,7 @@ class TransactionSplit(Base):
         ),
     )
     payee: ORMStrOpt
-    description: ORMStrOpt
+    memo: ORMStrOpt
     tag: ORMStrOpt
 
     text_fields: ORMStrOpt
@@ -91,7 +91,7 @@ class TransactionSplit(Base):
 
     __table_args__ = (
         *string_column_args("payee"),
-        *string_column_args("description"),
+        *string_column_args("memo"),
         *string_column_args("tag"),
         *string_column_args("text_fields"),
         CheckConstraint(
@@ -100,7 +100,7 @@ class TransactionSplit(Base):
         ),
     )
 
-    @orm.validates("payee", "description", "tag", "text_fields")
+    @orm.validates("payee", "memo", "tag", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
         return self.clean_strings(key, field, short_check=key != "ticker")
@@ -142,8 +142,8 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
         # update text_fields
-        if name in ("payee", "description", "tag"):
-            field = [self.payee, self.description, self.tag]
+        if name in ("payee", "memo", "tag"):
+            field = [self.payee, self.memo, self.tag]
             text_fields = " ".join(f for f in field if f).lower()
             super().__setattr__("text_fields", text_fields)
 

@@ -35,7 +35,7 @@ class _SplitContext(TypedDict):
     date: datetime.date
     account: str
     payee: str | None
-    description: str | None
+    memo: str | None
     category: str
     tag: str | None
     amount: Decimal
@@ -336,7 +336,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 parent.locked = "locked" in form
 
                 payee = form.getlist("payee")
-                description = form.getlist("description")
+                memo = form.getlist("memo")
                 category = form.getlist("category")
                 tag = form.getlist("tag")
                 amount = [
@@ -372,7 +372,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
 
                     try:
                         t_split.payee = payee[i]
-                        t_split.description = description[i]
+                        t_split.memo = memo[i]
                         t_split.category_id = categories_rev[category[i]]
                         t_split.tag = tag[i]
                         a = amount[i]
@@ -407,21 +407,21 @@ def split(uri: str) -> str:
     form = flask.request.form
 
     payee: list[str | None] = list(form.getlist("payee"))
-    description: list[str | None] = list(form.getlist("description"))
+    memo: list[str | None] = list(form.getlist("memo"))
     category: list[str] = form.getlist("category")
     tag: list[str | None] = list(form.getlist("tag"))
     amount = [utils.evaluate_real_statement(x) for x in form.getlist("amount")]
 
     if flask.request.method == "POST":
         payee.append(None)
-        description.append(None)
+        memo.append(None)
         category.append("Uncategorized")
         tag.append(None)
         amount.append(None)
     elif flask.request.method == "GET":
         # Load all splits from similar transaction
         payee = []
-        description = []
+        memo = []
         category = []
         tag = []
         amount = []
@@ -432,16 +432,16 @@ def split(uri: str) -> str:
                 s.query(TransactionSplit)
                 .with_entities(
                     TransactionSplit.payee,
-                    TransactionSplit.description,
+                    TransactionSplit.memo,
                     TransactionSplit.category_id,
                     TransactionSplit.tag,
                     TransactionSplit.amount,
                 )
                 .where(TransactionSplit.parent_id == parent_id)
             )
-            for t_payee, t_desc, t_cat_id, t_tag, t_amount in query.all():
+            for t_payee, t_memo, t_cat_id, t_tag, t_amount in query.all():
                 payee.append(t_payee)
-                description.append(t_desc)
+                memo.append(t_memo)
                 category.append(categories[t_cat_id])
                 tag.append(t_tag)
                 amount.append(t_amount)
@@ -453,7 +453,7 @@ def split(uri: str) -> str:
     # DELETE below
     elif "all" in flask.request.args:
         payee = [None]
-        description = [None]
+        memo = [None]
         category = ["Uncategorized"]
         tag = [None]
         amount = [None]
@@ -465,7 +465,7 @@ def split(uri: str) -> str:
         i = int(flask.request.args["index"]) - 1
 
         payee.pop(i)
-        description.pop(i)
+        memo.pop(i)
         category.pop(i)
         tag.pop(i)
         amount.pop(i)
@@ -474,7 +474,7 @@ def split(uri: str) -> str:
     for i in range(len(payee)):
         item = {
             "payee": payee[i],
-            "description": description[i],
+            "memo": memo[i],
             "category": category[i],
             "tag": tag[i],
             "amount": amount[i],
@@ -557,7 +557,7 @@ def table_query(
         TransactionSplit.payee,
         TransactionSplit.category_id,
         TransactionSplit.tag,
-        TransactionSplit.description,
+        TransactionSplit.memo,
     )
 
     any_filters = False
@@ -635,7 +635,7 @@ def ctx_split(
         "date": datetime.date.fromordinal(t_split.date_ord),
         "account": accounts[t_split.account_id],
         "payee": t_split.payee,
-        "description": t_split.description,
+        "memo": t_split.memo,
         "category": categories[t_split.category_id],
         "tag": t_split.tag,
         "amount": t_split.amount,

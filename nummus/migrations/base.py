@@ -73,6 +73,27 @@ class Migrator(ABC):
         if initial_value is not None:
             s.query(model).update({column: initial_value})
 
+    def rename_column(
+        self,
+        s: orm.Session,
+        model: type[Base],
+        old_name: str,
+        new_name: str,
+    ) -> None:
+        """Rename a column in a table.
+
+        Args:
+            s: SQL session to use
+            model: Table to modify
+            old_name: Current name of column
+            new_name: New name of column
+        """
+        stmt = (
+            f"ALTER TABLE '{model.__tablename__}' "
+            f"RENAME COLUMN {old_name} TO {new_name}"
+        )
+        s.execute(sqlalchemy.text(stmt))
+
     def migrate_schemas(
         self,
         s: orm.Session,
