@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import textwrap
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 import packaging.version
 import sqlalchemy
-from sqlalchemy import orm, sql
+from sqlalchemy import orm
 
+from nummus import sql
 from nummus.models import Base, Config, ConfigKey
 from nummus.utils import classproperty
 
@@ -65,9 +67,9 @@ class Migrator(ABC):
         """
         engine = s.get_bind().engine
 
-        col_name = column.name
+        col_name = sql.escape(column.name)
         col_type = column.type.compile(dialect=engine.dialect)
-        stmt = f"ALTER TABLE '{model.__tablename__}' ADD COLUMN {col_name} {col_type}"
+        stmt = f'ALTER TABLE "{model.__tablename__}" ADD {col_name} {col_type}'
         s.execute(sqlalchemy.text(stmt))
 
         if initial_value is not None:
@@ -88,23 +90,43 @@ class Migrator(ABC):
             old_name: Current name of column
             new_name: New name of column
         """
-        stmt = (
-            f"ALTER TABLE '{model.__tablename__}' "
-            f"RENAME COLUMN {old_name} TO {new_name}"
-        )
+        old_name = sql.escape(old_name)
+        new_name = sql.escape(new_name)
+        stmt = f'ALTER TABLE "{model.__tablename__}" RENAME {old_name} TO {new_name}'
+        s.execute(sqlalchemy.text(stmt))
+
+    def drop_column(
+        self,
+        s: orm.Session,
+        model: type[Base],
+        col_name: str,
+    ) -> None:
+        """Rename a column in a table.
+
+        Args:
+            s: SQL session to use
+            model: Table to modify
+            col_name: Name of column to drop
+        """
+        col_name = sql.escape(col_name)
+        stmt = f'ALTER TABLE "{model.__tablename__}" DROP {col_name}'
         s.execute(sqlalchemy.text(stmt))
 
     def migrate_schemas(
         self,
         s: orm.Session,
         model: type[Base],
+        *,
+        drop: set[str] | None = None,
     ) -> None:
         """Migrate the schemas of a table.
 
         Args:
             s: SQL session to use
             model: Table to modify
+            drop: Set of column names to drop
         """
+        drop = drop or set()
         # In SQLite we can do the hacky way or recreate the table
         # Opt for recreate
         table: sqlalchemy.Table = model.__table__  # type: ignore[attr-defined]
@@ -116,7 +138,7 @@ class Migrator(ABC):
         stmt = "PRAGMA legacy_alter_table = ON"
         s.execute(sqlalchemy.text(stmt))
 
-        stmt = f"ALTER TABLE '{name}' RENAME TO migration_temp"
+        stmt = f'ALTER TABLE "{name}" RENAME TO "migration_temp"'
         s.execute(sqlalchemy.text(stmt))
 
         # Reset
@@ -128,11 +150,15 @@ class Migrator(ABC):
         table.create(bind=s.get_bind())
 
         columns = ", ".join(
-            f"`{c.name}`" if c.name in sql.compiler.RESERVED_WORDS else c.name
-            for c in table.columns
+            sql.escape(c.name) for c in table.columns if c.name not in drop
         )
-        stmt = f"INSERT INTO '{name}' ({columns}) SELECT {columns} FROM migration_temp"  # noqa: S608
+        stmt = textwrap.dedent(
+            f"""\
+            INSERT INTO "{name}" ({columns})
+                SELECT {columns}
+                FROM "migration_temp";""",  # noqa: S608
+        )
         s.execute(sqlalchemy.text(stmt))
 
-        stmt = "DROP TABLE migration_temp"
+        stmt = 'DROP TABLE "migration_temp"'
         s.execute(sqlalchemy.text(stmt))

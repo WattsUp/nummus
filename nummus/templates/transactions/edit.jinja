@@ -170,7 +170,7 @@
                 hx-delete="{{ url_for('transactions.split',uri="arst") }}"
                 disabled>Copy Similar</button>
     {% endif %}
-    {% if txn.uri and not txn.linked %}
+    {% if txn.uri and not txn.cleared %}
         <button class="btn-text-error mx-auto"
                 onclick="txn.confirmDelete(event)"
                 hx-trigger="delete"

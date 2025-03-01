@@ -85,14 +85,14 @@
                 </div>
             </label>
             <label class="toggle col-start-1 col-span-full mx-auto gap-4">
-                <input name="unlinked"
+                <input name="uncleared"
                        type="checkbox"
                        autocomplete="off"
-                       {% if ctx.unlinked %}checked{% endif %}
+                       {% if ctx.uncleared %}checked{% endif %}
                        hx-target="#txn-filters"
                        hx-indicator="unset"
                        hx-get="{{ url_for('transactions.table_options') }}">
-                <div>Only unlinked</div>
+                <div>Only uncleared</div>
                 <switch></switch>
             </label>
             <div class="flex justify-around col-span-full">

@@ -445,9 +445,7 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
-                            linked=True,
-                            # Asset transactions are immediately locked
-                            locked=True,
+                            cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
@@ -486,9 +484,7 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
-                            linked=True,
-                            # Asset transactions are immediately locked
-                            locked=True,
+                            cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
@@ -524,7 +520,7 @@ class Portfolio:
                             Transaction.amount == d["amount"],
                             Transaction.date_ord >= date_ord - 5,
                             Transaction.date_ord <= date_ord + 5,
-                            Transaction.linked.is_(False),
+                            Transaction.cleared.is_(False),
                         )
                         .all(),
                     )
@@ -544,7 +540,7 @@ class Portfolio:
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
                         {
-                            "linked": True,
+                            "cleared": True,
                             "statement": Transaction.clean_strings(
                                 "statement",
                                 statement,
@@ -553,16 +549,14 @@ class Portfolio:
                     )
                     s.query(TransactionSplit).where(
                         TransactionSplit.parent_id == match_id,
-                    ).update({"linked": True})
+                    ).update({"cleared": True})
                 else:
                     txn = Transaction(
                         account_id=acct_id,
                         amount=d["amount"],
                         date=d["date"],
                         statement=statement,
-                        linked=True,
-                        # Asset transactions are immediately locked
-                        locked=asset_id is not None,
+                        cleared=True,
                     )
                     t_split = TransactionSplit(
                         amount=d["amount"],
@@ -771,7 +765,6 @@ class Portfolio:
             .where(
                 Transaction.account_id == txn.account_id,
                 Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
                 Transaction.amount >= amount_min,
                 Transaction.amount <= amount_max,
                 Transaction.statement == txn.statement,
@@ -787,7 +780,6 @@ class Portfolio:
             s.query(Transaction.id_)
             .where(
                 Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
                 Transaction.amount >= amount_min,
                 Transaction.amount <= amount_max,
                 Transaction.statement == txn.statement,
@@ -803,7 +795,6 @@ class Portfolio:
             s.query(Transaction.id_)
             .where(
                 Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
                 Transaction.statement == txn.statement,
             )
             .order_by(sort_closest_amount)
@@ -821,7 +812,6 @@ class Portfolio:
             )
             .where(
                 Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
                 Transaction.amount >= amount_min,
                 Transaction.amount <= amount_max,
             )

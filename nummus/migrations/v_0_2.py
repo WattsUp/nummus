@@ -40,11 +40,18 @@ class MigratorV0_2(Migrator):  # noqa: N801
             # Update TransactionSplit to add text_fields
             self.add_column(s, TransactionSplit, TransactionSplit.text_fields)
             self.rename_column(s, TransactionSplit, "description", "memo")
+            self.rename_column(s, TransactionSplit, "linked", "cleared")
+            self.drop_column(s, TransactionSplit, "locked")
 
         with p.begin_session() as s:
             # Update Transaction to add payee
             self.add_column(s, Transaction, Transaction.payee)
+            self.rename_column(s, Transaction, "linked", "cleared")
+            # Can't do drop_column directly since there is a constraint
+            # referencing locked
+            self.migrate_schemas(s, Transaction, drop={"locked"})
 
+        with p.begin_session() as s:
             # Check which ones have more than one payee
             accounts = Account.map_name(s)
             query = (
@@ -92,7 +99,7 @@ class MigratorV0_2(Migrator):  # noqa: N801
             Config,
             ImportedFile,
             HealthCheckIssue,
-            Transaction,
+            # Transaction done above
             TransactionCategory,
             TransactionSplit,
         ]

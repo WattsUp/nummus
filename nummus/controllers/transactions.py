@@ -40,8 +40,7 @@ class _SplitContext(TypedDict):
     category_uri: str
     tag: str | None
     amount: Decimal
-    locked: bool
-    linked: bool
+    cleared: bool
     asset_name: str | None
     asset_ticker: str | None
     asset_price: Decimal | None
@@ -108,7 +107,7 @@ def table_options() -> str:
         categories_emoji = TransactionCategory.map_name_emoji(s)
 
         args = flask.request.args
-        unlinked = "unlinked" in args
+        uncleared = "uncleared" in args
         selected_account = args.get("account")
         selected_category = args.get("category")
         selected_period = args.get("period")
@@ -123,7 +122,7 @@ def table_options() -> str:
             selected_start,
             selected_end,
             selected_category,
-            unlinked=unlinked,
+            uncleared=uncleared,
         )
         options = ctx_options(
             query,
@@ -141,7 +140,7 @@ def table_options() -> str:
                 "selected_period": selected_period,
                 "selected_account": selected_account,
                 "selected_category": selected_category,
-                "unlinked": unlinked,
+                "uncleared": uncleared,
                 "start": selected_start,
                 "end": selected_end,
             },
@@ -249,8 +248,6 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
                     amount=amount,
                     statement="Manually added",
                     payee=payee,
-                    locked=False,
-                    linked=False,
                 )
                 # Allow new with splits
                 t_split = TransactionSplit(
@@ -339,8 +336,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                     (Account.id_to_uri(acct_id), name)
                     for acct_id, name in accounts.items()
                 ],
-                "locked": parent.locked,
-                "linked": parent.linked,
+                "cleared": parent.cleared,
                 "date": datetime.date.fromordinal(parent.date_ord),
                 "amount": parent.amount,
                 "statement": parent.statement,
@@ -357,8 +353,8 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
 
             return flask.render_template("transactions/edit.jinja", txn=ctx)
         if flask.request.method == "DELETE":
-            if parent.linked:
-                return common.error("Cannot delete linked transaction")
+            if parent.cleared:
+                return common.error("Cannot delete cleared transaction")
             s.query(TransactionSplit).where(
                 TransactionSplit.parent_id == parent.id_,
             ).delete()
@@ -373,7 +369,6 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 if date is None:
                     return common.error("Transaction date must not be empty")
                 parent.date = date
-                parent.locked = "locked" in form
                 parent.payee = form.get("payee")
 
                 split_memos = form.getlist("memo")
@@ -575,7 +570,7 @@ def table_query(
     selected_end: str | None = None,
     selected_category: str | None = None,
     *,
-    unlinked: bool | None = False,
+    uncleared: bool | None = False,
 ) -> tuple[orm.Query, bool]:
     """Create transactions table query.
 
@@ -587,7 +582,7 @@ def table_query(
         selected_start: ISO date string of start from args
         selected_end: ISO date string of end from args
         selected_category: URI of category from args
-        unlinked: True will only query unlinked transactions
+        uncleared: True will only query uncleared transactions
 
     Returns:
         (SQL query, any_filters)
@@ -639,9 +634,9 @@ def table_query(
         cat_id = TransactionCategory.uri_to_id(selected_category)
         query = query.where(TransactionSplit.category_id == cat_id)
 
-    if unlinked:
+    if uncleared:
         any_filters = True
-        query = query.where(TransactionSplit.linked.is_(False))
+        query = query.where(TransactionSplit.cleared.is_(False))
 
     return query, any_filters
 
@@ -682,8 +677,7 @@ def ctx_split(
         "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "tag": t_split.tag,
         "amount": t_split.amount,
-        "locked": t_split.locked,
-        "linked": t_split.linked,
+        "cleared": t_split.cleared,
         "asset_name": asset_name,
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
@@ -789,7 +783,7 @@ def ctx_table(
 
         args = flask.request.args
         search_str = args.get("search")
-        unlinked = "unlinked" in args
+        uncleared = "uncleared" in args
         selected_account = args.get("account")
         selected_category = args.get("category")
         selected_period = args.get("period")
@@ -813,7 +807,7 @@ def ctx_table(
             selected_start,
             selected_end,
             selected_category,
-            unlinked=unlinked,
+            uncleared=uncleared,
         )
         options = ctx_options(
             query,
@@ -932,7 +926,7 @@ def ctx_table(
             "selected_period": selected_period,
             "selected_account": selected_account,
             "selected_category": selected_category,
-            "unlinked": unlinked,
+            "uncleared": uncleared,
             "start": selected_start,
             "end": selected_end,
         }

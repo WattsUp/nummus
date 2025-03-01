@@ -51,9 +51,7 @@ class TransactionSplit(Base):
         category: Type of Transaction
         parent: Parent Transaction
         date_ord: Date ordinal on which Transaction occurred
-        locked: True only allows manually editing, False allows automatic changes
-            (namely auto labeling field based on similar Transactions)
-        linked: True when transaction has been imported from a bank source, False
+        cleared: True when transaction has been imported from a bank source, False
             indicates transaction was manually created
         account: Account that owns this Transaction
         asset: Asset exchanged for cash, primarily for instrument transactions
@@ -81,8 +79,7 @@ class TransactionSplit(Base):
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date_ord: ORMInt
     month_ord: ORMInt
-    locked: ORMBool
-    linked: ORMBool
+    cleared: ORMBool
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     asset_id: ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -117,8 +114,7 @@ class TransactionSplit(Base):
             "date_ord",
             "month_ord",
             "payee",
-            "locked",
-            "linked",
+            "cleared",
             "account_id",
         ]:
             msg = (
@@ -206,8 +202,7 @@ class TransactionSplit(Base):
         super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("month_ord", parent.month_ord)
         super().__setattr__("payee", parent.payee)
-        super().__setattr__("locked", parent.locked)
-        super().__setattr__("linked", parent.linked)
+        super().__setattr__("cleared", parent.cleared)
         super().__setattr__("account_id", parent.account_id)
 
     @classmethod
@@ -372,9 +367,7 @@ class Transaction(Base):
             increases in value (inflow)
         statement: Text appearing on Account statement
         payee: Name of payee (for outflow)/payer (for inflow)
-        locked: True only allows manually editing, False allows automatic changes
-            (namely auto labeling field based on similar Transactions)
-        linked: True when transaction has been imported from a bank source, False
+        cleared: True when transaction has been imported from a bank source, False
             indicates transaction was manually created
         splits: List of TransactionSplits
     """
@@ -388,8 +381,7 @@ class Transaction(Base):
     amount: ORMReal = orm.mapped_column(Decimal6)
     statement: ORMStr
     payee: ORMStrOpt
-    locked: ORMBool = orm.mapped_column(default=False)
-    linked: ORMBool = orm.mapped_column(default=False)
+    cleared: ORMBool = orm.mapped_column(default=False)
 
     similar_txn_id: ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
 
@@ -398,10 +390,6 @@ class Transaction(Base):
     __table_args__ = (
         *string_column_args("statement"),
         *string_column_args("payee"),
-        CheckConstraint(
-            "linked or not locked",
-            "Transaction cannot be locked until linked",
-        ),
     )
 
     @orm.validates("statement", "payee")

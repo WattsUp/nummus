@@ -28,8 +28,8 @@
             </div>
             {% set class_amount = "text-primary" if txn.amount > 0 %}
             <div class="{{ class_amount }}">{{ txn.amount | money }}</div>
-            {% set class_linked = "text-primary filled" if txn.linked > 0 %}
-            <icon class="{{ class_linked }}">check_circle</icon>
+            {% set class_cleared = "text-primary filled" if txn.cleared > 0 %}
+            <icon class="{{ class_cleared }}">check_circle</icon>
         </div>
         <div>
             <div>
