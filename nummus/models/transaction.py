@@ -45,7 +45,6 @@ class TransactionSplit(Base):
         uri: TransactionSplit unique identifier
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
-        payee: Name of payee (for outflow)/payer (for inflow)
         description: Description of exchange
         tag: Unique tag linked across datasets
         text_fields: Join of all text fields for searching
@@ -117,6 +116,7 @@ class TransactionSplit(Base):
             "parent_id",
             "date_ord",
             "month_ord",
+            "payee",
             "locked",
             "linked",
             "account_id",
@@ -205,6 +205,7 @@ class TransactionSplit(Base):
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("month_ord", parent.month_ord)
+        super().__setattr__("payee", parent.payee)
         super().__setattr__("locked", parent.locked)
         super().__setattr__("linked", parent.linked)
         super().__setattr__("account_id", parent.account_id)
@@ -370,6 +371,7 @@ class Transaction(Base):
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
         statement: Text appearing on Account statement
+        payee: Name of payee (for outflow)/payer (for inflow)
         locked: True only allows manually editing, False allows automatic changes
             (namely auto labeling field based on similar Transactions)
         linked: True when transaction has been imported from a bank source, False
@@ -385,6 +387,7 @@ class Transaction(Base):
     month_ord: ORMInt
     amount: ORMReal = orm.mapped_column(Decimal6)
     statement: ORMStr
+    payee: ORMStrOpt
     locked: ORMBool = orm.mapped_column(default=False)
     linked: ORMBool = orm.mapped_column(default=False)
 
@@ -394,13 +397,14 @@ class Transaction(Base):
 
     __table_args__ = (
         *string_column_args("statement"),
+        *string_column_args("payee"),
         CheckConstraint(
             "linked or not locked",
             "Transaction cannot be locked until linked",
         ),
     )
 
-    @orm.validates("statement")
+    @orm.validates("statement", "payee")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
         return self.clean_strings(key, field, short_check=key != "ticker")

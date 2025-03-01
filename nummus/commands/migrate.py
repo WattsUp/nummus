@@ -59,7 +59,9 @@ class Migrate(Base):
                 continue
             try:
                 m = m_class()
-                m.migrate(p)
+                comments = m.migrate(p)
+                for line in comments:
+                    print(f"{Fore.CYAN}{line}")
 
                 print(f"{Fore.GREEN}Portfolio migrated to v{m_v}")
             except Exception as e:

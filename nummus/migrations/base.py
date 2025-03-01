@@ -22,11 +22,14 @@ class Migrator(ABC):
     _VERSION: str
 
     @abstractmethod
-    def migrate(self, p: portfolio.Portfolio) -> None:
+    def migrate(self, p: portfolio.Portfolio) -> list[str]:
         """Run migration.
 
         Args:
             p: Portfolio to migrate
+
+        Returns:
+            List of comments to display to user
         """
 
     @classproperty
