@@ -69,7 +69,8 @@ const dialog = {
             for (const next of results) {
                 if (next.compareDocumentPosition(start) ===
                     Node.DOCUMENT_POSITION_PRECEDING) {
-                    next.focus();
+                    next.focus({preventScroll: true});
+                    next.selectionStart = next.selectionEnd = next.value.length;
                     return;
                 }
             }
@@ -82,6 +83,11 @@ const dialog = {
                     focusNext(e);
                 }
             });
+            htmx.on(e, 'focus', (evt) => {
+                // Smooth scroll nearest
+                evt.preventDefault();
+                e.scrollIntoView({block: 'nearest'});
+            })
         });
     },
     /**

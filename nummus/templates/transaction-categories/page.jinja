@@ -5,6 +5,7 @@
     <h1 class="text-3xl font-serif text-primary">Transaction categories</h1>
     <button class="btn-tonal"
             hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
             hx-disabled-elt="this"
             hx-get="{{ url_for('transaction_categories.new') }}">
         <icon>add</icon>New
@@ -22,7 +23,8 @@
     </p>
 </div>
 <div class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2"
-     hx-target="#dialog">
+     hx-target="#dialog"
+     hx-swap="innerHTML show:#dialog:top">
     {% for group, items in ctx.groups.items() %}
         {# Set row span such that on md screen the third category will fit in dense #}
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">

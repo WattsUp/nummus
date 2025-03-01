@@ -6,7 +6,12 @@
        hx-get="{{ url_for('dashboard.page') }}"
        hx-disabled-elt="this">nummus</a>
     <section class="w-min">
-        <button class="fab" disabled>
+        <button class="fab"
+                hx-get="{{ url_for('transactions.new') }}"
+                hx-target="#dialog"
+                hx-swap="innerHTML show:#dialog:top"
+                hx-push-url="false"
+                hx-disabled-elt="this">
             <icon>note_stack_add</icon>
             <div>Transaction</div>
         </button>
@@ -26,6 +31,7 @@
                 {% elif link == "DIALOG" %}
                     <button hx-get="{{ url_for(endpoint) }}"
                             hx-target="#dialog"
+                            hx-swap="innerHTML show:#dialog:top"
                             hx-trigger="load, click"
                             hx-push-url="false"
                             hx-disabled-elt="this">

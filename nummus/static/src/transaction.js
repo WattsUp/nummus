@@ -10,4 +10,19 @@ const txn = {
             e.disabled = notCustom;
         });
     },
+    /**
+     * On click of delete transaction, confirm action
+     *
+     * @param {Event} evt Triggering event
+     */
+    confirmDelete: function(evt) {
+        dialog.confirm(
+            'Delete Transaction',
+            'Delete',
+            () => {
+                htmx.trigger(evt.target, 'delete');
+            },
+            'Unlinked transaction will be deleted.',
+        );
+    },
 };

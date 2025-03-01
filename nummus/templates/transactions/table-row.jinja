@@ -1,4 +1,5 @@
-<div class="txn">
+<div class="txn"
+     hx-get="{{ url_for('transactions.transaction', uri=txn.uri) }}">
     <label class="checkbox">
         <input type="checkbox" autocomplete="off" disabled>
         <icon>check_box_outline_blank</icon>

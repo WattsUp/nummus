@@ -1,28 +1,38 @@
-@layer components {
+@utility dialog-wrapper {
+    @apply fixed;
+    @apply max-w-full max-h-full overflow-y-scroll scroll-smooth;
+    @apply left-[50vw] top-[50vh] -translate-x-1/2 -translate-y-1/2;
 
-    .dialog {
-        @apply absolute m-auto empty:hidden p-3 rounded-3xl;
-        @apply min-w-64;
-        @apply bg-surface-container-high;
-        @apply left-[50vw] top-[50vh] -translate-x-1/2 -translate-y-1/2;
+    &:has(.dialog:empty) {
+        @apply hidden;
+    }
 
-        @variant not-empty {
-            &+.scrim {
-                @apply translate-x-0 opacity-100;
-                transition: opacity 0.3s, translate 0s;
-            }
+    &:has(.dialog:not(:empty))+.scrim {
+        @apply translate-x-0 opacity-100;
+        transition: opacity 0.3s, translate 0s;
+    }
+}
+
+@utility dialog {
+    @apply p-3 rounded-3xl;
+    @apply min-w-64 max-w-full;
+    @apply bg-surface-container-high;
+
+
+    &>div:first-child {
+        @apply flex items-center gap-1 mb-2;
+        @apply sticky top-0 z-10 bg-surface-container-high;
+
+        &>h1 {
+            @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
         }
 
-        &>div:first-child {
-            @apply flex items-center gap-1 mb-2;
-
-            &>h1 {
-                @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
-            }
-
-            &>button {
-                @apply btn-text;
-            }
+        &>button {
+            @apply btn-text;
         }
+    }
+
+    &>form {
+        @apply max-w-full;
     }
 }

@@ -37,6 +37,7 @@ class _SplitContext(TypedDict):
     payee: str | None
     memo: str | None
     category: str
+    category_uri: str
     tag: str | None
     amount: Decimal
     locked: bool
@@ -166,24 +167,53 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             .where(Account.closed.is_(False))
         )
         if "budgeted" in flask.request.args:
-            query = query.where(Account.budgeted)
+            query = query.order_by(Account.budgeted.desc(), Account.name)
+        else:
+            query = query.order_by(Account.name)
         accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
+        query = s.query(TransactionCategory).with_entities(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+            TransactionCategory.asset_linked,
+        )
+        categories: dict[int, tuple[str, bool]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
+
         if flask.request.method == "GET":
-            ctx_parent = {
+            query = s.query(Transaction.payee)
+            payees = sorted(
+                filter(None, (item for item, in query.distinct())),
+                key=lambda item: item.lower(),
+            )
+
+            query = s.query(TransactionSplit.tag)
+            tags = sorted(
+                filter(None, (item for item, in query.distinct())),
+                key=lambda item: item.lower(),
+            )
+            ctx = {
                 "uri": None,
-                "account": (
-                    None if acct_uri is None else accounts[Account.uri_to_id(acct_uri)]
-                ),
+                "account": acct_uri,
+                "accounts": [
+                    (Account.id_to_uri(acct_id), name)
+                    for acct_id, name in accounts.items()
+                ],
+                "categories": [
+                    (TransactionCategory.id_to_uri(cat_id), name, asset_linked)
+                    for cat_id, (name, asset_linked) in categories.items()
+                ],
+                "payees": payees,
+                "tags": tags,
                 "date": datetime.date.today(),
                 "amount": None,
-                "statement": "",
+                "splits": [{}],
             }
 
             return flask.render_template(
-                "transactions/new.jinja",
-                parent=ctx_parent,
-                accounts=accounts.values(),
+                "transactions/edit.jinja",
+                txn=ctx,
             )
 
         form = flask.request.form
@@ -198,47 +228,43 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         account = form.get("account")
         if account is None:
             return common.error("Transaction account must not be empty")
-        statement = form.get("statement")
+        payee = form.get("payee")
 
-        # Reverse accounts for LUT
-        accounts_rev = {v: k for k, v in accounts.items()}
-
-        category_id: int | None = (
-            s.query(TransactionCategory.id_)
-            .where(TransactionCategory.name == "Uncategorized")
-            .scalar()
-        )
-        if category_id is None:  # pragma: no cover
-            msg = "Category Uncategorized not found"
-            raise exc.ProtectedObjectNotFoundError(msg)
+        split_memos = form.getlist("memo")
+        split_categories = [
+            TransactionCategory.uri_to_id(x) for x in form.getlist("category")
+        ]
+        split_tags = form.getlist("tag")
+        split_amounts = [
+            utils.evaluate_real_statement(x) for x in form.getlist("amount")
+        ]
+        if len(split_categories) == 1:
+            split_amounts = [amount]
 
         try:
             with s.begin_nested():
                 txn = Transaction(
-                    account_id=accounts_rev[account],
+                    account_id=Account.uri_to_id(account),
                     date=date,
                     amount=amount,
-                    statement=statement or "Manually added",
+                    statement="Manually added",
+                    payee=payee,
                     locked=False,
                     linked=False,
                 )
+                # Allow new with splits
                 t_split = TransactionSplit(
                     parent=txn,
-                    amount=amount,
-                    category_id=category_id,
+                    amount=split_amounts[0],
+                    category_id=split_categories[0],
+                    memo=split_memos[0],
+                    tag=split_tags[0],
                 )
                 s.add_all((txn, t_split))
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        uri = txn.uri
-
-        edit_overlay = transaction(uri, force_get=True)
-        if not isinstance(edit_overlay, str):  # pragma: no cover
-            msg = "Edit overlay did not return a string"
-            raise TypeError(msg)
-        # Adding transactions update account cause the balance changes
-        return common.dialog_swap(edit_overlay, event="update-account")
+        return common.dialog_swap(event="update-transaction")
 
 
 def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
@@ -260,7 +286,15 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except exc.http.BadRequest:
             child = web_utils.find(s, TransactionSplit, uri)
             parent = child.parent
-        categories = TransactionCategory.map_name(s, no_asset_linked=True)
+        query = s.query(TransactionCategory).with_entities(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+            TransactionCategory.asset_linked,
+        )
+        categories: dict[int, tuple[str, bool]] = {
+            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        }
+        category_names = {k: v[0] for k, v in categories.items()}
         query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
         assets: dict[int, tuple[str, str | None]] = {
             r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
@@ -269,52 +303,59 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         if force_get or flask.request.method == "GET":
             accounts = Account.map_name(s)
 
-            ctx_parent = {
-                "uri": parent.uri,
-                "account": accounts[parent.account_id],
-                "locked": parent.locked,
-                "linked": parent.linked,
-                "date": datetime.date.fromordinal(parent.date_ord),
-                "amount": parent.amount,
-                "statement": parent.statement,
-            }
-
             splits = parent.splits
 
             ctx_splits: list[_SplitContext] = [
-                ctx_split(t_split, accounts, categories, assets, {parent.id_})
+                ctx_split(
+                    t_split,
+                    accounts,
+                    category_names,
+                    assets,
+                    set(),
+                )
                 for t_split in splits
             ]
 
-            query = s.query(TransactionSplit.payee).where(
-                TransactionSplit.asset_id.is_(None),
-            )
+            query = s.query(Transaction.payee)
             payees = sorted(
                 filter(None, (item for item, in query.distinct())),
                 key=lambda item: item.lower(),
             )
 
-            query = s.query(TransactionSplit.tag).where(
-                TransactionSplit.asset_id.is_(None),
-            )
+            query = s.query(TransactionSplit.tag)
             tags = sorted(
                 filter(None, (item for item, in query.distinct())),
                 key=lambda item: item.lower(),
             )
 
-            # Run transaction
+            # Run similar transaction
             similar_id = p.find_similar_transaction(parent, set_property=False)
             similar_uri = similar_id and Transaction.id_to_uri(similar_id)
 
-            return flask.render_template(
-                "transactions/edit.jinja",
-                splits=ctx_splits,
-                parent=ctx_parent,
-                payees=payees,
-                categories=categories.values(),
-                tags=tags,
-                similar_uri=similar_uri,
-            )
+            ctx = {
+                "uri": parent.uri,
+                "account": Account.id_to_uri(parent.account_id),
+                "accounts": [
+                    (Account.id_to_uri(acct_id), name)
+                    for acct_id, name in accounts.items()
+                ],
+                "locked": parent.locked,
+                "linked": parent.linked,
+                "date": datetime.date.fromordinal(parent.date_ord),
+                "amount": parent.amount,
+                "statement": parent.statement,
+                "payee": parent.payee,
+                "splits": ctx_splits,
+                "categories": [
+                    (TransactionCategory.id_to_uri(cat_id), name, asset_linked)
+                    for cat_id, (name, asset_linked) in categories.items()
+                ],
+                "payees": payees,
+                "tags": tags,
+                "similar_uri": similar_uri,
+            }
+
+            return flask.render_template("transactions/edit.jinja", txn=ctx)
         if flask.request.method == "DELETE":
             if parent.linked:
                 return common.error("Cannot delete linked transaction")
@@ -322,8 +363,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 TransactionSplit.parent_id == parent.id_,
             ).delete()
             s.delete(parent)
-            # Adding transactions update account cause the balance changes
-            return common.dialog_swap(event="update-account")
+            return common.dialog_swap(event="update-transaction")
 
         try:
             with s.begin_nested():
@@ -334,27 +374,30 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                     return common.error("Transaction date must not be empty")
                 parent.date = date
                 parent.locked = "locked" in form
+                parent.payee = form.get("payee")
 
-                payee = form.getlist("payee")
-                memo = form.getlist("memo")
-                category = form.getlist("category")
-                tag = form.getlist("tag")
-                amount = [
+                split_memos = form.getlist("memo")
+                split_categories = [
+                    TransactionCategory.uri_to_id(x) for x in form.getlist("category")
+                ]
+                split_tags = form.getlist("tag")
+                split_amounts = [
                     utils.evaluate_real_statement(x) for x in form.getlist("amount")
                 ]
 
-                if sum(filter(None, amount)) != parent.amount:
-                    msg = "Non-zero remaining amount to be assigned"
-                    return common.error(msg)
-
-                if len(payee) < 1:
+                if len(split_categories) < 1:
                     msg = "Transaction must have at least one split"
+                    return common.error(msg)
+                if len(split_categories) == 1:
+                    split_amounts = [parent.amount]
+                elif sum(filter(None, split_amounts)) != parent.amount:
+                    msg = "Non-zero remaining amount to be assigned"
                     return common.error(msg)
 
                 splits = parent.splits
 
                 # Add or remove splits to match desired
-                n_add = len(payee) - len(splits)
+                n_add = len(split_categories) - len(splits)
                 while n_add > 0:
                     splits.append(TransactionSplit())
                     n_add -= 1
@@ -363,26 +406,25 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                         s.delete(t_split)
                     splits = splits[:n_add]
 
-                # Reverse categories for LUT
-                categories_rev = {v: k for k, v in categories.items()}
-
                 # Update parent properties
-                for i, t_split in enumerate(splits):
+                for t_split, memo, cat_id, tag, amount in zip(
+                    splits,
+                    split_memos,
+                    split_categories,
+                    split_tags,
+                    split_amounts,
+                    strict=True,
+                ):
                     t_split.parent = parent
 
-                    try:
-                        t_split.payee = payee[i]
-                        t_split.memo = memo[i]
-                        t_split.category_id = categories_rev[category[i]]
-                        t_split.tag = tag[i]
-                        a = amount[i]
-                    except IndexError:
-                        return common.error("Transaction split missing properties")
-                    if a is None:
+                    t_split.memo = memo
+                    t_split.category_id = cat_id
+                    t_split.tag = tag
+                    if amount is None:
                         return common.error(
                             "Transaction split amount must not be empty",
                         )
-                    t_split.amount = a
+                    t_split.amount = amount
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -637,6 +679,7 @@ def ctx_split(
         "payee": t_split.payee,
         "memo": t_split.memo,
         "category": categories[t_split.category_id],
+        "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "tag": t_split.tag,
         "amount": t_split.amount,
         "locked": t_split.locked,

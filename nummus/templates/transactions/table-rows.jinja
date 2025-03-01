@@ -6,7 +6,7 @@
     {% endwith %}
 {% endif %}
 {% for date, transactions in ctx.transactions %}
-    <div>
+    <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
         <div class="txn-header">
             <div>{{ date }}</div>
         </div>
@@ -18,7 +18,7 @@
     {% if loop.last %}
         {% if ctx.next_page %}
             <div hx-target="#txn-table"
-                 hx-swap="beforeend"
+                 hx-swap="beforeend show:none"
                  hx-trigger="revealed"
                  hx-include="#txn-filters,#txn-search"
                  hx-get="{{ url_for(endpoint, page=ctx.next_page) }}"

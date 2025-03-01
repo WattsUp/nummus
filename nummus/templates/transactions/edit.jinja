@@ -1,7 +1,187 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
-     onclick="overlayEditor.close()"></div>
-<div class="w-full max-md:min-h-full md:w-[750px] md:h-[580px] md:max-h-[90vh] lg:w-[900px] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
-     hx-include="#form-txn">
+{% if txn.uri %}
+    {% with headline="Edit transaction", save_url=url_for("transactions.transaction", uri=txn.uri) %}
+        {% include "/shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% else %}
+    {% with headline="New transaction", save_url=url_for("transactions.new"), save_method="post" %}
+        {% include "/shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% endif %}
+<form class="grid gap-2 grid-cols-2 w-88" onsubmit="return false">
+    <datalist id="payees">
+        {% for item in txn.payees %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
+    </datalist>
+    <datalist id="tags">
+        {% for item in txn.tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
+    </datalist>
+    {# TODO (WattsUp): If locked, cannot change amount and account #}
+    {# TODO (WattsUp): If split, change to full screen dialog #}
+    {# TODO (WattsUp): On larger screens, layout better #}
+    <label class="input-outlined input-bg-surface-container-high col-span-2">
+        <input name="amount"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ "%.2f" % txn.amount if txn.amount }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               autocomplete="off">
+        <icon>attach_money</icon>
+        <div>
+            <div>Amount</div>
+        </div>
+        <div>
+            <error></error>
+            <div>Positive for inflow, negative for outflow</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container-high col-span-2">
+        <input name="payee"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ txn.payee or "" }}"
+               list="payees"
+               autocomplete="off">
+        <icon>store</icon>
+        <div>
+            <div>Payee/Payor</div>
+        </div>
+        <div>
+            <error></error>
+            <div>Name of business transaction was made with</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container-high col-span-2">
+        <select name="account" required autocomplete="off">
+            <option value="" disabled hidden {% if not txn.account %}selected{% endif %}></option>
+            {% for value, label in txn.accounts %}
+                <option value="{{ value }}" {% if value == txn.account %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <icon>account_balance</icon>
+        <div>
+            <div>Account</div>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container-high col-span-2">
+        <input name="date"
+               type="date"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ txn.date or "" }}"
+               autocomplete="off">
+        <icon>event</icon>
+        <div>
+            <div>Date</div>
+        </div>
+        <div>
+            <error></error>
+        </div>
+    </label>
+    {% set is_split = (txn.splits | length) > 1 %}
+    {% for split in txn.splits %}
+        <hr>
+        {% if is_split %}
+            <div class="text-center italic text-on-surface-variant col-span-full">Split #{{ loop.index }}</div>
+        {% endif %}
+        <label class="input-outlined input-bg-surface-container-high col-span-2">
+            <select name="category" required autocomplete="off">
+                <option value=""
+                        disabled
+                        hidden
+                        {% if not split.category_uri %}selected{% endif %}></option>
+                {% for value, label, disabled in txn.categories %}
+                    <option value="{{ value }}"
+                            {% if value == split.category_uri %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <icon>category</icon>
+            <div>
+                <div>Category</div>
+            </div>
+        </label>
+        <label class="input-outlined input-bg-surface-container-high col-span-2">
+            <input name="memo"
+                   enterkeyhint="next"
+                   placeholder=""
+                   value="{{ split.memo or "" }}"
+                   hx-target="next error"
+                   hx-trigger="input delay:200ms"
+                   hx-include="this"
+                   autocomplete="off">
+            <icon>notes</icon>
+            <div>
+                <div>Memo (optional)</div>
+            </div>
+            <div>
+                <error></error>
+                <div>Optional note to refresh your memory later</div>
+            </div>
+        </label>
+        <label class="input-outlined input-bg-surface-container-high col-span-2">
+            <input name="tag"
+                   enterkeyhint="next"
+                   placeholder=""
+                   value="{{ split.tag or "" }}"
+                   list="tags"
+                   hx-target="next error"
+                   hx-trigger="input delay:200ms"
+                   hx-include="this"
+                   autocomplete="off">
+            <icon>label</icon>
+            <div>
+                <div>Tag (optional)</div>
+            </div>
+            <div>
+                <error></error>
+                <div>Optional tag to associate transactions together</div>
+            </div>
+        </label>
+        {% if is_split %}
+            <label class="input-outlined input-bg-surface-container-high col-span-2">
+                <input name="split-amount"
+                       enterkeyhint="next"
+                       placeholder=""
+                       value="{{ "%.2f" % split.amount if split.amount }}"
+                       hx-target="next error"
+                       hx-trigger="input delay:200ms"
+                       hx-include="this"
+                       autocomplete="off">
+                <icon>attach_money</icon>
+                <div>
+                    <div>Split Amount</div>
+                </div>
+                <div>
+                    <error></error>
+                </div>
+            </label>
+        {% endif %}
+    {% endfor %}
+</form>
+<div class="flex justify-around">
+    <button class="btn-text"
+            hx-delete="{{ url_for('transactions.split',uri="arst") }}"
+            disabled>Add Split</button>
+    {% if txn.similar_uri %}
+        <button class="btn-text"
+                hx-delete="{{ url_for('transactions.split',uri="arst") }}"
+                disabled>Copy Similar</button>
+    {% endif %}
+    {% if txn.uri and not txn.linked %}
+        <button class="btn-text-error mx-auto"
+                onclick="txn.confirmDelete(event)"
+                hx-trigger="delete"
+                hx-delete="{{ url_for('transactions.transaction', uri=txn.uri) }}">Delete</button>
+    {% endif %}
+</div>
+<div id="dialog-error" class="error"></div>
+<script>dialog.onLoad()</script>
+{#
+<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden" onclick="overlayEditor.close()"></div>
+<div class="w-full max-md:min-h-full md:w-[750px] md:h-[580px] md:max-h-[90vh] lg:w-[900px] bg-white opacity-100 m-auto flex flex-col py-2 px-6" hx-include="#form-txn">
     <div class="flex items-start mb-2">
         <h1 class="font-serif text-2xl text-green-600 grow">Edit transaction</h1>
         <button class="shrink-0" onclick="overlayEditor.close()">
@@ -10,32 +190,8 @@
             {% endwith %}
         </button>
     </div>
-    <datalist id="payees">
-        {% for item in payees %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
-    </datalist>
-    <datalist id="tags">
-        {% for item in tags %}<option value="{{ item | e }}">{{ item }}</option>{% endfor %}
-    </datalist>
     <div class="flex flex-col w-full grow min-h-0" id="form-txn">
         <div class="flex w-full max-md:flex-col md:gap-4 whitespace-nowrap">
-            <div class="flex flex-col grow min-w-0">
-                <div class="flex gap-2 flex-wrap max-md:justify-between items-center">
-                    <div class="w-20 shrink-0">Date</div>
-                    <input name="date"
-                           type="date"
-                           class="shrink-0"
-                           value="{{ parent["date"] }}"
-                           autocomplete="off">
-                </div>
-                <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
-                    <div class="w-20 shrink-0">Account</div>
-                    <div class="shrink-0">{{ parent["account"] }}</div>
-                </div>
-                <div class="flex gap-2 min-h-7 max-md:justify-between items-center">
-                    <div class="w-20 shrink-0">Statement</div>
-                    <div class="italic truncate min-w-0">{{ parent["statement"] }}</div>
-                </div>
-            </div>
             <div class="flex flex-col min-w-0 shrink-0">
                 <div class="flex gap-2 min-h-7 justify-between items-center">
                     <div class="w-28 shrink-2">Total Amount</div>
@@ -45,10 +201,7 @@
                     <div class="w-28 shrink-0">Locked</div>
                     {% if parent["linked"] %}
                         <label class="checkbox">
-                            <input type="checkbox"
-                                   name="locked"
-                                   {% if parent["locked"] %}checked{% endif %}
-                                   autocomplete="off">
+                            <input type="checkbox" name="locked" {% if parent["locked"] %}checked{% endif %} autocomplete="off">
                             {% with class = "w-6 h-6" %}
                                 {% include "svg/lock.svg" %}
                             {% endwith %}
@@ -80,31 +233,22 @@
             {% include "transactions/edit-remaining.jinja" %}
         </div>
     </div>
-    <div id="overlay-error"
-         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
+    <div id="overlay-error" class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
     <div class="w-full flex justify-between items-center text-xl gap-2 flex-wrap">
-        <button hx-post="{{ url_for('transactions.split', uri=parent['uri']) }}"
-                hx-target="#txn-splits"
-                class="button hover-blue">
+        <button hx-post="{{ url_for('transactions.split', uri=parent['uri']) }}" hx-target="#txn-splits" class="button hover-blue">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/plus.svg" %}
             {% endwith %}
             Add split
         </button>
-        <button hx-delete="{{ url_for('transactions.split', uri=parent['uri']) }}?all"
-                hx-target="#txn-splits"
-                hx-include="unset"
-                class="button hover-red">
+        <button hx-delete="{{ url_for('transactions.split', uri=parent['uri']) }}?all" hx-target="#txn-splits" hx-include="unset" class="button hover-red">
             {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                 {% include "svg/trash.svg" %}
             {% endwith %}
             Clear splits
         </button>
         {% if similar_uri %}
-            <button hx-get="{{ url_for('transactions.split', uri=parent['uri'], similar=similar_uri) }}"
-                    hx-target="#txn-splits"
-                    hx-include="unset"
-                    class="button hover-yellow">
+            <button hx-get="{{ url_for('transactions.split', uri=parent['uri'], similar=similar_uri) }}" hx-target="#txn-splits" hx-include="unset" class="button hover-yellow">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/copy.svg" %}
                 {% endwith %}
@@ -112,12 +256,7 @@
             </button>
         {% endif %}
         {% if not parent["linked"] %}
-            <button hx-delete="{{ url_for('transactions.transaction', uri=parent['uri']) }}"
-                    hx-target="#overlay-error"
-                    hx-swap="innerHTML"
-                    hx-include="unset"
-                    hx-confirm="Are you sure you wish to delete this unlinked transaction?"
-                    class="button hover-red">
+            <button hx-delete="{{ url_for('transactions.transaction', uri=parent['uri']) }}" hx-target="#overlay-error" hx-swap="innerHTML" hx-include="unset" hx-confirm="Are you sure you wish to delete this unlinked transaction?" class="button hover-red">
                 {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
                     {% include "svg/trash.svg" %}
                 {% endwith %}
@@ -126,10 +265,8 @@
         {% endif %}
         <div class="grow"></div>
         <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
-        <button hx-put="{{ url_for('transactions.transaction', uri=parent['uri']) }}"
-                hx-target="#overlay-error"
-                hx-swap="innerHTML"
-                class="button bg-green">Save</button>
+        <button hx-put="{{ url_for('transactions.transaction', uri=parent['uri']) }}" hx-target="#overlay-error" hx-swap="innerHTML" class="button bg-green">Save</button>
     </div>
     <script>overlayEditor.addListeners("form-txn");</script>
 </div>
+#}

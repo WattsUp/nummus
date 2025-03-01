@@ -10,7 +10,7 @@
         {% elif link == "DIALOG" %}
             <button hx-get="{{ url_for(endpoint) }}"
                     hx-target="#dialog"
-                    hx-trigger="load, click"
+                    hx-swap="innerHTML show:#dialog:top"
                     hx-push-url="false"
                     hx-disabled-elt="this">
                 <icon>{{ icon }}</icon>
@@ -25,7 +25,13 @@
             </button>
         {% endif %}
     {% endfor %}
-    <button title="Add Transaction" id="nav-fab" disabled>
+    <button title="Add Transaction"
+            id="nav-fab"
+            hx-get="{{ url_for('transactions.new') }}"
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-push-url="false"
+            hx-disabled-elt="this">
         <icon>note_stack_add</icon>
     </button>
 </nav>
