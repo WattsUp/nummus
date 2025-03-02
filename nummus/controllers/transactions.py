@@ -387,7 +387,16 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 parent.date = date
                 parent.payee = form.get("payee")
 
-                if not parent.cleared:
+                if parent.cleared:
+                    if "amount" in form:
+                        return common.error(
+                            "Cannot modify amount of cleared transaction",
+                        )
+                    if "account" in form:
+                        return common.error(
+                            "Cannot modify account of cleared transaction",
+                        )
+                else:
                     amount = utils.evaluate_real_statement(form.get("amount"))
                     if amount is None:
                         return common.error("Transaction amount must not be empty")
@@ -562,31 +571,6 @@ def split(uri: str) -> str:
                 oob=True,
             )
     return html
-
-
-def remaining(uri: str) -> str:
-    """POST /h/transactions/<uri>/remaining.
-
-    Args:
-        uri: Transaction URI
-
-    Returns:
-      string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        parent = web_utils.find(s, Transaction, uri)
-        form = flask.request.form
-
-        amount = [utils.evaluate_real_statement(x) for x in form.getlist("amount")]
-        current = sum(filter(None, amount))
-
-        return flask.render_template(
-            "transactions/edit-remaining.jinja",
-            remaining=parent.amount - current,
-        )
 
 
 def table_query(
@@ -961,6 +945,93 @@ def ctx_table(
         }
 
 
+def validation(uri: str) -> str:
+    """GET /h/transactions/t/<uri>/validation.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    # dict{key: (required, prop if unique required)}
+    properties: dict[str, bool] = {
+        "payee": True,
+        "memo": False,
+        "tag": False,
+    }
+
+    args = flask.request.args
+    for key, required in properties.items():
+        if key not in args:
+            continue
+        value = args[key].strip()
+        if value == "":
+            return "Required" if required else ""
+        if len(value) < utils.MIN_STR_LEN:
+            return f"{utils.MIN_STR_LEN} characters required"
+        return ""
+
+    if "split-amount" in args:
+        if "i" in args:
+            i = int(args["i"])
+            value = args.getlist("split-amount")[i].strip()
+        else:
+            i = None
+            value = args["amount"].strip()
+        if value == "":
+            return "Required"
+        amount = utils.evaluate_real_statement(value)
+        if amount is None:
+            return "Unable to parse"
+        parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal(0)
+        split_amounts = [
+            utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
+        ]
+
+        split_sum = sum(filter(None, split_amounts)) or Decimal(0)
+
+        remaining = parent_amount - split_sum
+        msg = (
+            (
+                f"Sum of splits {utils.format_financial(split_sum)} "
+                f"not equal to total {utils.format_financial(parent_amount)}. "
+                f"{utils.format_financial(remaining)} to assign"
+            )
+            if remaining != 0
+            else ""
+        )
+
+        # Render sum of splits to headline since its a global error
+        return flask.render_template(
+            "shared/dialog-headline-error.jinja",
+            oob=True,
+            error=msg,
+        )
+    if "amount" in args:
+        value = args["amount"].strip()
+        if value == "":
+            return "Required"
+        amount = utils.evaluate_real_statement(value)
+        if amount is None:
+            return "Unable to parse"
+        with p.begin_session() as s:
+            parent_amount = (
+                s.query(Transaction.amount)
+                .where(
+                    Transaction.id_ == Transaction.uri_to_id(uri),
+                    Transaction.cleared,
+                )
+                .scalar()
+            )
+            if parent_amount is not None:
+                return "Cannot modify amount"
+        return ""
+
+    msg = f"Transaction validation for {args} not implemented"
+    raise NotImplementedError(msg)
+
+
 ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
@@ -969,6 +1040,5 @@ ROUTES: Routes = {
     "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
     # TODO (WattsUp): Fix split endpoint
     "/h/transactions/t/<path:uri>/split": (split, ["GET", "POST", "DELETE"]),
-    # TODO (WattsUp): Fix remaining/ move to validation endpoint
-    "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
+    "/h/transactions/t/<path:uri>/validation": (validation, ["GET"]),
 }

@@ -28,16 +28,25 @@
 
 
     &>div:first-child {
-        @apply flex items-center gap-1 mb-2;
+        @apply mb-2;
         @apply sticky top-0 z-10 bg-surface-container-high;
 
-        &>h1 {
-            @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
+        &>div {
+            @apply flex items-center gap-1;
+
+            &>h1 {
+                @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
+            }
+
+            &>button {
+                @apply btn-text;
+            }
         }
 
-        &>button {
-            @apply btn-text;
+        &>error {
+            @apply block text-error text-sm text-center h-5;
         }
+
     }
 
     &>form {

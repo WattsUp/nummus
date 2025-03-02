@@ -52,8 +52,7 @@ const dialog = {
         const saveBtn = htmx.find('#dialog-save');
         if (!saveBtn) return;
         const allFilled = dialog.checkRequired();
-        const anyInvalid =
-            htmx.find('#dialog input~div>error:not(:empty)') != null;
+        const anyInvalid = htmx.find('#dialog error:not(:empty)') != null;
         saveBtn.disabled = !allFilled || anyInvalid;
     },
     /**
@@ -70,7 +69,8 @@ const dialog = {
                 if (next.compareDocumentPosition(start) ===
                     Node.DOCUMENT_POSITION_PRECEDING) {
                     next.focus({preventScroll: true});
-                    next.selectionStart = next.selectionEnd = next.value.length;
+                    next.selectionStart = 0;
+                    next.selectionEnd = next.value.length;
                     return;
                 }
             }

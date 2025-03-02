@@ -183,7 +183,7 @@ def validation() -> str:
         if name == "":
             return "Required"
         if len(name) < utils.MIN_STR_LEN:
-            return f"At least {utils.MIN_STR_LEN} characters required"
+            return f"{utils.MIN_STR_LEN} characters required"
         with p.begin_session() as s:
             # Only get original name if locked
             locked_name = (

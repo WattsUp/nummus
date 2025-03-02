@@ -157,7 +157,6 @@ def validation(uri: str) -> str:
     }
 
     args = flask.request.args
-    acct_id = Account.uri_to_id(uri)
     for key, (required, prop) in properties.items():
         if key not in args:
             continue
@@ -165,14 +164,14 @@ def validation(uri: str) -> str:
         if value == "":
             return "Required" if required else ""
         if len(value) < utils.MIN_STR_LEN:
-            return f"At least {utils.MIN_STR_LEN} characters required"
+            return f"{utils.MIN_STR_LEN} characters required"
         if prop is not None:
             with p.begin_session() as s:
                 n = (
                     s.query(Account)
                     .where(
                         prop == value,
-                        Account.id_ != acct_id,
+                        Account.id_ != Account.uri_to_id(uri),
                     )
                     .count()
                 )

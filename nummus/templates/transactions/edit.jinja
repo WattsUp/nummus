@@ -60,7 +60,8 @@
                    value="{{ "%.2f" % txn.amount if txn.amount }}"
                    hx-target="next error"
                    hx-trigger="input delay:200ms"
-                   hx-include="this"
+                   hx-include="#dialog [name=split-amount], this"
+                   hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
                    autocomplete="off">
             <icon>attach_money</icon>
             <div>
@@ -68,7 +69,7 @@
             </div>
             <div>
                 <error></error>
-                <div>Inflow (+)/Outflow(-)</div>
+                <span>Inflow (+)/Outflow(-)</span>
             </div>
         </label>
     {% endif %}
@@ -78,6 +79,10 @@
                enterkeyhint="next"
                placeholder=""
                value="{{ txn.payee or "" }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
                list="payees"
                autocomplete="off">
         <icon>store</icon>
@@ -162,6 +167,7 @@
                    hx-target="next error"
                    hx-trigger="input delay:200ms"
                    hx-include="this"
+                   hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
                    autocomplete="off">
             <icon>notes</icon>
             <div>
@@ -180,6 +186,7 @@
                    hx-target="next error"
                    hx-trigger="input delay:200ms"
                    hx-include="this"
+                   hx-get="{{ url_for('transactions.validation', uri=txn.uri) }}"
                    autocomplete="off">
             <icon>label</icon>
             <div>
@@ -197,7 +204,8 @@
                        value="{{ "%.2f" % split.amount if split.amount }}"
                        hx-target="next error"
                        hx-trigger="input delay:200ms"
-                       hx-include="this"
+                       hx-include="#dialog [name=split-amount], #dialog [name=amount]"
+                       hx-get="{{ url_for('transactions.validation', uri=txn.uri, i=loop.index0) }}"
                        autocomplete="off">
                 <icon>attach_money</icon>
                 <div>

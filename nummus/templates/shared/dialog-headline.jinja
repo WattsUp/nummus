@@ -1,14 +1,17 @@
 <div>
-    <button class="btn-sq" onclick="dialog.close()">
-        <icon>close</icon>
-    </button>
-    <h1>{{ headline }}</h1>
-    {% if save_url %}
-        <button id="dialog-save"
-                disabled
-                {{ 'hx-' + (save_method or 'put') + '="' + save_url + '"' }}
-                hx-target="#dialog-error"
-                hx-include="next form">Save
+    <div>
+        <button class="btn-sq" onclick="dialog.close()">
+            <icon>close</icon>
         </button>
-    {% endif %}
+        <h1>{{ headline }}</h1>
+        {% if save_url %}
+            <button id="dialog-save"
+                    disabled
+                    {{ 'hx-' + (save_method or 'put') + '="' + save_url + '"' }}
+                    hx-target="#dialog-error"
+                    hx-include="next form">Save
+            </button>
+        {% endif %}
+    </div>
+    {% include "/shared/dialog-headline-error.jinja" %}
 </div>

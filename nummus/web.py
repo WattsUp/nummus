@@ -149,7 +149,7 @@ class NummusApp(flask.Flask):
         values = {
             k.replace("_", "-"): ("" if isinstance(v, bool) else v)
             for k, v in values.items()
-            if v
+            if not isinstance(v, bool | None) or v
         }
         return super().url_for(
             endpoint,
