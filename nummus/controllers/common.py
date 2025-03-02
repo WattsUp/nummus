@@ -51,7 +51,7 @@ def ctx_base() -> dict[str, object]:
         (
             "Investing",
             {
-                "Assets": None,  # inventory_2
+                "Assets": None,  # box
                 "Performance": None,  # ssid_chart
                 "Allocation": None,  # full_stacked_bar_chart
             },

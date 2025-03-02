@@ -12,10 +12,12 @@
     {% set form_class = "full-screen grid-cols-2 md:grid-cols-4 md:w-3xl" %}
     {% set parent_class = "md:col-span-2" %}
     {% set split_class = "" %}
+    {% set split_class_2 = "md:col-span-2" %}
 {% else %}
     {% set form_class = " grid-cols-1 md:grid-cols-6 md:w-xl" %}
     {% set parent_class = "md:col-span-3" %}
     {% set split_class = "md:col-span-2" %}
+    {% set split_class_2 = "md:col-span-4" %}
 {% endif %}
 <form class="grid gap-x-2 gap-y-1 {{ form_class }}" onsubmit="return false">
     <datalist id="payees">
@@ -27,9 +29,29 @@
     {# TODO (WattsUp): Add a manual clear button with confirmation #}
     {% if txn.cleared %}
         <div class="flex items-center gap-1 {{ parent_class }}">
+            <icon>account_balance</icon>Account: {{ txn.account }}
+        </div>
+        <div class="flex items-center gap-1 {{ parent_class }}">
             <icon>attach_money</icon>Amount: {{ txn.amount | money }}
         </div>
     {% else %}
+        <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
+            <select name="account" required autocomplete="off">
+                <option value=""
+                        disabled
+                        hidden
+                        {% if not txn.account_uri %}selected{% endif %}></option>
+                {% for value, label, disabled in txn.accounts %}
+                    <option value="{{ value }}"
+                            {% if disabled %}disabled hidden{% endif %}
+                            {% if value == txn.account_uri %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+            <icon>account_balance</icon>
+            <div>
+                <div>Account</div>
+            </div>
+        </label>
         <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
             <input name="amount"
                    required
@@ -66,29 +88,6 @@
             <error></error>
         </div>
     </label>
-    {% if txn.cleared %}
-        <div class="flex items-center gap-1 {{ parent_class }}">
-            <icon>account_balance</icon>Account: {{ txn.account }}
-        </div>
-    {% else %}
-        <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
-            <select name="account" required autocomplete="off">
-                <option value=""
-                        disabled
-                        hidden
-                        {% if not txn.account_uri %}selected{% endif %}></option>
-                {% for value, label, disabled in txn.accounts %}
-                    <option value="{{ value }}"
-                            {% if disabled %}disabled hidden{% endif %}
-                            {% if value == txn.account_uri %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-            <icon>account_balance</icon>
-            <div>
-                <div>Account</div>
-            </div>
-        </label>
-    {% endif %}
     <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
         <input name="date"
                type="date"
@@ -107,24 +106,54 @@
     </label>
     {% for split in txn.splits %}
         <hr>
-        {# TODO (WattsUp): If securities traded, different UI #}
-        <label class="input-outlined input-bg-surface-container-high {{ split_class }}">
-            <select name="category" required autocomplete="off">
-                <option value=""
-                        disabled
-                        hidden
-                        {% if not split.category_uri %}selected{% endif %}></option>
-                {% for value, label, disabled in txn.categories %}
-                    <option value="{{ value }}"
-                            {% if disabled %}disabled hidden{% endif %}
-                            {% if value == split.category_uri %}selected{% endif %}>{{ label }}</option>
-                {% endfor %}
-            </select>
-            <icon>category</icon>
-            <div>
-                <div>Category</div>
+        {% if split.asset_name %}
+            <div class="flex items-center gap-1 {{ parent_class }}">
+                <icon>box</icon>
+                {% if split.asset_quantity > 0 %}
+                    Buy
+                {% elif split.asset_quantity == 0 %}
+                    {% if split.amount > 0 %}
+                        Dividend from
+                    {% else %}
+                        Fee from
+                    {% endif %}
+                {% else %}
+                    Sell
+                {% endif %}
+                {% if split.asset_ticker %}{{ split.asset_ticker }}:{% endif %}
+                {{ split.asset_name }}
             </div>
-        </label>
+            <div class="flex items-center gap-1 {{ parent_class }}">
+                {% if split.asset_quantity %}
+                    <icon>money_bag</icon>
+                    {{ split.asset_quantity | abs | qty }} shares
+                    @
+                    {{ split.asset_price | money }}
+                {% endif %}
+            </div>
+            <div class="flex items-center gap-1 md:mt-1 md:mb-5 {{ split_class }}">
+                <icon>category</icon>{{ split.category }}
+                <input name="category" type=hidden value="{{ split.category_uri }}">
+            </div>
+        {% else %}
+            <label class="input-outlined input-bg-surface-container-high {{ split_class }}">
+                <select name="category" required autocomplete="off">
+                    <option value=""
+                            disabled
+                            hidden
+                            {% if not split.category_uri %}selected{% endif %}></option>
+                    {% for value, label, disabled in txn.categories %}
+                        <option value="{{ value }}"
+                                {% if disabled %}disabled hidden{% endif %}
+                                {% if value == split.category_uri %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <icon>category</icon>
+                <div>
+                    <div>Category</div>
+                </div>
+            </label>
+        {% endif %}
         <label class="input-outlined input-bg-surface-container-high {{ split_class }}">
             <input name="memo"
                    enterkeyhint="next"

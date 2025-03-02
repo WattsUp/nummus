@@ -1,11 +1,13 @@
 <div class="flex justify-between items-center"
     hx-target="#main"
     {# TODO (WattsUp): Can updating be optimized to just affected rows? #}
+    hx-include="#txn-filters,#txn-search"
     hx-trigger="update-transaction from:body"
     hx-get="{{ url_for('transactions.page_all') }}">
     <h1 class="text-3xl font-serif text-primary">Transactions</h1>
     <button class="btn-tonal"
             hx-target="#dialog"
+            hx-include="unset"
             hx-swap="innerHTML show:#dialog:top"
             hx-disabled-elt="this"
             hx-get="{{ url_for('transactions.new') }}">

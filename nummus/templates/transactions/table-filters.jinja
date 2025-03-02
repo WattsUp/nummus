@@ -25,7 +25,8 @@
                 </div>
             </label>
             <label class="input-outlined input-bg-surface-container">
-                <input name="start"
+                <input id="txn-filter-start"
+                       name="start"
                        type="date"
                        autocomplete="off"
                        value="{{ ctx.start or '' }}"
@@ -38,7 +39,8 @@
                 </div>
             </label>
             <label class="input-outlined input-bg-surface-container">
-                <input name="end"
+                <input id="txn-filter-end"
+                       name="end"
                        type="date"
                        autocomplete="off"
                        value="{{ ctx.end or '' }}"
