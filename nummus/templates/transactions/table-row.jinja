@@ -1,11 +1,13 @@
 <div class="txn"
      hx-get="{{ url_for('transactions.transaction', uri=txn.uri) }}">
     <label class="checkbox">
+        {# TODO (WattsUp): Add bulk editor #}
         <input type="checkbox" autocomplete="off" disabled>
         <icon>check_box_outline_blank</icon>
         <icon>check_box</icon>
     </label>
     <div>
+        {# TODO (WattsUp): Add emphasis to matching terms when searching #}
         <div>
             <div>
                 {% if txn.asset_name %}

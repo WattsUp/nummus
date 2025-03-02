@@ -1,7 +1,9 @@
 @utility dialog-wrapper {
     @apply fixed;
-    @apply max-w-full max-h-full overflow-y-scroll scroll-smooth;
+    @apply max-h-full overflow-y-scroll scroll-smooth;
     @apply left-[50vw] top-[50vh] -translate-x-1/2 -translate-y-1/2;
+
+    max-width: calc(100vw - var(--spacing) * 4);
 
     &:has(.dialog:empty) {
         @apply hidden;
@@ -11,11 +13,17 @@
         @apply translate-x-0 opacity-100;
         transition: opacity 0.3s, translate 0s;
     }
+
+    @variant max-md {
+        &:has(.full-screen) {
+            @apply inset-0 translate-0 max-w-full;
+        }
+    }
 }
 
 @utility dialog {
     @apply p-3 rounded-3xl;
-    @apply min-w-64 max-w-full;
+    @apply min-w-64 max-w-full min-h-full;
     @apply bg-surface-container-high;
 
 
@@ -34,5 +42,11 @@
 
     &>form {
         @apply max-w-full;
+    }
+
+    @variant max-md {
+        &:has(.full-screen) {
+            @apply rounded-none;
+        }
     }
 }

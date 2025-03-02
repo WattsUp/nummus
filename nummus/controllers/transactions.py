@@ -262,7 +262,10 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-transaction")
+        return common.dialog_swap(
+            event="update-transaction",
+            snackbar="Transaction created",
+        )
 
 
 def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
@@ -364,11 +367,15 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         if flask.request.method == "DELETE":
             if parent.cleared:
                 return common.error("Cannot delete cleared transaction")
+            date = datetime.date.fromordinal(parent.date_ord)
             s.query(TransactionSplit).where(
                 TransactionSplit.parent_id == parent.id_,
             ).delete()
             s.delete(parent)
-            return common.dialog_swap(event="update-transaction")
+            return common.dialog_swap(
+                event="update-transaction",
+                snackbar=f"Transaction on {date} deleted",
+            )
 
         try:
             with s.begin_nested():
@@ -441,7 +448,10 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-transaction")
+        return common.dialog_swap(
+            event="update-transaction",
+            snackbar="All changes saved",
+        )
 
 
 def split(uri: str) -> str:
@@ -957,6 +967,8 @@ ROUTES: Routes = {
     "/h/transactions/table-options": (table_options, ["GET"]),
     "/h/transactions/new": (new, ["GET", "POST"]),
     "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
+    # TODO (WattsUp): Fix split endpoint
     "/h/transactions/t/<path:uri>/split": (split, ["GET", "POST", "DELETE"]),
+    # TODO (WattsUp): Fix remaining/ move to validation endpoint
     "/h/transactions/t/<path:uri>/remaining": (remaining, ["POST"]),
 }

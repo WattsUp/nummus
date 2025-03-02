@@ -1,7 +1,8 @@
 <div class="flex justify-between items-center"
-     hx-target="#main"
-     hx-trigger="update-transaction from:body"
-     hx-get="{{ url_for('transactions.page_all') }}">
+    hx-target="#main"
+    {# TODO (WattsUp): Can updating be optimized to just affected rows? #}
+    hx-trigger="update-transaction from:body"
+    hx-get="{{ url_for('transactions.page_all') }}">
     <h1 class="text-3xl font-serif text-primary">Transactions</h1>
     <button class="btn-tonal"
             hx-target="#dialog"
