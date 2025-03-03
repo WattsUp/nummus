@@ -34,6 +34,8 @@
         <div class="flex items-center gap-1 {{ parent_class }}">
             <icon>attach_money</icon>Amount: {{ txn.amount | money }}
         </div>
+        <input name="account" type=hidden value="{{ txn.account_uri }}">
+        <input name="amount" type=hidden value="{{ txn.amount }}">
     {% else %}
         <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
             <select name="account" required autocomplete="off">
@@ -73,7 +75,8 @@
             </div>
         </label>
     {% endif %}
-    <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
+    <label class="input-outlined input-bg-surface-container-high {{ parent_class }}"
+           title="Original statement: {{ txn.statement }}">
         <input name="payee"
                required
                enterkeyhint="next"
@@ -91,6 +94,7 @@
         </div>
         <div>
             <error></error>
+            <span>Statement: {{ txn.statement }}</span>
         </div>
     </label>
     <label class="input-outlined input-bg-surface-container-high {{ parent_class }}">
@@ -143,10 +147,6 @@
         {% else %}
             <label class="input-outlined input-bg-surface-container-high {{ split_class }}">
                 <select name="category" required autocomplete="off">
-                    <option value=""
-                            disabled
-                            hidden
-                            {% if not split.category_uri %}selected{% endif %}></option>
                     {% for value, label, disabled in txn.categories %}
                         <option value="{{ value }}"
                                 {% if disabled %}disabled hidden{% endif %}
@@ -204,8 +204,8 @@
                        value="{{ "%.2f" % split.amount if split.amount }}"
                        hx-target="next error"
                        hx-trigger="input delay:200ms"
-                       hx-include="#dialog [name=split-amount], #dialog [name=amount]"
-                       hx-get="{{ url_for('transactions.validation', uri=txn.uri, i=loop.index0) }}"
+                       hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
+                       hx-get="{{ url_for('transactions.validation', uri=txn.uri, split=True) }}"
                        autocomplete="off">
                 <icon>attach_money</icon>
                 <div>
@@ -218,10 +218,15 @@
         {% endif %}
     {% endfor %}
 </form>
+{% if is_split %}
+    <div class="text-center italic text-sm">Simply leave a split amount empty when saving to remove</div>
+{% endif %}
 <div class="flex justify-around">
     <button class="btn-text"
-            hx-delete="{{ url_for('transactions.split', uri="arst") }}"
-            disabled>Add Split</button>
+            hx-target="#dialog"
+            hx-include="#dialog form"
+            hx-swap="innerHTML show:#dialog:bottom"
+            hx-put="{{ url_for('transactions.split', uri=txn.uri) }}">Add Splits</button>
     {% if txn.similar_uri %}
         <button class="btn-text"
                 hx-delete="{{ url_for('transactions.split', uri="arst") }}"

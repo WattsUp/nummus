@@ -76,11 +76,7 @@
     /* Supporting text */
     &>div:not(:first-of-type) {
         @apply block ml-2 h-5;
-        @apply text-sm;
-
-        &>div {
-            @apply truncate;
-        }
+        @apply text-sm truncate;
     }
 
     &>input,
