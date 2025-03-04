@@ -84,10 +84,10 @@ def page_all() -> flask.Response:
     Returns:
         string HTML response
     """
-    txn_table = ctx_table()
+    txn_table, title = ctx_table()
     return common.page(
         "transactions/page-all.jinja",
-        title="Transactions",
+        title=title,
         ctx=txn_table,
         endpoint="transactions.table",
     )
@@ -101,8 +101,9 @@ def table() -> str | flask.Response:
     """
     args = flask.request.args
     first_page = "page" not in args
-    txn_table = ctx_table()
-    html = flask.render_template(
+    txn_table, title = ctx_table()
+    html_title = f"<title>{title} - nummus</title>\n"
+    html = html_title + flask.render_template(
         "transactions/table-rows.jinja",
         ctx=txn_table,
         endpoint="transactions.table",
@@ -998,14 +999,14 @@ def ctx_options(
     }
 
 
-def ctx_table(acct_uri: str | None = None) -> dict[str, object]:
+def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
     """Get the context to build the transaction table.
 
     Args:
         acct_uri: Account uri to get transactions for, None will use filter queries
 
     Returns:
-        Dictionary HTML context
+        tuple(Dictionary HTML context, page title)
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -1156,6 +1157,30 @@ def ctx_table(acct_uri: str | None = None) -> dict[str, object]:
         if last_date and current_group:
             groups.append((last_date, current_group))
 
+        if len(args) == 0:
+            title = "Transactions"
+        else:
+            if not selected_period:
+                title = ""
+            elif selected_period != "custom":
+                title = selected_period.title()
+
+            elif selected_start and selected_end:
+                title = f"{selected_start} to {selected_end}"
+            elif selected_start:
+                title = f"from {selected_start}"
+            elif selected_end:
+                title = f"to {selected_end}"
+            else:
+                title = ""
+
+            if selected_account:
+                acct_id = Account.uri_to_id(selected_account)
+                title += f", {accounts[acct_id]}"
+            if selected_category:
+                cat_id = TransactionCategory.uri_to_id(selected_category)
+                title += f", {categories_emoji[cat_id]}"
+
         return {
             "uri": acct_uri,
             "transactions": groups,
@@ -1171,7 +1196,7 @@ def ctx_table(acct_uri: str | None = None) -> dict[str, object]:
             "uncleared": uncleared,
             "start": selected_start,
             "end": selected_end,
-        }
+        }, title
 
 
 ROUTES: Routes = {

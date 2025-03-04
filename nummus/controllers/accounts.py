@@ -75,10 +75,12 @@ def page(uri: str) -> flask.Response:
 
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
-        txn_table = transactions.ctx_table(acct.uri)
+        txn_table, title = transactions.ctx_table(acct.uri)
+        title = title.removeprefix("Transactions").strip()
+        title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
         return common.page(
             "accounts/page.jinja",
-            title=f"Account {acct.name}",
+            title=title,
             acct=ctx_account(acct),
             txn_table=txn_table,
             endpoint="accounts.txns",
@@ -503,10 +505,19 @@ def txns(uri: str) -> str | flask.Response:
     Returns:
         HTML response
     """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
     args = flask.request.args
     first_page = "page" not in args
-    txn_table = transactions.ctx_table(uri)
-    html = flask.render_template(
+
+    txn_table, title = transactions.ctx_table(uri)
+    title = title.removeprefix("Transactions").strip()
+    with p.begin_session() as s:
+        acct = web_utils.find(s, Account, uri)
+        title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
+    html_title = f"<title>{title} - nummus</title>\n"
+    html = html_title + flask.render_template(
         "transactions/table-rows.jinja",
         acct={"uri": uri},
         ctx=txn_table,
