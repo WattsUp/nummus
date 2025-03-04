@@ -10,7 +10,7 @@
         {% if acct.closed %}
             <span class="not-disabled:text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
         {% elif acct.updated_days_ago == 0 %}
-            <span>{{ acct.n_today }} transactions today</span>
+            <span>{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today</span>
             <span>{{ acct.change_today | money }}</span>
         {% else %}
             Updated {{ acct.updated_days_ago | days }} ago

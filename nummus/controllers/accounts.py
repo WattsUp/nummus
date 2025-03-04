@@ -30,6 +30,23 @@ if TYPE_CHECKING:
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
 
 
+class _AccountContext(TypedDict):
+    """Type definition for Account context."""
+
+    uri: str | None
+    name: str
+    number: str | None
+    institution: str
+    category: AccountCategory
+    category_type: type[AccountCategory]
+    closed: bool
+    budgeted: bool
+    updated_days_ago: int
+    n_today: int
+    change_today: Decimal
+    value: Decimal
+
+
 def page_all() -> flask.Response:
     """GET /accounts.
 
@@ -58,18 +75,14 @@ def page(uri: str) -> flask.Response:
 
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
-        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
-        title = f"Account {acct.name}," + title.removeprefix("Transactions")
+        txn_table = transactions.ctx_table(acct.uri)
         return common.page(
             "accounts/page.jinja",
-            title=title,
+            title=f"Account {acct.name}",
             acct=ctx_account(acct),
             txn_table=txn_table,
-            assets=ctx_assets(s, acct),
             endpoint="accounts.txns",
-            endpoint_new="accounts.new_txn",
             url_args={"uri": uri},
-            no_account_column=True,
         )
 
 
@@ -99,14 +112,14 @@ def account(uri: str) -> str | flask.Response:
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
 
-        values, _, _ = acct.get_value(today_ord, today_ord)
-        v = values[0]
-
         if flask.request.method == "GET":
             return flask.render_template(
                 "accounts/edit.jinja",
-                acct=ctx_account(acct, v),
+                acct=ctx_account(acct),
             )
+
+        values, _, _ = acct.get_value(today_ord, today_ord)
+        v = values[0]
 
         form = flask.request.form
         institution = form["institution"].strip()
@@ -183,25 +196,44 @@ def validation(uri: str) -> str:
     raise NotImplementedError(msg)
 
 
-def ctx_account(
-    acct: Account,
-    current_value: Decimal | None = None,
-) -> dict[str, object]:
+def ctx_account(acct: Account, *, skip_today: bool = False) -> _AccountContext:
     """Get the context to build the account details.
 
     Args:
         acct: Account to generate context for
-        current_value: Current value to include, None will fetch
+        skip_today: True will skip fetching today's value
 
     Returns:
         Dictionary HTML context
     """
     today = datetime.date.today()
     today_ord = today.toordinal()
-    if current_value is None:
+    if skip_today:
+        current_value = Decimal(0)
+        change_today = Decimal(0)
+        n_today = 0
+        updated_on_ord = today_ord
+    else:
+        s = orm.object_session(acct)
+        if s is None:
+            raise exc.UnboundExecutionError
+        updated_on_ord = acct.updated_on_ord or today_ord
+
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                func.count(Transaction.id_),
+                func.sum(Transaction.amount),
+            )
+            .where(
+                Transaction.date_ord == today_ord,
+                Transaction.account_id == acct.id_,
+            )
+        )
+        n_today, change_today = query.one()
+
         values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
-    updated_on_ord = acct.updated_on_ord or today_ord
 
     return {
         "uri": acct.uri,
@@ -211,11 +243,11 @@ def ctx_account(
         "category": acct.category,
         "category_type": AccountCategory,
         "value": current_value,
-        "updated_on": datetime.date.fromordinal(updated_on_ord),
         "closed": acct.closed,
         "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
-        "opened_days_ago": today_ord - (acct.opened_on_ord or today_ord),
+        "change_today": change_today,
+        "n_today": n_today,
     }
 
 
@@ -229,6 +261,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     Returns:
         Dictionary HTML context
     """
+    raise NotImplementedError
     args = flask.request.args
 
     period = args.get("period", transactions.DEFAULT_PERIOD)
@@ -368,53 +401,19 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     assets = Decimal(0)
     liabilities = Decimal(0)
 
-    class AccountContext(TypedDict):
-        """Type definition for Account context."""
-
-        uri: str | None
-        name: str
-        category: AccountCategory
-        closed: bool
-        updated_days_ago: int
-        n_today: int
-        change_today: Decimal
-        value: Decimal
-
     categories_total: dict[AccountCategory, Decimal] = defaultdict(Decimal)
-    categories: dict[AccountCategory, list[AccountContext]] = defaultdict(list)
+    categories: dict[AccountCategory, list[_AccountContext]] = defaultdict(list)
 
     n_closed = 0
     with p.begin_session() as s:
         # Get basic info
-        accounts: dict[int, AccountContext] = {}
-        query = (
-            s.query(Account)
-            .with_entities(
-                Account.id_,
-                Account.name,
-                Account.category,
-                Account.closed,
-            )
-            .order_by(Account.category)
-        )
+        accounts: dict[int, _AccountContext] = {}
+        query = s.query(Account).order_by(Account.category)
         if not include_closed:
             query = query.where(Account.closed.is_(False))
-        for acct_id, name, category, closed in query.all():
-            acct_id: int
-            name: str
-            category: AccountCategory
-            closed: bool
-            accounts[acct_id] = {
-                "uri": Account.id_to_uri(acct_id),
-                "name": name,
-                "category": category,
-                "closed": closed,
-                "updated_days_ago": 0,
-                "n_today": 0,
-                "change_today": Decimal(0),
-                "value": Decimal(0),
-            }
-            if closed:
+        for acct in query.all():
+            accounts[acct.id_] = ctx_account(acct, skip_today=True)
+            if acct.closed:
                 n_closed += 1
 
         # Get updated_on
@@ -495,7 +494,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     }
 
 
-def txns(uri: str) -> flask.Response:
+def txns(uri: str) -> str | flask.Response:
     """GET /h/accounts/a/<uri>/txns.
 
     Args:
@@ -504,68 +503,38 @@ def txns(uri: str) -> flask.Response:
     Returns:
         HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
-
-        args = flask.request.args
-        period = args.get("period", transactions.DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-        if start is None:
-            opened_on_ord = acct.opened_on_ord
-            start = (
-                end
-                if opened_on_ord is None
-                else datetime.date.fromordinal(opened_on_ord)
-            )
-        txn_table, title = transactions.ctx_table(acct, transactions.DEFAULT_PERIOD)
-        title = f"Account {acct.name}," + title.removeprefix("Transactions")
-        html = f"<title>{title}</title>\n" + flask.render_template(
-            "transactions/table.jinja",
-            txn_table=txn_table,
-            include_oob=True,
-            endpoint="accounts.txns",
-            endpoint_new="accounts.new_txn",
-            url_args={"uri": uri},
-            no_account_column=True,
-        )
-        if not (
-            PREVIOUS_PERIOD["start"] == start
-            and PREVIOUS_PERIOD["end"] == end
-            and flask.request.headers.get("Hx-Trigger") != "txn-table"
-        ):
-            # If same period and not being updated via update_transaction:
-            # don't update the chart
-            # aka if just the table changed pages or column filters
-            ctx = ctx_assets(s, acct)
-            if ctx:
-                html += flask.render_template(
-                    "accounts/assets.jinja",
-                    oob=True,
-                    assets=ctx,
-                )
-        response = flask.make_response(html)
-        args = dict(flask.request.args.lists())
-        response.headers["HX-Push-Url"] = flask.url_for(
-            "accounts.page",
-            _anchor=None,
-            _method=None,
-            _scheme=None,
-            _external=False,
-            uri=uri,
-            **args,
-        )
-        return response
+    args = flask.request.args
+    first_page = "page" not in args
+    txn_table = transactions.ctx_table(uri)
+    html = flask.render_template(
+        "transactions/table-rows.jinja",
+        acct={"uri": uri},
+        ctx=txn_table,
+        endpoint="accounts.txns",
+        url_args={"uri": uri},
+        include_oob=first_page,
+    )
+    if not first_page:
+        # Don't push URL for following pages
+        return html
+    response = flask.make_response(html)
+    response.headers["HX-Push-URL"] = flask.url_for(
+        "accounts.page",
+        uri=uri,
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        **flask.request.args,
+    )
+    return response
 
 
-def txns_options(uri: str, field: str) -> str:
-    """GET /h/accounts/a/<uri>/txn-options/<field>.
+def txns_options(uri: str) -> str:
+    """GET /h/accounts/a/<uri>/txns-options.
 
     Args:
         uri: Account URI
-        field: Name of field to get options for
 
     Returns:
         string HTML response
@@ -574,54 +543,51 @@ def txns_options(uri: str, field: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
+        accounts = Account.map_name(s)
+        categories_emoji = TransactionCategory.map_name_emoji(s)
+
         args = flask.request.args
+        uncleared = "uncleared" in args
+        selected_account = uri
+        selected_category = args.get("category")
+        selected_period = args.get("period")
+        selected_start = args.get("start")
+        selected_end = args.get("end")
 
-        id_mapping = None
-        label_mapping = None
-        if field == "account":
-            msg = "Cannot get account options for account transactions"
-            raise exc.http.BadRequest(msg)
-        if field == "category":
-            id_mapping = TransactionCategory.map_name(s)
-            label_mapping = TransactionCategory.map_name_emoji(s)
-        elif field not in {"payee", "tag"}:
-            msg = f"Unexpected txns options: {field}"
-            raise exc.http.BadRequest(msg)
-
-        query, _, _, _ = transactions.table_unfiltered_query(s, acct=acct)
-
-        search_str = args.get(f"search-{field}")
-
-        return flask.render_template(
-            "transactions/table-options.jinja",
-            options=transactions.ctx_options(
-                query,
-                field,
-                id_mapping,
-                label_mapping=label_mapping,
-                search_str=search_str,
-            ),
-            txn_table={"uri": uri},
-            name=field,
-            search_str=search_str,
-            endpoint="accounts.txns",
-            endpoint_new="accounts.new_txn",
-            url_args={"uri": uri},
-            no_account_column=True,
+        query, _ = transactions.table_query(
+            s,
+            None,
+            selected_account,
+            selected_period,
+            selected_start,
+            selected_end,
+            selected_category,
+            uncleared=uncleared,
+        )
+        options = transactions.ctx_options(
+            query,
+            accounts,
+            categories_emoji,
+            selected_account,
+            selected_category,
         )
 
-
-def new_txn(uri: str) -> str | flask.Response:
-    """GET & POST /h/accounts/a/<uri>/new-txn.
-
-    Args:
-        uri: Account URI
-
-    Returns:
-        HTML response
-    """
-    return transactions.new(uri)
+        return flask.render_template(
+            "transactions/table-filters.jinja",
+            only_inner=True,
+            acct={"uri": uri},
+            ctx={
+                **options,
+                "selected_period": selected_period,
+                "selected_account": selected_account,
+                "selected_category": selected_category,
+                "uncleared": uncleared,
+                "start": selected_start,
+                "end": selected_end,
+            },
+            endpoint="accounts.txns",
+            url_args={"uri": uri},
+        )
 
 
 ROUTES: Routes = {
@@ -631,6 +597,5 @@ ROUTES: Routes = {
     "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
     "/h/accounts/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
-    "/h/accounts/a/<path:uri>/txns-options/<path:field>": (txns_options, ["GET"]),
-    "/h/accounts/a/<path:uri>/new-txn": (new_txn, ["GET", "POST"]),
+    "/h/accounts/a/<path:uri>/txns-options": (txns_options, ["GET"]),
 }

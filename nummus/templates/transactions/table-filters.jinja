@@ -1,12 +1,12 @@
 {% if not only_inner %}
     <form id="txn-filters"
-        class="p-2 mb-2 grid gap-2 grid-cols-2 md:grid-cols-3 max-w-2xl mx-auto not-open:hidden rounded-xl bg-surface-container"
+        class="p-2 mb-2 grid gap-2 grid-cols-2 md:grid-cols-3 max-w-2xl mx-auto not-open:hidden rounded-xl bg-surface-container {{ 'open' if ctx.any_filters }}"
         {# innerHTML to preserve open state #}
         hx-swap-oob="{{ 'innerHTML' if oob }}"
         hx-include="#txn-filters,#txn-search"
         hx-target="#txn-table"
         hx-indicator="#txn-table,#txn-indicator"
-        hx-get="{{ url_for('transactions.table') }}">
+        hx-get="{{ url_for(endpoint,  **url_args) }}">
         {% block inner %}
             <label class="input-outlined input-bg-surface-container">
                 <select name="period"
@@ -14,7 +14,7 @@
                         onchange="txn.changePeriod()"
                         hx-target="#txn-filters"
                         hx-indicator="unset"
-                        hx-get="{{ url_for('transactions.table_options') }}">
+                        hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
                     {% for label, value in ctx.options_period %}
                         <option value="{{ value }}"
                                 {% if value == ctx.selected_period %}selected{% endif %}>{{ label }}</option>
@@ -33,7 +33,7 @@
                        {% if ctx.selected_period != "custom" %}disabled{% endif %}
                        hx-target="#txn-filters"
                        hx-indicator="unset"
-                       hx-get="{{ url_for('transactions.table_options') }}">
+                       hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
                 <div>
                     <div>Start date</div>
                 </div>
@@ -47,35 +47,39 @@
                        {% if ctx.selected_period != "custom" %}disabled{% endif %}
                        hx-target="#txn-filters"
                        hx-indicator="unset"
-                       hx-get="{{ url_for('transactions.table_options') }}">
+                       hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
                 <div>
                     <div>End date</div>
                 </div>
             </label>
-            <label class="input-outlined input-bg-surface-container max-md:row-start-1 col-start-2 md:col-start-1">
-                <select name="account"
-                        autocomplete="off"
-                        {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
-                        hx-target="#txn-filters"
-                        hx-indicator="unset"
-                        hx-get="{{ url_for('transactions.table_options') }}">
-                    <option value=""></option>
-                    {% for label, value in ctx.options_account %}
-                        <option value="{{ value }}"
-                                {% if value == ctx.selected_account %}selected{% endif %}>{{ label }}</option>
-                    {% endfor %}
-                </select>
-                <div>
-                    <div>Account</div>
-                </div>
-            </label>
+            {% if acct %}
+                <div class="max-md:row-start-1 col-start-2 md:col-start-1"></div>
+            {% else %}
+                <label class="input-outlined input-bg-surface-container max-md:row-start-1 col-start-2 md:col-start-1">
+                    <select name="account"
+                            autocomplete="off"
+                            {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
+                            hx-target="#txn-filters"
+                            hx-indicator="unset"
+                            hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
+                        <option value=""></option>
+                        {% for label, value in ctx.options_account %}
+                            <option value="{{ value }}"
+                                    {% if value == ctx.selected_account %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    <div>
+                        <div>Account</div>
+                    </div>
+                </label>
+            {% endif %}
             <label class="input-outlined input-bg-surface-container col-span-2">
                 <select name="category"
                         autocomplete="off"
                         {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}
                         hx-target="#txn-filters"
                         hx-indicator="unset"
-                        hx-get="{{ url_for('transactions.table_options') }}">
+                        hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
                     <option value=""></option>
                     {% for label, value, _ in ctx.options_category %}
                         <option value="{{ value }}"
@@ -93,7 +97,7 @@
                        {% if ctx.uncleared %}checked{% endif %}
                        hx-target="#txn-filters"
                        hx-indicator="unset"
-                       hx-get="{{ url_for('transactions.table_options') }}">
+                       hx-get="{{ url_for(endpoint + '_options',  **url_args) }}">
                 <div>Only uncleared</div>
                 <switch></switch>
             </label>
@@ -102,7 +106,7 @@
                 <button class="btn-text"
                         type="button"
                         hx-include="unset"
-                        hx-get="{{ url_for('transactions.table') }}">Clear all filters</button>
+                        hx-get="{{ url_for(endpoint,  **url_args) }}">Clear all filters</button>
             </div>
         {% endblock inner %}
     </form>

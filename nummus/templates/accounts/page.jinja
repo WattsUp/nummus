@@ -28,7 +28,7 @@
         {% if acct.closed %}
             <span class="not-disabled:text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
         {% elif acct.updated_days_ago == 0 %}
-            <span>{{ acct.n_today }} transactions today</span>
+            <span>{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today</span>
             <span>{{ acct.change_today | money }}</span>
         {% else %}
             Updated {{ acct.updated_days_ago | days }} ago
@@ -46,11 +46,10 @@
             hx-target="#dialog"
             hx-swap="innerHTML show:#dialog:top"
             hx-disabled-elt="this"
-            hx-get="{{ url_for('transactions.new', account=acct.uri) }}"
-            disabled>
+            hx-get="{{ url_for('transactions.new', account=acct.uri) }}">
         <icon>note_stack_add</icon>New
     </button>
 </div>
-{% with ctx= txn_table %}
+{% with ctx = txn_table %}
     {% include "/transactions/table.jinja" %}
 {% endwith %}

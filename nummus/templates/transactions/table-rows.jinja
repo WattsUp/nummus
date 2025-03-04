@@ -21,7 +21,7 @@
                  hx-swap="beforeend show:none"
                  hx-trigger="revealed"
                  hx-include="#txn-filters,#txn-search"
-                 hx-get="{{ url_for(endpoint, page=ctx.next_page) }}"
+                 hx-get="{{ url_for(endpoint, page=ctx.next_page, **url_args) }}"
                  hx-indicator="#txn-indicator"
                  hx-on::after-request="this.remove()"></div>
         {% else %}

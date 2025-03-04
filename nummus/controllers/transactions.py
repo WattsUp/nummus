@@ -165,6 +165,7 @@ def table_options() -> str:
         return flask.render_template(
             "transactions/table-filters.jinja",
             only_inner=True,
+            endpoint="transactions.table",
             ctx={
                 **options,
                 "selected_period": selected_period,
@@ -177,11 +178,8 @@ def table_options() -> str:
         )
 
 
-def new(acct_uri: str | None = None) -> str | flask.Response:
+def new() -> str | flask.Response:
     """GET & POST /h/transactions/new.
-
-    Args:
-        acct_uri: Account uri to make transaction for, None for blank
 
     Returns:
         string HTML response
@@ -250,7 +248,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         ctx: _TxnContext = {
             "uri": "",
             "account": "",
-            "account_uri": acct_uri or "",
+            "account_uri": flask.request.args.get("account") or "",
             "accounts": [
                 (Account.id_to_uri(acct_id), name, False)
                 for acct_id, name in accounts.items()
@@ -297,7 +295,7 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
 
         if flask.request.method == "PUT":
             amount = amount or Decimal(0)
-            ctx["account_uri"] = account or acct_uri or ""
+            ctx["account_uri"] = account or ""
             ctx["amount"] = amount
             ctx["payee"] = payee
             ctx["date"] = date or today
@@ -375,7 +373,8 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            event="update-transaction",
+            # update-account since transaction was created
+            event="update-account",
             snackbar="Transaction created",
         )
 
@@ -410,7 +409,8 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             ).delete()
             s.delete(txn)
             return common.dialog_swap(
-                event="update-transaction",
+                # update-account since transaction was deleted
+                event="update-account",
                 snackbar=f"Transaction on {date} deleted",
             )
 
@@ -684,7 +684,7 @@ def validation() -> str:
 
 def table_query(
     s: orm.Session,
-    acct: Account | None = None,
+    acct_uri: str | None = None,
     selected_account: str | None = None,
     selected_period: str | None = None,
     selected_start: str | None = None,
@@ -697,7 +697,7 @@ def table_query(
 
     Args:
         s: SQL session to use
-        acct: Account to filter to
+        acct_uri: Account URI to filter to
         selected_account: URI of account from args
         selected_period: Name of period from args
         selected_start: ISO date string of start from args
@@ -708,7 +708,7 @@ def table_query(
     Returns:
         (SQL query, any_filters)
     """
-    selected_account = (acct and acct.uri) or selected_account
+    selected_account = acct_uri or selected_account
     query = s.query(TransactionSplit).order_by(
         TransactionSplit.date_ord.desc(),
         TransactionSplit.account_id,
@@ -745,7 +745,7 @@ def table_query(
             )
 
     if selected_account:
-        any_filters |= acct is None
+        any_filters |= acct_uri is None
         query = query.where(
             TransactionSplit.account_id == Account.uri_to_id(selected_account),
         )
@@ -998,13 +998,11 @@ def ctx_options(
     }
 
 
-def ctx_table(
-    acct: Account | None = None,
-) -> dict[str, object]:
+def ctx_table(acct_uri: str | None = None) -> dict[str, object]:
     """Get the context to build the transaction table.
 
     Args:
-        acct: Account to get transactions for, None will use filter queries
+        acct_uri: Account uri to get transactions for, None will use filter queries
 
     Returns:
         Dictionary HTML context
@@ -1044,7 +1042,7 @@ def ctx_table(
 
         query, any_filters = table_query(
             s,
-            acct,
+            acct_uri,
             selected_account,
             selected_period,
             selected_start,
@@ -1159,7 +1157,7 @@ def ctx_table(
             groups.append((last_date, current_group))
 
         return {
-            "uri": None if acct is None else acct.uri,
+            "uri": acct_uri,
             "transactions": groups,
             "query_total": query_total.scalar() or 0,
             "no_matches": len(t_splits_flat) == 0 and page_start is None,

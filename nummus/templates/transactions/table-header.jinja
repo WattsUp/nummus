@@ -10,7 +10,7 @@
                hx-trigger="keyup[keyCode==13]"
                hx-include="#txn-filters"
                hx-target="#txn-table"
-               hx-get="{{ url_for('transactions.table') }}"
+               hx-get="{{ url_for(endpoint,  **url_args) }}"
                hx-indicator="#txn-table,#txn-indicator"
                autocomplete="off"
                spellcheck="true">
