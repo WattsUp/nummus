@@ -1,9 +1,13 @@
 <div class="flex justify-between items-center"
-    hx-target="#main"
-    {# TODO (WattsUp): Can updating be optimized to just affected rows? #}
-    hx-include="#txn-filters,#txn-search"
-    hx-trigger="update-transaction from:body"
-    hx-get="{{ url_for('transactions.page_all') }}">
+     hx-target="#main"
+     hx-include="#txn-filters,#txn-search"
+     hx-trigger="update-transaction from:body"
+     hx-get="{{ url_for('transactions.page_all') }}">
+    {# TODO (WattsUp): Can updating be optimized to just affected rows?
+        Return oob for the two date sections affected.
+        If in search mode, fire update-transaction for first page only.
+        This also fires for new & import
+    #}
     <h1 class="text-3xl font-serif text-primary">Transactions</h1>
     <button class="btn-tonal"
             hx-target="#dialog"

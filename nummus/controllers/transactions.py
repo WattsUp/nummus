@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func, orm
@@ -17,6 +17,7 @@ from nummus.models import (
     Asset,
     Transaction,
     TransactionCategory,
+    TransactionCategoryGroup,
     TransactionSplit,
     YIELD_PER,
 )
@@ -37,30 +38,33 @@ class _TxnContext(TypedDict):
     accounts: list[tuple[str, str, bool]]
     cleared: bool
     date: datetime.date
+    date_max: datetime.date
     amount: Decimal
     statement: str
     payee: str | None
     splits: list[_SplitContext]
-    # list[(category uri, name, option disabled)]
-    categories: list[tuple[str, str, bool]]
+    # list[(category uri, name, option disabled, group)]
+    categories: list[tuple[str, str, bool, TransactionCategoryGroup]]
     payees: list[str]
     tags: list[str]
     similar_uri: str | None
+    any_asset_splits: bool
 
 
 class _SplitContext(TypedDict):
     """Type definition for transaction split context."""
 
     parent_uri: str
+    category: str
     category_uri: str
     memo: str | None
     tag: str | None
     amount: Decimal | None
 
-    asset_name: str | None
-    asset_ticker: str | None
-    asset_price: Decimal | None
-    asset_quantity: Decimal | None
+    asset_name: NotRequired[str | None]
+    asset_ticker: NotRequired[str | None]
+    asset_price: NotRequired[Decimal | None]
+    asset_quantity: NotRequired[Decimal | None]
 
 
 class _RowContext(_SplitContext):
@@ -197,46 +201,78 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
             query = query.order_by(Account.name)
         accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        query = s.query(TransactionCategory).with_entities(
-            TransactionCategory.id_,
-            TransactionCategory.emoji_name,
-            TransactionCategory.asset_linked,
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+                TransactionCategory.asset_linked,
+                TransactionCategory.group,
+            )
+            .order_by(TransactionCategory.group, TransactionCategory.name)
         )
-        categories: dict[int, tuple[str, bool]] = {
-            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+        categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
+            r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
+        }
+
+        try:
+            uncategorized_id = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == "uncategorized")
+                .one()[0]
+            )
+        except exc.NoResultFound as e:
+            msg = "Category Uncategorized not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        else:
+            uncategorized_uri = TransactionCategory.id_to_uri(uncategorized_id)
+
+        query = s.query(Transaction.payee)
+        payees = sorted(
+            filter(None, (item for item, in query.distinct())),
+            key=lambda item: item.lower(),
+        )
+
+        query = s.query(TransactionSplit.tag)
+        tags = sorted(
+            filter(None, (item for item, in query.distinct())),
+            key=lambda item: item.lower(),
+        )
+        today = datetime.date.today()
+        empty_split: _SplitContext = {
+            "parent_uri": "",
+            "category": "",
+            "category_uri": uncategorized_uri,
+            "memo": None,
+            "tag": None,
+            "amount": None,
+        }
+        ctx: _TxnContext = {
+            "uri": "",
+            "account": "",
+            "account_uri": acct_uri or "",
+            "accounts": [
+                (Account.id_to_uri(acct_id), name, False)
+                for acct_id, name in accounts.items()
+            ],
+            "cleared": False,
+            "date": today,
+            "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
+            "amount": Decimal(0),
+            "statement": "Manually created",
+            "payee": None,
+            "splits": [empty_split],
+            "categories": [
+                (TransactionCategory.id_to_uri(cat_id), *row)
+                for cat_id, row in categories.items()
+            ],
+            "payees": payees,
+            "tags": tags,
+            "similar_uri": None,
+            "any_asset_splits": False,
         }
 
         if flask.request.method == "GET":
-            query = s.query(Transaction.payee)
-            payees = sorted(
-                filter(None, (item for item, in query.distinct())),
-                key=lambda item: item.lower(),
-            )
-
-            query = s.query(TransactionSplit.tag)
-            tags = sorted(
-                filter(None, (item for item, in query.distinct())),
-                key=lambda item: item.lower(),
-            )
-            ctx = {
-                "uri": None,
-                "account": "",
-                "account_uri": acct_uri,
-                "accounts": [
-                    (Account.id_to_uri(acct_id), name, False)
-                    for acct_id, name in accounts.items()
-                ],
-                "categories": [
-                    (TransactionCategory.id_to_uri(cat_id), name, asset_linked)
-                    for cat_id, (name, asset_linked) in categories.items()
-                ],
-                "payees": payees,
-                "tags": tags,
-                "date": datetime.date.today(),
-                "amount": None,
-                "splits": [{}],
-            }
-
             return flask.render_template(
                 "transactions/edit.jinja",
                 txn=ctx,
@@ -244,16 +280,8 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
 
         form = flask.request.form
         date = utils.parse_date(form.get("date"))
-        if date is None:
-            return common.error("Transaction date must not be empty")
-        if date > datetime.date.today():
-            return common.error("Cannot create future transaction")
         amount = utils.evaluate_real_statement(form.get("amount"))
-        if amount is None:
-            return common.error("Transaction amount must not be empty")
         account = form.get("account")
-        if account is None:
-            return common.error("Transaction account must not be empty")
         payee = form.get("payee")
 
         split_memos = form.getlist("memo")
@@ -262,10 +290,68 @@ def new(acct_uri: str | None = None) -> str | flask.Response:
         ]
         split_tags = form.getlist("tag")
         split_amounts = [
-            utils.evaluate_real_statement(x) for x in form.getlist("amount")
+            utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
         ]
         if len(split_categories) == 1:
             split_amounts = [amount]
+
+        if flask.request.method == "PUT":
+            amount = amount or Decimal(0)
+            ctx["account_uri"] = account or acct_uri or ""
+            ctx["amount"] = amount
+            ctx["payee"] = payee
+            ctx["date"] = date or today
+
+            splits: list[_SplitContext] = [
+                {
+                    "parent_uri": "",
+                    "category": "",
+                    "category_uri": TransactionCategory.id_to_uri(cat_id),
+                    "memo": memo,
+                    "tag": tag,
+                    "amount": amount,
+                }
+                for cat_id, memo, tag, amount in zip(
+                    split_categories,
+                    split_memos,
+                    split_tags,
+                    split_amounts,
+                    strict=True,
+                )
+                if amount
+            ]
+
+            split_sum = sum(filter(None, split_amounts)) or Decimal(0)
+
+            remaining = amount - split_sum
+            headline_error = (
+                (
+                    f"Sum of splits {utils.format_financial(split_sum)} "
+                    f"not equal to total {utils.format_financial(amount)}. "
+                    f"{utils.format_financial(remaining)} to assign"
+                )
+                if remaining != 0
+                else ""
+            )
+
+            splits.extend(
+                [empty_split] * 3,
+            )
+            ctx["splits"] = splits
+            return flask.render_template(
+                "transactions/edit.jinja",
+                txn=ctx,
+                headline_error=headline_error,
+            )
+
+        if date is None:
+            return common.error("Transaction date must not be empty")
+        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+            return common.error("Date can only be up to a week in the future")
+        if amount is None:
+            return common.error("Transaction amount must not be empty")
+        if account is None:
+            return common.error("Transaction account must not be empty")
 
         try:
             with s.begin_nested():
@@ -335,6 +421,10 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 date = utils.parse_date(form.get("date"))
                 if date is None:
                     return common.error("Transaction date must not be empty")
+                if date > (
+                    datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)
+                ):
+                    return common.error("Date can only be up to a week in the future")
                 txn.date = date
                 txn.payee = form.get("payee")
 
@@ -469,6 +559,7 @@ def split(uri: str) -> str:
         ):
             item: _SplitContext = {
                 "parent_uri": uri,
+                "category": "",
                 "category_uri": cat_uri or uncategorized_uri,
                 "memo": memo,
                 "tag": tag,
@@ -509,15 +600,12 @@ def split(uri: str) -> str:
         )
 
 
-def validation(uri: str) -> str:
-    """GET /h/transactions/t/<uri>/validation.
+def validation() -> str:
+    """GET /h/transactions/validation.
 
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
     # dict{key: (required, prop if unique required)}
     properties: dict[str, bool] = {
         "payee": True,
@@ -534,6 +622,17 @@ def validation(uri: str) -> str:
             return "Required" if required else ""
         if len(value) < utils.MIN_STR_LEN:
             return f"{utils.MIN_STR_LEN} characters required"
+        return ""
+
+    if "date" in args:
+        value = args["date"].strip()
+        if value == "":
+            return "Required"
+        date = utils.parse_date(args["date"])
+        if date is None:
+            return common.error("Unable to parse")
+        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+            return "Only up to a week in advance"
         return ""
 
     if "split-amount" in args:
@@ -577,17 +676,6 @@ def validation(uri: str) -> str:
         amount = utils.evaluate_real_statement(value)
         if amount is None:
             return "Unable to parse"
-        with p.begin_session() as s:
-            parent_amount = (
-                s.query(Transaction.amount)
-                .where(
-                    Transaction.id_ == Transaction.uri_to_id(uri),
-                    Transaction.cleared,
-                )
-                .scalar()
-            )
-            if parent_amount is not None:
-                return "Cannot modify amount"
         return ""
 
     msg = f"Transaction validation for {args} not implemented"
@@ -710,24 +798,31 @@ def ctx_txn(
     accounts: dict[int, tuple[str, bool]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
-    query = s.query(TransactionCategory).with_entities(
-        TransactionCategory.id_,
-        TransactionCategory.emoji_name,
-        TransactionCategory.asset_linked,
+    query = (
+        s.query(TransactionCategory)
+        .with_entities(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+            TransactionCategory.asset_linked,
+            TransactionCategory.group,
+        )
+        .order_by(TransactionCategory.group, TransactionCategory.name)
     )
-    categories: dict[int, tuple[str, bool]] = {
-        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+    categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
+        r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
     }
+    category_names = {cat_id: name for cat_id, (name, _, _) in categories.items()}
     query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
 
     ctx_splits: list[_SplitContext] = (
-        [ctx_split(t_split, assets) for t_split in txn.splits]
+        [ctx_split(t_split, assets, category_names) for t_split in txn.splits]
         if splits is None
         else splits
     )
+    any_asset_splits = any(split.get("asset_name") for split in ctx_splits)
 
     query = s.query(Transaction.payee)
     payees = sorted(
@@ -754,29 +849,33 @@ def ctx_txn(
         ],
         "cleared": txn.cleared,
         "date": datetime.date.fromordinal(txn.date_ord) if date is None else date,
+        "date_max": datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK),
         "amount": txn.amount if amount is None else amount,
         "statement": txn.statement,
         "payee": txn.payee if payee is None else payee,
         "splits": ctx_splits,
         "categories": [
-            (TransactionCategory.id_to_uri(cat_id), name, asset_linked)
-            for cat_id, (name, asset_linked) in categories.items()
+            (TransactionCategory.id_to_uri(cat_id), *row)
+            for cat_id, row in categories.items()
         ],
         "payees": payees,
         "tags": tags,
         "similar_uri": similar_uri,
+        "any_asset_splits": any_asset_splits,
     }
 
 
 def ctx_split(
     t_split: TransactionSplit,
     assets: dict[int, tuple[str, str | None]],
+    categories: dict[int, str],
 ) -> _SplitContext:
     """Get the context to build the transaction edit dialog.
 
     Args:
         t_split: TransactionSplit to build context for
         assets: Dict {id: (asset name, ticker)}
+        categories: Account name mapping
 
     Returns:
         Dictionary HTML context
@@ -790,6 +889,7 @@ def ctx_split(
     return {
         "parent_uri": Transaction.id_to_uri(t_split.parent_id),
         "amount": t_split.amount,
+        "category": categories[t_split.category_id],
         "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "memo": t_split.memo,
         "tag": t_split.tag,
@@ -820,11 +920,10 @@ def ctx_row(
         Dictionary HTML context
     """
     return {
-        **ctx_split(t_split, assets),
+        **ctx_split(t_split, assets, categories),
         "date": datetime.date.fromordinal(t_split.date_ord),
         "account": accounts[t_split.account_id],
         "payee": t_split.payee,
-        "category": categories[t_split.category_id],
         "cleared": t_split.cleared,
         "is_split": t_split.parent_id in split_parents,
     }
@@ -1081,8 +1180,8 @@ ROUTES: Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/table-options": (table_options, ["GET"]),
-    "/h/transactions/new": (new, ["GET", "POST"]),
+    "/h/transactions/new": (new, ["GET", "PUT", "POST"]),
+    "/h/transactions/validation": (validation, ["GET"]),
     "/h/transactions/t/<path:uri>": (transaction, ["GET", "PUT", "DELETE"]),
     "/h/transactions/t/<path:uri>/split": (split, ["PUT"]),
-    "/h/transactions/t/<path:uri>/validation": (validation, ["GET"]),
 }
