@@ -56,6 +56,14 @@ class _PerformanceContext(TypedDict):
     pnl_past_year: Decimal
     pnl_total: Decimal
 
+    total_cost_basis: Decimal
+    dividends: Decimal
+    fees: Decimal
+    cash: Decimal
+
+    twrr: Decimal
+    mwrr: Decimal
+
     labels: list[str]
     date_mode: str
     values: list[Decimal]
@@ -329,23 +337,29 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         "max": "MAX",
     }
 
-    query = s.query(TransactionCategory.id_).where(
+    query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
         TransactionCategory.is_profit_loss.is_(True),
     )
-    cost_basis_skip_ids = {t_cat_id for t_cat_id, in query.all()}
+    pnl_categories: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
 
     # Calculate total cost basis
-    total_cost_basis = (
+    total_cost_basis = Decimal(0)
+    dividends = Decimal(0)
+    fees = Decimal(0)
+    query = (
         s.query(TransactionSplit)
-        .with_entities(
-            func.sum(TransactionSplit.amount),
-        )
-        .where(
-            TransactionSplit.account_id == acct.id_,
-            TransactionSplit.category_id.not_in(cost_basis_skip_ids),
-        )
-        .scalar()
-    ) or Decimal(0)
+        .with_entities(TransactionSplit.category_id, func.sum(TransactionSplit.amount))
+        .where(TransactionSplit.account_id == acct.id_)
+        .group_by(TransactionSplit.category_id)
+    )
+    for cat_id, value in query.yield_per(YIELD_PER):
+        name = pnl_categories.get(cat_id)
+        if name is None:
+            total_cost_basis += value
+        elif "dividend" in name:
+            dividends += value
+        elif "fee" in name:
+            fees += value
 
     today = datetime.date.today()
     today_ord = today.toordinal()
@@ -362,9 +376,11 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         msg = f"Unknown period '{period}'"
         raise exc.http.BadRequest(msg)
 
-    values, profits, _ = acct.get_value(start_ord, today_ord)
-    dates = utils.range_date(start_ord, today_ord)
+    values, profits, asset_values = acct.get_value(start_ord, today_ord)
 
+    cash = values[-1] - sum(v[-1] for v in asset_values.values())
+
+    dates = utils.range_date(start_ord, today_ord)
     n = len(dates)
     if n > web_utils.LIMIT_TICKS_YEARS:
         date_mode = "years"
@@ -375,9 +391,18 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
     else:
         date_mode = "days"
 
+    twrr = utils.twrr(values, profits)[-1]
+    twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / n) - 1
+
     return {
         "pnl_past_year": profits[-1],
         "pnl_total": values[-1] - total_cost_basis,
+        "total_cost_basis": total_cost_basis,
+        "dividends": dividends,
+        "fees": fees,
+        "cash": cash,
+        "twrr": twrr_per_annum,
+        "mwrr": utils.mwrr(values, profits),
         "labels": [d.isoformat() for d in dates],
         "date_mode": date_mode,
         "values": values,

@@ -15,4 +15,24 @@
             </button>
         {% endfor %}
     </div>
+    <h1 class="text-2xl font-serif text-primary">Performance</h1>
+    <div class="bg-surface-container-high rounded-xl p-2 grid grid-cols-2 max-w-md mx-auto font-bold">
+        <div class="text-on-surface-variant">Total Return</div>
+        <div class="text-right {{ perf.pnl_total | pnl_color }}">{{ perf.pnl_total | money }}</div>
+        <hr>
+        <div class="text-on-surface-variant">Contributions</div>
+        <div class="text-right">{{ perf.total_cost_basis | money }}</div>
+        <div class="text-on-surface-variant">Dividends earned</div>
+        <div class="text-right">{{ perf.dividends | money }}</div>
+        <div class="text-on-surface-variant">Investment fees</div>
+        <div class="text-right">{{ perf.fees | money }}</div>
+        <div class="text-on-surface-variant">Uninvested cash</div>
+        <div class="text-right">{{ perf.cash | money }}</div>
+        <hr>
+        <div class="text-on-surface-variant font-normal col-span-full text-center italic">Over selected period</div>
+        <div class="text-on-surface-variant">TWRR per annum</div>
+        <div class="text-right">{{ perf.twrr | percent }}</div>
+        <div class="text-on-surface-variant">MWRR per annum</div>
+        <div class="text-right">{{ perf.mwrr | percent }}</div>
+    </div>
 {% endwith %}

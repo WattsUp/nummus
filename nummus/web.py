@@ -255,7 +255,7 @@ class Server:
         self._app.jinja_env.filters["qty"] = lambda x: f"{x:,.6f}"
         self._app.jinja_env.filters["percent"] = lambda x: f"{x * 100:5.2f}%"
         self._app.jinja_env.filters["pnl_color"] = lambda x: (
-            "black" if x is None or x == 0 else ("green-600" if x > 0 else "red-600")
+            "" if x is None or x == 0 else ("text-primary" if x > 0 else "text-error")
         )
         self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
         self._app.jinja_env.filters["tojson"] = web_utils.ctx_to_json
