@@ -35,10 +35,30 @@
         {% endif %}
     </span>
 </h2>
-<div class="text-center font-bold">
-    <h2 class="text-2xl">Balance</h2>
-    <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
-</div>
+{% if acct.performance %}
+    {% with perf = acct.performance %}
+        <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold">
+            <div class="col-span-2">
+                <h2 class="text-2xl">Balance</h2>
+                <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
+            </div>
+            <div class="max-lg:col-start-1">
+                <h2 class="text-2xl">Year Return</h2>
+                <h1 class="text-4xl text-tertiary font-serif">{{ perf.pnl_past_year | money }}</h1>
+            </div>
+            <div>
+                <h2 class="text-2xl">Total Return</h2>
+                <h1 class="text-4xl text-tertiary font-serif">{{ perf.pnl_total | money }}</h1>
+            </div>
+        </div>
+    {% endwith %}
+    <div id="account-performance">{% include "accounts/performance.jinja" %}</div>
+{% else %}
+    <div class="text-center font-bold">
+        <h2 class="text-2xl">Balance</h2>
+        <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
+    </div>
+{% endif %}
 {# TODO (WattsUp): Add asset table #}
 <div class="flex justify-between items-center">
     <h1 class="text-2xl font-serif text-primary">Transactions</h1>

@@ -19,6 +19,15 @@ const nummusChart = {
         'use strict';
         setChartDefaults();
 
+        // If only single day data, duplicate for prettier charts
+        if (labels.length == 1) {
+            labels.push(labels[0]);
+            datasets.forEach((d) => {
+                d.data.push(d.data[0]);
+            });
+        }
+
+
         const pluginObjects = [
             pluginColor,
         ];
@@ -30,6 +39,9 @@ const nummusChart = {
                 intersect: false,
                 mode: 'index',
                 enabled: window.screen.width >= 768,
+                filter: function(context) {
+                    return context.dataset.label != null;
+                },
                 callbacks: {
                     label: function(context) {
                         let label = context.dataset.label || '';

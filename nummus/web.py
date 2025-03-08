@@ -20,7 +20,7 @@ from typing_extensions import override
 
 from nummus import controllers
 from nummus import exceptions as exc
-from nummus import portfolio, utils, version, web_assets
+from nummus import portfolio, utils, version, web_assets, web_utils
 from nummus.controllers import auth, common
 from nummus.models import Config, ConfigKey
 
@@ -258,6 +258,7 @@ class Server:
             "black" if x is None or x == 0 else ("green-600" if x > 0 else "red-600")
         )
         self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
+        self._app.jinja_env.filters["tojson"] = web_utils.ctx_to_json
 
         if not p.ssl_cert_path.exists():
             print(

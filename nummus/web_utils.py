@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import datetime
+import json
 import mimetypes
 import re
+from decimal import Decimal
 from typing import TYPE_CHECKING
 
 from typing_extensions import TypeVar
@@ -27,6 +29,7 @@ LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
 LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
 # else plot normally by days
 
+LIMIT_TICKS_YEARS = 400  # if n_days > LIMIT_TICKS_YEARS then have ticks on the new year
 LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
 LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
 # else tick each day
@@ -171,3 +174,22 @@ def validate_image_upload(req: flask.Request) -> str:
         raise exc.http.RequestEntityTooLarge(msg)
 
     return suffix
+
+
+def ctx_to_json(d: dict[str, object]) -> str:
+    """Convert web context to JSON.
+
+    Args:
+        d: Object to serialize
+
+    Returns:
+        JSON object
+    """
+
+    def default(obj: object) -> str | float:
+        if isinstance(obj, Decimal):
+            return float(round(obj, 2))
+        msg = f"Unknown type {type(obj)}"
+        raise TypeError(msg)
+
+    return json.dumps(d, default=default)

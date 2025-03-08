@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
@@ -46,6 +47,23 @@ class _AccountContext(TypedDict):
     change_today: Decimal
     value: Decimal
 
+    performance: _PerformanceContext | None
+
+
+class _PerformanceContext(TypedDict):
+    """Context for performance metrics."""
+
+    pnl_past_year: Decimal
+    pnl_total: Decimal
+
+    labels: list[str]
+    date_mode: str
+    values: list[Decimal]
+    cost_bases: list[Decimal]
+
+    period: str
+    period_options: dict[str, str]
+
 
 def page_all() -> flask.Response:
     """GET /accounts.
@@ -78,10 +96,14 @@ def page(uri: str) -> flask.Response:
         txn_table, title = transactions.ctx_table(acct.uri)
         title = title.removeprefix("Transactions").strip()
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
+
+        ctx = ctx_account(s, acct)
+        if acct.category == AccountCategory.INVESTMENT:
+            ctx["performance"] = ctx_performance(s, acct)
         return common.page(
             "accounts/page.jinja",
             title=title,
-            acct=ctx_account(acct),
+            acct=ctx,
             txn_table=txn_table,
             endpoint="accounts.txns",
             url_args={"uri": uri},
@@ -117,7 +139,7 @@ def account(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             return flask.render_template(
                 "accounts/edit.jinja",
-                acct=ctx_account(acct),
+                acct=ctx_account(s, acct),
             )
 
         values, _, _ = acct.get_value(today_ord, today_ord)
@@ -153,6 +175,37 @@ def account(uri: str) -> str | flask.Response:
             event="update-account",
             snackbar="All changes saved",
         )
+
+
+def performance(uri: str) -> flask.Response:
+    """GET /h/accounts/a/<uri>/performance.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        acct = web_utils.find(s, Account, uri)
+        html = flask.render_template(
+            "accounts/performance.jinja",
+            acct={
+                "uri": uri,
+                "performance": ctx_performance(s, acct),
+            },
+        )
+    response = flask.make_response(html)
+    response.headers["HX-Push-URL"] = flask.url_for(
+        "accounts.page",
+        uri=uri,
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        **flask.request.args,
+    )
+    return response
 
 
 def validation(uri: str) -> str:
@@ -198,10 +251,16 @@ def validation(uri: str) -> str:
     raise NotImplementedError(msg)
 
 
-def ctx_account(acct: Account, *, skip_today: bool = False) -> _AccountContext:
+def ctx_account(
+    s: orm.Session,
+    acct: Account,
+    *,
+    skip_today: bool = False,
+) -> _AccountContext:
     """Get the context to build the account details.
 
     Args:
+        s: SQL session to use
         acct: Account to generate context for
         skip_today: True will skip fetching today's value
 
@@ -216,9 +275,6 @@ def ctx_account(acct: Account, *, skip_today: bool = False) -> _AccountContext:
         n_today = 0
         updated_on_ord = today_ord
     else:
-        s = orm.object_session(acct)
-        if s is None:
-            raise exc.UnboundExecutionError
         updated_on_ord = acct.updated_on_ord or today_ord
 
         query = (
@@ -250,6 +306,84 @@ def ctx_account(acct: Account, *, skip_today: bool = False) -> _AccountContext:
         "updated_days_ago": today_ord - updated_on_ord,
         "change_today": change_today,
         "n_today": n_today,
+        "performance": None,
+    }
+
+
+def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
+    """Get the context to build the account performance details.
+
+    Args:
+        s: SQL session to use
+        acct: Account to generate context for
+
+    Returns:
+        Dictionary HTML context
+    """
+    period = flask.request.args.get("chart-period", "1yr")
+    period_options = {
+        "1m": "1M",
+        "6m": "6M",
+        "ytd": "YTD",
+        "1yr": "1Y",
+        "max": "MAX",
+    }
+
+    query = s.query(TransactionCategory.id_).where(
+        TransactionCategory.is_profit_loss.is_(True),
+    )
+    cost_basis_skip_ids = {t_cat_id for t_cat_id, in query.all()}
+
+    # Calculate total cost basis
+    total_cost_basis = (
+        s.query(TransactionSplit)
+        .with_entities(
+            func.sum(TransactionSplit.amount),
+        )
+        .where(
+            TransactionSplit.account_id == acct.id_,
+            TransactionSplit.category_id.not_in(cost_basis_skip_ids),
+        )
+        .scalar()
+    ) or Decimal(0)
+
+    today = datetime.date.today()
+    today_ord = today.toordinal()
+    if period == "1yr":
+        start_ord = datetime.date(today.year - 1, today.month, today.day).toordinal()
+    elif period == "ytd":
+        start_ord = datetime.date(today.year, 1, 1).toordinal()
+    elif period == "max":
+        start_ord = acct.opened_on_ord or today_ord
+    elif m := re.match(r"(\d)m", period):
+        n = min(0, -int(m.group(1)))
+        start_ord = utils.date_add_months(today, n).toordinal()
+    else:
+        msg = f"Unknown period '{period}'"
+        raise exc.http.BadRequest(msg)
+
+    values, profits, _ = acct.get_value(start_ord, today_ord)
+    dates = utils.range_date(start_ord, today_ord)
+
+    n = len(dates)
+    if n > web_utils.LIMIT_TICKS_YEARS:
+        date_mode = "years"
+    elif n > web_utils.LIMIT_TICKS_MONTHS:
+        date_mode = "months"
+    elif n > web_utils.LIMIT_TICKS_WEEKS:
+        date_mode = "weeks"
+    else:
+        date_mode = "days"
+
+    return {
+        "pnl_past_year": profits[-1],
+        "pnl_total": values[-1] - total_cost_basis,
+        "labels": [d.isoformat() for d in dates],
+        "date_mode": date_mode,
+        "values": values,
+        "cost_bases": [v - p for v, p in zip(values, profits, strict=True)],
+        "period_options": period_options,
+        "period": period,
     }
 
 
@@ -414,7 +548,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
         if not include_closed:
             query = query.where(Account.closed.is_(False))
         for acct in query.all():
-            accounts[acct.id_] = ctx_account(acct, skip_today=True)
+            accounts[acct.id_] = ctx_account(s, acct, skip_today=True)
             if acct.closed:
                 n_closed += 1
 
@@ -606,6 +740,7 @@ ROUTES: Routes = {
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/new": (new, ["GET", "POST"]),
     "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
+    "/h/accounts/a/<path:uri>/performance": (performance, ["GET"]),
     "/h/accounts/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options": (txns_options, ["GET"]),

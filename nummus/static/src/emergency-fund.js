@@ -9,9 +9,9 @@ const emergencyFund = {
     update: function(raw) {
         const labels = raw.labels;
         const dateMode = raw.date_mode;
-        const values = raw.balances.map(v => Number(v));
-        const spendingLower = raw.spending_lower.map(v => Number(v));
-        const spendingUpper = raw.spending_upper.map(v => Number(v));
+        const values = raw.balances;
+        const spendingLower = raw.spending_lower;
+        const spendingUpper = raw.spending_upper;
 
         const canvas = document.getElementById('e-fund-chart-canvas');
         const ctx = canvas.getContext('2d');

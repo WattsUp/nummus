@@ -225,7 +225,7 @@
 {% if is_split %}
     <div class="text-center italic text-sm">Simply leave a split amount empty when saving to remove</div>
 {% endif %}
-<div class="flex justify-around">
+<div class="flex justify-around flex-wrap">
     {% if not txn.any_asset_splits %}
         {% if txn.uri %}
             <button class="btn-text"

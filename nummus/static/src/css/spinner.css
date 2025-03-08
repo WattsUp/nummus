@@ -105,3 +105,10 @@
         transform: rotate(360deg);
     }
 }
+
+@utility spinner-overlay {
+    @apply absolute inset-0;
+    @apply flex items-center;
+    @apply bg-surface/50;
+    @apply not-htmx-request:hidden;
+}
