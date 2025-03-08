@@ -18,6 +18,7 @@
             <div>Search</div>
         </div>
         <icon>search</icon>
+        <icon onclick="htmx.find(this.parentNode, 'input').value=''">clear</icon>
     </label>
     <button id="txn-filter-btn"
             class="{{ 'btn-filled' if ctx.any_filters else 'btn-tonal' }} mt-1.5"

@@ -1,5 +1,4 @@
 @layer base {
-    /* TODO (WattsUp): Add clear button */
 
     input,
     select {
@@ -37,14 +36,27 @@
     --input-label-color: var(--color-on-surface-variant);
 
     --input-pl: calc(var(--spacing) * 2);
+    --input-pr: calc(var(--spacing) * 2);
 
     &:has(icon) {
         --input-pl: calc(var(--spacing) * 8);
     }
 
+    &:has(icon:nth-of-type(2)) {
+        --input-pr: calc(var(--spacing) * 8);
+    }
+
     &>icon {
-        @apply absolute left-1 top-2 border border-transparent;
+        @apply absolute top-2 border border-transparent;
         @apply text-on-surface-variant;
+
+        @variant nth-of-type-1 {
+            @apply left-1;
+        }
+
+        @variant nth-of-type-2 {
+            @apply right-1;
+        }
     }
 
     &>div {
@@ -84,6 +96,7 @@
         @apply w-full py-2 scroll-my-5;
 
         padding-left: var(--input-pl);
+        padding-right: var(--input-pr);
 
         @variant focus-visible {
             @apply outline-2 outline-primary;
@@ -125,6 +138,10 @@
     &>select:has(option:checked:not([value])),
     &>select:has(option:checked:not([value=""])) {
         @apply input-outlined-translate;
+    }
+
+    &>input:placeholder-shown~icon:nth-of-type(2) {
+        @apply hidden;
     }
 
     &:has(error:not(:empty)) {
