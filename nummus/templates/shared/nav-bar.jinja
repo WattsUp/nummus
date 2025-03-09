@@ -28,6 +28,7 @@
     <button title="Add Transaction"
             id="nav-fab"
             hx-get="{{ url_for('transactions.new') }}"
+            hx-include="previous .current-account"
             hx-target="#dialog"
             hx-swap="innerHTML show:#dialog:top"
             hx-push-url="false"

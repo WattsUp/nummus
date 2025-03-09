@@ -11,6 +11,10 @@
         <icon>edit</icon>Edit
     </button>
 </div>
+<input class="current-account"
+       name="account"
+       type="hidden"
+       value="{{ acct.uri }}">
 <h2 class="text-sm text-on-surface-variant flex flex-wrap items-center gap-2">
     <span>@{{ acct.institution }}</span>
     {% if acct.number %}

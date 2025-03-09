@@ -2,7 +2,7 @@
     #snackbar {
         @apply fixed z-40 bottom-44 md:bottom-4 right-1/2 md:right-4 translate-x-4/2 w-96;
         @apply px-4 py-3 rounded cursor-default;
-        @apply text-inverse-on-surface shadow-sm shadow-shadow/50;
+        @apply text-inverse-on-surface shadow-md shadow-shadow/50;
 
         --snack-base-color: var(--color-inverse-surface);
         --snack-bg-color: var(--snack-base-color);

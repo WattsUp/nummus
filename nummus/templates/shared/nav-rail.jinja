@@ -9,6 +9,7 @@
         <button class="fab"
                 title="Add Transaction"
                 hx-get="{{ url_for('transactions.new') }}"
+                hx-include="next .current-account"
                 hx-target="#dialog"
                 hx-swap="innerHTML show:#dialog:top"
                 hx-push-url="false"

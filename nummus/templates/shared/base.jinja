@@ -16,6 +16,8 @@
       hx-on::after-request="progress.update(event, 0.9)"
       hx-on::after-settle="progress.update(event, 1)"
       hx-target="#main">
+    {# Default current-account is blank #}
+    <input class="current-account" name="account" type="hidden">
     <script id="history-script"></script>
     <div id="page-progress"></div>
     {% include "/shared/hx-error.jinja" %}
@@ -43,5 +45,7 @@
         <div id="confirm-dialog" class="dialog max-w-80"></div>
     </div>
     <div id="confirm-scrim" class="scrim z-49" onclick="dialog.closeConfirm()"></div>
+    {# Default current-account is blank #}
+    <input class="current-account" name="account" type="hidden">
 </body>
 </html>

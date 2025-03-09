@@ -109,7 +109,7 @@
 
             @variant last {
                 @apply w-min absolute right-3 bottom-19.5;
-                @apply fab;
+                @apply fab shadow-shadow/50;
                 transition: translate 0.5s;
             }
         }
