@@ -3,7 +3,7 @@
 {# ignore missing <head> #}
 <html lang="en-US">
 {# djlint: on #}
-{% include "/shared/head.jinja" %}
+{% include "shared/head.jinja" %}
 <body hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)"
       hx-on::history-cache-miss-load-error="nummusResponseError(event)"
@@ -20,10 +20,10 @@
     <input class="current-account" name="account" type="hidden">
     <script id="history-script"></script>
     <div id="page-progress"></div>
-    {% include "/shared/hx-error.jinja" %}
-    {% include "/shared/nav-header.jinja" %}
-    {% include "/shared/nav-rail.jinja" %}
-    {% include "/shared/nav-drawer.jinja" %}
+    {% include "shared/hx-error.jinja" %}
+    {% include "shared/nav-header.jinja" %}
+    {% include "shared/nav-rail.jinja" %}
+    {% include "shared/nav-drawer.jinja" %}
     <div id="main-wrapper">
         <main id="main" hx-history-elt>
             {% block content required %}
@@ -34,10 +34,10 @@
             <p>Version: {{ version }}</p>
         </div>
     </div>
-    {% include "/shared/nav-bar.jinja" %}
+    {% include "shared/nav-bar.jinja" %}
     <div id="snackbar" onclick="snackbar.hide()"></div>
     <script id="snackbar-script"></script>
-    <div class="dialog-wrapper z-48">{% include "/shared/dialog.jinja" %}</div>
+    <div class="dialog-wrapper z-48">{% include "shared/dialog.jinja" %}</div>
     <div id="scrim"
          class="scrim z-47"
          onclick="dialog.close();nav.closeDrawer()"></div>

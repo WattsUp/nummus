@@ -1,10 +1,10 @@
 {% if txn.uri %}
     {% with headline="Edit transaction", save_url=url_for("transactions.transaction", uri=txn.uri) %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% else %}
     {% with headline="New transaction", save_url=url_for("transactions.new"), save_method="post" %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% endif %}
 {% set is_split = (txn.splits | length) > 1 %}

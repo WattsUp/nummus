@@ -1,10 +1,10 @@
 {% if acct.uri %}
     {% with headline="Edit account", save_url=url_for("accounts.account", uri=acct.uri) %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% else %}
     {% with headline="New account", save_url=url_for("accounts.new"), save_method="post" %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% endif %}
 <form class="grid gap-2 w-88" onsubmit="return false">

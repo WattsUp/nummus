@@ -30,7 +30,7 @@
         <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
             <h1 class="sticky top-10 md:top-0 p-1 text-2xl font-serif text-primary bg-surface">{{ group.pretty }}</h1>
             {% for cat in items %}
-                {% include "/transaction-categories/category-row.jinja" %}
+                {% include "transaction-categories/category-row.jinja" %}
                 {% if not loop.last %}<hr class="mx-2">{% endif %}
             {% endfor %}
         </div>

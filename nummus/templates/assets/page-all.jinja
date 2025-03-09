@@ -1,0 +1,50 @@
+<div class="flex justify-between items-center"
+     hx-target="#main"
+     hx-trigger="update-account from:body"
+     hx-get="{{ url_for('assets.page_all') }}">
+    <h1 class="text-3xl font-serif text-primary">Assets</h1>
+    <button class="btn-tonal"
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-disabled-elt="this"
+            hx-get="{{ url_for('assets.new') }}"
+            disabled>
+        <icon>add</icon>New
+    </button>
+</div>
+<div class="prose mx-auto">
+    Assets are resources that can be used to produce positive economic value.
+    Cash and cryptocurrency are forms of currency whose value comes from purchasing power against other currencies.
+    Stocks, bonds, and futures have value derived from a contractual claim.
+    Real estate, vehicles, and items are tangible assets that can be physically exchanged.
+</div>
+<div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4 grid-flow-row-dense"
+     hx-push-url="true"
+     hx-swap="innerHTML show:window:top">
+    {% for category, assets in ctx.categories.items() %}
+        <div class="mb-4" style="grid-row: span {{ assets | length }}">
+            <div class="w-full">
+                <div class="sticky top-10 md:top-0 text-2xl font-serif text-primary bg-surface z-10">{{ category.pretty }}</div>
+                {% for asset in assets %}
+                    {% include "assets/asset-row.jinja" %}
+                    {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    {% endfor %}
+</div>
+<label class="toggle max-w-60">
+    <input type="checkbox"
+           autocomplete="off"
+           {% if ctx.include_unheld %}checked{% endif %}
+           hx-push-url="true"
+           hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}">
+    <div>
+        {% if ctx.include_unheld %}
+            Hide unheld assets
+        {% else %}
+            Show unheld assets
+        {% endif %}
+    </div>
+    <switch></switch>
+</label>

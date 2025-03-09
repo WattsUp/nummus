@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import datetime
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from decimal import Decimal
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
-from nummus.controllers import common, transactions
+from nummus.controllers import common
 from nummus.models import (
     Account,
     Asset,
@@ -22,12 +23,21 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    from decimal import Decimal
-
     from nummus.controllers.base import Routes
 
 DEFAULT_PERIOD = "90-days"
 PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
+
+
+class _RowContext(TypedDict):
+    """Context for asset row."""
+
+    uri: str
+    name: str
+    ticker: str | None
+    qty: Decimal
+    price: Decimal
+    value: Decimal
 
 
 def page_all() -> flask.Response:
@@ -39,45 +49,56 @@ def page_all() -> flask.Response:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    include_not_held = "include-not-held" in flask.request.args
+    include_unheld = "include-unheld" in flask.request.args
 
     with p.begin_session() as s:
-        categories: dict[AssetCategory, list[dict[str, object]]] = defaultdict(list)
+        categories: dict[AssetCategory, list[_RowContext]] = defaultdict(list)
+
+        today = datetime.date.today()
+        today_ord = today.toordinal()
+
+        accounts = Account.get_asset_qty_all(s, today_ord, today_ord)
+        qtys: dict[int, Decimal] = defaultdict(Decimal)
+        for acct_qtys in accounts.values():
+            for a_id, values in acct_qtys.items():
+                qtys[a_id] += values[0]
+        held_ids = {a_id for a_id, qty in qtys.items() if qty}
 
         query = (
             s.query(Asset)
+            .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
             .where(Asset.category != AssetCategory.INDEX)
-            .order_by(Asset.category, Asset.name)
+            .order_by(Asset.category)
         )
-        if not include_not_held:
-            today = datetime.date.today()
-            today_ord = today.toordinal()
+        if not include_unheld:
+            query = query.where(Asset.id_.in_(held_ids))
+        prices = Asset.get_value_all(s, today_ord, today_ord, held_ids)
+        for a_id, name, category, ticker in query.yield_per(YIELD_PER):
+            qty = qtys[a_id]
+            price = prices[a_id][0]
+            value = qty * price
 
-            asset_ids: set[int] = set()
-            for asset_qtys in Account.get_asset_qty_all(
-                s,
-                today_ord,
-                today_ord,
-            ).values():
-                for a_id, values in asset_qtys.items():
-                    if values[0]:
-                        asset_ids.add(a_id)
-            query = query.where(Asset.id_.in_(asset_ids))
-        for a in query.yield_per(YIELD_PER):
-            categories[a.category].append(
+            categories[category].append(
                 {
-                    "uri": a.uri,
-                    "name": a.name,
-                    "desc": a.description,
-                    "ticker": a.ticker,
+                    "uri": Asset.id_to_uri(a_id),
+                    "name": name,
+                    "ticker": ticker,
+                    "qty": qty,
+                    "price": price,
+                    "value": value,
                 },
             )
 
     return common.page(
-        "assets/index-content-all.jinja",
+        "assets/page-all.jinja",
         title="Assets",
-        categories=categories,
-        include_not_held=include_not_held,
+        ctx={
+            "categories": {
+                cat: sorted(assets, key=lambda asset: asset["name"].lower())
+                for cat, assets in categories.items()
+            },
+            "include_unheld": include_unheld,
+        },
     )
 
 
@@ -95,103 +116,21 @@ def page(uri: str) -> flask.Response:
 
     with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
-        val_table, title = ctx_valuations(a)
         title = f"Asset {a.name}"
         return common.page(
-            "assets/index-content.jinja",
+            "assets/page.jinja",
             title=title,
             asset=ctx_asset(a),
-            chart=ctx_chart(a),
-            val_table=val_table,
-            url_args={"uri": uri},
         )
 
 
-def page_transactions() -> flask.Response:
-    """GET /assets/transactions.
+def new() -> str:
+    """GET & POST /h/accounts/new.
 
     Returns:
-        string HTML response
+        HTML response
     """
-    txn_table, title = transactions.ctx_table(asset_transactions=True)
-    return common.page(
-        "transactions/index-content.jinja",
-        title=title,
-        txn_table=txn_table,
-        endpoint="assets.txns",
-        asset_transactions=True,
-    )
-
-
-def txns() -> flask.Response:
-    """GET /h/assets/transactions.
-
-    Returns:
-        HTML response with url set
-    """
-    txn_table, title = transactions.ctx_table(asset_transactions=True)
-    html_title = f"<title>{title}</title>\n"
-    html = html_title + flask.render_template(
-        "transactions/table.jinja",
-        txn_table=txn_table,
-        include_oob=True,
-        endpoint="assets.txns",
-        asset_transactions=True,
-    )
-    response = flask.make_response(html)
-    args = dict(flask.request.args.lists())
-    response.headers["HX-Push-Url"] = flask.url_for(
-        "assets.page_transactions",
-        _anchor=None,
-        _method=None,
-        _scheme=None,
-        _external=False,
-        **args,
-    )
-    return response
-
-
-def txns_options(field: str) -> str:
-    """GET /h/assets/txns-options/<field>.
-
-    Args:
-        uri: Account URI
-        field: Name of field to get options for
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        args = flask.request.args
-
-        id_mapping = None
-        if field == "account":
-            id_mapping = Account.map_name(s)
-        elif field == "asset":
-            id_mapping = Asset.map_name(s)
-        else:
-            msg = f"Unexpected txns options: {field}"
-            raise exc.http.BadRequest(msg)
-
-        query, _, _, _ = transactions.table_unfiltered_query(s, asset_transactions=True)
-
-        search_str = args.get(f"search-{field}")
-
-        return flask.render_template(
-            "transactions/table-options.jinja",
-            options=transactions.ctx_options(
-                query,
-                field,
-                id_mapping,
-                search_str=search_str,
-            ),
-            name=field,
-            search_str=search_str,
-            endpoint="assets.txns",
-        )
+    raise NotImplementedError
 
 
 def asset(uri: str) -> str | flask.Response:
@@ -235,56 +174,7 @@ def asset(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.overlay_swap(event="update-asset")
-
-
-def valuation(uri: str) -> str | flask.Response:
-    """GET, PUT, & DELETE /h/assets/v/<uri>.
-
-    Args:
-        uri: AssetValuation URI
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        v = web_utils.find(s, AssetValuation, uri)
-
-        if flask.request.method == "GET":
-            return flask.render_template(
-                "assets/valuations-edit.jinja",
-                valuation=ctx_valuation(v),
-            )
-        if flask.request.method == "DELETE":
-            s.delete(v)
-            return common.overlay_swap(event="update-valuation")
-
-        form = flask.request.form
-        date = utils.parse_date(form.get("date"))
-        if date is None:
-            return common.error("Asset valuation date must not be empty")
-        value = utils.evaluate_real_statement(form.get("value"), precision=6)
-        if value is None:
-            return common.error("Asset valuation value must not be empty")
-
-        try:
-            with s.begin_nested():
-                # Make the changes
-                v.date_ord = date.toordinal()
-                v.value = value
-        except exc.IntegrityError as e:
-            # Get the line that starts with (...IntegrityError)
-            orig = str(e.orig)
-            if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
-                return common.error(
-                    "Asset valuation date must be unique for each asset",
-                )
-            return common.error(e)
-
-        return common.overlay_swap(event="update-valuation")
+        return common.dialog_swap(event="update-asset", snackbar="All changes saved")
 
 
 def new_valuation(uri: str) -> str | flask.Response:
@@ -334,7 +224,63 @@ def new_valuation(uri: str) -> str | flask.Response:
             )
         return common.error(e)
 
-    return common.overlay_swap(event="update-valuation")
+    return common.dialog_swap(event="update-valuation", snackbar="All changes saved")
+
+
+def valuation(uri: str) -> str | flask.Response:
+    """GET, PUT, & DELETE /h/assets/v/<uri>.
+
+    Args:
+        uri: AssetValuation URI
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        v = web_utils.find(s, AssetValuation, uri)
+
+        if flask.request.method == "GET":
+            return flask.render_template(
+                "assets/valuations-edit.jinja",
+                valuation=ctx_valuation(v),
+            )
+        if flask.request.method == "DELETE":
+            date = datetime.date.fromordinal(v.date_ord)
+            s.delete(v)
+            return common.dialog_swap(
+                event="update-valuation",
+                snackbar=f"{date} valuation deleted",
+            )
+
+        form = flask.request.form
+        date = utils.parse_date(form.get("date"))
+        if date is None:
+            return common.error("Asset valuation date must not be empty")
+        value = utils.evaluate_real_statement(form.get("value"), precision=6)
+        if value is None:
+            return common.error("Asset valuation value must not be empty")
+
+        try:
+            with s.begin_nested():
+                # Make the changes
+                v.date_ord = date.toordinal()
+                v.value = value
+        except exc.IntegrityError as e:
+            # Get the line that starts with (...IntegrityError)
+            orig = str(e.orig)
+            if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
+                return common.error(
+                    "Asset valuation date must be unique for each asset",
+                )
+            return common.error(e)
+
+        return common.dialog_swap(
+            event="update-valuation",
+            snackbar="All changes saved",
+        )
 
 
 def ctx_asset(a: Asset) -> dict[str, object]:
@@ -652,9 +598,7 @@ def update() -> str | flask.Response:
 ROUTES: Routes = {
     "/assets": (page_all, ["GET"]),
     "/assets/<path:uri>": (page, ["GET"]),
-    "/assets/transactions": (page_transactions, ["GET"]),
-    "/h/assets/txns": (txns, ["GET"]),
-    "/h/assets/txns-options/<path:field>": (txns_options, ["GET"]),
+    "/h/assets/new": (new, ["GET", "POST"]),
     "/h/assets/a/<path:uri>": (asset, ["GET", "PUT"]),
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),

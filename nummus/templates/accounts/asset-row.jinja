@@ -1,11 +1,10 @@
-{% set class = "btn-text block relative text-on-surface px-6" %}
+{% set class = "relative text-on-surface px-6" %}
 {% if asset.uri %}
     <a id="asset-{{ asset.uri }}"
-       class="{{ class }}"
+       class="btn-text block {{ class }}"
        hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
        href="{{ url_for('assets.page', uri=asset.uri) }}"
-       hx-disabled-elt="this"
-       disabled>
+       hx-disabled-elt="this">
         {% block row %}
             <div class="flex justify-between gap-2">
                 <b class="truncate">{{ asset.name }}</b>
@@ -33,6 +32,7 @@
                 </div>
             </div>
         {% endblock row %}
+        <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>
     </a>
 {% else %}
     <div class="{{ class }}">{{ self.row() }}</div>

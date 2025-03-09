@@ -1,10 +1,10 @@
 {% if category.uri %}
     {% with headline="Edit category", save_url=url_for("transaction_categories.category", uri=category.uri) %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% else %}
     {% with headline="New category", save_url=url_for("transaction_categories.new"), save_method="post" %}
-        {% include "/shared/dialog-headline.jinja" %}
+        {% include "shared/dialog-headline.jinja" %}
     {% endwith %}
 {% endif %}
 <form class="grid gap-2 w-88" onsubmit="return false">

@@ -1,0 +1,13 @@
+<div class="flex justify-between items-center"
+     hx-target="#main"
+     hx-trigger="update-asset from:body"
+     hx-get="{{ url_for('assets.page', uri=asset.uri) }}">
+    <h1 class="text-3xl font-serif text-primary">{{ asset.name }}</h1>
+    <button class="btn-tonal"
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-disabled-elt="this"
+            hx-get="{{ url_for('assets.asset', uri=asset.uri) }}">
+        <icon>edit</icon>Edit
+    </button>
+</div>

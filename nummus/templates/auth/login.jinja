@@ -4,12 +4,12 @@
 <html lang="en-US">
 {# djlint: on #}
 {% with title="Login | nummus", resizes="visual" %}
-    {% include "/shared/head.jinja" %}
+    {% include "shared/head.jinja" %}
 {% endwith %}
 <body class="bg-primary-container"
       hx-on::send-error="nummusSendError(event)"
       hx-on::response-error="nummusResponseError(event)">
-    {% include "/shared/hx-error.jinja" %}
+    {% include "shared/hx-error.jinja" %}
     <div id="main-sizer" class="p-0 pb-28">
         <main id="main" class="flex flex-col justify-center items-center">
             <form id="form-login"
@@ -45,7 +45,7 @@
         </main>
     </div>
     {% block footer %}
-        {% include "/shared/footer.jinja" %}
+        {% include "shared/footer.jinja" %}
     {% endblock footer %}
 </body>
 </html>

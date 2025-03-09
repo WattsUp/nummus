@@ -52,7 +52,7 @@
                     <span>{{ total | money }}</span>
                 </div>
                 {% for acct in accounts %}
-                    {% include "/accounts/account-row.jinja" %}
+                    {% include "accounts/account-row.jinja" %}
                     {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
                 {% endfor %}
             </div>

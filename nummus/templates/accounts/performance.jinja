@@ -1,6 +1,6 @@
 <div class="w-full h-60 md:h-96 relative">
     <canvas id="account-chart-canvas" hx-preserve></canvas>
-    <div id="account-indicator" class="spinner-overlay">{% include "/shared/spinner.jinja" %}</div>
+    <div id="account-indicator" class="spinner-overlay">{% include "shared/spinner.jinja" %}</div>
 </div>
 {% with perf = acct.performance %}
     <script>accounts.update(JSON.parse('{{ perf | tojson }}'))</script>

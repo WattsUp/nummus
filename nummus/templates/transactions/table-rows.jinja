@@ -1,8 +1,8 @@
 {% if include_oob %}
     {% with oob = True %}
-        {% include "/transactions/table-header.jinja" %}
-        {% include "/transactions/table-filters.jinja" %}
-        {% include "/transactions/table-total.jinja" %}
+        {% include "transactions/table-header.jinja" %}
+        {% include "transactions/table-filters.jinja" %}
+        {% include "transactions/table-total.jinja" %}
     {% endwith %}
 {% endif %}
 {% for date, transactions in ctx.transactions %}
@@ -11,7 +11,7 @@
             <div>{{ date }}</div>
         </div>
         {% for txn in transactions %}
-            {% include "/transactions/table-row.jinja" %}
+            {% include "transactions/table-row.jinja" %}
             {% if not loop.last %}<hr class="mx-4">{% endif %}
         {% endfor %}
     </div>
