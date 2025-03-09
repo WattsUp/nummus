@@ -1,4 +1,4 @@
-<a class="btn-text block relative group not-disabled:text-on-surface px-6"
+<a class="btn-text block relative text-on-surface px-6"
    href="{{ url_for('accounts.page', uri=acct.uri) }}"
    hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
    hx-disabled-elt="this">
@@ -6,9 +6,9 @@
         <b>{{ acct.name }}</b>
         <span>{{ acct.value | money }}</span>
     </div>
-    <div class="flex justify-between text-sm group-not-disabled:text-on-surface-variant">
+    <div class="flex justify-between text-sm text-on-surface-variant">
         {% if acct.closed %}
-            <span class="not-disabled:text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
+            <span class="text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
         {% elif acct.updated_days_ago == 0 %}
             <span>{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today</span>
             <span>{{ acct.change_today | money }}</span>

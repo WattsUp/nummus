@@ -1,0 +1,39 @@
+{% set class = "btn-text block relative text-on-surface px-6" %}
+{% if asset.uri %}
+    <a id="asset-{{ asset.uri }}"
+       class="{{ class }}"
+       hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
+       href="{{ url_for('assets.page', uri=asset.uri) }}"
+       hx-disabled-elt="this"
+       disabled>
+        {% block row %}
+            <div class="flex justify-between gap-2">
+                <b class="truncate">{{ asset.name }}</b>
+                {% if asset.profit is not none %}
+                    <div class="{{ asset.profit | pnl_color }} flex justify-end items-center">
+                        <icon class="sm">{{ asset.profit | pnl_arrow }}</icon>
+                        {{ asset.profit | abs | money }}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="flex justify-between gap-2 text-sm text-on-surface-variant">
+                <div>
+                    {{ asset.category.pretty }}
+                    {% if asset.ticker %}@{{ asset.ticker }}{% endif %}
+                </div>
+                <div>
+                    {% if asset.value %}
+                        <span class="max-md:hidden">
+                            {% if asset.qty %}{{ asset.qty | qty }} @ {{ asset.price | money }}:{% endif %}
+                        </span>
+                        {{ asset.value | money }} ({{ asset.value_ratio | percent | replace(' ', '') }})
+                    {% else %}
+                        Not currently held
+                    {% endif %}
+                </div>
+            </div>
+        {% endblock row %}
+    </a>
+{% else %}
+    <div class="{{ class }}">{{ self.row() }}</div>
+{% endif %}

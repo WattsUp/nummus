@@ -1103,7 +1103,11 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
 
             query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
 
-            next_page = datetime.date.fromordinal(min(included_date_ords) - 1)
+            next_page = (
+                None
+                if len(included_date_ords) == 0
+                else datetime.date.fromordinal(min(included_date_ords) - 1)
+            )
 
         # Iterate first to get required second queries
         t_splits: list[TransactionSplit] = []

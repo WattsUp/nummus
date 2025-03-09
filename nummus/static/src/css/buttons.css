@@ -25,6 +25,10 @@
 
     @variant disabled {
         @apply cursor-auto text-on-surface/38;
+
+        & * {
+            @apply text-on-surface/38;
+        }
     }
 
     @variant focus-visible {

@@ -257,6 +257,11 @@ class Server:
         self._app.jinja_env.filters["pnl_color"] = lambda x: (
             "" if x is None or x == 0 else ("text-primary" if x > 0 else "text-error")
         )
+        self._app.jinja_env.filters["pnl_arrow"] = lambda x: (
+            ""
+            if x is None or x == 0
+            else ("arrow_upward" if x > 0 else "arrow_downward")
+        )
         self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
         self._app.jinja_env.filters["tojson"] = web_utils.ctx_to_json
 

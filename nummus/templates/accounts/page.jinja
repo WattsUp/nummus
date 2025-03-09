@@ -26,7 +26,7 @@
     {% endif %}
     <span class="ml-auto">
         {% if acct.closed %}
-            <span class="not-disabled:text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
+            <span class="text-error">Account was closed {{ acct.updated_days_ago | days }} ago</span>
         {% elif acct.updated_days_ago == 0 %}
             <span>{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today</span>
             <span>{{ acct.change_today | money }}</span>
@@ -37,18 +37,24 @@
 </h2>
 {% if acct.performance %}
     {% with perf = acct.performance %}
-        <div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold">
+        <div class="grid gap-x-2 max-lg:grid-cols-2 text-center font-bold">
             <div class="col-span-2">
                 <h2 class="text-2xl">Balance</h2>
                 <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
             </div>
-            <div class="max-lg:col-start-1">
+            <div class="lg:col-start-3">
                 <h2 class="text-2xl">Year Return</h2>
-                <h1 class="text-4xl text-tertiary font-serif">{{ perf.pnl_past_year | money }}</h1>
+                <h1 class="text-3xl md:text-4xl text-tertiary font-serif flex justify-center items-center">
+                    <icon>{{ perf.pnl_past_year | pnl_arrow }}</icon>
+                    {{ perf.pnl_past_year | abs | money }}
+                </h1>
             </div>
-            <div>
+            <div class="lg:col-start-4">
                 <h2 class="text-2xl">Total Return</h2>
-                <h1 class="text-4xl text-tertiary font-serif">{{ perf.pnl_total | money }}</h1>
+                <h1 class="text-3xl md:text-4xl text-tertiary font-serif flex justify-center items-center">
+                    <icon>{{ perf.pnl_total | pnl_arrow }}</icon>
+                    {{ perf.pnl_total | abs | money }}
+                </h1>
             </div>
         </div>
     {% endwith %}
@@ -59,7 +65,33 @@
         <h1 class="text-6xl text-tertiary font-serif">{{ acct.value | money }}</h1>
     </div>
 {% endif %}
-{# TODO (WattsUp): Add asset table #}
+{% if acct.assets %}
+    <div class="flex justify-between items-end">
+        <h1 class="text-2xl font-serif text-primary">
+            {% if acct.performance %}
+                Investments
+            {% else %}
+                Assets
+            {% endif %}
+        </h1>
+        <h2 class="text-on-surface-variant pr-6">Total Return</h2>
+    </div>
+    <div>
+        {% for asset in acct.assets[:3] %}
+            {% include "accounts/asset-row.jinja" %}
+            {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
+        {% endfor %}
+    </div>
+    {% if acct.assets | length > 3 %}
+        <button class="btn-text mx-auto my-1" onclick="accounts.showAllAssets(this)">Show all</button>
+        <div id="account-assets-all" class="hidden">
+            {% for asset in acct.assets[3:] %}
+                <hr class="mx-4 my-1">
+                {% include "accounts/asset-row.jinja" %}
+            {% endfor %}
+        </div>
+    {% endif %}
+{% endif %}
 <div class="flex justify-between items-center">
     <h1 class="text-2xl font-serif text-primary">Transactions</h1>
     <button class="btn-tonal"

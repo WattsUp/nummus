@@ -48,6 +48,7 @@ class _AccountContext(TypedDict):
     value: Decimal
 
     performance: _PerformanceContext | None
+    assets: list[_AssetContext] | None
 
 
 class _PerformanceContext(TypedDict):
@@ -71,6 +72,20 @@ class _PerformanceContext(TypedDict):
 
     period: str
     period_options: dict[str, str]
+
+
+class _AssetContext(TypedDict):
+    """Context for assets held."""
+
+    uri: str | None
+    category: AssetCategory
+    name: str
+    ticker: str | None
+    qty: Decimal | None
+    price: Decimal
+    value: Decimal
+    value_ratio: Decimal
+    profit: Decimal | None
 
 
 def page_all() -> flask.Response:
@@ -108,6 +123,7 @@ def page(uri: str) -> flask.Response:
         ctx = ctx_account(s, acct)
         if acct.category == AccountCategory.INVESTMENT:
             ctx["performance"] = ctx_performance(s, acct)
+        ctx["assets"] = ctx_assets(s, acct)
         return common.page(
             "accounts/page.jinja",
             title=title,
@@ -315,6 +331,7 @@ def ctx_account(
         "change_today": change_today,
         "n_today": n_today,
         "performance": None,
+        "assets": [],
     }
 
 
@@ -412,7 +429,7 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
     }
 
 
-def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
+def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     """Get the context to build the account assets.
 
     Args:
@@ -422,43 +439,25 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
     Returns:
         Dictionary HTML context
     """
-    raise NotImplementedError
-    args = flask.request.args
-
-    period = args.get("period", transactions.DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-    if start is None:
-        opened_on_ord = acct.opened_on_ord
-        start = (
-            end if opened_on_ord is None else datetime.date.fromordinal(opened_on_ord)
-        )
-
-    start_ord = start.toordinal()
-    end_ord = end.toordinal()
+    today = datetime.date.today()
+    today_ord = today.toordinal()
+    start_ord = acct.opened_on_ord or today_ord
 
     asset_qtys = {
-        a_id: qtys[0] for a_id, qtys in acct.get_asset_qty(end_ord, end_ord).items()
+        a_id: qtys[0] for a_id, qtys in acct.get_asset_qty(today_ord, today_ord).items()
     }
     if len(asset_qtys) == 0:
         return None  # Not an investment account
 
-    # Include assets that are currently held or had a change in qty
+    # Include all assets every held
     query = s.query(TransactionSplit.asset_id).where(
         TransactionSplit.account_id == acct.id_,
-        TransactionSplit.date_ord <= end_ord,
-        TransactionSplit.date_ord >= start_ord,
         TransactionSplit.asset_id.is_not(None),
     )
     a_ids = {a_id for a_id, in query.distinct()}
 
-    asset_qtys = {
-        a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty != 0
-    }
-    a_ids = set(asset_qtys.keys())
-
-    end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
-
-    asset_profits = acct.get_profit_by_asset(start_ord, end_ord)
+    end_prices = Asset.get_value_all(s, today_ord, today_ord, ids=a_ids)
+    asset_profits = acct.get_profit_by_asset(start_ord, today_ord)
 
     # Sum of profits should match final profit value, add any mismatch to cash
 
@@ -467,40 +466,33 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
         .with_entities(
             Asset.id_,
             Asset.name,
+            Asset.ticker,
             Asset.category,
         )
         .where(Asset.id_.in_(a_ids))
     )
 
-    class AssetContext(TypedDict):
-        """Type definition for Asset context."""
-
-        uri: str | None
-        category: AssetCategory
-        name: str
-        end_qty: Decimal | None
-        end_value: Decimal
-        end_value_ratio: Decimal
-        profit: Decimal | None
-
-    assets: list[AssetContext] = []
+    assets: list[_AssetContext] = []
     total_value = Decimal(0)
     total_profit = Decimal(0)
-    for a_id, name, category in query.yield_per(YIELD_PER):
+    for a_id, name, ticker, category in query.yield_per(YIELD_PER):
         end_qty = asset_qtys[a_id]
-        end_value = end_qty * end_prices[a_id][0]
+        end_price = end_prices[a_id][0]
+        end_value = end_qty * end_price
         profit = asset_profits[a_id]
 
         total_value += end_value
         total_profit += profit
 
-        ctx_asset: AssetContext = {
+        ctx_asset: _AssetContext = {
             "uri": Asset.id_to_uri(a_id),
             "category": category,
             "name": name,
-            "end_qty": end_qty,
-            "end_value": end_value,
-            "end_value_ratio": Decimal(0),
+            "ticker": ticker,
+            "qty": end_qty,
+            "price": end_price,
+            "value": end_value,
+            "value_ratio": Decimal(0),
             "profit": profit,
         }
         assets.append(ctx_asset)
@@ -516,32 +508,29 @@ def ctx_assets(s: orm.Session, acct: Account) -> dict[str, object] | None:
         "uri": None,
         "category": AssetCategory.CASH,
         "name": "Cash",
-        "end_qty": None,
-        "end_value": cash,
-        "end_value_ratio": Decimal(0),
+        "ticker": None,
+        "qty": None,
+        "price": Decimal(1),
+        "value": cash,
+        "value_ratio": Decimal(0),
         "profit": None,
     }
     assets.append(ctx_asset)
 
     for item in assets:
-        item["end_value_ratio"] = (
-            Decimal(0) if total_value == 0 else item["end_value"] / total_value
+        item["value_ratio"] = (
+            Decimal(0) if total_value == 0 else item["value"] / total_value
         )
 
-    assets = sorted(
+    return sorted(
         assets,
         key=lambda item: (
-            -item["end_value"],
+            item["value"] == 0,
             0 if item["profit"] is None else -item["profit"],
+            -item["value"],
             item["name"].lower(),
         ),
     )
-
-    return {
-        "assets": assets,
-        "end_value": total_value,
-        "profit": total_profit,
-    }
 
 
 def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:

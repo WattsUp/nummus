@@ -125,6 +125,10 @@
         font-variation-settings: 'FILL' 1;
     }
 
+    icon.sm {
+        font-size: 20px;
+    }
+
     html {
         @apply scroll-smooth overscroll-y-contain;
 

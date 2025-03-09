@@ -18,7 +18,10 @@
     <h1 class="text-2xl font-serif text-primary">Performance</h1>
     <div class="bg-surface-container-high rounded-xl p-2 grid grid-cols-2 max-w-md mx-auto font-bold">
         <div class="text-on-surface-variant">Total Return</div>
-        <div class="text-right {{ perf.pnl_total | pnl_color }}">{{ perf.pnl_total | money }}</div>
+        <div class="{{ perf.pnl_total | pnl_color }} flex justify-end items-center">
+            <icon class="sm">{{ perf.pnl_total | pnl_arrow }}</icon>
+            {{ perf.pnl_total | abs | money }}
+        </div>
         <hr>
         <div class="text-on-surface-variant">Contributions</div>
         <div class="text-right">{{ perf.total_cost_basis | money }}</div>

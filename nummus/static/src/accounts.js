@@ -78,4 +78,13 @@ const accounts = {
         );
         return;
     },
+    /**
+     * Show remaining assets
+     *
+     * @param {Element} btn Triggering button
+     */
+    showAllAssets: function(btn) {
+        htmx.addClass(btn, 'hidden');
+        htmx.removeClass(htmx.find('#account-assets-all'), 'hidden');
+    },
 }
