@@ -37,6 +37,7 @@ class _AssetContext(TypedDict):
     description: str | None
     ticker: str | None
     category: AssetCategory
+    category_type: type[AssetCategory]
     value: Decimal
     value_date: datetime.date | None
 
@@ -235,6 +236,50 @@ def performance(uri: str) -> flask.Response:
     return response
 
 
+def validation(uri: str) -> str:
+    """GET /h/assets/a/<uri>/validation.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    # dict{key: (required, prop if unique required)}
+    properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
+        "name": (True, Asset.name),
+        "description": (False, None),
+        "ticker": (False, Asset.ticker),
+    }
+
+    args = flask.request.args
+    for key, (required, prop) in properties.items():
+        if key not in args:
+            continue
+        value = args[key].strip()
+        if value == "":
+            return "Required" if required else ""
+        if key != "ticker" and len(value) < utils.MIN_STR_LEN:
+            # Ticker can be short
+            return f"{utils.MIN_STR_LEN} characters required"
+        if prop is not None:
+            with p.begin_session() as s:
+                n = (
+                    s.query(Asset)
+                    .where(
+                        prop == value,
+                        Asset.id_ != Asset.uri_to_id(uri),
+                    )
+                    .count()
+                )
+                if n != 0:
+                    return "Must be unique"
+        return ""
+
+    msg = f"Asset validation for {args} not implemented"
+    raise NotImplementedError(msg)
+
+
 def new_valuation(uri: str) -> str | flask.Response:
     """GET & POST /h/assets/a/<uri>/new-valuation.
 
@@ -370,6 +415,7 @@ def ctx_asset(s: orm.Session, a: Asset) -> _AssetContext:
         "description": a.description,
         "ticker": a.ticker,
         "category": a.category,
+        "category_type": AssetCategory,
         "value": current_value,
         "value_date": current_date,
         "performance": None,
@@ -608,6 +654,7 @@ ROUTES: Routes = {
     "/h/assets/new": (new, ["GET", "POST"]),
     "/h/assets/a/<path:uri>": (asset, ["GET", "PUT"]),
     "/h/assets/a/<path:uri>/performance": (performance, ["GET"]),
+    "/h/assets/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
     "/h/assets/v/<path:uri>": (valuation, ["GET", "PUT", "DELETE"]),

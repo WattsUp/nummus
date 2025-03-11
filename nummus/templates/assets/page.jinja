@@ -7,9 +7,7 @@
             hx-target="#dialog"
             hx-swap="innerHTML show:#dialog:top"
             hx-disabled-elt="this"
-            hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
-            disabled>
-        {# TODO (WattsUp): Add edit dialog #}
+            hx-get="{{ url_for('assets.asset', uri=asset.uri) }}">
         <icon>edit</icon>Edit
     </button>
 </div>

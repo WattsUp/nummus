@@ -337,6 +337,99 @@
         </div>
     </label>
     <label class="input-outlined col-start-1">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()"></textarea>
+        <div>
+            <div>Extended text</div>
+        </div>
+        <div>
+            <error></error>
+            <span>Supporting text</span>
+        </div>
+        <icon>search</icon>
+        <icon onclick="htmx.find(this.parentNode, 'textarea').value=''">clear</icon>
+    </label>
+    <label class="input-outlined">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()">Banana</textarea>
+        <div>
+            <div>Extended text with value</div>
+        </div>
+        <icon>search</icon>
+    </label>
+    <label class="input-outlined">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()">Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. Lemons are fruits. Tomatoes are fruits.</textarea>
+        <div>
+            <div>Extended text with value</div>
+        </div>
+        <div>
+            <error></error>
+            <span>Supporting text</span>
+        </div>
+        <icon>search</icon>
+    </label>
+    <label class="input-outlined">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  disabled
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()">Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. Lemons are fruits. Tomatoes are fruits.</textarea>
+        <div>
+            <div>Extended text disabled</div>
+        </div>
+        <div>
+            <error></error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined col-start-1">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()"></textarea>
+        <div>
+            <div>Extended text</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+        <icon>search</icon>
+    </label>
+    <label class="input-outlined">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()">Banana</textarea>
+        <div>
+            <div>Extended text with value</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined">
+        <textarea enterkeyhint="next"
+                  placeholder=""
+                  autocomplete="off"
+                  onkeydown="if(event.keyCode == 13)event.preventDefault()">Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. Lemons are fruits. Tomatoes are fruits.</textarea>
+        <div>
+            <div>Extended text with value</div>
+        </div>
+        <div>
+            <error>Inline validation error</error>
+            <span>Supporting text</span>
+        </div>
+    </label>
+    <label class="input-outlined col-start-1">
         <select autocomplete="off">
             <option value="" disabled hidden selected></option>
             <option value="apple">Apple</option>

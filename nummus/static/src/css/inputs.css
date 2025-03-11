@@ -1,6 +1,7 @@
 @layer base {
 
     input,
+    textarea,
     select {
         --input-border-color: var(--color-outline);
         @apply px-2 py-1 rounded-md;
@@ -92,8 +93,9 @@
     }
 
     &>input,
+    &>textarea,
     &>select {
-        @apply w-full py-2 scroll-my-5;
+        @apply w-full py-2 scroll-my-5 resize-none;
 
         padding-left: var(--input-pl);
         padding-right: var(--input-pr);
@@ -134,13 +136,19 @@
         }
     }
 
+    &>textarea {
+        @apply h-24;
+    }
+
     &>input:not(:placeholder-shown),
+    &>textarea:not(:placeholder-shown),
     &>select:has(option:checked:not([value])),
     &>select:has(option:checked:not([value=""])) {
         @apply input-outlined-translate;
     }
 
-    &>input:placeholder-shown~icon:nth-of-type(2) {
+    &>input:placeholder-shown~icon:nth-of-type(2),
+    &>textarea:placeholder-shown~icon:nth-of-type(2) {
         @apply hidden;
     }
 
@@ -149,6 +157,7 @@
         --input-border-color: var(--color-error);
 
         &>input,
+        &>textarea,
         &>select {
             @variant focus-visible {
                 @apply outline-error;

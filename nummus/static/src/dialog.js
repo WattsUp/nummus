@@ -59,12 +59,14 @@ const dialog = {
      * Add event listeners to the dialog
      */
     addListeners: function() {
-        htmx.findAll('#dialog [required]').forEach((e) => {
+        const d = htmx.find('#dialog');
+        htmx.findAll(d, '[required]').forEach((e) => {
             htmx.on(e, 'input', dialog.updateSave);
         });
         const focusNext = function(start) {
             const results = htmx.findAll(
-                '#dialog input:not(:disabled), #dialog select:not(:disabled)');
+                d,
+                'input:not(:disabled), textarea:not(:disabled), select:not(:disabled)');
             for (const next of results) {
                 if (next.compareDocumentPosition(start) ===
                     Node.DOCUMENT_POSITION_PRECEDING) {
@@ -75,7 +77,7 @@ const dialog = {
                 }
             }
         };
-        htmx.findAll('#dialog input, #dialog select').forEach((e) => {
+        htmx.findAll(d, 'input, textarea, select').forEach((e) => {
             htmx.on(e, 'input', dialog.changes);
             htmx.on(e, 'keypress', (evt) => {
                 if (evt.key == 'Enter') {
@@ -97,7 +99,8 @@ const dialog = {
         dialog.addListeners();
         // Only autofocus for not mobile
         if (window.screen.width >= 768) {
-            const firstInput = htmx.find('#dialog input, #dialog select');
+            const d = htmx.find('#dialog');
+            const firstInput = htmx.find(d, 'input, textarea, select');
             firstInput.focus();
             if (firstInput.type == 'text') {
                 const n = firstInput.value.length;
