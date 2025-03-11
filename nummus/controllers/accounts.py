@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime
-import re
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
@@ -346,13 +345,10 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         Dictionary HTML context
     """
     period = flask.request.args.get("chart-period", "1yr")
-    period_options = {
-        "1m": "1M",
-        "6m": "6M",
-        "ytd": "YTD",
-        "1yr": "1Y",
-        "max": "MAX",
-    }
+    start, end = web_utils.parse_period(period)
+    end_ord = end.toordinal()
+    start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
+    labels, date_mode = web_utils.date_labels(start_ord, end_ord)
 
     query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
         TransactionCategory.is_profit_loss.is_(True),
@@ -378,36 +374,11 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         elif "fee" in name:
             fees += value
 
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-    if period == "1yr":
-        start_ord = datetime.date(today.year - 1, today.month, today.day).toordinal()
-    elif period == "ytd":
-        start_ord = datetime.date(today.year, 1, 1).toordinal()
-    elif period == "max":
-        start_ord = acct.opened_on_ord or today_ord
-    elif m := re.match(r"(\d)m", period):
-        n = min(0, -int(m.group(1)))
-        start_ord = utils.date_add_months(today, n).toordinal()
-    else:
-        msg = f"Unknown period '{period}'"
-        raise exc.http.BadRequest(msg)
-
-    values, profits, asset_values = acct.get_value(start_ord, today_ord)
+    values, profits, asset_values = acct.get_value(start_ord, end_ord)
 
     cash = values[-1] - sum(v[-1] for v in asset_values.values())
 
-    dates = utils.range_date(start_ord, today_ord)
-    n = len(dates)
-    if n > web_utils.LIMIT_TICKS_YEARS:
-        date_mode = "years"
-    elif n > web_utils.LIMIT_TICKS_MONTHS:
-        date_mode = "months"
-    elif n > web_utils.LIMIT_TICKS_WEEKS:
-        date_mode = "weeks"
-    else:
-        date_mode = "days"
-
+    n = len(labels)
     twrr = utils.twrr(values, profits)[-1]
     twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / n) - 1
 
@@ -420,12 +391,12 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         "cash": cash,
         "twrr": twrr_per_annum,
         "mwrr": utils.mwrr(values, profits),
-        "labels": [d.isoformat() for d in dates],
+        "labels": labels,
         "date_mode": date_mode,
         "values": values,
         "cost_bases": [v - p for v, p in zip(values, profits, strict=True)],
-        "period_options": period_options,
         "period": period,
+        "period_options": web_utils.PERIOD_OPTIONS,
     }
 
 

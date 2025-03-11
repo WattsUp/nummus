@@ -7,7 +7,33 @@
             hx-target="#dialog"
             hx-swap="innerHTML show:#dialog:top"
             hx-disabled-elt="this"
-            hx-get="{{ url_for('assets.asset', uri=asset.uri) }}">
+            hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
+            disabled>
+        {# TODO (WattsUp): Add edit dialog #}
         <icon>edit</icon>Edit
     </button>
 </div>
+<h2 class="text-sm text-on-surface-variant flex flex-wrap items-center gap-2">
+    <span>
+        {{ asset.category.pretty }}
+        {% if asset.ticker %}@{{ asset.ticker }}{% endif %}
+    </span>
+    <span class="ml-auto">
+        {% if asset.value_date %}
+            {{ asset.value | money }} as of {{ asset.value_date }}
+        {% else %}
+            <span class="text-error">Asset has no valuations</span>
+        {% endif %}
+    </span>
+</h2>
+<div id="asset-performance" class="mb-2">{% include "assets/performance.jinja" %}</div>
+{% if asset.description %}
+    <div class="prose mx-auto">
+        <h3>About</h3>
+        {{ asset.description }}
+    </div>
+{% endif %}
+<h1 class="text-2xl font-serif text-primary">Holdings - if applicable</h1>
+{# TODO (WattsUp): Add holdings info #}
+<h1 class="text-2xl font-serif text-primary">Valuations</h1>
+{# TODO (WattsUp): Add valuations info #}

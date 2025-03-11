@@ -1,7 +1,6 @@
 'use strict';
 const accounts = {
     chart: null,
-    chartProfit: null,
     /**
      * Create Account Chart
      *
@@ -76,7 +75,6 @@ const accounts = {
                 }
             },
         );
-        return;
     },
     /**
      * Show remaining assets

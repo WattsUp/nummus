@@ -39,6 +39,14 @@ HTTP_CODE_REDIRECT = 302
 HTTP_CODE_BAD_REQUEST = 400
 HTTP_CODE_FORBIDDEN = 403
 
+PERIOD_OPTIONS = {
+    "1m": "1M",
+    "6m": "6M",
+    "ytd": "YTD",
+    "1yr": "1Y",
+    "max": "MAX",
+}
+
 
 T = TypeVar("T", bound=Base)
 
@@ -70,72 +78,54 @@ def find(s: orm.Session, cls: type[T], uri: str) -> T:
     return obj
 
 
-def parse_period(
-    period: str,
-    start_custom: datetime.date | str | None,
-    end_custom: datetime.date | str | None,
-) -> tuple[datetime.date | None, datetime.date]:
+def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     """Parse time period from arguments.
 
     Args:
         period: Name of period
-        start_custom: Start date for "custom"
-        end_custom: End date from "custom"
 
     Returns:
         start, end dates
         start is None for "all"
     """
-    if isinstance(start_custom, str):
-        try:
-            start_custom = datetime.date.fromisoformat(start_custom)
-        except ValueError:
-            start_custom = None
-    if isinstance(end_custom, str):
-        try:
-            end_custom = datetime.date.fromisoformat(end_custom)
-        except ValueError:
-            end_custom = None
-
     today = datetime.date.today()
-    if period == "custom":
-        earliest = datetime.date(1970, 1, 1)
-        start = start_custom or today
-        end = end_custom or today
-        start = max(start, earliest)
-        end = max(start, end, earliest)
-    elif period == "this-month":
-        start = utils.start_of_month(today)
-        end = today
-    elif period == "last-month":
-        end = utils.start_of_month(today) - datetime.timedelta(days=1)
-        start = utils.start_of_month(end)
-    elif m_days := re.match(r"(\d+)-days", period):
-        n = int(m_days.group(1))
-        start = today - datetime.timedelta(days=n)
-        end = today
-    elif m_months := re.match(r"(\d+)-months", period):
-        n = int(m_months.group(1))
-        start_this_month = datetime.date(today.year, today.month, 1)
-        start = utils.date_add_months(start_this_month, -n)
-        end = today
-    elif m_years := re.match(r"(\d+)-years?", period):
-        n = int(m_years.group(1))
-        start = datetime.date(today.year - n, today.month, 1)
-        end = today
-    elif period == "this-year":
+    if period == "1yr":
+        start = datetime.date(today.year - 1, today.month, today.day)
+    elif period == "ytd":
         start = datetime.date(today.year, 1, 1)
-        end = today
-    elif period == "last-year":
-        start = datetime.date(today.year - 1, 1, 1)
-        end = datetime.date(today.year - 1, 12, 31)
-    elif period == "all":
+    elif period == "max":
         start = None
-        end = today
+    elif m := re.match(r"(\d)m", period):
+        n = min(0, -int(m.group(1)))
+        start = utils.date_add_months(today, n)
     else:
-        msg = f"Unknown period: {period}"
+        msg = f"Unknown period '{period}'"
         raise exc.http.BadRequest(msg)
-    return start, end
+
+    return start, today
+
+
+def date_labels(start_ord: int, end_ord: int) -> tuple[list[str], str]:
+    """Generate date labels and proper date mode.
+
+    Args:
+        start_ord: Start date ordinal
+        end_ord: End date ordinal
+
+    Returns:
+        tuple(list of labels, date mode)
+    """
+    dates = utils.range_date(start_ord, end_ord)
+    n = len(dates)
+    if n > LIMIT_TICKS_YEARS:
+        date_mode = "years"
+    elif n > LIMIT_TICKS_MONTHS:
+        date_mode = "months"
+    elif n > LIMIT_TICKS_WEEKS:
+        date_mode = "weeks"
+    else:
+        date_mode = "days"
+    return [d.isoformat() for d in dates], date_mode
 
 
 def validate_image_upload(req: flask.Request) -> str:
