@@ -13,20 +13,12 @@ from sqlalchemy import func, orm
 from nummus import exceptions as exc
 from nummus import portfolio, utils, web_utils
 from nummus.controllers import common
-from nummus.models import (
-    Account,
-    Asset,
-    AssetCategory,
-    AssetValuation,
-    paginate,
-    YIELD_PER,
-)
+from nummus.models import Account, Asset, AssetCategory, AssetValuation, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "90-days"
-PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
+PAGE_LEN = 50
 
 
 class _AssetContext(TypedDict):
@@ -41,7 +33,32 @@ class _AssetContext(TypedDict):
     value: Decimal
     value_date: datetime.date | None
 
-    performance: _PerformanceContext | None
+    table: _TableContext
+
+    performance: _PerformanceContext
+
+
+class _TableContext(TypedDict):
+    """Context for valuations table."""
+
+    uri: str
+    editable: bool
+    valuations: list[_ValuationContext]
+    no_matches: bool
+    next_page: datetime.date | None
+    any_filters: bool
+    selected_period: str | None
+    options_period: list[tuple[str, str]]
+    start: str | None
+    end: str | None
+
+
+class _ValuationContext(TypedDict):
+    """Context for a valuation."""
+
+    uri: str
+    date: datetime.date
+    value: Decimal
 
 
 class _PerformanceContext(TypedDict):
@@ -144,7 +161,6 @@ def page(uri: str) -> flask.Response:
         a = web_utils.find(s, Asset, uri)
         title = f"Asset {a.name}"
         ctx = ctx_asset(s, a)
-        ctx["performance"] = ctx_performance(s, a)
         return common.page(
             "assets/page.jinja",
             title=title,
@@ -223,6 +239,45 @@ def performance(uri: str) -> flask.Response:
                 "performance": ctx_performance(s, a),
             },
         )
+    response = flask.make_response(html)
+    response.headers["HX-Push-URL"] = flask.url_for(
+        "assets.page",
+        uri=uri,
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        **flask.request.args,
+    )
+    return response
+
+
+def table(uri: str) -> str | flask.Response:
+    """GET /h/assets/a/<uri>/table.
+
+    Args:
+        uri: Asset URI
+
+    Returns:
+        HTML response with url set
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        a = web_utils.find(s, Asset, uri)
+        val_table = ctx_table(s, a)
+
+    args = flask.request.args
+    first_page = "page" not in args
+    html = flask.render_template(
+        "assets/table-rows.jinja",
+        ctx=val_table,
+        include_oob=first_page,
+    )
+    if not first_page:
+        # Don't push URL for following pages
+        return html
     response = flask.make_response(html)
     response.headers["HX-Push-URL"] = flask.url_for(
         "assets.page",
@@ -348,7 +403,6 @@ def valuation(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             return flask.render_template(
                 "assets/valuations-edit.jinja",
-                valuation=ctx_valuation(v),
             )
         if flask.request.method == "DELETE":
             date = datetime.date.fromordinal(v.date_ord)
@@ -418,7 +472,8 @@ def ctx_asset(s: orm.Session, a: Asset) -> _AssetContext:
         "category_type": AssetCategory,
         "value": current_value,
         "value_date": current_date,
-        "performance": None,
+        "performance": ctx_performance(s, a),
+        "table": ctx_table(s, a),
     }
 
 
@@ -457,150 +512,101 @@ def ctx_performance(s: orm.Session, a: Asset) -> _PerformanceContext:
     }
 
 
-def valuations(uri: str) -> flask.Response:
-    """GET /h/assets/a/<uri>/valuations.
-
-    Args:
-        uri: Asset URI
-
-    Returns:
-        HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        a = web_utils.find(s, Asset, uri)
-
-        args = flask.request.args
-        period = args.get("period", DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(period)
-        if start is None:
-            start_ord = (
-                s.query(AssetValuation.date_ord)
-                .where(AssetValuation.asset_id == a.id_)
-                .order_by(AssetValuation.date_ord)
-                .first()
-            )
-            start = (
-                end if start_ord is None else datetime.date.fromordinal(start_ord[0])
-            )
-        val_table, title = ctx_valuations(a)
-        html = f"<title>{title}</title>\n" + flask.render_template(
-            "assets/valuations.jinja",
-            val_table=val_table,
-            include_oob=True,
-            url_args={"uri": uri},
-        )
-        response = flask.make_response(html)
-        args = dict(flask.request.args.lists())
-        response.headers["HX-Push-Url"] = flask.url_for(
-            "assets.page",
-            _anchor=None,
-            _method=None,
-            _scheme=None,
-            _external=False,
-            uri=uri,
-            **args,
-        )
-        return response
-
-
-def ctx_valuations(
-    a: Asset,
-) -> tuple[dict[str, object], str]:
+def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
     """Get the context to build the valuations table.
 
     Args:
+        s: SQL session to use
         a: Asset to get valuations for
 
     Returns:
         Dictionary HTML context, title of page
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    args = flask.request.args
+    selected_period = args.get("period")
+    selected_start = args.get("start")
+    selected_end = args.get("end")
 
-    with p.begin_session() as s:
-        args = flask.request.args
-        page_len = 25
-        offset = int(args.get("offset", 0))
-        period = args.get("period", DEFAULT_PERIOD)
-        start, end = web_utils.parse_period(period)
-        if start is None:
-            start_ord = (
-                s.query(AssetValuation.date_ord)
-                .where(AssetValuation.asset_id == a.id_)
-                .order_by(AssetValuation.date_ord)
-                .first()
-            )
-            start = (
-                end if start_ord is None else datetime.date.fromordinal(start_ord[0])
-            )
-        start_ord = start.toordinal()
-        end_ord = end.toordinal()
+    page_start_str = args.get("page")
+    if page_start_str is None:
+        page_start = None
+    else:
+        try:
+            page_start = int(page_start_str)
+        except ValueError:
+            page_start = datetime.date.fromisoformat(page_start_str).toordinal()
 
-        query = (
-            s.query(AssetValuation)
-            .where(
-                AssetValuation.asset_id == a.id_,
-                AssetValuation.date_ord <= end_ord,
-                AssetValuation.date_ord >= start_ord,
-            )
-            .order_by(AssetValuation.date_ord)
-        )
+    query = (
+        s.query(AssetValuation)
+        .where(AssetValuation.asset_id == a.id_)
+        .order_by(AssetValuation.date_ord.desc())
+    )
 
-        page, count, offset_next = paginate(query, page_len, offset)  # type: ignore[attr-defined]
+    any_filters = False
 
-        valuations: list[dict[str, object]] = []
-        for v in page:  # type: ignore[attr-defined]
-            v: AssetValuation
-            v_ctx = ctx_valuation(v)
-
-            valuations.append(v_ctx)
-
-        offset_last = max(0, int((count - 1) // page_len) * page_len)
-
-        if period == "custom":
-            title = f"{start} to {end}"
+    start = None
+    end = None
+    if selected_period and selected_period != "all":
+        any_filters = True
+        if selected_period == "custom":
+            start = utils.parse_date(selected_start)
+            end = utils.parse_date(selected_end)
+        elif "-" in selected_period:
+            start = datetime.date.fromisoformat(selected_period + "-01")
+            end = utils.end_of_month(start)
         else:
-            title = period.replace("-", " ").title()
+            year = int(selected_period)
+            start = datetime.date(year, 1, 1)
+            end = datetime.date(year, 12, 31)
 
-        title = f"Asset {a.name} {title} | nummus"
+        if start:
+            query = query.where(AssetValuation.date_ord >= start.toordinal())
+        if end:
+            query = query.where(AssetValuation.date_ord <= end.toordinal())
 
-        return {
-            "uri": a.uri,
-            "editable": a.ticker is None,
-            "valuations": valuations,
-            "count": count,
-            "offset": offset,
-            "i_first": 0 if count == 0 else offset + 1,
-            "i_last": min(offset + page_len, count),
-            "page_len": page_len,
-            "offset_first": 0,
-            "offset_prev": max(0, offset - page_len),
-            "offset_next": offset_next or offset_last,
-            "offset_last": offset_last,
-            "start": start,
-            "end": end,
-            "period": period,
-        }, title
+    if page_start:
+        query = query.where(AssetValuation.date_ord <= page_start)
 
+    valuations: list[_ValuationContext] = [
+        {
+            "uri": v.uri,
+            "date": datetime.date.fromordinal(v.date_ord),
+            "value": v.value,
+        }
+        for v in query.limit(PAGE_LEN).yield_per(YIELD_PER)
+    ]
 
-def ctx_valuation(
-    v: AssetValuation,
-) -> dict[str, object]:
-    """Get the context to build the valuation row.
+    next_page = (
+        None
+        if len(valuations) == 0
+        else valuations[-1]["date"] - datetime.timedelta(days=1)
+    )
 
-    Args:
-        v: AssetValuation to build context for
+    # There are no more if there wasn't enough for a full page
+    no_more = len(valuations) < PAGE_LEN
 
-    Returns:
-        Dictionary HTML context
-    """
+    today = datetime.date.today()
+    month = utils.start_of_month(today)
+    last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
+    options_period = [
+        ("All time", "all"),
+        *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+        (str(month.year), str(month.year)),
+        (str(month.year - 1), str(month.year - 1)),
+        ("Custom date range", "custom"),
+    ]
+
     return {
-        "uri": v.uri,
-        "date": datetime.date.fromordinal(v.date_ord),
-        "value": v.value,
+        "uri": a.uri,
+        "editable": a.ticker is None,
+        "valuations": valuations,
+        "no_matches": len(valuations) == 0 and page_start is None,
+        "next_page": None if no_more else next_page,
+        "any_filters": any_filters,
+        "selected_period": selected_period,
+        "options_period": options_period,
+        "start": selected_start,
+        "end": selected_end,
     }
 
 
@@ -654,9 +660,9 @@ ROUTES: Routes = {
     "/h/assets/new": (new, ["GET", "POST"]),
     "/h/assets/a/<path:uri>": (asset, ["GET", "PUT"]),
     "/h/assets/a/<path:uri>/performance": (performance, ["GET"]),
+    "/h/assets/a/<path:uri>/table": (table, ["GET"]),
     "/h/assets/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
-    "/h/assets/a/<path:uri>/valuations": (valuations, ["GET"]),
     "/h/assets/v/<path:uri>": (valuation, ["GET", "PUT", "DELETE"]),
     "/h/assets/update": (update, ["GET", "POST"]),
 }

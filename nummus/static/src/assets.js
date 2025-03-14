@@ -39,4 +39,14 @@ const assets = {
             datasets,
         );
     },
+    /**
+     * On change of period select, hide or show date input
+     */
+    changeTablePeriod: function() {
+        const select = htmx.find('#valuation-filters [name=\'period\']');
+        const notCustom = select.value != 'custom';
+        htmx.findAll('#valuation-filters [type=\'date\']').forEach((e) => {
+            e.disabled = notCustom;
+        });
+    },
 }

@@ -1,0 +1,23 @@
+{% if include_oob %}
+    {% with oob = True %}
+        {% include "assets/table-header.jinja" %}
+        {% include "assets/table-filters.jinja" %}
+    {% endwith %}
+{% endif %}
+{% for valuation in ctx.valuations %}
+    {% include "assets/table-row.jinja" %}
+    {% if not loop.last %}<hr class="mx-2">{% endif %}
+{% endfor %}
+{% if ctx.no_matches %}
+    <div class="text-center italic">no transactions match query</div>
+{% elif ctx.next_page %}
+    <div hx-target="#valuation-table"
+         hx-swap="beforeend show:none"
+         hx-trigger="revealed"
+         hx-include="#valuation-filters"
+         hx-get="{{ url_for('assets.table', uri=ctx.uri, page=ctx.next_page) }}"
+         hx-indicator="#valuation-indicator"
+         hx-on::after-request="this.remove()"></div>
+{% else %}
+    <div class="text-center italic">no more transactions match query</div>
+{% endif %}

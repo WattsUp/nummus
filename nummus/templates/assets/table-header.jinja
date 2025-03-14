@@ -1,0 +1,19 @@
+<div id="valuation-header"
+     hx-swap-oob="{{ oob }}"
+     class="flex gap-2 items-center mb-2">
+    <h1 class="text-2xl font-serif text-primary mr-auto">Valuations</h1>
+    <button id="valuation-filter-btn"
+            class="{{ 'btn-filled' if ctx.any_filters else 'btn-tonal' }}"
+            onclick="htmx.toggleClass(htmx.find('#valuation-filters'), 'open')">
+        <icon>tune</icon>
+    </button>
+    {% if ctx.editable %}
+        <button class="btn-tonal"
+                hx-target="#dialog"
+                hx-swap="innerHTML show:#dialog:top"
+                hx-disabled-elt="this"
+                hx-get="{{ url_for('assets.new_valuation', uri=ctx.uri) }}">
+            <icon>add</icon>New
+        </button>
+    {% endif %}
+</div>

@@ -31,7 +31,21 @@
         {{ asset.description }}
     </div>
 {% endif %}
-<h1 class="text-2xl font-serif text-primary">Holdings - if applicable</h1>
 {# TODO (WattsUp): Add holdings info #}
-<h1 class="text-2xl font-serif text-primary">Valuations</h1>
-{# TODO (WattsUp): Add valuations info #}
+{% with ctx = asset.table %}
+    {% include "assets/table-header.jinja" %}
+    {% if asset.ticker %}
+        <div class="italic text-center">
+            Asset is updated via ticker using web sources. Valuations cannot be manually modified.
+        </div>
+    {% else %}
+        <div class="italic text-center">Set ticker if possible to update asset using web sources.</div>
+    {% endif %}
+    {% include "assets/table-filters.jinja" %}
+    {# Display query total if filtered #}
+    <div id="valuation-table"
+         class="max-w-sm mx-auto"
+         hx-target="#dialog"
+         hx-swap="innerHTML show:#dialog:top">{% include "assets/table-rows.jinja" %}</div>
+    <div id="valuation-indicator">{% include "shared/spinner.jinja" %}</div>
+{% endwith %}
