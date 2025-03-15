@@ -374,8 +374,8 @@ def new() -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            # update-account since transaction was created
-            event="update-account",
+            # account since transaction was created
+            event="account",
             snackbar="Transaction created",
         )
 
@@ -411,7 +411,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             s.delete(txn)
             return common.dialog_swap(
                 # update-account since transaction was deleted
-                event="update-account",
+                event="account",
                 snackbar=f"Transaction on {date} deleted",
             )
 
@@ -496,7 +496,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            event="update-transaction",
+            event="transaction",
             snackbar="All changes saved",
         )
 

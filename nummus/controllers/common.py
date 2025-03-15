@@ -77,7 +77,7 @@ def ctx_base() -> dict[str, object]:
                     LinkType.PAGE,
                 ),
                 "Import File": None,  # upload
-                "Update Assets": None,  # update
+                "Update Assets": ("update", "assets.update", LinkType.DIALOG),
                 "Health Checks": None,  # health_metrics
                 "Style Test": (
                     ("style", "common.page_style_test", LinkType.PAGE)
@@ -105,14 +105,14 @@ def ctx_base() -> dict[str, object]:
 
 def dialog_swap(
     content: str | None = None,
-    event: str | list[str] | None = None,
+    event: str | None = None,
     snackbar: str | None = None,
 ) -> flask.Response:
     """Create a response to close the dialog and trigger listeners.
 
     Args:
         content: Content of dialog to swap to, None will close dialog
-        event: Event or list of events to trigger
+        event: Event to trigger
         snackbar: Snackbar message to display
 
     Returns:
@@ -128,10 +128,7 @@ def dialog_swap(
     )
     response = flask.make_response(html)
     if event:
-        if isinstance(event, str):
-            response.headers["HX-Trigger"] = event
-        else:
-            response.headers["HX-Trigger"] = ",".join(event)
+        response.headers["HX-Trigger"] = event
     return response
 
 

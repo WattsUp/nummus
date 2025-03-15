@@ -74,7 +74,7 @@ def new() -> str | flask.Response:
         return common.error(e)
 
     return common.dialog_swap(
-        event="update-category",
+        event="category",
         snackbar=f"Created category {name}",
     )
 
@@ -131,7 +131,7 @@ def category(uri: str) -> str | flask.Response:
             s.delete(cat)
 
             return common.dialog_swap(
-                event="update-category",
+                event="category",
                 snackbar=f"Category {cat.emoji_name} deleted",
             )
 
@@ -161,7 +161,7 @@ def category(uri: str) -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            event="update-category",
+            event="category",
             snackbar="All changes saved",
         )
 

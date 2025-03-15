@@ -1,7 +1,7 @@
 <div class="flex justify-between items-center"
      hx-target="#main"
      hx-include="#txn-filters,#txn-search"
-     hx-trigger="update-transaction from:body"
+     hx-trigger="transaction from:body"
      hx-get="{{ url_for('transactions.page_all') }}">
     {# TODO (WattsUp): Can updating be optimized to just affected rows?
         Return oob for the two date sections affected.

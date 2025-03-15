@@ -1,6 +1,6 @@
 <div class="flex justify-between items-center"
      hx-target="#main"
-     hx-trigger="update-category from:body"
+     hx-trigger="category from:body"
      hx-get="{{ url_for('transaction_categories.page') }}">
     <h1 class="text-3xl font-serif text-primary">Transaction categories</h1>
     <button class="btn-tonal"

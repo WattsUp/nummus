@@ -24,7 +24,7 @@ dependencies = [
   "flask-login",
   "typing-extensions",
   "pdfplumber",
-  "yfinance",
+  "yfinance>=0.2.54",
   "pyspellchecker",
   "tqdm",
   "argcomplete",

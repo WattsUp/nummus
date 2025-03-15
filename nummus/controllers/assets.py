@@ -221,7 +221,7 @@ def asset(uri: str) -> str | flask.Response:
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
-        return common.dialog_swap(event="update-asset", snackbar="All changes saved")
+        return common.dialog_swap(event="asset", snackbar="All changes saved")
 
 
 def performance(uri: str) -> flask.Response:
@@ -421,7 +421,7 @@ def new_valuation(uri: str) -> str | flask.Response:
             )
         return common.error(e)
 
-    return common.dialog_swap(event="update-asset", snackbar="All changes saved")
+    return common.dialog_swap(event="valuation", snackbar="All changes saved")
 
 
 def valuation(uri: str) -> str | flask.Response:
@@ -456,7 +456,7 @@ def valuation(uri: str) -> str | flask.Response:
             date = datetime.date.fromordinal(v.date_ord)
             s.delete(v)
             return common.dialog_swap(
-                event="update-asset",
+                event="valuation",
                 snackbar=f"{date} valuation deleted",
             )
 
@@ -484,10 +484,7 @@ def valuation(uri: str) -> str | flask.Response:
                 )
             return common.error(e)
 
-        return common.dialog_swap(
-            event="update-asset",
-            snackbar="All changes saved",
-        )
+        return common.dialog_swap(event="valuation", snackbar="All changes saved")
 
 
 def ctx_asset(s: orm.Session, a: Asset) -> _AssetContext:
@@ -700,10 +697,10 @@ def update() -> str | flask.Response:
     html = flask.render_template(
         "assets/update.jinja",
         failed_tickers=failed_tickers,
-        successful_tickers=successful_tickers,
+        successful_tickers=sorted(successful_tickers),
     )
     response = flask.make_response(html)
-    response.headers["HX-Trigger"] = "update-asset"
+    response.headers["HX-Trigger"] = "valuation"
     return response
 
 

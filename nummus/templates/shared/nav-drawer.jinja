@@ -33,7 +33,7 @@
                     <button hx-get="{{ url_for(endpoint) }}"
                             hx-target="#dialog"
                             hx-swap="innerHTML show:#dialog:top"
-                            hx-trigger="load, click"
+                            hx-trigger="click"
                             hx-push-url="false"
                             hx-disabled-elt="this">
                         <icon>{{ icon }}</icon>
