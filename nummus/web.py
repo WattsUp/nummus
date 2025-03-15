@@ -264,6 +264,9 @@ class Server:
         )
         self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
         self._app.jinja_env.filters["tojson"] = web_utils.ctx_to_json
+        self._app.jinja_env.filters["input_value"] = (
+            lambda x: str(x or "").rstrip("0").rstrip(".")
+        )
 
         if not p.ssl_cert_path.exists():
             print(

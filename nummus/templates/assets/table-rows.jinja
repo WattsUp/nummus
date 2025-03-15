@@ -5,8 +5,9 @@
     {% endwith %}
 {% endif %}
 {% for valuation in ctx.valuations %}
+    {# Include first hr if not first page #}
+    {% if not loop.first or not ctx.first_page %}<hr class="mx-2">{% endif %}
     {% include "assets/table-row.jinja" %}
-    {% if not loop.last %}<hr class="mx-2">{% endif %}
 {% endfor %}
 {% if ctx.no_matches %}
     <div class="text-center italic">no transactions match query</div>

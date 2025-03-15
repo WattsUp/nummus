@@ -1,0 +1,60 @@
+{% if valuation.uri %}
+    {% with headline="Edit valuation", save_url=url_for("assets.valuation", uri=valuation.uri) %}
+        {% include "shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% else %}
+    {% with headline="New valuation", save_url=url_for("assets.new_valuation", uri=valuation.asset_uri), save_method="post" %}
+        {% include "shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% endif %}
+<form class="grid grid-cols-1 gap-2 w-88" onsubmit="return false">
+    <label class="input-outlined input-bg-surface-container-high">
+        <input name="date"
+               type="date"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ valuation.date or "" }}"
+               max="{{ valuation.date_max }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri) }}"
+               autocomplete="off">
+        <icon>event</icon>
+        <div>
+            <div>Date</div>
+        </div>
+        <div>
+            <error></error>
+        </div>
+    </label>
+    <label class="input-outlined input-bg-surface-container-high">
+        <input name="value"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ valuation.value | input_value }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri) }}"
+               autocomplete="off">
+        <div>
+            <div>Value</div>
+        </div>
+        <div>
+            <error></error>
+        </div>
+    </label>
+</form>
+<div class="flex justify-around flex-wrap">
+    {% if valuation.uri %}
+        <button class="btn-text-error"
+                onclick="assets.confirmDelete(event)"
+                hx-trigger="delete"
+                hx-delete="{{ url_for('assets.valuation', uri=valuation.uri) }}">Delete</button>
+    {% endif %}
+</div>
+<div id="dialog-error" class="error"></div>
+<script>dialog.onLoad()</script>

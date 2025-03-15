@@ -57,7 +57,7 @@
                    required
                    enterkeyhint="next"
                    placeholder=""
-                   value="{{ "%.2f" % txn.amount if txn.amount }}"
+                   value="{{ txn.amount | input_value }}"
                    hx-target="next error"
                    hx-trigger="input delay:200ms"
                    hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
@@ -205,7 +205,7 @@
                 <input name="split-amount"
                        enterkeyhint="next"
                        placeholder=""
-                       value="{{ "%.2f" % split.amount if split.amount }}"
+                       value="{{ split.amount | input_value }}"
                        hx-target="next error"
                        hx-trigger="input delay:200ms"
                        hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"

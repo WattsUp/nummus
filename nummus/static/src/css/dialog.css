@@ -31,16 +31,17 @@
         @apply mb-2;
         @apply sticky top-0 z-10 bg-surface-container-high;
 
+        & h1 {
+            @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
+        }
+
+        & button {
+            @apply btn-text;
+        }
+
         &>div {
             @apply flex items-center gap-1;
 
-            &>h1 {
-                @apply font-serif text-primary text-2xl whitespace-nowrap mr-12 grow;
-            }
-
-            &>button {
-                @apply btn-text;
-            }
         }
 
         &>error {

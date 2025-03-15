@@ -42,6 +42,7 @@ class _TableContext(TypedDict):
     """Context for valuations table."""
 
     uri: str
+    first_page: bool
     editable: bool
     valuations: list[_ValuationContext]
     no_matches: bool
@@ -56,9 +57,11 @@ class _TableContext(TypedDict):
 class _ValuationContext(TypedDict):
     """Context for a valuation."""
 
-    uri: str
+    uri: str | None
+    asset_uri: str
     date: datetime.date
-    value: Decimal
+    date_max: datetime.date | None
+    value: Decimal | None
 
 
 class _PerformanceContext(TypedDict):
@@ -331,6 +334,37 @@ def validation(uri: str) -> str:
                     return "Must be unique"
         return ""
 
+    if "date" in args:
+        value = args["date"].strip()
+        if value == "":
+            return "Required"
+        date = utils.parse_date(args["date"])
+        if date is None:
+            return common.error("Unable to parse")
+        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+            return "Only up to a week in advance"
+        with p.begin_session() as s:
+            n = (
+                s.query(AssetValuation)
+                .where(
+                    AssetValuation.date_ord == date.toordinal(),
+                    AssetValuation.asset_id != Asset.uri_to_id(uri),
+                )
+                .count()
+            )
+            if n != 0:
+                return "Must be unique"
+        return ""
+
+    if "value" in args:
+        value = args["value"].strip()
+        if value == "":
+            return "Required"
+        amount = utils.evaluate_real_statement(value)
+        if amount is None:
+            return "Unable to parse"
+        return ""
+
     msg = f"Asset validation for {args} not implemented"
     raise NotImplementedError(msg)
 
@@ -341,26 +375,31 @@ def new_valuation(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
+    today = datetime.date.today()
+    date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
     if flask.request.method == "GET":
-        ctx: dict[str, object] = {
+        ctx: _ValuationContext = {
             "uri": None,
-            "date": None,
+            "asset_uri": uri,
+            "date": today,
+            "date_max": date_max,
             "value": None,
         }
 
         return flask.render_template(
-            "assets/valuations-edit.jinja",
+            "assets/edit-valuation.jinja",
             valuation=ctx,
-            url_args={"uri": uri},
         )
 
     form = flask.request.form
     date = utils.parse_date(form.get("date"))
     if date is None:
-        return common.error("Asset valuation date must not be empty")
+        return common.error("Date must not be empty")
+    if date > date_max:
+        return common.error("Date can only be up to a week in the future")
     value = utils.evaluate_real_statement(form.get("value"), precision=6)
     if value is None:
-        return common.error("Asset valuation value must not be empty")
+        return common.error("Value must not be empty")
 
     try:
         with flask.current_app.app_context():
@@ -382,7 +421,7 @@ def new_valuation(uri: str) -> str | flask.Response:
             )
         return common.error(e)
 
-    return common.dialog_swap(event="update-valuation", snackbar="All changes saved")
+    return common.dialog_swap(event="update-asset", snackbar="All changes saved")
 
 
 def valuation(uri: str) -> str | flask.Response:
@@ -400,25 +439,36 @@ def valuation(uri: str) -> str | flask.Response:
     with p.begin_session() as s:
         v = web_utils.find(s, AssetValuation, uri)
 
+        today = datetime.date.today()
+        date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
         if flask.request.method == "GET":
             return flask.render_template(
-                "assets/valuations-edit.jinja",
+                "assets/edit-valuation.jinja",
+                valuation={
+                    "asset_uri": Asset.id_to_uri(v.asset_id),
+                    "uri": uri,
+                    "date": datetime.date.fromordinal(v.date_ord),
+                    "date_max": date_max,
+                    "value": v.value,
+                },
             )
         if flask.request.method == "DELETE":
             date = datetime.date.fromordinal(v.date_ord)
             s.delete(v)
             return common.dialog_swap(
-                event="update-valuation",
+                event="update-asset",
                 snackbar=f"{date} valuation deleted",
             )
 
         form = flask.request.form
         date = utils.parse_date(form.get("date"))
         if date is None:
-            return common.error("Asset valuation date must not be empty")
+            return common.error("Date must not be empty")
+        if date > date_max:
+            return common.error("Date can only be up to a week in the future")
         value = utils.evaluate_real_statement(form.get("value"), precision=6)
         if value is None:
-            return common.error("Asset valuation value must not be empty")
+            return common.error("Value must not be empty")
 
         try:
             with s.begin_nested():
@@ -435,7 +485,7 @@ def valuation(uri: str) -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            event="update-valuation",
+            event="update-asset",
             snackbar="All changes saved",
         )
 
@@ -570,7 +620,9 @@ def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
     valuations: list[_ValuationContext] = [
         {
             "uri": v.uri,
+            "asset_uri": a.uri,
             "date": datetime.date.fromordinal(v.date_ord),
+            "date_max": None,
             "value": v.value,
         }
         for v in query.limit(PAGE_LEN).yield_per(YIELD_PER)
@@ -598,6 +650,7 @@ def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
 
     return {
         "uri": a.uri,
+        "first_page": page_start is None,
         "editable": a.ticker is None,
         "valuations": valuations,
         "no_matches": len(valuations) == 0 and page_start is None,

@@ -49,4 +49,19 @@ const assets = {
             e.disabled = notCustom;
         });
     },
+    /**
+     * On click of delete valuation, confirm action
+     *
+     * @param {Event} evt Triggering event
+     */
+    confirmDelete: function(evt) {
+        dialog.confirm(
+            'Delete Valuation',
+            'Delete',
+            () => {
+                htmx.trigger(evt.target, 'delete');
+            },
+            'Valuation will be deleted.',
+        );
+    },
 }
