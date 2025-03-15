@@ -245,8 +245,17 @@
     }
 }
 
-@utility error {
+@utility status-box {
     @apply flex items-center justify-center gap-1 p-1 rounded-md;
     @apply empty:hidden;
+}
+
+@utility error {
+    @apply status-box;
     @apply bg-error-container text-on-error-container;
+}
+
+@utility success {
+    @apply status-box;
+    @apply bg-primary-container text-on-primary-container;
 }

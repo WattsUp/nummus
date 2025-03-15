@@ -120,7 +120,7 @@ class TransactionSplit(Base):
         ]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
-                "Do not set parent properties directly"
+                f"Do not set parent property '{name}' directly"
             )
             raise exc.ParentAttributeError(msg)
         if name == "asset_quantity":

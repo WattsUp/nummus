@@ -217,6 +217,11 @@ class FutureTransactionError(Exception):
 class UnknownCategoryError(Exception):
     """Error when a category is not recognized."""
 
+    def __init__(self, cat_name: str) -> None:
+        """Initialize UnknownCategoryError."""
+        msg = f"Unknown category '{cat_name}'"
+        super().__init__(msg)
+
 
 class MissingAssetError(Exception):
     """Error when transaction is missing Asset information."""

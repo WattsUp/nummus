@@ -76,7 +76,7 @@ def ctx_base() -> dict[str, object]:
                     "transaction_categories.page",
                     LinkType.PAGE,
                 ),
-                "Import File": None,  # upload
+                "Import File": ("upload", "import_file.import_file", LinkType.DIALOG),
                 "Update Assets": ("update", "assets.update", LinkType.DIALOG),
                 "Health Checks": None,  # health_metrics
                 "Style Test": (

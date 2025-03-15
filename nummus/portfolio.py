@@ -379,9 +379,9 @@ class Portfolio:
         today = datetime.date.today()
 
         with self.begin_session() as s:
-            categories: dict[str, TransactionCategory] = {
-                cat.name: cat for cat in s.query(TransactionCategory).all()
-            }
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
             # Cache a mapping from account/asset name to the ID
             acct_mapping: dict[str, int] = {}
             asset_mapping: dict[str, tuple[int, str]] = {}
@@ -423,14 +423,14 @@ class Portfolio:
                     if not statement:
                         statement = f"Asset Transaction {asset_name}"
 
-                category_name = d["category"] or "Uncategorized"
+                category_name = (d["category"] or "uncategorized").lower()
 
                 if d["date"] > today:
                     raise exc.FutureTransactionError
 
                 match_id: int | None = None
                 if asset_id is not None:
-                    if category_name == "Investment Fees":
+                    if category_name == "investment fees":
                         # Associate fees with asset
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
@@ -444,29 +444,28 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
+                            payee=d["payee"],
                             cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
+                            memo=d["description"],
+                            category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=-qty,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Investment Fees"].id_,
+                            memo=d["description"],
+                            category_id=categories["investment fees"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
                         s.add_all((txn, t_split_0, t_split_1))
                         continue
-                    if category_name == "Dividends Received":
+                    if category_name == "dividends received":
                         # Associate dividends with asset
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
@@ -483,23 +482,22 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
+                            payee=d["payee"],
                             cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Dividends Received"].id_,
+                            memo=d["description"],
+                            category_id=categories["dividends received"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
+                            memo=d["description"],
+                            category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=qty,
                         )
@@ -531,10 +529,9 @@ class Portfolio:
                         match_id = matches[0][0]
 
                 try:
-                    category_id = categories[category_name].id_
+                    category_id = categories[category_name]
                 except KeyError as e:
-                    msg = f"Could not find category '{category_name}', ctx={ctx}"
-                    raise exc.UnknownCategoryError(msg) from e
+                    raise exc.UnknownCategoryError(category_name) from e
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
@@ -555,12 +552,12 @@ class Portfolio:
                         amount=d["amount"],
                         date=d["date"],
                         statement=statement,
+                        payee=d["payee"],
                         cleared=True,
                     )
                     t_split = TransactionSplit(
                         amount=d["amount"],
-                        payee=d["payee"],
-                        description=d["description"],
+                        memo=d["description"],
                         tag=d["tag"],
                         category_id=category_id,
                         asset_id=asset_id,

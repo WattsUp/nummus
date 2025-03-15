@@ -13,5 +13,7 @@
             </button>
         {% endif %}
     </div>
-    {% include "shared/dialog-headline-error.jinja" %}
+    {% if include_error %}
+        {% include "shared/dialog-headline-error.jinja" %}
+    {% endif %}
 </div>
