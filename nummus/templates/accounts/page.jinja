@@ -80,7 +80,7 @@
         </h1>
         <h2 class="text-on-surface-variant pr-6">Total Return</h2>
     </div>
-    <div>
+    <div hx-push-url="true" hx-swap="innerHTML show:window:top">
         {% for asset in acct.assets[:3] %}
             {% include "accounts/asset-row.jinja" %}
             {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
@@ -88,7 +88,10 @@
     </div>
     {% if acct.assets | length > 3 %}
         <button class="btn-text mx-auto my-1" onclick="accounts.showAllAssets(this)">Show all</button>
-        <div id="account-assets-all" class="hidden">
+        <div id="account-assets-all"
+             class="hidden"
+             hx-push-url="true"
+             hx-swap="innerHTML show:window:top">
             {% for asset in acct.assets[3:] %}
                 <hr class="mx-4 my-1">
                 {% include "accounts/asset-row.jinja" %}
