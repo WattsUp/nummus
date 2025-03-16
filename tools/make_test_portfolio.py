@@ -169,6 +169,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.CASH,
             closed=False,
             number="MB-1234",
+            budgeted=True,
         )
         savings = Account(
             name="Savings",
@@ -176,6 +177,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.CASH,
             closed=False,
             number="MB-1235",
+            budgeted=True,
         )
         cc_0 = Account(
             name="Banana VISA",
@@ -183,6 +185,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.CREDIT,
             closed=False,
             number="MB-1236",
+            budgeted=True,
         )
         cc_1 = Account(
             name="Peanut Credit",
@@ -190,6 +193,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.CREDIT,
             closed=False,
             number="PB-1234",
+            budgeted=True,
         )
         mortgage = Account(
             name="Monkey Mortgage",
@@ -197,6 +201,7 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.MORTGAGE,
             closed=False,
             number="MB-4234",
+            budgeted=False,
         )
         retirement = Account(
             name="401k",
@@ -204,12 +209,14 @@ def make_accounts(p: Portfolio) -> dict[str, int]:
             category=AccountCategory.INVESTMENT,
             closed=False,
             number="MBR-1234",
+            budgeted=False,
         )
         real_estate = Account(
             name="Real Estate",
             institution="Real Estate",
             category=AccountCategory.FIXED,
             closed=False,
+            budgeted=False,
         )
 
         accts = [checking, savings, cc_0, cc_1, mortgage, retirement, real_estate]
@@ -392,13 +399,13 @@ def generate_early_savings(p: Portfolio, accts: dict[str, int]) -> None:
         acct: Account = s.query(Account).where(Account.id_ == accts["savings"]).scalar()  # type: ignore[attr-defined]
         for age in range(8, 18):
             date = birthday("self", age)
-            date_ord = date.toordinal()
             txn = Transaction(
                 account_id=acct.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=round(rng_uniform(Decimal(1), Decimal(10)), 2),
                 statement="Birthday money",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -482,10 +489,11 @@ def generate_income(
                 date_ord = date.toordinal()
                 txn = Transaction(
                     account_id=acct_checking.id_,
-                    date_ord=date_ord,
+                    date=date,
                     amount=paycheck,
                     statement=job,
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -497,10 +505,11 @@ def generate_income(
                 s.add_all((txn, txn_split))
                 txn = Transaction(
                     account_id=acct_savings.id_,
-                    date_ord=date_ord,
+                    date=date,
                     amount=savings,
                     statement=job,
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -513,10 +522,11 @@ def generate_income(
                 if retirement != 0:
                     txn = Transaction(
                         account_id=acct_retirement.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=retirement,
                         statement=job,
                         locked=True,
+                        linked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
@@ -583,10 +593,11 @@ def generate_income(
 
                     txn = Transaction(
                         account_id=acct_retirement.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=-retirement,
                         statement=job,
                         locked=True,
+                        linked=True,
                     )
                     txn_split_0 = TransactionSplit(
                         parent=txn,
@@ -700,10 +711,11 @@ def generate_housing(
             # Pay down payment and closing costs
             txn = Transaction(
                 account_id=acct_savings.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-(down_payment + closing_costs),
                 statement="Home closing",
                 locked=True,
+                linked=True,
             )
             txn_dp = TransactionSplit(
                 parent=txn,
@@ -724,10 +736,11 @@ def generate_housing(
             # Open a mortgage
             txn = Transaction(
                 account_id=acct_mortgage.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-p,
                 statement="Home closing",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -741,10 +754,11 @@ def generate_housing(
             # Buy the house
             txn = Transaction(
                 account_id=acct_real_estate.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=price,
                 statement="Mortgage funding",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -756,10 +770,11 @@ def generate_housing(
             s.add_all((txn, txn_split))
             txn = Transaction(
                 account_id=acct_real_estate.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-price,
                 statement="Home closing",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -793,16 +808,16 @@ def generate_housing(
                 price: Price to sell it at
                 balance: Remaining mortgage balance
             """
-            date_ord = date.toordinal()
             closing_costs = round(price * Decimal("0.08"), 2)
 
             # Pay down payment and closing costs
             txn = Transaction(
                 account_id=acct_savings.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=price - closing_costs,
                 statement="Home closing",
                 locked=True,
+                linked=True,
             )
             txn_sell = TransactionSplit(
                 parent=txn,
@@ -823,10 +838,11 @@ def generate_housing(
             # Sell the house
             txn = Transaction(
                 account_id=acct_real_estate.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=price,
                 statement="Home closing",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -841,10 +857,11 @@ def generate_housing(
             # Sell the house
             txn = Transaction(
                 account_id=acct_real_estate.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-price,
                 statement="Transfer",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -859,10 +876,11 @@ def generate_housing(
                 # Close a mortgage
                 txn = Transaction(
                     account_id=acct_mortgage.id_,
-                    date_ord=date_ord,
+                    date=date,
                     amount=balance,
                     statement="Home closing",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -875,10 +893,11 @@ def generate_housing(
 
                 txn = Transaction(
                     account_id=acct_savings.id_,
-                    date_ord=date_ord,
+                    date=date,
                     amount=-balance,
                     statement="Home closing",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -912,7 +931,6 @@ def generate_housing(
                 pmi: Amount of private mortgage insurance
                 pmi_threshold: Balance amount that PMI is no longer paid
             """
-            date_ord = date.toordinal()
             i = round(balance * rate, 2)
             p = min(balance, payment - i)
             amount = i + p + escrow
@@ -920,10 +938,11 @@ def generate_housing(
                 amount += pmi
             txn = Transaction(
                 account_id=acct_checking.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-amount,
                 statement="House payment",
                 locked=True,
+                linked=True,
             )
             txn_ti = TransactionSplit(
                 parent=txn,
@@ -964,10 +983,11 @@ def generate_housing(
             if p > 0:
                 txn = Transaction(
                     account_id=acct_mortgage.id_,
-                    date_ord=date_ord,
+                    date=date,
                     amount=p,
                     statement="Principal",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -987,10 +1007,11 @@ def generate_housing(
 
             txn = Transaction(
                 account_id=acct_cc_0.id_,
-                date_ord=date_ord,
+                date=date,
                 amount=-utilities,
                 statement="Utilities",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -1012,10 +1033,11 @@ def generate_housing(
                     acct = acct_savings
                 txn = Transaction(
                     account_id=acct.id_,
-                    date_ord=date_ord + rng_int(1, 28),
+                    date=date + datetime.timedelta(days=rng_int(1, 28)),
                     amount=-repair_cost,
                     statement="Repairs",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -1050,13 +1072,13 @@ def generate_housing(
                 # Renting until age 30
                 rent = Decimal(71 * (1.03) ** (age - 18))
                 for date in dates:
-                    date_ord = date.toordinal()
                     txn = Transaction(
                         account_id=acct_checking.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=-rent,
                         statement="Rent",
                         locked=True,
+                        linked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
@@ -1071,10 +1093,11 @@ def generate_housing(
 
                     txn = Transaction(
                         account_id=acct_cc_0.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=-utilities,
                         statement="Utilities",
                         locked=True,
+                        linked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
@@ -1276,16 +1299,16 @@ def generate_food(p: Portfolio, accts: dict[str, int]) -> None:
                 acct = acct_cc_1
 
             for date in dates:
-                date_ord = date.toordinal()
                 store = rng_choice(grocery_stores)
                 amount = round(grocery_budget / 2 * rng_normal(1, 0.2), 2)
                 if amount > 0:
                     txn = Transaction(
                         account_id=acct.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=-amount,
                         statement=store,
                         locked=True,
+                        linked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
@@ -1302,16 +1325,16 @@ def generate_food(p: Portfolio, accts: dict[str, int]) -> None:
                 days = RNG.choice(range(1, 29), restaurant_freq, replace=False)
                 for day in days:
                     date = datetime.date(BIRTH_YEAR + age, m + 1, day)
-                    date_ord = date.toordinal()
                     restaurant = rng_choice(restaurants)
                     total_exp = restaurant_cost * restaurant_plates
                     amount = round(total_exp * rng_normal(1, 0.2), 2)
                     txn = Transaction(
                         account_id=acct.id_,
-                        date_ord=date_ord,
+                        date=date,
                         amount=-amount,
                         statement=restaurant,
                         locked=True,
+                        linked=True,
                     )
                     txn_split = TransactionSplit(
                         parent=txn,
@@ -1349,7 +1372,6 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
         )
         date_transfer = date_sell + datetime.timedelta(days=7)
         date_sell_ord = date_sell.toordinal()
-        date_transfer_ord = date_transfer.toordinal()
 
         asset_qty = acct_retirement.get_asset_qty(date_sell_ord, date_sell_ord)
 
@@ -1364,10 +1386,11 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
             amount = round(qty * values[0], 2)
             txn = Transaction(
                 account_id=acct_retirement.id_,
-                date_ord=date_sell_ord,
+                date=date_sell,
                 amount=amount,
                 statement="Security Sell",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -1382,10 +1405,11 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
 
             txn = Transaction(
                 account_id=acct_retirement.id_,
-                date_ord=date_transfer_ord,
+                date=date_transfer,
                 amount=-amount,
                 statement="Account Transfer",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -1398,10 +1422,11 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
 
             txn = Transaction(
                 account_id=acct_checking.id_,
-                date_ord=date_transfer_ord,
+                date=date_transfer,
                 amount=amount,
                 statement="Account Transfer",
                 locked=True,
+                linked=True,
             )
             txn_split = TransactionSplit(
                 parent=txn,
@@ -1420,10 +1445,11 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
         # World was ending, so boss gave a bonus, sure... idk lore
         txn = Transaction(
             account_id=acct_retirement.id_,
-            date_ord=datetime.date(1999, 12, 31).toordinal(),
+            date=datetime.date(1999, 12, 31),
             amount=Decimal("99.50"),
             statement="Y2K Bonus",
             locked=True,
+            linked=True,
         )
         txn_split = TransactionSplit(
             parent=txn,
@@ -1435,10 +1461,11 @@ def add_retirement(p: Portfolio, accts: dict[str, int], assets: dict[str, int]) 
         s.add_all((txn, txn_split))
         txn = Transaction(
             account_id=acct_retirement.id_,
-            date_ord=datetime.date(2000, 1, 3).toordinal(),
+            date=datetime.date(2000, 1, 3),
             amount=Decimal("-99.50"),
             statement="Security Buy",
             locked=True,
+            linked=True,
         )
         txn_split = TransactionSplit(
             parent=txn,
@@ -1496,10 +1523,11 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
             if interest > 0:
                 txn = Transaction(
                     account_id=acct.id_,
-                    date_ord=next_date.toordinal(),
+                    date=next_date,
                     amount=interest,
                     statement="Interest",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -1559,10 +1587,11 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
                 due_date = next_date.replace(day=15)
                 txn = Transaction(
                     account_id=acct.id_,
-                    date_ord=due_date.toordinal(),
+                    date=due_date,
                     amount=-balance,
                     statement="Credit Card Payment",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
@@ -1575,10 +1604,11 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
 
                 txn = Transaction(
                     account_id=acct_fund.id_,
-                    date_ord=due_date.toordinal(),
+                    date=due_date,
                     amount=balance,
                     statement="Credit Card Payment",
                     locked=True,
+                    linked=True,
                 )
                 txn_split = TransactionSplit(
                     parent=txn,
