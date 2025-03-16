@@ -208,7 +208,7 @@ class TransactionCategory(Base):
                     essential=essential,
                 )
                 s.add(cat)
-                d[name] = cat
+                d[cat.name] = cat
         return d
 
     @override

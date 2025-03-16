@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
@@ -51,7 +51,7 @@ class _Summary(TypedDict):
     db_size: int
 
 
-class Summarize(Base):
+class Summarize(BaseCommand):
     """Print summary information and statistics on Portfolio."""
 
     NAME = "summarize"

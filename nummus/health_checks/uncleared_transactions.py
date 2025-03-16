@@ -1,4 +1,4 @@
-"""Checks for unlocked transactions."""
+"""Checks for uncleared transactions."""
 
 from __future__ import annotations
 
@@ -16,13 +16,13 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
 
-class UnlockedTransactions(Base):
-    """Checks for unlocked transactions."""
+class UnclearedTransactions(Base):
+    """Checks for unlinked transactions."""
 
     _DESC = textwrap.dedent(
         """\
-        Locked transactions have been manually verified.
-        Any unlocked transactions should be validated and locked.""",
+        Cleared transactions have been imported from bank statements.
+        Any uncleared transactions should be imported.""",
     )
     _SEVERE = False
 
@@ -44,10 +44,7 @@ class UnlockedTransactions(Base):
                     TransactionSplit.payee,
                     TransactionSplit.amount,
                 )
-                .where(
-                    TransactionSplit.locked.is_(False),
-                    TransactionSplit.linked.is_(True),
-                )
+                .where(TransactionSplit.cleared.is_(False))
             )
             for t_id, date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
                 t_id: int
@@ -61,7 +58,7 @@ class UnlockedTransactions(Base):
                     f"{datetime.date.fromordinal(date_ord)} -"
                     f" {accounts[acct_id]:{acct_len}}:"
                     f" {utils.format_financial(amount)} to {payee or '[blank]'} is"
-                    " unlocked"
+                    " uncleared"
                 )
                 self._issues_raw[uri] = msg
 

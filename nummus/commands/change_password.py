@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
 
 
-class ChangePassword(Base):
+class ChangePassword(BaseCommand):
     """Change portfolio password."""
 
     NAME = "change-password"
@@ -29,7 +29,6 @@ class ChangePassword(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import exceptions as exc
         from nummus import portfolio, utils
 
         p = self._p
@@ -66,10 +65,11 @@ class ChangePassword(Base):
 
             if change_web_key and new_web_key is not None:
                 p.change_web_key(new_web_key)
-        except Exception as e:
+        except Exception:  # pragma: no cover
+            # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)
             print(f"{Fore.RED}Abandoned password change, restored from backup")
-            raise exc.FailedCommandError(self.NAME) from e
+            raise
         print(f"{Fore.GREEN}Changed password(s)")
         print(f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password")
         return 0

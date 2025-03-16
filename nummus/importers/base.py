@@ -21,7 +21,7 @@ class TxnDict(TypedDict):
 
     # Importers may import these items
     payee: str | None
-    description: str | None
+    memo: str | None
     category: str | None
     tag: str | None
     asset: str | None

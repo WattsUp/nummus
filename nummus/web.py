@@ -45,7 +45,8 @@ class Handler(gevent.pywsgi.WSGIHandler):
     )
 
     @override
-    def handle(self) -> None:
+    def handle(self) -> None:  # pragma: no cover
+        # Too hard to mock a timeout
         # Add a timeout to connections for client that don't close keep-alive
         timeout = gevent.Timeout.start_new(self.TIMEOUT)
         try:

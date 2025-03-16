@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import io
+from typing import TYPE_CHECKING
 from unittest import mock
 
 from colorama import Fore
 
 from nummus import encryption, portfolio
 from nummus.commands import base, create
+from nummus.models import Config, ConfigKey
 from tests.base import TestBase
+
+if TYPE_CHECKING:
+    import argparse
+
+
+class MockCommand(base.BaseCommand):
+
+    @classmethod
+    def setup_args(cls, parser: argparse.ArgumentParser) -> None:
+        _ = parser
+
+    def run(self) -> int:
+        return 0
 
 
 class Testbase(TestBase):
@@ -28,10 +43,27 @@ class Testbase(TestBase):
             create.Create(path_db, None, force=False, no_encrypt=True).run()
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             p = base.unlock(path_db, None)
-        self.assertIsNotNone(p)
+        if p is None:
+            self.fail("portfolio is None")
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.GREEN}Portfolio is unlocked\n"
+        self.assertEqual(fake_stdout, target)
+
+        # Force migration required
+        with p.begin_session() as s:
+            # Good, now reset version
+            s.query(Config).where(Config.key == ConfigKey.VERSION).update(
+                {"value": "0.0.0"},
+            )
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            self.assertRaises(SystemExit, MockCommand, path_db, None)
+
+        fake_stdout = fake_stdout.getvalue()
+        target = (
+            f"{Fore.RED}Portfolio requires migration to v0.2.0\n"
+            f"{Fore.YELLOW}Run nummus migrate to resolve\n"
+        )
         self.assertEqual(fake_stdout, target)
 
     def test_unlock_encrypted(self) -> None:

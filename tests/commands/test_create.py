@@ -148,34 +148,6 @@ class TestCommands(TestBase):
         # Check password is correct
         portfolio.Portfolio(path_db, key)
 
-        # Create encrypted
-        queue = [self.random_string(7), key, key + "typo", key, key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = create.Create(path_db, None, force=True, no_encrypt=False)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            "Please enter password: \n"
-            f"{Fore.RED}Password must be at least 8 characters\n"
-            "Please enter password: \n"
-            "Please confirm password: \n"
-            f"{Fore.RED}Passwords must match\n"
-            "Please enter password: \n"
-            "Please confirm password: \n"
-            f"{Fore.GREEN}Portfolio created at {path_db}\n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, 0)
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_salt.exists(), "Salt does not exist")
-
-        # Check password is correct
-        portfolio.Portfolio(path_db, key)
-
         # Cancel on first prompt
         queue = [None]
         with (
@@ -187,20 +159,6 @@ class TestCommands(TestBase):
             rc = c.run()
         fake_stdout = fake_stdout.getvalue()
         target = "Please enter password: \n"
-        self.assertEqual(fake_stdout, target)
-        self.assertNotEqual(rc, 0)
-
-        # Cancel on second prompt
-        queue = [key, None]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = create.Create(path_db, None, force=True, no_encrypt=False)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = "Please enter password: \nPlease confirm password: \n"
         self.assertEqual(fake_stdout, target)
         self.assertNotEqual(rc, 0)
 

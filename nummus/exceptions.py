@@ -25,7 +25,6 @@ __all__ = [
     "DuplicateURLError",
     "EmptyImportError",
     "EvaluationError",
-    "FailedCommandError",
     "FailedImportError",
     "FileAlreadyImportedError",
     "FutureTransactionError",
@@ -45,7 +44,6 @@ __all__ = [
     "ParentAttributeError",
     "ProtectedObjectNotFoundError",
     "UnboundExecutionError",
-    "UnknownCategoryError",
     "UnknownEncryptionVersionError",
     "UnknownImporterError",
     "UnlockingError",
@@ -214,15 +212,6 @@ class FutureTransactionError(Exception):
         super().__init__(msg)
 
 
-class UnknownCategoryError(Exception):
-    """Error when a category is not recognized."""
-
-    def __init__(self, cat_name: str) -> None:
-        """Initialize UnknownCategoryError."""
-        msg = f"Unknown category '{cat_name}'"
-        super().__init__(msg)
-
-
 class MissingAssetError(Exception):
     """Error when transaction is missing Asset information."""
 
@@ -241,12 +230,3 @@ class EvaluationError(Exception):
 
 class MigrationRequiredError(Exception):
     """Error when a migration is needed to operate."""
-
-
-class FailedCommandError(Exception):
-    """Error when a command fails."""
-
-    def __init__(self, cmd_name: str) -> None:
-        """Initialize FailedCommandError."""
-        msg = f"Command {cmd_name} failed"
-        super().__init__(msg)

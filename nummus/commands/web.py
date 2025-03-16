@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from typing_extensions import override
 
 from nummus import version
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
 # web is difficult to mock, and just a wrapper command
-class Web(Base):  # pragma: no cover
+class Web(BaseCommand):  # pragma: no cover
     """Web server for nummus."""
 
     NAME = "web"

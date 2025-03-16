@@ -14,14 +14,14 @@ import tarfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import packaging.version
 import sqlalchemy
 import tqdm
+from packaging.version import Version
 from sqlalchemy import func, orm
 
-from nummus import encryption
+from nummus import __version__, encryption
 from nummus import exceptions as exc
-from nummus import importers, migrations, models, sql, version
+from nummus import importers, migrations, models, sql
 from nummus.models import (
     Account,
     Asset,
@@ -182,9 +182,16 @@ class Portfolio:
                 models.metadata_create_all(s)
 
             with s.begin():
+                # If developing a migration, current version will be less
+                # Set new portfolio to max of nummus version and MIGRATORS
+                v = max(
+                    Version(__version__),
+                    *[m.min_version for m in migrations.MIGRATORS],
+                )
+
                 c_version = Config(
                     key=ConfigKey.VERSION,
-                    value=str(version.__version__),
+                    value=str(v),
                 )
                 c_enc_test = Config(
                     key=ConfigKey.ENCRYPTION_TEST,
@@ -311,7 +318,7 @@ class Portfolio:
         return self.decrypt(enc_secret).decode()
 
     @property
-    def db_version(self) -> packaging.version.Version:
+    def db_version(self) -> Version:
         """Check the version of portfolio is current and does not need migration.
 
         Returns:
@@ -326,11 +333,11 @@ class Portfolio:
                 )
             except exc.NoResultFound as e:
                 msg = "Config.VERSION not found"
-                raise exc.UnlockingError(msg) from e
+                raise exc.ProtectedObjectNotFoundError(msg) from e
 
-            return packaging.version.Version(v)
+            return Version(v)
 
-    def migration_required(self) -> packaging.version.Version | None:
+    def migration_required(self) -> Version | None:
         """Check if migration is required.
 
         Returns:
@@ -400,6 +407,8 @@ class Portfolio:
                     acct = self.find_account(acct_raw, session=s)
                     if not isinstance(acct, Account):
                         msg = f"Could not find Account by '{acct_raw}', ctx={ctx}"
+                        # TODO (WattsUp): Gracefully handle
+                        # import-files command should catch all expected exceptions
                         raise KeyError(msg)
                     acct_id = acct.id_
                     acct_mapping[acct_raw] = acct_id
@@ -450,7 +459,7 @@ class Portfolio:
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            memo=d["description"],
+                            memo=d["memo"],
                             category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=-qty,
@@ -458,7 +467,7 @@ class Portfolio:
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            memo=d["description"],
+                            memo=d["memo"],
                             category_id=categories["investment fees"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
@@ -488,7 +497,7 @@ class Portfolio:
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            memo=d["description"],
+                            memo=d["memo"],
                             category_id=categories["dividends received"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
@@ -496,7 +505,7 @@ class Portfolio:
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            memo=d["description"],
+                            memo=d["memo"],
                             category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=qty,
@@ -530,8 +539,8 @@ class Portfolio:
 
                 try:
                     category_id = categories[category_name]
-                except KeyError as e:
-                    raise exc.UnknownCategoryError(category_name) from e
+                except KeyError:
+                    category_id = categories["uncategorized"]
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
@@ -557,7 +566,7 @@ class Portfolio:
                     )
                     t_split = TransactionSplit(
                         amount=d["amount"],
-                        memo=d["description"],
+                        memo=d["memo"],
                         tag=d["tag"],
                         category_id=category_id,
                         asset_id=asset_id,

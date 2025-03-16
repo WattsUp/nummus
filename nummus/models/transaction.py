@@ -62,13 +62,7 @@ class TransactionSplit(Base):
 
     __table_id__ = 0x00000000
 
-    amount: ORMReal = orm.mapped_column(
-        Decimal6,
-        CheckConstraint(
-            "amount != 0",
-            "transaction_split.amount must be non-zero",
-        ),
-    )
+    amount: ORMReal = orm.mapped_column(Decimal6)
     payee: ORMStrOpt
     memo: ORMStrOpt
     tag: ORMStrOpt
@@ -95,6 +89,10 @@ class TransactionSplit(Base):
         CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
+        ),
+        CheckConstraint(
+            "amount != 0",
+            "transaction_split.amount must be non-zero",
         ),
     )
 
@@ -139,10 +137,14 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
         # update text_fields
-        if name in ("payee", "memo", "tag"):
-            field = [self.payee, self.memo, self.tag]
-            text_fields = " ".join(f for f in field if f).lower()
-            super().__setattr__("text_fields", text_fields)
+        if name in ("memo", "tag"):
+            self._update_text_fields()
+
+    def _update_text_fields(self) -> None:
+        """Update text_fields."""
+        field = [self.payee, self.memo, self.tag]
+        text_fields = " ".join(f for f in field if f).lower()
+        super().__setattr__("text_fields", text_fields)
 
     @property
     def asset_quantity_unadjusted(self) -> Decimal | None:
@@ -205,6 +207,7 @@ class TransactionSplit(Base):
         super().__setattr__("payee", parent.payee)
         super().__setattr__("cleared", parent.cleared)
         super().__setattr__("account_id", parent.account_id)
+        self._update_text_fields()
 
     @classmethod
     def search(
@@ -266,7 +269,7 @@ class TransactionSplit(Base):
 
         category_names = category_names or TransactionCategory.map_name(query.session)
 
-        # Add tokens_must as an OR for each
+        # Add tokens_must as an OR for each category and text_fields
         for token in tokens_must:
             clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
             categories = {
@@ -279,7 +282,7 @@ class TransactionSplit(Base):
             clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
             query = query.where(sqlalchemy.or_(*clauses_or))
 
-        # Add tokens_not as an NAND for each
+        # Add tokens_not as an NAND for each category and text_fields
         for token in tokens_not:
             categories = {
                 cat_id
@@ -552,7 +555,7 @@ class Transaction(Base):
             # There are transactions with similar amounts but not close statement
             # Return the closest in amount and account
             # Aka proceed with all matches
-            matches = {t_id: 50 for t_id in statements}
+            matches = dict.fromkeys(statements, 50)
         else:
             matches = {t_id: score for _, score, t_id in extracted}
 

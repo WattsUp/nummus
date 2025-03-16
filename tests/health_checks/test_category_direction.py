@@ -53,12 +53,11 @@ class TestCategoryDirection(TestBase):
                 date=today,
                 amount=-10,
                 statement=self.random_string(),
-                locked=False,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Other Income"],
+                category_id=categories["other income"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -88,7 +87,7 @@ class TestCategoryDirection(TestBase):
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(10),
-                    "category_id": categories["General Merchandise"],
+                    "category_id": categories["general merchandise"],
                 },
             )
 
@@ -115,7 +114,7 @@ class TestCategoryDirection(TestBase):
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(-10),
-                    "category_id": categories["General Merchandise"],
+                    "category_id": categories["general merchandise"],
                 },
             )
 

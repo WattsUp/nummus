@@ -59,8 +59,6 @@ def import_file() -> str | flask.Response:
         error = f"{e.importer} failed to import file"
     except exc.EmptyImportError as e:
         error = f"{e.importer} did not import any transactions for file"
-    except exc.UnknownCategoryError as e:
-        error = str(e)
     finally:
         path_file_local.unlink()
 

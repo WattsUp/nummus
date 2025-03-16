@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class UpdateAssets(Base):
+class UpdateAssets(BaseCommand):
     """Update valuations for assets."""
 
     NAME = "update-assets"
@@ -43,7 +43,6 @@ class UpdateAssets(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import exceptions as exc
         from nummus import portfolio
 
         p = self._p
@@ -54,10 +53,11 @@ class UpdateAssets(Base):
 
         try:
             updated = p.update_assets()
-        except Exception as e:
+        except Exception:  # pragma: no cover
+            # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)
             print(f"{Fore.RED}Abandoned update assets, restored from backup")
-            raise exc.FailedCommandError(self.NAME) from e
+            raise
 
         if len(updated) == 0:
             print(

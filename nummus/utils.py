@@ -307,9 +307,9 @@ def format_days(days: int, labels: list[str] | None = None) -> str:
 
     Returns:
         x days
-        x wks
-        x mos
-        x yrs
+        x weeks
+        x months
+        x years
     """
     labels = labels or ["days", "weeks", "months", "years"]
     years = days / DAYS_IN_YEAR
@@ -337,15 +337,15 @@ def format_seconds(
         labels_days: Override day labels, passed to format_days
 
     Returns:
-        x s
-        x min
-        x hrs
+        x seconds
+        x minutes
+        x hours
         x days
-        x wks
-        x mos
-        x yrs
+        x weeks
+        x months
+        x years
     """
-    labels = labels or ["s", "min", "hrs"]
+    labels = labels or ["seconds", "minutes", "hours"]
     hours = seconds / SECONDS_IN_HOUR
     if hours > THRESHOLD_HOURS:
         days = int(seconds // SECONDS_IN_DAY)

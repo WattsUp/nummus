@@ -28,7 +28,10 @@ class UnbalancedTransfers(Base):
     @override
     def test(self) -> None:
         with self._p.begin_session() as s:
-            query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
+            query = s.query(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+            ).where(
                 TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
             )
             cat_transfers_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]

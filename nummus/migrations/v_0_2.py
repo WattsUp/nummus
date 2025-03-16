@@ -47,9 +47,7 @@ class MigratorV0_2(Migrator):  # noqa: N801
             # Update Transaction to add payee
             self.add_column(s, Transaction, Transaction.payee)
             self.rename_column(s, Transaction, "linked", "cleared")
-            # Can't do drop_column directly since there is a constraint
-            # referencing locked
-            self.migrate_schemas(s, Transaction, drop={"locked"})
+            self.drop_column(s, Transaction, "locked")
 
         with p.begin_session() as s:
             # Check which ones have more than one payee
@@ -63,7 +61,7 @@ class MigratorV0_2(Migrator):  # noqa: N801
             for t_split in query.yield_per(YIELD_PER):
                 date = datetime.date.fromordinal(t_split.date_ord)
                 msg = (
-                    "This transaction had multiple payees, only one allowed "
+                    "This transaction had multiple payees, only one allowed: "
                     f"{date} {accounts[t_split.account_id]}, please validate"
                 )
                 comments.append(msg)
@@ -99,15 +97,10 @@ class MigratorV0_2(Migrator):  # noqa: N801
             Config,
             ImportedFile,
             HealthCheckIssue,
-            # Transaction done above
+            Transaction,
             TransactionCategory,
             TransactionSplit,
         ]
-
-        for model in models:
-            with p.begin_session() as s:
-                self.migrate_schemas(s, model)
-
-        self.update_db_version(p)
+        self.pending_schema_updates.update(models)
 
         return comments

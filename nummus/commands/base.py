@@ -15,7 +15,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
-class Base(ABC):
+class BaseCommand(ABC):
     """Base command interface."""
 
     NAME: str = ""

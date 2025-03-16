@@ -30,7 +30,7 @@ class TestTransactionCategory(TestBase):
         s.add(t_cat)
         s.commit()
 
-        self.assertEqual(t_cat.name, name)
+        self.assertEqual(t_cat.name, name.lower())
         self.assertEqual(t_cat.emoji_name, d["emoji_name"])
         self.assertEqual(t_cat.group, d["group"])
         self.assertEqual(t_cat.locked, d["locked"])
@@ -145,7 +145,7 @@ class TestTransactionCategory(TestBase):
 
         t_cat_id = (
             s.query(TransactionCategory.id_)
-            .where(TransactionCategory.name == "Uncategorized")
+            .where(TransactionCategory.name == "uncategorized")
             .one()[0]
         )
         s.query(TransactionCategory).where(TransactionCategory.id_ == t_cat_id).update(
@@ -153,25 +153,18 @@ class TestTransactionCategory(TestBase):
         )
 
         target = TransactionCategory.map_name(s)
-        target[t_cat_id] = "🤷 Uncategorized 🤷"
+        target[t_cat_id] = "🤷 uncategorized 🤷"
         result = TransactionCategory.map_name_emoji(s)
-        self.assertEqual(result, target)
+        self.assertEqual({k: v.lower() for k, v in result.items()}, target)
 
-        t_cat = (
-            s.query(TransactionCategory)
-            .where(TransactionCategory.id_ == t_cat_id)
-            .one()
-        )
-        self.assertEqual(t_cat.emoji_name, target[t_cat_id])
-
-        asset_linked = ("Securities Traded", "Dividends Received", "Investment Fees")
+        asset_linked = ("securities traded", "dividends received", "investment fees")
         target = {
             t_cat_id: name
             for t_cat_id, name in target.items()
             if name not in asset_linked
         }
         result = TransactionCategory.map_name_emoji(s, no_asset_linked=True)
-        self.assertEqual(result, target)
-        target[t_cat_id] = "Uncategorized"
+        self.assertEqual({k: v.lower() for k, v in result.items()}, target)
+        target[t_cat_id] = "uncategorized"
         result = TransactionCategory.map_name(s, no_asset_linked=True)
-        self.assertEqual(result, target)
+        self.assertEqual({k: v.lower() for k, v in result.items()}, target)

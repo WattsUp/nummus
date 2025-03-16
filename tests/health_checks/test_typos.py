@@ -76,13 +76,13 @@ class TestTypos(TestBase):
                 date=today,
                 amount=amount_0,
                 statement=self.random_string(),
+                payee="Grocery Storre",
             )
             t_split_0 = TransactionSplit(
                 amount=txn_0.amount,
                 parent=txn_0,
-                category_id=categories["Uncategorized"],
-                payee="Grocery Storre",
-                description="$ 5 Applesandbananas",
+                category_id=categories["uncategorized"],
+                memo="$ 5 Applesandbananas",
                 tag="Fruit",
             )
             s.add_all((txn_0, t_split_0))
@@ -95,12 +95,12 @@ class TestTypos(TestBase):
                 date=today,
                 amount=amount_1,
                 statement=self.random_string(),
+                payee="Grocery Store",
             )
             t_split_1 = TransactionSplit(
                 amount=txn_1.amount,
                 parent=txn_1,
-                category_id=categories["Uncategorized"],
-                payee="Grocery Store",
+                category_id=categories["uncategorized"],
                 tag="Fruiit",
             )
             s.add_all((txn_1, t_split_1))
@@ -172,7 +172,7 @@ class TestTypos(TestBase):
             uri_0: "Account Monkey Bannke Savings       institution: Moonkey Bannke",
             uri_1: f"{today} - Monkey Bannke Checking payee      : Grocery Storre",
             uri_2: f"{today} - Monkey Bannke Savings  tag        : Fruiit",
-            uri_3: f"{today} - Monkey Bannke Checking description: applesandbananas",
+            uri_3: f"{today} - Monkey Bannke Checking memo       : applesandbananas",
             uri_4: "Asset Bananana Inc.                 description: technologie",
         }
         self.assertEqual(c.issues, target)
@@ -203,13 +203,13 @@ class TestTypos(TestBase):
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id_0).update(
                 {
                     "payee": "Grocery Store",
-                    "description": "Apples and Bananas",
+                    "memo": "Apples and Bananas",
                 },
             )
 
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id_1).update(
                 {
-                    "description": "Apples and Bananas",
+                    "memo": "Apples and Bananas",
                     "tag": None,
                 },
             )

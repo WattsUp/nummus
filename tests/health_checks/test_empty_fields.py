@@ -68,14 +68,14 @@ class TestEmptyFields(TestBase):
                 date=today,
                 amount=amount,
                 statement=self.random_string(),
+                # missing payee
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
                 # missing category
-                # missing payee
-                # missing description
+                # missing memo
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -123,11 +123,11 @@ class TestEmptyFields(TestBase):
 
             i = (
                 s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{t_uri}.description")
+                .where(HealthCheckIssue.value == f"{t_uri}.memo")
                 .one()
             )
             self.assertEqual(i.check, c.name)
-            i_t_description_uri = i.uri
+            i_t_memo_uri = i.uri
 
         t_split_str = f"{today} - Monkey Bank Checking"
         target = {
@@ -135,7 +135,7 @@ class TestEmptyFields(TestBase):
             i_a_uri: "Asset Banana Inc.                 has an empty description",
             i_t_category_uri: f"{t_split_str} is uncategorized",
             i_t_payee_uri: f"{t_split_str} has an empty payee",
-            i_t_description_uri: f"{t_split_str} has an empty description",
+            i_t_memo_uri: f"{t_split_str} has an empty memo",
         }
         self.assertEqual(c.issues, target)
 
@@ -144,7 +144,7 @@ class TestEmptyFields(TestBase):
             t_cat_id = (
                 s.query(TransactionCategory.id_)
                 .where(
-                    TransactionCategory.name == "Savings",
+                    TransactionCategory.name == "savings",
                 )
                 .one()[0]
             )
@@ -160,7 +160,7 @@ class TestEmptyFields(TestBase):
                 {
                     "category_id": t_cat_id,
                     "payee": self.random_string(),
-                    "description": self.random_string(),
+                    "memo": self.random_string(),
                 },
             )
 

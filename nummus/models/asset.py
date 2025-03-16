@@ -69,15 +69,15 @@ class AssetSector(Base):
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     sector: orm.Mapped[USSector] = orm.mapped_column(SQLEnum(USSector))
-    weight: ORMReal = orm.mapped_column(
-        Decimal6,
+    weight: ORMReal = orm.mapped_column(Decimal6)
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "sector"),
         CheckConstraint(
             "weight > 0",
             "asset_sector.weight must be positive",
         ),
     )
-
-    __table_args__ = (UniqueConstraint("asset_id", "sector"),)
 
 
 class AssetSplit(Base):
@@ -92,16 +92,16 @@ class AssetSplit(Base):
     __table_id__ = None
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
-    multiplier: ORMReal = orm.mapped_column(
-        Decimal6,
+    multiplier: ORMReal = orm.mapped_column(Decimal6)
+    date_ord: ORMInt
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "date_ord"),
         CheckConstraint(
             "multiplier > 0",
             "asset_split.multiplier must be positive",
         ),
     )
-    date_ord: ORMInt
-
-    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("multiplier")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -122,15 +122,15 @@ class AssetValuation(Base):
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     date_ord: ORMInt
-    value: ORMReal = orm.mapped_column(
-        Decimal6,
+    value: ORMReal = orm.mapped_column(Decimal6)
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "date_ord"),
         CheckConstraint(
             "value >= 0",
             "asset_valuation.value must be zero or positive",
         ),
     )
-
-    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("value")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:

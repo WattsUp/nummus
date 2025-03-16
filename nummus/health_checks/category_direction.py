@@ -36,11 +36,17 @@ class CategoryDirection(Base):
                 return
             acct_len = max(len(acct) for acct in accounts.values())
 
-            query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
+            query = s.query(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+            ).where(
                 TransactionCategory.group == TransactionCategoryGroup.INCOME,
             )
             cat_income_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
-            query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
+            query = s.query(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+            ).where(
                 TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
             )
             cat_expense_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]

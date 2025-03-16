@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from nummus.models import TransactionSplit
 
 
-class Export(Base):
+class Export(BaseCommand):
     """Export transactions."""
 
     NAME = "export"
@@ -119,13 +119,13 @@ def write_csv(
 
     s = transactions_query.session
     accounts = Account.map_name(s)
-    categories = TransactionCategory.map_name(s)
+    categories = TransactionCategory.map_name_emoji(s)
 
     query = transactions_query.with_entities(
         TransactionSplit.date_ord,
         TransactionSplit.account_id,
         TransactionSplit.payee,
-        TransactionSplit.description,
+        TransactionSplit.memo,
         TransactionSplit.category_id,
         TransactionSplit.tag,
         TransactionSplit.amount,
@@ -136,7 +136,7 @@ def write_csv(
         "Date",
         "Account",
         "Payee",
-        "Description",
+        "Memo",
         "Category",
         "Tag",
         "Amount",
@@ -146,7 +146,7 @@ def write_csv(
         date,
         acct_id,
         payee,
-        description,
+        memo,
         t_cat_id,
         tag,
         amount,
@@ -156,7 +156,7 @@ def write_csv(
                 datetime.date.fromordinal(date).isoformat(),
                 accounts[acct_id],
                 payee,
-                description,
+                memo,
                 categories[t_cat_id],
                 tag,
                 utils.format_financial(amount),

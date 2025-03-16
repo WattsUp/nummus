@@ -15,7 +15,7 @@ from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 class CSVTransactionImporter(TransactionImporter):
     """Import a CSV of transactions.
 
-    Required Columns: account,date,amount,payee,description
+    Required Columns: account,date,amount,payee,statement
 
     Other columns are allowed
     """
@@ -68,7 +68,7 @@ class CSVTransactionImporter(TransactionImporter):
                 "amount": amount,
                 "statement": row["statement"],
                 "payee": row.get("payee") or None,
-                "description": row.get("description") or None,
+                "memo": row.get("memo") or None,
                 "category": row.get("category") or None,
                 "tag": row.get("tag") or None,
                 "asset": row.get("asset") or None,

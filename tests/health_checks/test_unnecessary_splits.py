@@ -58,7 +58,7 @@ class TestUnnecessarySplits(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             s.add_all((txn, t_split))
 
@@ -74,27 +74,29 @@ class TestUnnecessarySplits(TestBase):
             # Add a duplicate split
             amount = -self.random_decimal(10, 100)
             statement = self.random_string()
+            payee = self.random_string()
             txn = Transaction(
                 account_id=acct_id,
                 date=today,
                 amount=amount,
                 statement=statement,
+                payee=payee,
             )
             t_split_0 = TransactionSplit(
                 amount=2,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             t_split_1 = TransactionSplit(
                 amount=amount - 5,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             t_split_2 = TransactionSplit(
                 amount=3,
                 parent=txn,
-                payee=self.random_string(),
-                category_id=categories["General Merchandise"],
+                category_id=categories["general merchandise"],
+                tag=self.random_string(),
             )
             s.add_all((txn, t_split_0, t_split_1, t_split_2))
             s.flush()
@@ -113,12 +115,12 @@ class TestUnnecessarySplits(TestBase):
             self.assertEqual(i.check, c.name)
             self.assertEqual(
                 i.value,
-                f"{t_id}.{None}.{categories['Uncategorized']}.{None}",
+                f"{t_id}.{payee}.{categories['uncategorized']}.{None}",
             )
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking -  - Uncategorized - ",
+            uri: f"{today} - Monkey Bank Checking - {payee} - Uncategorized - ",
         }
         self.assertEqual(c.issues, target)
 
@@ -130,7 +132,7 @@ class TestUnnecessarySplits(TestBase):
                 .one()
             )
 
-            t_split.category_id = categories["General Merchandise"]
+            t_split.category_id = categories["general merchandise"]
 
         c = UnnecessarySplits(p)
         c.test()

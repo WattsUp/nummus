@@ -13,8 +13,7 @@ from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
 from nummus.health_checks.typos import Typos
 from nummus.health_checks.unbalanced_transfers import UnbalancedTransfers
-from nummus.health_checks.unlinked_transactions import UnlinkedTransactions
-from nummus.health_checks.unlocked_transactions import UnlockedTransactions
+from nummus.health_checks.uncleared_transactions import UnclearedTransactions
 from nummus.health_checks.unnecessary_slits import UnnecessarySplits
 from nummus.health_checks.unused_categories import UnusedCategories
 
@@ -31,8 +30,7 @@ __all__ = [
     "OverdrawnAccounts",
     "Typos",
     "UnbalancedTransfers",
-    "UnlinkedTransactions",
-    "UnlockedTransactions",
+    "UnclearedTransactions",
     "UnnecessarySplits",
     "UnusedCategories",
 ]
@@ -47,8 +45,7 @@ CHECKS: list[type[Base]] = [
     OverdrawnAccounts,
     # Not severe below
     Typos,
-    UnlockedTransactions,
-    UnlinkedTransactions,
+    UnclearedTransactions,
     EmptyFields,
     MissingAssetLink,
     UnusedCategories,

@@ -6,14 +6,14 @@ from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Unlock(Base):
+class Unlock(BaseCommand):
     """Test unlocking portfolio."""
 
     NAME = "unlock"

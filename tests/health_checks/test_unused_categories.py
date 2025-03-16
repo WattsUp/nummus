@@ -39,7 +39,7 @@ class TestUnusedCategories(TestBase):
             self.assertEqual(n, 0)
 
             s.query(TransactionCategory).where(
-                TransactionCategory.name != "Other Income",
+                TransactionCategory.name != "other income",
             ).delete()
             t_cat = s.query(TransactionCategory).one()
             t_cat.locked = False
@@ -81,8 +81,7 @@ class TestUnusedCategories(TestBase):
                 date=today,
                 amount=10,
                 statement=self.random_string(),
-                locked=False,
-                linked=True,
+                cleared=True,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,

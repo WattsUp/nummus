@@ -21,7 +21,7 @@ class UnnecessarySplits(Base):
     def test(self) -> None:
         with self._p.begin_session() as s:
             accounts = Account.map_name(s)
-            categories = TransactionCategory.map_name(s)
+            categories = TransactionCategory.map_name_emoji(s)
 
             issues: list[tuple[str, str, str, str, str]] = []
 
@@ -37,7 +37,6 @@ class UnnecessarySplits(Base):
                 )
                 .group_by(
                     TransactionSplit.parent_id,
-                    TransactionSplit.payee,
                     TransactionSplit.category_id,
                     TransactionSplit.tag,
                 )

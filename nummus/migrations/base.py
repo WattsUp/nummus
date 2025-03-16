@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import re
 import textwrap
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-import packaging.version
 import sqlalchemy
+from packaging.version import Version
 from sqlalchemy import orm
+from sqlalchemy.schema import CreateTable
+from typing_extensions import override
 
 from nummus import sql
-from nummus.models import Base, Config, ConfigKey
+from nummus.models import Base, dump_table_configs, get_constraints
 from nummus.utils import classproperty
 
 if TYPE_CHECKING:
@@ -22,6 +25,11 @@ class Migrator(ABC):
     """Base Migrator."""
 
     _VERSION: str
+
+    def __init__(self) -> None:
+        """Initialize Migrator."""
+        super().__init__()
+        self.pending_schema_updates: set[type[Base]] = set()
 
     @abstractmethod
     def migrate(self, p: portfolio.Portfolio) -> list[str]:
@@ -35,20 +43,9 @@ class Migrator(ABC):
         """
 
     @classproperty
-    def min_version(self) -> packaging.version.Version:
+    def min_version(self) -> Version:
         """Minimum version that satisfies migrator."""
-        return packaging.version.Version(self._VERSION)
-
-    def update_db_version(self, p: portfolio.Portfolio) -> None:
-        """Update DB version.
-
-        Args:
-            p: Portfolio to update
-        """
-        with p.begin_session() as s:
-            s.query(Config).where(Config.key == ConfigKey.VERSION).update(
-                {"value": self._VERSION},
-            )
+        return Version(self._VERSION)
 
     def add_column(
         self,
@@ -75,6 +72,8 @@ class Migrator(ABC):
         if initial_value is not None:
             s.query(model).update({column: initial_value})
 
+        self.pending_schema_updates.add(model)
+
     def rename_column(
         self,
         s: orm.Session,
@@ -95,6 +94,10 @@ class Migrator(ABC):
         stmt = f'ALTER TABLE "{model.__tablename__}" RENAME {old_name} TO {new_name}'
         s.execute(sqlalchemy.text(stmt))
 
+        # RENAME modifies column references but not constraint names
+        # Need to update schema to update those
+        self.pending_schema_updates.add(model)
+
     def drop_column(
         self,
         s: orm.Session,
@@ -108,57 +111,107 @@ class Migrator(ABC):
             model: Table to modify
             col_name: Name of column to drop
         """
-        col_name = sql.escape(col_name)
-        stmt = f'ALTER TABLE "{model.__tablename__}" DROP {col_name}'
-        s.execute(sqlalchemy.text(stmt))
+        constraints = get_constraints(s, model)
+        if any(col_name in sql_text for _, sql_text in constraints):
+            self.recreate_table(s, model, drop={col_name})
+        else:
+            # Able to drop directly
+            col_name = sql.escape(col_name)
+            stmt = f'ALTER TABLE "{model.__tablename__}" DROP {col_name}'
+            s.execute(sqlalchemy.text(stmt))
 
-    def migrate_schemas(
+        # DROP does not need updated schema
+
+    def recreate_table(
         self,
         s: orm.Session,
         model: type[Base],
         *,
         drop: set[str] | None = None,
+        create_stmt: str | None = None,
     ) -> None:
-        """Migrate the schemas of a table.
+        """Rebuild table, optionally dropping columns.
 
         Args:
             s: SQL session to use
             model: Table to modify
             drop: Set of column names to drop
+            create_stmt: Statement to execute to create new table,
+                None will modify existing config
         """
         drop = drop or set()
         # In SQLite we can do the hacky way or recreate the table
         # Opt for recreate
         table: sqlalchemy.Table = model.__table__  # type: ignore[attr-defined]
-        name = model.__tablename__
+        name: str = model.__tablename__  # type: ignore[attr-defined]
 
-        # Turn on legacy_alter_table so renaming doesn't rename references
+        if create_stmt:
+            new_config = create_stmt.splitlines()
+        else:
+            # Edit table config, dropping any columns
+            old_config = dump_table_configs(s, model)
+            new_config: list[str] = []
+            re_column = re.compile(r" +([a-z_]+) [A-Z ]+")
+            re_constraint = re.compile(r' +[A-Z ]+(?:"[^\"]+" [A-Z ]+)?\(([^\)]+)\)')
+            for line in old_config:
+                if (m := re_column.match(line)) or (m := re_constraint.match(line)):
+                    sql_text = m.group(1)
+                    if all(col not in sql_text for col in drop):
+                        new_config.append(line)
+                else:
+                    new_config.append(line)
+        new_config[0] = new_config[0].replace(name, "migration_temp")
+
         stmt = "PRAGMA foreign_keys = OFF"
         s.execute(sqlalchemy.text(stmt))
-        stmt = "PRAGMA legacy_alter_table = ON"
-        s.execute(sqlalchemy.text(stmt))
 
-        stmt = f'ALTER TABLE "{name}" RENAME TO "migration_temp"'
-        s.execute(sqlalchemy.text(stmt))
+        # Create new table
+        s.execute(sqlalchemy.text("\n".join(new_config)))
 
-        # Reset
-        stmt = "PRAGMA foreign_keys = ON"
-        s.execute(sqlalchemy.text(stmt))
-        stmt = "PRAGMA legacy_alter_table = OFF"
-        s.execute(sqlalchemy.text(stmt))
-
-        table.create(bind=s.get_bind())
-
+        # Copy data
         columns = ", ".join(
             sql.escape(c.name) for c in table.columns if c.name not in drop
         )
         stmt = textwrap.dedent(
             f"""\
-            INSERT INTO "{name}" ({columns})
+            INSERT INTO "migration_temp" ({columns})
                 SELECT {columns}
-                FROM "migration_temp";""",  # noqa: S608
+                FROM "{name}";""",  # noqa: S608
         )
         s.execute(sqlalchemy.text(stmt))
 
-        stmt = 'DROP TABLE "migration_temp"'
+        # Drop old table
+        stmt = f'DROP TABLE "{name}"'
         s.execute(sqlalchemy.text(stmt))
+
+        # Rename new into old
+        stmt = f'ALTER TABLE "migration_temp" RENAME TO "{name}"'
+        s.execute(sqlalchemy.text(stmt))
+
+        # Reset PRAGMAs
+        stmt = "PRAGMA foreign_keys = ON"
+        s.execute(sqlalchemy.text(stmt))
+
+        self.pending_schema_updates.add(model)
+
+
+class SchemaMigrator(Migrator):
+    """Migrator to update schema of pending tables."""
+
+    def __init__(self, pending_schema_updates: set[type[Base]]) -> None:
+        """Initialize SchemaMigrator.
+
+        Args:
+            pending_schema_updates: Models to update schema for
+        """
+        super().__init__()
+        self.pending_schema_updates = pending_schema_updates
+
+    @override
+    def migrate(self, p: portfolio.Portfolio) -> list[str]:
+        for model in self.pending_schema_updates:
+            with p.begin_session() as s:
+                table: sqlalchemy.Table = model.__table__  # type: ignore[attr-defined]
+                create_stmt = CreateTable(table).compile(s.get_bind()).string.strip()
+                self.recreate_table(s, model, create_stmt=create_stmt)
+        return []

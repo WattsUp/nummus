@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
 
 
-class Import(Base):
+class Import(BaseCommand):
     """Import files into portfolio."""
 
     NAME = "import"
@@ -84,6 +84,7 @@ class Import(Base):
             for path in self._paths:
                 if not path.exists():
                     print(f"{Fore.RED}File does not exist: {path}")
+                    restore()
                     return -1
                 if path.is_dir():
                     for f in path.iterdir():
@@ -106,8 +107,9 @@ class Import(Base):
             print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
             restore()
             return -3
-        except Exception as e:
+        except Exception:  # pragma: no cover
+            # No immediate exception thrown, can't easily test
             restore()
-            raise exc.FailedCommandError(self.NAME) from e
+            raise
         print(f"{Fore.GREEN}Imported {count} files")
         return 0

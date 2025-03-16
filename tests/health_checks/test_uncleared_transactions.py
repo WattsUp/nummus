@@ -4,7 +4,7 @@ import datetime
 import secrets
 
 from nummus import portfolio
-from nummus.health_checks.unlocked_transactions import UnlockedTransactions
+from nummus.health_checks.uncleared_transactions import UnclearedTransactions
 from nummus.models import (
     Account,
     AccountCategory,
@@ -16,14 +16,14 @@ from nummus.models import (
 from tests.base import TestBase
 
 
-class TestUnlockedTransactions(TestBase):
+class TestUnclearedTransactions(TestBase):
     def test_check(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
         today = datetime.date.today()
 
-        c = UnlockedTransactions(p)
+        c = UnclearedTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)
@@ -52,20 +52,19 @@ class TestUnlockedTransactions(TestBase):
                 date=today,
                 amount=10,
                 statement=self.random_string(),
-                locked=False,
-                linked=True,
+                cleared=False,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Transfers"],
+                category_id=categories["transfers"],
             )
             s.add_all((txn, t_split))
             s.flush()
             t_id = t_split.id_
             t_uri = t_split.uri
 
-        c = UnlockedTransactions(p)
+        c = UnclearedTransactions(p)
         c.test()
 
         with p.begin_session() as s:
@@ -78,34 +77,18 @@ class TestUnlockedTransactions(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] is unlocked",
+            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] is uncleared",
         }
         self.assertEqual(c.issues, target)
 
         # Solve all issues
         with p.begin_session() as s:
-            # Should lock the parent and the child but okay for this test
+            # Should clear the parent and the child but okay for this test
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
-                {"locked": True},
+                {"cleared": True},
             )
 
-        c = UnlockedTransactions(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
-            self.assertEqual(n, 0)
-
-        # Ignore unlinked
-        with p.begin_session() as s:
-            # Should lock the parent and the child but okay for this test
-            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
-                {"locked": False, "linked": False},
-            )
-
-        c = UnlockedTransactions(p)
+        c = UnclearedTransactions(p)
         c.test()
         target = {}
         self.assertEqual(c.issues, target)

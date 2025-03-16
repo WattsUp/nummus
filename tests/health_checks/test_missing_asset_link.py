@@ -68,7 +68,7 @@ class TestMissingAssetLink(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
                 # Missing asset
                 asset_quantity_unadjusted=1,
             )
@@ -87,7 +87,7 @@ class TestMissingAssetLink(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Interest"],
+                category_id=categories["interest"],
                 asset_id=a_id,
             )
             s.add_all((txn, t_split))

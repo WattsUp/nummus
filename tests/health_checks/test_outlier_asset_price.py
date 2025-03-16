@@ -74,7 +74,7 @@ class TestOutlierAssetPrice(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Dividends Received"],
+                category_id=categories["dividends received"],
                 asset_id=a_id,
                 asset_quantity_unadjusted=0,
             )
@@ -90,7 +90,7 @@ class TestOutlierAssetPrice(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
                 asset_id=a_id,
                 asset_quantity_unadjusted=1,
             )

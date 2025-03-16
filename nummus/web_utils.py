@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import json
-import mimetypes
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -16,11 +15,8 @@ from nummus import utils
 from nummus.models import Base
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
-
-MAX_IMAGE_SIZE = int(1e6)
 
 LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
 # else plot normally by days
@@ -128,44 +124,6 @@ def date_labels(start_ord: int, end_ord: int) -> tuple[list[str], str]:
     return [d.isoformat() for d in dates], date_mode
 
 
-def validate_image_upload(req: flask.Request) -> str:
-    """Checks image upload meets criteria for accepting.
-
-    Args:
-        req: Request to validate
-
-    Returns:
-        Suffix of image based on content-type
-
-    Raises:
-        HTTPError(411): Missing Content-Length
-        HTTPError(413): Length > 1MB
-        HTTPError(415): Unsupported image type
-        HTTPError(422): Missing Content-Type
-    """
-    if req.content_length is None:
-        raise exc.http.LengthRequired
-
-    if req.content_type is None:
-        msg = "Request missing Content-Type"
-        raise exc.http.UnprocessableEntity(msg)
-
-    if not req.content_type.startswith("image/"):
-        msg = f"Content-type must be image/*: {req.content_type}"
-        raise exc.http.UnsupportedMediaType(msg)
-
-    suffix = mimetypes.guess_extension(req.content_type)
-    if suffix is None:
-        msg = f"Unsupported image type: {req.content_type}"
-        raise exc.http.UnsupportedMediaType(msg)
-
-    if req.content_length > MAX_IMAGE_SIZE:
-        msg = f"Payload length > {MAX_IMAGE_SIZE}B: {req.content_length}B"
-        raise exc.http.RequestEntityTooLarge(msg)
-
-    return suffix
-
-
 def ctx_to_json(d: dict[str, object]) -> str:
     """Convert web context to JSON.
 
@@ -182,4 +140,4 @@ def ctx_to_json(d: dict[str, object]) -> str:
         msg = f"Unknown type {type(obj)}"
         raise TypeError(msg)
 
-    return json.dumps(d, default=default)
+    return json.dumps(d, default=default, separators=(",", ":"))
