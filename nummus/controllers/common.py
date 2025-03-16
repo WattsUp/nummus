@@ -78,7 +78,7 @@ def ctx_base() -> dict[str, object]:
                 ),
                 "Import File": ("upload", "import_file.import_file", LinkType.DIALOG),
                 "Update Assets": ("update", "assets.update", LinkType.DIALOG),
-                "Health Checks": None,  # health_metrics
+                "Health Checks": ("health_metrics", "health.page", LinkType.PAGE),
                 "Style Test": (
                     ("style", "common.page_style_test", LinkType.PAGE)
                     if flask.current_app.debug

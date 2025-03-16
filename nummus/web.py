@@ -247,6 +247,7 @@ class Server:
         self._app.jinja_env.filters["money"] = utils.format_financial
         self._app.jinja_env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         self._app.jinja_env.filters["money6"] = lambda x: utils.format_financial(x, 6)
+        self._app.jinja_env.filters["seconds"] = utils.format_seconds
         self._app.jinja_env.filters["days"] = utils.format_days
         self._app.jinja_env.filters["days_abv"] = lambda x: utils.format_days(
             x,

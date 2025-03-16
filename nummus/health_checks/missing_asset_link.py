@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class MissingAssetLink(Base):
     """Checks for transactions that should be linked to an asset that aren't."""
 
-    _DESC = "Checks for transactions that should be linked to an asset that aren't"
+    _DESC = "Checks for transactions that should be linked to an asset that aren't."
     _SEVERE = False
 
     @override

@@ -1,62 +1,67 @@
-{% if oob %}
-    <div id="health-checks-update" hx-swap-oob="true">
-        {% if checks["last_update_ago"] %}
-            Last checks ran {{ checks["last_update_ago"] }} ago
-        {% else %}
-            Health checks never ran
-        {% endif %}
-    </div>
+{% if include_oob %}
+    {% with oob=True %}
+        {% include "health/timestamp.jinja" %}
+    {% endwith %}
 {% endif %}
-<div id="health-checks" class="w-full relative">
-    {% for check in checks["checks"] %}
-        <div class="w-full mb-2">
-            <input class="health-check-toggle hidden"
-                   id="toggle-{{ loop.index0 }}"
-                   {% if check["is_closed"] %}checked{% endif %}
-                   type="checkbox"
-                   name="closed"
-                   hx-put="{{ url_for('health.check', name=check["name"]) }}"
-                   autocomplete="off">
-            {% if check["issues"] %}
-                {% set color = "red" if check["is_severe"] else "yellow" %}
+{% for check in ctx.checks %}
+    <div class="accordion w-full mb-2 bg-surface-container-high rounded-md">
+        <input id="toggle-{{ loop.index0 }}"
+               name="closed"
+               type="checkbox"
+               {% if check.is_closed %}checked{% endif %}
+               hx-target="#no-target"
+               hx-put="{{ url_for('health.check', name=check.name) }}"
+               autocomplete="off">
+        {% if check.issues %}
+            {% if check.is_severe %}
+                {% set header_class = "bg-error text-on-error" %}
+                {% set icon = "error" %}
             {% else %}
-                {% set color = "green" %}
+                {% set header_class = "bg-error-container" %}
+                {% set icon = "warning" %}
             {% endif %}
-            <label class="health-check-toggle-label bg-{{ color }}-200"
-                   for="toggle-{{ loop.index0 }}">
-                <span>{{ check["name"] }}</span>
-                <span>
-                    {% if check["issues"] %}{{ check["issues"] | length }} Issues{% endif %}
-                </span>
-            </label>
-            <div class="health-check-fold">
-                <p class="italic">
-                    {{ check["description"] }}
-                    {% if check["is_severe"] %}
-                        Issues found here might indicate inaccurate balances.
-                    {% else %}
-                        Issues found here might indicate inconsistent data.
-                    {% endif %}
-                </p>
-                <div class="max-h-96 overflow-y-auto">
-                    {% if check["issues"] %}
-                        {% for uri, issue in check["issues"].items() %}
-                            <div class="flex items-center">
-                                <div class="cursor-pointer"
-                                     hx-put="{{ url_for('health.ignore', uri=uri) }}">
-                                    {% with class = "w-6 h-6" %}
-                                        {% include "svg/hide.svg" %}
-                                    {% endwith %}
-                                </div>
-                                {{ issue }}
-                            </div>
-                        {% endfor %}
-                    {% else %}
-                        No issues found
-                    {% endif %}
-                </div>
+        {% else %}
+            {% set header_class = "bg-primary-container" %}
+            {% set icon = "check_circle" %}
+        {% endif %}
+        <label class="block w-full p-2 flex gap-2 items-center rounded-md {{ header_class }}"
+               for="toggle-{{ loop.index0 }}">
+            <icon>{{ icon }}</icon>
+            <span>{{ check.name }}</span>
+            <span class="ml-auto">
+                {% if check.issues %}
+                    {{ check.issues | length }}
+                    {{ 'Error' if check.is_severe else 'Warning' }}{{ 's' if (check.issues | length) > 1 }}
+                {% endif %}
+            </span>
+            <icon class="accordion-icon-up">keyboard_arrow_up</icon>
+            <icon class="accordion-icon-down">keyboard_arrow_down</icon>
+        </label>
+        <div class="p-2">
+            <div class="prose mx-auto italic text-on-surface-variant">
+                {{ check.description }}
+                {% if check.is_severe %}
+                    Issues found here might indicate inaccurate balances.
+                {% else %}
+                    Issues found here might indicate inconsistent data.
+                {% endif %}
+            </div>
+            <div class="max-h-96 overflow-y-auto">
+                {% if check.issues %}
+                    {% for uri, issue in check.issues.items() %}
+                        <div class="flex items-center">
+                            <button class="btn-text btn-sq"
+                                    hx-put="{{ url_for('health.ignore', uri=uri) }}">
+                                <icon>visibility_off</icon>
+                            </button>
+                            {{ issue }}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center">No issues found</div>
+                {% endif %}
             </div>
         </div>
-    {% endfor %}
-    {% include "shared/spinner.jinja" %}
-</div>
+    </div>
+{% endfor %}
+<div id="health-indicator" class="spinner-overlay">{% include "shared/spinner.jinja" %}</div>

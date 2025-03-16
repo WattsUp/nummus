@@ -1,0 +1,22 @@
+@utility accordion {
+    &>input {
+        @apply hidden;
+
+        @variant checked {
+            &~div {
+                @apply hidden;
+            }
+
+            &~* .accordion-icon-up {
+                @apply hidden;
+            }
+        }
+
+        @variant not-checked {
+            &~* .accordion-icon-down {
+                @apply hidden;
+            }
+        }
+    }
+
+}

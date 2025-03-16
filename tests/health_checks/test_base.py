@@ -5,6 +5,7 @@ import secrets
 from typing_extensions import override
 
 from nummus import portfolio
+from nummus.health_checks import CHECKS
 from nummus.health_checks.base import Base
 from nummus.models import HealthCheckIssue
 from tests.base import TestBase
@@ -199,3 +200,8 @@ class TestCheckBase(TestBase):
             uri_0: d["0"],
         }
         self.assertEqual(result, target)
+
+    def test_descriptions(self) -> None:
+        # All descriptions are full sentences
+        for c in CHECKS:
+            self.assertEqual(c.description[-1], ".")

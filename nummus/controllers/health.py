@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import health_checks, portfolio, utils
+from nummus import health_checks, portfolio
 from nummus.controllers import common
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 
@@ -24,6 +24,74 @@ class HealthCheckContext(TypedDict):
     description: str
     is_severe: bool
     issues: dict[str, str]
+
+
+def page() -> flask.Response:
+    """GET /health.
+
+    Returns:
+        string HTML response
+    """
+    return common.page(
+        "health/page.jinja",
+        title="Health",
+        ctx=ctx_checks(run=False),
+    )
+
+
+def refresh() -> str:
+    """POST /h/health/refresh.
+
+    Returns:
+        string HTML response
+    """
+    return flask.render_template(
+        "health/checks.jinja",
+        ctx=ctx_checks(run=True),
+        include_oob=True,
+    )
+
+
+def check(name: str) -> str:
+    """PUT /h/health/c/<name>.
+
+    Returns:
+        string HTML response
+    """
+    is_open = "closed" not in flask.request.form
+
+    checks_open: list[str] = flask.session.get("checks_open", [])
+    checks_open = [x for x in checks_open if x != name]
+    if is_open:
+        checks_open.append(name)
+    flask.session["checks_open"] = checks_open
+
+    # No response since actual toggle is on client side
+    return ""
+
+
+def ignore(uri: str) -> str:
+    """POST /h/health/i/<uri>/ignore.
+
+    Args:
+        uri: HealthCheckIssue uri to ignore
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        s.query(HealthCheckIssue).where(
+            HealthCheckIssue.id_ == HealthCheckIssue.uri_to_id(uri),
+        ).update({"ignore": True})
+
+    return flask.render_template(
+        "health/checks.jinja",
+        ctx=ctx_checks(run=False),
+        oob=True,
+    )
 
 
 def ctx_checks(*, run: bool) -> dict[str, object]:
@@ -95,82 +163,9 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
     return {
         "checks": checks,
         "last_update_ago": (
-            None
-            if last_update is None
-            else utils.format_seconds((utc_now - last_update).total_seconds())
+            None if last_update is None else (utc_now - last_update).total_seconds()
         ),
     }
-
-
-def page() -> flask.Response:
-    """GET /health.
-
-    Returns:
-        string HTML response
-    """
-    return common.page(
-        "health/index-content.jinja",
-        title="Health",
-        checks=ctx_checks(run=False),
-    )
-
-
-def refresh() -> str:
-    """POST /h/health/refresh.
-
-    Returns:
-        string HTML response
-    """
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=True),
-        oob=True,
-    )
-
-
-def check(name: str) -> str:
-    """PUT /h/health/c/<name>.
-
-    Returns:
-        string HTML response
-    """
-    is_open = "closed" not in flask.request.form
-
-    checks_open: list[str] = flask.session.get("checks_open", [])
-    checks_open = [x for x in checks_open if x != name]
-    if is_open:
-        checks_open.append(name)
-    flask.session["checks_open"] = checks_open
-
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=False),
-        oob=True,
-    )
-
-
-def ignore(uri: str) -> str:
-    """POST /h/health/i/<uri>/ignore.
-
-    Args:
-        uri: HealthCheckIssue uri to ignore
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        s.query(HealthCheckIssue).where(
-            HealthCheckIssue.id_ == HealthCheckIssue.uri_to_id(uri),
-        ).update({"ignore": True})
-
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=False),
-        oob=True,
-    )
 
 
 ROUTES: Routes = {
