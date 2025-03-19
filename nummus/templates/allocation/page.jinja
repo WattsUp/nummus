@@ -1,0 +1,53 @@
+<div class="flex justify-between items-center"
+     hx-target="#main"
+     hx-trigger="account from:body, asset from:body, valuation from:body"
+     hx-get="{{ url_for('allocation.page') }}">
+    <h1 class="text-3xl font-serif text-primary">Asset Allocation</h1>
+</div>
+<h2 class="text-2xl font-serif text-primary">By Category</h2>
+<div hx-push-url="true" hx-swap="innerHTML show:window:top">
+    {% for category in allocation.categories %}
+        <details class="mb-2 bg-surface-container-high rounded-md" name="category">
+            <summary class="p-2 flex gap-2 items-center rounded-md bg-secondary-container">
+                <span>{{ category.name }}</span>
+                <span class="ml-auto">{{ category.value | money }}</span>
+                <icon class="details-icon-open">keyboard_arrow_up</icon>
+                <icon class="details-icon-closed">keyboard_arrow_down</icon>
+            </summary>
+            <div class="p-1 max-h-96 overflow-y-auto">
+                {% for asset in category.assets %}
+                    {% include "allocation/asset-row.jinja" %}
+                    {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
+                {% endfor %}
+            </div>
+        </details>
+    {% endfor %}
+</div>
+<h2 class="text-2xl font-serif text-primary">By U.S. Sector</h2>
+<div class="prose mx-auto">
+    Some U.S. assets have sector information, presented here.
+    The asset share information describes how much of an asset is made up of a particluar sector.
+    For individual companies, the share is likely 100%.
+    For mutual funds and ETFs, the share depends on where the fund is currently allocated.
+</div>
+{# TODO (WattsUp): Add charts #}
+<div hx-push-url="true" hx-swap="innerHTML show:window:top">
+    {% for sector in allocation.sectors %}
+        <details class="mb-2 bg-surface-container-high rounded-md" name="sector">
+            <summary class="p-2 flex gap-2 items-center rounded-md bg-secondary-container">
+                <span>{{ sector.name }}</span>
+                <span class="ml-auto">{{ sector.value | money }}</span>
+                <icon class="details-icon-open">keyboard_arrow_up</icon>
+                <icon class="details-icon-closed">keyboard_arrow_down</icon>
+            </summary>
+            <div class="p-1 max-h-96 overflow-y-auto">
+                {% with include_weight=true %}
+                    {% for asset in sector.assets %}
+                        {% include "allocation/asset-row.jinja" %}
+                        {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
+                    {% endfor %}
+                {% endwith %}
+            </div>
+        </details>
+    {% endfor %}
+</div>

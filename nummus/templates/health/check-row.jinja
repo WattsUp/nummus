@@ -1,0 +1,49 @@
+{% if check.issues %}
+    {% if check.is_severe %}
+        {% set header_class = "bg-error text-on-error" %}
+        {% set icon = "error" %}
+    {% else %}
+        {% set header_class = "bg-error-container" %}
+        {% set icon = "warning" %}
+    {% endif %}
+{% else %}
+    {% set header_class = "bg-primary-container" %}
+    {% set icon = "check_circle" %}
+{% endif %}
+<summary class="p-2 flex gap-2 items-center rounded-md {{ header_class }}">
+    <icon>{{ icon }}</icon>
+    <span>{{ check.name }}</span>
+    <span class="ml-auto">
+        {% if check.issues %}
+            {{ check.issues | length }}
+            {{ 'Error' if check.is_severe else 'Warning' }}{{ 's' if (check.issues | length) > 1 }}
+        {% endif %}
+    </span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+</summary>
+<div class="p-1 max-h-96 overflow-y-auto">
+    <div class="prose mx-auto italic text-on-surface-variant">
+        {{ check.description }}
+        {% if check.is_severe %}
+            Issues found here might indicate inaccurate balances.
+        {% else %}
+            Issues found here might indicate inconsistent data.
+        {% endif %}
+    </div>
+    {% if check.issues %}
+        {% for uri, issue in check.issues.items() %}
+            <div class="flex items-center">
+                <button class="btn-text btn-sq"
+                        hx-put="{{ url_for('health.ignore', uri=uri) }}"
+                        hx-target="#check-{{ check.uri }}"
+                        hx-disabled-elt="this">
+                    <icon>visibility_off</icon>
+                </button>
+                {{ issue }}
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="text-center">No issues found</div>
+    {% endif %}
+</div>

@@ -53,7 +53,11 @@ def ctx_base() -> dict[str, object]:
             {
                 "Assets": ("box", "assets.page_all", LinkType.PAGE),
                 "Performance": None,  # ssid_chart
-                "Allocation": None,  # full_stacked_bar_chart
+                "Allocation": (
+                    "full_stacked_bar_chart",
+                    "allocation.page",
+                    LinkType.PAGE,
+                ),
             },
         ),
         (

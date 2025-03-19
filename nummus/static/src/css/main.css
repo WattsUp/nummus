@@ -6,7 +6,6 @@
 @import "./buttons.css";
 @import "./inputs.css";
 @import "./prose.css";
-@import "./accordion.css";
 
 @import "./nav.css";
 @import "./dialog.css";
@@ -216,6 +215,14 @@
 
     * {
         @apply disabled:pointer-events-none;
+    }
+
+    details[open] .details-icon-closed {
+        @apply hidden;
+    }
+
+    details:not([open]) .details-icon-open {
+        @apply hidden;
     }
 
 }

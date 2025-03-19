@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
@@ -24,6 +24,26 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
+class _AssetContext(TypedDict):
+    """Type definition for asset context."""
+
+    uri: str
+    name: str
+    ticker: str | None
+    qty: Decimal
+    price: Decimal
+    value: Decimal
+    weight: Decimal
+
+
+class _GroupContext(TypedDict):
+    """Type definition for category or sector context."""
+
+    name: str
+    value: Decimal
+    assets: list[_AssetContext]
+
+
 def page() -> flask.Response:
     """GET /allocation.
 
@@ -31,7 +51,7 @@ def page() -> flask.Response:
         string HTML response
     """
     return common.page(
-        "allocation/index-content.jinja",
+        "allocation/page.jinja",
         title="Asset Allocation",
         allocation=ctx_allocation(),
     )
@@ -75,10 +95,8 @@ def ctx_allocation() -> dict[str, object]:
         for a_sector in s.query(AssetSector).yield_per(YIELD_PER):
             asset_sectors[a_sector.asset_id][a_sector.sector] = a_sector.weight
 
-        categories: dict[AssetCategory, list[dict[str, object]]] = defaultdict(list)
-        category_values: dict[AssetCategory, Decimal] = defaultdict(Decimal)
-        sectors: dict[USSector, list[dict[str, object]]] = defaultdict(list)
-        sector_values: dict[USSector, Decimal] = defaultdict(Decimal)
+        assets_by_category: dict[AssetCategory, list[_AssetContext]] = defaultdict(list)
+        assets_by_sector: dict[USSector, list[_AssetContext]] = defaultdict(list)
         query = (
             s.query(Asset)
             .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
@@ -90,41 +108,48 @@ def ctx_allocation() -> dict[str, object]:
             name: str
             category: AssetCategory
             ticker: str | None
+            qty = asset_qtys[a_id]
             value = asset_values[a_id]
             a_uri = Asset.id_to_uri(a_id)
 
-            ctx = {
+            asset_ctx: _AssetContext = {
                 "uri": a_uri,
                 "name": name,
                 "ticker": ticker,
-                "qty": asset_qtys[a_id],
+                "qty": qty,
                 "price": asset_prices[a_id],
                 "value": value,
+                "weight": Decimal(1),
             }
-            categories[category].append(ctx)
-            category_values[category] += asset_values[a_id]
+            assets_by_category[category].append(asset_ctx)
 
             for sector, weight in asset_sectors[a_id].items():
-                sector_value = weight * value
-                ctx = {
-                    "uri": a_uri,
-                    "name": name,
-                    "ticker": ticker,
-                    "weight": weight,
-                    "value": sector_value,
-                }
-                sectors[sector].append(ctx)
-                sector_values[sector] += sector_value
+                asset_sector_ctx = asset_ctx.copy()
+                asset_sector_ctx["weight"] = weight
+                asset_sector_ctx["qty"] = qty * weight
+                asset_sector_ctx["value"] = value * weight
+                assets_by_sector[sector].append(asset_sector_ctx)
+
+    categories: list[_GroupContext] = [
+        {
+            "name": cat.pretty,
+            "value": sum(a["value"] for a in assets) or Decimal(0),
+            "assets": sorted(assets, key=lambda item: item["name"]),
+        }
+        for cat, assets in assets_by_category.items()
+    ]
+    sectors: list[_GroupContext] = [
+        {
+            "name": sector.pretty,
+            "value": sum(a["value"] for a in assets) or Decimal(0),
+            "assets": sorted(assets, key=lambda item: item["name"]),
+        }
+        for sector, assets in assets_by_sector.items()
+    ]
 
     return {
-        "categories": {cat.pretty: assets for cat, assets in categories.items()},
-        "category_values": {
-            cat.pretty: value for cat, value in category_values.items()
-        },
-        "sectors": {sector.pretty: assets for sector, assets in sectors.items()},
-        "sector_values": {
-            sector.pretty: value for sector, value in sector_values.items()
-        },
+        "categories": sorted(categories, key=lambda item: item["name"]),
+        "sectors": sorted(sectors, key=lambda item: item["name"]),
     }
 
 

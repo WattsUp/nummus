@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import health_checks, portfolio
+from nummus import health_checks, portfolio, web_utils
 from nummus.controllers import common
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 
@@ -16,11 +16,18 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
+class HealthContext(TypedDict):
+    """Type definition for health page context."""
+
+    last_update_ago: float | None
+    checks: list[HealthCheckContext]
+
+
 class HealthCheckContext(TypedDict):
     """Type definition for health check context."""
 
     name: str
-    is_closed: bool
+    uri: str
     description: str
     is_severe: bool
     issues: dict[str, str]
@@ -52,24 +59,6 @@ def refresh() -> str:
     )
 
 
-def check(name: str) -> str:
-    """PUT /h/health/c/<name>.
-
-    Returns:
-        string HTML response
-    """
-    is_open = "closed" not in flask.request.form
-
-    checks_open: list[str] = flask.session.get("checks_open", [])
-    checks_open = [x for x in checks_open if x != name]
-    if is_open:
-        checks_open.append(name)
-    flask.session["checks_open"] = checks_open
-
-    # No response since actual toggle is on client side
-    return ""
-
-
 def ignore(uri: str) -> str:
     """POST /h/health/i/<uri>/ignore.
 
@@ -83,18 +72,20 @@ def ignore(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
-        s.query(HealthCheckIssue).where(
-            HealthCheckIssue.id_ == HealthCheckIssue.uri_to_id(uri),
-        ).update({"ignore": True})
+        c = web_utils.find(s, HealthCheckIssue, uri)
+        c.ignore = True
+        name = c.check
+
+    checks = ctx_checks(run=False)["checks"]
 
     return flask.render_template(
-        "health/checks.jinja",
-        ctx=ctx_checks(run=False),
+        "health/check-row.jinja",
+        check=next(c for c in checks if c["name"] == name),
         oob=True,
     )
 
 
-def ctx_checks(*, run: bool) -> dict[str, object]:
+def ctx_checks(*, run: bool) -> HealthContext:
     """Get the context to build the health checks.
 
     Args:
@@ -107,7 +98,6 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     utc_now = datetime.datetime.now(datetime.timezone.utc)
-    checks_open: list[str] = flask.session.get("checks_open", [])
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     with p.begin_session() as s:
@@ -143,18 +133,19 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
 
     checks: list[HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
+        name = check_type.name
 
         if run:
             c = check_type(p)
             c.test()
             c_issues = c.issues
         else:
-            c_issues = issues[check_type.name]
+            c_issues = issues[name]
 
         checks.append(
             {
-                "name": check_type.name,
-                "is_closed": check_type.name not in checks_open,
+                "name": name,
+                "uri": name.replace(" ", "-").lower(),
                 "description": check_type.description,
                 "is_severe": check_type.is_severe,
                 "issues": dict(sorted(c_issues.items(), key=lambda item: item[1])),
@@ -171,6 +162,5 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
 ROUTES: Routes = {
     "/health": (page, ["GET"]),
     "/h/health/refresh": (refresh, ["POST"]),
-    "/h/health/c/<path:name>": (check, ["PUT"]),
     "/h/health/i/<path:uri>/ignore": (ignore, ["PUT"]),
 }
