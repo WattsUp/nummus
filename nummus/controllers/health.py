@@ -16,14 +16,14 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-class HealthContext(TypedDict):
+class _HealthContext(TypedDict):
     """Type definition for health page context."""
 
     last_update_ago: float | None
-    checks: list[HealthCheckContext]
+    checks: list[_HealthCheckContext]
 
 
-class HealthCheckContext(TypedDict):
+class _HealthCheckContext(TypedDict):
     """Type definition for health check context."""
 
     name: str
@@ -85,7 +85,7 @@ def ignore(uri: str) -> str:
     )
 
 
-def ctx_checks(*, run: bool) -> HealthContext:
+def ctx_checks(*, run: bool) -> _HealthContext:
     """Get the context to build the health checks.
 
     Args:
@@ -131,7 +131,7 @@ def ctx_checks(*, run: bool) -> HealthContext:
             for i in query.yield_per(YIELD_PER):
                 issues[i.check][i.uri] = i.msg
 
-    checks: list[HealthCheckContext] = []
+    checks: list[_HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
         name = check_type.name
 

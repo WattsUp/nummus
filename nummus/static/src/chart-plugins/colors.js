@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Chart.js plugin to compute color from semantic name
  *

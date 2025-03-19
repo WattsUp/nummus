@@ -147,9 +147,26 @@ def ctx_allocation() -> dict[str, object]:
         for sector, assets in assets_by_sector.items()
     ]
 
+    def chart_assets(assets: list[_AssetContext]) -> list[dict[str, object]]:
+        return [
+            {
+                "name": a["name"],
+                "ticker": a["ticker"],
+                "value": a["value"],
+                "weight": a["weight"],
+            }
+            for a in assets
+        ]
+
     return {
         "categories": sorted(categories, key=lambda item: item["name"]),
         "sectors": sorted(sectors, key=lambda item: item["name"]),
+        "chart": {
+            "categories": {
+                item["name"]: chart_assets(item["assets"]) for item in categories
+            },
+            "sectors": {item["name"]: chart_assets(item["assets"]) for item in sectors},
+        },
     }
 
 

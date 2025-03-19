@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Chart.js plugin to highlight another element on hover
  *

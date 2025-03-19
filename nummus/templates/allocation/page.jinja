@@ -5,6 +5,9 @@
     <h1 class="text-3xl font-serif text-primary">Asset Allocation</h1>
 </div>
 <h2 class="text-2xl font-serif text-primary">By Category</h2>
+<div class="w-full h-60 md:h-96 relative mb-2">
+    <canvas id="category-chart-canvas" hx-preserve></canvas>
+</div>
 <div hx-push-url="true" hx-swap="innerHTML show:window:top">
     {% for category in allocation.categories %}
         <details class="mb-2 bg-surface-container-high rounded-md" name="category">
@@ -24,13 +27,15 @@
     {% endfor %}
 </div>
 <h2 class="text-2xl font-serif text-primary">By U.S. Sector</h2>
+<div class="w-full h-60 md:h-96 relative mb-2">
+    <canvas id="sector-chart-canvas" hx-preserve></canvas>
+</div>
 <div class="prose mx-auto">
     Some U.S. assets have sector information, presented here.
     The asset share information describes how much of an asset is made up of a particluar sector.
     For individual companies, the share is likely 100%.
     For mutual funds and ETFs, the share depends on where the fund is currently allocated.
 </div>
-{# TODO (WattsUp): Add charts #}
 <div hx-push-url="true" hx-swap="innerHTML show:window:top">
     {% for sector in allocation.sectors %}
         <details class="mb-2 bg-surface-container-high rounded-md" name="sector">
@@ -51,3 +56,4 @@
         </details>
     {% endfor %}
 </div>
+<script>allocation.update(JSON.parse('{{ allocation.chart | tojson }}'))</script>

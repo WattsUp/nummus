@@ -6,22 +6,8 @@
  * @return {String} Hex string of color
  */
 function getThemeColor(name) {
-    'use strict';
     const style = getComputedStyle(document.body);
     return style.getPropertyValue(`--color-${name}`);
-}
-
-/**
- * Get nth color for chart colors
- *
- * @param {Number} i Index of color to get
- * @return {String} Hex string of color
- */
-function getChartColor(i, spin) {
-    'use strict';
-    const base = getThemeColor('green');
-    spin = spin ?? 22
-    return tinycolor(base).spin(i * spin).toHexString();
 }
 
 /**
@@ -117,7 +103,6 @@ const formatterF2 = new Intl.NumberFormat('en-US', {
  * @return {String} Label for current tick
  */
 function formatMoneyTicks(value, index, ticks) {
-    'use strict';
     if (index == 0) {
         const step = Math.abs(ticks[0].value - ticks[1].value);
         const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
@@ -143,7 +128,6 @@ function formatMoneyTicks(value, index, ticks) {
  * @return {String} Label for current tick
  */
 function formatPercentTicks(value, index, ticks) {
-    'use strict';
     if (index == 0) {
         const step = Math.abs(ticks[0].value - ticks[1].value);
         const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
@@ -296,6 +280,56 @@ function merge(target, ...sources) {
         }
     }
     return merge(target, ...sources);
+}
+
+/**
+ * Wrap words over multiple lines
+ *
+ * @param {Array} rawLines Array of original lines, will keep separate
+ * @param {Number} maxWidth Maximum width of a lines
+ * @param {Number} maxLines Maximum number of lines
+ * @param {2DContext} ctx Canvas drawing context
+ * @return {Array} Array of wrapped lines
+ */
+function word_wrap(rawLines, maxWidth, maxLines, ctx) {
+    if (maxLines < 1) {
+        return [];
+    }
+    const lines = [];
+    for (const rawLine of rawLines) {
+        if (!rawLine) {
+            continue;
+        }
+        const words = rawLine.split(' ');
+        let currentLine = null;
+        for (const word of words) {
+            const newLine = currentLine ? currentLine + ' ' + word : word;
+            const width = ctx.measureText(newLine).width;
+            if (width < maxWidth) {
+                currentLine = newLine;
+            } else if (currentLine) {
+                const wordWidth = ctx.measureText(word).width;
+                if (wordWidth >= maxWidth) {
+                    return lines;
+                }
+                lines.push(currentLine);
+                if (lines.length == maxLines) {
+                    return lines;
+                }
+                currentLine = word;
+            } else {
+                // word alone doesn't fit
+                return lines;
+            }
+        }
+        if (currentLine) {
+            lines.push(currentLine);
+            if (lines.length == maxLines) {
+                return lines;
+            }
+        }
+    }
+    return lines;
 }
 
 /**

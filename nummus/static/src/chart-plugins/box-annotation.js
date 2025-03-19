@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Chart.js plugin to draw a box annotation
  *

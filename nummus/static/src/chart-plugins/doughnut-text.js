@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Chart.js plugin to draw text at the center of a doughnut chart
  *

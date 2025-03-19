@@ -16,7 +16,6 @@ const nummusChart = {
      * @return {Object} Chart object
      */
     create: function(ctx, labels, dateMode, datasets, plugins, options) {
-        'use strict';
         setChartDefaults();
 
         // If only single day data, duplicate for prettier charts
@@ -26,7 +25,6 @@ const nummusChart = {
                 d.data.push(d.data[0]);
             });
         }
-
 
         const pluginObjects = [
             pluginColor,
@@ -123,7 +121,6 @@ const nummusChart = {
      * @param {Array} values Array of values
      */
     update: function(chart, labels, dateMode, datasets) {
-        'use strict';
         chart.data.labels = labels;
         if (chart.data.datasets.length == datasets.length) {
             for (let i = 0; i < datasets.length; ++i) {
@@ -142,7 +139,6 @@ const nummusChart = {
      * @return {Array} datasets
      */
     datasetsStacked: function(sources) {
-        'use strict';
         const datasets = [];
         const n = sources[0].values.length;
         let values = new Array(n).fill(0);
@@ -174,8 +170,6 @@ const nummusChart = {
      * @return {Number} total of all sources
      */
     datasetsPie: function(sources) {
-        'use strict';
-
         const labels = [];
         const datasets = [];
 
@@ -216,7 +210,6 @@ const nummusChart = {
      * @return {Object} Chart object
      */
     createPie: function(ctx, sources, plugins, options) {
-        'use strict';
         setChartDefaults();
 
         const {labels, datasets, total} = this.datasetsPie(sources);
@@ -280,7 +273,6 @@ const nummusChart = {
      * @param {Array} sources Array of sources [values0, values1, ...]
      */
     updatePie: function(chart, sources) {
-        'use strict';
         const {labels, datasets, total} = this.datasetsPie(sources);
 
         if (chart.data.datasets.length == datasets.length) {
@@ -309,10 +301,13 @@ const nummusChart = {
      * @return {Object} Chart object
      */
     createTree: function(ctx, datasets, plugins, options) {
-        'use strict';
         setChartDefaults();
 
-        const pluginObjects = [];
+        const pluginObjects = [
+            pluginColor,
+            pluginTreeColor,
+            pluginTreeLabel,
+        ];
         const pluginOptions = {
             legend: {
                 display: false,
@@ -359,34 +354,6 @@ const nummusChart = {
                 maintainAspectRatio: false,
                 animations: false,
                 plugins: pluginOptions,
-                elements: {
-                    treemap: {
-                        captions: {
-                            align: 'center',
-                            formatter: function(context) {
-                                const rawObj = context.raw._data;
-                                if (rawObj.name) {
-                                    return null;
-                                }
-                                let sector = rawObj[0];
-                                let label = sector;
-                                const ctx = context.chart.ctx;
-                                const zoom = context.chart.getZoomLevel();
-
-                                const labelPadding = 2;
-                                const maxWidth =
-                                    context.raw.w * zoom - labelPadding * 2;
-                                let width = ctx.measureText(label).width;
-                                while (sector && width >= maxWidth) {
-                                    sector = sector.slice(0, -1);
-                                    label = sector + '...';
-                                    width = ctx.measureText(label).width;
-                                }
-                                return label;
-                            },
-                        },
-                    },
-                },
             },
             options ?? {},
         );
@@ -397,17 +364,5 @@ const nummusChart = {
             options: options,
             plugins: pluginObjects,
         });
-    },
-    /**
-     * Update existing tree chart
-     *
-     * @param {Object} chart Chart object
-     * @param {Array} datasets Array of datasets
-     */
-    updateTree: function(chart, datasets) {
-        'use strict';
-        // Just swap datasets, no animations
-        chart.data.datasets = datasets;
-        chart.update();
     },
 };

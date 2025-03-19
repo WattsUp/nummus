@@ -1,3 +1,4 @@
+'use strict';
 /**
  * Chart.js plugin to set a fixed axis width
  *
