@@ -30,12 +30,22 @@
 <div class="w-full h-60 md:h-96 relative mb-2">
     <canvas id="sector-chart-canvas" hx-preserve></canvas>
 </div>
-<div class="prose mx-auto">
-    Some U.S. assets have sector information, presented here.
-    The asset share information describes how much of an asset is made up of a particluar sector.
-    For individual companies, the share is likely 100%.
-    For mutual funds and ETFs, the share depends on where the fund is currently allocated.
-</div>
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+        <icon>help</icon>
+        <span class="mr-auto">About U.S. sector allocation</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose px-2 mx-auto">
+        <p>
+            Some U.S. assets have sector information, presented here.
+            The asset share information describes how much of an asset is made up of a particluar sector.
+            For individual companies, the share is likely 100%.
+            For mutual funds and ETFs, the share depends on where the fund is currently allocated.
+        </p>
+    </div>
+</details>
 <div hx-push-url="true" hx-swap="innerHTML show:window:top">
     {% for sector in allocation.sectors %}
         <details class="mb-2 bg-surface-container-high rounded-md" name="sector">

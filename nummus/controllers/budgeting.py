@@ -392,7 +392,7 @@ def page() -> flask.Response:
         table, title = ctx_table(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return common.page(
-        "budgeting/index-content.jinja",
+        "budgeting/page.jinja",
         title=title,
         table=table,
         budget_sidebar=sidebar,
@@ -537,7 +537,7 @@ def overspending(uri: str) -> str | flask.Response:
                 else:
                     a.amount -= to_move
 
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="update-budget")
 
         category_names = TransactionCategory.map_name(s)
 
@@ -648,7 +648,7 @@ def move(uri: str) -> str | flask.Response:
                 else:
                     a.amount += to_move
 
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="update-budget")
 
         category_names = TransactionCategory.map_name(s)
 
@@ -943,7 +943,7 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="update-budget")
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
             return common.error(error)
@@ -995,12 +995,12 @@ def target(uri: str) -> str | flask.Response:
             tar.repeat_every = 1
 
         if flask.request.method == "PUT":
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="update-budget")
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
                     s.add(tar)
-                return common.overlay_swap(event="update-budget")
+                return common.dialog_swap(event="update-budget")
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 

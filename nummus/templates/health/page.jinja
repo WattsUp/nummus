@@ -9,8 +9,19 @@
     </button>
 </div>
 {% include "health/timestamp.jinja" %}
-<div class="prose mx-auto">
-    These inspect the portfolio for issues, checking for anything that looks out of place.
-    If there's a false positive, then click the hide button to ignore.
-</div>
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+        <icon>help</icon>
+        <span class="mr-auto">About health checks</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose px-2 mx-auto">
+        <p>
+            These inspect the portfolio for issues, checking for anything that looks out of place.
+            If there's a false positive, then click the hide button to ignore.
+        </p>
+        <p>Read about what each check specifically inspects for by expanding them.</p>
+    </div>
+</details>
 <div id="health-checks" class="w-full max-w-3xl mx-auto">{% include "health/checks.jinja" %}</div>

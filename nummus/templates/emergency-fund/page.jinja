@@ -1,34 +1,42 @@
 <h1 class="text-3xl font-serif text-primary">Emergency fund</h1>
-<div class="flex justify-around font-bold">
-    <div class="text-center">
-        <h2 class="text-lg">Current Balance</h2>
-        <h1 class="text-2xl text-tertiary">{{ ctx.current | money0 }}</h1>
+<div class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2 text-center font-bold mb-2">
+    <div class="max-lg:col-span-full">
+        <h2 class="text-xl">Current Balance</h2>
+        <h1 class="text-6xl text-tertiary font-serif">{{ ctx.current | money0 }}</h1>
     </div>
-    <div class="text-center">
-        <h2 class="text-lg">Recommended Balance</h2>
-        <h1 class="text-2xl text-tertiary">{{ ctx.target_lower | money0 }} - {{ ctx.target_upper | money0 }}</h1>
+    <div class="md:col-span-2">
+        <h2 class="text-xl">Recommended Balance</h2>
+        <h1 class="text-6xl text-tertiary font-serif">{{ ctx.target_lower | money0 }} - {{ ctx.target_upper | money0 }}</h1>
     </div>
 </div>
-<div class="prose mx-auto">
-    <h2>What's an emergency fund?</h2>
-    <p>
-        An emergency fund is a cash reserve specifically set aside for unexpected expenses.
-        Some common examples include car repairs, home repairs, medical bills, or a loss of income.
-    </p>
-    <p>
-        Without savings, an financial shock, large <i>or small,</i> can be difficult.
-        And if it turns into debt, it can potentially have a lasting impact.
-        An underfunded emergency fund <i>is an emergency.</i>
-    </p>
-    <h2>How much do I need?</h2>
-    <p>
-        Most experts recommend having 3-6 months of living expenses in your emergency fund.
-        nummus tracks the spending for categories marked "essential spending".
-        On the chart below is a region to aim to be within.
-        Having an emergency fund of that amount means you can last 3 to 6 months of
-        essential spending if a loss of income event happens.
-    </p>
-</div>
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+        <icon>help</icon>
+        <span class="mr-auto">About emergency funds</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose px-2 mx-auto">
+        <h2>What's an emergency fund?</h2>
+        <p>
+            An emergency fund is a cash reserve specifically set aside for unexpected expenses.
+            Some common examples include car repairs, home repairs, medical bills, or a loss of income.
+        </p>
+        <p>
+            Without savings, an financial shock, large <i>or small,</i> can be difficult.
+            And if it turns into debt, it can potentially have a lasting impact.
+            An underfunded emergency fund <i>is an emergency.</i>
+        </p>
+        <h2>How much do I need?</h2>
+        <p>
+            Most experts recommend having 3-6 months of living expenses in your emergency fund.
+            nummus tracks the spending for categories marked "essential spending".
+            On the chart below is a region to aim to be within.
+            Having an emergency fund of that amount means you can last 3 to 6 months of
+            essential spending if a loss of income event happens.
+        </p>
+    </div>
+</details>
 <h1 class="text-2xl font-serif text-primary">Historical Balance</h1>
 <div class="w-full h-60 md:h-96 relative">
     <canvas id="e-fund-chart-canvas" hx-preserve></canvas>

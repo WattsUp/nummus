@@ -12,7 +12,7 @@
         <icon>add</icon>New
     </button>
 </div>
-<div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold">
+<div class="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold mb-2">
     <div class="col-span-2">
         <h2 class="text-xl">Net Worth</h2>
         <h1 class="text-6xl text-tertiary font-serif">{{ ctx.net_worth | money0 }}</h1>
@@ -34,13 +34,23 @@
         </div>
     </div>
 </div>
-<div class="prose mx-auto">
-    Assets are accounts with a positive valuation.
-    This is commonly cash, stocks, and other investments.
-    Liabilites are accounts with a negative valuation.
-    This is commonly lines of credit, mortgages, and other loans.
-    Net worth is the sum of all account valuations.
-</div>
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+        <icon>help</icon>
+        <span class="mr-auto">About account classification</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose px-2 mx-auto">
+        <p>
+            Assets are accounts with a positive valuation.
+            This is commonly cash, stocks, and other investments.
+            Liabilites are accounts with a negative valuation.
+            This is commonly lines of credit, mortgages, and other loans.
+            Net worth is the sum of all account valuations.
+        </p>
+    </div>
+</details>
 <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
      hx-push-url="true"
      hx-swap="innerHTML show:window:top">

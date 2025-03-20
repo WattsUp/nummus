@@ -40,7 +40,7 @@ def ctx_base() -> dict[str, object]:
             "",
             {
                 "Home": ("home", "dashboard.page", LinkType.PAGE),
-                "Budget": None,  # wallet
+                "Budget": ("wallet", "budgeting.page", LinkType.PAGE),
                 # TODO (WattsUp): Change to receipt_long and add_receipt_long if
                 # request gets fulfilled
                 "Transactions": ("note_stack", "transactions.page_all", LinkType.PAGE),
@@ -48,6 +48,7 @@ def ctx_base() -> dict[str, object]:
                 "Insights": None,  # search_insights
             },
         ),
+        # TODO (WattsUp): Banking section? Where to put spending by tag info?
         (
             "Investing",
             {

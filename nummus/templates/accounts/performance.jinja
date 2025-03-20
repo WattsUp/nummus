@@ -16,7 +16,7 @@
         {% endfor %}
     </div>
     <h1 class="text-2xl font-serif text-primary">Performance</h1>
-    <div class="bg-surface-container-high rounded-xl p-2 grid grid-cols-2 max-w-md mx-auto font-bold">
+    <div class="bg-surface-container-high rounded-xl p-2 grid grid-cols-2 max-w-md mx-auto font-bold mb-2">
         <div class="text-on-surface-variant">Total Return</div>
         <div class="{{ perf.pnl_total | pnl_color }} flex justify-end items-center">
             <icon class="sm">{{ perf.pnl_total | pnl_arrow }}</icon>
@@ -38,4 +38,33 @@
         <div class="text-on-surface-variant">MWRR per annum</div>
         <div class="text-right">{{ perf.mwrr | percent }}</div>
     </div>
+    <details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+        <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+            <icon>help</icon>
+            <span class="mr-auto">About account performance</span>
+            <icon class="details-icon-open">keyboard_arrow_up</icon>
+            <icon class="details-icon-closed">keyboard_arrow_down</icon>
+        </summary>
+        <div class="prose px-2 mx-auto">
+            <p>
+                Dividends are a distribution of profit from a company to shareholders.
+                Investment fees are commonly from management of mutual funds and ETFs.
+                Total return is the sum of dividends, fees, and any change in value of assets held.
+            </p>
+            <p>
+                Time-Weighted Rate of Return or TWRR is a performance metric that ignores cash flow.
+                Cash flow include deposits into or withdrawls out of an account.
+                If funds are added just before a rise, this has no effect on TWRR.
+            </p>
+            <p>
+                Money-Weighted Rate of Return or MWRR is a performance metric that includes cash flow.
+                Also known as Internal Rate of Return or IRR.
+                If funds are added just before a rise, this positively affects MWRR.
+            </p>
+            <p>
+                MWRR allows you to see how your cash flow actions affect your investment.
+                TWRR allows you to see how your asset allocation is performing compared to other investments.
+            </p>
+        </div>
+    </details>
 {% endwith %}

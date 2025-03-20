@@ -1,4 +1,4 @@
-<div class="flex justify-between items-center"
+<div class="flex justify-between items-center mb-2"
      hx-target="#main"
      hx-trigger="asset from:body, valuation from:body, account from:body"
      hx-get="{{ url_for('assets.page_all') }}">
@@ -12,12 +12,22 @@
         <icon>add</icon>New
     </button>
 </div>
-<div class="prose mx-auto">
-    Assets are resources that can be used to produce positive economic value.
-    Cash and cryptocurrency are forms of currency whose value comes from purchasing power against other currencies.
-    Stocks, bonds, and futures have value derived from a contractual claim.
-    Real estate, vehicles, and items are tangible assets that can be physically exchanged.
-</div>
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
+        <icon>help</icon>
+        <span class="mr-auto">About asset classification</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose px-2 mx-auto">
+        <p>
+            Assets are resources that can be used to produce positive economic value.
+            Cash and cryptocurrency are forms of currency whose value comes from purchasing power against other currencies.
+            Stocks, bonds, and futures have value derived from a contractual claim.
+            Real estate, vehicles, and items are tangible assets that can be physically exchanged.
+        </p>
+    </div>
+</details>
 <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4 grid-flow-row-dense"
      hx-push-url="true"
      hx-swap="innerHTML show:window:top">
