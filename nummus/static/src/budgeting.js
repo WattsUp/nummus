@@ -560,6 +560,20 @@ const budgeting = {
             htmx.trigger(`#target-${budgeting.activeCategory}`, 'click');
         }
     },
+    /**
+     * Update group open state from checkbox
+     *
+     * @param {Element} e Checkbox input element
+     * @param {String} uri URI of group to update
+     */
+    openGroup: function(e, uri) {
+        const isOpen = e.checked;
+        if (isOpen) {
+            htmx.addClass(htmx.find(`#group-${uri}`), 'open');
+        } else {
+            htmx.removeClass(htmx.find(`#group-${uri}`), 'open');
+        }
+    },
 };
 
 window.addEventListener('click', budgeting.closeRow);

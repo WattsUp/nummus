@@ -1,0 +1,8 @@
+<div class="budget-bar">
+    {% for bar_w, bg_fill_w, fg_fill_w, bg, fg in category.bars %}
+        <div style="width: {{ bar_w | percent }}">
+            <div class="{{ bg }}" style="width: {{ bg_fill_w | percent }}"></div>
+            <div class="bar-fg {{ fg }}" style="width: {{ fg_fill_w | percent }}"></div>
+        </div>
+    {% endfor %}
+</div>

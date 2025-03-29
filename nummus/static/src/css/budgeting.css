@@ -1,77 +1,58 @@
-@layer components {
-    .budget-group-toggle-label {
-        @apply absolute z-40;
+@utility budget-group {
+    @apply mb-2 rounded-md;
+    @apply bg-surface-container-low;
+
+    &>label {
+        @apply flex items-center;
+        @apply pl-1 pr-2 h-11 rounded-md;
+        @apply bg-surface-container-highest;
+
+        & input {
+            @apply opacity-0 w-0 h-0;
+        }
+
+        &>h1 {
+            @apply mr-auto;
+        }
+
+        &>div {
+            @apply w-28 shrink-0 text-right;
+        }
     }
 
-    .budget-group-toggle-label::after {
-        @apply content-["▼"] absolute top-[3px] cursor-pointer text-grey-500 md:hover:text-green-500;
-    }
-
-    .dragging {
-        @apply z-50;
-    }
-
-    .dragging::before {
-        @apply content-[""] absolute -inset-1 bg-white border-2 border-grey-500 shadow-xl z-[-1];
-    }
-
-    input[type=checkbox].budget-group-toggle:checked~.budget-group-fold {
-        @apply hidden;
-    }
-
-    input[type=checkbox].budget-group-toggle:checked~.budget-group-toggle-label::after {
-        @apply content-["►"];
-    }
-
-    .bar-fg {
-        @apply pattern-diagonal-lines pattern-size-2 pattern-opacity-100;
-    }
-
-    .bar-fg.green {
-        @apply pattern-green-100 pattern-bg-green-400;
-    }
-
-    .bar-fg.yellow {
-        @apply pattern-yellow-100 pattern-bg-yellow-300;
-    }
-
-    .health-check-toggle-label {
-        @apply block relative pl-5 pr-2 py-1 text-xl font-serif w-full cursor-pointer flex justify-between;
-    }
-
-    .health-check-toggle-label::after {
-        @apply content-["▼"] absolute left-1 top-[5px] cursor-pointer text-grey-800 md:hover:text-green-500 font-sans text-base;
-    }
-
-    input[type=checkbox].health-check-toggle:checked~.health-check-fold {
-        @apply hidden;
-    }
-
-    input[type=checkbox].health-check-toggle:checked~.health-check-toggle-label::after {
-        @apply content-["►"];
+    &>div {
+        @apply not-open:hidden;
     }
 }
 
-/* TODO(WattsUp): Max a PR in upstream for this migration? */
-@utility pattern-diagonal-lines {
-    opacity: var(--pattern-opacity, 0.4);
-    backgroundColor: var(--pattern-bg-color, transparent);
-    background:
-        repeating-linear-gradient(45deg, var(--pattern-color), var(--pattern-color) calc(var(--pattern-size, 40px) * 0.2), var(--pattern-bg-color, transparent) calc(var(--pattern-size, 40px) * 0.2), var(--pattern-bg-color) var(--pattern-size, 40px));
+@utility budget-category {
+    @apply px-2 py-1;
+
+
+    &>div:first-of-type>div {
+        @apply w-28 shrink-0 text-right;
+    }
 }
 
-@utility pattern-size-* {
-    --pattern-size: calc(var(--spacing) * --value(integer));
+@utility budget-bar {
+    @apply h-[6px] w-full flex gap-1;
+
+    &>div {
+        @apply h-full grow relative;
+        @apply bg-surface-container-highest;
+
+        /* big radius to get pill shape */
+        border-radius: 100em;
+
+        &>div {
+            @apply h-full absolute top-0 left-0;
+
+            /* big radius to get pill shape */
+            border-radius: 100em;
+        }
+    }
 }
 
-@utility pattern-opacity-* {
-    --pattern-opacity: calc(--value(integer) * 1%);
-}
-
-@utility pattern-* {
-    --pattern-color: --value(--color-*);
-}
-
-@utility pattern-bg-* {
-    --pattern-bg-color: --value(--color-*);
+@utility bar-fg {
+    @apply pattern-diagonal-lines pattern-white pattern-opacity-100;
 }

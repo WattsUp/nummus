@@ -183,6 +183,12 @@
 }
 
 /* Other colors */
+@utility btn-filled-error {
+    @apply btn-filled;
+    --btn-base-color: var(--color-error);
+    --btn-text-color: var(--color-on-error);
+}
+
 @utility btn-text-error {
     @apply btn-text;
     --btn-base-color: var(--color-error);

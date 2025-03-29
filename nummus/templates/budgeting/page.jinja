@@ -1,10 +1,24 @@
-<div class="flex justify-between items-center mb-2"
+<div class="flex items-center mb-2"
      hx-target="#main"
      hx-trigger="account from:body, asset from:body, valuation from:body"
      hx-get="{{ url_for('budgeting.page') }}">
-    <h1 class="text-3xl font-serif text-primary">Budgeting</h1>
+    <h1 class="text-3xl font-serif text-primary mr-auto">Budgeting</h1>
+    <button class="btn-text btn-sq"
+            hx-get="{{ url_for('budgeting.page', month=ctx.month_prev) }}"
+            hx-push-url="true"
+            hx-swap="innerHTML show:window:top">
+        <icon>chevron_left</icon>
+    </button>
+    <h1 class="text-3xl font-serif text-primary">{{ ctx.month }}</h1>
+    <button class="btn-text btn-sq"
+            hx-get="{{ url_for('budgeting.page', month=ctx.month_next) }}"
+            hx-push-url="true"
+            hx-swap="innerHTML show:window:top"
+            {% if not ctx.month_next %}disabled{% endif %}>
+        <icon>chevron_right</icon>
+    </button>
 </div>
-<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
+<details class="max-w-2xl mx-auto lg:mb-2 bg-surface-container-high rounded-md">
     <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
         <icon>help</icon>
         <span class="mr-auto">About budgeting in nummus</span>
@@ -13,42 +27,30 @@
     </summary>
     <div class="prose px-2 mx-auto">
         <p>
-            nummus employes a zero-based budgeting technique.
+            nummus employs a zero-based budgeting technique.
             Every single dollar is assigned to a category for spending.
-            The goal is to know what every cent in your accounts is for.
+            The goal is to know what the role is for every cent in your accounts.
         </p>
         <p>
-            Don't have enough funds for a purchase? Then move funds from a category that has some to spare.
-            Have extra income? Allocate to a savings category or fun money!
+            Don't have enough funds for a purchase?
+            Then move funds from a category that has some to spare.
+            Have extra income?
+            Allocate to a savings category or fun money!
         </p>
         <p>
-            Target are ways to keep you on track on regular spending and savings.
-            Go grocery shopping once a week? Set a weekly target to set aside some for that errand.
-            Do you have rent or a mortgage? Set a monthly target for that!
-            Always forget to save for car insurance every 6 months? Set a recurring target to save a bit each month.
+            Targets are ways to keep you on track on regular spending and savings.
+            Go grocery shopping once a week?
+            Set a weekly target to set aside some for that errand.
+            Do you have rent or a mortgage?
+            Set a monthly target for that!
+            Always forget to save for car insurance every 6 months?
+            Set a recurring target to save a bit each month so you are never surprised again.
         </p>
     </div>
 </details>
-{#
-<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full" hx-get="{{ url_for('budgeting.page', month=table['month']) }}" hx-trigger="update-account from:body, update-budget from:body, update-transaction from:body" hx-target="#main" hx-include="#budgeting-sidebar-uri" hx-swap="innerHTML">
-    <div class="w-full flex items-center" hx-push-url="true">
-        <h1 class="text-2xl md:text-3xl font-serif text-green-600">Budgeting</h1>
-        <div class="grow"></div>
-        <button hx-get="{{ url_for('budgeting.page', month=table['month_prev']) }}">
-            {% with class="w-[36px] h-[36px] hover:fill-green" %}
-                {% include "svg/arrow-left.svg" %}
-            {% endwith %}
-        </button>
-        <h1 class="text-2xl md:text-3xl font-serif text-green-600">{{ table["month"] }}</h1>
-        <button hx-get="{{ url_for('budgeting.page', month=table['month_next']) }}">
-            {% with class="w-[36px] h-[36px] hover:fill-green" %}
-                {% include "svg/arrow-right.svg" %}
-            {% endwith %}
-        </button>
+<div class="lg:grid grid-cols-[5fr_2fr] gap-2 grid-flow-row-dense">
+    <div class="col-start-2 sticky top-10 md:top-0 bg-surface max-lg:py-2 z-10">
+        {% include "budgeting/status.jinja" %}
     </div>
-    <p class="italic text-sm text-center">
-        To change which accounts are included in budgeting, edit account in the sidebar.
-    </p>
-    {% include "budgeting/table.jinja" %}
-</section>
-#}
+    <div>{% include "budgeting/groups.jinja" %}</div>
+</div>

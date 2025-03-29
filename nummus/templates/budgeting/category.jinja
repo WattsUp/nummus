@@ -1,0 +1,15 @@
+<div id="category-{{ category.uri }}" class="budget-category">
+    <div class="flex items-center mb-1">
+        <h1 class="grow">{{ category.name }}</h1>
+        <div class="{{ 'text-on-surface-variant' if category.assigned == 0 }} max-md:hidden">
+            {{ category.assigned | money }}
+        </div>
+        <div class="{{ 'text-on-surface-variant' if category.activity == 0 }} max-md:hidden">
+            {{ category.activity | money }}
+        </div>
+        <div>
+            <button class="btn-tonal ml-auto px-2">{{ category.available | money }}</button>
+        </div>
+    </div>
+    {% include "budgeting/category-bar.jinja" %}
+</div>

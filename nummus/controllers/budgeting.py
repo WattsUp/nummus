@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-class TargetContext(TypedDict):
-    """Target Monthly Context."""
+class _TargetContext(TypedDict):
+    """Type definition for target context."""
 
     target_assigned: Decimal
     total_assigned: Decimal
@@ -48,13 +48,41 @@ class TargetContext(TypedDict):
     type: TargetType
 
 
+class _CategoryContext(TypedDict):
+    """Type definition for budget category context."""
+
+    position: int | None
+    name: str
+    uri: str
+    assigned: Decimal
+    activity: Decimal
+    available: Decimal
+    # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
+    bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
+
+    target: _TargetContext | None
+
+
+class _GroupContext(TypedDict):
+    """Type definition for budget group context."""
+
+    position: int
+    name: str | None
+    uri: str | None
+    is_open: bool
+    categories: list[_CategoryContext]
+    assigned: Decimal
+    activity: Decimal
+    available: Decimal
+
+
 def ctx_target(
     tar: Target,
     month: datetime.date,
     assigned: Decimal,
     available: Decimal,
     leftover: Decimal,
-) -> TargetContext:
+) -> _TargetContext:
     """Get monthly context for target.
 
     Args:
@@ -187,7 +215,7 @@ def ctx_target(
     }
 
 
-def ctx_table(
+def ctx_budget(
     s: orm.Session,
     month: datetime.date,
     categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
@@ -206,60 +234,32 @@ def ctx_table(
     Returns:
         Dictionary HTML context
     """
-
-    class CategoryContext(TypedDict):
-        """Type definition for budget category context."""
-
-        position: int | None
-        name: str
-        uri: str
-        emoji_name: str
-        assigned: Decimal
-        activity: Decimal
-        available: Decimal
-        # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
-        bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
-
-        target: TargetContext | None
-
-    class GroupContext(TypedDict):
-        """Type definition for budget group context."""
-
-        position: int
-        name: str | None
-        uri: str | None
-        is_closed: bool
-        categories: list[CategoryContext]
-        assigned: Decimal
-        activity: Decimal
-        available: Decimal
-
     n_overspent = 0
 
     targets: dict[int, Target] = {
         t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
     }
 
-    groups_closed: list[str] = flask.session.get("groups_closed", [])
+    groups_open: list[str] = flask.session.get("groups_open", [])
 
-    groups: dict[int | None, GroupContext] = {}
+    groups: dict[int | None, _GroupContext] = {}
     query = s.query(BudgetGroup)
     for g in query.all():
         groups[g.id_] = {
             "position": g.position,
             "name": g.name,
             "uri": g.uri,
-            "is_closed": g.uri in groups_closed,
+            "is_open": g.uri in groups_open,
             "assigned": Decimal(0),
             "activity": Decimal(0),
             "available": Decimal(0),
             "categories": [],
         }
-    ungrouped: GroupContext = {
+    ungrouped: _GroupContext = {
         "position": -1,
         "name": None,
         "uri": None,
-        "is_closed": "ungrouped" in groups_closed,
+        "is_open": "ungrouped" in groups_open,
         "assigned": Decimal(0),
         "activity": Decimal(0),
         "available": Decimal(0),
@@ -310,29 +310,31 @@ def ctx_table(
         for v in bar_dollars:
             bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
 
-            fg = "green"
+            # TODO (WattsUp): Add a success and warning color role
+            fg = "pattern-bg-primary-container"
             if v == 0:
-                bg = "grey-400"
-                bg_fill_w = Decimal(1)
+                bg = "bg-black"
+                bg_fill_w = Decimal(0)
                 fg_fill_w = Decimal(0)
             elif available < 0:
-                bg = "red"
-                fg = "yellow"
+                bg = "bg-error"
+                fg = "pattern-bg-tertiary"
                 bg_fill_w = utils.clamp((-activity - bar_start) / v)
                 fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
             else:
-                bg = "green" if total_assigned == bar_dollars_sum else "yellow"
+                bg = (
+                    "bg-primary" if total_assigned == bar_dollars_sum else "bg-tertiary"
+                )
                 bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
                 fg_fill_w = utils.clamp((-activity - bar_start) / v)
 
             bars.append((bar_w, bg_fill_w, fg_fill_w, bg, fg))
             bar_start += v
 
-        cat_ctx: CategoryContext = {
+        cat_ctx: _CategoryContext = {
             "position": t_cat.budget_position,
             "uri": t_cat.uri,
-            "name": t_cat.name,
-            "emoji_name": t_cat.emoji_name,
+            "name": t_cat.emoji_name,
             "assigned": assigned,
             "activity": activity,
             "available": available,
@@ -355,10 +357,14 @@ def ctx_table(
         )
 
     month_str = month.isoformat()[:7]
-    title = f"Budgeting { month_str} | nummus"
+    title = f"Budgeting { month_str}"
+    today = datetime.date.today()
+    month_next = (
+        None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
+    )
     return {
         "month": month_str,
-        "month_next": utils.date_add_months(month, 1).isoformat()[:7],
+        "month_next": month_next,
         "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
         "assignable": assignable,
         "future_assigned": future_assigned,
@@ -389,12 +395,12 @@ def page() -> flask.Response:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, title = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, title = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return common.page(
         "budgeting/page.jinja",
         title=title,
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
     )
 
@@ -449,12 +455,12 @@ def assign(uri: str) -> str:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
         "budgeting/table.jinja",
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
     )
 
@@ -773,11 +779,11 @@ def reorder() -> str:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
         "budgeting/table.jinja",
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
     )
 
@@ -793,44 +799,45 @@ def group(uri: str) -> str:
 
     form = flask.request.form
     if flask.request.method == "PUT":
-        closed = "closed" in form
+        is_open = "open" in form
         if uri != "ungrouped":
-            name = form["name"]
+            name = form.get("name")
+            if name is not None:
+                try:
+                    with p.begin_session() as s:
+                        g = web_utils.find(s, BudgetGroup, uri)
+                        g.name = name
+                except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                    return common.error(e)
 
-            try:
-                with p.begin_session() as s:
-                    g = web_utils.find(s, BudgetGroup, uri)
-                    g.name = name
-            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                return common.error(e)
-
-        groups_closed: list[str] = flask.session.get("groups_closed", [])
-        groups_closed = [x for x in groups_closed if x != uri]
-        if closed:
-            groups_closed.append(uri)
-        flask.session["groups_closed"] = groups_closed
-    elif flask.request.method == "DELETE":
-        with p.begin_session() as s:
-            g = web_utils.find(s, BudgetGroup, uri)
-            s.query(TransactionCategory).where(
-                TransactionCategory.budget_group_id == g.id_,
-            ).update(
-                {
-                    TransactionCategory.budget_group_id: None,
-                    TransactionCategory.budget_position: None,
-                },
-            )
-            s.delete(g)
-            # Subtract 1 from the following positions to close the gap
-            query = (
-                s.query(BudgetGroup)
-                .where(BudgetGroup.position >= g.position)
-                .order_by(BudgetGroup.position)
-            )
-            for g in query.yield_per(YIELD_PER):
-                g.position -= 1
-    else:
+        groups_open: list[str] = flask.session.get("groups_open", [])
+        groups_open = [x for x in groups_open if x != uri]
+        if is_open:
+            groups_open.append(uri)
+        flask.session["groups_open"] = groups_open
+        # No response expected, actual opening done in JS
+        return ""
+    if flask.request.method != "DELETE":
         raise NotImplementedError
+    with p.begin_session() as s:
+        g = web_utils.find(s, BudgetGroup, uri)
+        s.query(TransactionCategory).where(
+            TransactionCategory.budget_group_id == g.id_,
+        ).update(
+            {
+                TransactionCategory.budget_group_id: None,
+                TransactionCategory.budget_position: None,
+            },
+        )
+        s.delete(g)
+        # Subtract 1 from the following positions to close the gap
+        query = (
+            s.query(BudgetGroup)
+            .where(BudgetGroup.position >= g.position)
+            .order_by(BudgetGroup.position)
+        )
+        for g in query.yield_per(YIELD_PER):
+            g.position -= 1
 
     month_str = form.get("month")
     month = (
@@ -844,11 +851,11 @@ def group(uri: str) -> str:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
         "budgeting/table.jinja",
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
         oob=True,
     )
@@ -886,11 +893,11 @@ def new_group() -> str:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
         "budgeting/table.jinja",
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
         oob=True,
     )

@@ -5,6 +5,7 @@
 @import "./fonts.css";
 @import "./buttons.css";
 @import "./inputs.css";
+@import "./patterns.css";
 @import "./prose.css";
 
 @import "./nav.css";
@@ -14,10 +15,13 @@
 @import "./spinner.css";
 
 @import "./transactions.css";
+@import "./budgeting.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));
+
 @custom-variant disabled (&:disabled, &[disabled]);
+@custom-variant open (&:where(.open, .open *));
 
 @theme {
     --color-*: initial;
