@@ -2,10 +2,20 @@
     @apply mb-2 rounded-md;
     @apply bg-surface-container-low;
 
+    @variant error {
+        &>label {
+            @apply bg-error-container text-on-error-container;
+        }
+    }
+
     &>label {
         @apply flex items-center;
         @apply pl-1 pr-2 h-11 rounded-md;
         @apply bg-surface-container-highest;
+
+        @variant error {
+            @apply bg-error-container text-on-error-container;
+        }
 
         & input {
             @apply opacity-0 w-0 h-0;

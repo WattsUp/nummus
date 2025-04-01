@@ -79,5 +79,5 @@
             hx-trigger="delete"
             hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}">Delete</button>
 {% endif %}
-<div id="dialog-error" class="error"></div>
+<div id="dialog-error" class="status-error"></div>
 <script>dialog.onLoad()</script>

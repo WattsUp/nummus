@@ -189,6 +189,27 @@
     --btn-text-color: var(--color-on-error);
 }
 
+@utility btn-tonal-good {
+    @apply btn-filled;
+    --btn-base-color: var(--color-good-container);
+    --btn-text-color: var(--color-on-good-container);
+    --btn-state-color: var(--color-on-good-container);
+}
+
+@utility btn-tonal-warning {
+    @apply btn-filled;
+    --btn-base-color: var(--color-warning-container);
+    --btn-text-color: var(--color-on-warning-container);
+    --btn-state-color: var(--color-on-warning-container);
+}
+
+@utility btn-tonal-error {
+    @apply btn-filled;
+    --btn-base-color: var(--color-error-container);
+    --btn-text-color: var(--color-on-error-container);
+    --btn-state-color: var(--color-on-error-container);
+}
+
 @utility btn-text-error {
     @apply btn-text;
     --btn-base-color: var(--color-error);

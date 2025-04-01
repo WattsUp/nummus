@@ -74,6 +74,7 @@ class _GroupContext(TypedDict):
     assigned: Decimal
     activity: Decimal
     available: Decimal
+    has_error: bool
 
 
 def ctx_target(
@@ -254,6 +255,7 @@ def ctx_budget(
             "activity": Decimal(0),
             "available": Decimal(0),
             "categories": [],
+            "has_error": False,
         }
     ungrouped: _GroupContext = {
         "position": -1,
@@ -264,6 +266,7 @@ def ctx_budget(
         "activity": Decimal(0),
         "available": Decimal(0),
         "categories": [],
+        "has_error": False,
     }
 
     query = s.query(TransactionCategory)
@@ -310,21 +313,18 @@ def ctx_budget(
         for v in bar_dollars:
             bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
 
-            # TODO (WattsUp): Add a success and warning color role
-            fg = "pattern-bg-primary-container"
+            fg = "pattern-bg-good"
             if v == 0:
                 bg = "bg-black"
                 bg_fill_w = Decimal(0)
                 fg_fill_w = Decimal(0)
             elif available < 0:
                 bg = "bg-error"
-                fg = "pattern-bg-tertiary"
+                fg = "pattern-bg-warning"
                 bg_fill_w = utils.clamp((-activity - bar_start) / v)
                 fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
             else:
-                bg = (
-                    "bg-primary" if total_assigned == bar_dollars_sum else "bg-tertiary"
-                )
+                bg = "bg-good" if total_assigned == bar_dollars_sum else "bg-warning"
                 bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
                 fg_fill_w = utils.clamp((-activity - bar_start) / v)
 
@@ -346,6 +346,8 @@ def ctx_budget(
         g["activity"] += activity
         g["available"] += available
         g["categories"].append(cat_ctx)
+        if available < 0:
+            g["has_error"] = True
 
     groups_list = sorted(groups.values(), key=lambda item: item["position"])
     groups_list.append(ungrouped)

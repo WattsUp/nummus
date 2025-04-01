@@ -8,7 +8,13 @@
             {{ category.activity | money }}
         </div>
         <div>
-            <button class="btn-tonal ml-auto px-2">{{ category.available | money }}</button>
+            {% if category.available < 0 %}
+                <button class="btn-tonal-error ml-auto px-2">{{ category.available | money }}</button>
+            {% else %}
+                <button class="{{ 'btn-tonal-good' if category.available > 0 else 'btn-tonal-warning' }} ml-auto px-2">
+                    {{ category.available | money }}
+                </button>
+            {% endif %}
         </div>
     </div>
     {% include "budgeting/category-bar.jinja" %}

@@ -1,6 +1,6 @@
 {% for group in ctx.groups %}
     <div id="group-{{ group.uri or 'ungrouped' }}"
-         class="budget-group {{ 'open' if group.is_open }}">
+         class="budget-group {{ 'open' if group.is_open }} {{ 'error' if group.has_error }}">
         <label>
             <input name="open"
                    type="checkbox"
@@ -13,18 +13,18 @@
             <icon class="open:hidden">keyboard_arrow_down</icon>
             <h1>{{ group.name or "Ungrouped" }}</h1>
             <div class="max-md:open:hidden">
-                <div class="text-sm text-on-surface-variant">Assigned</div>
+                <div class="text-sm not-error:text-on-surface-variant">Assigned</div>
                 <div>{{ group.assigned | money }}</div>
             </div>
             <div class="max-md:hidden">
-                <div class="text-sm text-on-surface-variant">Activity</div>
+                <div class="text-sm not-error:text-on-surface-variant">Activity</div>
                 <div>{{ group.activity | money }}</div>
             </div>
             <div class="max-md:open:hidden md:pr-2">
-                <div class="text-sm text-on-surface-variant">Available</div>
+                <div class="text-sm not-error:text-on-surface-variant">Available</div>
                 <div>{{ group.available | money }}</div>
             </div>
-            <div class="not-open:hidden md:hidden text-sm text-on-surface-variant">
+            <div class="not-open:hidden md:hidden text-sm not-error:text-on-surface-variant">
                 <div>Available</div>
                 <div>to spend</div>
             </div>

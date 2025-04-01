@@ -22,6 +22,7 @@
 
 @custom-variant disabled (&:disabled, &[disabled]);
 @custom-variant open (&:where(.open, .open *));
+@custom-variant error (&:where(.error, .error *));
 
 @theme {
     --color-*: initial;
@@ -53,6 +54,16 @@
     --color-on-tertiary-fixed: #002022;
     --color-tertiary-fixed-dim: #A0CFD2;
     --color-on-tertiary-fixed-variant: #1E4D51;
+
+    --color-good: #1B7A01;
+    --color-on-good: #FFFFFF;
+    --color-good-container: #D6EBD2;
+    --color-on-good-container: #042600;
+
+    --color-warning: #EDD502;
+    --color-on-warning: #000000;
+    --color-warning-container: #E8E7BF;
+    --color-on-warning-container: #221F00;
 
     --color-error: #BA1A1A;
     --color-on-error: #FFFFFF;
@@ -145,6 +156,16 @@
             --color-on-tertiary: #00373A;
             --color-tertiary-container: #1E4D51;
             --color-on-tertiary-container: #BCEBEF;
+
+            --color-good: #AAD9A2;
+            --color-on-good: #0A4101;
+            --color-good-container: #135D01;
+            --color-on-good-container: #D6EBD2;
+
+            --color-warning: #D4CD88;
+            --color-on-warning: #3B3600;
+            --color-warning-container: #6A6201;
+            --color-on-warning-container: #E8E7BF;
 
             --color-error: #FFB4AB;
             --color-on-error: #690005;
@@ -255,12 +276,12 @@
     @apply empty:hidden;
 }
 
-@utility error {
+@utility status-error {
     @apply status-box;
     @apply bg-error-container text-on-error-container;
 }
 
-@utility success {
+@utility status-success {
     @apply status-box;
     @apply bg-primary-container text-on-primary-container;
 }
