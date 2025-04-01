@@ -29,7 +29,7 @@
                 <div>to spend</div>
             </div>
         </label>
-        <div>
+        <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
             {% for category in group.categories %}
                 {% include "budgeting/category.jinja" %}
                 {% if not loop.last %}<hr class="mx-4">{% endif %}

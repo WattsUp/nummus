@@ -3,9 +3,11 @@
     <div class="{{ class }} bg-surface-container-high">
         <div class="grow">
             All money assigned
-            {% if ctx.future_assigned != 0 %}
-                <div class="italic text-sm">{{ ctx.future_assigned | money }} assigned in the future.</div>
-            {% endif %}
+            {% block future %}
+                {% if ctx.future_assigned != 0 %}
+                    <div class="italic text-sm">{{ ctx.future_assigned | money }} assigned in the future.</div>
+                {% endif %}
+            {% endblock future %}
         </div>
     </div>
 {% elif ctx.assignable > 0 %}
@@ -13,25 +15,32 @@
         <div class="grow">
             <div>{{ ctx.assignable | money }}</div>
             <div class="text-sm">Ready to assign</div>
-            {% if ctx.future_assigned != 0 %}
-                <div class="italic text-sm">{{ ctx.future_assigned | money }} assigned in the future.</div>
-            {% endif %}
+            {{ self.future() }}
         </div>
         <button class="btn-filled"
                 hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
-                disabled>Assign</button>
+                hx-target="#dialog"
+                hx-swap="innerHTML show:#dialog:top"
+                hx-disabled-elt="this">Assign</button>
     </div>
 {% else %}
     <div class="{{ class }} bg-error-container text-on-error-container">
         <div class="grow">
             <div>{{ ctx.assignable | money }}</div>
             <div class="text-sm">You assigned more than you have</div>
-            {% if ctx.future_assigned != 0 %}
-                <div class="italic text-sm">{{ ctx.future_assigned | money }} assigned in the future.</div>
-            {% endif %}
+            {{ self.future() }}
         </div>
         <button class="btn-filled-error"
                 hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
-                disabled>Fix</button>
+                hx-target="#dialog"
+                hx-swap="innerHTML show:#dialog:top"
+                hx-disabled-elt="this">Fix</button>
+    </div>
+{% endif %}
+{% if ctx.n_overspent > 0 %}
+    <div class="{{ class }} mt-1 bg-error-container text-on-error-container">
+        <div class="grow">
+            {{ ctx.n_overspent }} {{ 'category is' if ctx.n_overspent == 1 else 'categories are' }} overspent
+        </div>
     </div>
 {% endif %}

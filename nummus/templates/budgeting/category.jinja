@@ -9,11 +9,13 @@
         </div>
         <div>
             {% if category.available < 0 %}
-                <button class="btn-tonal-error ml-auto px-2">{{ category.available | money }}</button>
+                <button class="btn-tonal-error ml-auto px-2"
+                        hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
+                        hx-disabled-elt="this">{{ category.available | money }}</button>
             {% else %}
-                <button class="{{ 'btn-tonal-good' if category.available > 0 else 'btn-tonal-warning' }} ml-auto px-2">
-                    {{ category.available | money }}
-                </button>
+                <button class="{{ 'btn-tonal-good' if category.available > 0 else 'btn-tonal-warning' }} ml-auto px-2"
+                        hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
+                        hx-disabled-elt="this">{{ category.available | money }}</button>
             {% endif %}
         </div>
     </div>
