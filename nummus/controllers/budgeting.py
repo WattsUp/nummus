@@ -77,6 +77,18 @@ class _GroupContext(TypedDict):
     has_error: bool
 
 
+class _BudgetContext(TypedDict):
+    """Type definition for budget context."""
+
+    month: str
+    month_next: str | None
+    month_prev: str
+    assignable: Decimal
+    future_assigned: Decimal
+    groups: list[_GroupContext]
+    n_overspent: int
+
+
 def page() -> flask.Response:
     """GET /budgeting.
 
@@ -214,6 +226,11 @@ def assign(uri: str) -> str:
 
     with p.begin_session() as s:
         cat = web_utils.find(s, TransactionCategory, uri)
+        group_uri = (
+            None
+            if cat.budget_group_id is None
+            else BudgetGroup.id_to_uri(cat.budget_group_id)
+        )
         if amount == 0:
             s.query(BudgetAssignment).where(
                 BudgetAssignment.month_ord == month_ord,
@@ -245,9 +262,11 @@ def assign(uri: str) -> str:
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
-        "budgeting/table.jinja",
+        "budgeting/group.jinja",
         ctx=budget,
+        group=next(group for group in budget["groups"] if group["uri"] == group_uri),
         budget_sidebar=sidebar,
+        include_oob=True,
     )
 
 
@@ -1151,7 +1170,7 @@ def ctx_budget(
     categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
     assignable: Decimal,
     future_assigned: Decimal,
-) -> tuple[dict[str, object], str]:
+) -> tuple[_BudgetContext, str]:
     """Get the context to build the budgeting table.
 
     Args:

@@ -574,6 +574,19 @@ const budgeting = {
             htmx.removeClass(htmx.find(`#group-${uri}`), 'open');
         }
     },
+    /**
+     * On click of category, activate assigned input
+     *
+     * @param {Element} e Category element
+     * @param {Event} evt Triggering event
+     */
+    onClickCategory(e, evt) {
+        if (evt.target.matches('input, input *, button, button *'))
+            return const assignedInput = htmx.find(e, 'input');
+        assignedInput.focus({preventScroll: true});
+        assignedInput.selectionStart = 0;
+        assignedInput.selectionEnd = assignedInput.value.length;
+    },
 };
 
 window.addEventListener('click', budgeting.closeRow);

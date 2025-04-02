@@ -40,7 +40,36 @@
 
 
     &>div:first-of-type>div {
-        @apply w-28 shrink-0 text-right;
+        @apply w-28 shrink-0;
+        @apply text-right;
+        @apply relative;
+
+        @variant first-of-type {
+            &>input {
+                @apply absolute inset-0;
+                @apply opacity-0;
+                @apply text-right;
+
+                @variant [:active, :focus-visible, :focus-within] {
+                    @apply opacity-100;
+
+                    &~span {
+                        @apply opacity-0;
+                    }
+                }
+            }
+
+            @variant hover {
+                &>span {
+                    @apply opacity-0;
+                    @apply pointer-events-none;
+                }
+
+                &>input {
+                    @apply opacity-100;
+                }
+            }
+        }
     }
 }
 
