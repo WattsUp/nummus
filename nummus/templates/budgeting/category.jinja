@@ -13,8 +13,10 @@
                         hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
                         hx-disabled-elt="this">{{ category.available | money }}</button>
             {% else %}
-                <button class="{{ 'btn-tonal-good' if category.available > 0 else 'btn-tonal-warning' }} ml-auto px-2"
-                        hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
+                {% set btn_class = ('btn-tonal-warning' if category.target and category.target.to_go > 0 else 'btn-tonal-good') %}
+                <button class="{{ btn_class }} ml-auto px-2"
+                        {% if category.available == 0 %}disabled{% endif %}
+                        hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
                         hx-disabled-elt="this">{{ category.available | money }}</button>
             {% endif %}
         </div>
