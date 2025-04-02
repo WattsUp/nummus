@@ -353,24 +353,44 @@ def overspending(uri: str) -> str | flask.Response:
                 snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
 
-        category_names = TransactionCategory.map_name_emoji(s)
-
-        options: list[tuple[str, str, Decimal]] = [
-            (
-                TransactionCategory.id_to_uri(t_cat_id),
-                category_names[t_cat_id],
-                available,
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+                TransactionCategory.group,
             )
-            for t_cat_id, (_, _, available, _) in categories.items()
-            if available > 0
-        ]
+            .where(
+                TransactionCategory.group.not_in(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER),
+                ),
+            )
+            .order_by(TransactionCategory.group, TransactionCategory.name)
+        )
+        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
+        for t_cat_id, name, group in query.yield_per(YIELD_PER):
+            t_cat_id: int
+            name: str
+            group: TransactionCategoryGroup
+
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+            available = categories[t_cat_id][2]
+            if available > 0:
+                options.append((t_cat_uri, name, available, group))
         if t_cat is None:
             available = assignable
         else:
             _, _, available, _ = categories[t_cat.id_]
-        options = sorted(options, key=lambda x: x[1])
         if assignable > 0:
-            options.insert(0, ("income", "Assignable income", assignable))
+            options.insert(
+                0,
+                (
+                    "income",
+                    "Assignable income",
+                    assignable,
+                    TransactionCategoryGroup.INCOME,
+                ),
+            )
 
         month_str = month.isoformat()[:7]
         category = {
@@ -467,24 +487,44 @@ def move(uri: str) -> str | flask.Response:
                 snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
 
-        category_names = TransactionCategory.map_name_emoji(s)
-
-        options: list[tuple[str, str, Decimal]] = [
-            (
-                TransactionCategory.id_to_uri(t_cat_id),
-                category_names[t_cat_id],
-                available,
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+                TransactionCategory.group,
             )
-            for t_cat_id, (_, _, available, _) in categories.items()
-            if (t_cat is None or t_cat_id != t_cat.id_) and t_cat_id in category_names
-        ]
+            .where(
+                TransactionCategory.group.not_in(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER),
+                ),
+            )
+            .order_by(TransactionCategory.group, TransactionCategory.name)
+        )
+        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
+        for t_cat_id, name, group in query.yield_per(YIELD_PER):
+            t_cat_id: int
+            name: str
+            group: TransactionCategoryGroup
+
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+            available = categories[t_cat_id][2]
+            options.append((t_cat_uri, name, available, group))
+
         if t_cat is None:
             available = assignable
         else:
             _, _, available, _ = categories[t_cat.id_]
-        options = sorted(options, key=lambda x: (x[2] >= 0, x[1]))
         if t_cat is not None:
-            options.insert(0, ("income", "Assignable income", assignable))
+            options.insert(
+                0,
+                (
+                    "income",
+                    "Assignable income",
+                    assignable,
+                    TransactionCategoryGroup.INCOME,
+                ),
+            )
 
         month_str = month.isoformat()[:7]
         category = {

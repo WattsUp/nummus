@@ -25,8 +25,8 @@
     </label>
     <label class="input-outlined input-bg-surface-container-high">
         <select name="destination" required autocomplete="off">
-            <option value="" disabled hidden selected></option>
-            {% for uri, name, available in category.options %}
+            {% for uri, name, available, group in category.options %}
+                {% if not loop.previtem or loop.previtem[3] != group %}<option disabled>{{ group.pretty }}</option>{% endif %}
                 <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
             {% endfor %}
         </select>

@@ -581,8 +581,8 @@ const budgeting = {
      * @param {Event} evt Triggering event
      */
     onClickCategory(e, evt) {
-        if (evt.target.matches('input, input *, button, button *'))
-            return const assignedInput = htmx.find(e, 'input');
+        if (evt.target.matches('input, input *, button, button *')) return;
+        const assignedInput = htmx.find(e, 'input');
         assignedInput.focus({preventScroll: true});
         assignedInput.selectionStart = 0;
         assignedInput.selectionEnd = assignedInput.value.length;
