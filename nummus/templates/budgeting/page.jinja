@@ -18,7 +18,7 @@
         <icon>chevron_right</icon>
     </button>
 </div>
-<details class="max-w-2xl mx-auto lg:mb-2 bg-surface-container-high rounded-md">
+<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
     <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
         <icon>help</icon>
         <span class="mr-auto">About budgeting in nummus</span>
@@ -48,11 +48,8 @@
         </p>
     </div>
 </details>
+<div id="budgeting-status" class="mx-auto w-md mb-2 max-w-full">{% include "budgeting/status.jinja" %}</div>
 <div class="lg:grid grid-cols-[5fr_2fr] gap-2 grid-flow-row-dense">
-    <div id="budgeting-status"
-         class="col-start-2 sticky top-10 md:top-0 bg-surface max-lg:py-2 z-10">
-        {% include "budgeting/status.jinja" %}
-    </div>
     <div>
         {% for group in ctx.groups %}
             <div id="group-{{ group.uri or 'ungrouped' }}"

@@ -189,18 +189,18 @@
     --btn-text-color: var(--color-on-error);
 }
 
-@utility btn-tonal-good {
+@utility btn-tonal-secondary {
     @apply btn-filled;
-    --btn-base-color: var(--color-good-container);
-    --btn-text-color: var(--color-on-good-container);
-    --btn-state-color: var(--color-on-good-container);
+    --btn-base-color: var(--color-secondary-container);
+    --btn-text-color: var(--color-on-secondary-container);
+    --btn-state-color: var(--color-on-secondary-container);
 }
 
-@utility btn-tonal-warning {
+@utility btn-tonal-tertiary {
     @apply btn-filled;
-    --btn-base-color: var(--color-warning-container);
-    --btn-text-color: var(--color-on-warning-container);
-    --btn-state-color: var(--color-on-warning-container);
+    --btn-base-color: var(--color-tertiary-container);
+    --btn-text-color: var(--color-on-tertiary-container);
+    --btn-state-color: var(--color-on-tertiary-container);
 }
 
 @utility btn-tonal-error {

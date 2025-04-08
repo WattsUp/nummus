@@ -57,8 +57,8 @@ class _CategoryContext(TypedDict):
     assigned: Decimal
     activity: Decimal
     available: Decimal
-    # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
-    bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
+    # List of bars (width ratio, bg fill ratio, fg fill ratio)
+    bars: list[tuple[Decimal, Decimal, Decimal]]
 
     target: _TargetContext | None
 
@@ -1291,7 +1291,7 @@ def ctx_budget(
             bar_dollars = target_ctx["progress_bars"]
 
         bar_dollars_sum = sum(bar_dollars)
-        bars: list[tuple[Decimal, Decimal, Decimal, str, str]] = []
+        bars: list[tuple[Decimal, Decimal, Decimal]] = []
         bar_start = Decimal(0)
         total_assigned = available - activity
         max_bar_dollars = max(total_assigned, -activity)
@@ -1301,22 +1301,17 @@ def ctx_budget(
         for v in bar_dollars:
             bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
 
-            fg = "pattern-bg-good"
             if v == 0:
-                bg = "bg-black"
                 bg_fill_w = Decimal(0)
                 fg_fill_w = Decimal(0)
             elif available < 0:
-                bg = "bg-error"
-                fg = "pattern-bg-warning"
                 bg_fill_w = utils.clamp((-activity - bar_start) / v)
                 fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
             else:
-                bg = "bg-good" if total_assigned == bar_dollars_sum else "bg-warning"
                 bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
                 fg_fill_w = utils.clamp((-activity - bar_start) / v)
 
-            bars.append((bar_w, bg_fill_w, fg_fill_w, bg, fg))
+            bars.append((bar_w, bg_fill_w, fg_fill_w))
             bar_start += v
 
         cat_ctx: _CategoryContext = {

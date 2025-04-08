@@ -21,6 +21,10 @@
         <div class="h-30 bg-tertiary text-on-tertiary p-2">Tertiary</div>
         <div class="h-20 bg-on-tertiary text-tertiary p-2">On Tertiary</div>
     </div>
+    <div>
+        <div class="h-30 bg-error text-on-error p-2">Error</div>
+        <div class="h-20 bg-on-error text-error p-2">On Error</div>
+    </div>
     <div class="col-start-1">
         <div class="h-30 bg-primary-container text-on-primary-container p-2">Primary Container</div>
         <div class="h-20 bg-on-primary-container text-primary-container p-2">On Primary Container</div>
@@ -32,6 +36,10 @@
     <div>
         <div class="h-30 bg-tertiary-container text-on-tertiary-container p-2">Tertiary Container</div>
         <div class="h-20 bg-on-tertiary-container text-tertiary-container p-2">On Tertiary Container</div>
+    </div>
+    <div>
+        <div class="h-30 bg-error-container text-on-error-container p-2">Error Container</div>
+        <div class="h-20 bg-on-error-container text-error-container p-2">On Error Container</div>
     </div>
     <div class="col-start-1">
         <div class="h-30 text-on-primary-fixed flex">
@@ -57,34 +65,14 @@
         <div class="h-20 bg-on-tertiary-fixed text-tertiary-fixed p-2">On Tertiary Fixed</div>
         <div class="h-20 bg-on-tertiary-fixed-variant text-tertiary-fixed p-2">On Tertiary Fixed Variant</div>
     </div>
-    <div class="col-start-1">
-        <div class="h-30 bg-good text-on-good p-2">Good</div>
-        <div class="h-20 bg-on-good text-good p-2">On Good</div>
-    </div>
-    <div>
-        <div class="h-30 bg-warning text-on-warning p-2">Warning</div>
-        <div class="h-20 bg-on-warning text-warning p-2">On Warning</div>
-    </div>
-    <div>
-        <div class="h-30 bg-error text-on-error p-2">Error</div>
-        <div class="h-20 bg-on-error text-error p-2">On Error</div>
-    </div>
-    <div class="col-start-1">
-        <div class="h-30 bg-good-container text-on-good-container p-2">Good Container</div>
-        <div class="h-20 bg-on-good-container text-good-container p-2">On Good Container</div>
-    </div>
-    <div>
-        <div class="h-30 bg-warning-container text-on-warning-container p-2">Warning Container</div>
-        <div class="h-20 bg-on-warning-container text-warning-container p-2">On Warning Container</div>
-    </div>
-    <div>
-        <div class="h-30 bg-error-container text-on-error-container p-2">Error Container</div>
-        <div class="h-20 bg-on-error-container text-error-container p-2">On Error Container</div>
-    </div>
     <div class="col-start-1 col-span-2 md:col-span-3 flex">
         <div class="bg-surface-dim text-on-surface p-2 w-1/3">Surface Dim</div>
         <div class="bg-surface text-on-surface p-2 w-1/3">Surface</div>
         <div class="bg-surface-bright text-on-surface p-2 w-1/3">Surface Bright</div>
+    </div>
+    <div>
+        <div class="bg-inverse-surface text-inverse-on-surface p-2">Inverse Surface</div>
+        <div class="bg-inverse-on-surface text-inverse-surface p-2">Inverse On Surface</div>
     </div>
     <div class="col-start-1 col-span-2 md:col-span-3 flex max-md:text-sm">
         <div class="bg-surface-container-lowest text-on-surface p-2 w-1/5">Surface Container Lowest</div>
@@ -93,16 +81,8 @@
         <div class="bg-surface-container-high text-on-surface p-2 w-1/5">Surface Container High</div>
         <div class="bg-surface-container-highest text-on-surface p-2 w-1/5">Surface Container Highest</div>
     </div>
-    <div class="col-start-1">
-        <div class="bg-inverse-surface text-inverse-on-surface p-2">Inverse Surface</div>
-        <div class="bg-inverse-on-surface text-inverse-surface p-2">Inverse On Surface</div>
-    </div>
     <div>
         <div class="bg-inverse-primary text-on-primary-fixed p-2">Inverse Primary</div>
-    </div>
-    <div class="flex gap-2">
-        <div class="bg-scrim text-white p-2 w-1/2">Scrim</div>
-        <div class="bg-shadow text-white p-2 w-1/2">Shadow</div>
     </div>
     <div class="col-start-1 col-span-2 md:col-span-3 flex">
         <div class="bg-on-surface text-surface p-2 w-1/4">On Surface</div>
@@ -110,16 +90,9 @@
         <div class="bg-outline text-surface p-2 w-1/4">Outline</div>
         <div class="bg-outline-variant text-on-surface p-2 w-1/4">Outline Variant</div>
     </div>
-</div>
-<h2 class="text-2xl font-serif text-primary">Patterns</h2>
-<div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
-    <div class="h-30 relative text-lg p-2">
-        <b>Lines</b>
-        <div class="absolute inset-0 pattern-lines"></div>
-    </div>
-    <div class="h-30 relative text-lg p-2">
-        <b>Diagonal Lines</b>
-        <div class="absolute inset-0 pattern-diagonal-lines"></div>
+    <div class="flex gap-2">
+        <div class="bg-scrim text-white p-2 w-1/2">Scrim</div>
+        <div class="bg-shadow text-white p-2 w-1/2">Shadow</div>
     </div>
 </div>
 <h2 class="text-2xl font-serif text-primary">Prose</h2>
@@ -617,7 +590,7 @@
     <icon>icecream</icon>Open Snackbar
 </button>
 <h2 class="text-2xl font-serif text-primary">Status Boxes</h2>
-<div class="status-success">
+<div class="status-success mb-2">
     <icon>check</icon>Something went right
 </div>
 <div class="status-error">

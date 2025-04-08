@@ -88,10 +88,10 @@
 
             /* big radius to get pill shape */
             border-radius: 100em;
+
+            @variant last-of-type {
+                @apply pattern-diagonal-lines pattern-opacity-100;
+            }
         }
     }
-}
-
-@utility bar-fg {
-    @apply pattern-diagonal-lines pattern-white pattern-opacity-100;
 }
