@@ -1,46 +1,38 @@
-{% set class = "p-2 flex gap-4 items-center rounded-md" %}
-{% if ctx.assignable == 0 %}
-    <div class="{{ class }} bg-surface-container-high">
-        <div class="grow">
-            All money assigned
-            {% block future %}
-                {% if ctx.future_assigned != 0 %}
-                    <div class="italic text-sm">{{ ctx.future_assigned | money }} assigned in the future.</div>
-                {% endif %}
-            {% endblock future %}
-        </div>
-    </div>
+{% if ctx.assignable < 0 or ctx.n_overspent > 0 %}
+    {% set class = "bg-error-container text-on-error-container" %}
 {% elif ctx.assignable > 0 %}
-    <div class="{{ class }} bg-primary-container text-on-primary-container">
-        <div class="grow">
-            <div>{{ ctx.assignable | money }}</div>
-            <div class="text-sm">Ready to assign</div>
-            {{ self.future() }}
-        </div>
-        <button class="btn-filled"
-                hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
-                hx-target="#dialog"
-                hx-swap="innerHTML show:#dialog:top"
-                hx-disabled-elt="this">Assign</button>
-    </div>
+    {% set class = "bg-primary-container text-on-primary-container" %}
 {% else %}
-    <div class="{{ class }} bg-error-container text-on-error-container">
-        <div class="grow">
-            <div>{{ ctx.assignable | money }}</div>
-            <div class="text-sm">You assigned more than you have</div>
-            {{ self.future() }}
-        </div>
-        <button class="btn-filled-error"
-                hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
-                hx-target="#dialog"
-                hx-swap="innerHTML show:#dialog:top"
-                hx-disabled-elt="this">Fix</button>
-    </div>
+    {% set class = "bg-surface-container-high text-on-surface-variant" %}
 {% endif %}
-{% if ctx.n_overspent > 0 %}
-    <div class="{{ class }} mt-1 bg-error-container text-on-error-container">
-        <div class="grow">
+<div class="h-17 p-2 flex flex-col justify-center rounded-md {{ class }}">
+    <div class="flex gap-2 items-center">
+        <div class="text-2xl font-bold grow">{{ ctx.assignable | money }}</div>
+        {% if ctx.assignable > 0 %}
+            <button class="{{ 'btn-filled-error' if ctx.n_overspent > 0 else 'btn-filled' }}"
+                    hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
+                    hx-target="#dialog"
+                    hx-swap="innerHTML show:#dialog:top"
+                    hx-disabled-elt="this">Assign</button>
+        {% elif ctx.assignable < 0 %}
+            <button class="btn-filled-error"
+                    hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
+                    hx-target="#dialog"
+                    hx-swap="innerHTML show:#dialog:top"
+                    hx-disabled-elt="this">Fix</button>
+        {% else %}
+            <icon class="filled lg">check_circle</icon>
+        {% endif %}
+    </div>
+    <div class="text-sm">
+        {% if ctx.n_overspent > 0 %}
             {{ ctx.n_overspent }} {{ 'category is' if ctx.n_overspent == 1 else 'categories are' }} overspent
-        </div>
+        {% elif ctx.assignable > 0 %}
+            Ready to assign
+        {% elif ctx.assignable < 0 %}
+            You assigned more than you have
+        {% else %}
+            All money assigned
+        {% endif %}
     </div>
-{% endif %}
+</div>

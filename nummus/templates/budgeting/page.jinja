@@ -1,22 +1,25 @@
-<div class="flex items-center mb-2"
+<div class="pb-2 grid grid-cols-2 md:grid-cols-4 grid-flow-row-dense gap-2"
      hx-target="#main"
      hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
      hx-get="{{ url_for('budgeting.page') }}">
     <h1 class="text-3xl font-serif text-primary mr-auto">Budgeting</h1>
-    <button class="btn-text btn-sq"
-            hx-get="{{ url_for('budgeting.page', month=ctx.month_prev) }}"
-            hx-push-url="true"
-            hx-swap="innerHTML show:window:top">
-        <icon>chevron_left</icon>
-    </button>
-    <h1 class="text-3xl font-serif text-primary">{{ ctx.month }}</h1>
-    <button class="btn-text btn-sq"
-            hx-get="{{ url_for('budgeting.page', month=ctx.month_next) }}"
-            hx-push-url="true"
-            hx-swap="innerHTML show:window:top"
-            {% if not ctx.month_next %}disabled{% endif %}>
-        <icon>chevron_right</icon>
-    </button>
+    <div id="budgeting-status" class="mx-auto w-md max-w-full col-span-2">{% include "budgeting/status.jinja" %}</div>
+    <div class="flex items-center justify-end h-9">
+        <button class="btn-text btn-sq"
+                hx-get="{{ url_for('budgeting.page', month=ctx.month_prev) }}"
+                hx-push-url="true"
+                hx-swap="innerHTML show:window:top">
+            <icon>chevron_left</icon>
+        </button>
+        <h1 class="text-3xl font-serif text-primary">{{ ctx.month }}</h1>
+        <button class="btn-text btn-sq"
+                hx-get="{{ url_for('budgeting.page', month=ctx.month_next) }}"
+                hx-push-url="true"
+                hx-swap="innerHTML show:window:top"
+                {% if not ctx.month_next %}disabled{% endif %}>
+            <icon>chevron_right</icon>
+        </button>
+    </div>
 </div>
 <details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
     <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
@@ -48,7 +51,6 @@
         </p>
     </div>
 </details>
-<div id="budgeting-status" class="mx-auto w-md mb-2 max-w-full">{% include "budgeting/status.jinja" %}</div>
 <div class="lg:grid grid-cols-[5fr_2fr] gap-2 grid-flow-row-dense">
     <div>
         {% for group in ctx.groups %}

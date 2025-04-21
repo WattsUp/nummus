@@ -123,9 +123,14 @@
         font-variation-settings: 'FILL' 1;
     }
 
+    icon.lg {
+        font-size: 32px;
+    }
+
     icon.sm {
         font-size: 20px;
     }
+
 
     html {
         @apply scroll-smooth overscroll-y-contain;
