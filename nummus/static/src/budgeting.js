@@ -418,15 +418,16 @@ const budgeting = {
             {
                 name: 'Assigned',
                 amount: assigned,
-                color: getThemeColor(onTrack ? 'green' : 'yellow'),
+                borderColorRaw: 'primary',
+                backgroundColorRaw: 'primary-container',
             },
         ];
         if (remaining > 0) {
             datasets.push({
-
-                name: 'Assigned',
+                name: 'Remaining',
                 amount: remaining,
-                color: getThemeColor('grey-500'),
+                borderColorRaw: 'tertiary',
+                backgroundColorRaw: 'tertiary-container',
             });
         }
         if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
@@ -586,6 +587,7 @@ const budgeting = {
         assignedInput.focus({preventScroll: true});
         assignedInput.selectionStart = 0;
         assignedInput.selectionEnd = assignedInput.value.length;
+        // TODO (WattsUp): Update sidebar
     },
 };
 

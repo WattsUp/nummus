@@ -95,3 +95,21 @@
         }
     }
 }
+
+@utility budget-sidebar-summary {
+    @apply p-2 rounded-md;
+    @apply bg-surface-container-high;
+
+    &>div {
+        @apply flex justify-between items-center gap-1;
+    }
+
+    & label {
+        @apply input-bg-surface-container-high;
+    }
+}
+
+@utility budget-sidebar-target {
+    @apply budget-sidebar-summary;
+    @apply mt-2;
+}

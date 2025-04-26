@@ -51,11 +51,13 @@
         </p>
     </div>
 </details>
-<div class="lg:grid grid-cols-[5fr_2fr] gap-2 grid-flow-row-dense">
+<div class="lg:grid grid-cols-[1fr_275px] gap-2 grid-flow-row-dense">
     <div>
         {% for group in ctx.groups %}
             <div id="group-{{ group.uri or 'ungrouped' }}"
                  class="budget-group {{ 'open' if group.is_open }}">{% include "budgeting/group.jinja" %}</div>
         {% endfor %}
     </div>
+    <div id="budgeting-sidebar" class="max-lg:hidden">{% include "budgeting/sidebar.jinja" %}</div>
+    {# TODO (WattsUp): fix oob update #}
 </div>

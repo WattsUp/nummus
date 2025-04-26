@@ -13,7 +13,7 @@ const pluginDoughnutText = {
         const {
             ctx,
             chartArea: {top, bottom, left, right, width, height},
-            doughnutText: {text, font},
+            doughnutText: {text, font, color},
         } = chart;
 
         const px = Math.floor(height / 10);
@@ -22,6 +22,7 @@ const pluginDoughnutText = {
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'center';
         ctx.font = `${px}px ${font}`;
+        ctx.fillStyle = color;
         ctx.fillText(text, (left + right) / 2, (top + bottom) / 2);
 
         ctx.restore();

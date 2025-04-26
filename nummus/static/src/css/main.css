@@ -266,6 +266,11 @@
     @apply bg-error-container text-on-error-container;
 }
 
+@utility status-tertiary {
+    @apply status-box;
+    @apply bg-tertiary-container text-on-tertiary-container;
+}
+
 @utility status-success {
     @apply status-box;
     @apply bg-primary-container text-on-primary-container;

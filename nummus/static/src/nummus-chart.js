@@ -185,14 +185,14 @@ const nummusChart = {
             total += value;
             data.push(value);
             labels.push(source.name);
-            colors.push(source.color);
-            backgroundColors.push(source.color + '80');
+            colors.push(source.borderColorRaw);
+            backgroundColors.push(source.backgroundColorRaw);
         }
         datasets.push({
             data: data,
             borderWidth: 1,
-            borderColor: colors,
-            backgroundColor: backgroundColors,
+            borderColorRaw: colors,
+            backgroundColorRaw: backgroundColors,
         });
         return {
             labels: labels,
@@ -215,6 +215,7 @@ const nummusChart = {
         const {labels, datasets, total} = this.datasetsPie(sources);
 
         const pluginObjects = [
+            pluginColor,
             pluginDoughnutText,
         ];
         const pluginOptions = {
@@ -239,7 +240,6 @@ const nummusChart = {
             doughnutText: {
                 text: formatterF0.format(total),
                 font: '\'liberation-sans\', \'sans-serif\'',
-
             }
         };
         if (plugins) {
