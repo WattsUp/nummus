@@ -1,5 +1,6 @@
 {% if include_oob %}
     <div id="budgeting-status" hx-swap-oob="innerHTML">{% include "budgeting/status.jinja" %}</div>
+    <div id="budgeting-sidebar" hx-swap-oob="innerHTML">{% include "budgeting/sidebar.jinja" %}</div>
 {% endif %}
 <label class="{{ 'error' if group.has_error }}">
     <input name="open"
@@ -29,7 +30,7 @@
         <div>to spend</div>
     </div>
 </label>
-<div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
+<div>
     {% for category in group.categories %}
         {% include "budgeting/category.jinja" %}
         {% if not loop.last %}<hr class="mx-4">{% endif %}

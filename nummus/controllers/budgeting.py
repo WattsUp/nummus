@@ -1049,7 +1049,7 @@ def sidebar() -> flask.Response:
         sidebar = ctx_sidebar(s, month, categories, future_assigned, uri)
         html = flask.render_template(
             "budgeting/sidebar.jinja",
-            oob=True,
+            ctx={"month": month_str},
             budget_sidebar=sidebar,
         )
     response = flask.make_response(html)

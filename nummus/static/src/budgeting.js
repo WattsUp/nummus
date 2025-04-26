@@ -431,7 +431,11 @@ const budgeting = {
             });
         }
         if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
-            nummusChart.updatePie(this.sidebarChart, datasets);
+            nummusChart.updatePie(
+                this.sidebarChart,
+                datasets,
+                `${percent.toFixed(0)}%`,
+            );
         } else {
             this.sidebarChart = nummusChart.createPie(
                 ctx,
@@ -587,7 +591,7 @@ const budgeting = {
         assignedInput.focus({preventScroll: true});
         assignedInput.selectionStart = 0;
         assignedInput.selectionEnd = assignedInput.value.length;
-        // TODO (WattsUp): Update sidebar
+        htmx.trigger(e, 'sidebar');
     },
 };
 

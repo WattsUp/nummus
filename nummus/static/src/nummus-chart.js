@@ -271,24 +271,27 @@ const nummusChart = {
      *
      * @param {Object} chart Chart object
      * @param {Array} sources Array of sources [values0, values1, ...]
+     * @param {String} doughnutText Text to update doughnutText
      */
-    updatePie: function(chart, sources) {
+    updatePie: function(chart, sources, doughnutText) {
         const {labels, datasets, total} = this.datasetsPie(sources);
 
         if (chart.data.datasets.length == datasets.length) {
             // Swapping same type monthly or not
             for (let i = 0; i < datasets.length; ++i) {
                 chart.data.datasets[i].data = datasets[i].data;
-                chart.data.datasets[i].borderColor = datasets[i].borderColor;
-                chart.data.datasets[i].backgroundColor =
-                    datasets[i].backgroundColor;
+                chart.data.datasets[i].borderColorRaw =
+                    datasets[i].borderColorRaw;
+                chart.data.datasets[i].backgroundColorRaw =
+                    datasets[i].backgroundColorRaw;
             }
         } else {
             chart.data.datasets = datasets;
         }
         chart.data.labels = labels;
         chart.config.options.plugins.doughnutText.text =
-            formatterF0.format(total);
+            doughnutText ?? formatterF0.format(total);
+        pluginColor.updateChartColor(chart);
         chart.update();
     },
     /**
