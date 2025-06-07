@@ -1364,7 +1364,9 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
+    # TODO (WattsUp): Add reorder mode
     "/h/budgeting/reorder": (reorder, ["PUT"]),
+    # TODO (WattsUp): Add group editing
     "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
     "/h/budgeting/t/<path:uri>": (target, ["GET", "POST", "PUT", "DELETE"]),

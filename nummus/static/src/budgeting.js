@@ -593,6 +593,21 @@ const budgeting = {
         assignedInput.selectionEnd = assignedInput.value.length;
         htmx.trigger(e, 'sidebar');
     },
+    /**
+     * On click of delete target, confirm action
+     *
+     * @param {Event} evt Triggering event
+     */
+    confirmDelete: function(evt) {
+        dialog.confirm(
+            'Delete Target',
+            'Delete',
+            () => {
+                htmx.trigger(evt.target, 'delete');
+            },
+            'Target will be deleted.',
+        );
+    },
 };
 
 window.addEventListener('click', budgeting.closeRow);

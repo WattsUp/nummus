@@ -1,155 +1,164 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
-     onclick="overlayEditor.close()"></div>
-<div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
-     hx-swap="innerHTML">
-    <div class="flex items-start mb-2">
-        <h1 class="font-serif text-2xl text-green-600 grow">
-            {{ "New" if target["new"] else "Edit" }} Target: {{ target["category"] }}
-        </h1>
-        <button class="shrink-0" onclick="overlayEditor.close()">
-            {% with class="w-[32px] h-[32px]" %}
-                {% include "svg/x.svg" %}
-            {% endwith %}
-        </button>
+{% if target.new %}
+    {% with headline="New target", save_url=url_for("budgeting.target", uri=target.uri), save_method="post" %}
+        {% include "shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% else %}
+    {% with headline="Edit target", save_url=url_for("budgeting.target", uri=target.uri) %}
+        {% include "shared/dialog-headline.jinja" %}
+    {% endwith %}
+{% endif %}
+{# TODO (WattsUp): Set pending when changing period #}
+{# TODO (WattsUp): Add validation and update desc #}
+{# TODO (WattsUp): Update page after target update #}
+<form class="grid grid-cols-2 gap-2 w-96" onsubmit="return false">
+    <h1 class="text-center col-span-full">How do you want to plan for {{ target.category }} spending?</h1>
+    <div class="flex gap-1 justify-center col-span-full flex-wrap">
+        {% for period, period_str in target["period_options"].items() %}
+            {% if period == target["period"] %}
+                <div class="btn-tonal">{{ period_str }}</div>
+                <input value="{{ period_str }}" name="period" type="hidden">
+            {% else %}
+                <div class="btn-outlined"
+                     hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}"
+                     hx-target="#dialog"
+                     hx-swap="innerHTML show:#dialog:top">{{ period_str }}</div>
+            {% endif %}
+        {% endfor %}
     </div>
-    <div class="flex w-full gap-1 flex-col grow"
-         id="form-edit-target"
-         hx-target="#overlay"
-         hx-include="this">
-        <div class="flex gap-1 justify-center">
-            {% for period, period_str in target["period_options"].items() %}
-                {% if period == target["period"] %}
-                    <div class="button bg-blue cursor-pointer">{{ period_str }}</div>
-                    <input value="{{ period_str }}" name="period" type="hidden">
-                {% else %}
-                    <div class="button hover-blue cursor-pointer"
-                         hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}">
-                        {{ period_str }}
-                    </div>
-                {% endif %}
-            {% endfor %}
+    <label class="input-outlined input-bg-surface-container-high col-span-full">
+        <input name="amount"
+               required
+               enterkeyhint="next"
+               placeholder=""
+               value="{{ target.amount | input_value }}"
+               hx-target="next error"
+               hx-trigger="input delay:200ms"
+               hx-include="this"
+               autocomplete="off">
+        <icon>attach_money</icon>
+        <div>
+            <div>Amount</div>
         </div>
-        <div class="flex gap-1 flex-wrap min-h-7 items-center">
-            <div class="w-32 shrink-1">Amount</div>
-            <input id="budgeting-amount"
-                   inputmode="tel"
-                   class="grow"
-                   name="amount"
-                   placeholder="0.00"
-                   value="{{ "%.2f" % target["amount"] if target["amount"] }}"
-                   hx-target="#budgeting-desc"
-                   hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}"
-                   hx-trigger="change, keyup changed delay:100ms">
+        <div>
+            <error></error>
         </div>
-        {% if target["period"] == "WEEK" %}
-            <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                <div class="w-32 shrink-1">Every</div>
-                <select class="grow" name="due">
-                    {% for weekday in target["weekdays"] %}
-                        <option value="{{ loop.index0 }}"
-                                {% if target["due_date_weekday"] == loop.index0 %}selected{% endif %}>
-                            {{ weekday }}
-                        </option>
+    </label>
+    {% if target.period == "WEEK" %}
+        <label class="input-outlined input-bg-surface-container-high">
+            <select name="due" autocomplete="off">
+                {% for weekday in target.weekdays %}
+                    <option value="{{ loop.index0 }}"
+                            {% if target.due_date_weekday == loop.index0 %}selected{% endif %}>{{ weekday }}</option>
+                {% endfor %}
+            </select>
+            <icon>date_range</icon>
+            <div>
+                <div>Every</div>
+            </div>
+            <div>
+                <error></error>
+            </div>
+        </label>
+    {% elif target.period == "ONCE" %}
+        <label class="toggle col-span-full">
+            <input type="checkbox"
+                   name="has-due"
+                   {% if target["due_date"] %}checked{% endif %}
+                   autocomplete="off">
+            <div>Due Date</div>
+            <switch></switch>
+        </label>
+        {% if target.due_date %}
+            <label class="input-outlined input-bg-surface-container-high">
+                <select name="due-month" autocomplete="off">
+                    {% for month in target.months %}
+                        <option value="{{ loop.index }}"
+                                {% if target.due_date_month == loop.index %}selected{% endif %}>{{ month }}</option>
                     {% endfor %}
                 </select>
-            </div>
-        {% elif target["period"] == "ONCE" %}
-            <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                <div class="w-32 shrink-1">Due Date</div>
-                <label class="checkbox">
-                    <input type="checkbox"
-                           name="has-due"
-                           {% if target["due_date"] %}checked{% endif %}
-                           hx-target="#budgeting-desc"
-                           hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}"
-                           autocomplete="off">
-                    {% with class = "w-6 h-6" %}
-                        {% include "svg/check.svg" %}
-                    {% endwith %}
-                </label>
-                <input type="hidden" name="has-due" value="off">
-            </div>
-            {% if target["due_date"] %}
-                <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                    <div class="w-32 shrink-1">By</div>
-                    <select class="grow" name="due-month">
-                        {% for month in target["months"] %}
-                            <option value="{{ loop.index }}"
-                                    {% if target["due_date_month"] == loop.index %}selected{% endif %}>
-                                {{ month }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                    <select name="due-year">
-                        {% for year in range(current_year, current_year + 50) %}
-                            <option value="{{ year }}"
-                                    {% if target["due_date_year"] == year %}selected{% endif %}>{{ year }}</option>
-                        {% endfor %}
-                    </select>
+                <icon>event</icon>
+                <div>
+                    <div>By</div>
                 </div>
-            {% endif %}
-        {% else %}
-            <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                <div class="w-32 shrink-1">By</div>
-                <input class="grow" name="due" type="date" value="{{ target["due_date"] }}">
-            </div>
-        {% endif %}
-        {% set money_period = ("/week" if target["period"] == "WEEK") %}
-        {% set next_period = ("year" if target["period"] == "YEAR" else "month") %}
-        {% if target["period"] != "ONCE" %}
-            <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                <div class="w-32 shrink-1">Next {{ next_period }}</div>
-                <select class="grow"
-                        name="type"
-                        hx-target="#budgeting-desc"
-                        hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}">
-                    <option value="accumulate"
-                            {% if target["type"] == "ACCUMULATE" %}selected{% endif %}>Add more</option>
-                    <option value="refill" {% if target["type"] == "REFILL" %}selected{% endif %}>Refill up</option>
+            </label>
+            <label class="input-outlined input-bg-surface-container-high">
+                <select name="due-year" autocomplete="off">
+                    {% for year in range(current_year, current_year + 50) %}
+                        <option value="{{ year }}"
+                                {% if target.due_date_year == year %}selected{% endif %}>{{ year }}</option>
+                    {% endfor %}
                 </select>
+            </label>
+        {% endif %}
+    {% else %}
+        <label class="input-outlined input-bg-surface-container-high col-span-full">
+            <input name="date"
+                   type="date"
+                   required
+                   enterkeyhint="next"
+                   placeholder=""
+                   value="{{ target.due_date or "" }}"
+                   hx-target="next error"
+                   hx-trigger="input delay:200ms"
+                   hx-include="this"
+                   autocomplete="off">
+            <icon>event</icon>
+            <div>
+                <div>By</div>
             </div>
-        {% endif %}
-        {% if target["period"].name in ("MONTH", "YEAR") %}
-            <div class="flex gap-1 flex-wrap min-h-7 items-center">
-                <div class="w-32 shrink-1">Repeat every</div>
-                <input class="grow"
-                       name="repeat"
-                       inputmode="tel"
-                       min="1"
-                       value="{{ target["repeat_every"] }}"
-                       hx-target="#budgeting-desc"
-                       hx-get="{{ url_for('budgeting.target', uri=target['uri'], desc=True) }}">
+            <div>
+                <error></error>
             </div>
-        {% endif %}
-        {% include "budgeting/target-desc.jinja" %}
-    </div>
-    <div id="overlay-error"
-         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
-        {% if not target["new"] %}
-            <button hx-delete="{{ url_for('budgeting.target', uri=target['uri']) }}"
-                    hx-confirm="Are you sure you wish to delete this target?"
-                    hx-target="#overlay-error"
-                    class="button hover-red">
-                {% with class="w-[24px] h-[24px] inline-block align-text-bottom" %}
-                    {% include "svg/trash.svg" %}
-                {% endwith %}
-                Delete
-            </button>
-        {% endif %}
-        <div class="grow"></div>
-        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
-        {% if target["new"] %}
-            <button hx-post="{{ url_for('budgeting.target', uri=target['uri']) }}"
-                    hx-target="#overlay-error"
-                    hx-include="#form-edit-target"
-                    class="button bg-green">Save</button>
-        {% else %}
-            <button hx-put="{{ url_for('budgeting.target', uri=target['uri']) }}"
-                    hx-target="#overlay-error"
-                    hx-include="#form-edit-target"
-                    class="button bg-green">Save</button>
-        {% endif %}
-    </div>
-    <script>overlayEditor.addListeners("form-edit-target");</script>
+        </label>
+    {% endif %}
+    {% set money_period = ("/week" if target.period == "WEEK") %}
+    {% set next_period = ("year" if target.period == "YEAR" else "month") %}
+    {% if target.period != "ONCE" %}
+        <label class="input-outlined input-bg-surface-container-high">
+            <select name="type" autocomplete="off">
+                <option value="accumulate"
+                        {% if target.type == "ACCUMULATE" %}selected{% endif %}>Add more</option>
+                <option value="refill" {% if target.type == "REFILL" %}selected{% endif %}>Refill up</option>
+            </select>
+            <icon>repeat</icon>
+            <div>
+                <div>Next {{ next_period }}</div>
+            </div>
+            <div>
+                <error></error>
+            </div>
+        </label>
+    {% endif %}
+    {% if target.period.name in ("MONTH", "YEAR") %}
+        <label class="input-outlined input-bg-surface-container-high">
+            <input name="repeat"
+                   required
+                   enterkeyhint="next"
+                   placeholder=""
+                   value="{{ target.repeat_every | input_value }}"
+                   min="1"
+                   hx-target="next error"
+                   hx-trigger="input delay:200ms"
+                   hx-include="this"
+                   autocomplete="off">
+            <icon>event_repeat</icon>
+            <div>
+                <div>Repeat every</div>
+            </div>
+            <div>
+                <error></error>
+            </div>
+        </label>
+    {% endif %}
+    {% include "budgeting/target-desc.jinja" %}
+</form>
+<div class="flex justify-around flex-wrap">
+    {% if not target.new %}
+        <button class="btn-text-error"
+                onclick="budgeting.confirmDelete(event)"
+                hx-trigger="delete"
+                hx-delete="{{ url_for('budgeting.target', uri=target.uri) }}">Delete</button>
+    {% endif %}
 </div>
+<div id="dialog-error" class="status-error"></div>
+<script>dialog.onLoad()</script>
