@@ -1,83 +1,103 @@
 {% if category.uri %}
-    {% with headline="Edit category", save_url=url_for("transaction_categories.category", uri=category.uri) %}
-        {% include "shared/dialog-headline.jinja" %}
-    {% endwith %}
+  {% with headline="Edit category", save_url=url_for("transaction_categories.category", uri=category.uri) %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
 {% else %}
-    {% with headline="New category", save_url=url_for("transaction_categories.new"), save_method="post" %}
-        {% include "shared/dialog-headline.jinja" %}
-    {% endwith %}
+  {% with headline="New category", save_url=url_for("transaction_categories.new"), save_method="post" %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
 {% endif %}
-<form class="grid gap-2 w-88" onsubmit="return false">
-    <label class="input-outlined input-bg-surface-container-high">
-        <input name="name"
-               required
-               enterkeyhint="next"
-               placeholder=""
-               value="{{ category.name or "" }}"
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               hx-get="{{ url_for('transaction_categories.validation', uri=category.uri) }}"
-               autocomplete="off"
-               spellcheck="true">
-        <div>
-            <div>Name</div>
-        </div>
-        <div>
-            <error></error>
-            {% if category.locked %}<span>May only add/remove emojis</span>{% endif %}
-        </div>
-    </label>
-    <label class="input-outlined input-bg-surface-container-high col-start-2">
-        <select name="group"
-                required
-                autocomplete="off"
-                {% if category.locked %}disabled{% endif %}
-                onchange="txnCat.updateEssential()">
-            <option value=""
-                    disabled
-                    hidden
-                    {% if not category.group %}selected{% endif %}></option>
-            {% for group in category.group_type %}
-                <option value="{{ group.name }}"
-                        {% if group == category.group %}selected{% endif %}
-                        {% if group =="OTHER" %}disabled hidden{% endif %}>{{ group.pretty }}</option>
-            {% endfor %}
-        </select>
-        <div>
-            <div>Group</div>
-        </div>
-    </label>
-    <label class="toggle col-span-2">
-        <input type="checkbox"
-               name="is-pnl"
-               autocomplete="off"
-               {% if category.locked %}disabled{% endif %}
-               {% if category.is_profit_loss %}checked{% endif %}>
-        <div>
-            <span>Include in profit &amp; loss</span>
-            <span>Such as dividends &amp; fees</span>
-        </div>
-        <switch></switch>
-    </label>
-    <label class="toggle col-span-2">
-        <input type="checkbox"
-               name="essential"
-               autocomplete="off"
-               {% if category.essential %}checked{% endif %}
-               {% if category.group == "INCOME" or category.locked %}disabled{% endif %}>
-        <div>
-            <span>Essential spending</span>
-            <span>For emergency fund estimation</span>
-        </div>
-        <switch></switch>
-    </label>
+<form class="w-88 grid gap-2" onsubmit="return false">
+  <label class="input-outlined input-bg-surface-container-high">
+    <input
+      name="name"
+      required
+      enterkeyhint="next"
+      placeholder=""
+      value="{{ category.name or "" }}"
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('transaction_categories.validation', uri=category.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Name</div>
+    </div>
+    <div>
+      <error></error>
+      {% if category.locked %}<span>May only add/remove emojis</span>{% endif %}
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-start-2">
+    <select
+      name="group"
+      required
+      autocomplete="off"
+      {% if category.locked %}disabled{% endif %}
+      onchange="txnCat.updateEssential()"
+    >
+      <option
+        value=""
+        disabled
+        hidden
+        {% if not category.group %}selected{% endif %}
+      ></option>
+      {% for group in category.group_type %}
+        <option
+          value="{{ group.name }}"
+          {% if group == category.group %}selected{% endif %}
+          {% if group =="OTHER" %}disabled hidden{% endif %}
+        >
+          {{ group.pretty }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Group</div>
+    </div>
+  </label>
+  <label class="toggle col-span-2">
+    <input
+      type="checkbox"
+      name="is-pnl"
+      autocomplete="off"
+      {% if category.locked %}disabled{% endif %}
+      {% if category.is_profit_loss %}checked{% endif %}
+    />
+    <div>
+      <span>Include in profit &amp; loss</span>
+      <span>Such as dividends &amp; fees</span>
+    </div>
+    <switch></switch>
+  </label>
+  <label class="toggle col-span-2">
+    <input
+      type="checkbox"
+      name="essential"
+      autocomplete="off"
+      {% if category.essential %}checked{% endif %}
+      {% if category.group == "INCOME" or category.locked %}disabled{% endif %}
+    />
+    <div>
+      <span>Essential spending</span>
+      <span>For emergency fund estimation</span>
+    </div>
+    <switch></switch>
+  </label>
 </form>
 {% if category.uri and not category.locked %}
-    <button class="btn-text-error mx-auto"
-            onclick="txnCat.confirmDelete(event)"
-            hx-trigger="delete"
-            hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}">Delete</button>
+  <button
+    class="btn-text-error mx-auto"
+    onclick="txnCat.confirmDelete(event)"
+    hx-trigger="delete"
+    hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}"
+  >
+    Delete
+  </button>
 {% endif %}
 <div id="dialog-error" class="status-error"></div>
-<script>dialog.onLoad()</script>
+<script>
+  dialog.onLoad();
+</script>

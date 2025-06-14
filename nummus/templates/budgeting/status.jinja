@@ -1,38 +1,48 @@
 {% if ctx.assignable < 0 or ctx.n_overspent > 0 %}
-    {% set class = "bg-error-container text-on-error-container" %}
+  {% set class = "bg-error-container text-on-error-container" %}
 {% elif ctx.assignable > 0 %}
-    {% set class = "bg-primary-container text-on-primary-container" %}
+  {% set class = "bg-primary-container text-on-primary-container" %}
 {% else %}
-    {% set class = "bg-surface-container-high text-on-surface-variant" %}
+  {% set class = "bg-surface-container-high text-on-surface-variant" %}
 {% endif %}
-<div class="h-17 p-2 flex flex-col justify-center rounded-md {{ class }}">
-    <div class="flex gap-2 items-center">
-        <div class="text-2xl font-bold grow">{{ ctx.assignable | money }}</div>
-        {% if ctx.assignable > 0 %}
-            <button class="{{ 'btn-filled-error' if ctx.n_overspent > 0 else 'btn-filled' }}"
-                    hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
-                    hx-target="#dialog"
-                    hx-swap="innerHTML show:#dialog:top"
-                    hx-disabled-elt="this">Assign</button>
-        {% elif ctx.assignable < 0 %}
-            <button class="btn-filled-error"
-                    hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
-                    hx-target="#dialog"
-                    hx-swap="innerHTML show:#dialog:top"
-                    hx-disabled-elt="this">Fix</button>
-        {% else %}
-            <icon class="filled lg">check_circle</icon>
-        {% endif %}
-    </div>
-    <div class="text-sm">
-        {% if ctx.n_overspent > 0 %}
-            {{ ctx.n_overspent }} {{ 'category is' if ctx.n_overspent == 1 else 'categories are' }} overspent
-        {% elif ctx.assignable > 0 %}
-            Ready to assign
-        {% elif ctx.assignable < 0 %}
-            You assigned more than you have
-        {% else %}
-            All money assigned
-        {% endif %}
-    </div>
+<div class="h-17 {{ class }} flex flex-col justify-center rounded-md p-2">
+  <div class="flex items-center gap-2">
+    <div class="grow text-2xl font-bold">{{ ctx.assignable | money }}</div>
+    {% if ctx.assignable > 0 %}
+      <button
+        class="{{ 'btn-filled-error' if ctx.n_overspent > 0 else 'btn-filled' }}"
+        hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
+        hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:top"
+        hx-disabled-elt="this"
+      >
+        Assign
+      </button>
+    {% elif ctx.assignable < 0 %}
+      <button
+        class="btn-filled-error"
+        hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
+        hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:top"
+        hx-disabled-elt="this"
+      >
+        Fix
+      </button>
+    {% else %}
+      <icon class="filled lg">check_circle</icon>
+    {% endif %}
+  </div>
+  <div class="text-sm">
+    {% if ctx.n_overspent > 0 %}
+      {{ ctx.n_overspent }}
+      {{ 'category is' if ctx.n_overspent == 1 else 'categories are' }}
+      overspent
+    {% elif ctx.assignable > 0 %}
+      Ready to assign
+    {% elif ctx.assignable < 0 %}
+      You assigned more than you have
+    {% else %}
+      All money assigned
+    {% endif %}
+  </div>
 </div>

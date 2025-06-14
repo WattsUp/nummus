@@ -1,54 +1,60 @@
 <head>
-    <title>{{ title }}</title>
-    <meta charset="utf-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-{{ resizes or 'content' }}" />
-    <meta name="description"
-          content="A personal financial information aggregator and planning tool." />
-    <meta name="keywords" content="">
-    <link rel="icon"
-          type="image/x-icon"
-          href="{{ url_for('static', filename='img/favicon.ico') }}">
-    {% assets "css" %}
-        <link rel="stylesheet" href="{{ ASSET_URL }}">
-    {% endassets %}
-    {% assets "js" %}
-        <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-    {% endassets %}
-    <script>
-        {# Embed directly to avoid FOUC #}
-        function updateTheme(selection) {
-            if (selection == 'system') {
-                localStorage.removeItem('currentTheme');
-            } else if (selection != null) {
-                localStorage.currentTheme = selection;
-            }
+  <title>{{ title }}</title>
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-{{ resizes or 'content' }}"
+  />
+  <meta
+    name="description"
+    content="A personal financial information aggregator and planning tool."
+  />
+  <meta name="keywords" content="" />
+  <link
+    rel="icon"
+    type="image/x-icon"
+    href="{{ url_for('static', filename='img/favicon.ico') }}"
+  />
+  {% assets "css" %}
+    <link rel="stylesheet" href="{{ ASSET_URL }}" />
+  {% endassets %}
+  {% assets "js" %}
+    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+  {% endassets %}
+  {# Embed directly to avoid FOUC #}
+  <script>
+    function updateTheme(selection) {
+      if (selection == "system") {
+        localStorage.removeItem("currentTheme");
+      } else if (selection != null) {
+        localStorage.currentTheme = selection;
+      }
 
-            let radioBtns = null;
-            if (localStorage.currentTheme === 'dark') {
-                radioBtns = document.querySelectorAll('.theme-dark');
-            } else if (localStorage.currentTheme === 'light') {
-                radioBtns = document.querySelectorAll('.theme-light');
-            } else {
-                radioBtns = document.querySelectorAll('.theme-system');
-            }
-            if (radioBtns) {
-                radioBtns.forEach((e) => {
-                    e.checked = true;
-                });
-            }
+      let radioBtns = null;
+      if (localStorage.currentTheme === "dark") {
+        radioBtns = document.querySelectorAll(".theme-dark");
+      } else if (localStorage.currentTheme === "light") {
+        radioBtns = document.querySelectorAll(".theme-light");
+      } else {
+        radioBtns = document.querySelectorAll(".theme-system");
+      }
+      if (radioBtns) {
+        radioBtns.forEach((e) => {
+          e.checked = true;
+        });
+      }
 
-            document.documentElement.classList.toggle(
-                'dark',
-                localStorage.currentTheme === 'dark' ||
-                    (!('currentTheme' in localStorage) &&
-                    window.matchMedia('(prefers-color-scheme: dark)').matches),
-            );
+      document.documentElement.classList.toggle(
+        "dark",
+        localStorage.currentTheme === "dark" ||
+          (!("currentTheme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches),
+      );
 
-            if (pluginColor) pluginColor.update();
-            if (pluginTreeColor) pluginTreeColor.update();
-        }
+      if (pluginColor) pluginColor.update();
+      if (pluginTreeColor) pluginTreeColor.update();
+    }
 
-        updateTheme();
-    </script>
+    updateTheme();
+  </script>
 </head>

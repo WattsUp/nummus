@@ -1,38 +1,46 @@
 {% if include_oob %}
-    <div id="budgeting-status" hx-swap-oob="innerHTML">{% include "budgeting/status.jinja" %}</div>
-    <div id="budgeting-sidebar" hx-swap-oob="innerHTML">{% include "budgeting/sidebar.jinja" %}</div>
+  <div id="budgeting-status" hx-swap-oob="innerHTML">
+    {% include "budgeting/status.jinja" %}
+  </div>
+  <div id="budgeting-sidebar" hx-swap-oob="innerHTML">
+    {% include "budgeting/sidebar.jinja" %}
+  </div>
 {% endif %}
 <label class="{{ 'error' if group.has_error }}">
-    <input name="open"
-           type="checkbox"
-           {% if group.is_open %}checked{% endif %}
-           hx-target="#no-target"
-           hx-include="this"
-           hx-put="{{ url_for('budgeting.group', uri=group.uri or "ungrouped") }}"
-           onclick="budgeting.openGroup(this, '{{ group.uri or "ungrouped" }}')">
-    <icon class="not-open:hidden">keyboard_arrow_up</icon>
-    <icon class="open:hidden">keyboard_arrow_down</icon>
-    <h1>{{ group.name or "Ungrouped" }}</h1>
-    <div class="max-md:open:hidden">
-        <div class="text-sm not-error:text-on-surface-variant">Assigned</div>
-        <div>{{ group.assigned | money }}</div>
-    </div>
-    <div class="max-md:hidden">
-        <div class="text-sm not-error:text-on-surface-variant">Activity</div>
-        <div>{{ group.activity | money }}</div>
-    </div>
-    <div class="max-md:open:hidden md:pr-2">
-        <div class="text-sm not-error:text-on-surface-variant">Available</div>
-        <div>{{ group.available | money }}</div>
-    </div>
-    <div class="not-open:hidden md:hidden text-sm not-error:text-on-surface-variant">
-        <div>Available</div>
-        <div>to spend</div>
-    </div>
+  <input
+    name="open"
+    type="checkbox"
+    {% if group.is_open %}checked{% endif %}
+    hx-target="#no-target"
+    hx-include="this"
+    hx-put="{{ url_for('budgeting.group', uri=group.uri or "ungrouped") }}"
+    onclick="budgeting.openGroup(this, '{{ group.uri or "ungrouped" }}')"
+  />
+  <icon class="not-open:hidden">keyboard_arrow_up</icon>
+  <icon class="open:hidden">keyboard_arrow_down</icon>
+  <h1>{{ group.name or "Ungrouped" }}</h1>
+  <div class="max-md:open:hidden">
+    <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
+    <div>{{ group.assigned | money }}</div>
+  </div>
+  <div class="max-md:hidden">
+    <div class="not-error:text-on-surface-variant text-sm">Activity</div>
+    <div>{{ group.activity | money }}</div>
+  </div>
+  <div class="max-md:open:hidden md:pr-2">
+    <div class="not-error:text-on-surface-variant text-sm">Available</div>
+    <div>{{ group.available | money }}</div>
+  </div>
+  <div
+    class="not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"
+  >
+    <div>Available</div>
+    <div>to spend</div>
+  </div>
 </label>
 <div>
-    {% for category in group.categories %}
-        {% include "budgeting/category.jinja" %}
-        {% if not loop.last %}<hr class="mx-4">{% endif %}
-    {% endfor %}
+  {% for category in group.categories %}
+    {% include "budgeting/category.jinja" %}
+    {% if not loop.last %}<hr class="mx-4" />{% endif %}
+  {% endfor %}
 </div>

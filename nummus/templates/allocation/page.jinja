@@ -1,69 +1,78 @@
-<div class="flex justify-between items-center"
-     hx-target="#main"
-     hx-trigger="account from:body, asset from:body, valuation from:body"
-     hx-get="{{ url_for('allocation.page') }}">
-    <h1 class="text-3xl font-serif text-primary">Asset Allocation</h1>
+<div
+  class="flex items-center justify-between"
+  hx-target="#main"
+  hx-trigger="account from:body, asset from:body, valuation from:body"
+  hx-get="{{ url_for('allocation.page') }}"
+>
+  <h1 class="text-primary font-serif text-3xl">Asset Allocation</h1>
 </div>
-<h2 class="text-2xl font-serif text-primary">By Category</h2>
-<div class="w-full h-60 md:h-96 relative mb-2">
-    <canvas id="category-chart-canvas" hx-preserve></canvas>
+<h2 class="text-primary font-serif text-2xl">By Category</h2>
+<div class="relative mb-2 h-60 w-full md:h-96">
+  <canvas id="category-chart-canvas" hx-preserve></canvas>
 </div>
 <div hx-push-url="true" hx-swap="innerHTML show:window:top">
-    {% for category in allocation.categories %}
-        <details class="mb-2 bg-surface-container-high rounded-md" name="category">
-            <summary class="p-2 flex gap-2 items-center rounded-md bg-secondary-container">
-                <span>{{ category.name }}</span>
-                <span class="ml-auto">{{ category.value | money }}</span>
-                <icon class="details-icon-open">keyboard_arrow_up</icon>
-                <icon class="details-icon-closed">keyboard_arrow_down</icon>
-            </summary>
-            <div class="p-1 max-h-96 overflow-y-auto">
-                {% for asset in category.assets %}
-                    {% include "allocation/asset-row.jinja" %}
-                    {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
-                {% endfor %}
-            </div>
-        </details>
-    {% endfor %}
-</div>
-<h2 class="text-2xl font-serif text-primary">By U.S. Sector</h2>
-<div class="w-full h-60 md:h-96 relative mb-2">
-    <canvas id="sector-chart-canvas" hx-preserve></canvas>
-</div>
-<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
-    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
-        <icon>help</icon>
-        <span class="mr-auto">About U.S. sector allocation</span>
+  {% for category in allocation.categories %}
+    <details class="bg-surface-container-high mb-2 rounded-md" name="category">
+      <summary
+        class="bg-secondary-container flex items-center gap-2 rounded-md p-2"
+      >
+        <span>{{ category.name }}</span>
+        <span class="ml-auto">{{ category.value | money }}</span>
         <icon class="details-icon-open">keyboard_arrow_up</icon>
         <icon class="details-icon-closed">keyboard_arrow_down</icon>
-    </summary>
-    <div class="prose px-2 mx-auto">
-        <p>
-            Some U.S. assets have sector information, presented here.
-            The asset share information describes how much of an asset is made up of a particluar sector.
-            For individual companies, the share is likely 100%.
-            For mutual funds and ETFs, the share depends on where the fund is currently allocated.
-        </p>
-    </div>
+      </summary>
+      <div class="max-h-96 overflow-y-auto p-1">
+        {% for asset in category.assets %}
+          {% include "allocation/asset-row.jinja" %}
+          {% if not loop.last %}<hr class="mx-4 my-1" />{% endif %}
+        {% endfor %}
+      </div>
+    </details>
+  {% endfor %}
+</div>
+<h2 class="text-primary font-serif text-2xl">By U.S. Sector</h2>
+<div class="relative mb-2 h-60 w-full md:h-96">
+  <canvas id="sector-chart-canvas" hx-preserve></canvas>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About U.S. sector allocation</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Some U.S. assets have sector information, presented here. The asset share
+      information describes how much of an asset is made up of a particluar
+      sector. For individual companies, the share is likely 100%. For mutual
+      funds and ETFs, the share depends on where the fund is currently
+      allocated.
+    </p>
+  </div>
 </details>
 <div hx-push-url="true" hx-swap="innerHTML show:window:top">
-    {% for sector in allocation.sectors %}
-        <details class="mb-2 bg-surface-container-high rounded-md" name="sector">
-            <summary class="p-2 flex gap-2 items-center rounded-md bg-secondary-container">
-                <span>{{ sector.name }}</span>
-                <span class="ml-auto">{{ sector.value | money }}</span>
-                <icon class="details-icon-open">keyboard_arrow_up</icon>
-                <icon class="details-icon-closed">keyboard_arrow_down</icon>
-            </summary>
-            <div class="p-1 max-h-96 overflow-y-auto">
-                {% with include_weight=true %}
-                    {% for asset in sector.assets %}
-                        {% include "allocation/asset-row.jinja" %}
-                        {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
-                    {% endfor %}
-                {% endwith %}
-            </div>
-        </details>
-    {% endfor %}
+  {% for sector in allocation.sectors %}
+    <details class="bg-surface-container-high mb-2 rounded-md" name="sector">
+      <summary
+        class="bg-secondary-container flex items-center gap-2 rounded-md p-2"
+      >
+        <span>{{ sector.name }}</span>
+        <span class="ml-auto">{{ sector.value | money }}</span>
+        <icon class="details-icon-open">keyboard_arrow_up</icon>
+        <icon class="details-icon-closed">keyboard_arrow_down</icon>
+      </summary>
+      <div class="max-h-96 overflow-y-auto p-1">
+        {% with include_weight=true %}
+          {% for asset in sector.assets %}
+            {% include "allocation/asset-row.jinja" %}
+            {% if not loop.last %}<hr class="mx-4 my-1" />{% endif %}
+          {% endfor %}
+        {% endwith %}
+      </div>
+    </details>
+  {% endfor %}
 </div>
-<script>allocation.update(JSON.parse('{{ allocation.chart | tojson }}'))</script>
+<script>
+  allocation.update(JSON.parse("{{ allocation.chart | tojson }}"));
+</script>

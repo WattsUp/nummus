@@ -1,13 +1,17 @@
 {% if include_oob %}
-    {% with oob=True %}
-        {% include "health/timestamp.jinja" %}
-    {% endwith %}
+  {% with oob=True %}
+    {% include "health/timestamp.jinja" %}
+  {% endwith %}
 {% endif %}
 {% for check in ctx.checks %}
-    <details id="check-{{ check.uri }}"
-             class="mb-2 bg-surface-container-high rounded-md"
-             name="check">
-        {% include "health/check-row.jinja" %}
-    </details>
+  <details
+    id="check-{{ check.uri }}"
+    class="bg-surface-container-high mb-2 rounded-md"
+    name="check"
+  >
+    {% include "health/check-row.jinja" %}
+  </details>
 {% endfor %}
-<div id="health-indicator" class="spinner-overlay">{% include "shared/spinner.jinja" %}</div>
+<div id="health-indicator" class="spinner-overlay">
+  {% include "shared/spinner.jinja" %}
+</div>

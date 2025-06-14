@@ -1,25 +1,33 @@
 {% with headline="Update assets" %}
-    {% include "shared/dialog-headline.jinja" %}
+  {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
-<div class="overflow-y-hidden w-88 min-h-60">
-    {% if failed_tickers %}
-        {% for ticker, e in failed_tickers.items() %}<p>{{ ticker }} failed: {{ e }}</p>{% endfor %}
-    {% elif successful_tickers %}
-        <p class="text-center">The assets with the following tickers were updated</p>
-        <p class="text-center">{{ successful_tickers | join(", ") }}</p>
-    {% elif n_to_update == 0 %}
-        <p>There are no assets to update, set ticker on edit asset page.</p>
+<div class="w-88 min-h-60 overflow-y-hidden">
+  {% if failed_tickers %}
+    {% for ticker, e in failed_tickers.items() %}
+      <p>{{ ticker }} failed: {{ e }}</p>
+    {% endfor %}
+  {% elif successful_tickers %}
+    <p class="text-center">
+      The assets with the following tickers were updated
+    </p>
+    <p class="text-center">{{ successful_tickers | join(", ") }}</p>
+  {% elif n_to_update == 0 %}
+    <p>There are no assets to update, set ticker on edit asset page.</p>
+  {% else %}
+    {% if n_to_update == 1 %}
+      <p>There is one asset with ticker to update.</p>
     {% else %}
-        {% if n_to_update == 1 %}
-            <p>There is one asset with ticker to update.</p>
-        {% else %}
-            <p>There are {{ n_to_update }} assets with tickers to update.</p>
-        {% endif %}
-        <button class="btn-text btn-size-lg mx-auto"
-                hx-post="{{ url_for('assets.update') }}"
-                hx-target="#dialog"
-                hx-disabled-elt="this"
-                hx-indicator="next .spinner">Update</button>
-        {% include "shared/spinner.jinja" %}
+      <p>There are {{ n_to_update }} assets with tickers to update.</p>
     {% endif %}
+    <button
+      class="btn-text btn-size-lg mx-auto"
+      hx-post="{{ url_for('assets.update') }}"
+      hx-target="#dialog"
+      hx-disabled-elt="this"
+      hx-indicator="next .spinner"
+    >
+      Update
+    </button>
+    {% include "shared/spinner.jinja" %}
+  {% endif %}
 </div>

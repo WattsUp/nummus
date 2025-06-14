@@ -1,18 +1,18 @@
 @layer components {
-    #page-progress {
-        @apply fixed top-10 md:top-0 left-0 h-1 w-full z-40;
-        @apply pointer-events-none;
-        @apply opacity-0 transition-opacity duration-500 delay-150;
+  #page-progress {
+    @apply fixed left-0 top-10 z-40 h-1 w-full md:top-0;
+    @apply pointer-events-none;
+    @apply opacity-0 transition-opacity delay-150 duration-500;
 
-        &>div {
-            @apply h-full;
-            @apply rounded-r-lg;
-            @apply bg-secondary md:bg-primary;
-            @apply transition-[width];
-        }
-
-        @variant open {
-            @apply opacity-100 duration-250 delay-0;
-        }
+    & > div {
+      @apply h-full;
+      @apply rounded-r-lg;
+      @apply bg-secondary md:bg-primary;
+      @apply transition-[width];
     }
+
+    @variant open {
+      @apply duration-250 opacity-100 delay-0;
+    }
+  }
 }

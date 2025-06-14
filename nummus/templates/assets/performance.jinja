@@ -1,18 +1,26 @@
-<div class="w-full h-60 md:h-96 relative">
-    <canvas id="asset-chart-canvas" hx-preserve></canvas>
-    <div id="asset-indicator" class="spinner-overlay">{% include "shared/spinner.jinja" %}</div>
+<div class="relative h-60 w-full md:h-96">
+  <canvas id="asset-chart-canvas" hx-preserve></canvas>
+  <div id="asset-indicator" class="spinner-overlay">
+    {% include "shared/spinner.jinja" %}
+  </div>
 </div>
 {% with perf = asset.performance %}
-    <script>assets.update(JSON.parse('{{ perf | tojson }}'))</script>
-    <div class="flex gap-2 justify-around"
-         hx-target="#asset-performance"
-         hx-indicator="#asset-indicator">
-        {% for value, label in perf.period_options.items() %}
-            {% set btn_class = "btn-tonal" if value == perf.period else "btn-text" %}
-            <button class="{{ btn_class }}"
-                    hx-get="{{ url_for('assets.performance', uri=asset.uri, chart_period=value) }}">
-                {{ label }}
-            </button>
-        {% endfor %}
-    </div>
+  <script>
+    assets.update(JSON.parse("{{ perf | tojson }}"));
+  </script>
+  <div
+    class="flex justify-around gap-2"
+    hx-target="#asset-performance"
+    hx-indicator="#asset-indicator"
+  >
+    {% for value, label in perf.period_options.items() %}
+      {% set btn_class = "btn-tonal" if value == perf.period else "btn-text" %}
+      <button
+        class="{{ btn_class }}"
+        hx-get="{{ url_for('assets.performance', uri=asset.uri, chart_period=value) }}"
+      >
+        {{ label }}
+      </button>
+    {% endfor %}
+  </div>
 {% endwith %}

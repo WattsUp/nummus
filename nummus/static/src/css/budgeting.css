@@ -3,12 +3,12 @@
   @apply bg-surface-container-low;
 
   @variant error {
-    &>label {
+    & > label {
       @apply bg-error-container text-on-error-container;
     }
   }
 
-  &>label {
+  & > label {
     @apply flex items-center;
     @apply h-11 rounded-md pl-1 pr-2;
     @apply bg-surface-container-highest;
@@ -21,16 +21,16 @@
       @apply h-0 w-0 opacity-0;
     }
 
-    &>h1 {
+    & > h1 {
       @apply mr-auto;
     }
 
-    &>div {
+    & > div {
       @apply w-28 shrink-0 text-right;
     }
   }
 
-  &>div {
+  & > div {
     @apply not-open:hidden;
   }
 }
@@ -38,13 +38,13 @@
 @utility budget-category {
   @apply px-2 py-1;
 
-  &>div:first-of-type>div {
+  & > div:first-of-type > div {
     @apply w-28 shrink-0;
     @apply text-right;
     @apply relative;
 
     @variant first-of-type {
-      &>input {
+      & > input {
         @apply absolute inset-0;
         @apply opacity-0;
         @apply text-right;
@@ -52,19 +52,19 @@
         @variant [:active, :focus-visible, :focus-within] {
           @apply opacity-100;
 
-          &~span {
+          & ~ span {
             @apply opacity-0;
           }
         }
       }
 
       @variant hover {
-        &>span {
+        & > span {
           @apply opacity-0;
           @apply pointer-events-none;
         }
 
-        &>input {
+        & > input {
           @apply opacity-100;
         }
       }
@@ -74,21 +74,21 @@
 
 @utility budget-category-active {
   @variant max-md {
-    @apply outline outline-3 outline-secondary;
+    @apply outline-3 outline-secondary outline;
   }
 }
 
 @utility budget-bar {
   @apply flex h-[6px] w-full gap-1;
 
-  &>div {
+  & > div {
     @apply relative h-full grow;
     @apply bg-surface-container-highest;
 
     /* big radius to get pill shape */
     border-radius: 100em;
 
-    &>div {
+    & > div {
       @apply absolute left-0 top-0 h-full;
 
       /* big radius to get pill shape */
@@ -105,7 +105,7 @@
   @apply rounded-md p-2;
   @apply bg-surface-container-high;
 
-  &>div {
+  & > div {
     @apply flex items-center justify-between gap-1;
   }
 
@@ -127,8 +127,8 @@
 
   transition: translate 0.5s;
 
-  &>button,
-  &>a {
+  & > button,
+  & > a {
     @apply btn-text-on-tertiary btn-stacked btn-size-lg mx-0 last:w-min;
   }
 }

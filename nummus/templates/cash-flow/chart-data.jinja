@@ -1,3 +1,5 @@
 <div id="cash-flow-chart-data" hx-swap-oob="{{ oob }}">
-    <script>cashFlow.update(JSON.parse('{{ chart["data"] | tojson }}'))</script>
+  <script>
+    cashFlow.update(JSON.parse('{{ chart["data"] | tojson }}'));
+  </script>
 </div>

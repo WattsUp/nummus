@@ -1,60 +1,73 @@
-<div class="flex justify-between items-center mb-2"
-     hx-target="#main"
-     hx-trigger="asset from:body, valuation from:body, account from:body"
-     hx-get="{{ url_for('assets.page_all') }}">
-    <h1 class="text-3xl font-serif text-primary">Assets</h1>
-    <button class="btn-tonal"
-            hx-target="#dialog"
-            hx-swap="innerHTML show:#dialog:top"
-            hx-disabled-elt="this"
-            hx-get="{{ url_for('assets.new') }}"
-            disabled>
-        <icon>add</icon>New
-    </button>
+<div
+  class="mb-2 flex items-center justify-between"
+  hx-target="#main"
+  hx-trigger="asset from:body, valuation from:body, account from:body"
+  hx-get="{{ url_for('assets.page_all') }}"
+>
+  <h1 class="text-primary font-serif text-3xl">Assets</h1>
+  <button
+    class="btn-tonal"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('assets.new') }}"
+    disabled
+  >
+    <icon>add</icon>New
+  </button>
 </div>
-<details class="max-w-2xl mx-auto mb-2 bg-surface-container-high rounded-md">
-    <summary class="p-2 flex gap-2 items-center rounded-md bg-tertiary-container">
-        <icon>help</icon>
-        <span class="mr-auto">About asset classification</span>
-        <icon class="details-icon-open">keyboard_arrow_up</icon>
-        <icon class="details-icon-closed">keyboard_arrow_down</icon>
-    </summary>
-    <div class="prose px-2 mx-auto">
-        <p>
-            Assets are resources that can be used to produce positive economic value.
-            Cash and cryptocurrency are forms of currency whose value comes from purchasing power against other currencies.
-            Stocks, bonds, and futures have value derived from a contractual claim.
-            Real estate, vehicles, and items are tangible assets that can be physically exchanged.
-        </p>
-    </div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About asset classification</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Assets are resources that can be used to produce positive economic value.
+      Cash and cryptocurrency are forms of currency whose value comes from
+      purchasing power against other currencies. Stocks, bonds, and futures have
+      value derived from a contractual claim. Real estate, vehicles, and items
+      are tangible assets that can be physically exchanged.
+    </p>
+  </div>
 </details>
-<div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4 grid-flow-row-dense"
-     hx-push-url="true"
-     hx-swap="innerHTML show:window:top">
-    {% for category, assets in ctx.categories.items() %}
-        <div class="mb-4" style="grid-row: span {{ assets | length }}">
-            <div class="w-full">
-                <div class="sticky top-10 md:top-0 text-2xl font-serif text-primary bg-surface z-10">{{ category.pretty }}</div>
-                {% for asset in assets %}
-                    {% include "assets/asset-row.jinja" %}
-                    {% if not loop.last %}<hr class="mx-4 my-1">{% endif %}
-                {% endfor %}
-            </div>
+<div
+  class="grid grid-flow-row-dense grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
+>
+  {% for category, assets in ctx.categories.items() %}
+    <div class="mb-4" style="grid-row: span {{ assets | length }}">
+      <div class="w-full">
+        <div
+          class="text-primary bg-surface sticky top-10 z-10 font-serif text-2xl md:top-0"
+        >
+          {{ category.pretty }}
         </div>
-    {% endfor %}
+        {% for asset in assets %}
+          {% include "assets/asset-row.jinja" %}
+          {% if not loop.last %}<hr class="mx-4 my-1" />{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
 </div>
 <label class="toggle max-w-60">
-    <input type="checkbox"
-           autocomplete="off"
-           {% if ctx.include_unheld %}checked{% endif %}
-           hx-push-url="true"
-           hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}">
-    <div>
-        {% if ctx.include_unheld %}
-            Hide unheld assets
-        {% else %}
-            Show unheld assets
-        {% endif %}
-    </div>
-    <switch></switch>
+  <input
+    type="checkbox"
+    autocomplete="off"
+    {% if ctx.include_unheld %}checked{% endif %}
+    hx-push-url="true"
+    hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}"
+  />
+  <div>
+    {% if ctx.include_unheld %}
+      Hide unheld assets
+    {% else %}
+      Show unheld assets
+    {% endif %}
+  </div>
+  <switch></switch>
 </label>

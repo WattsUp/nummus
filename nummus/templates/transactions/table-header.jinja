@@ -1,28 +1,34 @@
-<div id="txn-header"
-     hx-swap-oob="{{ oob }}"
-     class="flex gap-2 items-start max-w-2xl mx-auto mb-2">
-    <label class="input-outlined grow">
-        <input id="txn-search"
-               name="search"
-               enterkeyhint="search"
-               placeholder=""
-               value="{{ (ctx.search or "") | e }}"
-               hx-trigger="keyup[keyCode==13]"
-               hx-include="#txn-filters"
-               hx-target="#txn-table"
-               hx-get="{{ url_for(endpoint,  **url_args) }}"
-               hx-indicator="#txn-table,#txn-indicator"
-               autocomplete="off"
-               spellcheck="true">
-        <div>
-            <div>Search</div>
-        </div>
-        <icon>search</icon>
-        <icon onclick="htmx.find(this.parentNode, 'input').value=''">clear</icon>
-    </label>
-    <button id="txn-filter-btn"
-            class="{{ 'btn-filled' if ctx.any_filters else 'btn-tonal' }} mt-1.5"
-            onclick="htmx.toggleClass(htmx.find('#txn-filters'), 'open')">
-        <icon>tune</icon>
-    </button>
+<div
+  id="txn-header"
+  hx-swap-oob="{{ oob }}"
+  class="mx-auto mb-2 flex max-w-2xl items-start gap-2"
+>
+  <label class="input-outlined grow">
+    <input
+      id="txn-search"
+      name="search"
+      enterkeyhint="search"
+      placeholder=""
+      value="{{ (ctx.search or "") | e }}"
+      hx-trigger="keyup[keyCode==13]"
+      hx-include="#txn-filters"
+      hx-target="#txn-table"
+      hx-get="{{ url_for(endpoint,  **url_args) }}"
+      hx-indicator="#txn-table,#txn-indicator"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Search</div>
+    </div>
+    <icon>search</icon>
+    <icon onclick="htmx.find(this.parentNode, 'input').value=''">clear</icon>
+  </label>
+  <button
+    id="txn-filter-btn"
+    class="{{ 'btn-filled' if ctx.any_filters else 'btn-tonal' }} mt-1.5"
+    onclick="htmx.toggleClass(htmx.find('#txn-filters'), 'open')"
+  >
+    <icon>tune</icon>
+  </button>
 </div>

@@ -1,20 +1,20 @@
-<a class="btn-text block relative text-on-surface px-6"
-   href="{{ url_for('assets.page', uri=asset.uri) }}"
-   hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
-   hx-disabled-elt="this">
-    <div class="flex justify-between gap-2">
-        <b class="truncate">{{ asset.name }}</b>
-        <span>
-            {% if asset.ticker %}@{{ asset.ticker }}{% endif %}
-        </span>
-    </div>
-    <div class="flex justify-between gap-2 text-sm text-on-surface-variant">
-        {% if asset.qty == 0 %}
-            <span class="text-error">Asset is not currently held</span>
-        {% else %}
-            <span>{{ asset.qty | qty }} @ {{ asset.price | money }}</span>
-            <span>{{ asset.value | money }}</span>
-        {% endif %}
-    </div>
-    <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>
+<a
+  class="btn-text text-on-surface relative block px-6"
+  href="{{ url_for('assets.page', uri=asset.uri) }}"
+  hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
+  hx-disabled-elt="this"
+>
+  <div class="flex justify-between gap-2">
+    <b class="truncate">{{ asset.name }}</b>
+    <span> {% if asset.ticker %}@{{ asset.ticker }}{% endif %} </span>
+  </div>
+  <div class="text-on-surface-variant flex justify-between gap-2 text-sm">
+    {% if asset.qty == 0 %}
+      <span class="text-error">Asset is not currently held</span>
+    {% else %}
+      <span>{{ asset.qty | qty }} @ {{ asset.price | money }}</span>
+      <span>{{ asset.value | money }}</span>
+    {% endif %}
+  </div>
+  <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>
 </a>

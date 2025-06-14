@@ -1,11 +1,13 @@
-<label class="py-0.5 flex items-center gap-2 w-full">
-    <div>{{ valuation.date }}</div>
-    <div class="ml-auto">{{ valuation.value | money }}</div>
-    {% if ctx.editable %}
-        <button class="btn-text btn-sq"
-                hx-disabled-elt="this"
-                hx-get="{{ url_for('assets.valuation', uri=valuation.uri) }}">
-            <icon>edit</icon>
-        </button>
-    {% endif %}
+<label class="flex w-full items-center gap-2 py-0.5">
+  <div>{{ valuation.date }}</div>
+  <div class="ml-auto">{{ valuation.value | money }}</div>
+  {% if ctx.editable %}
+    <button
+      class="btn-text btn-sq"
+      hx-disabled-elt="this"
+      hx-get="{{ url_for('assets.valuation', uri=valuation.uri) }}"
+    >
+      <icon>edit</icon>
+    </button>
+  {% endif %}
 </label>

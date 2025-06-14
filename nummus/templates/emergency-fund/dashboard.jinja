@@ -1,32 +1,51 @@
-<div class="relative bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem]">
-    <a class="w-full flex space-between cursor-pointer group"
-       href="{{ url_for('emergency_fund.page') }}"
-       hx-get="{{ url_for('emergency_fund.page') }}"
-       hx-target="#main"
-       hx-swap="innerHTML"
-       hx-push-url="true"
-       hx-indicator="next .spinner">
-        <h1 class="text-xl align-left w-full font-serif text-green-600 md:group-hover:underline md:group-hover:after:content-['»']">
-            Emergency Fund
-        </h1>
-        <h1 class="text-lg">{{ e_fund["current"] | money0 }}</h1>
-    </a>
-    <div class="w-full grow dashboard">
-        <canvas id="e-fund-chart-canvas-dashboard" hx-preserve></canvas>
-    </div>
-    <div id="e-fund-chart-data">
-        <script>emergencyFund.updateDashboard(JSON.parse('{{ e_fund["chart"] | tojson }}'))</script>
-    </div>
-    <div class="text-sm text-center">
-        {% if e_fund["months"] is none %}
-            No spending found to estimate emergency budget.
-        {% elif e_fund["delta_lower"] > 0 %}
-            <p>Try to increase your fund to at least {{ e_fund["target_lower"] | money0 }}.</p>
-        {% elif e_fund["delta_upper"] > 0 %}
-            <p>{{ e_fund["delta_upper"] | money0 }} could be invested for potential greater returns.</p>
-        {% else %}
-            <p>You should be able to cover {{ "%.1f" % e_fund["months"] }} months of expenses.</p>
-        {% endif %}
-    </div>
-    <div>{% include "shared/spinner.jinja" %}</div>
+<div
+  class="relative flex h-[16rem] min-h-[16rem] flex-col bg-white p-2 md:h-[20rem] md:min-h-[20rem]"
+>
+  <a
+    class="space-between group flex w-full cursor-pointer"
+    href="{{ url_for('emergency_fund.page') }}"
+    hx-get="{{ url_for('emergency_fund.page') }}"
+    hx-target="#main"
+    hx-swap="innerHTML"
+    hx-push-url="true"
+    hx-indicator="next .spinner"
+  >
+    <h1
+      class="align-left w-full font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
+    >
+      Emergency Fund
+    </h1>
+    <h1 class="text-lg">{{ e_fund["current"] | money0 }}</h1>
+  </a>
+  <div class="dashboard w-full grow">
+    <canvas id="e-fund-chart-canvas-dashboard" hx-preserve></canvas>
+  </div>
+  <div id="e-fund-chart-data">
+    <script>
+      emergencyFund.updateDashboard(
+        JSON.parse('{{ e_fund["chart"] | tojson }}'),
+      );
+    </script>
+  </div>
+  <div class="text-center text-sm">
+    {% if e_fund["months"] is none %}
+      No spending found to estimate emergency budget.
+    {% elif e_fund["delta_lower"] > 0 %}
+      <p>
+        Try to increase your fund to at least
+        {{ e_fund["target_lower"] | money0 }}.
+      </p>
+    {% elif e_fund["delta_upper"] > 0 %}
+      <p>
+        {{ e_fund["delta_upper"] | money0 }} could be invested for potential
+        greater returns.
+      </p>
+    {% else %}
+      <p>
+        You should be able to cover {{ "%.1f" % e_fund["months"] }} months of
+        expenses.
+      </p>
+    {% endif %}
+  </div>
+  <div>{% include "shared/spinner.jinja" %}</div>
 </div>

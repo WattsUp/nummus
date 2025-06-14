@@ -1,56 +1,73 @@
-<nav id="nav-drawer"
-     hx-push-url="true"
-     hx-swap="innerHTML show:window:top"
-     onclick="nav.closeDrawer(event)">
-    <a href="{{ url_for('dashboard.page') }}"
-       hx-get="{{ url_for('dashboard.page') }}"
-       hx-disabled-elt="this">nummus</a>
-    <section class="w-min">
-        <button class="fab"
-                hx-get="{{ url_for('transactions.new') }}"
-                hx-include="next .current-account"
-                hx-target="#dialog"
-                hx-swap="innerHTML show:#dialog:top"
-                hx-push-url="false"
-                hx-disabled-elt="this">
-            <icon>note_stack_add</icon>
-            <div>Transaction</div>
-        </button>
+<nav
+  id="nav-drawer"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
+  onclick="nav.closeDrawer(event)"
+>
+  <a
+    href="{{ url_for('dashboard.page') }}"
+    hx-get="{{ url_for('dashboard.page') }}"
+    hx-disabled-elt="this"
+    >nummus</a
+  >
+  <section class="w-min">
+    <button
+      class="fab"
+      hx-get="{{ url_for('transactions.new') }}"
+      hx-include="next .current-account"
+      hx-target="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
+      hx-push-url="false"
+      hx-disabled-elt="this"
+    >
+      <icon>note_stack_add</icon>
+      <div>Transaction</div>
+    </button>
+  </section>
+  {% for group_label, group in nav_items %}
+    {% if not loop.first %}<hr class="mx-2" />{% endif %}
+    <section>
+      {% if group_label %}
+        <h1 class="text-on-surface-variant italic">{{ group_label }}</h1>
+      {% endif %}
+      {% for label, (icon, endpoint, link) in group.items() %}
+        {% if link == "PAGE" %}
+          <a
+            href="{{ url_for(endpoint) }}"
+            hx-get="{{ url_for(endpoint) }}"
+            hx-disabled-elt="this"
+          >
+            <icon>{{ icon }}</icon>
+            <div>{{ label }}</div>
+          </a>
+        {% elif link == "DIALOG" %}
+          <button
+            hx-get="{{ url_for(endpoint) }}"
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-trigger="click"
+            hx-push-url="false"
+            hx-disabled-elt="this"
+          >
+            <icon>{{ icon }}</icon>
+            <div>{{ label }}</div>
+          </button>
+        {% elif link == "HX_POST" %}
+          <button
+            hx-post="{{ url_for(endpoint) }}"
+            hx-push-url="false"
+            hx-disabled-elt="this"
+          >
+            <icon>{{ icon }}</icon>
+            <div>{{ label }}</div>
+          </button>
+        {% endif %}
+      {% endfor %}
     </section>
-    {% for group_label, group in nav_items %}
-        {% if not loop.first %}<hr class="mx-2">{% endif %}
-        <section>
-            {% if group_label %}<h1 class="italic text-on-surface-variant">{{ group_label }}</h1>{% endif %}
-            {% for label, (icon, endpoint, link) in group.items() %}
-                {% if link == "PAGE" %}
-                    <a href="{{ url_for(endpoint) }}"
-                       hx-get="{{ url_for(endpoint) }}"
-                       hx-disabled-elt="this">
-                        <icon>{{ icon }}</icon>
-                        <div>{{ label }}</div>
-                    </a>
-                {% elif link == "DIALOG" %}
-                    <button hx-get="{{ url_for(endpoint) }}"
-                            hx-target="#dialog"
-                            hx-swap="innerHTML show:#dialog:top"
-                            hx-trigger="click"
-                            hx-push-url="false"
-                            hx-disabled-elt="this">
-                        <icon>{{ icon }}</icon>
-                        <div>{{ label }}</div>
-                    </button>
-                {% elif link == "HX_POST" %}
-                    <button hx-post="{{ url_for(endpoint) }}"
-                            hx-push-url="false"
-                            hx-disabled-elt="this">
-                        <icon>{{ icon }}</icon>
-                        <div>{{ label }}</div>
-                    </button>
-                {% endif %}
-            {% endfor %}
-        </section>
-    {% endfor %}
-    {% include "shared/theme-selector.jinja" %}
-    {# Set radio buttons once buttons load #}
-    <script>updateTheme();</script>
+  {% endfor %}
+  {% include "shared/theme-selector.jinja" %}
+  {# Set radio buttons once buttons load #}
+  <script>
+    updateTheme();
+  </script>
 </nav>

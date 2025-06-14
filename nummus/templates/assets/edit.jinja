@@ -1,80 +1,99 @@
 {% if asset.uri %}
-    {% with headline="Edit asset", save_url=url_for("assets.asset", uri=asset.uri) %}
-        {% include "shared/dialog-headline.jinja" %}
-    {% endwith %}
+  {% with headline="Edit asset", save_url=url_for("assets.asset", uri=asset.uri) %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
 {% else %}
-    {% with headline="New asset", save_url=url_for("assets.new"), save_method="post" %}
-        {% include "shared/dialog-headline.jinja" %}
-    {% endwith %}
+  {% with headline="New asset", save_url=url_for("assets.new"), save_method="post" %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
 {% endif %}
-<form class="grid grid-cols-2 gap-2 w-88" onsubmit="return false">
-    <label class="input-outlined input-bg-surface-container-high col-span-2">
-        <input name="name"
-               required
-               enterkeyhint="next"
-               placeholder=""
-               value="{{ asset.name or "" }}"
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
-               autocomplete="off"
-               spellcheck="true">
-        <div>
-            <div>Name</div>
-        </div>
-        <div>
-            <error></error>
-        </div>
-    </label>
-    <label class="input-outlined input-bg-surface-container-high">
-        <input name="ticker"
-               enterkeyhint="next"
-               placeholder=""
-               value="{{ asset.ticker or "" }}"
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
-               autocomplete="off"
-               spellcheck="true">
-        <div>
-            <div>Ticker</div>
-        </div>
-        <div>
-            <error></error>
-        </div>
-    </label>
-    <label class="input-outlined input-bg-surface-container-high col-start-2">
-        <select name="category" required autocomplete="off">
-            <option value="" disabled hidden {% if not asset.group %}selected{% endif %}></option>
-            {% for cat in asset.category_type %}
-                <option value="{{ cat.name }}"
-                        {% if cat == asset.category %}selected{% endif %}
-                        {% if cat =="INDEX" %}disabled hidden{% endif %}>{{ cat.pretty }}</option>
-            {% endfor %}
-        </select>
-        <div>
-            <div>Category</div>
-        </div>
-    </label>
-    <label class="input-outlined input-bg-surface-container-high col-span-full">
-        <textarea name="description"
-                  enterkeyhint="next"
-                  placeholder=""
-                  hx-target="next error"
-                  hx-trigger="input delay:200ms"
-                  hx-include="this"
-                  hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
-                  autocomplete="off"
-                  spellcheck="true">{{ asset.description or "" }}</textarea>
-        <div>
-            <div>Description</div>
-        </div>
-        <div>
-            <error></error>
-        </div>
-    </label>
+<form class="w-88 grid grid-cols-2 gap-2" onsubmit="return false">
+  <label class="input-outlined input-bg-surface-container-high col-span-2">
+    <input
+      name="name"
+      required
+      enterkeyhint="next"
+      placeholder=""
+      value="{{ asset.name or "" }}"
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Name</div>
+    </div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high">
+    <input
+      name="ticker"
+      enterkeyhint="next"
+      placeholder=""
+      value="{{ asset.ticker or "" }}"
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Ticker</div>
+    </div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-start-2">
+    <select name="category" required autocomplete="off">
+      <option
+        value=""
+        disabled
+        hidden
+        {% if not asset.group %}selected{% endif %}
+      ></option>
+      {% for cat in asset.category_type %}
+        <option
+          value="{{ cat.name }}"
+          {% if cat == asset.category %}selected{% endif %}
+          {% if cat =="INDEX" %}disabled hidden{% endif %}
+        >
+          {{ cat.pretty }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Category</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-span-full">
+    <textarea
+      name="description"
+      enterkeyhint="next"
+      placeholder=""
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    >
+{{ asset.description or "" }}</textarea
+    >
+    <div>
+      <div>Description</div>
+    </div>
+    <div>
+      <error></error>
+    </div>
+  </label>
 </form>
 <div id="dialog-error" class="status-error"></div>
-<script>dialog.onLoad()</script>
+<script>
+  dialog.onLoad();
+</script>

@@ -1,12 +1,32 @@
-<option value="this-month" {% if period == "this-month" %}selected{% endif %}>This Month</option>
-<option value="last-month" {% if period == "last-month" %}selected{% endif %}>Last Month</option>
-<option value="30-days" {% if period == "30-days" %}selected{% endif %}>30 Days</option>
-<option value="90-days" {% if period == "90-days" %}selected{% endif %}>90 Days</option>
-<option value="1-year" {% if period == "1-year" %}selected{% endif %}>1 year</option>
-<option value="5-years" {% if period == "5-years" %}selected{% endif %}>5 years</option>
-<option value="this-year" {% if period == "this-year" %}selected{% endif %}>This Year</option>
-<option value="last-year" {% if period == "last-year" %}selected{% endif %}>Last Year</option>
+<option value="this-month" {% if period == "this-month" %}selected{% endif %}>
+  This Month
+</option>
+<option value="last-month" {% if period == "last-month" %}selected{% endif %}>
+  Last Month
+</option>
+<option value="30-days" {% if period == "30-days" %}selected{% endif %}>
+  30 Days
+</option>
+<option value="90-days" {% if period == "90-days" %}selected{% endif %}>
+  90 Days
+</option>
+<option value="1-year" {% if period == "1-year" %}selected{% endif %}>
+  1 year
+</option>
+<option value="5-years" {% if period == "5-years" %}selected{% endif %}>
+  5 years
+</option>
+<option value="this-year" {% if period == "this-year" %}selected{% endif %}>
+  This Year
+</option>
+<option value="last-year" {% if period == "last-year" %}selected{% endif %}>
+  Last Year
+</option>
 <option value="all" {% if period == "all" %}selected{% endif %}>All</option>
-<option value="custom"
-        hidden="hidden"
-        {% if period == "custom" %}selected{% endif %}>Custom</option>
+<option
+  value="custom"
+  hidden="hidden"
+  {% if period == "custom" %}selected{% endif %}
+>
+  Custom
+</option>

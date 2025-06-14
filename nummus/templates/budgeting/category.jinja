@@ -1,50 +1,67 @@
 {% set target = category.target %}
-<div id="category-{{ category.uri }}"
-     class="budget-category"
-     onclick="budgeting.onClickCategory(this, event)"
-     hx-include="#budgeting-sidebar-uri"
-     hx-target="#budgeting-sidebar"
-     hx-trigger="sidebar"
-     hx-get="{{ url_for('budgeting.sidebar', uri=category.uri) }}">
-    <div class="flex items-center mb-1">
-        <h1 class="grow">{{ category.name }}</h1>
-        <div class="{{ 'text-on-surface-variant' if category.assigned == 0 }} max-md:hidden group">
-            <input name="amount"
-                   placeholder="0.00"
-                   value="{{ category.assigned | input_value }}"
-                   hx-target="#group-{{ group.uri or 'ungrouped' }}"
-                   hx-put="{{ url_for('budgeting.assign', uri=category.uri, month=ctx.month) }}"
-                   autocomplete="off">
-            <span>{{ category.assigned | money }}</span>
-        </div>
-        <div class="{{ 'text-on-surface-variant' if category.activity == 0 }} max-md:hidden">
-            {{ category.activity | money }}
-        </div>
-        <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
-            {% if category.available < 0 %}
-                <button class="btn-tonal-error ml-auto px-2"
-                        hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
-                        hx-disabled-elt="this">{{ category.available | money }}</button>
-            {% else %}
-                {% set btn_class = ('btn-tonal-tertiary' if target and target.to_go > 0 else 'btn-tonal') %}
-                <button class="{{ btn_class }} ml-auto px-2"
-                        {% if category.available == 0 %}disabled{% endif %}
-                        hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
-                        hx-disabled-elt="this">{{ category.available | money }}</button>
-            {% endif %}
-        </div>
+<div
+  id="category-{{ category.uri }}"
+  class="budget-category"
+  onclick="budgeting.onClickCategory(this, event)"
+  hx-include="#budgeting-sidebar-uri"
+  hx-target="#budgeting-sidebar"
+  hx-trigger="sidebar"
+  hx-get="{{ url_for('budgeting.sidebar', uri=category.uri) }}"
+>
+  <div class="mb-1 flex items-center">
+    <h1 class="grow">{{ category.name }}</h1>
+    <div
+      class="{{ 'text-on-surface-variant' if category.assigned == 0 }} group max-md:hidden"
+    >
+      <input
+        name="amount"
+        placeholder="0.00"
+        value="{{ category.assigned | input_value }}"
+        hx-target="#group-{{ group.uri or 'ungrouped' }}"
+        hx-put="{{ url_for('budgeting.assign', uri=category.uri, month=ctx.month) }}"
+        autocomplete="off"
+      />
+      <span>{{ category.assigned | money }}</span>
     </div>
-    {% include "budgeting/category-bar.jinja" %}
-    <div class="text-sm text-on-surface-variant">
-        {% if category.available < 0 %}<b>Overspent</b>{% endif %}
-        {% if target and target.total_to_go != 0 %}
-            {% if not target.on_track %}
-                {{ target.to_go | money }} more needed
-            {% elif target.period == "WEEK" %}
-                On track, {{ target.to_go | money }} more needed
-            {% else %}
-                On track
-            {% endif %}
-        {% endif %}
+    <div
+      class="{{ 'text-on-surface-variant' if category.activity == 0 }} max-md:hidden"
+    >
+      {{ category.activity | money }}
     </div>
+    <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
+      {% if category.available < 0 %}
+        <button
+          class="btn-tonal-error ml-auto px-2"
+          hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
+          hx-disabled-elt="this"
+        >
+          {{ category.available | money }}
+        </button>
+      {% else %}
+        {% set btn_class = ('btn-tonal-tertiary' if target and target.to_go > 0 else 'btn-tonal') %}
+        <button
+          class="{{ btn_class }} ml-auto px-2"
+          {% if category.available == 0 %}disabled{% endif %}
+          hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
+          hx-disabled-elt="this"
+        >
+          {{ category.available | money }}
+        </button>
+      {% endif %}
+    </div>
+  </div>
+  {% include "budgeting/category-bar.jinja" %}
+  <div class="text-on-surface-variant text-sm">
+    {% if category.available < 0 %}<b>Overspent</b>{% endif %}
+    {% if target and target.total_to_go != 0 %}
+      {% if not target.on_track %}
+        {{ target.to_go | money }}
+        more needed
+      {% elif target.period == "WEEK" %}
+        On track, {{ target.to_go | money }} more needed
+      {% else %}
+        On track
+      {% endif %}
+    {% endif %}
+  </div>
 </div>

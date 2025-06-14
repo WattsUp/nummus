@@ -1,8 +1,9 @@
-<header id="nav-header"
-        hx-push-url="true"
-        hx-swap="innerHTML show:window:top">
-    <icon class="nav-opener" onclick="nav.openDrawer()">menu</icon>
-    <a href="{{ url_for('dashboard.page') }}"
-       hx-disabled-elt="this"
-       hx-get="{{ url_for('dashboard.page') }}">nummus</a>
+<header id="nav-header" hx-push-url="true" hx-swap="innerHTML show:window:top">
+  <icon class="nav-opener" onclick="nav.openDrawer()">menu</icon>
+  <a
+    href="{{ url_for('dashboard.page') }}"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('dashboard.page') }}"
+    >nummus</a
+  >
 </header>

@@ -1,8 +1,10 @@
-<label class="py-0.5 flex justify-between items-center">
-    <div>{{ cat.name }}</div>
-    <button class="btn-text btn-sq"
-            hx-disabled-elt="this"
-            hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}">
-        <icon>edit</icon>
-    </button>
+<label class="flex items-center justify-between py-0.5">
+  <div>{{ cat.name }}</div>
+  <button
+    class="btn-text btn-sq"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}"
+  >
+    <icon>edit</icon>
+  </button>
 </label>

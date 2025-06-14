@@ -1,39 +1,47 @@
 {% with headline="Move available funds", save_url=url_for("budgeting.move", uri=category.uri, month=category.month) %}
-    {% include "shared/dialog-headline.jinja" %}
+  {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
-<form class="grid gap-2 w-88" onsubmit="return false">
+<form class="w-88 grid gap-2" onsubmit="return false">
+  <div>
+    {{ category.name or "Assignable income" }} has
+    {{ category.available | money }} available
+  </div>
+  <label
+    class="input-outlined input-bg-surface-container-high {{ split_class }}"
+  >
+    <input
+      name="amount"
+      enterkeyhint="next"
+      placeholder=""
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('budgeting.validation') }}"
+      autocomplete="off"
+    />
+    <icon>attach_money</icon>
     <div>
-        {{ category.name or "Assignable income" }}
-        has {{ category.available | money }} available
+      <div>Move Amount</div>
     </div>
-    <label class="input-outlined input-bg-surface-container-high {{ split_class }}">
-        <input name="amount"
-               enterkeyhint="next"
-               placeholder=""
-               hx-target="next error"
-               hx-trigger="input delay:200ms"
-               hx-include="this"
-               hx-get="{{ url_for('budgeting.validation') }}"
-               autocomplete="off">
-        <icon>attach_money</icon>
-        <div>
-            <div>Move Amount</div>
-        </div>
-        <div>
-            <error></error>
-        </div>
-    </label>
-    <label class="input-outlined input-bg-surface-container-high">
-        <select name="destination" required autocomplete="off">
-            {% for uri, name, available, group in category.options %}
-                {% if not loop.previtem or loop.previtem[3] != group %}<option disabled>{{ group.pretty }}</option>{% endif %}
-                <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
-            {% endfor %}
-        </select>
-        <div>
-            <div>Destination</div>
-        </div>
-    </label>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high">
+    <select name="destination" required autocomplete="off">
+      {% for uri, name, available, group in category.options %}
+        {% if not loop.previtem or loop.previtem[3] != group %}
+          <option disabled>{{ group.pretty }}</option>
+        {% endif %}
+        <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Destination</div>
+    </div>
+  </label>
 </form>
 <div id="dialog-error" class="status-error"></div>
-<script>dialog.onLoad()</script>
+<script>
+  dialog.onLoad();
+</script>
