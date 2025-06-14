@@ -1,3 +1,4 @@
+{% set target = category.target %}
 <div id="category-{{ category.uri }}"
      class="budget-category"
      onclick="budgeting.onClickCategory(this, event)"
@@ -25,7 +26,7 @@
                         hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
                         hx-disabled-elt="this">{{ category.available | money }}</button>
             {% else %}
-                {% set btn_class = ('btn-tonal-tertiary' if category.target and category.target.to_go > 0 else 'btn-tonal') %}
+                {% set btn_class = ('btn-tonal-tertiary' if target and target.to_go > 0 else 'btn-tonal') %}
                 <button class="{{ btn_class }} ml-auto px-2"
                         {% if category.available == 0 %}disabled{% endif %}
                         hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
@@ -34,4 +35,16 @@
         </div>
     </div>
     {% include "budgeting/category-bar.jinja" %}
+    <div class="text-sm text-on-surface-variant">
+        {% if category.available < 0 %}<b>Overspent</b>{% endif %}
+        {% if target and target.total_to_go != 0 %}
+            {% if not target.on_track %}
+                {{ target.to_go | money }} more needed
+            {% elif target.period == "WEEK" %}
+                On track, {{ target.to_go | money }} more needed
+            {% else %}
+                On track
+            {% endif %}
+        {% endif %}
+    </div>
 </div>
