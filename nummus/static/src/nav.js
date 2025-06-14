@@ -1,6 +1,7 @@
 'use strict';
 const nav = {
     barOn: true,
+    overrideBarOff: false,
     lastToggleY: null,
     barHeight: null,
     barTranslate: 0,
@@ -50,6 +51,34 @@ const nav = {
         }
         const scrollY = window.scrollY;
 
+        const hyst = 20;
+        if (nav.lastToggleY == null) {
+            nav.lastToggleY = scrollY;
+        }
+
+        if (nav.barOn) {
+            nav.lastToggleY = Math.min(scrollY, nav.lastToggleY ?? scrollY);
+            if (scrollY > (nav.lastToggleY + hyst)) {
+                nav.updateBar(false);
+            }
+        } else {
+            nav.lastToggleY = Math.max(scrollY, nav.lastToggleY ?? scrollY);
+            if (scrollY < (nav.lastToggleY - hyst)) {
+                nav.updateBar(true);
+            }
+        }
+    },
+    /**
+     * Update bar translate
+     *
+     * @param {Boolean} on true show the bar
+     */
+    updateBar: function(on) {
+        on = on ?? nav.barOn;
+        nav.barOn = on;
+
+        if (nav.overrideBarOff) on = false;
+
         if (nav.bar == null) nav.bar = htmx.find('#nav-bar');
         if (nav.barHeight == null) {
             const rect = nav.bar.getBoundingClientRect();
@@ -63,36 +92,20 @@ const nav = {
                 (rect.width + window.screen.width - rect.right) / nav.barHeight;
         }
 
+        nav.barTranslate = on ? 0 : nav.barHeight * 1.1;
+        fabTranslate = nav.barTranslate * nav.fabRatio;
 
-        const hyst = 20;
-        if (nav.lastToggleY == null) {
-            nav.lastToggleY = scrollY;
-        }
-
-        let change = false;
-        if (nav.barOn) {
-            nav.lastToggleY = Math.min(scrollY, nav.lastToggleY ?? scrollY);
-            if (scrollY > (nav.lastToggleY + hyst)) {
-                nav.barTranslate = nav.barHeight * 1.1;
-                nav.barOn = false;
-                change = true;
-            }
-        } else {
-            nav.lastToggleY = Math.max(scrollY, nav.lastToggleY ?? scrollY);
-            if (scrollY < (nav.lastToggleY - hyst)) {
-                nav.barTranslate = 0;
-                nav.barOn = true;
-                change = true;
-            }
-        }
-
-        if (change) {
-            fabTranslate = nav.barTranslate * nav.fabRatio;
-
-            nav.bar.style.translate = `0 ${nav.barTranslate}px`;
-            nav.fab.style.translate =
-                `${fabTranslate}px ${- nav.barTranslate}px`;
-        }
+        nav.bar.style.translate = `0 ${nav.barTranslate}px`;
+        nav.fab.style.translate = `${fabTranslate}px ${- nav.barTranslate}px`;
+    },
+    /**
+     * Set override to force close the bar
+     *
+     * @param {Boolean} on true will unset the override
+     */
+    setOverrideBarOff: function(on) {
+        nav.overrideBarOff = !(on ?? false);
+        nav.updateBar();
     },
 };
 

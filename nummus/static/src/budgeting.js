@@ -23,6 +23,11 @@ const budgeting = {
     mouseOffsetY: null,
     isDragging: false,
     groupOpen: {},
+    currentURI: null,
+    barOn: true,
+    barHeight: null,
+    barTranslate: 0,
+    bar: null,
     /**
      * Set up budgeting drag listeners
      */
@@ -586,12 +591,47 @@ const budgeting = {
      * @param {Event} evt Triggering event
      */
     onClickCategory(e, evt) {
-        if (evt.target.matches('input, input *, button, button *')) return;
-        const assignedInput = htmx.find(e, 'input');
-        assignedInput.focus({preventScroll: true});
-        assignedInput.selectionStart = 0;
-        assignedInput.selectionEnd = assignedInput.value.length;
+        if (window.screen.width < 768) {
+            // for small, activate budget-bar
+            const uri = e.id.slice(9);
+            if (this.currentURI == uri) {
+                this.currentURI = null;
+                this.updateBar(false);
+                nav.setOverrideBarOff(true);
+                htmx.removeClass(e, 'budget-category-active');
+            } else {
+                if (this.currentURI) {
+                    htmx.removeClass(
+                        htmx.find(`#category-${this.currentURI}`),
+                        'budget-category-active');
+                }
+                this.currentURI = uri;
+                this.updateBar(true);
+                nav.setOverrideBarOff();
+                htmx.addClass(e, 'budget-category-active');
+            }
+
+            return;
+        }
+        // for larger, activate sidebar
         htmx.trigger(e, 'sidebar');
+    },
+    /**
+     * Update bar translate
+     *
+     * @param {Boolean} on true show the bar
+     */
+    updateBar: function(on) {
+        this.barOn = on;
+
+        if (this.bar == null) this.bar = htmx.find('#budget-button-bar');
+        if (this.barHeight == null) {
+            const rect = this.bar.getBoundingClientRect();
+            this.barHeight = rect.height;
+        }
+
+        this.barTranslate = on ? 0 : this.barHeight * 1.1;
+        this.bar.style.translate = `0 ${this.barTranslate}px`;
     },
     /**
      * On click of delete target, confirm action

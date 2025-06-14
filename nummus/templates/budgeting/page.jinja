@@ -61,3 +61,32 @@
     </div>
     <div id="budgeting-sidebar" class="max-lg:hidden">{% include "budgeting/sidebar.jinja" %}</div>
 </div>
+<div id="budget-button-bar">
+    <button hx-get=""
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-push-url="false"
+            hx-disabled-elt="this"
+            disabled>
+        <icon>payments</icon>
+        <div>Assign</div>
+    </button>
+    <button hx-get=""
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-push-url="false"
+            hx-disabled-elt="this"
+            disabled>
+        <icon>swap_vert</icon>
+        <div>Move Money</div>
+    </button>
+    <button hx-get=""
+            hx-target="#dialog"
+            hx-swap="innerHTML show:#dialog:top"
+            hx-push-url="false"
+            hx-disabled-elt="this"
+            disabled>
+        <icon>target</icon>
+        <div>Target</div>
+    </button>
+</div>
