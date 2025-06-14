@@ -95,19 +95,17 @@ Coverage report
 Code development of this project adheres to [Google Python Guide](https://google.github.io/styleguide/pyguide.html)
 
 Linters
-```bash
-> ruff .
-> djlint .
-> codespell .
-```
+- `ruff` for Python
+- `pyright` for Python type analysis
+- `djlint` for Jinja HTML templates
+- `codespell` for all files
 
 Formatters
-```bash
-> isort .
-> black .
-> djlint . --reformat
-> clang-format $EACH_JS_FILE
-```
+- `isort` for Python import order
+- `black` for Python
+- `prettier` for Jinja HTML templates and CSS
+- `clang-format` for JavaScript
+- `taplo` for TOML
 
 ### Tools
 - `formatters.sh` will run every formatter

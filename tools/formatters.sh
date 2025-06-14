@@ -2,7 +2,6 @@
 # Run every formatter
 isort .
 black .
-djlint . --reformat
+prettier nummus/templates nummus/static/src/css -w
 find nummus/static/src -name "*.js" -not -path "nummus/static/src/3rd-party/*" -exec clang-format -i {} \;
-clang-format -i nummus/static/tailwind.config.js
 taplo fmt .

@@ -7,7 +7,7 @@
 }
 
 @utility btn {
-  @apply border transition flex gap-1 items-center whitespace-nowrap;
+  @apply flex items-center gap-1 whitespace-nowrap border transition;
   @apply cursor-default;
 
   /* big radius to get pill shape */
@@ -24,7 +24,7 @@
   transition-property: color, background-color, box-shadow;
 
   @variant disabled {
-    @apply cursor-auto text-on-surface/38;
+    @apply text-on-surface/38 cursor-auto;
 
     & * {
       @apply text-on-surface/38;
@@ -32,23 +32,23 @@
   }
 
   @variant focus-visible {
-    @apply outline outline-3;
+    @apply outline-3 outline;
     outline-color: var(--btn-focus-indicator-color);
   }
 }
 
 @utility btn-icon-filled {
   & icon {
-    font-variation-settings: 'FILL' 1;
+    font-variation-settings: "FILL" 1;
   }
 }
 
 @utility btn-stacked {
   @apply mb-6;
 
-  &>div {
-    @apply absolute left-1/2 -bottom-6 -translate-x-1/2;
-    @apply text-sm text-center;
+  & > div {
+    @apply absolute -bottom-6 left-1/2 -translate-x-1/2;
+    @apply text-center text-sm;
   }
 }
 
@@ -64,12 +64,20 @@
 
   @variant not-disabled {
     @variant hover {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 92%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled shadow-md;
     }
 
     @variant [:active, :focus-visible] {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 90%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
   }
@@ -91,12 +99,20 @@
 
   @variant not-disabled {
     @variant hover {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 92%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled shadow-md;
     }
 
     @variant [:active, :focus-visible] {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 90%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
   }
@@ -118,12 +134,20 @@
 
   @variant not-disabled {
     @variant hover {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 8%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
 
     @variant [:active, :focus-visible] {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 10%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
   }
@@ -145,12 +169,20 @@
 
   @variant not-disabled {
     @variant hover {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 8%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 8%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
 
     @variant [:active, :focus-visible] {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 10%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 10%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
   }
@@ -238,12 +270,20 @@
 
   @variant not-disabled {
     @variant hover {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 92%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 92%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
 
     @variant [:active, :focus-visible] {
-      --btn-bg-color: color-mix(in oklab, var(--btn-base-color) 90%, var(--btn-state-color));
+      --btn-bg-color: color-mix(
+        in oklab,
+        var(--btn-base-color) 90%,
+        var(--btn-state-color)
+      );
       @apply btn-icon-filled;
     }
   }
@@ -269,7 +309,7 @@
   border-radius: 100em;
 
   & input {
-    @apply opacity-0 w-0 h-0;
+    @apply h-0 w-0 opacity-0;
   }
 
   & label {
@@ -277,7 +317,7 @@
   }
 
   & icon {
-    @apply transition-colors box-content;
+    @apply box-content transition-colors;
 
     height: 24px;
     padding: var(--radioset-p);
@@ -285,26 +325,36 @@
   }
 
   @variant not-disabled {
-    &>label {
-
+    & > label {
       @variant hover {
         & icon {
-          background-color: color-mix(in oklab, var(--radioset-base-color) 16%, var(--radioset-state-color));
-          font-variation-settings: 'FILL' 1;
+          background-color: color-mix(
+            in oklab,
+            var(--radioset-base-color) 16%,
+            var(--radioset-state-color)
+          );
+          font-variation-settings: "FILL" 1;
         }
       }
 
       @variant active {
         & icon {
-          background-color: color-mix(in oklab, var(--radioset-base-color) 20%, var(--radioset-state-color));
-          font-variation-settings: 'FILL' 1;
+          background-color: color-mix(
+            in oklab,
+            var(--radioset-base-color) 20%,
+            var(--radioset-state-color)
+          );
+          font-variation-settings: "FILL" 1;
         }
       }
-
     }
 
-    & input:checked+icon {
-      background-color: color-mix(in oklab, var(--radioset-base-color) 20%, var(--radioset-state-color));
+    & input:checked + icon {
+      background-color: color-mix(
+        in oklab,
+        var(--radioset-base-color) 20%,
+        var(--radioset-state-color)
+      );
     }
 
     &:has(input:focus-visible) {
@@ -313,13 +363,13 @@
   }
 
   @variant disabled {
-    @apply cursor-auto text-on-surface/38;
+    @apply text-on-surface/38 cursor-auto;
 
-    &>label {
+    & > label {
       @apply cursor-auto;
     }
 
-    & input:checked+icon {
+    & input:checked + icon {
       @apply bg-on-surface/16;
     }
   }
