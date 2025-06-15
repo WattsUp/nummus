@@ -121,29 +121,18 @@ def page() -> flask.Response:
     )
 
 
-def validation() -> str:
-    """GET /h/transactions/validation.
+def validation() -> flask.Response | str:
+    """GET /h/budgeting/validation.
 
     Returns:
         string HTML response
     """
-    # dict{key: (required, prop if unique required)}
-    properties: dict[str, bool] = {
-        "payee": True,
-        "memo": False,
-        "tag": False,
-    }
-
     args = flask.request.args
-    for key, required in properties.items():
-        if key not in args:
-            continue
-        value = args[key].strip()
-        if value == "":
-            return "Required" if required else ""
-        if len(value) < utils.MIN_STR_LEN:
-            return f"{utils.MIN_STR_LEN} characters required"
-        return ""
+
+    def update_target_desc() -> flask.Response:
+        response = flask.make_response()
+        response.headers["HX-Trigger"] = "target-desc"
+        return response
 
     if "date" in args:
         value = args["date"].strip()
@@ -152,44 +141,8 @@ def validation() -> str:
         date = utils.parse_date(args["date"])
         if date is None:
             return common.error("Unable to parse")
-        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-            return "Only up to a week in advance"
-        return ""
+        return update_target_desc()
 
-    if "split-amount" in args:
-        if "split" in args:
-            value = args["split-amount"].strip()
-        else:
-            value = args["amount"].strip()
-            if value == "":
-                return "Required"
-        amount = utils.evaluate_real_statement(value)
-        if value != "" and amount is None:
-            return "Unable to parse"
-        parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal(0)
-        split_amounts = [
-            utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
-        ]
-
-        split_sum = sum(filter(None, split_amounts)) or Decimal(0)
-
-        remaining = parent_amount - split_sum
-        msg = (
-            (
-                f"Sum of splits {utils.format_financial(split_sum)} "
-                f"not equal to total {utils.format_financial(parent_amount)}. "
-                f"{utils.format_financial(remaining)} to assign"
-            )
-            if remaining != 0
-            else ""
-        )
-
-        # Render sum of splits to headline since its a global error
-        return flask.render_template(
-            "shared/dialog-headline-error.jinja",
-            oob=True,
-            headline_error=msg,
-        )
     if "amount" in args:
         value = args["amount"].strip()
         if value == "":
@@ -197,7 +150,19 @@ def validation() -> str:
         amount = utils.evaluate_real_statement(value)
         if amount is None:
             return "Unable to parse"
-        return ""
+        return update_target_desc()
+
+    if "repeat" in args:
+        value = args["repeat"].strip()
+        if value == "":
+            return "Required"
+        try:
+            value = int(value)
+        except ValueError:
+            return "Unable to parse"
+        if value < 1:
+            return "Must be positive"
+        return update_target_desc()
 
     msg = f"Transaction validation for {args} not implemented"
     raise NotImplementedError(msg)
@@ -756,7 +721,7 @@ def new_group() -> str:
 
 
 def target(uri: str) -> str | flask.Response:
-    """GET /h/budgeting/t/<path:uri>.
+    """GET, POST, PUT, DELETE /h/budgeting/t/<path:uri>.
 
     Returns:
         string HTML response

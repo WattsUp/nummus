@@ -7,9 +7,6 @@
     {% include "shared/dialog-headline.jinja" %}
   {% endwith %}
 {% endif %}
-{# TODO (WattsUp): Set pending when changing period #}
-{# TODO (WattsUp): Add validation and update desc #}
-{# TODO (WattsUp): Update page after target update #}
 <form class="grid w-96 grid-cols-2 gap-2" onsubmit="return false">
   <h1 class="col-span-full text-center">
     How do you want to plan for {{ target.category }} spending?
@@ -25,6 +22,7 @@
           hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}"
           hx-target="#dialog"
           hx-swap="innerHTML show:#dialog:top"
+          onclick="dialog.changes()"
         >
           {{ period_str }}
         </div>
@@ -41,6 +39,7 @@
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"
+      hx-get="{{ url_for("budgeting.validation") }}"
       autocomplete="off"
     />
     <icon>attach_money</icon>
@@ -53,7 +52,13 @@
   </label>
   {% if target.period == "WEEK" %}
     <label class="input-outlined input-bg-surface-container-high">
-      <select name="due" autocomplete="off">
+      <select
+        name="due"
+        autocomplete="off"
+        hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
+        hx-include="#dialog form"
+        hx-target="#target-desc"
+      >
         {% for weekday in target.weekdays %}
           <option
             value="{{ loop.index0 }}"
@@ -124,6 +129,7 @@
         hx-target="next error"
         hx-trigger="input delay:200ms"
         hx-include="this"
+        hx-get="{{ url_for("budgeting.validation") }}"
         autocomplete="off"
       />
       <icon>event</icon>
@@ -139,7 +145,13 @@
   {% set next_period = ("year" if target.period == "YEAR" else "month") %}
   {% if target.period != "ONCE" %}
     <label class="input-outlined input-bg-surface-container-high">
-      <select name="type" autocomplete="off">
+      <select
+        name="type"
+        autocomplete="off"
+        hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
+        hx-include="#dialog form"
+        hx-target="#target-desc"
+      >
         <option
           value="accumulate"
           {% if target.type == "ACCUMULATE" %}selected{% endif %}
@@ -174,6 +186,7 @@
         hx-target="next error"
         hx-trigger="input delay:200ms"
         hx-include="this"
+        hx-get="{{ url_for("budgeting.validation") }}"
         autocomplete="off"
       />
       <icon>event_repeat</icon>
@@ -185,7 +198,16 @@
       </div>
     </label>
   {% endif %}
-  {% include "budgeting/target-desc.jinja" %}
+  <div
+    id="target-desc"
+    class="col-span-full"
+    hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
+    hx-include="#dialog form"
+    hx-target="this"
+    hx-trigger="target-desc from:body"
+  >
+    {% include "budgeting/target-desc.jinja" %}
+  </div>
 </form>
 <div class="flex flex-wrap justify-around">
   {% if not target.new %}
