@@ -32,7 +32,7 @@
   }
 
   @variant focus-visible {
-    @apply outline-3 outline;
+    @apply outline-3;
     outline-color: var(--btn-focus-indicator-color);
   }
 }

@@ -74,7 +74,7 @@
 
 @utility budget-category-active {
   @variant max-md {
-    @apply outline-3 outline-secondary outline;
+    @apply outline-3 outline-secondary;
   }
 }
 

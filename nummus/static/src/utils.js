@@ -1,4 +1,4 @@
-'use strict';
+"use strict";
 /**
  * Get theme colors
  *
@@ -6,8 +6,8 @@
  * @return {String} Hex string of color
  */
 function getThemeColor(name) {
-    const style = getComputedStyle(document.body);
-    return style.getPropertyValue(`--color-${name}`);
+  const style = getComputedStyle(document.body);
+  return style.getPropertyValue(`--color-${name}`);
 }
 
 /**
@@ -22,76 +22,79 @@ function getThemeColor(name) {
  * @return {Array} avg
  */
 function downsampleMonths(dates, values) {
-    let labels = [];
-    let min = [];
-    let max = [];
-    let avg = [];
+  let labels = [];
+  let min = [];
+  let max = [];
+  let avg = [];
 
-    let currentMonth = dates[0].slice(0, 7);
-    let currentMin = values[0];
-    let currentMax = values[0];
-    let currentSum = 0;
-    let currentN = 0
-    for (let i = 0; i < dates.length; ++i) {
-        let month = dates[i].slice(0, 7);
-        let v = values[i];
+  let currentMonth = dates[0].slice(0, 7);
+  let currentMin = values[0];
+  let currentMax = values[0];
+  let currentSum = 0;
+  let currentN = 0;
+  for (let i = 0; i < dates.length; ++i) {
+    let month = dates[i].slice(0, 7);
+    let v = values[i];
 
-        if (month != currentMonth) {
-            labels.push(currentMonth);
-            min.push(currentMin);
-            max.push(currentMax);
-            avg.push(currentSum / currentN);
+    if (month != currentMonth) {
+      labels.push(currentMonth);
+      min.push(currentMin);
+      max.push(currentMax);
+      avg.push(currentSum / currentN);
 
-            currentMonth = month;
-            currentMin = v;
-            currentMax = v;
-            currentSum = 0;
-            currentN = 0;
-        }
-
-        currentMin = Math.min(currentMin, v);
-        currentMax = Math.max(currentMax, v);
-        currentSum += v;
-        ++currentN;
+      currentMonth = month;
+      currentMin = v;
+      currentMax = v;
+      currentSum = 0;
+      currentN = 0;
     }
-    labels.push(currentMonth);
-    min.push(currentMin);
-    max.push(currentMax);
-    avg.push(currentSum / currentN);
 
-    return {
-        labels: labels, min: min, max: max, avg: avg,
-    }
+    currentMin = Math.min(currentMin, v);
+    currentMax = Math.max(currentMax, v);
+    currentSum += v;
+    ++currentN;
+  }
+  labels.push(currentMonth);
+  min.push(currentMin);
+  max.push(currentMax);
+  avg.push(currentSum / currentN);
+
+  return {
+    labels: labels,
+    min: min,
+    max: max,
+    avg: avg,
+  };
 }
 
 /**
  * USD formatter with zero fractional digits
  */
-const formatterF0 = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
+const formatterF0 = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
 });
 
 /**
  * USD formatter with one fractional digit
  */
-const formatterF1 = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+const formatterF1 = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
 });
 
 /**
  * USD formatter with two fractional digits
  */
-const formatterF2 = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+const formatterF2 = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
 });
 
 /**
@@ -103,20 +106,20 @@ const formatterF2 = new Intl.NumberFormat('en-US', {
  * @return {String} Label for current tick
  */
 function formatMoneyTicks(value, index, ticks) {
-    if (index == 0) {
-        const step = Math.abs(ticks[0].value - ticks[1].value);
-        const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
-        ticks.forEach((t) => {
-            if (step >= 1000) {
-                t.label = formatterF0.format(t.value / 1000) + 'k';
-            } else if (step >= 100 && smallest >= 1000) {
-                t.label = formatterF1.format(t.value / 1000) + 'k';
-            } else {
-                t.label = formatterF0.format(t.value);
-            }
-        });
-    }
-    return ticks[index].label;
+  if (index == 0) {
+    const step = Math.abs(ticks[0].value - ticks[1].value);
+    const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
+    ticks.forEach((t) => {
+      if (step >= 1000) {
+        t.label = formatterF0.format(t.value / 1000) + "k";
+      } else if (step >= 100 && smallest >= 1000) {
+        t.label = formatterF1.format(t.value / 1000) + "k";
+      } else {
+        t.label = formatterF0.format(t.value);
+      }
+    });
+  }
+  return ticks[index].label;
 }
 
 /**
@@ -128,16 +131,15 @@ function formatMoneyTicks(value, index, ticks) {
  * @return {String} Label for current tick
  */
 function formatPercentTicks(value, index, ticks) {
-    if (index == 0) {
-        const step = Math.abs(ticks[0].value - ticks[1].value);
-        const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
-        ticks.forEach((t) => {
-            t.label = `${t.value.toFixed(0)}%`;
-        });
-    }
-    return ticks[index].label;
+  if (index == 0) {
+    const step = Math.abs(ticks[0].value - ticks[1].value);
+    const smallest = Math.min(...ticks.map((t) => Math.abs(t.value)));
+    ticks.forEach((t) => {
+      t.label = `${t.value.toFixed(0)}%`;
+    });
+  }
+  return ticks[index].label;
 }
-
 
 /**
  * Format ticks as date
@@ -148,37 +150,37 @@ function formatPercentTicks(value, index, ticks) {
  * @return {String} Label for current tick
  */
 function formatDateTicks(value, index, ticks) {
-    if (index == 0) {
-        const chart = this.chart;
-        const labels = chart.data.labels;
-        const dateMode = chart.config.options.scales.x.ticks.dateMode;
-        switch (dateMode) {
-            case 'years':
-                ticks.forEach((t, i) => {
-                    let l = labels[i];
-                    if (l.slice(-5) == '01-01') t.label = l.slice(0, 4);
-                });
-                break;
-            case 'months':
-                formatDateTicksMonths.bind(this)(value, index, ticks);
-                break;
-            case 'weeks':
-                ticks.forEach((t, i) => {
-                    let l = labels[i];
-                    let date = new Date(l);
-                    // Mark each Sunday
-                    if (date.getUTCDay() == 0) t.label = l.slice(5, 10);
-                });
-                break;
-            case 'days':
-                ticks.forEach((t, i) => t.label = labels[i].slice(5, 10));
-                break;
-            default:
-                ticks.forEach((t, i) => t.label = labels[i]);
-                break;
-        }
+  if (index == 0) {
+    const chart = this.chart;
+    const labels = chart.data.labels;
+    const dateMode = chart.config.options.scales.x.ticks.dateMode;
+    switch (dateMode) {
+      case "years":
+        ticks.forEach((t, i) => {
+          let l = labels[i];
+          if (l.slice(-5) == "01-01") t.label = l.slice(0, 4);
+        });
+        break;
+      case "months":
+        formatDateTicksMonths.bind(this)(value, index, ticks);
+        break;
+      case "weeks":
+        ticks.forEach((t, i) => {
+          let l = labels[i];
+          let date = new Date(l);
+          // Mark each Sunday
+          if (date.getUTCDay() == 0) t.label = l.slice(5, 10);
+        });
+        break;
+      case "days":
+        ticks.forEach((t, i) => (t.label = labels[i].slice(5, 10)));
+        break;
+      default:
+        ticks.forEach((t, i) => (t.label = labels[i]));
+        break;
     }
-    return ticks[index].label;
+  }
+  return ticks[index].label;
 }
 
 /**
@@ -190,31 +192,31 @@ function formatDateTicks(value, index, ticks) {
  * @return {String} Label for current tick
  */
 function formatDateTicksMonths(value, index, ticks) {
-    if (index == 0) {
-        const chart = this.chart;
-        const labels = chart.data.labels;
-        const months = {
-            '01': 'Jan',
-            '02': 'Feb',
-            '03': 'Mar',
-            '04': 'Apr',
-            '05': 'May',
-            '06': 'Jun',
-            '07': 'Jul',
-            '08': 'Aug',
-            '09': 'Sep',
-            '10': 'Oct',
-            '11': 'Nov',
-            '12': 'Dec',
-        };
-        ticks.forEach((t, i) => {
-            let l = labels[i];
-            if (l.length == 7 || l.slice(-2) == '01') {
-                t.label = months[l.slice(5, 7)];
-            }
-        });
-    }
-    return ticks[index].label;
+  if (index == 0) {
+    const chart = this.chart;
+    const labels = chart.data.labels;
+    const months = {
+      "01": "Jan",
+      "02": "Feb",
+      "03": "Mar",
+      "04": "Apr",
+      "05": "May",
+      "06": "Jun",
+      "07": "Jul",
+      "08": "Aug",
+      "09": "Sep",
+      10: "Oct",
+      11: "Nov",
+      12: "Dec",
+    };
+    ticks.forEach((t, i) => {
+      let l = labels[i];
+      if (l.length == 7 || l.slice(-2) == "01") {
+        t.label = months[l.slice(5, 7)];
+      }
+    });
+  }
+  return ticks[index].label;
 }
 
 /**
@@ -223,13 +225,13 @@ function formatDateTicksMonths(value, index, ticks) {
  * @param {Array} array Array to compute over
  * @return {Number} Average value
  */
-const average = array => array.reduce((a, b) => a + b) / array.length;
+const average = (array) => array.reduce((a, b) => a + b) / array.length;
 
 /**
  * Configures chart defaults
  */
 function setChartDefaults() {
-    Chart.defaults.font.family = '\'liberation-sans\', \'sans-serif\'';
+  Chart.defaults.font.family = "'liberation-sans', 'sans-serif'";
 }
 
 /**
@@ -243,9 +245,9 @@ function setChartDefaults() {
  * @return {Number} max New range maximum
  */
 function widenRange(min, max, amount) {
-    const center = (min + max) / 2;
-    const range = (max - min) * (1 + amount);
-    return {min: center - range / 2, max: center + range / 2};
+  const center = (min + max) / 2;
+  const range = (max - min) * (1 + amount);
+  return { min: center - range / 2, max: center + range / 2 };
 }
 
 /**
@@ -255,7 +257,7 @@ function widenRange(min, max, amount) {
  * @return {Boolean} true if item is an object
  */
 function isObject(item) {
-    return (item && typeof item === 'object' && !Array.isArray(item));
+  return item && typeof item === "object" && !Array.isArray(item);
 }
 
 /**
@@ -266,20 +268,20 @@ function isObject(item) {
  * @return {Object} Merged objects
  */
 function merge(target, ...sources) {
-    if (!sources.length) return target;
-    const source = sources.shift();
+  if (!sources.length) return target;
+  const source = sources.shift();
 
-    if (isObject(target) && isObject(source)) {
-        for (const key in source) {
-            if (isObject(source[key])) {
-                if (!target[key]) Object.assign(target, {[key]: {}});
-                merge(target[key], source[key]);
-            } else {
-                Object.assign(target, {[key]: source[key]});
-            }
-        }
+  if (isObject(target) && isObject(source)) {
+    for (const key in source) {
+      if (isObject(source[key])) {
+        if (!target[key]) Object.assign(target, { [key]: {} });
+        merge(target[key], source[key]);
+      } else {
+        Object.assign(target, { [key]: source[key] });
+      }
     }
-    return merge(target, ...sources);
+  }
+  return merge(target, ...sources);
 }
 
 /**
@@ -292,44 +294,44 @@ function merge(target, ...sources) {
  * @return {Array} Array of wrapped lines
  */
 function word_wrap(rawLines, maxWidth, maxLines, ctx) {
-    if (maxLines < 1) {
-        return [];
+  if (maxLines < 1) {
+    return [];
+  }
+  const lines = [];
+  for (const rawLine of rawLines) {
+    if (!rawLine) {
+      continue;
     }
-    const lines = [];
-    for (const rawLine of rawLines) {
-        if (!rawLine) {
-            continue;
+    const words = rawLine.split(" ");
+    let currentLine = null;
+    for (const word of words) {
+      const newLine = currentLine ? currentLine + " " + word : word;
+      const width = ctx.measureText(newLine).width;
+      if (width < maxWidth) {
+        currentLine = newLine;
+      } else if (currentLine) {
+        const wordWidth = ctx.measureText(word).width;
+        if (wordWidth >= maxWidth) {
+          return lines;
         }
-        const words = rawLine.split(' ');
-        let currentLine = null;
-        for (const word of words) {
-            const newLine = currentLine ? currentLine + ' ' + word : word;
-            const width = ctx.measureText(newLine).width;
-            if (width < maxWidth) {
-                currentLine = newLine;
-            } else if (currentLine) {
-                const wordWidth = ctx.measureText(word).width;
-                if (wordWidth >= maxWidth) {
-                    return lines;
-                }
-                lines.push(currentLine);
-                if (lines.length == maxLines) {
-                    return lines;
-                }
-                currentLine = word;
-            } else {
-                // word alone doesn't fit
-                return lines;
-            }
+        lines.push(currentLine);
+        if (lines.length == maxLines) {
+          return lines;
         }
-        if (currentLine) {
-            lines.push(currentLine);
-            if (lines.length == maxLines) {
-                return lines;
-            }
-        }
+        currentLine = word;
+      } else {
+        // word alone doesn't fit
+        return lines;
+      }
     }
-    return lines;
+    if (currentLine) {
+      lines.push(currentLine);
+      if (lines.length == maxLines) {
+        return lines;
+      }
+    }
+  }
+  return lines;
 }
 
 /**
@@ -338,10 +340,10 @@ function word_wrap(rawLines, maxWidth, maxLines, ctx) {
  * @param {Event} event Triggering event
  */
 function nummusSendError(evt) {
-    const url = evt.detail.pathInfo.finalRequestPath;
-    const e = document.querySelector('#hx-error');
-    e.classList.remove('hidden');
-    e.querySelector('span').innerHTML = `Failed to send request for '${url}'`
+  const url = evt.detail.pathInfo.finalRequestPath;
+  const e = document.querySelector("#hx-error");
+  e.classList.remove("hidden");
+  e.querySelector("span").innerHTML = `Failed to send request for '${url}'`;
 }
 
 /**
@@ -350,20 +352,20 @@ function nummusSendError(evt) {
  * @param {Event} event Triggering event
  */
 function nummusResponseError(evt) {
-    const e = document.querySelector('#hx-error');
-    e.classList.remove('hidden');
-    e.querySelector('span').innerHTML = evt.detail.error;
+  const e = document.querySelector("#hx-error");
+  e.classList.remove("hidden");
+  e.querySelector("span").innerHTML = evt.detail.error;
 }
 
 /**
  * On changes, clear all page history and force a cache miss
  */
 function nummusClearHistory() {
-    localStorage.removeItem('htmx-history-cache');
+  localStorage.removeItem("htmx-history-cache");
 }
 
 /*
  * DELETE is supposed to use request parameters but form is way better
  * htmx 2.x followed the spec properly, revert
  */
-htmx.config.methodsThatUseUrlParams = ['get'];
+htmx.config.methodsThatUseUrlParams = ["get"];
