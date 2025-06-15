@@ -16,6 +16,7 @@
 
 @import "./transactions.css";
 @import "./budgeting.css";
+@import "./dashboard.css";
 
 /* Apply dark theme if on element or any ancestor */
 @custom-variant dark (&:where(.dark, .dark *));

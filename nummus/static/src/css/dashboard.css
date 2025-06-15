@@ -1,0 +1,31 @@
+@utility dashboard {
+  @apply grid grid-flow-dense grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2;
+
+  & > div {
+    @apply min-h-64 rounded-xl p-2;
+    @apply flex flex-col;
+    @apply bg-surface-container;
+
+    & > a {
+      @apply relative flex justify-between pr-6;
+
+      & > h1 {
+        @apply text-primary font-serif text-xl;
+      }
+
+      & > h2 {
+        @apply text-lg;
+      }
+
+      & > icon {
+        @apply absolute right-0 top-1/2 -translate-y-1/2;
+      }
+
+      @variant hover {
+        & > h1 {
+          @apply decoration-primary underline;
+        }
+      }
+    }
+  }
+}

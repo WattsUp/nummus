@@ -1,51 +1,14 @@
-<section class="m-auto flex max-w-screen-lg flex-col">
+<div class="flex items-center justify-between">
+  <h1 class="text-primary font-serif text-3xl">Dashboard</h1>
+</div>
+<div class="dashboard">
   <div
-    class="grid grid-flow-dense grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3"
+    hx-get="{{ url_for('emergency_fund.dashboard') }}"
+    hx-trigger="load"
+    hx-indicator="find .spinner"
+    hx-target="this"
+    hx-swap="outerHTML"
   >
-    <div
-      class="relative h-[16rem] min-h-[16rem] md:h-[20rem] md:min-h-[20rem]"
-      hx-get="{{ url_for('net_worth.dashboard') }}"
-      hx-trigger="load"
-      hx-indicator="find .spinner"
-      hx-target="this"
-    >
-      {% include "shared/spinner.jinja" %}
-    </div>
-    {#<div hx-get="/h/dashboard/budget" hx-trigger="load">
-            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
-        </div>#}
-    <div
-      class="relative h-[16rem] min-h-[16rem] md:h-[20rem] md:min-h-[20rem]"
-      hx-get="{{ url_for('cash_flow.dashboard', period='8-months') }}"
-      hx-trigger="load"
-      hx-indicator="find .spinner"
-      hx-target="this"
-    >
-      {% include "shared/spinner.jinja" %}
-    </div>
-    {#<div hx-get="/h/dashboard/retirement" hx-trigger="load">
-            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
-        </div>#}
-    <div
-      class="relative h-[16rem] min-h-[16rem] md:h-[20rem] md:min-h-[20rem]"
-      hx-get="{{ url_for('emergency_fund.dashboard') }}"
-      hx-trigger="load"
-      hx-indicator="find .spinner"
-      hx-target="this"
-    >
-      {% include "shared/spinner.jinja" %}
-    </div>
-    {#<div hx-get="/h/dashboard/debt-paydown" hx-trigger="load">
-            <div class="text-center">{% include "shared/spinner.jinja" %}</div>
-        </div>#}
-    <div
-      class="relative h-[16rem] min-h-[16rem] md:h-[20rem] md:min-h-[20rem]"
-      hx-get="{{ url_for('performance.dashboard') }}"
-      hx-trigger="load"
-      hx-indicator="find .spinner"
-      hx-target="this"
-    >
-      {% include "shared/spinner.jinja" %}
-    </div>
+    {% include "shared/spinner.jinja" %}
   </div>
-</section>
+</div>
