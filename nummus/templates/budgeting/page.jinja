@@ -2,7 +2,7 @@
   class="grid grid-flow-row-dense grid-cols-2 gap-2 pb-2 md:grid-cols-4"
   hx-target="#main"
   hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
-  hx-get="{{ url_for('budgeting.page') }}"
+  hx-get="{{ url_for("budgeting.page") }}"
   hx-include="#budgeting-sidebar-uri"
 >
   <h1 class="text-primary mr-auto font-serif text-3xl">Budgeting</h1>
@@ -12,7 +12,7 @@
   <div class="flex h-9 items-center justify-end">
     <button
       class="btn-text btn-sq"
-      hx-get="{{ url_for('budgeting.page', month=ctx.month_prev) }}"
+      hx-get="{{ url_for("budgeting.page", month=ctx.month_prev) }}"
       hx-push-url="true"
       hx-swap="innerHTML show:window:top"
     >
@@ -21,7 +21,7 @@
     <h1 class="text-primary font-serif text-3xl">{{ ctx.month }}</h1>
     <button
       class="btn-text btn-sq"
-      hx-get="{{ url_for('budgeting.page', month=ctx.month_next) }}"
+      hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
       hx-push-url="true"
       hx-swap="innerHTML show:window:top"
       {% if not ctx.month_next %}disabled{% endif %}
@@ -62,8 +62,8 @@
   <div>
     {% for group in ctx.groups %}
       <div
-        id="group-{{ group.uri or 'ungrouped' }}"
-        class="budget-group {{ 'open' if group.is_open }}"
+        id="group-{{ group.uri or "ungrouped" }}"
+        class="budget-group {{ "open" if group.is_open }}"
       >
         {% include "budgeting/group.jinja" %}
       </div>
@@ -74,38 +74,27 @@
   </div>
 </div>
 <div id="budget-button-bar">
-  {# TODO (WattsUp): enable buttons #}
+  <input type="hidden" name="destination" />
   <button
-    hx-get=""
+    hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
+    hx-include="#budget-button-bar"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-push-url="false"
     hx-disabled-elt="this"
-    disabled
   >
     <icon>payments</icon>
     <div>Assign</div>
   </button>
-  <button
-    hx-get=""
-    hx-target="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-    hx-push-url="false"
-    hx-disabled-elt="this"
-    disabled
-  >
+  <button onclick="budgeting.onBarMove()">
     <icon>swap_vert</icon>
     <div>Move Money</div>
   </button>
-  <button
-    hx-get=""
-    hx-target="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-    hx-push-url="false"
-    hx-disabled-elt="this"
-    disabled
-  >
+  <button onclick="budgeting.onBarTarget()">
     <icon>target</icon>
     <div>Target</div>
   </button>
 </div>
+<script>
+  budgeting.reset();
+</script>

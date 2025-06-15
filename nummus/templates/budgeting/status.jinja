@@ -10,8 +10,8 @@
     <div class="grow text-2xl font-bold">{{ ctx.assignable | money }}</div>
     {% if ctx.assignable > 0 %}
       <button
-        class="{{ 'btn-filled-error' if ctx.n_overspent > 0 else 'btn-filled' }}"
-        hx-get="{{ url_for('budgeting.move', uri='income', month=ctx.month) }}"
+        class="{{ "btn-filled-error" if ctx.n_overspent > 0 else "btn-filled" }}"
+        hx-get="{{ url_for("budgeting.move", uri="income", month=ctx.month) }}"
         hx-target="#dialog"
         hx-swap="innerHTML show:#dialog:top"
         hx-disabled-elt="this"
@@ -21,7 +21,7 @@
     {% elif ctx.assignable < 0 %}
       <button
         class="btn-filled-error"
-        hx-get="{{ url_for('budgeting.overspending', uri='income', month=ctx.month) }}"
+        hx-get="{{ url_for("budgeting.overspending", uri="income", month=ctx.month) }}"
         hx-target="#dialog"
         hx-swap="innerHTML show:#dialog:top"
         hx-disabled-elt="this"
@@ -35,7 +35,7 @@
   <div class="text-sm">
     {% if ctx.n_overspent > 0 %}
       {{ ctx.n_overspent }}
-      {{ 'category is' if ctx.n_overspent == 1 else 'categories are' }}
+      {{ "category is" if ctx.n_overspent == 1 else "categories are" }}
       overspent
     {% elif ctx.assignable > 0 %}
       Ready to assign

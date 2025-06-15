@@ -16,7 +16,7 @@
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"
-      hx-get="{{ url_for('budgeting.validation') }}"
+      hx-get="{{ url_for("budgeting.validation") }}"
       autocomplete="off"
     />
     <icon>attach_money</icon>
@@ -33,7 +33,12 @@
         {% if not loop.previtem or loop.previtem[3] != group %}
           <option disabled>{{ group.pretty }}</option>
         {% endif %}
-        <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
+        <option
+          value="{{ uri }}"
+          {% if uri == category.dest %}selected{% endif %}
+        >
+          {{ name }} {{ available | money }}
+        </option>
       {% endfor %}
     </select>
     <div>

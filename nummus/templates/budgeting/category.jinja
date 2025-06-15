@@ -6,25 +6,25 @@
   hx-include="#budgeting-sidebar-uri"
   hx-target="#budgeting-sidebar"
   hx-trigger="sidebar"
-  hx-get="{{ url_for('budgeting.sidebar', uri=category.uri) }}"
+  hx-get="{{ url_for("budgeting.sidebar", uri=category.uri) }}"
 >
   <div class="mb-1 flex items-center">
     <h1 class="grow">{{ category.name }}</h1>
     <div
-      class="{{ 'text-on-surface-variant' if category.assigned == 0 }} group max-md:hidden"
+      class="{{ "text-on-surface-variant" if category.assigned == 0 }} group max-md:hidden"
     >
       <input
         name="amount"
         placeholder="0.00"
         value="{{ category.assigned | input_value }}"
-        hx-target="#group-{{ group.uri or 'ungrouped' }}"
-        hx-put="{{ url_for('budgeting.assign', uri=category.uri, month=ctx.month) }}"
+        hx-target="#group-{{ group.uri or "ungrouped" }}"
+        hx-put="{{ url_for("budgeting.assign", uri=category.uri, month=ctx.month) }}"
         autocomplete="off"
       />
       <span>{{ category.assigned | money }}</span>
     </div>
     <div
-      class="{{ 'text-on-surface-variant' if category.activity == 0 }} max-md:hidden"
+      class="{{ "text-on-surface-variant" if category.activity == 0 }} max-md:hidden"
     >
       {{ category.activity | money }}
     </div>
@@ -32,17 +32,17 @@
       {% if category.available < 0 %}
         <button
           class="btn-tonal-error ml-auto px-2"
-          hx-get="{{ url_for('budgeting.overspending', uri=category.uri, month=ctx.month) }}"
+          hx-get="{{ url_for("budgeting.overspending", uri=category.uri, month=ctx.month) }}"
           hx-disabled-elt="this"
         >
           {{ category.available | money }}
         </button>
       {% else %}
-        {% set btn_class = ('btn-tonal-tertiary' if target and target.to_go > 0 else 'btn-tonal') %}
+        {% set btn_class = ("btn-tonal-tertiary" if target and target.to_go > 0 else "btn-tonal") %}
         <button
           class="{{ btn_class }} ml-auto px-2"
           {% if category.available == 0 %}disabled{% endif %}
-          hx-get="{{ url_for('budgeting.move', uri=category.uri, month=ctx.month) }}"
+          hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
           hx-disabled-elt="this"
         >
           {{ category.available | money }}
@@ -64,4 +64,18 @@
       {% endif %}
     {% endif %}
   </div>
+  <div
+    class="hx-assign hidden"
+    hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-trigger="button"
+  ></div>
+  <div
+    class="hx-target hidden"
+    hx-get="{{ url_for("budgeting.target", uri=category.uri) }}"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-trigger="button"
+  ></div>
 </div>

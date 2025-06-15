@@ -533,6 +533,7 @@ def move(uri: str) -> str | flask.Response:
             "available": available,
             "month": month_str,
             "options": options,
+            "dest": args.get("destination"),
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",
@@ -801,7 +802,7 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            return common.dialog_swap(event="update-budget")
+            return common.dialog_swap(event="budget")
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
             return common.error(error)
@@ -853,12 +854,12 @@ def target(uri: str) -> str | flask.Response:
             tar.repeat_every = 1
 
         if flask.request.method == "PUT":
-            return common.dialog_swap(event="update-budget")
+            return common.dialog_swap(event="budget")
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
                     s.add(tar)
-                return common.dialog_swap(event="update-budget")
+                return common.dialog_swap(event="budget")
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 

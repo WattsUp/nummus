@@ -608,6 +608,7 @@ const budgeting = {
             "budget-category-active",
           );
         }
+        htmx.find("#budget-button-bar input").value = uri;
         this.currentURI = uri;
         this.updateBar(true);
         nav.setOverrideBarOff();
@@ -650,6 +651,28 @@ const budgeting = {
       },
       "Target will be deleted.",
     );
+  },
+  /** On click of move bar button, trigger the category
+   */
+  onBarMove: function () {
+    const e = htmx.find(`#category-${this.currentURI} .hx-assign`);
+    htmx.trigger(e, "button");
+  },
+  /** On click of target bar button, trigger the category
+   */
+  onBarTarget: function () {
+    const e = htmx.find(`#category-${this.currentURI} .hx-target`);
+    htmx.trigger(e, "button");
+  },
+  /** Reset budgeting JS states
+   */
+  reset: function () {
+    this.bar = null;
+    if (this.currentURI) {
+      this.currentURI = null;
+      this.updateBar(false);
+      nav.setOverrideBarOff(true);
+    }
   },
 };
 
