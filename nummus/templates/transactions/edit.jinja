@@ -69,10 +69,10 @@
     >
       <input
         name="amount"
+        value="{{ txn.amount | input_value }}"
         required
         enterkeyhint="next"
         placeholder=""
-        value="{{ txn.amount | input_value }}"
         hx-target="next error"
         hx-trigger="input delay:200ms"
         hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
@@ -95,10 +95,10 @@
   >
     <input
       name="payee"
+      value="{{ txn.payee or "" }}"
       required
       enterkeyhint="next"
       placeholder=""
-      value="{{ txn.payee or "" }}"
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"
@@ -120,11 +120,11 @@
   >
     <input
       name="date"
+      value="{{ txn.date or "" }}"
       type="date"
       required
       enterkeyhint="next"
       placeholder=""
-      value="{{ txn.date or "" }}"
       max="{{ txn.date_max }}"
       hx-target="next error"
       hx-trigger="input delay:200ms"
@@ -205,9 +205,9 @@
     >
       <input
         name="memo"
+        value="{{ split.memo or "" }}"
         enterkeyhint="next"
         placeholder=""
-        value="{{ split.memo or "" }}"
         hx-target="next error"
         hx-trigger="input delay:200ms"
         hx-include="this"
@@ -227,9 +227,9 @@
     >
       <input
         name="tag"
+        value="{{ split.tag or "" }}"
         enterkeyhint="next"
         placeholder=""
-        value="{{ split.tag or "" }}"
         list="tags"
         hx-target="next error"
         hx-trigger="input delay:200ms"
@@ -251,9 +251,9 @@
       >
         <input
           name="split-amount"
+          value="{{ split.amount | input_value }}"
           enterkeyhint="next"
           placeholder=""
-          value="{{ split.amount | input_value }}"
           hx-target="next error"
           hx-trigger="input delay:200ms"
           hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
@@ -300,6 +300,7 @@
       </button>
     {% endif %}
     {% if txn.similar_uri %}
+      {# TODO (WattsUp): enable button #}
       <button
         class="btn-text"
         hx-delete="{{ url_for('transactions.split', uri="arst") }}"

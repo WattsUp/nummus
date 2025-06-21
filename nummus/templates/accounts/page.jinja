@@ -1,7 +1,8 @@
 <div
   class="flex items-center justify-between"
   hx-target="#main"
-  hx-trigger="account from:body, valuation from:body"
+  {# TODO (WattsUp): Just update transaction table on transaction event #}
+  hx-trigger="account from:body, valuation from:body, transaction from:body"
   hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
 >
   <h1 class="text-primary font-serif text-3xl">{{ acct.name }}</h1>

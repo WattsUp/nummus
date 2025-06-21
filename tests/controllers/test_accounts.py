@@ -4,30 +4,180 @@ import datetime
 import re
 from decimal import Decimal
 
-from nummus.controllers import accounts
 from nummus.models import (
     Account,
     AccountCategory,
-    Asset,
-    AssetValuation,
     Transaction,
     TransactionCategory,
     TransactionSplit,
 )
-from nummus.web_utils import HTTP_CODE_BAD_REQUEST
 from tests.controllers.base import WebTestBase
 
 
 class TestAccount(WebTestBase):
-    def setUp(self, **_) -> None:
-        self.skipTest("Controller tests not updated yet")
+
+    def test_page_all(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+
+        acct_id = d["acct_id"]
+        acct_uri = d["acct_uri"]
+        acct_name = d["acct_name"]
+
+        endpoint = "accounts.page_all"
+        headers = {"HX-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(
+            endpoint,
+            headers=headers,
+        )
+        self.assertIn("Accounts", result)
+        self.assertIn("Cash", result)
+        self.assertNotIn("Investment", result)
+        self.assertIn(acct_uri, result)
+        self.assertIn(acct_name, result)
+        matches = re.findall(r"(-?\$\d+)<", result)
+        self.assertEqual(matches, ["$90", "$90", "$0"])
+
+        with p.begin_session() as s:
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+
+            # Account shouldn't be closed with non-zero balance
+            # But it's fine
+            s.query(Account).where(Account.id_ == acct_id).update(
+                {Account.closed: True},
+            )
+
+            # Make account a liability
+            txn = Transaction(
+                account_id=acct_id,
+                date=today,
+                amount=-100,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                parent=txn,
+                amount=-100,
+                category_id=categories["groceries"],
+            )
+            s.add_all((txn, t_split))
+
+        result, _ = self.web_get(
+            endpoint,
+            headers=headers,
+        )
+        self.assertIn("Accounts", result)
+        self.assertNotIn("Cash", result)
+        self.assertNotIn("Investment", result)
+        self.assertNotIn(acct_uri, result)
+        self.assertNotIn(acct_name, result)
+        matches = re.findall(r"(-?\$\d+)<", result)
+        self.assertEqual(matches, ["$0", "$0", "$0"])
+
+        result, _ = self.web_get(
+            (endpoint, {"include-closed": True}),
+            headers=headers,
+        )
+        self.assertIn("Accounts", result)
+        self.assertIn("Cash", result)
+        self.assertNotIn("Investment", result)
+        self.assertIn(acct_uri, result)
+        self.assertIn(acct_name, result)
+        matches = re.findall(r"(-?\$\d+)<", result)
+        self.assertEqual(matches, ["-$10", "$0", "-$10"])
+
+    def test_page(self) -> None:
+        d = self._setup_portfolio()
+        p = self._portfolio
+        today = datetime.date.today()
+
+        acct_id = d["acct_id"]
+        acct_uri = d["acct_uri"]
+        txn_0_uri = d["txn_0_uri"]
+        txn_1_uri = d["txn_1_uri"]
+        asset_0_id = d["asset_0_id"]
+
+        endpoint = "accounts.page"
+        headers = {"HX-Request": "true"}  # Fetch main content only
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri}),
+            headers=headers,
+        )
+        self.assertNotIn("Performance", result)
+        self.assertIn(rf'hx-get="/h/transactions/t/{txn_0_uri}"', result)
+        self.assertIn(rf'hx-get="/h/transactions/t/{txn_1_uri}"', result)
+
+        with p.begin_session() as s:
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
+            s.query(Account).where(Account.id_ == acct_id).update(
+                {Account.category: AccountCategory.INVESTMENT},
+            )
+            txn = Transaction(
+                account_id=acct_id,
+                date=today - datetime.timedelta(days=1),
+                amount=0,
+                statement=self.random_string(),
+            )
+            t_split_0 = TransactionSplit(
+                amount=10,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=0,
+                category_id=categories["dividends received"],
+            )
+            t_split_1 = TransactionSplit(
+                amount=-10,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=Decimal("0.1"),
+                category_id=categories["securities traded"],
+            )
+            s.add_all((txn, t_split_0, t_split_1))
+
+            txn = Transaction(
+                account_id=acct_id,
+                date=today,
+                amount=0,
+                statement=self.random_string(),
+            )
+            t_split_0 = TransactionSplit(
+                amount=-1,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=0,
+                category_id=categories["investment fees"],
+            )
+            t_split_1 = TransactionSplit(
+                amount=1,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=Decimal("-0.1"),
+                category_id=categories["securities traded"],
+            )
+            s.add_all((txn, t_split_0, t_split_1))
+
+        result, _ = self.web_get(
+            (endpoint, {"uri": acct_uri, "period": "2000"}),
+            headers=headers,
+        )
+        self.assertIn("Performance", result)
+        self.assertNotIn(rf'hx-get="/h/transactions/t/{txn_0_uri}"', result)
+        self.assertNotIn(rf'hx-get="/h/transactions/t/{txn_1_uri}"', result)
+        self.assertIn("$10.00", result)
+        self.assertIn("-$1.00", result)
 
     def test_account(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
+        today = datetime.date.today()
 
+        acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
-        cat_1 = d["cat_1"]
+        cat_1_id = d["cat_1_id"]
 
         endpoint = "accounts.account"
         url = endpoint, {"uri": acct_uri}
@@ -44,13 +194,10 @@ class TestAccount(WebTestBase):
             "number": "",
         }
         result, headers = self.web_put(url, data=form)
-        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
-        self.assertEqual(headers["HX-Trigger"], "update-account")
-        self.assertNotIn("<svg", result)  # No error SVG
+        self.assertIn("snackbar-script", result)
+        self.assertEqual(headers.get("HX-Trigger"), "account")
         with p.begin_session() as s:
-            acct = s.query(Account).first()
-            if acct is None:
-                self.fail("Account is missing")
+            acct = s.query(Account).where(Account.id_ == acct_id).one()
             self.assertEqual(acct.name, name)
             self.assertEqual(acct.institution, institution)
             self.assertEqual(acct.category, AccountCategory.CREDIT)
@@ -99,8 +246,6 @@ class TestAccount(WebTestBase):
 
         # Cancel balance
         with p.begin_session() as s:
-            today = datetime.date.today()
-
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
@@ -114,14 +259,13 @@ class TestAccount(WebTestBase):
                 date=today,
                 amount=-90,
                 statement=self.random_string(),
-                locked=True,
-                linked=True,
+                payee=self.random_string(),
+                cleared=True,
             )
             t_split = TransactionSplit(
-                amount=txn.amount,
                 parent=txn,
-                payee=self.random_string(),
-                category_id=categories[cat_1],
+                amount=txn.amount,
+                category_id=cat_1_id,
             )
             s.add_all((txn, t_split))
 
@@ -140,357 +284,154 @@ class TestAccount(WebTestBase):
                 self.fail("Account is missing")
             self.assertTrue(acct.closed)
 
-    def test_page(self) -> None:
-        d = self._setup_portfolio()
-
-        acct_uri = d["acct_uri"]
-        t_split_0 = d["t_split_0"]
-        t_split_1 = d["t_split_1"]
-
-        endpoint = "accounts.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri}),
-            headers=headers,
-        )
-        self.assertRegex(result, r"<h1.*>\$90.00</h1>")
-        self.assertRegex(result, r"<script>accounts\.update\(.*\)</script>")
-        self.assertRegex(result, r"<div.*>Uncategorized</div>")
-        self.assertRegex(result, r"<div.*>\$100.00</div>")
-        self.assertRegex(result, r"<div.*>-\$10.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "last-year"}),
-            headers=headers,
-        )
-        self.assertRegex(result, r"<h1.*>\$90.00</h1>")
-        self.assertRegex(result, r"<script>accounts\.update\(.*\)</script>")
-        self.assertNotRegex(result, r"<div.*>Uncategorized</div>")
-        self.assertNotRegex(result, r"<div.*>\$100.00</div>")
-        self.assertNotRegex(result, r"<div.*>-\$10.00</div>")
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
-
-    def test_txns(self) -> None:
+    def test_performance(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
-        today_ord = today.toordinal()
 
+        acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
-        a_uri_0 = d["a_uri_0"]
-        a_uri_1 = d["a_uri_1"]
-        t_split_0 = d["t_split_0"]
-        t_split_1 = d["t_split_1"]
+        asset_0_id = d["asset_0_id"]
 
-        accounts.PREVIOUS_PERIOD["start"] = None
-        accounts.PREVIOUS_PERIOD["end"] = None
-
-        endpoint = "accounts.txns"
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "all"}),
-        )
-        self.assertNotIn("<html", result)
-        # First different call for table should update chart as well
-        self.assertRegex(
-            result,
-            r'<script>accounts\.update\(.*"min": null.*\)</script>',
-        )
-        m = re.search(
-            r'<script>accounts\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
-            result,
-        )
-        self.assertIsNotNone(m)
-        dates_s = m[1] if m else ""
-        self.assertIn(today.isoformat(), dates_s)
-        self.assertIn('"date_mode": "days"', result)
-        self.assertNotIn("txn-account", result)  # No account column on account page
-        self.assertRegex(result, r"<div .*>Uncategorized</div>")
-        self.assertRegex(result, r"<div .*>\$100.00</div>")
-        self.assertRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
-        self.assertRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
-        self.assertNotIn('id="assets"', result)  # Not an investment account
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "all"}),
-        )
-        # Second call for table should not update chart as well
-        self.assertNotRegex(result, r"<script>accounts\.update\(.*\)</script>")
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "30-days"}),
-        )
-        self.assertRegex(
-            result,
-            r'<script>accounts\.update\(.*"min": null.*\)</script>',
-        )
-        self.assertIn('"date_mode": "weeks"', result)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "last-year"}),
-        )
-        self.assertRegex(
-            result,
-            r'<script>accounts\.update\(.*"min": null.*\)</script>',
-        )
-        self.assertIn('"date_mode": "months"', result)
-        self.assertNotRegex(result, r"<div .*>Uncategorized</div>")
-        self.assertNotRegex(result, r"<div .*>\$100.00</div>")
-        self.assertNotRegex(result, r"<div .*>-\$10.00</div>")
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_0}"')
-        self.assertNotRegex(result, rf'hx-get="/h/transactions/t/{t_split_1}"')
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "5-years"}),
-        )
-        self.assertRegex(
-            result,
-            r'<script>accounts\.update\(.*"min": \[.+\].*\)</script>',
-        )
-        m = re.search(
-            r'<script>accounts\.update\(.*"labels": \[([^\]]+)\].*\)</script>',
-            result,
-        )
-        self.assertIsNotNone(m)
-        dates_s = m[1] if m else ""
-        self.assertNotIn(today.isoformat(), dates_s)
-        self.assertIn(today.isoformat()[:7], dates_s)
-        self.assertIn('"date_mode": "years"', result)
-
-        # Add an asset transaction
         with p.begin_session() as s:
-            acct_id = Account.uri_to_id(acct_uri)
-            a_id_1 = Asset.uri_to_id(a_uri_1)
-
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
-
-            # Buy the house but no ticker so excluded
-            txn = Transaction(
-                account_id=acct_id,
-                date=today - datetime.timedelta(days=2),
-                amount=-10,
-                statement=self.random_string(),
+            s.query(Account).where(Account.id_ == acct_id).update(
+                {Account.category: AccountCategory.INVESTMENT},
             )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                asset_id=a_id_1,
-                asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
-            )
-            s.add_all((txn, t_split))
-
-        headers = {"HX-Trigger": "txn-table"}
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "all"}),
-            headers=headers,
-        )
-        # Get the asset block
-        m = re.search(r'id="assets"(.*)', result, re.S)
-        self.assertIsNotNone(m)
-        result_assets = m[1] if m else ""
-        result_assets = result_assets.replace("\n", " ")
-        result_assets, result_total = result_assets.split('id="assets-total"')
-
-        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
-        self.assertRegex(
-            result_assets,
-            r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$0\.00).*(0\.00%).*(-\$10\.00)[^0-9]*",
-        )
-        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$80\.00).*(-\$10\.00)[^0-9]*")
-
-        # Add a valuation for the house with zero profit
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=a_id_1,
-                date_ord=today_ord - 2,
-                value=10,
-            )
-            s.add(v)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "period": "all"}),
-            headers=headers,
-        )
-        # Get the asset block
-        m = re.search(r'id="assets"(.*)', result, re.S)
-        self.assertIsNotNone(m)
-        result_assets = m[1] if m else ""
-        result_assets = result_assets.replace("\n", " ")
-        result_assets, result_total = result_assets.split('id="assets-total"')
-
-        self.assertIn(f'id="asset-{a_uri_1}"', result_assets)
-        self.assertRegex(
-            result_assets,
-            r"(Real Estate).*(Fruit Ct\. House).*"
-            r"(1\.000000).*(\$10\.00).*(11\.11%).*(\$0\.00)[^0-9]*",
-        )
-        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$90\.00).*(\$0\.00)[^0-9]*")
-
-        # Sell house for $20
-        with p.begin_session() as s:
-            acct_id = Account.uri_to_id(acct_uri)
-
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-
             txn = Transaction(
                 account_id=acct_id,
                 date=today - datetime.timedelta(days=1),
-                amount=20,
+                amount=0,
                 statement=self.random_string(),
             )
-            t_split = TransactionSplit(
-                amount=txn.amount,
+            t_split_0 = TransactionSplit(
+                amount=10,
                 parent=txn,
-                asset_id=a_id_1,
-                asset_quantity_unadjusted=-1,
-                category_id=categories["Securities Traded"],
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=0,
+                category_id=categories["dividends received"],
             )
-            s.add_all((txn, t_split))
+            t_split_1 = TransactionSplit(
+                amount=-10,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=Decimal("0.1"),
+                category_id=categories["securities traded"],
+            )
+            s.add_all((txn, t_split_0, t_split_1))
 
-        queries = {
-            "period": "custom",
-            "start": today.isoformat(),
-            "end": today.isoformat(),
-        }
+            txn = Transaction(
+                account_id=acct_id,
+                date=today,
+                amount=0,
+                statement=self.random_string(),
+            )
+            t_split_0 = TransactionSplit(
+                amount=-1,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=0,
+                category_id=categories["investment fees"],
+            )
+            t_split_1 = TransactionSplit(
+                amount=1,
+                parent=txn,
+                asset_id=asset_0_id,
+                asset_quantity_unadjusted=Decimal("-0.1"),
+                category_id=categories["securities traded"],
+            )
+            s.add_all((txn, t_split_0, t_split_1))
+
+        endpoint = "accounts.performance"
+        result, _ = self.web_get((endpoint, {"uri": acct_uri}))
+        self.assertIn("Performance", result)
+        self.assertIn("$10.00", result)
+        self.assertIn("-$1.00", result)
+
+    def test_validation(self) -> None:
+        d = self._setup_portfolio()
+
+        acct_id = d["acct_id"]
+        acct_uri = d["acct_uri"]
+        acct_name = d["acct_name"]
+
+        endpoint = "accounts.validation"
+
+        result, _ = self.web_get((endpoint, {"uri": acct_uri, "name": " "}))
+        self.assertEqual("Required", result)
+
+        result, _ = self.web_get((endpoint, {"uri": acct_uri, "name": "a"}))
+        self.assertEqual("2 characters required", result)
+
+        result, _ = self.web_get((endpoint, {"uri": acct_uri, "name": "ab"}))
+        self.assertEqual("", result)
+
+        # Number not required
+        result, _ = self.web_get((endpoint, {"uri": acct_uri, "number": " "}))
+        self.assertEqual("", result)
+
+        acct_uri = Account.id_to_uri(acct_id + 1)
+
+        # Name cannot be duplicated
+        result, _ = self.web_get((endpoint, {"uri": acct_uri, "name": acct_name}))
+        self.assertEqual("Must be unique", result)
+
+        # Institution not checked for duplication
         result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, **queries}),
-            headers=headers,
+            (endpoint, {"uri": acct_uri, "institution": "Monkey Bank"}),
         )
-        # Get the asset block
-        m = re.search(r'id="assets"(.*)', result, re.S)
-        self.assertIsNotNone(m)
-        result_assets = m[1] if m else ""
-        result_assets = result_assets.replace("\n", " ")
-        result_assets, result_total = result_assets.split('id="assets-total"')
+        self.assertEqual("", result)
 
-        self.assertNotIn(f'id="asset-{a_uri_0}"', result_assets)
-        self.assertNotIn(f'id="asset-{a_uri_1}"', result_assets)
-        self.assertRegex(result_total, r"(Total).*(\$100\.00).*(\$0\.00)[^0-9]*")
+    def test_txns(self) -> None:
+        d = self._setup_portfolio()
+        today = datetime.date.today()
+
+        acct_name = d["acct_name"]
+        acct_uri = d["acct_uri"]
+        txn_0_uri = d["txn_0_uri"]
+        txn_1_uri = d["txn_1_uri"]
+
+        endpoint = "accounts.txns"
+        result, headers = self.web_get(
+            (endpoint, {"uri": acct_uri}),
+        )
+        self.assertEqual(headers.get("HX-Push-Url"), f"/accounts/{acct_uri}")
+        self.assertIn(txn_0_uri, result)
+        self.assertIn(txn_1_uri, result)
+        self.assertIn(
+            f"<title>Account {acct_name} - nummus</title>",
+            result,
+        )
+
+        result, headers = self.web_get(
+            (endpoint, {"uri": acct_uri, "page": today.isoformat(), "period": "all"}),
+        )
+        self.assertNotIn("HX-Push-Url", headers)
+        self.assertEqual(result.count('<div class="txn"'), 2)
+        self.assertIn(txn_0_uri, result)
+        self.assertIn(txn_1_uri, result)
+        self.assertIn(
+            f"<title>Account {acct_name}, All Transactions - nummus</title>",
+            result,
+        )
 
     def test_txns_options(self) -> None:
         d = self._setup_portfolio()
 
         acct_uri = d["acct_uri"]
-        d["payee_0"]
-        d["payee_1"]
-        d["t_split_0"]
-        d["t_split_1"]
-        cat_0 = d["cat_0"]
-        cat_1 = d["cat_1"]
-        tag_1 = d["tag_1"]
+        acct_name = d["acct_name"]
+        cat_0_uri = d["cat_0_uri"]
+        cat_0_emoji_name = d["cat_0_emoji_name"]
+        cat_1_uri = d["cat_1_uri"]
+        cat_1_emoji_name = d["cat_1_emoji_name"]
 
         endpoint = "accounts.txns_options"
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "field": "account"}),
-            rc=HTTP_CODE_BAD_REQUEST,
-        )
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "field": "category", "period": "all"}),
-        )
-        self.assertNotIn("<html", result)
-        self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
-        self.assertRegex(result, rf'value="{cat_1}"[ \n]+hx-get')
-        self.assertNotIn("checked", result)
-        # Check sorting
-        i_0 = result.find(cat_0)
-        i_1 = result.find(cat_1)
-        self.assertLess(i_0, i_1)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "field": "category", "category": cat_1}),
-        )
-        self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, rf'value="{cat_0}"[ \n]+hx-get')
-        self.assertRegex(result, rf'value="{cat_1}"[ \n]+checked[ \n]+hx-get')
-        # Check sorting
-        i_0 = result.find(cat_0)
-        i_1 = result.find(cat_1)
-        self.assertLess(i_1, i_0)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "field": "tag"}),
-        )
-        self.assertEqual(result.count("span"), 4)
-        self.assertRegex(result, r'value="\[blank\]"[ \n]+hx-get')
-        self.assertRegex(result, rf'value="{tag_1}"[ \n]+hx-get')
-        self.assertNotIn("checked", result)
-        # Check sorting
-        i_blank = result.find("[blank]")
-        i_1 = result.find(tag_1)
-        self.assertLess(i_blank, i_1)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": acct_uri, "field": "unknown"}),
-            rc=HTTP_CODE_BAD_REQUEST,
-        )
-
-    def test_new_txn(self) -> None:
-        p = self._portfolio
-        d = self._setup_portfolio()
-        today = datetime.date.today()
-
-        acct = d["acct"]
-        acct_uri = d["acct_uri"]
-
-        endpoint = "accounts.new_txn"
         result, _ = self.web_get((endpoint, {"uri": acct_uri}))
-        self.assertIn("New transaction", result)
-        self.assertIn(f"selected>{acct}", result)
-
-        form = {}
-        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
-        self.assertIn("Transaction date must not be empty", result)
-
-        form = {"date": today}
-        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
-        self.assertIn("Transaction amount must not be empty", result)
-
-        form = {"date": today, "amount": "1000"}
-        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
-        self.assertIn("Transaction account must not be empty", result)
-
-        form = {"date": today, "amount": "1000", "account": acct}
-        result, _ = self.web_post((endpoint, {"uri": acct_uri}), data=form)
-        # Redirect to edit after creating
-        self.assertIn("Edit transaction", result)
-        with p.begin_session() as s:
-            acct_id = Account.uri_to_id(acct_uri)
-            txn = (
-                s.query(Transaction)
-                .where(
-                    Transaction.account_id == acct_id,
-                    Transaction.amount == Decimal("1000"),
-                )
-                .one()
-            )
-            self.assertEqual(txn.statement, "Manually added")
-            self.assertFalse(txn.locked, "Transaction unexpectably locked")
-            self.assertFalse(txn.linked, "Transaction unexpectably linked")
-
-            category_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Uncategorized")
-                .scalar()
-            )
-            t_split = (
-                s.query(TransactionSplit)
-                .where(
-                    TransactionSplit.account_id == acct_id,
-                    TransactionSplit.amount == Decimal("1000"),
-                )
-                .one()
-            )
-            self.assertEqual(t_split.category_id, category_id)
+        self.assertNotIn(acct_name, result)
+        self.assertIn(cat_0_uri, result)
+        self.assertIn(cat_0_emoji_name, result)
+        self.assertIn(cat_1_uri, result)
+        self.assertIn(cat_1_emoji_name, result)
+        self.assertNotIn("checked", result)

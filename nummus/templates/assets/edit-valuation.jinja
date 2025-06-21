@@ -20,7 +20,7 @@
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"
-      hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri) }}"
+      hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri, v=valuation.uri) }}"
       autocomplete="off"
     />
     <icon>event</icon>

@@ -12,9 +12,6 @@ from tests.controllers.base import HTTP_CODE_REDIRECT, WebTestBase
 
 
 class TestAuth(WebTestBase):
-    def setUp(self, **_) -> None:
-        self.skipTest("Controller tests not updated yet")
-
     @classmethod
     def setUpClass(cls) -> None:
         super().setUpClass()
@@ -45,7 +42,7 @@ class TestAuth(WebTestBase):
         key = self._key
 
         # Not logged in should redirect any page to page_login
-        endpoint = "net_worth.page"
+        endpoint = "accounts.page_all"
         with self._flask_app.app_context(), self._flask_app.test_request_context():
             url_next = flask.url_for(endpoint)
             url_dashboard = flask.url_for("dashboard.page")
@@ -53,23 +50,13 @@ class TestAuth(WebTestBase):
             url_login_next = url_login + f"?next={urllib.parse.quote_plus(url_next)}"
         response, headers = self.web_get(endpoint, rc=HTTP_CODE_REDIRECT)
         self.assertIn(url_login_next, response)
-        self.assertIn(
-            "Location",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["Location"], url_login_next)
+        self.assertEqual(headers.get("Location"), url_login_next)
 
         # With HX-Request, return OK with HX-Redirect
         send_headers = {"HX-Request": "true"}
         response, headers = self.web_get(endpoint, headers=send_headers)
         self.assertEqual(response, "")
-        self.assertIn(
-            "HX-Redirect",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["HX-Redirect"], url_login_next)
+        self.assertEqual(headers.get("HX-Redirect"), url_login_next)
 
         # Static pages aren't protected
         self.web_get(
@@ -95,27 +82,17 @@ class TestAuth(WebTestBase):
         form = {"password": key}
         response, headers = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertEqual("", response)
-        self.assertIn(
-            "HX-Redirect",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["HX-Redirect"], url_dashboard)
+        self.assertEqual(headers.get("HX-Redirect"), url_dashboard)
 
         # Good password with next
         form = {"password": key, "next": url_next}
         response, headers = self.web_post("auth.login", headers=send_headers, data=form)
         self.assertEqual("", response)
-        self.assertIn(
-            "HX-Redirect",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["HX-Redirect"], url_next)
+        self.assertEqual(headers.get("HX-Redirect"), url_next)
 
         # Now can visit protected pages
         response, _ = self.web_get("dashboard.page")
-        self.assertIn("Net Worth", response)
+        self.assertIn("Dashboard", response)
 
         # Login page while authenticated redirects to next
         response, headers = self.web_get(
@@ -123,12 +100,7 @@ class TestAuth(WebTestBase):
             rc=HTTP_CODE_REDIRECT,
         )
         self.assertIn(url_next, response)
-        self.assertIn(
-            "Location",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["Location"], url_next)
+        self.assertEqual(headers.get("Location"), url_next)
 
         # No next goes to dashboard
         response, headers = self.web_get(
@@ -136,12 +108,7 @@ class TestAuth(WebTestBase):
             rc=HTTP_CODE_REDIRECT,
         )
         self.assertIn(url_dashboard, response)
-        self.assertIn(
-            "Location",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["Location"], url_dashboard)
+        self.assertEqual(headers.get("Location"), url_dashboard)
 
         # Logging out should redirect to login page
         response, headers = self.web_post(
@@ -150,12 +117,7 @@ class TestAuth(WebTestBase):
             data=form,
         )
         self.assertEqual("", response)
-        self.assertIn(
-            "HX-Redirect",
-            headers,
-            msg=f"Response lack Location {response}",
-        )
-        self.assertEqual(headers["HX-Redirect"], url_login)
+        self.assertEqual(headers.get("HX-Redirect"), url_login)
 
         # Can't visit protected pages anymore
         self.web_get("dashboard.page", rc=HTTP_CODE_REDIRECT)

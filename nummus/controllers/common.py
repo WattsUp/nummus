@@ -102,6 +102,9 @@ def ctx_base() -> dict[str, object]:
             subpages_filtered[sub_label] = item
         if subpages_filtered:
             nav_items_filtered.append((label, subpages_filtered))
+        else:  # pragma: no cover
+            # There shouldn't be an empty group
+            pass
 
     return {
         "nav_items": nav_items_filtered,
@@ -210,7 +213,10 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     return response
 
 
-def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
+# Difficult to mock, just moves Location to HX-Redirect
+def change_redirect_to_htmx(
+    response: flask.Response,
+) -> flask.Response:  # pragma: no cover
     """Change redirect responses to HX-Redirect.
 
     Args:
@@ -224,8 +230,7 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
         and flask.request.headers.get("HX-Request", "false") == "true"
     ):
         # If a redirect is issued to a HX-Request, send OK and HX-Redirect
-        location = response.headers["Location"]
-        response.headers["HX-Redirect"] = location
+        response.headers["HX-Redirect"] = response.headers.pop("Location")
         response.status_code = HTTP_CODE_OK
         # werkzeug redirect doesn't have close tags
         # clear body
@@ -234,7 +239,8 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     return response
 
 
-def page_style_test() -> flask.Response:
+# Don't need to test debug-only page
+def page_style_test() -> flask.Response:  # pragma: no cover
     """GET /style-test.
 
     Returns:

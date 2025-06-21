@@ -10,7 +10,7 @@
   {% include "assets/table-row.jinja" %}
 {% endfor %}
 {% if ctx.no_matches %}
-  <div class="text-center italic">no transactions match query</div>
+  <div class="text-center italic">no valuations match query</div>
 {% elif ctx.next_page %}
   <div
     hx-target="#valuation-table"
@@ -22,5 +22,5 @@
     hx-on::after-request="this.remove()"
   ></div>
 {% else %}
-  <div class="text-center italic">no more transactions match query</div>
+  <div class="text-center italic">no more valuations match query</div>
 {% endif %}

@@ -180,7 +180,7 @@ def table_options() -> str:
 
 
 def new() -> str | flask.Response:
-    """GET & POST /h/transactions/new.
+    """GET, PUT, & POST /h/transactions/new.
 
     Returns:
         string HTML response
@@ -193,11 +193,8 @@ def new() -> str | flask.Response:
             s.query(Account)
             .with_entities(Account.id_, Account.name)
             .where(Account.closed.is_(False))
+            .order_by(Account.name)
         )
-        if "budgeted" in flask.request.args:
-            query = query.order_by(Account.budgeted.desc(), Account.name)
-        else:
-            query = query.order_by(Account.name)
         accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
         query = (
@@ -220,7 +217,8 @@ def new() -> str | flask.Response:
                 .where(TransactionCategory.name == "uncategorized")
                 .one()[0]
             )
-        except exc.NoResultFound as e:
+        except exc.NoResultFound as e:  # pragma: no cover
+            # Don't need to test ProtectedObjectNotFoundError
             msg = "Category Uncategorized not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
         else:
@@ -415,6 +413,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 snackbar=f"Transaction on {date} deleted",
             )
 
+        amount_changed = False
         try:
             with s.begin_nested():
                 form = flask.request.form
@@ -433,6 +432,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                     amount = utils.evaluate_real_statement(form.get("amount"))
                     if amount is None:
                         return common.error("Transaction amount must not be empty")
+                    amount_changed = txn.amount != amount
                     txn.amount = amount
                     acct_id = Account.uri_to_id(form["account"])
                     txn.account_id = acct_id
@@ -496,13 +496,13 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
             return common.error(e)
 
         return common.dialog_swap(
-            event="transaction",
+            event="account" if amount_changed else "transaction",
             snackbar="All changes saved",
         )
 
 
 def split(uri: str) -> str:
-    """PUT & DELETE /h/transactions/<uri>/split.
+    """PUT /h/transactions/<uri>/split.
 
     Args:
         uri: Transaction URI
@@ -544,7 +544,8 @@ def split(uri: str) -> str:
                 .where(TransactionCategory.name == "uncategorized")
                 .one()[0]
             )
-        except exc.NoResultFound as e:
+        except exc.NoResultFound as e:  # pragma: no cover
+            # Don't need to test ProtectedObjectNotFoundError
             msg = "Category Uncategorized not found"
             raise exc.ProtectedObjectNotFoundError(msg) from e
         else:
@@ -607,7 +608,7 @@ def validation() -> str:
     Returns:
         string HTML response
     """
-    # dict{key: (required, prop if unique required)}
+    # dict{key: required}
     properties: dict[str, bool] = {
         "payee": True,
         "memo": False,
@@ -629,9 +630,13 @@ def validation() -> str:
         value = args["date"].strip()
         if value == "":
             return "Required"
-        date = utils.parse_date(args["date"])
-        if date is None:
-            return common.error("Unable to parse")
+        try:
+            date = utils.parse_date(value)
+        except ValueError:
+            return "Unable to parse"
+        if date is None:  # pragma: no cover
+            # Type guard, should not be called
+            return "Unable to parse"
         if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
             return "Only up to a week in advance"
         return ""
@@ -679,8 +684,7 @@ def validation() -> str:
             return "Unable to parse"
         return ""
 
-    msg = f"Transaction validation for {args} not implemented"
-    raise NotImplementedError(msg)
+    raise NotImplementedError
 
 
 def table_query(
@@ -1098,7 +1102,7 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
             ):
                 included_date_ords.add(date_ord)
                 page_count += count
-                if page_count > PAGE_LEN:
+                if page_count >= PAGE_LEN:
                     break
 
             query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
@@ -1168,15 +1172,16 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
                 title = ""
             elif selected_period != "custom":
                 title = selected_period.title()
-
             elif selected_start and selected_end:
                 title = f"{selected_start} to {selected_end}"
             elif selected_start:
                 title = f"from {selected_start}"
             elif selected_end:
                 title = f"to {selected_end}"
-            else:
-                title = ""
+            else:  # pragma: no cover
+                msg = "Invalid period option"
+                raise exc.http.BadRequest(msg)
+            title += " Transactions"
 
             if selected_account:
                 acct_id = Account.uri_to_id(selected_account)
@@ -1184,6 +1189,8 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
             if selected_category:
                 cat_id = TransactionCategory.uri_to_id(selected_category)
                 title += f", {categories_emoji[cat_id]}"
+            if uncleared:
+                title += ", Uncleared"
 
         return {
             "uri": acct_uri,

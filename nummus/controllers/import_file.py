@@ -59,6 +59,8 @@ def import_file() -> str | flask.Response:
         error = f"{e.importer} failed to import file"
     except exc.EmptyImportError as e:
         error = f"{e.importer} did not import any transactions for file"
+    except exc.FutureTransactionError:
+        error = "Cannot create transaction in the future"
     finally:
         path_file_local.unlink()
 

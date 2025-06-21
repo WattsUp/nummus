@@ -2,7 +2,9 @@
   {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
 <div class="w-88 min-h-60 overflow-y-hidden">
-  {% if failed_tickers %}
+  {% if error %}
+    <error class="status-error"> {{ error }} </error>
+  {% elif failed_tickers %}
     {% for ticker, e in failed_tickers.items() %}
       <p>{{ ticker }} failed: {{ e }}</p>
     {% endfor %}

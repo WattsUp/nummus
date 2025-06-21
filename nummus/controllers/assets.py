@@ -338,9 +338,13 @@ def validation(uri: str) -> str:
         value = args["date"].strip()
         if value == "":
             return "Required"
-        date = utils.parse_date(args["date"])
-        if date is None:
-            return common.error("Unable to parse")
+        try:
+            date = utils.parse_date(value)
+        except ValueError:
+            return "Unable to parse"
+        if date is None:  # pragma: no cover
+            # Type guard, should not be called
+            return "Unable to parse"
         if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
             return "Only up to a week in advance"
         with p.begin_session() as s:
@@ -348,7 +352,8 @@ def validation(uri: str) -> str:
                 s.query(AssetValuation)
                 .where(
                     AssetValuation.date_ord == date.toordinal(),
-                    AssetValuation.asset_id != Asset.uri_to_id(uri),
+                    AssetValuation.asset_id == Asset.uri_to_id(uri),
+                    AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
                 )
                 .count()
             )
@@ -365,8 +370,7 @@ def validation(uri: str) -> str:
             return "Unable to parse"
         return ""
 
-    msg = f"Asset validation for {args} not implemented"
-    raise NotImplementedError(msg)
+    raise NotImplementedError
 
 
 def new_valuation(uri: str) -> str | flask.Response:
@@ -400,6 +404,8 @@ def new_valuation(uri: str) -> str | flask.Response:
     value = utils.evaluate_real_statement(form.get("value"), precision=6)
     if value is None:
         return common.error("Value must not be empty")
+    if value < 0:
+        return common.error("Value must not be negative")
 
     try:
         with flask.current_app.app_context():
@@ -415,11 +421,12 @@ def new_valuation(uri: str) -> str | flask.Response:
     except exc.IntegrityError as e:
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
-        if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
-            return common.error(
-                "Asset valuation date must be unique for each asset",
-            )
-        return common.error(e)
+        msg = (
+            "Date must be unique for each asset"
+            if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig
+            else e
+        )
+        return common.error(msg)
 
     return common.dialog_swap(event="valuation", snackbar="All changes saved")
 
@@ -469,6 +476,8 @@ def valuation(uri: str) -> str | flask.Response:
         value = utils.evaluate_real_statement(form.get("value"), precision=6)
         if value is None:
             return common.error("Value must not be empty")
+        if value < 0:
+            return common.error("Value must not be negative")
 
         try:
             with s.begin_nested():
@@ -478,13 +487,58 @@ def valuation(uri: str) -> str | flask.Response:
         except exc.IntegrityError as e:
             # Get the line that starts with (...IntegrityError)
             orig = str(e.orig)
-            if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig:
-                return common.error(
-                    "Asset valuation date must be unique for each asset",
-                )
-            return common.error(e)
+            msg = (
+                "Date must be unique for each asset"
+                if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig
+                else e
+            )
+            return common.error(msg)
 
         return common.dialog_swap(event="valuation", snackbar="All changes saved")
+
+
+def update() -> str | flask.Response:
+    """GET & POST /h/assets/update.
+
+    Returns:
+        HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        n = s.query(Asset).where(Asset.ticker.is_not(None)).count()
+    if flask.request.method == "GET":
+        return flask.render_template(
+            "assets/update.jinja",
+            n_to_update=n,
+        )
+
+    updated = p.update_assets(no_bars=True)
+
+    if len(updated) == 0:
+        return flask.render_template(
+            "assets/update.jinja",
+            n_to_update=n,
+            error=common.error("No assets were updated"),
+        )
+
+    updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
+    failed_tickers: dict[str, str] = {}
+    successful_tickers: list[str] = []
+    for _, ticker, _, _, error in updated:
+        if error is not None:
+            failed_tickers[ticker] = error
+        else:
+            successful_tickers.append(ticker)
+    html = flask.render_template(
+        "assets/update.jinja",
+        failed_tickers=failed_tickers,
+        successful_tickers=sorted(successful_tickers),
+    )
+    response = flask.make_response(html)
+    response.headers["HX-Trigger"] = "valuation"
+    return response
 
 
 def ctx_asset(s: orm.Session, a: Asset) -> _AssetContext:
@@ -658,50 +712,6 @@ def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
         "start": selected_start,
         "end": selected_end,
     }
-
-
-def update() -> str | flask.Response:
-    """GET & POST /h/assets/update.
-
-    Returns:
-        HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        n = s.query(Asset).where(Asset.ticker.is_not(None)).count()
-    if flask.request.method == "GET":
-        return flask.render_template(
-            "assets/update.jinja",
-            n_to_update=n,
-        )
-
-    updated = p.update_assets(no_bars=True)
-
-    if len(updated) == 0:
-        return flask.render_template(
-            "assets/update.jinja",
-            n_to_update=n,
-            error=common.error("No assets were updated"),
-        )
-
-    updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
-    failed_tickers: dict[str, str] = {}
-    successful_tickers: list[str] = []
-    for _, ticker, _, _, error in updated:
-        if error is not None:
-            failed_tickers[ticker] = error
-        else:
-            successful_tickers.append(ticker)
-    html = flask.render_template(
-        "assets/update.jinja",
-        failed_tickers=failed_tickers,
-        successful_tickers=sorted(successful_tickers),
-    )
-    response = flask.make_response(html)
-    response.headers["HX-Trigger"] = "valuation"
-    return response
 
 
 ROUTES: Routes = {

@@ -138,9 +138,13 @@ def validation() -> flask.Response | str:
         value = args["date"].strip()
         if value == "":
             return "Required"
-        date = utils.parse_date(args["date"])
-        if date is None:
-            return common.error("Unable to parse")
+        try:
+            date = utils.parse_date(value)
+        except ValueError:
+            return "Unable to parse"
+        if date is None:  # pragma: no cover
+            # Type guard, should not be called
+            return "Unable to parse"
         return update_target_desc()
 
     if "amount" in args:
@@ -164,8 +168,7 @@ def validation() -> flask.Response | str:
             return "Must be positive"
         return update_target_desc()
 
-    msg = f"Transaction validation for {args} not implemented"
-    raise NotImplementedError(msg)
+    raise NotImplementedError
 
 
 def assign(uri: str) -> str:

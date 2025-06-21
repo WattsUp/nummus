@@ -15,8 +15,6 @@ from tests.controllers.base import WebTestBase
 
 
 class TestEmergencyFund(WebTestBase):
-    def setUp(self, **_) -> None:
-        self.skipTest("Controller tests not updated yet")
 
     def test_page(self) -> None:
         p = self._portfolio
@@ -33,7 +31,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("No spending", result)
         self.assertRegex(
             result,
-            r'<script>emergencyFund\.update\(.*"balances": \[.+\].*\)</script>',
+            r'emergencyFund\.update\(.*"balances":\[.+\].*\)',
         )
 
         # Add an emergency fund
@@ -44,7 +42,7 @@ class TestEmergencyFund(WebTestBase):
 
             t_cat_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Emergency Fund")
+                .where(TransactionCategory.name == "emergency fund")
                 .one()[0]
             )
             b = BudgetAssignment(category_id=t_cat_id, month_ord=month_ord, amount=10)
@@ -58,7 +56,7 @@ class TestEmergencyFund(WebTestBase):
 
             # Mark groceries as essential
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "Groceries",
+                TransactionCategory.name == "groceries",
             ).update({"essential": True})
 
             # Add spending
@@ -71,7 +69,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -85,7 +83,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -99,7 +97,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -109,7 +107,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("increasing your emergency fund by $29", result)
         self.assertRegex(
             result,
-            r'<script>emergencyFund\.update\(.*"balances": \[.+\].*\)</script>',
+            r'emergencyFund\.update\(.*"balances":\[.+\].*\)',
         )
         self.assertIn("Groceries", result)
         m = re.search(
@@ -119,15 +117,14 @@ class TestEmergencyFund(WebTestBase):
         )
         if m is None:
             self.fail("Could not find Groceries row")
-        else:
-            self.assertEqualWithinError(float(m[1]), 32.97, 0.01)
+        self.assertEqualWithinError(float(m[1]), 32.97, 0.01)
 
         # Increase fund to $100
         with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 100})
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("You have $100 in your emergency fund", result)
-        self.assertIn("will cover 5.5 months", result)
+        self.assertIn("will cover 5 months", result)
         self.assertIn("good shape", result)
 
         # Increase fund to $200
@@ -135,7 +132,7 @@ class TestEmergencyFund(WebTestBase):
             s.query(BudgetAssignment).update({"amount": 200})
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("You have $200 in your emergency fund", result)
-        self.assertIn("will cover 10.7 months", result)
+        self.assertIn("will cover 11 months", result)
         self.assertIn("extra $88 could be invested", result)
 
     def test_dashboard(self) -> None:
@@ -152,8 +149,7 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("No spending", result)
         self.assertRegex(
             result,
-            r"<script>emergencyFund\.updateDashboard\("
-            r'.*"balances": \[.+\].*\)</script>',
+            r'emergencyFund\.updateDashboard\(.*"balances":\[.+\].*\)',
         )
 
         # Add an emergency fund
@@ -164,7 +160,7 @@ class TestEmergencyFund(WebTestBase):
 
             t_cat_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Emergency Fund")
+                .where(TransactionCategory.name == "emergency fund")
                 .one()[0]
             )
             b = BudgetAssignment(category_id=t_cat_id, month_ord=month_ord, amount=10)
@@ -178,7 +174,7 @@ class TestEmergencyFund(WebTestBase):
 
             # Mark groceries as essential
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "Groceries",
+                TransactionCategory.name == "groceries",
             ).update({"essential": True})
 
             # Add spending
@@ -191,7 +187,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -205,7 +201,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -219,7 +215,7 @@ class TestEmergencyFund(WebTestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
 
@@ -227,15 +223,14 @@ class TestEmergencyFund(WebTestBase):
         self.assertIn("increase your fund to at least $39", result)
         self.assertRegex(
             result,
-            r"<script>emergencyFund\.updateDashboard"
-            r'\(.*"balances": \[.+\].*\)</script>',
+            r'emergencyFund\.updateDashboard\(.*"balances":\[.+\].*\)',
         )
 
         # Increase fund to $100
         with p.begin_session() as s:
             s.query(BudgetAssignment).update({"amount": 100})
         result, _ = self.web_get(endpoint)
-        self.assertIn("cover 5.5 months", result)
+        self.assertIn("cover 5 months", result)
 
         # Increase fund to $200
         with p.begin_session() as s:

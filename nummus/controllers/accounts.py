@@ -27,8 +27,6 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-PREVIOUS_PERIOD: dict[str, datetime.date | None] = {"start": None, "end": None}
-
 
 class _AccountContext(TypedDict):
     """Type definition for Account context."""
@@ -267,8 +265,7 @@ def validation(uri: str) -> str:
                     return "Must be unique"
         return ""
 
-    msg = f"Account validation for {args} not implemented"
-    raise NotImplementedError(msg)
+    raise NotImplementedError
 
 
 def ctx_account(
@@ -377,7 +374,9 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
 
     n = len(labels)
     twrr = utils.twrr(values, profits)[-1]
-    twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / n) - 1
+    twrr_per_annum = (
+        Decimal(-1) if twrr < -1 else (1 + twrr) ** (utils.DAYS_IN_YEAR / n) - 1
+    )
 
     return {
         "pnl_past_year": profits[-1],

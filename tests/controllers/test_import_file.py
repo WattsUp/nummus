@@ -8,9 +8,6 @@ from tests.controllers.base import WebTestBase
 
 
 class TestImportFile(WebTestBase):
-    def setUp(self, **_) -> None:
-        self.skipTest("Controller tests not updated yet")
-
     def test_import_file(self) -> None:
         p = self._portfolio
         self._setup_portfolio()
@@ -29,7 +26,7 @@ class TestImportFile(WebTestBase):
 
         endpoint = "import_file.import_file"
         result, _ = self.web_get(endpoint)
-        self.assertIn("Import File", result)
+        self.assertIn("Import file", result)
         self.assertIn("Upload", result)
 
         result, _ = self.web_post(endpoint)
@@ -49,12 +46,12 @@ class TestImportFile(WebTestBase):
         )
         self.assertIn("CSVTransactionImporter failed to import file", result)
 
-        path = self._DATA_ROOT.joinpath("transactions_bad_category.csv")
+        path = self._DATA_ROOT.joinpath("transactions_future.csv")
         result, _ = self.web_post(
             endpoint,
             data={"file": (path, path.name)},
         )
-        self.assertIn("Could not find category 'Not a category'", result)
+        self.assertIn("Cannot create transaction in the future", result)
 
         file = io.BytesIO(b"Account,Date,Amount,Statement\n")
         result, _ = self.web_post(

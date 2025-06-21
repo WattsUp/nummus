@@ -51,14 +51,14 @@
 {% include "emergency-fund/chart-data.jinja" %}
 <div class="prose mx-auto">
   <p>
-    {% if ctx.months is none %}
+    {% if ctx.days is none %}
       No spending found to estimate emergency budget.
     {% elif ctx.delta_lower > 0 %}
       You have {{ ctx.current | money0 }} in your emergency fund. You need
       {{ ctx.target_lower | money0 }} for emergencies to cover 3 months of
       budgeted expenses. Consider increasing your emergency fund by
       {{ ctx.delta_lower | money0 }}.
-    {% elif ctx.delta_lower > 0 %}
+    {% elif ctx.delta_upper > 0 %}
       You have {{ ctx.current | money0 }} in your emergency fund which will
       cover {{ ctx.days | days }} of budgeted expenses. You only need
       {{ ctx.target_upper | money0 }} to cover 6 months of budgeted expenses.

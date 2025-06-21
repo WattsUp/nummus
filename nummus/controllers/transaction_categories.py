@@ -206,9 +206,9 @@ def validation() -> str:
             )
             if n != 0:
                 return "Must be unique"
-    else:
-        raise NotImplementedError
-    return ""
+        return ""
+
+    raise NotImplementedError
 
 
 def ctx_categories() -> dict[str, object]:
