@@ -22,7 +22,7 @@
     <div>{{ budget_sidebar.activity | money }}</div>
   </div>
   <input
-    id="budgeting-sidebar-uri"
+    id="budget-sidebar-uri"
     name="sidebar"
     value="{{ budget_sidebar.uri or "" }}"
     hidden
@@ -63,7 +63,7 @@
         <button
           class="btn-text btn-sq"
           hx-get="{{ url_for("budgeting.sidebar", month=ctx.month) }}"
-          hx-target="#budgeting-sidebar"
+          hx-target="#budget-sidebar"
           hx-swap="innerHTML"
         >
           <icon>close</icon>
@@ -138,7 +138,7 @@
         <button
           class="btn-text btn-sq"
           hx-get="{{ url_for("budgeting.sidebar", month=ctx.month) }}"
-          hx-target="#budgeting-sidebar"
+          hx-target="#budget-sidebar"
           hx-swap="innerHTML"
         >
           <icon>close</icon>

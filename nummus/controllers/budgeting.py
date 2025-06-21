@@ -619,22 +619,23 @@ def group(uri: str) -> str:
 
     form = flask.request.form
     if flask.request.method == "PUT":
-        is_open = "open" in form
-        if uri != "ungrouped":
-            name = form.get("name")
-            if name is not None:
-                try:
-                    with p.begin_session() as s:
-                        g = web_utils.find(s, BudgetGroup, uri)
-                        g.name = name
-                except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                    return common.error(e)
+        name = form.get("group")
+        if name is None:
+            # sending open state
+            is_open = "open" in form
+            groups_open: list[str] = flask.session.get("groups_open", [])
+            groups_open = [x for x in groups_open if x != uri]
+            if is_open:
+                groups_open.append(uri)
+            flask.session["groups_open"] = groups_open
+        elif uri != "ungrouped":
+            try:
+                with p.begin_session() as s:
+                    g = web_utils.find(s, BudgetGroup, uri)
+                    g.name = name
+            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+                return common.error(e)
 
-        groups_open: list[str] = flask.session.get("groups_open", [])
-        groups_open = [x for x in groups_open if x != uri]
-        if is_open:
-            groups_open.append(uri)
-        flask.session["groups_open"] = groups_open
         # No response expected, actual opening done in JS
         return ""
     if flask.request.method != "DELETE":

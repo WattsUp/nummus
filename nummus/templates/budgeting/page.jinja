@@ -3,10 +3,10 @@
   hx-target="#main"
   hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
   hx-get="{{ url_for("budgeting.page") }}"
-  hx-include="#budgeting-sidebar-uri"
+  hx-include="#budget-sidebar-uri"
 >
   <h1 class="text-primary mr-auto font-serif text-3xl">Budgeting</h1>
-  <div id="budgeting-status" class="w-md col-span-2 mx-auto max-w-full">
+  <div id="budget-status" class="w-md col-span-2 mx-auto max-w-full">
     {% include "budgeting/status.jinja" %}
   </div>
   <div class="flex h-9 items-center justify-end">
@@ -68,8 +68,17 @@
         {% include "budgeting/group.jinja" %}
       </div>
     {% endfor %}
+    <label class="toggle">
+      <input
+        type="checkbox"
+        autocomplete="off"
+        oninput="budgeting.toggleEdit(this)"
+      />
+      <div>Edit groups and reorder</div>
+      <switch></switch>
+    </label>
   </div>
-  <div id="budgeting-sidebar" class="max-lg:hidden">
+  <div id="budget-sidebar" class="max-lg:hidden">
     {% include "budgeting/sidebar.jinja" %}
   </div>
 </div>

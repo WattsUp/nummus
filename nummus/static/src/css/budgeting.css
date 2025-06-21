@@ -10,14 +10,14 @@
 
   & > label {
     @apply flex items-center;
-    @apply h-11 rounded-md pl-1 pr-2;
+    @apply edit:pl-8 relative h-11 rounded-md pl-1 pr-2;
     @apply bg-surface-container-highest;
 
     @variant error {
       @apply bg-error-container text-on-error-container;
     }
 
-    & input {
+    & > input:first-of-type {
       @apply h-0 w-0 opacity-0;
     }
 
@@ -31,12 +31,12 @@
   }
 
   & > div {
-    @apply not-open:hidden;
+    @apply not-edit:not-open:hidden;
   }
 }
 
 @utility budget-category {
-  @apply px-2 py-1;
+  @apply edit:pl-8 relative px-2 py-1;
 
   & > div:first-of-type > div {
     @apply w-28 shrink-0;
@@ -49,27 +49,36 @@
         @apply opacity-0;
         @apply text-right;
 
-        @variant [:active, :focus-visible, :focus-within] {
-          @apply opacity-100;
+        @variant not-edit {
+          @variant [:active, :focus-visible, :focus-within] {
+            @apply opacity-100;
 
-          & ~ span {
-            @apply opacity-0;
+            & ~ span {
+              @apply opacity-0;
+            }
           }
         }
       }
 
-      @variant hover {
-        & > span {
-          @apply opacity-0;
-          @apply pointer-events-none;
-        }
+      @variant not-edit {
+        @variant hover {
+          & > span {
+            @apply opacity-0;
+            @apply pointer-events-none;
+          }
 
-        & > input {
-          @apply opacity-100;
+          & > input {
+            @apply opacity-100;
+          }
         }
       }
     }
   }
+}
+
+@utility budget-drag {
+  @apply not-edit:hidden absolute left-1 top-1/2 -translate-y-1/2;
+  @apply cursor-grab;
 }
 
 @utility budget-category-active {

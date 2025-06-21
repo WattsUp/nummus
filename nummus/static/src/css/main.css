@@ -24,6 +24,7 @@
 @custom-variant disabled (&:disabled, &[disabled]);
 @custom-variant open (&:where(.open, .open *));
 @custom-variant error (&:where(.error, .error *));
+@custom-variant edit (&:where(.edit, .edit *));
 
 @theme {
   --color-*: initial;
