@@ -59,7 +59,13 @@
   </div>
 </details>
 <div class="grid-flow-row-dense grid-cols-[1fr_275px] gap-2 lg:grid">
-  <div>
+  <div
+    id="budget-table"
+    hx-put="{{ url_for("budgeting.reorder") }}"
+    hx-include="this"
+    hx-target="#no-target"
+    hx-trigger="reorder"
+  >
     {% for group in ctx.groups %}
       <div
         id="group-{{ group.uri or "ungrouped" }}"

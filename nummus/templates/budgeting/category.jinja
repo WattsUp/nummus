@@ -8,6 +8,7 @@
   hx-trigger="sidebar"
   hx-get="{{ url_for("budgeting.sidebar", uri=category.uri) }}"
 >
+  <input name="category-uri" value="{{ category.uri }}" type="hidden" />
   <icon class="budget-drag">drag_indicator</icon>
   <div class="mb-1 flex items-center">
     <h1 class="grow">{{ category.name }}</h1>

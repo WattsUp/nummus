@@ -510,7 +510,7 @@ def move(uri: str) -> str | flask.Response:
 
 
 def reorder() -> str:
-    """GET & PUT /h/budgeting/reorder.
+    """PUT /h/budgeting/reorder.
 
     Returns:
         string HTML response
@@ -519,8 +519,8 @@ def reorder() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     form = flask.request.form
-    group_uris = form.getlist("group_uri")
-    row_uris = form.getlist("row_uri")
+    group_uris = form.getlist("group-uri")
+    t_cat_uris = form.getlist("category-uri")
     groups = form.getlist("group")
 
     with p.begin_session() as s:
@@ -533,8 +533,8 @@ def reorder() -> str:
 
         i = 0
         last_group = None
-        for t_cat_uri, g_uri in zip(row_uris, groups, strict=True):
-            g_id = None if g_uri == "" else BudgetGroup.uri_to_id(g_uri)
+        for t_cat_uri, g_uri in zip(t_cat_uris, groups, strict=True):
+            g_id = None if g_uri == "ungrouped" else BudgetGroup.uri_to_id(g_uri)
             if g_uri != last_group:
                 i = 0
 
@@ -588,24 +588,8 @@ def reorder() -> str:
                 },
             )
 
-        month_str = form.get("month")
-        month = (
-            utils.start_of_month(datetime.date.today())
-            if month_str is None
-            else datetime.date.fromisoformat(month_str + "-01")
-        )
-        sidebar_uri = form.get("sidebar") or None
-
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        ctx=budget,
-        budget_sidebar=sidebar,
-    )
+    # No response expected, actual moving done in JS
+    return ""
 
 
 def group(uri: str) -> str:
@@ -619,7 +603,7 @@ def group(uri: str) -> str:
 
     form = flask.request.form
     if flask.request.method == "PUT":
-        name = form.get("group")
+        name = form.get("name")
         if name is None:
             # sending open state
             is_open = "open" in form
@@ -1334,9 +1318,7 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
-    # TODO (WattsUp): Add reorder mode
     "/h/budgeting/reorder": (reorder, ["PUT"]),
-    # TODO (WattsUp): Add group editing
     "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
     "/h/budgeting/t/<path:uri>": (target, ["GET", "POST", "PUT", "DELETE"]),

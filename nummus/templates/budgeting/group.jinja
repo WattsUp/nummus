@@ -19,6 +19,7 @@
     autocomplete="off"
   />
   {% if group.name %}
+    <input name="group-uri" value="{{ group.uri or "" }}" type="hidden" />
     <icon class="budget-drag">drag_indicator</icon>
   {% endif %}
   <icon class="not-open:hidden edit:hidden">keyboard_arrow_up</icon>
@@ -26,7 +27,7 @@
   <h1>
     {% if group.name %}
       <input
-        name="group"
+        name="name"
         value="{{ group.name }}"
         class="not-edit:hidden"
         hx-target="#no-target"
@@ -39,6 +40,7 @@
       Ungrouped
     {% endif %}
   </h1>
+  {# TODO (WattsUp): Add new & delete group button #}
   <div class="max-md:open:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
     <div>{{ group.assigned | money }}</div>
@@ -58,9 +60,15 @@
     <div>to spend</div>
   </div>
 </label>
-<div>
+<div class="budget-group-items">
+  {# TODO (WattsUp): Include all groups during edit #}
   {% for category in group.categories %}
     {% include "budgeting/category.jinja" %}
     {% if not loop.last %}<hr class="mx-4" />{% endif %}
   {% endfor %}
+  {% if not group.uri %}
+    <div class="not-edit:hidden text-on-surface-variant text-center italic">
+      Ungrouped cannot be moved nor reorganized
+    </div>
+  {% endif %}
 </div>

@@ -1,6 +1,6 @@
 @utility budget-group {
-  @apply mb-2 rounded-md;
-  @apply bg-surface-container-low;
+  @apply relative mb-2 rounded-md;
+  @apply not-edit:bg-surface-container-low;
 
   @variant error {
     & > label {
@@ -32,6 +32,10 @@
 
   & > div {
     @apply not-edit:not-open:hidden;
+  }
+
+  & hr {
+    @apply edit:hidden;
   }
 }
 
@@ -73,6 +77,16 @@
         }
       }
     }
+  }
+}
+
+@utility budget-dragging {
+  @apply z-50;
+
+  &::before {
+    @apply -z-1 absolute -inset-1 content-[""];
+    @apply border-outline bg-surface-container-lowest border-2;
+    @apply shadow-xl;
   }
 }
 
