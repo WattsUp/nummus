@@ -77,8 +77,10 @@ class TestCategoryDirection(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: -$10.00 to [blank] has negative "
-            "amount with income category Other Income",
+            uri: (
+                f"{today} - Monkey Bank Checking: -$10.00 to [blank] has negative "
+                "amount with income category Other Income"
+            ),
         }
         self.assertEqual(c.issues, target)
 
@@ -104,8 +106,10 @@ class TestCategoryDirection(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] has positive "
-            "amount with expense category General Merchandise",
+            uri: (
+                f"{today} - Monkey Bank Checking: $10.00 to [blank] has positive "
+                "amount with expense category General Merchandise"
+            ),
         }
         self.assertEqual(c.issues, target)
 

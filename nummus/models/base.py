@@ -93,6 +93,10 @@ class Base(orm.DeclarativeBase):
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
+    def __hash__(self) -> int:
+        """Hash function for dictionary keys."""
+        return self.id_
+
     def __eq__(self, other: Base | object) -> bool:
         """Test equality by URI.
 

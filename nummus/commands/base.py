@@ -49,7 +49,7 @@ class BaseCommand(ABC):
         self._p: Portfolio | None = None
 
         # Defer for faster time to main
-        from nummus import exceptions as exc
+        from nummus import exceptions as exc  # noqa: PLC0415
 
         if do_unlock:
             try:
@@ -101,8 +101,8 @@ def unlock(
         Unlocked Portfolio or None if unlocking failed
     """
     # defer for faster time to main
-    from nummus import exceptions as exc
-    from nummus import portfolio, utils
+    from nummus import exceptions as exc  # noqa: PLC0415
+    from nummus import portfolio, utils  # noqa: PLC0415
 
     if not path_db.exists():
         print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")

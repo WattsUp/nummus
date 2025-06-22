@@ -79,7 +79,7 @@ class Web(BaseCommand):  # pragma: no cover
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import web
+        from nummus import web  # noqa: PLC0415
 
         if self._p is None:
             return 1

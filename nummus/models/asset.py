@@ -323,8 +323,7 @@ class Asset(Base):
         Does not commit changes, call s.commit() afterwards.
         """
         # This function is best here but need to avoid circular imports
-
-        from nummus.models import TransactionSplit
+        from nummus.models import TransactionSplit  # noqa: PLC0415
 
         s = orm.object_session(self)
         if s is None:
@@ -686,20 +685,27 @@ class Asset(Base):
         indices: dict[str, dict[str, str]] = {
             "^GSPC": {
                 "name": "S&P 500",
-                "description": "A stock market index tracking the stock performance of "
-                "500 of the largest companies listed on stock exchanges in the United "
-                "States",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "500 of the largest companies listed on stock exchanges "
+                    "in the United States"
+                ),
             },
             "^DJI": {
                 "name": "Dow Jones Industrial Average",
-                "description": "A stock market index tracking the stock performance of "
-                "30 prominent companies listed on stock exchanges in the United States",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "30 prominent companies listed on stock exchanges in the "
+                    "United States"
+                ),
             },
             "^BUK100P": {
                 "name": "Cboe UK 100",
-                "description": "A stock market index tracking the stock performance of "
-                "100 of the largest companies listed on stock exchanges in the United "
-                "Kingdom",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "100 of the largest companies listed on stock exchanges "
+                    "in the United Kingdom"
+                ),
             },
             "^N225": {
                 "name": "Nikkel Index",
@@ -707,13 +713,17 @@ class Asset(Base):
             },
             "^N100": {
                 "name": "Euronext 100 Index",
-                "description": "A stock market index tracking the stock performance of "
-                "100 of the largest companies listed on Euronext",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "100 of the largest companies listed on Euronext"
+                ),
             },
             "^HSI": {  # codespell:ignore
                 "name": "Hang Seng Index",
-                "description": "A freefloat-adjusted market-capitalization-weighted "
-                "stock-market index in Hong Kong",
+                "description": (
+                    "A freefloat-adjusted market-capitalization-weighted "
+                    "stock-market index in Hong Kong"
+                ),
             },
         }
         for ticker, item in indices.items():

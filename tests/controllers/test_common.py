@@ -6,15 +6,10 @@ import warnings
 from typing import TYPE_CHECKING
 from unittest import mock
 
-
 from nummus import controllers
 from nummus import exceptions as exc
 from nummus.controllers import common
-from nummus.models import (
-    Asset,
-    TransactionCategory,
-    TransactionCategoryGroup,
-)
+from nummus.models import Asset, TransactionCategory, TransactionCategoryGroup
 from nummus.web_utils import HTTP_CODE_OK
 from tests.controllers.base import WebTestBase
 

@@ -148,7 +148,7 @@ class NummusApp(flask.Flask):
         # Change snake case to kebab case
         # Change bools to "" if True, omit if False
         values = {
-            k.replace("_", "-"): ("" if isinstance(v, bool) else v)
+            k.replace("_", "-"): "" if isinstance(v, bool) else v
             for k, v in values.items()
             if not isinstance(v, str | bool | None) or v
         }

@@ -29,7 +29,7 @@ class ChangePassword(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio, utils
+        from nummus import portfolio, utils  # noqa: PLC0415
 
         p = self._p
         if p is None:  # pragma: no cover

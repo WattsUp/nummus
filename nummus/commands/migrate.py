@@ -14,6 +14,8 @@ if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
+    from nummus.models import Base
+
 
 class Migrate(BaseCommand):
     """Migrate portfolio."""
@@ -40,14 +42,11 @@ class Migrate(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from packaging.version import Version
+        from packaging.version import Version  # noqa: PLC0415
 
-        from nummus import portfolio
-        from nummus.migrations import MIGRATORS, SchemaMigrator
-        from nummus.models import Config, ConfigKey
-
-        if TYPE_CHECKING:
-            from nummus.models import Base
+        from nummus import portfolio  # noqa: PLC0415
+        from nummus.migrations import MIGRATORS, SchemaMigrator  # noqa: PLC0415
+        from nummus.models import Config, ConfigKey  # noqa: PLC0415
 
         p = self._p
         if p is None:  # pragma: no cover

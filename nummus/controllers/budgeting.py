@@ -820,8 +820,9 @@ def target(uri: str) -> str | flask.Response:
             "amount": tar.amount,
             "weekdays": utils.WEEKDAYS,
             "months": utils.MONTHS,
-            "from_amount": flask.request.headers.get("HX-Trigger")
-            == "budgeting-amount",
+            "from_amount": (
+                flask.request.headers.get("HX-Trigger") == "budgeting-amount"
+            ),
         }
         # Don't make the changes
         s.rollback()

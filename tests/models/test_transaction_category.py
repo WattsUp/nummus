@@ -83,6 +83,15 @@ class TestTransactionCategory(TestBase):
             True,  # noqa: FBT003
         )
 
+        # INCOME cannot be non-bool
+        self.assertRaises(
+            TypeError,
+            setattr,
+            t_cat,
+            "essential",
+            None,
+        )
+
         # EXPENSE okay
         t_cat.group = TransactionCategoryGroup.EXPENSE
         t_cat.essential = True

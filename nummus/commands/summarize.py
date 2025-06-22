@@ -103,10 +103,10 @@ class Summarize(BaseCommand):
             Dictionary of statistics
         """
         # Defer for faster time to main
-        from sqlalchemy import func
+        from sqlalchemy import func  # noqa: PLC0415
 
-        from nummus import utils
-        from nummus.models import (
+        from nummus import utils  # noqa: PLC0415
+        from nummus.models import (  # noqa: PLC0415
             Account,
             Asset,
             AssetCategory,
@@ -233,7 +233,7 @@ class Summarize(BaseCommand):
             summary: Summary dictionary
         """
         # Defer for faster time to main
-        from nummus import utils
+        from nummus import utils  # noqa: PLC0415
 
         def is_are(i: int) -> str:
             return "is" if i == 1 else "are"

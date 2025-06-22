@@ -61,7 +61,7 @@ class Create(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio, utils
+        from nummus import portfolio, utils  # noqa: PLC0415
 
         if self._path_db.exists():
             if self._force:

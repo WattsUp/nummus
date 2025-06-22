@@ -103,10 +103,10 @@ class Health(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        import datetime
+        import datetime  # noqa: PLC0415
 
-        from nummus import health_checks
-        from nummus.models import Config, ConfigKey, HealthCheckIssue
+        from nummus import health_checks  # noqa: PLC0415
+        from nummus.models import Config, ConfigKey, HealthCheckIssue  # noqa: PLC0415
 
         if self._p is None:  # pragma: no cover
             return 1

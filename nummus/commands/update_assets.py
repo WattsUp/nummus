@@ -43,7 +43,7 @@ class UpdateAssets(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio
+        from nummus import portfolio  # noqa: PLC0415
 
         p = self._p
         if p is None:  # pragma: no cover

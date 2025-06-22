@@ -202,7 +202,10 @@ def confirm(
 
 def _eval_node(node: ast.expr) -> Decimal:
     if isinstance(node, ast.Constant):
-        return Decimal(node.value)
+        if isinstance(node.value, int | float | str):
+            return Decimal(node.value)
+        msg = f"Unknown constant type: {node.value}({type(node.value)})"
+        raise TypeError(msg)
     if isinstance(node, ast.BinOp):
         return REAL_OPERATORS[type(node.op)](
             _eval_node(node.left),
@@ -228,7 +231,7 @@ def evaluate_real_statement(s: str | None, precision: int = 2) -> Decimal | None
         return None
     try:
         value = _eval_node(ast.parse(s, mode="eval").body)
-    except (exc.EvaluationError, SyntaxError):
+    except (exc.EvaluationError, SyntaxError, TypeError):
         return None
     return round(value, precision)
 

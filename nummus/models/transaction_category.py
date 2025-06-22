@@ -87,7 +87,7 @@ class TransactionCategory(Base):
         return self.clean_strings(key, field)
 
     @orm.validates("essential")
-    def validate_essential(self, _: str, field: bool | None) -> bool | None:
+    def validate_essential(self, _: str, field: object) -> bool:
         """Validates income groups are not marked essential.
 
         Args:
@@ -99,6 +99,9 @@ class TransactionCategory(Base):
         Raises:
             InvalidORMValueError if field is essential
         """
+        if not isinstance(field, bool):
+            msg = f"field is not of type bool: {type(field)}"
+            raise TypeError(msg)
         if field and self.group in (
             TransactionCategoryGroup.INCOME,
             TransactionCategoryGroup.OTHER,

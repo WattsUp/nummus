@@ -230,6 +230,10 @@ class TestUtils(TestBase):
         result = utils.evaluate_real_statement(s)
         self.assertIsNone(result)
 
+        s = "2+5j"
+        result = utils.evaluate_real_statement(s)
+        self.assertIsNone(result)
+
     def test_parse_real(self) -> None:
         result = utils.parse_real(None)
         self.assertIsNone(result)

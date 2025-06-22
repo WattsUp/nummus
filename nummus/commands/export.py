@@ -74,7 +74,7 @@ class Export(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus.models import TransactionSplit
+        from nummus.models import TransactionSplit  # noqa: PLC0415
 
         if self._p is None:  # pragma: no cover
             return 1
@@ -112,10 +112,15 @@ def write_csv(
         transactions_query: ORM query to obtain TransactionSplits
     """
     # Defer for faster time to main
-    import tqdm
+    import tqdm  # noqa: PLC0415
 
-    from nummus import utils
-    from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
+    from nummus import utils  # noqa: PLC0415
+    from nummus.models import (  # noqa: PLC0415
+        Account,
+        TransactionCategory,
+        TransactionSplit,
+        YIELD_PER,
+    )
 
     s = transactions_query.session
     accounts = Account.map_name(s)
