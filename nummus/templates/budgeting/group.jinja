@@ -41,15 +41,15 @@
     {% endif %}
   </h1>
   {# TODO (WattsUp): Add new & delete group button #}
-  <div class="max-md:edit:hidden max-md:open:hidden">
+  <div class="edit:hidden max-md:open:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
     <div>{{ group.assigned | money }}</div>
   </div>
-  <div class="max-md:hidden">
+  <div class="edit:hidden max-md:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Activity</div>
     <div>{{ group.activity | money }}</div>
   </div>
-  <div class="max-md:edit:hidden max-md:open:hidden md:pr-2">
+  <div class="edit:hidden max-md:open:hidden md:pr-2">
     <div class="not-error:text-on-surface-variant text-sm">Available</div>
     <div>{{ group.available | money }}</div>
   </div>
@@ -59,6 +59,14 @@
     <div>Available</div>
     <div>to spend</div>
   </div>
+  {% if group.uri %}
+    <button
+      class="not-edit:hidden btn-text-error btn-sq"
+      onclick="budgeting.deleteGroup(this)"
+    >
+      <icon>delete</icon>
+    </button>
+  {% endif %}
 </label>
 <div class="budget-group-items">
   {% for category in group.categories %}

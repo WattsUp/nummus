@@ -551,8 +551,19 @@ def reorder() -> str:
             i += 1
             last_group = g_uri
 
-        # Set all to -index first so swapping can occur without unique violations
-        if len(g_positions) > 0 and len(t_cat_positions) > 0:
+        # Set all to None first so swapping can occur without unique violations
+        s.query(TransactionCategory).update(
+            {
+                TransactionCategory.budget_group_id: None,
+                TransactionCategory.budget_position: None,
+            },
+        )
+
+        # Delete any groups
+        s.query(BudgetGroup).where(BudgetGroup.id_.not_in(g_positions)).delete()
+
+        if g_positions and t_cat_positions:
+            # Set all to -index first so swapping can occur without unique violations
             s.query(BudgetGroup).update(
                 {
                     BudgetGroup.position: sql.case(
@@ -561,14 +572,8 @@ def reorder() -> str:
                     ),
                 },
             )
-            # Set all to None first so swapping can occur without unique violations
-            s.query(TransactionCategory).update(
-                {
-                    TransactionCategory.budget_group_id: None,
-                    TransactionCategory.budget_position: None,
-                },
-            )
 
+            # Set new group positions
             s.query(BudgetGroup).update(
                 {
                     BudgetGroup.position: sql.case(
@@ -577,6 +582,8 @@ def reorder() -> str:
                     ),
                 },
             )
+
+            # Set new category positions
             s.query(TransactionCategory).update(
                 {
                     TransactionCategory.budget_group_id: sql.case(
@@ -604,68 +611,25 @@ def group(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     form = flask.request.form
-    if flask.request.method == "PUT":
-        name = form.get("name")
-        if name is None:
-            # sending open state
-            is_open = "open" in form
-            groups_open: list[str] = flask.session.get("groups_open", [])
-            groups_open = [x for x in groups_open if x != uri]
-            if is_open:
-                groups_open.append(uri)
-            flask.session["groups_open"] = groups_open
-        elif uri != "ungrouped":
-            try:
-                with p.begin_session() as s:
-                    g = web_utils.find(s, BudgetGroup, uri)
-                    g.name = name
-            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                return common.error(e)
+    name = form.get("name")
+    if name is None:
+        # sending open state
+        is_open = "open" in form
+        groups_open: list[str] = flask.session.get("groups_open", [])
+        groups_open = [x for x in groups_open if x != uri]
+        if is_open:
+            groups_open.append(uri)
+        flask.session["groups_open"] = groups_open
+    elif uri != "ungrouped":
+        try:
+            with p.begin_session() as s:
+                g = web_utils.find(s, BudgetGroup, uri)
+                g.name = name
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
 
-        # No response expected, actual opening done in JS
-        return ""
-    if flask.request.method != "DELETE":
-        raise NotImplementedError
-    with p.begin_session() as s:
-        g = web_utils.find(s, BudgetGroup, uri)
-        s.query(TransactionCategory).where(
-            TransactionCategory.budget_group_id == g.id_,
-        ).update(
-            {
-                TransactionCategory.budget_group_id: None,
-                TransactionCategory.budget_position: None,
-            },
-        )
-        s.delete(g)
-        # Subtract 1 from the following positions to close the gap
-        query = (
-            s.query(BudgetGroup)
-            .where(BudgetGroup.position >= g.position)
-            .order_by(BudgetGroup.position)
-        )
-        for g in query.yield_per(YIELD_PER):
-            g.position -= 1
-
-    month_str = form.get("month")
-    month = (
-        utils.start_of_month(datetime.date.today())
-        if month_str is None
-        else datetime.date.fromisoformat(month_str + "-01")
-    )
-    sidebar_uri = form.get("sidebar") or None
-
-    with p.begin_session() as s:
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        ctx=budget,
-        budget_sidebar=sidebar,
-        oob=True,
-    )
+    # No response expected, actual opening done in JS
+    return ""
 
 
 def new_group() -> str:
@@ -1322,7 +1286,7 @@ ROUTES: Routes = {
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
-    "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
+    "/h/budgeting/g/<path:uri>": (group, ["PUT"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
     "/h/budgeting/t/<path:uri>": (target, ["GET", "POST", "PUT", "DELETE"]),
     "/h/budgeting/sidebar": (sidebar, ["GET"]),

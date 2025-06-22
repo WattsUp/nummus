@@ -565,6 +565,45 @@ const budgeting = {
       htmx.trigger(document.body, "budget");
     }
   },
+  /**
+   * Delete group, move items to neighbor
+   *
+   * @param {Element} btn - Triggering button
+   */
+  deleteGroup(btn) {
+    const group = btn.closest(".budget-group");
+    const items = htmx.find(group, ".budget-group-items");
+    const prevGroup = group.previousElementSibling;
+    if (prevGroup) {
+      const newItems = htmx.find(prevGroup, ".budget-group-items");
+      htmx.findAll(items, ".budget-category").forEach((e) => {
+        newItems.insertBefore(e, null);
+      });
+      htmx.remove(group);
+    } else {
+      const nextGroup = group.nextElementSibling;
+      const newItems = htmx.find(nextGroup, ".budget-group-items");
+      const first = newItems.firstChild;
+      htmx.findAll(items, ".budget-category").forEach((e) => {
+        newItems.insertBefore(e, first);
+      });
+      htmx.remove(group);
+    }
+
+    htmx.findAll(".budget-category").forEach((e, i) => {
+      const group = e.closest(".budget-group");
+      const groupURI = group.id.slice(6);
+
+      const inputGroup = document.createElement("input");
+      inputGroup.name = "group";
+      inputGroup.type = "text";
+      inputGroup.value = groupURI;
+      inputGroup.hidden = true;
+      e.append(inputGroup);
+    });
+    htmx.trigger("#budget-table", "reorder");
+    this.cleanUpDrag();
+  },
 };
 
 htmx.on("click", (evt) => {
