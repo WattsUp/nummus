@@ -562,7 +562,7 @@ def reorder() -> str:
         # Delete any groups
         s.query(BudgetGroup).where(BudgetGroup.id_.not_in(g_positions)).delete()
 
-        if g_positions and t_cat_positions:
+        if g_positions:
             # Set all to -index first so swapping can occur without unique violations
             s.query(BudgetGroup).update(
                 {
@@ -583,6 +583,7 @@ def reorder() -> str:
                 },
             )
 
+        if t_cat_positions:
             # Set new category positions
             s.query(TransactionCategory).update(
                 {
@@ -627,6 +628,9 @@ def group(uri: str) -> str:
                 g.name = name
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
+    else:
+        msg = "Cannot rename ungrouped"
+        raise exc.http.BadRequest(msg)
 
     # No response expected, actual opening done in JS
     return ""
@@ -642,30 +646,27 @@ def new_group() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     name = "New Group"
-    try:
-        with p.begin_session() as s:
-            # Ensure the name isn't a duplicate
-            i = 1
+    with p.begin_session() as s:
+        # Ensure the name isn't a duplicate
+        i = 1
+        n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+        while n != 0:
+            i += 1
+            name = f"New Group {i}"
             n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
-            while n != 0:
-                i += 1
-                name = f"New Group {i}"
-                n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
 
-            # Move existing groups down one
-            n = s.query(BudgetGroup).count()
-            for i in range(n, -1, -1):
-                # Do one at a time in reverse order to prevent duplicate value
-                s.query(BudgetGroup).where(BudgetGroup.position == i).update(
-                    {BudgetGroup.position: i + 1},
-                )
+        # Move existing groups down one
+        n = s.query(BudgetGroup).count()
+        for i in range(n, -1, -1):
+            # Do one at a time in reverse order to prevent duplicate value
+            s.query(BudgetGroup).where(BudgetGroup.position == i).update(
+                {BudgetGroup.position: i + 1},
+            )
 
-            g = BudgetGroup(name=name, position=0)
-            s.add(g)
-            s.flush()
-            g_uri = g.uri
-    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-        return common.error(e)
+        g = BudgetGroup(name=name, position=0)
+        s.add(g)
+        s.flush()
+        g_uri = g.uri
     ctx: _GroupContext = {
         "position": 0,
         "name": name,
@@ -681,7 +682,7 @@ def new_group() -> str:
         """\
         <div
             id="group-{{ group.uri or "ungrouped" }}"
-            class="budget-group {{ "open" if group.is_open }}"
+            class="budget-group"
         >
             {% include "budgeting/group.jinja" %}
         </div>

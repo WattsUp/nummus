@@ -17,6 +17,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+from nummus.web_utils import HTTP_CODE_BAD_REQUEST
 from tests.controllers.base import WebTestBase
 
 
@@ -558,7 +559,6 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(a.amount, Decimal(-50))
 
     def test_reorder(self) -> None:
-        self.skipTest("Not implemented")
         _ = self._setup_portfolio()
         p = self._portfolio
 
@@ -604,19 +604,15 @@ class TestBudgeting(WebTestBase):
 
         endpoint = "budgeting.reorder"
         url = endpoint
-        # Empty form doesn't make problems
-        form = {}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
 
         # Swap groups 0 and 1
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
             "group": [g_uri_1, g_uri_0, g_uri_0],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -647,12 +643,12 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(t_cat.budget_group_id, g_id_1)
 
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
             "group": [g_uri_1, g_uri_1, g_uri_0],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -683,12 +679,12 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(t_cat.budget_group_id, g_id_1)
 
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_0, t_cat_uri_1, t_cat_uri_2],
-            "group": [g_uri_1, g_uri_0, ""],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_0, t_cat_uri_1, t_cat_uri_2],
+            "group": [g_uri_1, g_uri_0, "ungrouped"],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -718,111 +714,125 @@ class TestBudgeting(WebTestBase):
             self.assertIsNone(t_cat.budget_position)
             self.assertIsNone(t_cat.budget_group_id)
 
+        # Missing group deletes it
+        form = {
+            "group-uri": [g_uri_0],
+        }
+        result, _ = self.web_put(url, data=form)
+        self.assertEqual(result, "")
+
+        with p.begin_session() as s:
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
+            self.assertEqual(g.position, 0)
+
+            n = s.query(BudgetGroup).count()
+            self.assertEqual(n, 1)
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_0)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_1)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_2)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+
+        form = {}
+        result, _ = self.web_put(url, data=form)
+        self.assertEqual(result, "")
+
+        with p.begin_session() as s:
+            n = s.query(BudgetGroup).count()
+            self.assertEqual(n, 0)
+
     def test_group(self) -> None:
-        self.skipTest("Not implemented")
         _ = self._setup_portfolio()
         p = self._portfolio
 
         with p.begin_session() as s:
             g_0 = BudgetGroup(name=self.random_string(), position=0)
-            g_1 = BudgetGroup(name=self.random_string(), position=1)
-            s.add_all((g_0, g_1))
+            s.add(g_0)
             s.flush()
-            g_id_0 = g_0.id_
             g_uri_0 = g_0.uri
-            g_id_1 = g_1.id_
-            g_uri_1 = g_1.uri
-
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "general merchandise")
-                .one()
-            )
-            t_cat_id = t_cat.id_
-            t_cat.budget_group_id = g_id_0
-            t_cat.budget_position = 0
 
         group_name = "Shopping Group"
 
         endpoint = "budgeting.group"
         url = endpoint, {"uri": g_uri_0}
-        form = {"name": ""}
+        form = {"name": " "}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Budget group name must not be empty", result)
 
-        form = {"name": group_name, "closed": ""}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn(group_name, result)
-        self.assertEqual(result.count("checked"), 1)
-
         form = {"name": group_name}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn(group_name, result)
-        self.assertEqual(result.count("checked"), 0)
+        self.assertEqual(result, "")
 
-        with p.begin_session() as s:
-            name = s.query(BudgetGroup.name).where(BudgetGroup.id_ == g_id_0).scalar()
-            self.assertEqual(name, group_name)
-
-        result, _ = self.web_delete(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertNotIn(group_name, result)
-
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.id_ == t_cat_id)
-                .one()
-            )
-            self.assertIsNone(t_cat.budget_group_id)
-            self.assertIsNone(t_cat.budget_position)
-
-            # Next category should move up
-            position = (
-                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_id_1).scalar()
-            )
-            self.assertEqual(position, 0)
-
-        url = endpoint, {"uri": g_uri_1}
-        form = {"name": group_name, "closed": ""}
+        form = {"open": True}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 1)
+        self.assertEqual(result, "")
+        with self._client.session_transaction() as session:
+            self.assertEqual(session["groups_open"], [g_uri_0])
 
-        url = endpoint, {"uri": "ungrouped"}
-        form = {"closed": ""}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 2)
-
-        url = endpoint, {"uri": "ungrouped"}
         form = {}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 1)
+        self.assertEqual(result, "")
+        with self._client.session_transaction() as session:
+            self.assertEqual(session["groups_open"], [])
+
+        # Can't edit ungrouped
+        form = {"name": group_name}
+        url = endpoint, {"uri": "ungrouped"}
+        self.web_put(url, data=form, rc=HTTP_CODE_BAD_REQUEST)
+
+        form = {"open": group_name}
+        result, _ = self.web_put(url, data=form)
 
     def test_new_group(self) -> None:
-        self.skipTest("Not implemented")
         _ = self._setup_portfolio()
         p = self._portfolio
 
         with p.begin_session() as s:
             g_0 = BudgetGroup(name="Bills", position=0)
             s.add(g_0)
+            s.flush()
+
+            g_0_id = g_0.id_
 
         endpoint = "budgeting.new_group"
-        url = endpoint
-        form = {"name": "Bills"}
-        result, _ = self.web_post(url, data=form)
-        self.assertIn("Budget group name must be unique", result)
+        result, _ = self.web_post(endpoint)
+        target = '<div id="group-'
+        self.assertEqual(result[: len(target)], target)
+        self.assertIn("New Group", result)
 
-        form = {"name": "Wants"}
-        result, _ = self.web_post(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn("Bills", result)
-        self.assertIn("Wants", result)
+        with p.begin_session() as s:
+            result = (
+                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_0_id).scalar()
+            )
+            self.assertEqual(result, 1)
+
+        result, _ = self.web_post(endpoint)
+        target = '<div id="group-'
+        self.assertEqual(result[: len(target)], target)
+        self.assertIn("New Group 2", result)
+
+        with p.begin_session() as s:
+            result = (
+                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_0_id).scalar()
+            )
+            self.assertEqual(result, 2)
 
     def test_ctx_target(self) -> None:
         # Test the context since testing the HTML would be very difficult
