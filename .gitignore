@@ -19,9 +19,7 @@ package*
 .coverage
 coverage.json
 test_log.json
-portfolio.db
-portfolio.config
-portfolio.images
+portfolio*
 result.json
 
 # Secrets
