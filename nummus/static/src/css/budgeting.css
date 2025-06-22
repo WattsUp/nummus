@@ -37,6 +37,20 @@
   & hr {
     @apply edit:hidden;
   }
+
+  @variant edit {
+    @variant last-of-type {
+      & > label {
+        @apply mb-6;
+
+        &::before {
+          @apply absolute left-0 top-11 w-full;
+          @apply text-on-surface-variant text-center italic;
+          content: "Ungrouped cannot be moved nor reorganized";
+        }
+      }
+    }
+  }
 }
 
 @utility budget-category {

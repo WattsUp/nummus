@@ -99,7 +99,7 @@ class TransactionSplit(Base):
     @orm.validates("payee", "memo", "tag", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
-        return self.clean_strings(key, field, short_check=key != "ticker")
+        return self.clean_strings(key, field)
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -395,7 +395,7 @@ class Transaction(Base):
     @orm.validates("statement", "payee")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
-        return self.clean_strings(key, field, short_check=key != "ticker")
+        return self.clean_strings(key, field)
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:

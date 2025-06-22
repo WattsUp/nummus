@@ -61,20 +61,14 @@
 <div class="grid-flow-row-dense grid-cols-[1fr_275px] gap-2 lg:grid">
   <div
     id="budget-table"
+    class="relative pb-8"
     hx-put="{{ url_for("budgeting.reorder") }}"
     hx-include="this"
     hx-target="#no-target"
     hx-trigger="reorder"
   >
-    {% for group in ctx.groups %}
-      <div
-        id="group-{{ group.uri or "ungrouped" }}"
-        class="budget-group {{ "open" if group.is_open }}"
-      >
-        {% include "budgeting/group.jinja" %}
-      </div>
-    {% endfor %}
-    <label class="toggle">
+    <error id="budget-error" class="status-error"></error>
+    <label class="toggle not-edit:absolute bottom-0 w-full">
       <input
         type="checkbox"
         autocomplete="off"
@@ -83,6 +77,22 @@
       <div>Edit groups and reorder</div>
       <switch></switch>
     </label>
+    <button
+      class="btn-filled not-edit:hidden mx-auto mb-2"
+      hx-post="{{ url_for("budgeting.new_group") }}"
+      hx-target="this"
+      hx-swap="afterend"
+    >
+      New Group
+    </button>
+    {% for group in ctx.groups %}
+      <div
+        id="group-{{ group.uri or "ungrouped" }}"
+        class="budget-group {{ "open" if group.is_open }}"
+      >
+        {% include "budgeting/group.jinja" %}
+      </div>
+    {% endfor %}
   </div>
   <div id="budget-sidebar" class="max-lg:hidden">
     {% include "budgeting/sidebar.jinja" %}

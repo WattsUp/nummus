@@ -641,36 +641,52 @@ def new_group() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    form = flask.request.form
-    name = form["name"]
-
+    name = "New Group"
     try:
         with p.begin_session() as s:
+            # Ensure the name isn't a duplicate
+            i = 1
+            n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+            while n != 0:
+                i += 1
+                name = f"New Group {i}"
+                n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+
+            # Move existing groups down one
             n = s.query(BudgetGroup).count()
-            g = BudgetGroup(name=name, position=n)
+            for i in range(n, -1, -1):
+                # Do one at a time in reverse order to prevent duplicate value
+                s.query(BudgetGroup).where(BudgetGroup.position == i).update(
+                    {BudgetGroup.position: i + 1},
+                )
+
+            g = BudgetGroup(name=name, position=0)
             s.add(g)
+            s.flush()
+            g_uri = g.uri
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
         return common.error(e)
-
-    month_str = form.get("month")
-    month = (
-        utils.start_of_month(datetime.date.today())
-        if month_str is None
-        else datetime.date.fromisoformat(month_str + "-01")
-    )
-    sidebar_uri = form.get("sidebar") or None
-
-    with p.begin_session() as s:
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        ctx=budget,
-        budget_sidebar=sidebar,
-        oob=True,
+    ctx: _GroupContext = {
+        "position": 0,
+        "name": name,
+        "uri": g_uri,
+        "is_open": False,
+        "assigned": Decimal(0),
+        "activity": Decimal(0),
+        "available": Decimal(0),
+        "categories": [],
+        "has_error": False,
+    }
+    return flask.render_template_string(
+        """\
+        <div
+            id="group-{{ group.uri or "ungrouped" }}"
+            class="budget-group {{ "open" if group.is_open }}"
+        >
+            {% include "budgeting/group.jinja" %}
+        </div>
+        """,
+        group=ctx,
     )
 
 

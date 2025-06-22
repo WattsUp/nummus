@@ -268,15 +268,16 @@ const budgeting = {
       items = first.parentNode;
       before = first;
       if (groupLabelsMovedDown.length) {
-        // Groups also moved see if the first one to move is same from first's group
         const group = groupLabelsMovedDown[0].parentNode;
-        if (group == first.closest(".budget-group")) {
-          // Insert dragItem at bottom of previous one's items
-          const prevGroup = group.previousElementSibling;
-          if (prevGroup) {
-            items = htmx.find(prevGroup, ".budget-group-items");
-            before = null;
-          }
+        const prevGroup = group.previousElementSibling;
+        if (
+          prevGroup &&
+          !htmx.find(prevGroup, '.budget-category:not([reorder=""])')
+        ) {
+          // previous to first moved group had no changes
+          // move dragItem to end of prevGroup
+          items = htmx.find(prevGroup, ".budget-group-items");
+          before = null;
         }
       }
     } else if (groupLabelsMovedUp.length) {
@@ -552,11 +553,8 @@ const budgeting = {
       .forEach((button) => {
         button.setAttribute("disabled", "");
       });
-    htmx.findAll(".budget-group").forEach((group) => {
-      if (this.editing) htmx.addClass(group, "edit");
-      else htmx.removeClass(group, "edit");
-    });
     if (this.editing) {
+      htmx.addClass(htmx.find("#budget-table"), "edit");
       this.setupDrag();
     } else {
       this.cleanUpDrag();
@@ -574,7 +572,7 @@ const budgeting = {
     const group = btn.closest(".budget-group");
     const items = htmx.find(group, ".budget-group-items");
     const prevGroup = group.previousElementSibling;
-    if (prevGroup) {
+    if (prevGroup && prevGroup.matches(".budget-group")) {
       const newItems = htmx.find(prevGroup, ".budget-group-items");
       htmx.findAll(items, ".budget-category").forEach((e) => {
         newItems.insertBefore(e, null);

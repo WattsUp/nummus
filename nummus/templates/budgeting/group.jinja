@@ -30,10 +30,11 @@
         name="name"
         value="{{ group.name }}"
         class="not-edit:hidden"
-        hx-target="#no-target"
+        hx-target="#budget-error"
         hx-include="this"
         hx-put="{{ url_for("budgeting.group", uri=group.uri) }}"
         autocomplete="off"
+        spellcheck="true"
       />
       <span class="edit:hidden">{{ group.name }}</span>
     {% else %}
@@ -54,7 +55,7 @@
     <div>{{ group.available | money }}</div>
   </div>
   <div
-    class="not-edit:not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"
+    class="edit:hidden not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"
   >
     <div>Available</div>
     <div>to spend</div>
@@ -73,9 +74,4 @@
     {% include "budgeting/category.jinja" %}
     {% if not loop.last and not category.hidden %}<hr class="mx-4" />{% endif %}
   {% endfor %}
-  {% if not group.uri %}
-    <div class="not-edit:hidden text-on-surface-variant text-center italic">
-      Ungrouped cannot be moved nor reorganized
-    </div>
-  {% endif %}
 </div>
