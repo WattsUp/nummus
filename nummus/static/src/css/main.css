@@ -240,7 +240,7 @@
   }
 
   #main {
-    @apply min-h-full px-2 pb-20 pt-2 md:px-4;
+    @apply min-h-full overflow-hidden px-2 pb-20 pt-2 md:px-4;
   }
 
   #main-footer {

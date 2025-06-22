@@ -53,12 +53,14 @@ class _CategoryContext(TypedDict):
 
     position: int | None
     name: str
+    emoji_name: str
     uri: str
     assigned: Decimal
     activity: Decimal
     available: Decimal
     # List of bars (width ratio, bg fill ratio, fg fill ratio)
     bars: list[tuple[Decimal, Decimal, Decimal]]
+    hidden: bool
 
     target: _TargetContext | None
 
@@ -1216,14 +1218,13 @@ def ctx_budget(
         assigned, activity, available, leftover = categories[t_cat.id_]
         tar = targets.get(t_cat.id_)
         # Skip category if all numbers are 0 and not grouped
-        if (
+        hidden = (
             t_cat.budget_group_id is None
             and activity == 0
             and assigned == 0
             and available == 0
             and tar is None
-        ):
-            continue
+        )
         if t_cat.group == TransactionCategoryGroup.INCOME:
             continue
 
@@ -1271,10 +1272,12 @@ def ctx_budget(
         cat_ctx: _CategoryContext = {
             "position": t_cat.budget_position,
             "uri": t_cat.uri,
-            "name": t_cat.emoji_name,
+            "name": t_cat.name,
+            "emoji_name": t_cat.emoji_name,
             "assigned": assigned,
             "activity": activity,
             "available": available,
+            "hidden": hidden,
             "bars": bars,
             "target": target_ctx,
         }

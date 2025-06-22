@@ -1,7 +1,7 @@
 {% set target = category.target %}
 <div
   id="category-{{ category.uri }}"
-  class="budget-category"
+  class="budget-category {{ "not-edit:hidden" if category.hidden }}"
   onclick="budgeting.onClickCategory(this, event)"
   hx-include="#budget-sidebar-uri"
   hx-target="#budget-sidebar"
@@ -11,7 +11,7 @@
   <input name="category-uri" value="{{ category.uri }}" type="hidden" />
   <icon class="budget-drag">drag_indicator</icon>
   <div class="mb-1 flex items-center">
-    <h1 class="grow">{{ category.name }}</h1>
+    <h1 class="grow">{{ category.emoji_name }}</h1>
     <div
       class="{{ "text-on-surface-variant" if category.assigned == 0 }} group max-md:hidden"
     >

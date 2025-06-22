@@ -81,7 +81,7 @@
 }
 
 @utility budget-dragging {
-  @apply z-50;
+  @apply z-50 m-0;
 
   &::before {
     @apply -z-1 absolute -inset-1 content-[""];

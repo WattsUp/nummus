@@ -8,9 +8,8 @@ const budgeting = {
   dragItemHeight: null,
   staticItems: [],
   staticItemsY: [],
-  initialX: null,
-  initialY: null,
   initialScroll: null,
+  doScroll: 0,
   initialMouseX: null,
   initialMouseY: null,
   mouseOffsetX: null,
@@ -21,27 +20,35 @@ const budgeting = {
   barHeight: null,
   barTranslate: 0,
   bar: null,
+  isTouch: false,
   /**
    * Set up budgeting drag listeners
    */
-  setupDrag: function () {
+  setupDrag() {
     this.table = document.querySelector("#budget-table");
 
     this.dragStartBound = this.dragStart.bind(this);
     this.dragEndBound = this.dragEnd.bind(this);
     htmx.on(this.table, "mousedown", this.dragStartBound);
+    htmx.on(this.table, "touchstart", this.dragStartBound);
     htmx.on("mouseup", this.dragEndBound);
+    htmx.on("touchend", this.dragEndBound);
   },
   /**
    * On click, record initial positions and such
    *
    * @param {Event} evt Triggering event
    */
-  dragStart: function (evt) {
+  dragStart(evt) {
     const target = evt.target;
     if (!target.matches(".budget-drag")) {
       // Not a handle, ignore mouse up
       return;
+    }
+    // Don't scroll on mobile
+    if (evt.type == "touchstart") {
+      this.isTouch = true;
+      evt.preventDefault();
     }
     if (target.matches(".budget-category, .budget-category *")) {
       this.isGroup = false;
@@ -67,11 +74,6 @@ const budgeting = {
       }
       return true;
     });
-    this.staticItems.forEach((e, i) => {
-      const rect = e.getBoundingClientRect();
-      // Center of dragItem
-      this.staticItemsY[i] = rect.y + rect.height / 2;
-    });
 
     // Set position attribute
     htmx.findAll(".budget-category").forEach((e, i) => {
@@ -82,11 +84,13 @@ const budgeting = {
     });
 
     // Record initial position
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
     const rect = this.dragItem.getBoundingClientRect();
-    this.mouseOffsetX = evt.clientX - rect.x;
-    this.mouseOffsetY = evt.clientY - rect.y;
-    this.initialMouseX = evt.clientX;
-    this.initialMouseY = evt.clientY;
+    this.mouseOffsetX = evtX - rect.x;
+    this.mouseOffsetY = evtY - rect.y;
+    this.initialMouseX = evtX;
+    this.initialMouseY = evtY;
     this.initialScroll = window.scrollY;
     this.dragItemHeight = rect.height;
 
@@ -94,7 +98,9 @@ const budgeting = {
     htmx.addClass(this.table, "select-none");
 
     this.dragStartTestBound = this.dragStartTest.bind(this);
-    htmx.on("mousemove", this.dragStartTestBound);
+    htmx.on(this.isTouch ? "touchmove" : "mousemove", this.dragStartTestBound, {
+      passive: false,
+    });
   },
   /**
    * Once mouse moves enough, actually start dragging
@@ -102,35 +108,84 @@ const budgeting = {
    * @param {Event} evt Triggering event
    */
   dragStartTest(evt) {
-    const dx = evt.clientX - this.initialMouseX;
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
+    const dx = evtX - this.initialMouseX;
     const dy =
-      evt.clientY - this.initialMouseY + (window.scrollY - this.initialScroll);
+      evtY - this.initialMouseY + (window.scrollY - this.initialScroll);
     const delta = Math.sqrt(dx * dx + dy * dy);
 
     if (delta < 10) {
       return;
     }
     htmx.off("mousemove", this.dragStartTestBound);
+    htmx.off("touchmove", this.dragStartTestBound);
+    this.dragStartTestBound = null;
 
     htmx.addClass(this.dragItem, "budget-dragging");
 
     this.isDragging = true;
+
+    const scrollY = window.scrollY;
+    if (this.isGroup) {
+      htmx.findAll(".budget-group-items").forEach((e) => {
+        htmx.addClass(e, "hidden");
+      });
+    }
+    const dyScroll = window.scrollY - scrollY;
+    this.initialScroll += dyScroll;
+
+    // After toggling open, compute initial location
+    const rect = this.dragItem.getBoundingClientRect();
+    this.initialMouseX = rect.x + this.mouseOffsetX;
+    this.initialMouseY = rect.y + this.mouseOffsetY;
+    this.dragItemHeight = rect.height;
+
+    this.staticItems.forEach((e, i) => {
+      const rect = e.getBoundingClientRect();
+      // Center of dragItem
+      this.staticItemsY[i] = rect.y + rect.height / 2;
+    });
+
+    this.drag(evt);
+
     // Add move listener
     this.dragBound = this.drag.bind(this);
-    htmx.on("mousemove", this.dragBound);
+    htmx.on(this.isTouch ? "touchmove" : "mousemove", this.dragBound, {
+      passive: false,
+    });
+  },
+  doScrollFrame() {
+    if (!this.doScroll) return;
+    window.scrollBy(0, this.doScroll);
+    requestAnimationFrame(this.doScrollFrame.bind(this));
   },
   /**
    * On mouse move, translate rows
    *
    * @param {Event} evt Triggering event
    */
-  drag: function (evt) {
-    const offsetX = evt.clientX - this.initialMouseX;
+  drag(evt) {
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
+    if (evt.type == "touchmove") {
+      evt.preventDefault();
+      const prevDoScroll = this.doScroll;
+      const th = 150;
+      if (evtY < th) this.doScroll = (evtY - th) * 2;
+      else if (evtY > window.innerHeight - th)
+        this.doScroll = evtY - window.innerHeight + th;
+      else this.doScroll = 0;
+
+      if (this.doScroll && !prevDoScroll)
+        requestAnimationFrame(this.doScrollFrame.bind(this));
+    }
+    const offsetX = evtX - this.initialMouseX;
     const scrollY = window.scrollY - this.initialScroll;
-    const offsetY = evt.clientY - this.initialMouseY + scrollY;
+    const offsetY = evtY - this.initialMouseY + scrollY;
     this.dragItem.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
 
-    const dragItemYTop = evt.clientY - this.mouseOffsetY + scrollY;
+    const dragItemYTop = evtY - this.mouseOffsetY + scrollY;
     const dragItemYBot = dragItemYTop + this.dragItemHeight;
 
     this.staticItems.forEach((e, i) => {
@@ -165,7 +220,7 @@ const budgeting = {
    *
    * @param {Event} evt Triggering event
    */
-  dragEnd: function (evt) {
+  dragEnd(evt) {
     if (!this.isDragging) {
       this.cleanUpDrag();
       return;
@@ -244,7 +299,14 @@ const budgeting = {
       this.cleanUpDrag();
       return;
     }
-    items.insertBefore(this.dragItem, before);
+    try {
+      items.insertBefore(this.dragItem, before);
+    } catch (error) {
+      // There's a bug with self-ancestor
+      // Hard to catch so add context to error next time it shows up
+      console.log(this.dragItem, items, before);
+      console.error(error);
+    }
 
     // Add group input on each row
     htmx.findAll(".budget-category").forEach((e, i) => {
@@ -264,23 +326,39 @@ const budgeting = {
   /**
    * Clean up dragging listeners
    */
-  cleanUpDrag: function () {
+  cleanUpDrag() {
     // Remove styles and listeners
     this.staticItems.forEach((e) => {
       e.style.transform = "";
     });
     this.staticItems.length = 0;
+    this.isTouch = false;
+    this.doScroll = 0;
+
+    if (this.dragBound) {
+      htmx.off("mousemove", this.dragBound);
+      htmx.off("touchmove", this.dragBound);
+      this.dragBound = null;
+    }
+    if (this.dragStartTestBound) {
+      htmx.off("mousemove", this.dragStartTestBound);
+      htmx.off("touchmove", this.dragStartTestBound);
+      this.dragStartTestBound = null;
+    }
+
+    htmx.findAll(".budget-group-items").forEach((e) => {
+      htmx.removeClass(e, "hidden");
+    });
 
     if (this.dragItem) {
       this.dragItem.style.transform = "";
       htmx.removeClass(this.dragItem, "budget-dragging");
+      // Scroll drag item back into view if uncollapsing groups
+      if (this.isGroup) this.dragItem.scrollIntoView({ block: "center" });
       this.dragItem = null;
     }
 
     htmx.removeClass(this.table, "select-none");
-
-    if (this.dragBound) htmx.off("mousemove", this.dragBound);
-    if (this.dragStartTestBound) htmx.off("mousemove", this.dragStartTestBound);
 
     htmx.findAll('.budget-category>input[name="group"]').forEach((e) => {
       htmx.remove(e);
@@ -295,7 +373,7 @@ const budgeting = {
    * @param {Number} targetAmount Full target amount
    * @param {Boolean} onTrack True if target is on track
    */
-  update: function (assigned, targetAmount, onTrack) {
+  update(assigned, targetAmount, onTrack) {
     const remaining = targetAmount - assigned;
     const percent = Math.min(100, (assigned / targetAmount) * 100);
 
@@ -336,7 +414,7 @@ const budgeting = {
    * @param {Element} e Checkbox input element
    * @param {String} uri URI of group to update
    */
-  openGroup: function (e, uri) {
+  openGroup(e, uri) {
     // do nothing during edit
     if (this.editing) return;
 
@@ -408,7 +486,7 @@ const budgeting = {
    *
    * @param {Boolean} on true show the bar
    */
-  updateBar: function (on) {
+  updateBar(on) {
     this.barOn = on;
 
     if (this.bar == null) this.bar = htmx.find("#budget-button-bar");
@@ -425,7 +503,7 @@ const budgeting = {
    *
    * @param {Event} evt Triggering event
    */
-  confirmDelete: function (evt) {
+  confirmDelete(evt) {
     dialog.confirm(
       "Delete Target",
       "Delete",
@@ -438,21 +516,21 @@ const budgeting = {
   /**
    * On click of move bar button, trigger the category
    */
-  onBarMove: function () {
+  onBarMove() {
     const e = htmx.find(`#category-${this.currentURI} .hx-assign`);
     htmx.trigger(e, "button");
   },
   /**
    * On click of target bar button, trigger the category
    */
-  onBarTarget: function () {
+  onBarTarget() {
     const e = htmx.find(`#category-${this.currentURI} .hx-target`);
     htmx.trigger(e, "button");
   },
   /**
    * Reset budgeting JS states
    */
-  reset: function () {
+  reset() {
     this.bar = null;
     if (this.currentURI) {
       this.currentURI = null;
@@ -465,7 +543,7 @@ const budgeting = {
    *
    * @param {Element} e Toggle element
    */
-  toggleEdit: function (e) {
+  toggleEdit(e) {
     this.editing = e.checked;
     htmx
       .findAll(

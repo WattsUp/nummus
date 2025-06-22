@@ -41,7 +41,7 @@
     {% endif %}
   </h1>
   {# TODO (WattsUp): Add new & delete group button #}
-  <div class="max-md:open:hidden">
+  <div class="max-md:edit:hidden max-md:open:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
     <div>{{ group.assigned | money }}</div>
   </div>
@@ -49,22 +49,21 @@
     <div class="not-error:text-on-surface-variant text-sm">Activity</div>
     <div>{{ group.activity | money }}</div>
   </div>
-  <div class="max-md:open:hidden md:pr-2">
+  <div class="max-md:edit:hidden max-md:open:hidden md:pr-2">
     <div class="not-error:text-on-surface-variant text-sm">Available</div>
     <div>{{ group.available | money }}</div>
   </div>
   <div
-    class="not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"
+    class="not-edit:not-open:hidden not-error:text-on-surface-variant text-sm md:hidden"
   >
     <div>Available</div>
     <div>to spend</div>
   </div>
 </label>
 <div class="budget-group-items">
-  {# TODO (WattsUp): Include all groups during edit #}
   {% for category in group.categories %}
     {% include "budgeting/category.jinja" %}
-    {% if not loop.last %}<hr class="mx-4" />{% endif %}
+    {% if not loop.last and not category.hidden %}<hr class="mx-4" />{% endif %}
   {% endfor %}
   {% if not group.uri %}
     <div class="not-edit:hidden text-on-surface-variant text-center italic">

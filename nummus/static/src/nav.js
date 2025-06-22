@@ -90,7 +90,7 @@ const nav = {
     }
 
     nav.barTranslate = on ? 0 : nav.barHeight * 1.1;
-    fabTranslate = nav.barTranslate * nav.fabRatio;
+    const fabTranslate = nav.barTranslate * nav.fabRatio;
 
     nav.bar.style.translate = `0 ${nav.barTranslate}px`;
     nav.fab.style.translate = `${fabTranslate}px ${-nav.barTranslate}px`;
