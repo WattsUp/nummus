@@ -16,10 +16,11 @@ from colorama import Back, Fore
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
+from typing_extensions import override
 
 from nummus import controllers
 from nummus import exceptions as exc
-from nummus import portfolio, utils, version, web_assets
+from nummus import portfolio, utils, version, web_assets, web_utils
 from nummus.controllers import auth, common
 from nummus.models import Config, ConfigKey
 
@@ -32,6 +33,7 @@ class Handler(gevent.pywsgi.WSGIHandler):
 
     REQ_TIME_BAD = 0.15
     REQ_TIME_WARN = 0.075
+    TIMEOUT = 5 * utils.SECONDS_IN_MINUTE
 
     _HTTP_CODE_COLORS = types.MappingProxyType(
         {
@@ -42,6 +44,20 @@ class Handler(gevent.pywsgi.WSGIHandler):
         },
     )
 
+    @override
+    def handle(self) -> None:  # pragma: no cover
+        # Too hard to mock a timeout
+        # Add a timeout to connections for client that don't close keep-alive
+        timeout = gevent.Timeout.start_new(self.TIMEOUT)
+        try:
+            super().handle()
+        except gevent.Timeout as e:
+            if e is timeout:
+                pass
+            else:
+                raise
+
+    @override
     def format_request(self) -> str:
         """Format request as a single line.
 
@@ -114,6 +130,38 @@ class Handler(gevent.pywsgi.WSGIHandler):
         )
 
 
+class NummusApp(flask.Flask):
+    """nummus flask app."""
+
+    @override
+    def url_for(
+        self,
+        /,
+        endpoint: str,
+        *,
+        _anchor: str | None = None,
+        _method: str | None = None,
+        _scheme: str | None = None,
+        _external: bool | None = None,
+        **values: object,
+    ) -> str:
+        # Change snake case to kebab case
+        # Change bools to "" if True, omit if False
+        values = {
+            k.replace("_", "-"): "" if isinstance(v, bool) else v
+            for k, v in values.items()
+            if not isinstance(v, str | bool | None) or v
+        }
+        return super().url_for(
+            endpoint,
+            _anchor=_anchor,
+            _method=_method,
+            _scheme=_scheme,
+            _external=_external,
+            **values,
+        )
+
+
 class Server:
     """HTTP server that serves a nummus Portfolio."""
 
@@ -135,7 +183,7 @@ class Server:
         """
         self._portfolio = p
 
-        self._app = flask.Flask(__name__)
+        self._app = NummusApp(__name__)
         self._metrics = prometheus_flask_exporter.PrometheusMetrics(
             self._app,
             excluded_paths="/static",
@@ -146,7 +194,7 @@ class Server:
         self._metrics.info("nummus_info", "nummus info", version=version.version)
 
         # HTML pages routing
-        controllers.add_routes(self._app)
+        controllers.add_routes(self._app, debug=debug)
 
         # Add Portfolio to context for controllers
         with self._app.app_context():
@@ -199,14 +247,28 @@ class Server:
         self._app.jinja_env.filters["money"] = utils.format_financial
         self._app.jinja_env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         self._app.jinja_env.filters["money6"] = lambda x: utils.format_financial(x, 6)
+        self._app.jinja_env.filters["seconds"] = utils.format_seconds
         self._app.jinja_env.filters["days"] = utils.format_days
+        self._app.jinja_env.filters["days_abv"] = lambda x: utils.format_days(
+            x,
+            ["days", "wks", "mos", "yrs"],
+        )
         self._app.jinja_env.filters["comma"] = lambda x: f"{x:,.2f}"
         self._app.jinja_env.filters["qty"] = lambda x: f"{x:,.6f}"
         self._app.jinja_env.filters["percent"] = lambda x: f"{x * 100:5.2f}%"
         self._app.jinja_env.filters["pnl_color"] = lambda x: (
-            "black" if x is None or x == 0 else ("green-600" if x > 0 else "red-600")
+            "" if x is None or x == 0 else ("text-primary" if x > 0 else "text-error")
+        )
+        self._app.jinja_env.filters["pnl_arrow"] = lambda x: (
+            ""
+            if x is None or x == 0
+            else ("arrow_upward" if x > 0 else "arrow_downward")
         )
         self._app.jinja_env.filters["no_emojis"] = utils.strip_emojis
+        self._app.jinja_env.filters["tojson"] = web_utils.ctx_to_json
+        self._app.jinja_env.filters["input_value"] = (
+            lambda x: str(x or "").rstrip("0").rstrip(".")
+        )
 
         if not p.ssl_cert_path.exists():
             print(

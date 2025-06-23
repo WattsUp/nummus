@@ -8,13 +8,13 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     from pathlib import Path
 
 
-class Create(Base):
+class Create(BaseCommand):
     """Create portfolio."""
 
     NAME = "create"
@@ -61,7 +61,7 @@ class Create(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio, utils
+        from nummus import portfolio, utils  # noqa: PLC0415
 
         if self._path_db.exists():
             if self._force:

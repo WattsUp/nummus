@@ -1,0 +1,65 @@
+<div
+  class="flex items-center justify-between"
+  hx-target="#main"
+  hx-trigger="asset from:body, valuation from:body"
+  hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
+>
+  <h1 class="text-primary font-serif text-3xl">{{ asset.name }}</h1>
+  <button
+    class="btn-tonal"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
+  >
+    <icon>edit</icon>Edit
+  </button>
+</div>
+<h2 class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
+  <span>
+    {{ asset.category.pretty }}
+    {% if asset.ticker %}@{{ asset.ticker }}{% endif %}
+  </span>
+  <span class="ml-auto">
+    {% if asset.value_date %}
+      {{ asset.value | money }}
+      as of {{ asset.value_date }}
+    {% else %}
+      <span class="text-error">Asset has no valuations</span>
+    {% endif %}
+  </span>
+</h2>
+<div id="asset-performance" class="mb-2">
+  {% include "assets/performance.jinja" %}
+</div>
+{% if asset.description %}
+  <div class="prose mx-auto">
+    <h3>About</h3>
+    {{ asset.description }}
+  </div>
+{% endif %}
+{# TODO (WattsUp): Add holdings info #}
+{% with ctx = asset.table %}
+  {% include "assets/table-header.jinja" %}
+  {% if asset.ticker %}
+    <div class="text-center italic">
+      Asset is updated via ticker using web sources. Valuations cannot be
+      manually modified.
+    </div>
+  {% else %}
+    <div class="text-center italic">
+      Set ticker if possible to update asset using web sources.
+    </div>
+  {% endif %}
+  {% include "assets/table-filters.jinja" %}
+  {# Display query total if filtered #}
+  <div
+    id="valuation-table"
+    class="mx-auto max-w-sm"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+  >
+    {% include "assets/table-rows.jinja" %}
+  </div>
+  <div id="valuation-indicator">{% include "shared/spinner.jinja" %}</div>
+{% endwith %}

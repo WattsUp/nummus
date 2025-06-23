@@ -47,7 +47,7 @@ class BudgetGroup(Base):
     @orm.validates("name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
-        return self.clean_strings(key, field, short_check=key != "ticker")
+        return self.clean_strings(key, field)
 
 
 class BudgetAssignment(Base):

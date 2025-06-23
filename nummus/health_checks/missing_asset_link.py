@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 class MissingAssetLink(Base):
     """Checks for transactions that should be linked to an asset that aren't."""
 
-    _DESC = "Checks for transactions that should be linked to an asset that aren't"
+    _DESC = "Checks for transactions that should be linked to an asset that aren't."
     _SEVERE = False
 
     @override
@@ -30,16 +30,13 @@ class MissingAssetLink(Base):
                 return
             acct_len = max(len(acct) for acct in accounts.values())
 
-            categories = TransactionCategory.map_name(s)
-            categories_rev = {v: k for k, v in categories.items()}
+            categories = TransactionCategory.map_name_emoji(s)
 
             # These categories should be linked to an asset
-            categories_assets = {
-                "Dividends Received",
-                "Investment Fees",
-                "Securities Traded",
-            }
-            categories_assets_id = {categories_rev[k] for k in categories_assets}
+            query = s.query(TransactionCategory.id_).where(
+                TransactionCategory.asset_linked.is_(True),
+            )
+            categories_assets_id = {r for r, in query.all()}
 
             # Get transactions in these categories that do not have an asset
             query = (

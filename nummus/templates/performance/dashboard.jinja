@@ -1,39 +1,55 @@
-<div id="dashboard-performance"
-     class="relative bg-white p-2 flex flex-col min-h-[16rem] h-[16rem] md:min-h-[20rem] md:h-[20rem]"
-     hx-get="{{ url_for('performance.dashboard') }}"
-     hx-trigger="update-asset from:body"
-     hx-target="#dashboard-performance"
-     hx-indicator="find .spinner">
-    <a class="w-full flex space-between cursor-pointer group"
-       href="{{ url_for('performance.page') }}"
-       hx-get="{{ url_for('performance.page') }}"
-       hx-target="#main"
-       hx-swap="innerHTML"
-       hx-push-url="true"
-       hx-indicator="next .spinner">
-        <h1 class="text-xl align-left grow font-serif text-green-600 md:group-hover:underline md:group-hover:after:content-['»']">
-            90-Day Performance
-        </h1>
-        <h1 class="text-lg">{{ data["profit"] | money }}</h1>
-    </a>
-    <div class="flex relative pl-1 border-l-4 border-blue group">
-        <div class="truncate grow">Portfolio</div>
-        <div class="min-w-[4rem] text-right text-{{ data["twrr"] | pnl_color }}">{{ data["twrr"] | percent }}</div>
-        <div class="absolute left-0 bottom-0 h-0.5 bg-blue transition-[width] duration-500 w-0 md:group-hover:w-full"></div>
+<div
+  id="dashboard-performance"
+  class="relative flex h-[16rem] min-h-[16rem] flex-col bg-white p-2 md:h-[20rem] md:min-h-[20rem]"
+  hx-get="{{ url_for('performance.dashboard') }}"
+  hx-trigger="update-asset from:body"
+  hx-target="#dashboard-performance"
+  hx-indicator="find .spinner"
+>
+  <a
+    class="space-between group flex w-full cursor-pointer"
+    href="{{ url_for('performance.page') }}"
+    hx-get="{{ url_for('performance.page') }}"
+    hx-target="#main"
+    hx-swap="innerHTML"
+    hx-push-url="true"
+    hx-indicator="next .spinner"
+  >
+    <h1
+      class="align-left grow font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
+    >
+      90-Day Performance
+    </h1>
+    <h1 class="text-lg">{{ data["profit"] | money }}</h1>
+  </a>
+  <div class="border-blue group relative flex border-l-4 pl-1">
+    <div class="grow truncate">Portfolio</div>
+    <div class="text-{{ data["twrr"] | pnl_color }} min-w-[4rem] text-right">
+      {{ data["twrr"] | percent }}
     </div>
-    <div class="w-full grow overflow-y-auto">
-        {% for index, twrr in data["indices"].items() %}
-            <a class="flex relative pl-1 border-l-4 border-yellow cursor-pointer group"
-               href="{{ url_for('performance.page', index=index) }}"
-               hx-get="{{ url_for('performance.page', index=index) }}"
-               hx-target="#main"
-               hx-swap="innerHTML"
-               hx-push-url="true">
-                <div class="truncate grow">{{ index }}</div>
-                <div class="min-w-[4rem] text-right text-{{ twrr | pnl_color }}">{{ twrr | percent }}</div>
-                <div class="absolute left-0 bottom-0 h-0.5 bg-yellow transition-[width] duration-500 w-0 md:group-hover:w-full"></div>
-            </a>
-        {% endfor %}
-    </div>
-    <div>{% include "shared/spinner.jinja" %}</div>
+    <div
+      class="bg-blue absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
+    ></div>
+  </div>
+  <div class="w-full grow overflow-y-auto">
+    {% for index, twrr in data["indices"].items() %}
+      <a
+        class="border-yellow group relative flex cursor-pointer border-l-4 pl-1"
+        href="{{ url_for('performance.page', index=index) }}"
+        hx-get="{{ url_for('performance.page', index=index) }}"
+        hx-target="#main"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+      >
+        <div class="grow truncate">{{ index }}</div>
+        <div class="text-{{ twrr | pnl_color }} min-w-[4rem] text-right">
+          {{ twrr | percent }}
+        </div>
+        <div
+          class="bg-yellow absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
+        ></div>
+      </a>
+    {% endfor %}
+  </div>
+  <div>{% include "shared/spinner.jinja" %}</div>
 </div>

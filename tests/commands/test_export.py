@@ -34,7 +34,7 @@ class TestExport(TestBase):
             "Date",
             "Account",
             "Payee",
-            "Description",
+            "Memo",
             "Category",
             "Tag",
             "Amount",
@@ -85,13 +85,13 @@ class TestExport(TestBase):
                 date=yesterday,
                 amount=100,
                 statement="Banana Store",
+                payee="Banana Store",
             )
             t_split_0 = TransactionSplit(
                 amount=txn_0.amount,
                 parent=txn_0,
-                payee="Banana Store",
-                description="Paycheck",
-                category_id=categories["Paychecks/Salary"],
+                memo="Paycheck",
+                category_id=categories["paychecks/salary"],
                 tag="Engineer",
             )
             s.add_all((txn_0, t_split_0))
@@ -105,7 +105,7 @@ class TestExport(TestBase):
             t_split_1 = TransactionSplit(
                 amount=txn_1.amount,
                 parent=txn_1,
-                category_id=categories["Groceries"],
+                category_id=categories["groceries"],
             )
             s.add_all((txn_1, t_split_1))
 
@@ -120,7 +120,7 @@ class TestExport(TestBase):
                 parent=txn_2,
                 asset_id=a.id_,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn_2, t_split_2))
 

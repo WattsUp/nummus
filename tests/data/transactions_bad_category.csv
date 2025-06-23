@@ -1,5 +1,2 @@
 Account,Date,Amount,Statement,Category
 Monkey Bank Checking,2023-01-01,"$1,000.00",Paycheck,Not a category
-Monkey Bank Checking,2023-01-02,-12.34,Banana,
-Monkey Bank Checking,2023-01-02,-900,Account Transfer,
-Monkey Investments,2023-01-02,900,Account Transfer,

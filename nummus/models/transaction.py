@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import datetime
+import re
+import shlex
+import string
+from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from sqlalchemy import CheckConstraint, event, ForeignKey, orm
+from rapidfuzz import process
+from sqlalchemy import CheckConstraint, event, ForeignKey, orm, Row
 from typing_extensions import override
 
 from nummus import exceptions as exc
@@ -23,7 +28,9 @@ from nummus.models.base import (
     ORMStr,
     ORMStrOpt,
     string_column_args,
+    YIELD_PER,
 )
+from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -39,15 +46,13 @@ class TransactionSplit(Base):
         uri: TransactionSplit unique identifier
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
-        payee: Name of payee (for outflow)/payer (for inflow)
-        description: Description of exchange
+        memo: Memo of exchange
         tag: Unique tag linked across datasets
+        text_fields: Join of all text fields for searching
         category: Type of Transaction
         parent: Parent Transaction
         date_ord: Date ordinal on which Transaction occurred
-        locked: True only allows manually editing, False allows automatic changes
-            (namely auto labeling field based on similar Transactions)
-        linked: True when transaction has been imported from a bank source, False
+        cleared: True when transaction has been imported from a bank source, False
             indicates transaction was manually created
         account: Account that owns this Transaction
         asset: Asset exchanged for cash, primarily for instrument transactions
@@ -57,24 +62,19 @@ class TransactionSplit(Base):
 
     __table_id__ = 0x00000000
 
-    amount: ORMReal = orm.mapped_column(
-        Decimal6,
-        CheckConstraint(
-            "amount != 0",
-            "transaction_split.amount must be non-zero",
-        ),
-    )
+    amount: ORMReal = orm.mapped_column(Decimal6)
     payee: ORMStrOpt
-    description: ORMStrOpt
+    memo: ORMStrOpt
     tag: ORMStrOpt
+
+    text_fields: ORMStrOpt
 
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
     parent_id: ORMInt = orm.mapped_column(ForeignKey("transaction.id_"))
     date_ord: ORMInt
     month_ord: ORMInt
-    locked: ORMBool
-    linked: ORMBool
+    cleared: ORMBool
     account_id: ORMInt = orm.mapped_column(ForeignKey("account.id_"))
 
     asset_id: ORMIntOpt = orm.mapped_column(ForeignKey("asset.id_"))
@@ -83,18 +83,23 @@ class TransactionSplit(Base):
 
     __table_args__ = (
         *string_column_args("payee"),
-        *string_column_args("description"),
+        *string_column_args("memo"),
         *string_column_args("tag"),
+        *string_column_args("text_fields"),
         CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
             name="asset_quantity and unadjusted must be same null state",
         ),
+        CheckConstraint(
+            "amount != 0",
+            "transaction_split.amount must be non-zero",
+        ),
     )
 
-    @orm.validates("payee", "description", "tag")
+    @orm.validates("payee", "memo", "tag", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
-        return self.clean_strings(key, field, short_check=key != "ticker")
+        return self.clean_strings(key, field)
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -107,13 +112,13 @@ class TransactionSplit(Base):
             "parent_id",
             "date_ord",
             "month_ord",
-            "locked",
-            "linked",
+            "payee",
+            "cleared",
             "account_id",
         ]:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
-                "Do not set parent properties directly"
+                f"Do not set parent property '{name}' directly"
             )
             raise exc.ParentAttributeError(msg)
         if name == "asset_quantity":
@@ -122,7 +127,24 @@ class TransactionSplit(Base):
                 "Do not set property directly"
             )
             raise exc.ComputedColumnError(msg)
+        if name == "text_fields":
+            msg = (
+                "TransactionSplit.text_fields set automatically. "
+                "Do not set property directly"
+            )
+            raise exc.ComputedColumnError(msg)
+
         super().__setattr__(name, value)
+
+        # update text_fields
+        if name in ("memo", "tag"):
+            self._update_text_fields()
+
+    def _update_text_fields(self) -> None:
+        """Update text_fields."""
+        field = [self.payee, self.memo, self.tag]
+        text_fields = " ".join(f for f in field if f).lower()
+        super().__setattr__("text_fields", text_fields)
 
     @property
     def asset_quantity_unadjusted(self) -> Decimal | None:
@@ -182,9 +204,134 @@ class TransactionSplit(Base):
         super().__setattr__("parent_id", parent.id_)
         super().__setattr__("date_ord", parent.date_ord)
         super().__setattr__("month_ord", parent.month_ord)
-        super().__setattr__("locked", parent.locked)
-        super().__setattr__("linked", parent.linked)
+        super().__setattr__("payee", parent.payee)
+        super().__setattr__("cleared", parent.cleared)
         super().__setattr__("account_id", parent.account_id)
+        self._update_text_fields()
+
+    @classmethod
+    def search(
+        cls,
+        query: orm.Query[TransactionSplit],
+        search_str: str,
+        category_names: dict[int, str] | None = None,
+    ) -> list[int] | None:
+        """Search TransactionSplit text fields.
+
+        Args:
+            query: Original query, could be partially filtered
+            search_str: String to search
+            category_names: Provide category_names to save an extra query
+
+        Returns:
+            Ordered list of matches, from best to worst
+            or None if search_str is invalid
+        """
+        # Clean a bit
+        for s in string.punctuation:
+            if s not in '"+-':
+                search_str = search_str.replace(s, " ")
+
+        # Replace +- not following a space with a space
+        # Skip +- at start
+        search_str = re.sub(r"(?<!^)(?<! )[+-]", " ", search_str)
+
+        search_str = search_str.strip().lower()
+
+        if len(search_str) < utils.MIN_STR_LEN:
+            return None
+
+        # If unbalanced quote, remove right most one
+        n = search_str.count('"')
+        if (n % 2) == 1:
+            i = search_str.rfind('"')
+            search_str = search_str[:i] + search_str[i + 1 :]
+
+        # tokenize search_str
+        tokens_must: set[str] = set()
+        tokens_can: set[str] = set()
+        tokens_not: set[str] = set()
+
+        for raw in shlex.split(search_str):
+            if raw[0] == "+":
+                dest = tokens_must
+                token = raw[1:]
+            elif raw[0] == "-":
+                dest = tokens_not
+                token = raw[1:]
+            else:
+                dest = tokens_can
+                token = raw
+
+            token = re.sub(r"  +", " ", token.strip())
+            if token:
+                dest.add(token)
+
+        category_names = category_names or TransactionCategory.map_name(query.session)
+
+        # Add tokens_must as an OR for each category and text_fields
+        for token in tokens_must:
+            clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                clauses_or.append(TransactionSplit.category_id.in_(categories))
+            clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
+            query = query.where(sqlalchemy.or_(*clauses_or))
+
+        # Add tokens_not as an NAND for each category and text_fields
+        for token in tokens_not:
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                query = query.where(TransactionSplit.category_id.not_in(categories))
+            query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
+
+        query_modified = query.with_entities(
+            TransactionSplit.id_,
+            TransactionSplit.date_ord,
+            TransactionSplit.category_id,
+            TransactionSplit.text_fields,
+        ).order_by(None)
+
+        full_texts: dict[str, list[tuple[int, int]]] = defaultdict(list)
+        for (
+            t_id,
+            date_ord,
+            cat_id,
+            text_fields,
+        ) in query_modified.yield_per(YIELD_PER):
+            t_id: int
+            date_ord: int
+            cat_id: int
+            text_fields: str | None
+
+            full_text = f"{category_names[cat_id]} {text_fields or ''}"
+
+            # Clean a bit
+            for s in string.punctuation:
+                full_text = full_text.replace(s, "")
+
+            full_texts[full_text].append((t_id, date_ord))
+
+        # Flatten into list[id, n token matches, date_ord]
+        matches: list[tuple[int, int, int]] = []
+        for full_text, ids in full_texts.items():
+            # No tokens_can should return all so set n to non-zero
+            n = sum(full_text.count(token) for token in tokens_can) if tokens_can else 1
+            if n != 0:
+                for t_id, date_ord in ids:
+                    matches.append((t_id, n, date_ord))
+
+        # Sort by n token matches then date
+        matches = sorted(matches, key=lambda item: (item[1], item[2]), reverse=True)
+        return [item[0] for item in matches]
 
 
 @event.listens_for(TransactionSplit, "before_insert")
@@ -219,9 +366,8 @@ class Transaction(Base):
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
         statement: Text appearing on Account statement
-        locked: True only allows manually editing, False allows automatic changes
-            (namely auto labeling field based on similar Transactions)
-        linked: True when transaction has been imported from a bank source, False
+        payee: Name of payee (for outflow)/payer (for inflow)
+        cleared: True when transaction has been imported from a bank source, False
             indicates transaction was manually created
         splits: List of TransactionSplits
     """
@@ -234,8 +380,8 @@ class Transaction(Base):
     month_ord: ORMInt
     amount: ORMReal = orm.mapped_column(Decimal6)
     statement: ORMStr
-    locked: ORMBool = orm.mapped_column(default=False)
-    linked: ORMBool = orm.mapped_column(default=False)
+    payee: ORMStrOpt
+    cleared: ORMBool = orm.mapped_column(default=False)
 
     similar_txn_id: ORMIntOpt = orm.mapped_column(ForeignKey("transaction.id_"))
 
@@ -243,16 +389,13 @@ class Transaction(Base):
 
     __table_args__ = (
         *string_column_args("statement"),
-        CheckConstraint(
-            "linked or not locked",
-            "Transaction cannot be locked until linked",
-        ),
+        *string_column_args("payee"),
     )
 
-    @orm.validates("statement")
+    @orm.validates("statement", "payee")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints."""
-        return self.clean_strings(key, field, short_check=key != "ticker")
+        return self.clean_strings(key, field)
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -269,3 +412,173 @@ class Transaction(Base):
         """Set date of Transaction."""
         self.date_ord = d.toordinal()
         self.month_ord = utils.start_of_month(d).toordinal()
+
+    def find_similar(
+        self,
+        *,
+        cache_ok: bool = True,
+        set_property: bool = True,
+    ) -> int | None:
+        """Find the most similar Transaction.
+
+        Args:
+            cache_ok: If available, use Transaction.similar_txn_id
+            set_property: If match found, set similar_txn_id
+
+        Returns:
+            Most similar Transaction.id_
+        """
+        s = orm.object_session(self)
+        if s is None:
+            raise exc.UnboundExecutionError
+
+        if cache_ok and self.similar_txn_id is not None:
+            return self.similar_txn_id
+
+        # Similar transaction must be within this range
+        amount_min = min(
+            self.amount * (1 - utils.MATCH_PERCENT),
+            self.amount - utils.MATCH_ABSOLUTE,
+        )
+        amount_max = max(
+            self.amount * (1 + utils.MATCH_PERCENT),
+            self.amount + utils.MATCH_ABSOLUTE,
+        )
+
+        def set_match(matching_row: int | Row[tuple[int]]) -> int:
+            id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
+            if set_property:
+                self.similar_txn_id = id_
+                s.flush()
+            return id_
+
+        # Convert txn.amount to the raw SQL value to make a raw query
+        amount_raw = Transaction.amount.type.process_bind_param(self.amount, None)
+        sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
+
+        cat_asset_linked = {
+            t_cat_id
+            for t_cat_id, in s.query(TransactionCategory.id_)
+            .where(TransactionCategory.asset_linked.is_(True))
+            .all()
+        }
+
+        # Check within Account first, exact matches
+        # If this matches, great, no post filtering needed
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.account_id == self.account_id,
+                Transaction.id_ != self.id_,
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+                Transaction.statement == self.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return set_match(row)
+
+        # Maybe exact statement but different account
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.id_ != self.id_,
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+                Transaction.statement == self.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return set_match(row)
+
+        # Maybe exact statement but different amount
+        query = (
+            s.query(Transaction.id_)
+            .where(
+                Transaction.id_ != self.id_,
+                Transaction.statement == self.statement,
+            )
+            .order_by(sort_closest_amount)
+        )
+        row = query.first()
+        if row is not None:
+            return set_match(row)
+
+        # No statements match, choose highest fuzzy matching statement
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.id_,
+                Transaction.statement,
+            )
+            .where(
+                Transaction.id_ != self.id_,
+                Transaction.amount >= amount_min,
+                Transaction.amount <= amount_max,
+            )
+            .order_by(sort_closest_amount)
+        )
+        statements: dict[int, str] = {
+            t_id: re.sub(r"[0-9]+", "", statement).lower()
+            for t_id, statement in query.yield_per(YIELD_PER)
+        }
+        if len(statements) == 0:
+            return None
+        # Don't match a Transaction if it has a Securities Traded split
+        has_asset_linked = {
+            id_
+            for id_, in s.query(TransactionSplit.parent_id)
+            .where(
+                TransactionSplit.parent_id.in_(statements),
+                TransactionSplit.category_id.in_(cat_asset_linked),
+            )
+            .distinct()
+        }
+        statements = {
+            t_id: statement
+            for t_id, statement in statements.items()
+            if t_id not in has_asset_linked
+        }
+        if len(statements) == 0:
+            return None
+        extracted = process.extract(
+            re.sub(r"[0-9]+", "", self.statement).lower(),
+            statements,
+            limit=None,
+            score_cutoff=utils.SEARCH_THRESHOLD,
+        )
+        if len(extracted) == 0:
+            # There are transactions with similar amounts but not close statement
+            # Return the closest in amount and account
+            # Aka proceed with all matches
+            matches = dict.fromkeys(statements, 50)
+        else:
+            matches = {t_id: score for _, score, t_id in extracted}
+
+        # Add a bonuse points for closeness in price and same account
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.id_,
+                Transaction.account_id,
+                Transaction.amount,
+            )
+            .where(Transaction.id_.in_(matches))
+        )
+        matches_bonus: dict[int, float] = {}
+        for t_id, acct_id, amount in query.yield_per(YIELD_PER):
+            # 5% off will reduce score by 5%
+            amount_diff_percent = abs(amount - self.amount) / self.amount
+            score = matches[t_id] * float(1 - amount_diff_percent)
+            if acct_id == self.account_id:
+                # Extra 10 points for same account
+                score += 10
+            matches_bonus[t_id] = score
+
+        # Sort by best score and return best id
+        best_id = sorted(matches_bonus.items(), key=lambda item: -item[1])[0][0]
+        return set_match(best_id)

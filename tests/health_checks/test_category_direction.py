@@ -53,12 +53,11 @@ class TestCategoryDirection(TestBase):
                 date=today,
                 amount=-10,
                 statement=self.random_string(),
-                locked=False,
             )
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Other Income"],
+                category_id=categories["other income"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -78,8 +77,10 @@ class TestCategoryDirection(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: -$10.00 to [blank] has negative "
-            "amount with income category Other Income",
+            uri: (
+                f"{today} - Monkey Bank Checking: -$10.00 to [blank] has negative "
+                "amount with income category Other Income"
+            ),
         }
         self.assertEqual(c.issues, target)
 
@@ -88,7 +89,7 @@ class TestCategoryDirection(TestBase):
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(10),
-                    "category_id": categories["General Merchandise"],
+                    "category_id": categories["general merchandise"],
                 },
             )
 
@@ -105,8 +106,10 @@ class TestCategoryDirection(TestBase):
             uri = i.uri
 
         target = {
-            uri: f"{today} - Monkey Bank Checking: $10.00 to [blank] has positive "
-            "amount with expense category General Merchandise",
+            uri: (
+                f"{today} - Monkey Bank Checking: $10.00 to [blank] has positive "
+                "amount with expense category General Merchandise"
+            ),
         }
         self.assertEqual(c.issues, target)
 
@@ -115,7 +118,7 @@ class TestCategoryDirection(TestBase):
             s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
                 {
                     "amount": Decimal(-10),
-                    "category_id": categories["General Merchandise"],
+                    "category_id": categories["general merchandise"],
                 },
             )
 

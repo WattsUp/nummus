@@ -1,0 +1,73 @@
+{% if not only_inner %}
+  <form
+    id="valuation-filters"
+    class="not-open:hidden bg-surface-container {{ 'open' if ctx.any_filters }} mx-auto mb-2 grid max-w-2xl grid-cols-2 gap-2 rounded-xl p-2 md:grid-cols-3"
+    {# innerHTML to preserve open state #}
+    hx-swap-oob="{{ 'innerHTML' if oob }}"
+    hx-include="#valuation-filters"
+    hx-target="#valuation-table"
+    hx-indicator="#valuation-table,#valuation-indicator"
+    hx-get="{{ url_for('assets.table', uri=ctx.uri) }}"
+  >
+    {% block inner %}
+      <label class="input-outlined input-bg-surface-container">
+        <select
+          name="period"
+          autocomplete="off"
+          onchange="assets.changeTablePeriod()"
+        >
+          {% for label, value in ctx.options_period %}
+            <option
+              value="{{ value }}"
+              {% if value == ctx.selected_period %}selected{% endif %}
+            >
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+        <div>
+          <div>Date range</div>
+        </div>
+      </label>
+      <label class="input-outlined input-bg-surface-container">
+        <input
+          id="valuation-filter-start"
+          name="start"
+          type="date"
+          autocomplete="off"
+          value="{{ ctx.start or '' }}"
+          {% if ctx.selected_period != "custom" %}disabled{% endif %}
+        />
+        <div>
+          <div>Start date</div>
+        </div>
+      </label>
+      <label class="input-outlined input-bg-surface-container">
+        <input
+          id="valuation-filter-end"
+          name="end"
+          type="date"
+          autocomplete="off"
+          value="{{ ctx.end or '' }}"
+          {% if ctx.selected_period != "custom" %}disabled{% endif %}
+        />
+        <div>
+          <div>End date</div>
+        </div>
+      </label>
+      <div class="col-span-full flex justify-around">
+        <button class="btn-filled">Apply filter</button>
+        <button
+          class="btn-text"
+          type="button"
+          hx-include="unset"
+          hx-get="{{ url_for('assets.table', uri=ctx.uri) }}"
+        >
+          Clear all filters
+        </button>
+      </div>
+    {% endblock inner %}
+  </form>
+{% else %}
+  {{ self.inner() }}
+{% endif %}

@@ -1,0 +1,36 @@
+{% if include_oob %}
+  {% with oob = True %}
+    {% include "transactions/table-header.jinja" %}
+    {% include "transactions/table-filters.jinja" %}
+    {% include "transactions/table-total.jinja" %}
+  {% endwith %}
+{% endif %}
+{% for date, transactions in ctx.transactions %}
+  <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
+    <div class="txn-header">
+      <div>{{ date }}</div>
+    </div>
+    {% for txn in transactions %}
+      {% include "transactions/table-row.jinja" %}
+      {% if not loop.last %}<hr class="mx-4" />{% endif %}
+    {% endfor %}
+  </div>
+  {% if loop.last %}
+    {% if ctx.next_page %}
+      <div
+        hx-target="#txn-table"
+        hx-swap="beforeend show:none"
+        hx-trigger="revealed"
+        hx-include="#txn-filters,#txn-search"
+        hx-get="{{ url_for(endpoint, page=ctx.next_page, **url_args) }}"
+        hx-indicator="#txn-indicator"
+        hx-on::after-request="this.remove()"
+      ></div>
+    {% else %}
+      <div class="text-center italic">no more transactions match query</div>
+    {% endif %}
+  {% endif %}
+{% endfor %}
+<div class="text-center italic">
+  {% if ctx.no_matches %}no transactions match query{% endif %}
+</div>

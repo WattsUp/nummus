@@ -10,10 +10,11 @@ from decimal import Decimal
 from unittest import mock
 
 import time_machine
+from packaging.version import Version
 
-from nummus import encryption
+from nummus import __version__, encryption
 from nummus import exceptions as exc
-from nummus import importers, models, portfolio, version
+from nummus import importers, models, portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -82,7 +83,7 @@ class TestPortfolio(TestBase):
             value: str = (
                 s.query(Config.value).where(Config.key == ConfigKey.VERSION).one()
             )[0]
-            self.assertEqual(value, str(version.__version__))
+            self.assertGreaterEqual(Version(value), Version(__version__))
 
             n = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).count()
             self.assertEqual(n, 1)
@@ -121,6 +122,34 @@ class TestPortfolio(TestBase):
 
         # Reopen portfolio
         p = portfolio.Portfolio(path_db, None)
+        self.assertFalse(p.migration_required())
+
+        # Force migration required
+        with p.begin_session() as s:
+            # Good, now reset version
+            s.query(Config).where(Config.key == ConfigKey.VERSION).update(
+                {"value": "0.0.0"},
+            )
+
+        self.assertRaises(
+            exc.MigrationRequiredError,
+            portfolio.Portfolio,
+            path_db,
+            None,
+        )
+
+        with p.begin_session() as s:
+            # Good, now delete version
+            s.query(Config).where(Config.key == ConfigKey.VERSION).delete()
+
+        # Missing cipher
+        self.assertRaises(
+            exc.ProtectedObjectNotFoundError,
+            portfolio.Portfolio,
+            path_db,
+            None,
+        )
+
         with p.begin_session() as s:
             # Good, now delete cipher
             s.query(Config).where(Config.key == ConfigKey.CIPHER).delete()
@@ -271,7 +300,7 @@ class TestPortfolio(TestBase):
                 budgeted=True,
             )
             acct_invest_1 = Account(
-                name="Primate Investments",
+                name="Primate Investments 2",
                 institution="Gorilla Bank",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
@@ -310,8 +339,8 @@ class TestPortfolio(TestBase):
         result = p.find_account("Monkey Bank Checking")
         self.assertEqual(result, acct_checking_id)
 
-        # More than 1 match by name
-        result = p.find_account("Primate Investments")
+        # More than 1 match by institution
+        result = p.find_account("Monkey Bank")
         self.assertIsNone(result)
 
         # Find by institution
@@ -457,12 +486,12 @@ class TestPortfolio(TestBase):
                 self.assertEqual(len(res.splits), 1)
                 r_split = res.splits[0]
                 self.assertEqual(r_split.amount, tgt["amount"])
-                self.assertEqual(r_split.description, tgt["description"])
+                self.assertEqual(r_split.memo, tgt["memo"])
                 cat_id = (
                     s.query(TransactionCategory.id_)
                     .where(
                         TransactionCategory.name
-                        == (tgt["category"] or "Uncategorized"),
+                        == (tgt["category"] or "uncategorized").lower(),
                     )
                     .one()[0]
                 )
@@ -482,11 +511,11 @@ class TestPortfolio(TestBase):
         self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
         with p.begin_session() as s:
-            # Unlink one so it'll link
+            # Unclear one so it'll link
             txn = (
                 s.query(Transaction).where(Transaction.amount == Decimal("1000")).one()
             )
-            txn.linked = False
+            txn.cleared = False
             txn.statement = "Overwrite me"
             t_split = (
                 s.query(TransactionSplit)
@@ -494,7 +523,7 @@ class TestPortfolio(TestBase):
                 .one()
             )
             t_split.parent = txn
-            t_split.description = "Don't overwrite me"
+            t_split.memo = "Don't overwrite me"
 
         # But it will work with force
         p.import_file(path, path_debug, force=True)
@@ -509,10 +538,10 @@ class TestPortfolio(TestBase):
                 .where(TransactionSplit.parent_id == txn.id_)
                 .one()
             )
-            self.assertTrue(txn.linked, "Transaction did not link")
-            self.assertTrue(t_split.linked, "TransactionSplit did not link")
+            self.assertTrue(txn.cleared, "Transaction did not clear")
+            self.assertTrue(t_split.cleared, "TransactionSplit did not clear")
             self.assertNotEqual(txn.statement, "Overwrite me")
-            self.assertEqual(t_split.description, "Don't overwrite me")
+            self.assertEqual(t_split.memo, "Don't overwrite me")
 
         # Fine importing with force when not required
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
@@ -545,16 +574,20 @@ class TestPortfolio(TestBase):
             path_debug,
         )
 
-        # Fail unknown category
+        with p.begin_session() as s:
+            # Clear transactions
+            s.query(TransactionSplit).delete()
+            s.query(Transaction).delete()
+            s.flush()
+
+        # Fallback to uncategorized if unknown
         path = self._DATA_ROOT.joinpath("transactions_bad_category.csv")
-        self.assertRaises(
-            exc.UnknownCategoryError,
-            p.import_file,
-            path,
-            path_debug,
-        )
+        p.import_file(path, path_debug)
 
         with p.begin_session() as s:
+            t_split = s.query(TransactionSplit).one()
+            self.assertEqual(t_split.category_id, categories["uncategorized"])
+
             # Clear transactions
             s.query(TransactionSplit).delete()
             s.query(Transaction).delete()
@@ -582,7 +615,7 @@ class TestPortfolio(TestBase):
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
                         t_split.category_id,
-                        categories["Securities Traded"],
+                        categories["securities traded"],
                     )
 
                     t_split = splits[1]
@@ -591,7 +624,7 @@ class TestPortfolio(TestBase):
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
                         t_split.category_id,
-                        categories["Dividends Received"],
+                        categories["dividends received"],
                     )
                 elif txn.statement == "Cash Maker":
                     # Cash Dividends
@@ -601,7 +634,7 @@ class TestPortfolio(TestBase):
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
                         t_split.category_id,
-                        categories["Dividends Received"],
+                        categories["dividends received"],
                     )
                 else:
                     # Fees
@@ -611,7 +644,7 @@ class TestPortfolio(TestBase):
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
                         t_split.category_id,
-                        categories["Investment Fees"],
+                        categories["investment fees"],
                     )
 
                     t_split = splits[1]
@@ -620,7 +653,7 @@ class TestPortfolio(TestBase):
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
                         t_split.category_id,
-                        categories["Securities Traded"],
+                        categories["securities traded"],
                     )
 
         # Fail missing asset quantity
@@ -993,7 +1026,7 @@ class TestPortfolio(TestBase):
                 parent=txn,
                 asset_id=a_house.id_,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn, t_split))
 
@@ -1042,7 +1075,7 @@ class TestPortfolio(TestBase):
                 parent=txn,
                 asset_id=a_id,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -1078,7 +1111,7 @@ class TestPortfolio(TestBase):
                 parent=txn,
                 asset_id=a_id,
                 asset_quantity_unadjusted=-1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -1118,170 +1151,6 @@ class TestPortfolio(TestBase):
             ),
         ]
         self.assertEqual(result, target)
-
-    def test_find_similar_transactions(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
-
-        today = datetime.date.today()
-
-        with p.begin_session() as s:
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
-
-            acct_0 = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            acct_1 = Account(
-                name="Monkey Bank Credit",
-                institution="Monkey Bank",
-                category=AccountCategory.CREDIT,
-                closed=False,
-                budgeted=True,
-            )
-            s.add_all((acct_0, acct_1))
-            s.flush()
-
-            txn_0 = Transaction(
-                account_id=acct_0.id_,
-                date=today,
-                amount=100,
-                statement="Banana Store",
-            )
-            t_split_0 = TransactionSplit(
-                amount=txn_0.amount,
-                parent=txn_0,
-                category_id=categories["Uncategorized"],
-            )
-
-            s.add_all((txn_0, t_split_0))
-            s.flush()
-
-            txn_1 = Transaction(
-                account_id=acct_0.id_,
-                date=today,
-                amount=100,
-                statement="Banana Store",
-            )
-            t_split_1 = TransactionSplit(
-                amount=txn_1.amount,
-                parent=txn_1,
-                category_id=categories["Uncategorized"],
-            )
-            s.add_all((txn_1, t_split_1))
-            s.flush()
-
-            txn_2 = Transaction(
-                account_id=acct_1.id_,
-                date=today,
-                amount=100,
-                statement="Banana Store",
-            )
-            t_split_2 = TransactionSplit(
-                amount=txn_2.amount,
-                parent=txn_2,
-                category_id=categories["Uncategorized"],
-            )
-            s.add_all((txn_2, t_split_2))
-            s.flush()
-
-            # None are locked so no candidates at all
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertIsNone(result)
-
-            txn_1.locked = True
-            txn_2.locked = True
-            txn_1.linked = True
-            txn_2.linked = True
-
-            # txn_0 and txn_1 have same statement and same account
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_1.id_)
-
-            # set_property=False means it isn't cached
-            self.assertIsNone(txn_0.similar_txn_id)
-
-            # txn_1 amount is outside limits, should match txn_2
-            txn_1.amount = Decimal(10)
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_2.id_)
-
-            # txn_2 amount is outside limits but further away, should match txn_1
-            txn_2.amount = Decimal(9)
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_1.id_)
-
-            # Different statement, both outside amount range
-            txn_0.statement = "Gas station 1234"
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertIsNone(result)
-
-            # No fuzzy matches at all and no amounts close
-            txn_0.amount = Decimal(1000)
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertIsNone(result)
-
-            # No fuzzy matches at all but amount if close enough
-            # txn_2 is closer but txn_1 is same account
-            txn_0.amount = Decimal(8)
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_1.id_)
-
-            # Make fuzzy close, txn_1 is same account so more points
-            txn_1.statement = "Gas station 5678"
-            txn_2.statement = "gas station 90"
-            txn_1.amount = Decimal(9)
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_1.id_)
-
-            # Cannot match if a split has an asset_linked
-            t_split_1.category_id = categories["Securities Traded"]
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertEqual(result, txn_2.id_)
-
-            t_split_2.category_id = categories["Securities Traded"]
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=False)
-            self.assertIsNone(result)
-
-            t_split_1.category_id = categories["Uncategorized"]
-            t_split_2.category_id = categories["Uncategorized"]
-            s.flush()
-
-            # txn_2 is closer so more points being closer
-            txn_2.amount = Decimal("8.5")
-            txn_2.account_id = acct_0.id_
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=True)
-            self.assertEqual(result, txn_2.id_)
-            self.assertEqual(txn_0.similar_txn_id, txn_2.id_)
-
-            # Even though txn_1 is exact statement match, cache is used
-            txn_1.statement = "Gas station 1234"
-            s.flush()
-            result = p.find_similar_transaction(txn_0, set_property=True)
-            self.assertEqual(result, txn_2.id_)
-            self.assertEqual(txn_0.similar_txn_id, txn_2.id_)
-
-            # Force not using cache will update similar
-            result = p.find_similar_transaction(
-                txn_0,
-                set_property=True,
-                cache_ok=False,
-            )
-            self.assertEqual(result, txn_1.id_)
-            self.assertEqual(txn_0.similar_txn_id, txn_1.id_)
 
     def test_change_key(self) -> None:
         if not encryption.AVAILABLE:

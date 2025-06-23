@@ -2,18 +2,14 @@
 
 from __future__ import annotations
 
-import datetime
 import re
 import textwrap
-from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING
 
 import flask
-from sqlalchemy import func
 
 from nummus import exceptions as exc
 from nummus import models
-from nummus.models import Account, AccountCategory, Transaction
 from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
@@ -21,167 +17,11 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-def sidebar() -> str:
-    """GET /h/sidebar.
-
-    Returns:
-        HTML string response
-    """
-    args = flask.request.args
-    include_closed = args.get("closed") == "included"
-    is_open = "open" in args
-    return flask.render_template(
-        "shared/sidebar.jinja",
-        sidebar=ctx_sidebar(include_closed=include_closed),
-        is_open=is_open,
-    )
-
-
-def ctx_sidebar(*, include_closed: bool = False) -> dict[str, object]:
-    """Get the context to build the sidebar.
-
-    Args:
-        include_closed: True will include Accounts marked closed, False will exclude
-
-    Returns:
-        Dictionary HTML context
-    """
-    # Create sidebar context
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    assets = Decimal(0)
-    liabilities = Decimal(0)
-
-    sorted_categories: list[AccountCategory] = [
-        AccountCategory.CASH,
-        AccountCategory.CREDIT,
-        AccountCategory.INVESTMENT,
-        AccountCategory.MORTGAGE,
-        AccountCategory.LOAN,
-        AccountCategory.FIXED,
-        AccountCategory.OTHER,
-    ]
-
-    class AccountContext(TypedDict):
-        """Type definition for Account context."""
-
-        uri: str | None
-        name: str
-        institution: str
-        category: AccountCategory
-        closed: bool
-        updated_days_ago: int
-        value: Decimal
-
-    categories_total: dict[AccountCategory, Decimal] = {
-        cat: Decimal(0) for cat in sorted_categories
-    }
-    categories: dict[AccountCategory, list[AccountContext]] = {
-        cat: [] for cat in sorted_categories
-    }
-
-    n_closed = 0
-    with p.begin_session() as s:
-        # Get basic info
-        accounts: dict[int, AccountContext] = {}
-        query = s.query(Account).with_entities(
-            Account.id_,
-            Account.name,
-            Account.institution,
-            Account.category,
-            Account.closed,
-        )
-        for acct_id, name, institution, category, closed in query.all():
-            acct_id: int
-            name: str
-            institution: str
-            category: AccountCategory
-            closed: bool
-            accounts[acct_id] = {
-                "uri": Account.id_to_uri(acct_id),
-                "name": name,
-                "institution": institution,
-                "category": category,
-                "closed": closed,
-                "updated_days_ago": 0,
-                "value": Decimal(0),
-            }
-            if closed:
-                n_closed += 1
-
-        # Get updated_on
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.account_id,
-                func.max(Transaction.date_ord),
-            )
-            .group_by(Transaction.account_id)
-        )
-        for acct_id, updated_on_ord in query.all():
-            acct_id: int
-            updated_on_ord: int
-            accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
-
-        # Get all Account values
-        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
-        for acct_id, values in acct_values.items():
-            acct_dict = accounts[acct_id]
-            v = values[0]
-            if v > 0:
-                assets += v
-            else:
-                liabilities += v
-            acct_dict["value"] = v
-            category = acct_dict["category"]
-
-            categories_total[category] += v
-            categories[category].append(acct_dict)
-
-    bar_total = assets - liabilities
-    if bar_total == 0:
-        asset_width = 0
-        liabilities_width = 0
-    else:
-        asset_width = round(assets / (assets - liabilities) * 100, 2)
-        liabilities_width = 100 - asset_width
-
-    if not include_closed:
-        categories = {
-            cat: [acct for acct in accounts if not acct["closed"]]
-            for cat, accounts in categories.items()
-        }
-
-    # Removed empty categories and sort
-    categories = {
-        cat: sorted(accounts, key=lambda acct: acct["name"])
-        for cat, accounts in categories.items()
-        if len(accounts) > 0
-    }
-
-    return {
-        "net-worth": assets + liabilities,
-        "assets": assets,
-        "liabilities": liabilities,
-        "assets-w": asset_width,
-        "liabilities-w": liabilities_width,
-        "categories": {
-            cat: (categories_total[cat], accounts)
-            for cat, accounts in categories.items()
-        },
-        "include_closed": include_closed,
-        "n_closed": n_closed,
-    }
-
-
 class LinkType(models.BaseEnum):
     """Header link type."""
 
     PAGE = 1
-    OVERLAY = 2
+    DIALOG = 2
     HX_POST = 3
 
 
@@ -194,76 +34,109 @@ def ctx_base() -> dict[str, object]:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    pages: dict[str, dict[str, None | tuple[str, LinkType]]] = {
-        "Overview": {
-            "Dashboard": ("dashboard.page", LinkType.PAGE),
-            "Net Worth": ("net_worth.page", LinkType.PAGE),
-            "Transactions": ("transactions.page_all", LinkType.PAGE),
-            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
-        },
-        "Banking": {
-            "Cash Flow": ("cash_flow.page", LinkType.PAGE),
-            "Budgeting": ("budgeting.page", LinkType.PAGE),
-        },
-        "Investing": {
-            "Assets": ("assets.page_all", LinkType.PAGE),
-            "Asset Transactions": ("assets.page_transactions", LinkType.PAGE),
-            "Performance": ("performance.page", LinkType.PAGE),
-            "Allocation": ("allocation.page", LinkType.PAGE),
-        },
-        "Planning": {
-            "Future Net Worth": None,
-            "Retirement": None,
-            "Emergency Fund": ("emergency_fund.page", LinkType.PAGE),
-            "Investment": None,
-        },
-    }
-    for section, subpages in pages.items():
-        pages[section] = {k: v for k, v in subpages.items() if v}
+    # list[(group label, subpages {label: (icon name, endpoint, link type)})]
+    nav_items: list[tuple[str, dict[str, None | tuple[str, str, LinkType]]]] = [
+        (
+            "",
+            {
+                "Home": ("home", "dashboard.page", LinkType.PAGE),
+                "Budget": ("wallet", "budgeting.page", LinkType.PAGE),
+                # TODO (WattsUp): Change to receipt_long and add_receipt_long if
+                # request gets fulfilled
+                "Transactions": ("note_stack", "transactions.page_all", LinkType.PAGE),
+                "Accounts": ("account_balance", "accounts.page_all", LinkType.PAGE),
+                "Insights": None,  # search_insights
+            },
+        ),
+        # TODO (WattsUp): Banking section? Where to put spending by tag info?
+        (
+            "Investing",
+            {
+                "Assets": ("box", "assets.page_all", LinkType.PAGE),
+                "Performance": None,  # ssid_chart
+                "Allocation": (
+                    "full_stacked_bar_chart",
+                    "allocation.page",
+                    LinkType.PAGE,
+                ),
+            },
+        ),
+        (
+            "Planning",
+            {
+                "Retirement": None,  # person_play
+                "Emergency Fund": ("emergency", "emergency_fund.page", LinkType.PAGE),
+            },
+        ),
+        (
+            "Utilities",
+            {
+                "Logout": (
+                    ("logout", "auth.logout", LinkType.HX_POST)
+                    if p.is_encrypted
+                    else None
+                ),
+                "Categories": (
+                    "category",
+                    "transaction_categories.page",
+                    LinkType.PAGE,
+                ),
+                "Import File": ("upload", "import_file.import_file", LinkType.DIALOG),
+                "Update Assets": ("update", "assets.update", LinkType.DIALOG),
+                "Health Checks": ("health_metrics", "health.page", LinkType.PAGE),
+                "Style Test": (
+                    ("style", "common.page_style_test", LinkType.PAGE)
+                    if flask.current_app.debug
+                    else None
+                ),
+            },
+        ),
+    ]
 
-    menu: dict[str, None | tuple[str, LinkType]] = {
-        "Logout": ("auth.logout", LinkType.HX_POST) if p.is_encrypted else None,
-        "Edit Transaction Categories": (
-            "transaction_categories.overlay",
-            LinkType.OVERLAY,
-        ),
-        "Import File": ("import_file.import_file", LinkType.OVERLAY),
-        "Update Asset Valuations": (
-            "assets.update",
-            LinkType.OVERLAY,
-        ),
-        "Heath Checks": ("health.page", LinkType.PAGE),
-    }
+    nav_items_filtered: list[tuple[str, dict[str, tuple[str, str, LinkType]]]] = []
+    for label, subpages in nav_items:
+        subpages_filtered = {}
+        for sub_label, item in subpages.items():
+            if item is None:
+                continue
+            subpages_filtered[sub_label] = item
+        if subpages_filtered:
+            nav_items_filtered.append((label, subpages_filtered))
+        else:  # pragma: no cover
+            # There shouldn't be an empty group
+            pass
+
     return {
-        "pages": {k: v for k, v in pages.items() if v},
-        "menu": {k: v for k, v in menu.items() if v},
+        "nav_items": nav_items_filtered,
     }
 
 
-def overlay_swap(
+def dialog_swap(
     content: str | None = None,
-    event: str | list[str] | None = None,
+    event: str | None = None,
+    snackbar: str | None = None,
 ) -> flask.Response:
-    """Create a response to close the overlay and trigger listeners.
+    """Create a response to close the dialog and trigger listeners.
 
     Args:
-        content: Content of overlay to swap to, None will close overlay
-        event: Event or list of events to trigger
+        content: Content of dialog to swap to, None will close dialog
+        event: Event to trigger
+        snackbar: Snackbar message to display
 
     Returns:
-        Response that updates overlay OOB and triggers events
+        Response that updates dialog OOB and triggers events
     """
     html = flask.render_template(
-        "shared/overlay.jinja",
+        "shared/dialog.jinja",
         oob=True,
         content=content or "",
+        snackbar=snackbar,
+        # Triggering events should clear history
+        clear_history=event is not None,
     )
     response = flask.make_response(html)
     if event:
-        if isinstance(event, str):
-            response.headers["HX-Trigger"] = event
-        else:
-            response.headers["HX-Trigger"] = ",".join(event)
+        response.headers["HX-Trigger"] = event
     return response
 
 
@@ -276,6 +149,7 @@ def error(e: str | Exception) -> str:
     Returns:
         HTML string response
     """
+    icon = "<icon>error</icon>"
     if isinstance(e, exc.IntegrityError):
         # Get the line that starts with (...IntegrityError)
         orig = str(e.orig)
@@ -297,10 +171,10 @@ def error(e: str | Exception) -> str:
         else:  # pragma: no cover
             # Don't need to test fallback
             msg = orig
-        return flask.render_template("shared/error.jinja", error=msg)
+        return icon + msg
 
     # Default return exception's string
-    return flask.render_template("shared/error.jinja", error=str(e))
+    return icon + str(e)
 
 
 def page(content_template: str, title: str, **context: object) -> flask.Response:
@@ -313,23 +187,22 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     """
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
-        html_title = f"<title>{title}</title>\n"
-        html = html_title + flask.render_template(content_template, **context)
+        html_title = f"<title>{title} - nummus</title>\n"
+        nav_trigger = "<script>nav.update()</script>\n"
+        content = flask.render_template(content_template, **context)
+        html = html_title + nav_trigger + content
     else:
         html = flask.render_template_string(
             textwrap.dedent(
                 f"""\
                 {{% extends "shared/base.jinja" %}}
-                {{% block title %}}
-                {title}
-                {{% endblock title %}}
                 {{% block content %}}
                 {{% include "{content_template}" %}}
                 {{% endblock content %}}
                 """,
             ),
-            sidebar=ctx_sidebar(),
-            base=ctx_base(),
+            title=f"{title} - nummus",
+            **ctx_base(),
             **context,
         )
 
@@ -340,7 +213,10 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     return response
 
 
-def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
+# Difficult to mock, just moves Location to HX-Redirect
+def change_redirect_to_htmx(
+    response: flask.Response,
+) -> flask.Response:  # pragma: no cover
     """Change redirect responses to HX-Redirect.
 
     Args:
@@ -354,8 +230,7 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
         and flask.request.headers.get("HX-Request", "false") == "true"
     ):
         # If a redirect is issued to a HX-Request, send OK and HX-Redirect
-        location = response.headers["Location"]
-        response.headers["HX-Redirect"] = location
+        response.headers["HX-Redirect"] = response.headers.pop("Location")
         response.status_code = HTTP_CODE_OK
         # werkzeug redirect doesn't have close tags
         # clear body
@@ -364,6 +239,19 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     return response
 
 
+# Don't need to test debug-only page
+def page_style_test() -> flask.Response:  # pragma: no cover
+    """GET /style-test.
+
+    Returns:
+        string HTML response
+    """
+    return page(
+        "shared/style-test.jinja",
+        "Style Test",
+    )
+
+
 ROUTES: Routes = {
-    "/h/sidebar": (sidebar, ["GET"]),
+    "/d/style-test": (page_style_test, ["GET"]),
 }

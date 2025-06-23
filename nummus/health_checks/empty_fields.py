@@ -20,7 +20,7 @@ from nummus.models import (
 class EmptyFields(Base):
     """Checks for empty fields that are better when populated."""
 
-    _DESC = "Checks for empty fields that are better when populated"
+    _DESC = "Checks for empty fields that are better when populated."
     _SEVERE = False
 
     @override
@@ -59,7 +59,7 @@ class EmptyFields(Base):
 
             txn_fields = [
                 TransactionSplit.payee,
-                TransactionSplit.description,
+                TransactionSplit.memo,
             ]
             for field in txn_fields:
                 query = (
@@ -89,7 +89,7 @@ class EmptyFields(Base):
             try:
                 t_cat_uncategorized = (
                     s.query(TransactionCategory.id_)
-                    .where(TransactionCategory.name == "Uncategorized")
+                    .where(TransactionCategory.name == "uncategorized")
                     .one()[0]
                 )
             except exc.NoResultFound as e:  # pragma: no cover

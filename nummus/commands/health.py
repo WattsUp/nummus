@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Health(Base):
+class Health(BaseCommand):
     """Health check portfolio."""
 
     NAME = "health"
@@ -103,10 +103,10 @@ class Health(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        import datetime
+        import datetime  # noqa: PLC0415
 
-        from nummus import health_checks
-        from nummus.models import Config, ConfigKey, HealthCheckIssue
+        from nummus import health_checks  # noqa: PLC0415
+        from nummus.models import Config, ConfigKey, HealthCheckIssue  # noqa: PLC0415
 
         if self._p is None:  # pragma: no cover
             return 1

@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class UpdateAssets(Base):
+class UpdateAssets(BaseCommand):
     """Update valuations for assets."""
 
     NAME = "update-assets"
@@ -43,23 +43,21 @@ class UpdateAssets(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio
+        from nummus import portfolio  # noqa: PLC0415
 
-        if self._p is None:  # pragma: no cover
+        p = self._p
+        if p is None:  # pragma: no cover
             return 1
         # Back up Portfolio
-        _, tar_ver = self._p.backup()
-        success = False
+        _, tar_ver = p.backup()
 
         try:
-            updated = self._p.update_assets()
-            success = True
-        finally:
-            # Restore backup if anything went really wrong
-            # Coverage gets confused with finally blocks
-            if not success:  # pragma: no cover
-                portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
-                print(f"{Fore.RED}Abandoned update-assets, restored from backup")
+            updated = p.update_assets()
+        except Exception:  # pragma: no cover
+            # No immediate exception thrown, can't easily test
+            portfolio.Portfolio.restore(p, tar_ver=tar_ver)
+            print(f"{Fore.RED}Abandoned update assets, restored from backup")
+            raise
 
         if len(updated) == 0:
             print(

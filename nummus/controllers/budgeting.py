@@ -30,8 +30,8 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-class TargetContext(TypedDict):
-    """Target Monthly Context."""
+class _TargetContext(TypedDict):
+    """Type definition for target context."""
 
     target_assigned: Decimal
     total_assigned: Decimal
@@ -48,323 +48,47 @@ class TargetContext(TypedDict):
     type: TargetType
 
 
-def ctx_target(
-    tar: Target,
-    month: datetime.date,
-    assigned: Decimal,
-    available: Decimal,
-    leftover: Decimal,
-) -> TargetContext:
-    """Get monthly context for target.
+class _CategoryContext(TypedDict):
+    """Type definition for budget category context."""
 
-    Args:
-        tar: Target to get context for
-        month: Month to check progress during
-        assigned: Amount assigned this month
-        available: Available balance this month
-        leftover: Category leftover balance from previous month
+    position: int | None
+    name: str
+    emoji_name: str
+    uri: str
+    assigned: Decimal
+    activity: Decimal
+    available: Decimal
+    # List of bars (width ratio, bg fill ratio, fg fill ratio)
+    bars: list[tuple[Decimal, Decimal, Decimal]]
+    hidden: bool
 
-    Returns:
-        TargetContext
-    """
-    if tar.due_date_ord is None:
-        # No due date, easy to figure out progress
-        # This is a BALANCE target
-        target_assigned = tar.amount - leftover
-        to_go = tar.amount - available
-        return {
-            "target_assigned": target_assigned,
-            "total_assigned": available,
-            "to_go": to_go,
-            "on_track": to_go <= 0,
-            "next_due_date": None,
-            "progress_bars": [tar.amount],
-            "target": tar.amount,
-            "total_target": tar.amount,
-            "total_to_go": max(Decimal(0), to_go),
-            "period": tar.period,
-            "type": tar.type_,
-        }
-
-    due_date = datetime.date.fromordinal(tar.due_date_ord)
-    if tar.period == TargetPeriod.WEEK:
-        # Need the number of weekdays that fall in this month
-        weekday = due_date.weekday()
-        n_weekdays = utils.weekdays_in_month(weekday, month)
-        total_target = n_weekdays * tar.amount
-        target_assigned = total_target
-        total_assigned = assigned
-        progress_bars = [leftover] + [tar.amount] * n_weekdays
-        if tar.type_ == TargetType.REFILL or leftover == 0:
-            # Adjust leftover to/from everything
-            target_assigned -= leftover
-            total_assigned += leftover
-            progress_bars.pop(0)
-        total_to_go = total_target - total_assigned
-
-        on_track = assigned >= target_assigned
-        next_due_date = datetime.date.today()
-        if month.year == next_due_date.year and month.month == next_due_date.month:
-            # Move next_due_date to next weekday
-            n_days = weekday - next_due_date.weekday()
-            # Keep positive
-            next_due_date += datetime.timedelta(
-                days=n_days + (utils.DAYS_IN_WEEK if n_days < 0 else 0),
-            )
-            n_weeks_elapsed = math.ceil(next_due_date.day / utils.DAYS_IN_WEEK)
-            on_track = assigned >= (tar.amount * n_weeks_elapsed)
-
-        return {
-            "target_assigned": target_assigned,
-            "total_assigned": total_assigned,
-            "to_go": target_assigned - assigned,
-            "on_track": on_track,
-            "next_due_date": utils.WEEKDAYS[weekday],
-            "progress_bars": progress_bars,
-            "target": tar.amount,
-            "total_target": total_target,
-            "total_to_go": max(Decimal(0), total_to_go),
-            "period": tar.period,
-            "type": tar.type_,
-        }
-
-    if tar.period == TargetPeriod.ONCE:
-        # This is a BALANCE target
-        n_months = max(0, utils.date_months_between(month, due_date))
-        target_assigned = (tar.amount - leftover) / (n_months + 1)
-        target_available = leftover + target_assigned
-        total_to_go = tar.amount - available
-        return {
-            "target_assigned": target_assigned,
-            "total_assigned": available,
-            "to_go": target_available - available,
-            "on_track": available >= target_available,
-            "next_due_date": f"{due_date:%B %Y}",
-            "progress_bars": [tar.amount],
-            "target": tar.amount,
-            "total_target": tar.amount,
-            "total_to_go": max(Decimal(0), total_to_go),
-            "period": tar.period,
-            "type": tar.type_,
-        }
-
-    # Move due_date into month
-    n = utils.date_months_between(due_date, month)
-    n_months_every = (
-        tar.repeat_every if tar.period == TargetPeriod.MONTH else tar.repeat_every * 12
-    )
-    n = math.ceil(n / n_months_every) * n_months_every
-    due_date = utils.date_add_months(due_date, n)
-    last_due_date = utils.date_add_months(due_date, -n_months_every)
-    last_repeat_last_month = utils.date_months_between(last_due_date, month) == 1
-
-    # If ACCUMULATE and last repeat ended last month, ignore balance
-    target_assigned = tar.amount
-    total_assigned = assigned
-    progress_bars = [leftover, tar.amount]
-    if tar.type_ == TargetType.REFILL or not last_repeat_last_month or leftover == 0:
-        # Adjust leftover to/from everything
-        target_assigned -= leftover
-        total_assigned += leftover
-        progress_bars.pop(0)
-    total_to_go = tar.amount - total_assigned
-
-    n_months = utils.date_months_between(month, due_date)
-    target_assigned = target_assigned / (n_months + 1)
-
-    return {
-        "target_assigned": target_assigned,
-        "total_assigned": total_assigned,
-        "to_go": target_assigned - assigned,
-        "on_track": assigned >= target_assigned,
-        "next_due_date": due_date,
-        "progress_bars": progress_bars,
-        "target": tar.amount,
-        "total_target": tar.amount,
-        "total_to_go": max(Decimal(0), total_to_go),
-        "period": tar.period,
-        "type": tar.type_,
-    }
+    target: _TargetContext | None
 
 
-def ctx_table(
-    s: orm.Session,
-    month: datetime.date,
-    categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
-    assignable: Decimal,
-    future_assigned: Decimal,
-) -> tuple[dict[str, object], str]:
-    """Get the context to build the budgeting table.
+class _GroupContext(TypedDict):
+    """Type definition for budget group context."""
 
-    Args:
-        s: SQL session to use
-        month: Month of table
-        categories: Dict of categories from Budget.get_monthly_available
-        assignable: Assignable amount from Budget.get_monthly_available
-        future_assigned: Assigned amount in the future from Budget.get_monthly_available
+    position: int
+    name: str | None
+    uri: str | None
+    is_open: bool
+    categories: list[_CategoryContext]
+    assigned: Decimal
+    activity: Decimal
+    available: Decimal
+    has_error: bool
 
-    Returns:
-        Dictionary HTML context
-    """
 
-    class CategoryContext(TypedDict):
-        """Type definition for budget category context."""
+class _BudgetContext(TypedDict):
+    """Type definition for budget context."""
 
-        position: int | None
-        name: str
-        uri: str
-        emoji_name: str
-        assigned: Decimal
-        activity: Decimal
-        available: Decimal
-        # List of bars (width ratio, bg fill ratio, fg fill ratio, bg, fg)
-        bars: list[tuple[Decimal, Decimal, Decimal, str, str]]
-
-        target: TargetContext | None
-
-    class GroupContext(TypedDict):
-        """Type definition for budget group context."""
-
-        position: int
-        name: str | None
-        uri: str | None
-        is_closed: bool
-        categories: list[CategoryContext]
-        assigned: Decimal
-        activity: Decimal
-        available: Decimal
-
-    n_overspent = 0
-
-    targets: dict[int, Target] = {
-        t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
-    }
-
-    groups_closed: list[str] = flask.session.get("groups_closed", [])
-
-    groups: dict[int | None, GroupContext] = {}
-    query = s.query(BudgetGroup)
-    for g in query.all():
-        groups[g.id_] = {
-            "position": g.position,
-            "name": g.name,
-            "uri": g.uri,
-            "is_closed": g.uri in groups_closed,
-            "assigned": Decimal(0),
-            "activity": Decimal(0),
-            "available": Decimal(0),
-            "categories": [],
-        }
-    ungrouped: GroupContext = {
-        "position": -1,
-        "name": None,
-        "uri": None,
-        "is_closed": "ungrouped" in groups_closed,
-        "assigned": Decimal(0),
-        "activity": Decimal(0),
-        "available": Decimal(0),
-        "categories": [],
-    }
-
-    query = s.query(TransactionCategory)
-    for t_cat in query.yield_per(YIELD_PER):
-        assigned, activity, available, leftover = categories[t_cat.id_]
-        tar = targets.get(t_cat.id_)
-        # Skip category if all numbers are 0 and not grouped
-        if (
-            t_cat.budget_group_id is None
-            and activity == 0
-            and assigned == 0
-            and available == 0
-            and tar is None
-        ):
-            continue
-        if t_cat.group == TransactionCategoryGroup.INCOME:
-            continue
-
-        if available < 0:
-            n_overspent += 1
-
-        bar_dollars: list[Decimal] = []
-        if tar is None:
-            bar_dollars = [max(available, Decimal(0)) - activity]
-            target_ctx = None
-        else:
-            target_ctx = ctx_target(
-                tar,
-                month,
-                assigned,
-                available,
-                leftover,
-            )
-            bar_dollars = target_ctx["progress_bars"]
-
-        bar_dollars_sum = sum(bar_dollars)
-        bars: list[tuple[Decimal, Decimal, Decimal, str, str]] = []
-        bar_start = Decimal(0)
-        total_assigned = available - activity
-        max_bar_dollars = max(total_assigned, -activity)
-        if max_bar_dollars > bar_dollars_sum:
-            bar_dollars[-1] += max_bar_dollars - bar_dollars_sum
-            bar_dollars_sum = max_bar_dollars
-        for v in bar_dollars:
-            bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
-
-            fg = "green"
-            if v == 0:
-                bg = "grey-400"
-                bg_fill_w = Decimal(1)
-                fg_fill_w = Decimal(0)
-            elif available < 0:
-                bg = "red"
-                fg = "yellow"
-                bg_fill_w = utils.clamp((-activity - bar_start) / v)
-                fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
-            else:
-                bg = "green" if total_assigned == bar_dollars_sum else "yellow"
-                bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
-                fg_fill_w = utils.clamp((-activity - bar_start) / v)
-
-            bars.append((bar_w, bg_fill_w, fg_fill_w, bg, fg))
-            bar_start += v
-
-        cat_ctx: CategoryContext = {
-            "position": t_cat.budget_position,
-            "uri": t_cat.uri,
-            "name": t_cat.name,
-            "emoji_name": t_cat.emoji_name,
-            "assigned": assigned,
-            "activity": activity,
-            "available": available,
-            "bars": bars,
-            "target": target_ctx,
-        }
-        g = groups.get(t_cat.budget_group_id, ungrouped)
-        g["assigned"] += assigned
-        g["activity"] += activity
-        g["available"] += available
-        g["categories"].append(cat_ctx)
-
-    groups_list = sorted(groups.values(), key=lambda item: item["position"])
-    groups_list.append(ungrouped)
-
-    for g in groups_list:
-        g["categories"] = sorted(
-            g["categories"],
-            key=lambda item: (item["position"] or 0, item["name"]),
-        )
-
-    month_str = month.isoformat()[:7]
-    title = f"Budgeting { month_str} | nummus"
-    return {
-        "month": month_str,
-        "month_next": utils.date_add_months(month, 1).isoformat()[:7],
-        "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
-        "assignable": assignable,
-        "future_assigned": future_assigned,
-        "groups": groups_list,
-        "n_overspent": n_overspent,
-    }, title
+    month: str
+    month_next: str | None
+    month_prev: str
+    assignable: Decimal
+    future_assigned: Decimal
+    groups: list[_GroupContext]
+    n_overspent: int
 
 
 def page() -> flask.Response:
@@ -389,14 +113,64 @@ def page() -> flask.Response:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, title = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, title = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return common.page(
-        "budgeting/index-content.jinja",
+        "budgeting/page.jinja",
         title=title,
-        table=table,
+        ctx=budget,
         budget_sidebar=sidebar,
     )
+
+
+def validation() -> flask.Response | str:
+    """GET /h/budgeting/validation.
+
+    Returns:
+        string HTML response
+    """
+    args = flask.request.args
+
+    def update_target_desc() -> flask.Response:
+        response = flask.make_response()
+        response.headers["HX-Trigger"] = "target-desc"
+        return response
+
+    if "date" in args:
+        value = args["date"].strip()
+        if value == "":
+            return "Required"
+        try:
+            date = utils.parse_date(value)
+        except ValueError:
+            return "Unable to parse"
+        if date is None:  # pragma: no cover
+            # Type guard, should not be called
+            return "Unable to parse"
+        return update_target_desc()
+
+    if "amount" in args:
+        value = args["amount"].strip()
+        if value == "":
+            return "Required"
+        amount = utils.evaluate_real_statement(value)
+        if amount is None:
+            return "Unable to parse"
+        return update_target_desc()
+
+    if "repeat" in args:
+        value = args["repeat"].strip()
+        if value == "":
+            return "Required"
+        try:
+            value = int(value)
+        except ValueError:
+            return "Unable to parse"
+        if value < 1:
+            return "Must be positive"
+        return update_target_desc()
+
+    raise NotImplementedError
 
 
 def assign(uri: str) -> str:
@@ -422,6 +196,11 @@ def assign(uri: str) -> str:
 
     with p.begin_session() as s:
         cat = web_utils.find(s, TransactionCategory, uri)
+        group_uri = (
+            None
+            if cat.budget_group_id is None
+            else BudgetGroup.id_to_uri(cat.budget_group_id)
+        )
         if amount == 0:
             s.query(BudgetAssignment).where(
                 BudgetAssignment.month_ord == month_ord,
@@ -449,13 +228,15 @@ def assign(uri: str) -> str:
         categories, assignable, future_assigned = (
             BudgetAssignment.get_monthly_available(s, month)
         )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
+        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
     return flask.render_template(
-        "budgeting/table.jinja",
-        table=table,
+        "budgeting/group.jinja",
+        ctx=budget,
+        group=next(group for group in budget["groups"] if group["uri"] == group_uri),
         budget_sidebar=sidebar,
+        include_oob=True,
     )
 
 
@@ -537,26 +318,49 @@ def overspending(uri: str) -> str | flask.Response:
                 else:
                     a.amount -= to_move
 
-            return common.overlay_swap(event="update-budget")
-
-        category_names = TransactionCategory.map_name(s)
-
-        options: list[tuple[str, str, Decimal]] = [
-            (
-                TransactionCategory.id_to_uri(t_cat_id),
-                category_names[t_cat_id],
-                available,
+            return common.dialog_swap(
+                event="budget",
+                snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
-            for t_cat_id, (_, _, available, _) in categories.items()
-            if available > 0
-        ]
+
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+                TransactionCategory.group,
+            )
+            .where(
+                TransactionCategory.group.not_in(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER),
+                ),
+            )
+            .order_by(TransactionCategory.group, TransactionCategory.name)
+        )
+        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
+        for t_cat_id, name, group in query.yield_per(YIELD_PER):
+            t_cat_id: int
+            name: str
+            group: TransactionCategoryGroup
+
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+            available = categories[t_cat_id][2]
+            if available > 0:
+                options.append((t_cat_uri, name, available, group))
         if t_cat is None:
             available = assignable
         else:
             _, _, available, _ = categories[t_cat.id_]
-        options = sorted(options, key=lambda x: x[1])
         if assignable > 0:
-            options.insert(0, ("income", "Assignable income", assignable))
+            options.insert(
+                0,
+                (
+                    "income",
+                    "Assignable income",
+                    assignable,
+                    TransactionCategoryGroup.INCOME,
+                ),
+            )
 
         month_str = month.isoformat()[:7]
         category = {
@@ -648,26 +452,49 @@ def move(uri: str) -> str | flask.Response:
                 else:
                     a.amount += to_move
 
-            return common.overlay_swap(event="update-budget")
-
-        category_names = TransactionCategory.map_name(s)
-
-        options: list[tuple[str, str, Decimal]] = [
-            (
-                TransactionCategory.id_to_uri(t_cat_id),
-                category_names[t_cat_id],
-                available,
+            return common.dialog_swap(
+                event="budget",
+                snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
-            for t_cat_id, (_, _, available, _) in categories.items()
-            if (t_cat is None or t_cat_id != t_cat.id_) and t_cat_id in category_names
-        ]
+
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.emoji_name,
+                TransactionCategory.group,
+            )
+            .where(
+                TransactionCategory.group.not_in(
+                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER),
+                ),
+            )
+            .order_by(TransactionCategory.group, TransactionCategory.name)
+        )
+        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
+        for t_cat_id, name, group in query.yield_per(YIELD_PER):
+            t_cat_id: int
+            name: str
+            group: TransactionCategoryGroup
+
+            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+            available = categories[t_cat_id][2]
+            options.append((t_cat_uri, name, available, group))
+
         if t_cat is None:
             available = assignable
         else:
             _, _, available, _ = categories[t_cat.id_]
-        options = sorted(options, key=lambda x: (x[2] >= 0, x[1]))
         if t_cat is not None:
-            options.insert(0, ("income", "Assignable income", assignable))
+            options.insert(
+                0,
+                (
+                    "income",
+                    "Assignable income",
+                    assignable,
+                    TransactionCategoryGroup.INCOME,
+                ),
+            )
 
         month_str = month.isoformat()[:7]
         category = {
@@ -676,6 +503,7 @@ def move(uri: str) -> str | flask.Response:
             "available": available,
             "month": month_str,
             "options": options,
+            "dest": args.get("destination"),
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",
@@ -684,7 +512,7 @@ def move(uri: str) -> str | flask.Response:
 
 
 def reorder() -> str:
-    """GET & PUT /h/budgeting/reorder.
+    """PUT /h/budgeting/reorder.
 
     Returns:
         string HTML response
@@ -693,8 +521,8 @@ def reorder() -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     form = flask.request.form
-    group_uris = form.getlist("group_uri")
-    row_uris = form.getlist("row_uri")
+    group_uris = form.getlist("group-uri")
+    t_cat_uris = form.getlist("category-uri")
     groups = form.getlist("group")
 
     with p.begin_session() as s:
@@ -707,8 +535,8 @@ def reorder() -> str:
 
         i = 0
         last_group = None
-        for t_cat_uri, g_uri in zip(row_uris, groups, strict=True):
-            g_id = None if g_uri == "" else BudgetGroup.uri_to_id(g_uri)
+        for t_cat_uri, g_uri in zip(t_cat_uris, groups, strict=True):
+            g_id = None if g_uri == "ungrouped" else BudgetGroup.uri_to_id(g_uri)
             if g_uri != last_group:
                 i = 0
 
@@ -723,8 +551,19 @@ def reorder() -> str:
             i += 1
             last_group = g_uri
 
-        # Set all to -index first so swapping can occur without unique violations
-        if len(g_positions) > 0 and len(t_cat_positions) > 0:
+        # Set all to None first so swapping can occur without unique violations
+        s.query(TransactionCategory).update(
+            {
+                TransactionCategory.budget_group_id: None,
+                TransactionCategory.budget_position: None,
+            },
+        )
+
+        # Delete any groups
+        s.query(BudgetGroup).where(BudgetGroup.id_.not_in(g_positions)).delete()
+
+        if g_positions:
+            # Set all to -index first so swapping can occur without unique violations
             s.query(BudgetGroup).update(
                 {
                     BudgetGroup.position: sql.case(
@@ -733,14 +572,8 @@ def reorder() -> str:
                     ),
                 },
             )
-            # Set all to None first so swapping can occur without unique violations
-            s.query(TransactionCategory).update(
-                {
-                    TransactionCategory.budget_group_id: None,
-                    TransactionCategory.budget_position: None,
-                },
-            )
 
+            # Set new group positions
             s.query(BudgetGroup).update(
                 {
                     BudgetGroup.position: sql.case(
@@ -749,6 +582,9 @@ def reorder() -> str:
                     ),
                 },
             )
+
+        if t_cat_positions:
+            # Set new category positions
             s.query(TransactionCategory).update(
                 {
                     TransactionCategory.budget_group_id: sql.case(
@@ -762,24 +598,8 @@ def reorder() -> str:
                 },
             )
 
-        month_str = form.get("month")
-        month = (
-            utils.start_of_month(datetime.date.today())
-            if month_str is None
-            else datetime.date.fromisoformat(month_str + "-01")
-        )
-        sidebar_uri = form.get("sidebar") or None
-
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        table=table,
-        budget_sidebar=sidebar,
-    )
+    # No response expected, actual moving done in JS
+    return ""
 
 
 def group(uri: str) -> str:
@@ -792,66 +612,28 @@ def group(uri: str) -> str:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     form = flask.request.form
-    if flask.request.method == "PUT":
-        closed = "closed" in form
-        if uri != "ungrouped":
-            name = form["name"]
-
-            try:
-                with p.begin_session() as s:
-                    g = web_utils.find(s, BudgetGroup, uri)
-                    g.name = name
-            except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-                return common.error(e)
-
-        groups_closed: list[str] = flask.session.get("groups_closed", [])
-        groups_closed = [x for x in groups_closed if x != uri]
-        if closed:
-            groups_closed.append(uri)
-        flask.session["groups_closed"] = groups_closed
-    elif flask.request.method == "DELETE":
-        with p.begin_session() as s:
-            g = web_utils.find(s, BudgetGroup, uri)
-            s.query(TransactionCategory).where(
-                TransactionCategory.budget_group_id == g.id_,
-            ).update(
-                {
-                    TransactionCategory.budget_group_id: None,
-                    TransactionCategory.budget_position: None,
-                },
-            )
-            s.delete(g)
-            # Subtract 1 from the following positions to close the gap
-            query = (
-                s.query(BudgetGroup)
-                .where(BudgetGroup.position >= g.position)
-                .order_by(BudgetGroup.position)
-            )
-            for g in query.yield_per(YIELD_PER):
-                g.position -= 1
+    name = form.get("name")
+    if name is None:
+        # sending open state
+        is_open = "open" in form
+        groups_open: list[str] = flask.session.get("groups_open", [])
+        groups_open = [x for x in groups_open if x != uri]
+        if is_open:
+            groups_open.append(uri)
+        flask.session["groups_open"] = groups_open
+    elif uri != "ungrouped":
+        try:
+            with p.begin_session() as s:
+                g = web_utils.find(s, BudgetGroup, uri)
+                g.name = name
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return common.error(e)
     else:
-        raise NotImplementedError
+        msg = "Cannot rename ungrouped"
+        raise exc.http.BadRequest(msg)
 
-    month_str = form.get("month")
-    month = (
-        utils.start_of_month(datetime.date.today())
-        if month_str is None
-        else datetime.date.fromisoformat(month_str + "-01")
-    )
-    sidebar_uri = form.get("sidebar") or None
-
-    with p.begin_session() as s:
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        table=table,
-        budget_sidebar=sidebar,
-        oob=True,
-    )
+    # No response expected, actual opening done in JS
+    return ""
 
 
 def new_group() -> str:
@@ -863,41 +645,54 @@ def new_group() -> str:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    form = flask.request.form
-    name = form["name"]
-
-    try:
-        with p.begin_session() as s:
-            n = s.query(BudgetGroup).count()
-            g = BudgetGroup(name=name, position=n)
-            s.add(g)
-    except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-        return common.error(e)
-
-    month_str = form.get("month")
-    month = (
-        utils.start_of_month(datetime.date.today())
-        if month_str is None
-        else datetime.date.fromisoformat(month_str + "-01")
-    )
-    sidebar_uri = form.get("sidebar") or None
-
+    name = "New Group"
     with p.begin_session() as s:
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
-        )
-        table, _ = ctx_table(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return flask.render_template(
-        "budgeting/table.jinja",
-        table=table,
-        budget_sidebar=sidebar,
-        oob=True,
+        # Ensure the name isn't a duplicate
+        i = 1
+        n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+        while n != 0:
+            i += 1
+            name = f"New Group {i}"
+            n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+
+        # Move existing groups down one
+        n = s.query(BudgetGroup).count()
+        for i in range(n, -1, -1):
+            # Do one at a time in reverse order to prevent duplicate value
+            s.query(BudgetGroup).where(BudgetGroup.position == i).update(
+                {BudgetGroup.position: i + 1},
+            )
+
+        g = BudgetGroup(name=name, position=0)
+        s.add(g)
+        s.flush()
+        g_uri = g.uri
+    ctx: _GroupContext = {
+        "position": 0,
+        "name": name,
+        "uri": g_uri,
+        "is_open": False,
+        "assigned": Decimal(0),
+        "activity": Decimal(0),
+        "available": Decimal(0),
+        "categories": [],
+        "has_error": False,
+    }
+    return flask.render_template_string(
+        """\
+        <div
+            id="group-{{ group.uri or "ungrouped" }}"
+            class="budget-group"
+        >
+            {% include "budgeting/group.jinja" %}
+        </div>
+        """,
+        group=ctx,
     )
 
 
 def target(uri: str) -> str | flask.Response:
-    """GET /h/budgeting/t/<path:uri>.
+    """GET, POST, PUT, DELETE /h/budgeting/t/<path:uri>.
 
     Returns:
         string HTML response
@@ -943,7 +738,7 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="budget")
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
             return common.error(error)
@@ -995,12 +790,12 @@ def target(uri: str) -> str | flask.Response:
             tar.repeat_every = 1
 
         if flask.request.method == "PUT":
-            return common.overlay_swap(event="update-budget")
+            return common.dialog_swap(event="budget")
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
                     s.add(tar)
-                return common.overlay_swap(event="update-budget")
+                return common.dialog_swap(event="budget")
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
@@ -1025,8 +820,9 @@ def target(uri: str) -> str | flask.Response:
             "amount": tar.amount,
             "weekdays": utils.WEEKDAYS,
             "months": utils.MONTHS,
-            "from_amount": flask.request.headers.get("HX-Trigger")
-            == "budgeting-amount",
+            "from_amount": (
+                flask.request.headers.get("HX-Trigger") == "budgeting-amount"
+            ),
         }
         # Don't make the changes
         s.rollback()
@@ -1191,7 +987,7 @@ def sidebar() -> flask.Response:
         sidebar = ctx_sidebar(s, month, categories, future_assigned, uri)
         html = flask.render_template(
             "budgeting/sidebar.jinja",
-            oob=True,
+            ctx={"month": month_str},
             budget_sidebar=sidebar,
         )
     response = flask.make_response(html)
@@ -1207,13 +1003,308 @@ def sidebar() -> flask.Response:
     return response
 
 
+def ctx_target(
+    tar: Target,
+    month: datetime.date,
+    assigned: Decimal,
+    available: Decimal,
+    leftover: Decimal,
+) -> _TargetContext:
+    """Get monthly context for target.
+
+    Args:
+        tar: Target to get context for
+        month: Month to check progress during
+        assigned: Amount assigned this month
+        available: Available balance this month
+        leftover: Category leftover balance from previous month
+
+    Returns:
+        TargetContext
+    """
+    if tar.due_date_ord is None:
+        # No due date, easy to figure out progress
+        # This is a BALANCE target
+        target_assigned = tar.amount - leftover
+        to_go = tar.amount - available
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": available,
+            "to_go": to_go,
+            "on_track": to_go <= 0,
+            "next_due_date": None,
+            "progress_bars": [tar.amount],
+            "target": tar.amount,
+            "total_target": tar.amount,
+            "total_to_go": max(Decimal(0), to_go),
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    due_date = datetime.date.fromordinal(tar.due_date_ord)
+    if tar.period == TargetPeriod.WEEK:
+        # Need the number of weekdays that fall in this month
+        weekday = due_date.weekday()
+        n_weekdays = utils.weekdays_in_month(weekday, month)
+        total_target = n_weekdays * tar.amount
+        target_assigned = total_target
+        total_assigned = assigned
+        progress_bars = [leftover] + [tar.amount] * n_weekdays
+        if tar.type_ == TargetType.REFILL or leftover == 0:
+            # Adjust leftover to/from everything
+            target_assigned -= leftover
+            total_assigned += leftover
+            progress_bars.pop(0)
+        total_to_go = total_target - total_assigned
+
+        on_track = assigned >= target_assigned
+        next_due_date = datetime.date.today()
+        if month.year == next_due_date.year and month.month == next_due_date.month:
+            # Move next_due_date to next weekday
+            n_days = weekday - next_due_date.weekday()
+            # Keep positive
+            next_due_date += datetime.timedelta(
+                days=n_days + (utils.DAYS_IN_WEEK if n_days < 0 else 0),
+            )
+            n_weeks_elapsed = math.ceil(next_due_date.day / utils.DAYS_IN_WEEK)
+            on_track = assigned >= (tar.amount * n_weeks_elapsed)
+
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": total_assigned,
+            "to_go": target_assigned - assigned,
+            "on_track": on_track,
+            "next_due_date": utils.WEEKDAYS[weekday],
+            "progress_bars": progress_bars,
+            "target": tar.amount,
+            "total_target": total_target,
+            "total_to_go": max(Decimal(0), total_to_go),
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    if tar.period == TargetPeriod.ONCE:
+        # This is a BALANCE target
+        n_months = max(0, utils.date_months_between(month, due_date))
+        target_assigned = (tar.amount - leftover) / (n_months + 1)
+        target_available = leftover + target_assigned
+        total_to_go = tar.amount - available
+        return {
+            "target_assigned": target_assigned,
+            "total_assigned": available,
+            "to_go": target_available - available,
+            "on_track": available >= target_available,
+            "next_due_date": f"{due_date:%B %Y}",
+            "progress_bars": [tar.amount],
+            "target": tar.amount,
+            "total_target": tar.amount,
+            "total_to_go": max(Decimal(0), total_to_go),
+            "period": tar.period,
+            "type": tar.type_,
+        }
+
+    # Move due_date into month
+    n = utils.date_months_between(due_date, month)
+    n_months_every = (
+        tar.repeat_every if tar.period == TargetPeriod.MONTH else tar.repeat_every * 12
+    )
+    n = math.ceil(n / n_months_every) * n_months_every
+    due_date = utils.date_add_months(due_date, n)
+    last_due_date = utils.date_add_months(due_date, -n_months_every)
+    last_repeat_last_month = utils.date_months_between(last_due_date, month) == 1
+
+    # If ACCUMULATE and last repeat ended last month, ignore balance
+    target_assigned = tar.amount
+    total_assigned = assigned
+    progress_bars = [leftover, tar.amount]
+    if tar.type_ == TargetType.REFILL or not last_repeat_last_month or leftover == 0:
+        # Adjust leftover to/from everything
+        target_assigned -= leftover
+        total_assigned += leftover
+        progress_bars.pop(0)
+    total_to_go = tar.amount - total_assigned
+
+    n_months = utils.date_months_between(month, due_date)
+    target_assigned = target_assigned / (n_months + 1)
+
+    return {
+        "target_assigned": target_assigned,
+        "total_assigned": total_assigned,
+        "to_go": target_assigned - assigned,
+        "on_track": assigned >= target_assigned,
+        "next_due_date": due_date,
+        "progress_bars": progress_bars,
+        "target": tar.amount,
+        "total_target": tar.amount,
+        "total_to_go": max(Decimal(0), total_to_go),
+        "period": tar.period,
+        "type": tar.type_,
+    }
+
+
+def ctx_budget(
+    s: orm.Session,
+    month: datetime.date,
+    categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
+    assignable: Decimal,
+    future_assigned: Decimal,
+) -> tuple[_BudgetContext, str]:
+    """Get the context to build the budgeting table.
+
+    Args:
+        s: SQL session to use
+        month: Month of table
+        categories: Dict of categories from Budget.get_monthly_available
+        assignable: Assignable amount from Budget.get_monthly_available
+        future_assigned: Assigned amount in the future from Budget.get_monthly_available
+
+    Returns:
+        Dictionary HTML context
+    """
+    n_overspent = 0
+
+    targets: dict[int, Target] = {
+        t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
+    }
+
+    groups_open: list[str] = flask.session.get("groups_open", [])
+
+    groups: dict[int | None, _GroupContext] = {}
+    query = s.query(BudgetGroup)
+    for g in query.all():
+        groups[g.id_] = {
+            "position": g.position,
+            "name": g.name,
+            "uri": g.uri,
+            "is_open": g.uri in groups_open,
+            "assigned": Decimal(0),
+            "activity": Decimal(0),
+            "available": Decimal(0),
+            "categories": [],
+            "has_error": False,
+        }
+    ungrouped: _GroupContext = {
+        "position": -1,
+        "name": None,
+        "uri": None,
+        "is_open": "ungrouped" in groups_open,
+        "assigned": Decimal(0),
+        "activity": Decimal(0),
+        "available": Decimal(0),
+        "categories": [],
+        "has_error": False,
+    }
+
+    query = s.query(TransactionCategory)
+    for t_cat in query.yield_per(YIELD_PER):
+        assigned, activity, available, leftover = categories[t_cat.id_]
+        tar = targets.get(t_cat.id_)
+        # Skip category if all numbers are 0 and not grouped
+        hidden = (
+            t_cat.budget_group_id is None
+            and activity == 0
+            and assigned == 0
+            and available == 0
+            and tar is None
+        )
+        if t_cat.group == TransactionCategoryGroup.INCOME:
+            continue
+
+        if available < 0:
+            n_overspent += 1
+
+        bar_dollars: list[Decimal] = []
+        if tar is None:
+            bar_dollars = [max(available, Decimal(0)) - activity]
+            target_ctx = None
+        else:
+            target_ctx = ctx_target(
+                tar,
+                month,
+                assigned,
+                available,
+                leftover,
+            )
+            bar_dollars = target_ctx["progress_bars"]
+
+        bar_dollars_sum = sum(bar_dollars)
+        bars: list[tuple[Decimal, Decimal, Decimal]] = []
+        bar_start = Decimal(0)
+        total_assigned = available - activity
+        max_bar_dollars = max(total_assigned, -activity)
+        if max_bar_dollars > bar_dollars_sum:
+            bar_dollars[-1] += max_bar_dollars - bar_dollars_sum
+            bar_dollars_sum = max_bar_dollars
+        for v in bar_dollars:
+            bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
+
+            if v == 0:
+                bg_fill_w = Decimal(0)
+                fg_fill_w = Decimal(0)
+            elif available < 0:
+                bg_fill_w = utils.clamp((-activity - bar_start) / v)
+                fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+            else:
+                bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+                fg_fill_w = utils.clamp((-activity - bar_start) / v)
+
+            bars.append((bar_w, bg_fill_w, fg_fill_w))
+            bar_start += v
+
+        cat_ctx: _CategoryContext = {
+            "position": t_cat.budget_position,
+            "uri": t_cat.uri,
+            "name": t_cat.name,
+            "emoji_name": t_cat.emoji_name,
+            "assigned": assigned,
+            "activity": activity,
+            "available": available,
+            "hidden": hidden,
+            "bars": bars,
+            "target": target_ctx,
+        }
+        g = groups.get(t_cat.budget_group_id, ungrouped)
+        g["assigned"] += assigned
+        g["activity"] += activity
+        g["available"] += available
+        g["categories"].append(cat_ctx)
+        if available < 0:
+            g["has_error"] = True
+
+    groups_list = sorted(groups.values(), key=lambda item: item["position"])
+    groups_list.append(ungrouped)
+
+    for g in groups_list:
+        g["categories"] = sorted(
+            g["categories"],
+            key=lambda item: (item["position"] or 0, item["name"]),
+        )
+
+    month_str = month.isoformat()[:7]
+    title = f"Budgeting { month_str}"
+    today = datetime.date.today()
+    month_next = (
+        None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
+    )
+    return {
+        "month": month_str,
+        "month_next": month_next,
+        "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
+        "assignable": assignable,
+        "future_assigned": future_assigned,
+        "groups": groups_list,
+        "n_overspent": n_overspent,
+    }, title
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
+    "/h/budgeting/validation": (validation, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
     "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
-    "/h/budgeting/g/<path:uri>": (group, ["PUT", "DELETE"]),
+    "/h/budgeting/g/<path:uri>": (group, ["PUT"]),
     "/h/budgeting/new-group": (new_group, ["POST"]),
     "/h/budgeting/t/<path:uri>": (target, ["GET", "POST", "PUT", "DELETE"]),
     "/h/budgeting/sidebar": (sidebar, ["GET"]),

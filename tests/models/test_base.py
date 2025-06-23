@@ -20,6 +20,9 @@ class Bytes:
     def __eq__(self, other: Bytes | object) -> bool:
         return isinstance(other, Bytes) and self._data == other._data
 
+    def __hash__(self) -> int:
+        return hash(self._data)
+
 
 class Derived(base.BaseEnum):
     RED = 1
@@ -90,6 +93,7 @@ class TestORMBase(TestBase):
         self.assertIsNotNone(parent.id_)
         self.assertIsNotNone(parent.uri)
         self.assertEqual(Parent.uri_to_id(parent.uri), parent.id_)
+        self.assertEqual(hash(parent), parent.id_)
 
         child = Child()
         self.assertIsNone(child.id_)
@@ -188,9 +192,6 @@ class TestORMBase(TestBase):
         parent.name = "    "
         self.assertIsNone(parent.name)
 
-        parent.name = "[blank]"
-        self.assertIsNone(parent.name)
-
         field = self.random_string(3)
         parent.name = field
         self.assertEqual(parent.name, field)
@@ -202,10 +203,6 @@ class TestORMBase(TestBase):
         s.commit()
 
         u = {Parent.name: ""}
-        self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
-        s.rollback()
-
-        u = {Parent.name: "[blank]"}
         self.assertRaises(exc.IntegrityError, s.query(Parent).update, u)
         s.rollback()
 
@@ -228,6 +225,14 @@ class TestORMBase(TestBase):
         height = Decimal("1.23456789")
         child.height = height
         self.assertEqual(child.height, Decimal("1.234567"))
+
+    def test_clean_emoji_name(self) -> None:
+        text = self.random_string().lower()
+        result = base.Base.clean_emoji_name(text.upper())
+        self.assertEqual(result, text)
+
+        result = base.Base.clean_emoji_name(text + "😀 ")
+        self.assertEqual(result, text)
 
 
 class TestBaseEnum(TestBase):

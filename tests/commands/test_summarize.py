@@ -99,7 +99,7 @@ class TestSummarize(TestBase):
                 parent=txn_0,
                 asset_id=a_apple_0.id_,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn_0, t_split_0))
             s.flush()
@@ -115,7 +115,7 @@ class TestSummarize(TestBase):
                 parent=txn_1,
                 asset_id=a_apple_1.id_,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn_1, t_split_1))
             s.flush()
@@ -129,7 +129,7 @@ class TestSummarize(TestBase):
             t_split_2 = TransactionSplit(
                 amount=txn_2.amount,
                 parent=txn_2,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             s.add_all((txn_2, t_split_2))
             s.flush()
@@ -218,7 +218,7 @@ class TestSummarize(TestBase):
                 parent=txn_1,
                 asset_id=a_apple_0_id,
                 asset_quantity_unadjusted=-1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn_1, t_split_1))
             s.flush()

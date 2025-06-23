@@ -2,71 +2,21 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import sqlalchemy
-from rapidfuzz import process
-from sqlalchemy import func, orm
-
-from nummus import utils
-from nummus.models.account import Account
-from nummus.models.asset import Asset
-from nummus.models.base import YIELD_PER
-from nummus.models.transaction import TransactionSplit
+from sqlalchemy import (
+    CheckConstraint,
+    Constraint,
+    ForeignKeyConstraint,
+    func,
+    orm,
+    UniqueConstraint,
+)
 
 if TYPE_CHECKING:
     from nummus.models.base import Base
-
-_SEARCH_PROPERTIES: dict[type[Base], list[str]] = {
-    Account: ["name", "institution"],
-    Asset: ["name", "description", "unit", "tag"],
-    TransactionSplit: ["payee", "description", "tag"],
-}
-
-
-def search(
-    query: orm.Query[Base],
-    cls: type[Base],
-    search_str: str | None,
-) -> orm.Query[Base]:
-    """Perform a fuzzy search and return matches.
-
-    Args:
-        query: Session query to execute before fuzzy searching
-        cls: Model type to search
-        search_str: String to search
-
-    Returns:
-        List of results, count of amount results
-    """
-    if search_str is None or len(search_str) < utils.MIN_STR_LEN:
-        return query
-
-    # Only fetch the searchable properties to be must faster
-    entities: list[orm.InstrumentedAttribute] = [cls.id_]
-    entities.extend(getattr(cls, prop) for prop in _SEARCH_PROPERTIES[cls])
-    query_unfiltered = query.with_entities(*entities)
-
-    strings: dict[int, str] = {}
-    for item in query_unfiltered.yield_per(YIELD_PER):
-        item_id = item[0]
-        item_str = " ".join(s for s in item[1:] if s is not None)
-        strings[item_id] = item_str
-
-    extracted = process.extract(
-        search_str,
-        strings,
-        limit=None,
-        processor=lambda s: s.lower(),
-    )
-    matching_ids: list[int] = [
-        i for _, score, i in extracted if score > utils.SEARCH_THRESHOLD
-    ]
-    if len(matching_ids) == 0:
-        # Include poor matches to return something
-        matching_ids: list[int] = [i for _, _, i in extracted[:5]]
-
-    return query.session.query(cls).where(cls.id_.in_(matching_ids))
 
 
 def query_count(query: orm.Query[Base]) -> int:
@@ -121,3 +71,63 @@ def paginate(
     next_offset = offset + n_current if remaining > 0 else None
 
     return results, count, next_offset
+
+
+# Debug only code, no need to test
+def dump_table_configs(
+    s: orm.Session,
+    model: type[Base] | None = None,
+) -> list[str]:
+    """Get the table configs (columns and constraints) and print.
+
+    Args:
+        s: SQL session to use
+        model: Filter to specific table
+
+    Returns:
+        List of lines used to create tables
+    """
+    table_filter = f"AND name='{model.__tablename__}'" if model else ""
+    stmt = f"""
+        SELECT sql
+        FROM sqlite_master
+        WHERE
+            type='table' {table_filter}
+        """.strip()  # noqa: S608
+    result = s.execute(sqlalchemy.text(stmt)).one()[0]
+    result: str
+    return [s.replace("\t", "    ") for s in result.splitlines()]
+
+
+def get_constraints(
+    s: orm.Session,
+    model: type[Base],
+) -> list[tuple[type[Constraint], str]]:
+    """Get constraints of a table.
+
+    Args:
+        s: SQL session to use
+        model: Filter to specific table
+
+    Returns:
+        list[(Constraint type, construction text)]
+    """
+    config = "\n".join(dump_table_configs(s, model))
+    constraints: list[tuple[type[Constraint], str]] = []
+
+    re_unique = re.compile(r"UNIQUE \(([^\)]+)\)")
+    for cols in re_unique.findall(config):
+        cols: str
+        constraints.append((UniqueConstraint, cols))
+
+    re_check = re.compile(r'CONSTRAINT "[^"]+" CHECK \(([^\)]+)\)')
+    for sql_text in re_check.findall(config):
+        sql_text: str
+        constraints.append((CheckConstraint, sql_text))
+
+    re_foreign = re.compile(r"FOREIGN KEY\((\w+)\) REFERENCES \w+ \(\w+\)")
+    for cols in re_foreign.findall(config):
+        sql_text: str
+        constraints.append((ForeignKeyConstraint, cols))
+
+    return constraints

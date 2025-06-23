@@ -16,53 +16,6 @@ from tests.base import TestBase
 
 
 class TestUtils(TestBase):
-    def test_search(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-
-        # Create accounts
-        acct_checking = Account(
-            name="Monkey Bank Checking",
-            institution="Monkey Bank",
-            category=AccountCategory.CASH,
-            closed=False,
-            budgeted=False,
-        )
-        acct_invest = Account(
-            name="Gorilla Investments",
-            institution="Ape Trading",
-            category=AccountCategory.INVESTMENT,
-            closed=False,
-            budgeted=False,
-        )
-        s.add_all((acct_checking, acct_invest))
-        s.commit()
-
-        query = s.query(Account)
-
-        # No results return all
-        result = utils.search(query, Account, None).all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking, acct_invest])
-
-        # Short query return all
-        result = utils.search(query, Account, "ab").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking, acct_invest])
-
-        # No matches return first 5
-        result = utils.search(query, Account, "crazy unrelated words").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking, acct_invest])
-
-        result = utils.search(query, Account, "checking").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking])
-
-        result = utils.search(query, Account, "Monkey Bank").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking])
-
-        result = utils.search(query, Account, "monkey gorilla").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_checking, acct_invest])
-
-        result = utils.search(query, Account, "trading").all()  # type: ignore[attr-defined]
-        self.assertEqual(result, [acct_invest])
 
     def test_paginate(self) -> None:
         s = self.get_session()

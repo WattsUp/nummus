@@ -1,0 +1,14 @@
+<div class="flex items-center justify-between">
+  <h1 class="text-primary font-serif text-3xl">Dashboard</h1>
+</div>
+<div class="dashboard">
+  <div
+    hx-get="{{ url_for('emergency_fund.dashboard') }}"
+    hx-trigger="load"
+    hx-indicator="find .spinner"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% include "shared/spinner.jinja" %}
+  </div>
+</div>

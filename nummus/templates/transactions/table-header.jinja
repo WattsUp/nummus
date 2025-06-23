@@ -1,101 +1,34 @@
-<div id="txn-header"
-     class="w-full flex font-bold border-b border-b-grey-200 sticky top-0 bg-white min-w-[750px] md:min-w-[650px]"
-     hx-indicator="unset">
-    <div class="w-24 shrink-0 p-1">Date</div>
-    {% if not no_account_column %}
-        <div class="w-24 shrink-0 grow p-1 flex items-center relative txn-filter">
-            Account
-            <div id="txn-icon-account"
-                 class="cursor-pointer"
-                 onclick="navigation.openTxnFilter(this)">
-                {% with any_filters = txn_table["any-filters-account"] %}
-                    {% include "transactions/table-options-icon.jinja" %}
-                {% endwith %}
-            </div>
-            <div id="txn-account" class="txn-filter-dropdown">
-                {% with options = txn_table["options-account"], name="account" %}
-                    {% include "transactions/table-options.jinja" %}
-                {% endwith %}
-            </div>
-        </div>
-    {% endif %}
-    {% if asset_transactions %}
-        <div class="w-24 shrink-0 grow p-1 flex items-center relative txn-filter">
-            Asset
-            <div id="txn-icon-asset"
-                 class="cursor-pointer"
-                 onclick="navigation.openTxnFilter(this)">
-                {% with any_filters = txn_table["any-filters-asset"] %}
-                    {% include "transactions/table-options-icon.jinja" %}
-                {% endwith %}
-            </div>
-            <div id="txn-asset" class="txn-filter-dropdown">
-                {% with options = txn_table["options-asset"], name="asset" %}
-                    {% include "transactions/table-options.jinja" %}
-                {% endwith %}
-            </div>
-        </div>
-    {% else %}
-        <div class="w-20 shrink-0 grow p-1 flex items-center relative txn-filter">
-            Payee
-            <div id="txn-icon-payee"
-                 class="cursor-pointer"
-                 onclick="navigation.openTxnFilter(this)">
-                {% with any_filters = txn_table["any-filters-payee"] %}
-                    {% include "transactions/table-options-icon.jinja" %}
-                {% endwith %}
-            </div>
-            <div id="txn-payee" class="txn-filter-dropdown">
-                {% with options = txn_table["options-payee"], name="payee" %}
-                    {% include "transactions/table-options.jinja" %}
-                {% endwith %}
-            </div>
-        </div>
-        <div class="w-24 shrink-0 grow p-1">Description</div>
-    {% endif %}
-    {% if not asset_transactions %}
-        <div class="w-24 shrink-0 grow p-1 flex items-center relative txn-filter">
-            Category
-            <div id="txn-icon-category"
-                 class="cursor-pointer"
-                 onclick="navigation.openTxnFilter(this)">
-                {% with any_filters = txn_table["any-filters-category"] %}
-                    {% include "transactions/table-options-icon.jinja" %}
-                {% endwith %}
-            </div>
-            <div id="txn-category" class="txn-filter-dropdown">
-                {% with options = txn_table["options-category"], name="category" %}
-                    {% include "transactions/table-options.jinja" %}
-                {% endwith %}
-            </div>
-        </div>
-        <div class="w-20 shrink-0 grow p-1 flex items-center relative txn-filter max-lg:hidden">
-            Tag
-            <div id="txn-icon-tag"
-                 class="cursor-pointer"
-                 onclick="navigation.openTxnFilter(this)">
-                {% with any_filters = txn_table["any-filters-tag"] %}
-                    {% include "transactions/table-options-icon.jinja" %}
-                {% endwith %}
-            </div>
-            <div id="txn-tag" class="txn-filter-dropdown">
-                {% with options = txn_table["options-tag"], name="tag" %}
-                    {% include "transactions/table-options.jinja" %}
-                {% endwith %}
-            </div>
-        </div>
-    {% else %}
-        <div class="w-28 shrink-0 p-1 text-right">Price</div>
-        <div class="w-28 shrink-0 p-1 text-right md:tooltip">
-            Quantity
-            <div class="tooltip-text right-[60%] top-0  after:left-full after:border-l-grey-800 after:-mt-[4px] font-normal w-60">
-                Quantity adjusted for splits
-            </div>
-        </div>
-    {% endif %}
-    <div class="w-28 shrink-0 p-1 text-right">Amount</div>
-    {% if not asset_transactions %}
-        {% include "transactions/table-locked.jinja" %}
-        {% include "transactions/table-linked.jinja" %}
-    {% endif %}
+<div
+  id="txn-header"
+  hx-swap-oob="{{ oob }}"
+  class="mx-auto mb-2 flex max-w-2xl items-start gap-2"
+>
+  <label class="input-outlined grow">
+    <input
+      id="txn-search"
+      name="search"
+      enterkeyhint="search"
+      placeholder=""
+      value="{{ (ctx.search or "") | e }}"
+      hx-trigger="keyup[keyCode==13]"
+      hx-include="#txn-filters"
+      hx-target="#txn-table"
+      hx-get="{{ url_for(endpoint,  **url_args) }}"
+      hx-indicator="#txn-table,#txn-indicator"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Search</div>
+    </div>
+    <icon>search</icon>
+    <icon onclick="htmx.find(this.parentNode, 'input').value=''">clear</icon>
+  </label>
+  <button
+    id="txn-filter-btn"
+    class="{{ 'btn-filled' if ctx.any_filters else 'btn-tonal' }} mt-1.5"
+    onclick="htmx.toggleClass(htmx.find('#txn-filters'), 'open')"
+  >
+    <icon>tune</icon>
+  </button>
 </div>

@@ -1,43 +1,57 @@
-<section class="bg-white max-w-screen-lg m-auto p-2 min-h-full"
-         hx-get="{{ url_for('net_worth.page') }}"
-         hx-trigger="update-account from:body, update-asset from:body"
-         hx-target="#main"
-         hx-swap="innerHTML">
-    <div class="w-full flex justify-between items-end">
-        <h1 class="text-2xl md:text-3xl align-left w-full font-serif text-green-600">Net Worth</h1>
-        <h2 class="text-lg whitespace-nowrap">
-            Today's Balance <b>{{ current | money }}</b>
-        </h2>
+<section
+  class="m-auto min-h-full max-w-screen-lg bg-white p-2"
+  hx-get="{{ url_for('net_worth.page') }}"
+  hx-trigger="update-account from:body, update-asset from:body"
+  hx-target="#main"
+  hx-swap="innerHTML"
+>
+  <div class="flex w-full items-end justify-between">
+    <h1
+      class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl"
+    >
+      Net Worth
+    </h1>
+    <h2 class="whitespace-nowrap text-lg">
+      Today's Balance <b>{{ current | money }}</b>
+    </h2>
+  </div>
+  <div class="relative h-60 w-full md:h-96">
+    <canvas id="total-chart-canvas" hx-preserve></canvas>
+    {% include "shared/spinner.jinja" %}
+  </div>
+  {% include "net-worth/chart-config.jinja" %}
+  <h1 class="align-left w-full font-serif text-3xl text-green-600">Assets</h1>
+  <div class="relative h-60 w-full md:h-96">
+    <canvas id="assets-chart-canvas" hx-preserve></canvas>
+    {% include "shared/spinner.jinja" %}
+  </div>
+  {% with assets = chart["assets"] %}
+    {% include "accounts/assets.jinja" %}
+  {% endwith %}
+  <h1 class="align-left w-full font-serif text-3xl text-green-600">
+    Liabilities
+  </h1>
+  <div class="relative h-60 w-full md:h-96">
+    <canvas id="liabilities-chart-canvas" hx-preserve></canvas>
+    {% include "shared/spinner.jinja" %}
+  </div>
+  <h1 class="align-left w-full font-serif text-3xl text-green-600">
+    Breakdown
+  </h1>
+  <div class="space relative flex justify-between max-md:flex-col">
+    <div class="flex max-h-[80vh] flex-col md:w-[49%]">
+      <canvas id="assets-pie-chart-canvas" class="mb-2" hx-preserve></canvas>
+      <div id="assets-breakdown" class="min-h-0 overflow-y-scroll"></div>
     </div>
-    <div class="w-full h-60 md:h-96 relative">
-        <canvas id="total-chart-canvas" hx-preserve></canvas>
-        {% include "shared/spinner.jinja" %}
+    <div class="flex max-h-[80vh] flex-col md:w-[49%]">
+      <canvas
+        id="liabilities-pie-chart-canvas"
+        class="mb-2"
+        hx-preserve
+      ></canvas>
+      <div id="liabilities-breakdown" class="min-h-0 overflow-y-scroll"></div>
     </div>
-    {% include "net-worth/chart-config.jinja" %}
-    <h1 class="text-3xl align-left w-full font-serif text-green-600">Assets</h1>
-    <div class="w-full h-60 md:h-96 relative">
-        <canvas id="assets-chart-canvas" hx-preserve></canvas>
-        {% include "shared/spinner.jinja" %}
-    </div>
-    {% with assets = chart["assets"] %}
-        {% include "accounts/assets.jinja" %}
-    {% endwith %}
-    <h1 class="text-3xl align-left w-full font-serif text-green-600">Liabilities</h1>
-    <div class="w-full h-60 md:h-96 relative">
-        <canvas id="liabilities-chart-canvas" hx-preserve></canvas>
-        {% include "shared/spinner.jinja" %}
-    </div>
-    <h1 class="text-3xl align-left w-full font-serif text-green-600">Breakdown</h1>
-    <div class="flex space justify-between relative max-md:flex-col">
-        <div class="md:w-[49%] max-h-[80vh] flex flex-col">
-            <canvas id="assets-pie-chart-canvas" class="mb-2" hx-preserve></canvas>
-            <div id="assets-breakdown" class="overflow-y-scroll min-h-0"></div>
-        </div>
-        <div class="md:w-[49%] max-h-[80vh] flex flex-col">
-            <canvas id="liabilities-pie-chart-canvas" class="mb-2" hx-preserve></canvas>
-            <div id="liabilities-breakdown" class="overflow-y-scroll min-h-0"></div>
-        </div>
-        {% include "shared/spinner.jinja" %}
-    </div>
-    {% include "net-worth/chart-data.jinja" %}
+    {% include "shared/spinner.jinja" %}
+  </div>
+  {% include "net-worth/chart-data.jinja" %}
 </section>

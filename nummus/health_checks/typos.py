@@ -42,7 +42,7 @@ class Typos(Base):
         Args:
             p: Portfolio to test
             no_ignores: True will print issues that have been ignored
-            no_description_typos: True will not check descriptions for typos
+            no_description_typos: True will not check descriptions or memos for typos
         """
         super().__init__(p, no_ignores=no_ignores)
         self._no_description_typos = no_description_typos
@@ -145,10 +145,10 @@ class Typos(Base):
                 .with_entities(
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
-                    TransactionSplit.description,
+                    TransactionSplit.memo,
                     func.count(),
                 )
-                .group_by(TransactionSplit.description)
+                .group_by(TransactionSplit.memo)
             )
             for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
                 date_ord: int
@@ -160,7 +160,7 @@ class Typos(Base):
                 source = f"{date} - {accounts[acct_id]}"
                 cleaned = re_cleaner.sub("", value).lower()
                 for word in self._RE_WORDS.split(cleaned):
-                    add(word, source, "description", count)
+                    add(word, source, "memo", count)
 
             query = (
                 s.query(Asset)
@@ -209,5 +209,5 @@ class Typos(Base):
             self._issues = {
                 uri: issue
                 for uri, issue in self._issues.items()
-                if "description:" not in issue
+                if "description" not in issue and "memo" not in issue
             }

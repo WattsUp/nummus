@@ -7,14 +7,14 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Clean(Base):
+class Clean(BaseCommand):
     """Clean portfolio."""
 
     NAME = "clean"

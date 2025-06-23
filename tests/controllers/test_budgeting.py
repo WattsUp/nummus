@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import re
 from decimal import Decimal
 
 import time_machine
@@ -16,12 +17,13 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
+from nummus.web_utils import HTTP_CODE_BAD_REQUEST
 from tests.controllers.base import WebTestBase
 
 
 class TestBudgeting(WebTestBase):
     def test_page(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
         month = utils.start_of_month(today)
@@ -29,15 +31,14 @@ class TestBudgeting(WebTestBase):
         month_str = month.isoformat()[:7]
         month_last = utils.date_add_months(month, -1)
 
+        cat_1_id = d["cat_1_id"]
+        cat_1_emoji_name = d["cat_1_emoji_name"]
+
         with p.begin_session() as s:
-            t_cat_id_0 = (
+            cat_2_emoji_name = "General Merchandise"
+            cat_2_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Uncategorized")
-                .one()[0]
-            )
-            t_cat_id_1 = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
+                .where(TransactionCategory.name == cat_2_emoji_name.lower())
                 .one()[0]
             )
 
@@ -46,40 +47,21 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(endpoint, headers=headers)
         self.assertIn("Budgeting", result)
         self.assertIn(month_str, result)
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>",
-        )
-        self.assertRegex(result, r"hx-get=.*>-\$10.00</span>")
-        self.assertIn("Total to go", result)
-        self.assertIn("<select", result)
-        self.assertRegex(
-            result,
-            r"<div>\$100.00</div>[ \n]+<div .*>Ready to assign</div>[ \n]+",
-        )
-        self.assertRegex(result, r"1[ \n]+category is[ \n]+overspent")
+        self.assertIn("Ungrouped", result)
+        self.assertIn(r"1 category is overspent", result)
 
         # Assign to category and add a target
         with p.begin_session() as s:
-            a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=t_cat_id_0)
+            a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=cat_1_id)
             s.add(a)
 
         result, _ = self.web_get((endpoint, {"month": month_str}), headers=headers)
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>",
-        )
-        self.assertRegex(result, r"<span .*>\$0.00</span>")
-        self.assertRegex(
-            result,
-            r"<div>\$90.00</div>[ \n]+<div .*>Ready to assign</div>",
-        )
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$10.00"])
+        self.assertEqual(activity, ["-$10.00"])
+        self.assertEqual(available, ["$0.00"])
         self.assertNotIn("overspent", result)
 
         # Assign to other category
@@ -87,12 +69,12 @@ class TestBudgeting(WebTestBase):
             a = BudgetAssignment(
                 month_ord=month_last.toordinal(),
                 amount=50,
-                category_id=t_cat_id_1,
+                category_id=cat_2_id,
             )
             s.add(a)
 
             tar = Target(
-                category_id=t_cat_id_1,
+                category_id=cat_2_id,
                 amount=Decimal(50),
                 type_=TargetType.BALANCE,
                 period=TargetPeriod.ONCE,
@@ -101,55 +83,39 @@ class TestBudgeting(WebTestBase):
             s.add(tar)
 
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$50.00</div>",
-        )
-        self.assertRegex(result, r"<span .*>\$0.00</span>")
-        self.assertRegex(result, r"hx-get=.*>\$50.00</span>")
-        self.assertRegex(
-            result,
-            r"<div>\$40.00</div>[ \n]+<div .*>Ready to assign</div>[ \n]+",
-        )
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$10.00"])
+        self.assertEqual(activity, ["-$10.00"])
+        self.assertEqual(available, ["$50.00"])
         self.assertNotIn("overspent", result)
-        self.assertIn("Funded", result)
-        i_uncategorized = result.find("Uncategorized")
-        i_general = result.find("General Merchandise")
-        self.assertLess(i_general, i_uncategorized)
+        i_cat_1 = result.find(cat_1_emoji_name)
+        i_cat_2 = result.find(cat_2_emoji_name)
+        self.assertLess(i_cat_2, i_cat_1)
 
-        # Group General Merchandise
+        # Group cat 2
         with p.begin_session() as s:
             g = BudgetGroup(name="Bills", position=0)
             s.add(g)
             s.flush()
             g_bills_id = g.id_
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "General Merchandise",
+                TransactionCategory.id_ == cat_2_id,
             ).update({"budget_group_id": g_bills_id, "budget_position": 0})
 
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>\$50.00</div>",
-        )
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>",
-        )
-        i_uncategorized = result.find("Uncategorized")
-        i_general = result.find("General Merchandise")
-        self.assertLess(i_general, i_uncategorized)
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$0.00", "$10.00"])
+        self.assertEqual(activity, ["$0.00", "-$10.00"])
+        self.assertEqual(available, ["$50.00", "$0.00"])
+        i_cat_1 = result.find(cat_1_emoji_name)
+        i_cat_2 = result.find(cat_2_emoji_name)
+        self.assertLess(i_cat_2, i_cat_1)
 
-        # Group Uncategorized
+        # Group cat 1
         with p.begin_session() as s:
             s.query(BudgetGroup).where(BudgetGroup.id_ == g_bills_id).update(
                 {"position": 1},
@@ -159,27 +125,19 @@ class TestBudgeting(WebTestBase):
             s.flush()
             g_wants_id = g.id_
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "Uncategorized",
+                TransactionCategory.id_ == cat_1_id,
             ).update({"budget_group_id": g_wants_id, "budget_position": 0})
 
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>\$50.00</div>",
-        )
-        self.assertRegex(
-            result,
-            r"<span.*>Wants</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>",
-        )
-        i_uncategorized = result.find("Uncategorized")
-        i_general = result.find("General Merchandise")
-        self.assertLess(i_uncategorized, i_general)
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$10.00", "$0.00", "$0.00"])
+        self.assertEqual(activity, ["-$10.00", "$0.00", "$0.00"])
+        self.assertEqual(available, ["$0.00", "$50.00", "$0.00"])
+        i_cat_1 = result.find(cat_1_emoji_name)
+        i_cat_2 = result.find(cat_2_emoji_name)
+        self.assertLess(i_cat_1, i_cat_2)
         i_bills = result.find("Bills")
         i_wants = result.find("Wants")
         self.assertLess(i_wants, i_bills)
@@ -187,23 +145,22 @@ class TestBudgeting(WebTestBase):
         # Combine groups
         with p.begin_session() as s:
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "General Merchandise",
+                TransactionCategory.id_ == cat_1_id,
             ).update({"budget_group_id": g_bills_id, "budget_position": 1})
             s.query(TransactionCategory).where(
-                TransactionCategory.name == "Uncategorized",
+                TransactionCategory.id_ == cat_2_id,
             ).update({"budget_group_id": g_bills_id, "budget_position": 0})
 
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$50.00</div>",
-        )
-        i_uncategorized = result.find("Uncategorized")
-        i_general = result.find("General Merchandise")
-        self.assertLess(i_uncategorized, i_general)
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$0.00", "$10.00", "$0.00"])
+        self.assertEqual(activity, ["$0.00", "-$10.00", "$0.00"])
+        self.assertEqual(available, ["$0.00", "$50.00", "$0.00"])
+        i_cat_1 = result.find(cat_1_emoji_name)
+        i_cat_2 = result.find(cat_2_emoji_name)
+        self.assertLess(i_cat_2, i_cat_1)
 
         # Unassign other category, assign remaining
         with p.begin_session() as s:
@@ -213,21 +170,17 @@ class TestBudgeting(WebTestBase):
             a = BudgetAssignment(
                 month_ord=month_ord,
                 amount=-50,
-                category_id=t_cat_id_1,
+                category_id=cat_2_id,
             )
             s.add(a)
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$50.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$90.00</div>",
-        )
-        self.assertRegex(
-            result,
-            r"<div>\$0.00</div>[ \n]+<div .*>All money assigned</div>",
-        )
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$0.00", "$50.00", "$0.00"])
+        self.assertEqual(activity, ["$0.00", "-$10.00", "$0.00"])
+        self.assertEqual(available, ["$0.00", "$90.00", "$0.00"])
+        self.assertIn("All money assigned", result)
 
         # Over assign
         with p.begin_session() as s:
@@ -235,104 +188,114 @@ class TestBudgeting(WebTestBase):
                 BudgetAssignment.month_ord == month_ord,
             ).update({"amount": Decimal(100)})
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<span.*>Bills</span>[ \n]+</div>[ \n]+"
-            r"<div.*>\$200.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$240.00</div>",
-        )
-        self.assertRegex(
-            result,
-            r"<div>-\$150.00</div>[ \n]+<div .*>More money assigned than held</div>",
-        )
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$0.00", "$200.00", "$0.00"])
+        self.assertEqual(activity, ["$0.00", "-$10.00", "$0.00"])
+        self.assertEqual(available, ["$0.00", "$240.00", "$0.00"])
+        self.assertIn("You assigned more than you have", result)
 
         # Add unbalanced transfer
         with p.begin_session() as s:
-            t_cat_id_2 = (
+            cat_3_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Transfers")
+                .where(TransactionCategory.name == "transfers")
                 .one()[0]
             )
             s.query(TransactionSplit).where(TransactionSplit.amount > 0).update(
-                {"category_id": t_cat_id_2},
+                {"category_id": cat_3_id},
             )
         result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>\$100.00</div>[ \n]+"
-            r"<div.*>\$100.00</div>",
-        )
+        assigned = re.findall(r"Assigned</div><div>(-?\$\d+\.\d\d)</div>", result)
+        activity = re.findall(r"Activity</div><div>(-?\$\d+\.\d\d)</div>", result)
+        available = re.findall(r"Available</div><div>(-?\$\d+\.\d\d)</div>", result)
+        self.assertEqual(assigned, ["$0.00", "$200.00", "$0.00"])
+        self.assertEqual(activity, ["$0.00", "-$10.00", "$100.00"])
+        self.assertEqual(available, ["$0.00", "$240.00", "$100.00"])
+
+    def test_validation(self) -> None:
+        today = datetime.date.today()
+
+        endpoint = "budgeting.validation"
+
+        result, headers = self.web_get((endpoint, {"date": " "}))
+        self.assertEqual("Required", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"date": "a"}))
+        self.assertEqual("Unable to parse", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"date": today.isoformat()}))
+        self.assertEqual("", result)
+        self.assertEqual(headers.get("HX-Trigger"), "target-desc")
+
+        result, headers = self.web_get((endpoint, {"amount": " "}))
+        self.assertEqual("Required", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"amount": "a"}))
+        self.assertEqual("Unable to parse", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"amount": "10"}))
+        self.assertEqual("", result)
+        self.assertEqual(headers.get("HX-Trigger"), "target-desc")
+
+        result, headers = self.web_get((endpoint, {"repeat": " "}))
+        self.assertEqual("Required", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"repeat": "a"}))
+        self.assertEqual("Unable to parse", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"repeat": "0"}))
+        self.assertEqual("Must be positive", result)
+        self.assertNotIn("HX-Trigger", headers)
+
+        result, headers = self.web_get((endpoint, {"repeat": "10"}))
+        self.assertEqual("", result)
+        self.assertEqual(headers.get("HX-Trigger"), "target-desc")
 
     def test_assign(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
 
-        with p.begin_session() as s:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Uncategorized")
-                .one()[0]
-            )
-            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+        cat_1_id = d["cat_1_id"]
+        cat_1_uri = d["cat_1_uri"]
 
         endpoint = "budgeting.assign"
-        url = endpoint, {"uri": t_cat_uri, "month": month_str}
+        url = endpoint, {"uri": cat_1_uri, "month": month_str}
         form = {"amount": "5*2"}
-        result, _ = self.web_put(url, data=form)
+        _, _ = self.web_put(url, data=form)
         with p.begin_session() as s:
-            a = s.query(BudgetAssignment).first()
-            if a is None:
-                self.fail("BudgetAssignment is missing")
+            a = s.query(BudgetAssignment).one()
             self.assertEqual(a.month_ord, month_ord)
-            self.assertEqual(a.category_id, t_cat_id)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(10))
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$0.00</div>",
-        )
 
         form = {"amount": "100"}
-        result, _ = self.web_put(url, data=form)
+        _, _ = self.web_put(url, data=form)
         with p.begin_session() as s:
-            a = s.query(BudgetAssignment).first()
-            if a is None:
-                self.fail("BudgetAssignment is missing")
+            a = s.query(BudgetAssignment).one()
             self.assertEqual(a.month_ord, month_ord)
-            self.assertEqual(a.category_id, t_cat_id)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(100))
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$100.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>\$90.00</div>",
-        )
 
         form = {"amount": "0"}
-        result, _ = self.web_put(url, data=form)
+        _, _ = self.web_put(url, data=form)
         with p.begin_session() as s:
             n = s.query(BudgetAssignment).count()
             self.assertEqual(n, 0)
-        self.assertRegex(
-            result,
-            r"<div.*>[ \n]+Ungrouped[ \n]+</div>[ \n]+"
-            r"<div.*>\$0.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>[ \n]+"
-            r"<div.*>-\$10.00</div>",
-        )
 
     def test_overspending(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
         month = utils.start_of_month(today)
@@ -340,63 +303,63 @@ class TestBudgeting(WebTestBase):
         month_str = month.isoformat()[:7]
         month_last = utils.date_add_months(month, -1)
 
+        cat_1_id = d["cat_1_id"]
+        cat_1_uri = d["cat_1_uri"]
+        cat_1_emoji_name = d["cat_1_emoji_name"]
+
         with p.begin_session() as s:
-            t_cat_id_0 = (
+            cat_2_emoji_name = "General Merchandise"
+            cat_2_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Uncategorized")
+                .where(TransactionCategory.name == cat_2_emoji_name.lower())
                 .one()[0]
             )
-            t_cat_id_1 = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()[0]
-            )
-            t_cat_uri_0 = TransactionCategory.id_to_uri(t_cat_id_0)
-            t_cat_uri_1 = TransactionCategory.id_to_uri(t_cat_id_1)
+            cat_2_uri = TransactionCategory.id_to_uri(cat_2_id)
 
         endpoint = "budgeting.overspending"
-        url = endpoint, {"uri": t_cat_uri_0, "month": month_str}
+        url = endpoint, {"uri": cat_1_uri, "month": month_str}
         result, _ = self.web_get(url)
-        self.assertIn("Uncategorized is overspent by $10.00", result)
+        self.assertIn(f"{cat_1_emoji_name} is overspent by $10.00", result)
         self.assertIn(
             '<option value="income">Assignable income $100.00</option>',
             result,
         )
-        self.assertEqual(result.count("option"), 2)
+        # 2 for empty option, 2 for group label, 2 for Assignable
+        self.assertEqual(result.count("option"), 6)
 
         form = {"source": "income"}
         _, headers = self.web_put(url, data=form)
-        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
-        self.assertEqual(headers["HX-Trigger"], "update-budget")
+        self.assertEqual(headers.get("HX-Trigger"), "budget")
         with p.begin_session() as s:
             a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, t_cat_id_0)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(10))
             self.assertEqual(a.month_ord, month_ord)
 
             a.amount = Decimal(5)
 
-            a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=t_cat_id_1)
+            a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=cat_2_id)
             s.add(a)
 
         result, _ = self.web_get(url)
-        self.assertIn("Uncategorized is overspent by $5.00", result)
+        self.assertIn(f"{cat_1_emoji_name} is overspent by $5.00", result)
         self.assertIn(
             '<option value="income">Assignable income $85.00</option>',
             result,
         )
         self.assertIn(
-            f'<option value="{t_cat_uri_1}">General Merchandise $10.00</option>',
+            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $10.00</option>',
             result,
         )
-        self.assertEqual(result.count("option"), 4)
+        # 2 for empty option, 4 for group labels, 2 for Assignable, 2 for General
+        self.assertEqual(result.count("option"), 10)
 
-        form = {"source": t_cat_uri_1}
+        form = {"source": cat_2_uri}
         self.web_put(url, data=form)
         with p.begin_session() as s:
             a = (
                 s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == t_cat_id_0)
+                .where(BudgetAssignment.category_id == cat_1_id)
                 .one()
             )
             self.assertEqual(a.amount, Decimal(10))
@@ -405,7 +368,7 @@ class TestBudgeting(WebTestBase):
 
             a = (
                 s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == t_cat_id_1)
+                .where(BudgetAssignment.category_id == cat_2_id)
                 .one()
             )
             self.assertEqual(a.amount, Decimal(5))
@@ -415,21 +378,22 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(url)
         self.assertIn("More money is assigned than held by $5.00", result)
         self.assertIn(
-            f'<option value="{t_cat_uri_0}">Uncategorized $90.00</option>',
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} $90.00</option>',
             result,
         )
         self.assertIn(
-            f'<option value="{t_cat_uri_1}">General Merchandise $5.00</option>',
+            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $5.00</option>',
             result,
         )
-        self.assertEqual(result.count("option"), 4)
+        # 2 for empty option, 2 for group label, 2 for Assignable, 2 for General
+        self.assertEqual(result.count("option"), 8)
 
-        form = {"source": t_cat_uri_1}
+        form = {"source": cat_2_uri}
         self.web_put(url, data=form)
         with p.begin_session() as s:
-            # cat_1 would have been deleted
+            # cat_2 would have been deleted
             a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, t_cat_id_0)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(100))
             self.assertEqual(a.month_ord, month_ord)
 
@@ -440,21 +404,21 @@ class TestBudgeting(WebTestBase):
         result, _ = self.web_get(url)
         self.assertIn("More money is assigned than held by $100.00", result)
         self.assertIn(
-            f'<option value="{t_cat_uri_0}">Uncategorized $190.00</option>',
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} $190.00</option>',
             result,
         )
-        self.assertEqual(result.count("option"), 2)
+        self.assertEqual(result.count("option"), 6)
 
-        form = {"source": t_cat_uri_0}
+        form = {"source": cat_1_uri}
         self.web_put(url, data=form)
         with p.begin_session() as s:
-            # cat_1 would have been deleted
+            # cat_2 would have been deleted
             a = (
                 s.query(BudgetAssignment)
                 .where(BudgetAssignment.month_ord == month_last.toordinal())
                 .one()
             )
-            self.assertEqual(a.category_id, t_cat_id_0)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(200))
 
             a = (
@@ -462,11 +426,11 @@ class TestBudgeting(WebTestBase):
                 .where(BudgetAssignment.month_ord == month_ord)
                 .one()
             )
-            self.assertEqual(a.category_id, t_cat_id_0)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(-100))
 
     def test_move(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
         today = datetime.date.today()
         month = utils.start_of_month(today)
@@ -474,71 +438,63 @@ class TestBudgeting(WebTestBase):
         month_str = month.isoformat()[:7]
         month_last = utils.date_add_months(month, -1)
 
+        cat_1_id = d["cat_1_id"]
+        cat_1_uri = d["cat_1_uri"]
+        cat_1_emoji_name = d["cat_1_emoji_name"]
+
         with p.begin_session() as s:
-            t_cat_id_0 = (
+            cat_2_emoji_name = "General Merchandise"
+            cat_2_id = (
                 s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "Uncategorized")
+                .where(TransactionCategory.name == cat_2_emoji_name.lower())
                 .one()[0]
             )
-            t_cat_id_1 = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()[0]
-            )
-            t_cat_uri_0 = TransactionCategory.id_to_uri(t_cat_id_0)
-            t_cat_uri_1 = TransactionCategory.id_to_uri(t_cat_id_1)
+            cat_2_uri = TransactionCategory.id_to_uri(cat_2_id)
 
         endpoint = "budgeting.move"
         url = endpoint, {"uri": "income", "month": month_str}
         result, _ = self.web_get(url)
         self.assertIn("Assignable income has $100.00 available", result)
         self.assertIn(
-            f'<option value="{t_cat_uri_0}">Uncategorized -$10.00</option>',
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} -$10.00</option>',
             result,
         )
         self.assertIn(
-            f'<option value="{t_cat_uri_1}">General Merchandise $0.00</option>',
+            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $0.00</option>',
             result,
         )
-        i_uncategorized = result.find("Uncategorized")
-        i_general = result.find("General Merchandise")
-        self.assertLess(i_uncategorized, i_general)
 
-        form = {"destination": t_cat_uri_1}
+        form = {"destination": cat_2_uri}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Amount to move must not be blank", result)
 
-        form = {"destination": t_cat_uri_1, "amount": "100.00"}
+        form = {"destination": cat_2_uri, "amount": "100.00"}
         _, headers = self.web_put(url, data=form)
-        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
-        self.assertEqual(headers["HX-Trigger"], "update-budget")
+        self.assertEqual(headers.get("HX-Trigger"), "budget")
         with p.begin_session() as s:
             a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, t_cat_id_1)
+            self.assertEqual(a.category_id, cat_2_id)
             self.assertEqual(a.month_ord, month_ord)
             self.assertEqual(a.amount, Decimal(100))
 
-        url = endpoint, {"uri": t_cat_uri_1, "month": month_str}
+        url = endpoint, {"uri": cat_2_uri, "month": month_str}
         result, _ = self.web_get(url)
-        self.assertIn("General Merchandise has $100.00 available", result)
+        self.assertIn(f"{cat_2_emoji_name} has $100.00 available", result)
         self.assertIn(
-            f'<option value="{t_cat_uri_0}">Uncategorized -$10.00</option>',
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} -$10.00</option>',
             result,
         )
         self.assertIn(
             '<option value="income">Assignable income $0.00</option>',
             result,
         )
-        i_uncategorized = result.find("Uncategorized")
-        i_income = result.find("Assignable income")
-        self.assertLess(i_income, i_uncategorized)
 
-        form = {"destination": t_cat_uri_0, "amount": "50.00"}
+        form = {"destination": cat_1_uri, "amount": "50.00"}
         self.web_put(url, data=form)
         with p.begin_session() as s:
             a = (
                 s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == t_cat_id_0)
+                .where(BudgetAssignment.category_id == cat_1_id)
                 .one()
             )
             self.assertEqual(a.amount, Decimal(50))
@@ -546,7 +502,7 @@ class TestBudgeting(WebTestBase):
 
             a = (
                 s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == t_cat_id_1)
+                .where(BudgetAssignment.category_id == cat_2_id)
                 .one()
             )
             self.assertEqual(a.amount, Decimal(50))
@@ -555,23 +511,23 @@ class TestBudgeting(WebTestBase):
         form = {"destination": "income", "amount": "50.00"}
         self.web_put(url, data=form)
         with p.begin_session() as s:
-            # cat_1 would have been deleted
+            # cat_2 would have been deleted
             a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, t_cat_id_0)
+            self.assertEqual(a.category_id, cat_1_id)
             self.assertEqual(a.amount, Decimal(50))
             self.assertEqual(a.month_ord, month_ord)
 
             a = BudgetAssignment(
                 month_ord=month_last.toordinal(),
                 amount=50,
-                category_id=t_cat_id_1,
+                category_id=cat_2_id,
             )
             s.add(a)
 
         result, _ = self.web_get(url)
-        self.assertIn("General Merchandise has $50.00 available", result)
+        self.assertIn(f"{cat_2_emoji_name} has $50.00 available", result)
         self.assertIn(
-            f'<option value="{t_cat_uri_0}">Uncategorized $40.00</option>',
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} $40.00</option>',
             result,
         )
         self.assertIn(
@@ -579,13 +535,13 @@ class TestBudgeting(WebTestBase):
             result,
         )
 
-        form = {"destination": t_cat_uri_0, "amount": "50.00"}
+        form = {"destination": cat_1_uri, "amount": "50.00"}
         self.web_put(url, data=form)
         with p.begin_session() as s:
             a = (
                 s.query(BudgetAssignment)
                 .where(
-                    BudgetAssignment.category_id == t_cat_id_0,
+                    BudgetAssignment.category_id == cat_1_id,
                     BudgetAssignment.month_ord == month_ord,
                 )
                 .one()
@@ -595,7 +551,7 @@ class TestBudgeting(WebTestBase):
             a = (
                 s.query(BudgetAssignment)
                 .where(
-                    BudgetAssignment.category_id == t_cat_id_1,
+                    BudgetAssignment.category_id == cat_2_id,
                     BudgetAssignment.month_ord == month_ord,
                 )
                 .one()
@@ -618,7 +574,7 @@ class TestBudgeting(WebTestBase):
 
             t_cat_0 = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name == "General Merchandise")
+                .where(TransactionCategory.name == "general merchandise")
                 .one()
             )
             t_cat_id_0 = t_cat_0.id_
@@ -628,7 +584,7 @@ class TestBudgeting(WebTestBase):
 
             t_cat_1 = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name == "Uncategorized")
+                .where(TransactionCategory.name == "uncategorized")
                 .one()
             )
             t_cat_id_1 = t_cat_1.id_
@@ -638,7 +594,7 @@ class TestBudgeting(WebTestBase):
 
             t_cat_2 = (
                 s.query(TransactionCategory)
-                .where(TransactionCategory.name == "Groceries")
+                .where(TransactionCategory.name == "groceries")
                 .one()
             )
             t_cat_id_2 = t_cat_2.id_
@@ -648,19 +604,15 @@ class TestBudgeting(WebTestBase):
 
         endpoint = "budgeting.reorder"
         url = endpoint
-        # Empty form doesn't make problems
-        form = {}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
 
         # Swap groups 0 and 1
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
             "group": [g_uri_1, g_uri_0, g_uri_0],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -691,12 +643,12 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(t_cat.budget_group_id, g_id_1)
 
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_2, t_cat_uri_0, t_cat_uri_1],
             "group": [g_uri_1, g_uri_1, g_uri_0],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -727,12 +679,12 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(t_cat.budget_group_id, g_id_1)
 
         form = {
-            "group_uri": [g_uri_1, g_uri_0],
-            "row_uri": [t_cat_uri_0, t_cat_uri_1, t_cat_uri_2],
-            "group": [g_uri_1, g_uri_0, ""],
+            "group-uri": [g_uri_1, g_uri_0],
+            "category-uri": [t_cat_uri_0, t_cat_uri_1, t_cat_uri_2],
+            "group": [g_uri_1, g_uri_0, "ungrouped"],
         }
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
+        self.assertEqual(result, "")
 
         with p.begin_session() as s:
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
@@ -761,6 +713,50 @@ class TestBudgeting(WebTestBase):
             )
             self.assertIsNone(t_cat.budget_position)
             self.assertIsNone(t_cat.budget_group_id)
+
+        # Missing group deletes it
+        form = {
+            "group-uri": [g_uri_0],
+        }
+        result, _ = self.web_put(url, data=form)
+        self.assertEqual(result, "")
+
+        with p.begin_session() as s:
+            g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
+            self.assertEqual(g.position, 0)
+
+            n = s.query(BudgetGroup).count()
+            self.assertEqual(n, 1)
+
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_0)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_1)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+            t_cat = (
+                s.query(TransactionCategory)
+                .where(TransactionCategory.id_ == t_cat_id_2)
+                .one()
+            )
+            self.assertIsNone(t_cat.budget_position)
+            self.assertIsNone(t_cat.budget_group_id)
+
+        form = {}
+        result, _ = self.web_put(url, data=form)
+        self.assertEqual(result, "")
+
+        with p.begin_session() as s:
+            n = s.query(BudgetGroup).count()
+            self.assertEqual(n, 0)
 
     def test_group(self) -> None:
         _ = self._setup_portfolio()
@@ -768,83 +764,41 @@ class TestBudgeting(WebTestBase):
 
         with p.begin_session() as s:
             g_0 = BudgetGroup(name=self.random_string(), position=0)
-            g_1 = BudgetGroup(name=self.random_string(), position=1)
-            s.add_all((g_0, g_1))
+            s.add(g_0)
             s.flush()
-            g_id_0 = g_0.id_
             g_uri_0 = g_0.uri
-            g_id_1 = g_1.id_
-            g_uri_1 = g_1.uri
-
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()
-            )
-            t_cat_id = t_cat.id_
-            t_cat.budget_group_id = g_id_0
-            t_cat.budget_position = 0
 
         group_name = "Shopping Group"
 
         endpoint = "budgeting.group"
         url = endpoint, {"uri": g_uri_0}
-        form = {"name": ""}
+        form = {"name": " "}
         result, _ = self.web_put(url, data=form)
         self.assertIn("Budget group name must not be empty", result)
 
-        form = {"name": group_name, "closed": ""}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn(group_name, result)
-        self.assertEqual(result.count("checked"), 1)
-
         form = {"name": group_name}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn(group_name, result)
-        self.assertEqual(result.count("checked"), 0)
+        self.assertEqual(result, "")
 
-        with p.begin_session() as s:
-            name = s.query(BudgetGroup.name).where(BudgetGroup.id_ == g_id_0).scalar()
-            self.assertEqual(name, group_name)
-
-        result, _ = self.web_delete(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertNotIn(group_name, result)
-
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.id_ == t_cat_id)
-                .one()
-            )
-            self.assertIsNone(t_cat.budget_group_id)
-            self.assertIsNone(t_cat.budget_position)
-
-            # Next category should move up
-            position = (
-                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_id_1).scalar()
-            )
-            self.assertEqual(position, 0)
-
-        url = endpoint, {"uri": g_uri_1}
-        form = {"name": group_name, "closed": ""}
+        form = {"open": True}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 1)
+        self.assertEqual(result, "")
+        with self._client.session_transaction() as session:
+            self.assertEqual(session["groups_open"], [g_uri_0])
 
-        url = endpoint, {"uri": "ungrouped"}
-        form = {"closed": ""}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 2)
-
-        url = endpoint, {"uri": "ungrouped"}
         form = {}
         result, _ = self.web_put(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertEqual(result.count("checked"), 1)
+        self.assertEqual(result, "")
+        with self._client.session_transaction() as session:
+            self.assertEqual(session["groups_open"], [])
+
+        # Can't edit ungrouped
+        form = {"name": group_name}
+        url = endpoint, {"uri": "ungrouped"}
+        self.web_put(url, data=form, rc=HTTP_CODE_BAD_REQUEST)
+
+        form = {"open": group_name}
+        result, _ = self.web_put(url, data=form)
 
     def test_new_group(self) -> None:
         _ = self._setup_portfolio()
@@ -853,38 +807,48 @@ class TestBudgeting(WebTestBase):
         with p.begin_session() as s:
             g_0 = BudgetGroup(name="Bills", position=0)
             s.add(g_0)
+            s.flush()
+
+            g_0_id = g_0.id_
 
         endpoint = "budgeting.new_group"
-        url = endpoint
-        form = {"name": "Bills"}
-        result, _ = self.web_post(url, data=form)
-        self.assertIn("Budget group name must be unique", result)
+        result, _ = self.web_post(endpoint)
+        target = '<div id="group-'
+        self.assertEqual(result[: len(target)], target)
+        self.assertIn("New Group", result)
 
-        form = {"name": "Wants"}
-        result, _ = self.web_post(url, data=form)
-        self.assertIn('<div id="budget-table"', result)
-        self.assertIn("Bills", result)
-        self.assertIn("Wants", result)
+        with p.begin_session() as s:
+            result = (
+                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_0_id).scalar()
+            )
+            self.assertEqual(result, 1)
+
+        result, _ = self.web_post(endpoint)
+        target = '<div id="group-'
+        self.assertEqual(result[: len(target)], target)
+        self.assertIn("New Group 2", result)
+
+        with p.begin_session() as s:
+            result = (
+                s.query(BudgetGroup.position).where(BudgetGroup.id_ == g_0_id).scalar()
+            )
+            self.assertEqual(result, 2)
 
     def test_ctx_target(self) -> None:
         # Test the context since testing the HTML would be very difficult
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
 
         today = datetime.date.today()
         month = utils.start_of_month(today)
         next_year = utils.date_add_months(month, 12)
 
-        with p.begin_session() as s:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()[0]
-            )
+        cat_1_id = d["cat_1_id"]
 
+        with p.begin_session() as s:
             # BALANCE target, no due date
             tar = Target(
-                category_id=t_cat_id,
+                category_id=cat_1_id,
                 period=TargetPeriod.ONCE,
                 type_=TargetType.BALANCE,
                 amount=100,
@@ -901,7 +865,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(30),
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(30),
                 "to_go": Decimal(70),
@@ -924,7 +888,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(110),
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(110),
                 "to_go": Decimal(-10),
@@ -948,7 +912,7 @@ class TestBudgeting(WebTestBase):
                 leftover=Decimal(10),
             )
             self.maxDiff = None
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(20),
                 "to_go": Decimal(80),
@@ -975,7 +939,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(9),
                 leftover=Decimal(9),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(7),
                 "total_assigned": Decimal(9),
                 "to_go": Decimal(7),
@@ -998,7 +962,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(29),
                 leftover=Decimal(9),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(7),
                 "total_assigned": Decimal(29),
                 "to_go": Decimal(-13),
@@ -1024,7 +988,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(129),
                 leftover=Decimal(9),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(91),
                 "total_assigned": Decimal(129),
                 "to_go": Decimal(-29),
@@ -1055,7 +1019,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(100 * n_weeks - 10),
                 "total_assigned": Decimal(30),
                 "to_go": Decimal(100 * n_weeks - 30),
@@ -1080,7 +1044,7 @@ class TestBudgeting(WebTestBase):
                     available=Decimal(0),  # Spent it all
                     leftover=Decimal(10),
                 )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(100 * n_weeks - 10),
                 "total_assigned": Decimal(100 * 2 + 10),
                 "to_go": Decimal(100 * (n_weeks - 2) - 10),
@@ -1106,7 +1070,7 @@ class TestBudgeting(WebTestBase):
                     available=Decimal(0),  # Spent it all
                     leftover=Decimal(10),
                 )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(100 * n_weeks - 10),
                 "total_assigned": Decimal(100 * 2 + 10),
                 "to_go": Decimal(100 * (n_weeks - 2) - 10),
@@ -1129,7 +1093,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(100 * n_weeks - 10),
                 "total_assigned": Decimal(100 * n_weeks + 10),
                 "to_go": Decimal(-10),
@@ -1164,7 +1128,7 @@ class TestBudgeting(WebTestBase):
                 today.weekday(),
                 utils.date_add_months(month, 1),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(100 * n_weeks),
                 "total_assigned": Decimal(20),
                 "to_go": Decimal(100 * n_weeks - 20),
@@ -1194,7 +1158,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(30),
                 "to_go": Decimal(70),
@@ -1217,7 +1181,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(50),
                 "total_assigned": Decimal(20),
                 "to_go": Decimal(30),
@@ -1240,7 +1204,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(50),
                 "total_assigned": Decimal(60),
                 "to_go": Decimal(-10),
@@ -1270,7 +1234,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(30),
                 "to_go": Decimal(70),
@@ -1293,7 +1257,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(20),
                 leftover=Decimal(20),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(20),
                 "total_assigned": Decimal(20),
                 "to_go": Decimal(20),
@@ -1323,7 +1287,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(10),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(90),
                 "total_assigned": Decimal(30),
                 "to_go": Decimal(70),
@@ -1346,7 +1310,7 @@ class TestBudgeting(WebTestBase):
                 available=Decimal(0),  # Spent it all
                 leftover=Decimal(4),
             )
-            target: budgeting.TargetContext = {
+            target: budgeting._TargetContext = {
                 "target_assigned": Decimal(4),
                 "total_assigned": Decimal(24),
                 "to_go": Decimal(-16),
@@ -1362,24 +1326,18 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
     def test_target(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
-
         today = datetime.date.today()
 
-        with p.begin_session() as s:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()[0]
-            )
-            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+        cat_1_id = d["cat_1_id"]
+        cat_1_uri = d["cat_1_uri"]
 
         # Get new target editor
         endpoint = "budgeting.target"
-        url = (endpoint, {"uri": t_cat_uri})
+        url = (endpoint, {"uri": cat_1_uri})
         result, _ = self.web_get(url)
-        self.assertIn("New Target: General Merchandise", result)
+        self.assertIn("New target", result)
 
         # Negative is bad
         form = {
@@ -1399,12 +1357,11 @@ class TestBudgeting(WebTestBase):
             "has-due": "off",
         }
         _, headers = self.web_post(url, data=form)
-        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
-        self.assertEqual(headers["HX-Trigger"], "update-budget")
+        self.assertEqual(headers.get("HX-Trigger"), "budget")
 
         with p.begin_session() as s:
             tar = s.query(Target).one()
-            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.category_id, cat_1_id)
             self.assertEqual(tar.period, TargetPeriod.ONCE)
             self.assertEqual(tar.type_, TargetType.BALANCE)
             self.assertEqual(tar.amount, 100)
@@ -1417,7 +1374,7 @@ class TestBudgeting(WebTestBase):
         self.assertIn("Cannot have multiple targets per category", result)
 
         result, _ = self.web_get((endpoint, {"uri": tar_uri, "has-due": "on"}))
-        self.assertRegex(result, rf'value="{today.month}"[ \n]*selected>')
+        self.assertIn(f'value="{today.month}" selected>', result)
 
         # Edit target
         form = {
@@ -1432,7 +1389,7 @@ class TestBudgeting(WebTestBase):
         self.web_put(url, data=form)
         with p.begin_session() as s:
             tar = s.query(Target).one()
-            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.category_id, cat_1_id)
             self.assertEqual(tar.period, TargetPeriod.ONCE)
             self.assertEqual(tar.type_, TargetType.BALANCE)
             self.assertEqual(tar.amount, 100)
@@ -1442,14 +1399,14 @@ class TestBudgeting(WebTestBase):
 
         # No has-due means it shouldn't change due date
         result, _ = self.web_get(url)
-        self.assertRegex(result, r'value="12"[ \n]*selected>[ \n]*December')
-        self.assertRegex(result, rf'value="{today.year+1}"[ \n]*selected>')
+        self.assertIn('value="12" selected>December', result)
+        self.assertIn(f'value="{today.year + 1}" selected>', result)
 
         # Changing period to weekly should reset due date
         result, _ = self.web_get(
-            (endpoint, {"uri": t_cat_uri, "period": "Weekly", "change": True}),
+            (endpoint, {"uri": cat_1_uri, "period": "Weekly", "change": True}),
         )
-        self.assertRegex(result, r'value="0"[ \n]*selected>[ \n]*Monday')
+        self.assertIn('value="0" selected>Monday', result)
 
         form = {
             "period": "Weekly",
@@ -1460,7 +1417,7 @@ class TestBudgeting(WebTestBase):
         self.web_put(url, data=form)
         with p.begin_session() as s:
             tar = s.query(Target).one()
-            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.category_id, cat_1_id)
             self.assertEqual(tar.period, TargetPeriod.WEEK)
             self.assertEqual(tar.type_, TargetType.REFILL)
             if tar.due_date_ord is None:
@@ -1480,7 +1437,7 @@ class TestBudgeting(WebTestBase):
         self.web_put(url, data=form)
         with p.begin_session() as s:
             tar = s.query(Target).one()
-            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.category_id, cat_1_id)
             self.assertEqual(tar.period, TargetPeriod.MONTH)
             self.assertEqual(tar.type_, TargetType.ACCUMULATE)
             if tar.due_date_ord is None:
@@ -1499,7 +1456,7 @@ class TestBudgeting(WebTestBase):
         self.web_put(url, data=form)
         with p.begin_session() as s:
             tar = s.query(Target).one()
-            self.assertEqual(tar.category_id, t_cat_id)
+            self.assertEqual(tar.category_id, cat_1_id)
             self.assertEqual(tar.period, TargetPeriod.YEAR)
             self.assertEqual(tar.type_, TargetType.ACCUMULATE)
             if tar.due_date_ord is None:
@@ -1510,23 +1467,18 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(tar.repeat_every, 2)
 
         _, headers = self.web_delete(url)
-        self.assertIn("HX-Trigger", headers, msg=f"Response lack HX-Trigger {result}")
-        self.assertEqual(headers["HX-Trigger"], "update-budget")
+        self.assertEqual(headers.get("HX-Trigger"), "budget")
         with p.begin_session() as s:
             n = s.query(Target).count()
             self.assertEqual(n, 0)
 
     def test_sidebar(self) -> None:
-        _ = self._setup_portfolio()
+        d = self._setup_portfolio()
         p = self._portfolio
 
-        with p.begin_session() as s:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "General Merchandise")
-                .one()[0]
-            )
-            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
+        cat_1_id = d["cat_1_id"]
+        cat_1_uri = d["cat_1_uri"]
+        cat_1_emoji_name = d["cat_1_emoji_name"]
 
         # No category selected
         endpoint = "budgeting.sidebar"
@@ -1535,16 +1487,16 @@ class TestBudgeting(WebTestBase):
         self.assertIn("<select", result)
 
         # Category selected without target
-        url = (endpoint, {"uri": t_cat_uri})
+        url = (endpoint, {"uri": cat_1_uri})
         result, _ = self.web_get(url)
         self.assertNotIn("Total to go", result)
         self.assertNotIn("<select", result)
-        self.assertIn("General Merchandise", result)
+        self.assertIn(cat_1_emoji_name, result)
         self.assertIn("Create Target", result)
 
         with p.begin_session() as s:
             tar = Target(
-                category_id=t_cat_id,
+                category_id=cat_1_id,
                 period=TargetPeriod.ONCE,
                 type_=TargetType.BALANCE,
                 amount=100,
@@ -1553,9 +1505,10 @@ class TestBudgeting(WebTestBase):
             s.add(tar)
 
         # Category selected with target
-        url = (endpoint, {"uri": t_cat_uri})
+        url = (endpoint, {"uri": cat_1_uri})
         result, _ = self.web_get(url)
-        self.assertIn("General Merchandise", result)
+        self.assertIn(cat_1_emoji_name, result)
         self.assertIn("Edit Target", result)
         self.assertIn("Have", result)
-        self.assertIn("Assign $100.00 more to meet target", result)
+        # +10 from the spending
+        self.assertIn("Assign $110.00 more to meet target", result)

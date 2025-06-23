@@ -69,15 +69,15 @@ class AssetSector(Base):
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     sector: orm.Mapped[USSector] = orm.mapped_column(SQLEnum(USSector))
-    weight: ORMReal = orm.mapped_column(
-        Decimal6,
+    weight: ORMReal = orm.mapped_column(Decimal6)
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "sector"),
         CheckConstraint(
             "weight > 0",
             "asset_sector.weight must be positive",
         ),
     )
-
-    __table_args__ = (UniqueConstraint("asset_id", "sector"),)
 
 
 class AssetSplit(Base):
@@ -92,16 +92,16 @@ class AssetSplit(Base):
     __table_id__ = None
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
-    multiplier: ORMReal = orm.mapped_column(
-        Decimal6,
+    multiplier: ORMReal = orm.mapped_column(Decimal6)
+    date_ord: ORMInt
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "date_ord"),
         CheckConstraint(
             "multiplier > 0",
             "asset_split.multiplier must be positive",
         ),
     )
-    date_ord: ORMInt
-
-    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("multiplier")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -122,15 +122,15 @@ class AssetValuation(Base):
 
     asset_id: ORMInt = orm.mapped_column(ForeignKey("asset.id_"))
     date_ord: ORMInt
-    value: ORMReal = orm.mapped_column(
-        Decimal6,
+    value: ORMReal = orm.mapped_column(Decimal6)
+
+    __table_args__ = (
+        UniqueConstraint("asset_id", "date_ord"),
         CheckConstraint(
             "value >= 0",
             "asset_valuation.value must be zero or positive",
         ),
     )
-
-    __table_args__ = (UniqueConstraint("asset_id", "date_ord"),)
 
     @orm.validates("value")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -323,8 +323,7 @@ class Asset(Base):
         Does not commit changes, call s.commit() afterwards.
         """
         # This function is best here but need to avoid circular imports
-
-        from nummus.models import TransactionSplit
+        from nummus.models import TransactionSplit  # noqa: PLC0415
 
         s = orm.object_session(self)
         if s is None:
@@ -686,20 +685,27 @@ class Asset(Base):
         indices: dict[str, dict[str, str]] = {
             "^GSPC": {
                 "name": "S&P 500",
-                "description": "A stock market index tracking the stock performance of "
-                "500 of the largest companies listed on stock exchanges in the United "
-                "States",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "500 of the largest companies listed on stock exchanges "
+                    "in the United States"
+                ),
             },
             "^DJI": {
                 "name": "Dow Jones Industrial Average",
-                "description": "A stock market index tracking the stock performance of "
-                "30 prominent companies listed on stock exchanges in the United States",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "30 prominent companies listed on stock exchanges in the "
+                    "United States"
+                ),
             },
             "^BUK100P": {
                 "name": "Cboe UK 100",
-                "description": "A stock market index tracking the stock performance of "
-                "100 of the largest companies listed on stock exchanges in the United "
-                "Kingdom",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "100 of the largest companies listed on stock exchanges "
+                    "in the United Kingdom"
+                ),
             },
             "^N225": {
                 "name": "Nikkel Index",
@@ -707,13 +713,17 @@ class Asset(Base):
             },
             "^N100": {
                 "name": "Euronext 100 Index",
-                "description": "A stock market index tracking the stock performance of "
-                "100 of the largest companies listed on Euronext",
+                "description": (
+                    "A stock market index tracking the stock performance of "
+                    "100 of the largest companies listed on Euronext"
+                ),
             },
             "^HSI": {  # codespell:ignore
                 "name": "Hang Seng Index",
-                "description": "A freefloat-adjusted market-capitalization-weighted "
-                "stock-market index in Hong Kong",
+                "description": (
+                    "A freefloat-adjusted market-capitalization-weighted "
+                    "stock-market index in Hong Kong"
+                ),
             },
         }
         for ticker, item in indices.items():

@@ -64,7 +64,7 @@ class TestOverdrawnAccounts(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -79,7 +79,7 @@ class TestOverdrawnAccounts(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Uncategorized"],
+                category_id=categories["uncategorized"],
             )
             s.add_all((txn, t_split))
 
@@ -111,7 +111,7 @@ class TestOverdrawnAccounts(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Other Income"],
+                category_id=categories["other income"],
             )
             s.add_all((txn, t_split))
 

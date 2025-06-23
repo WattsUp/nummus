@@ -129,7 +129,7 @@ class TestBudgetAssignment(TestBase):
         s.add(acct)
         s.commit()
 
-        t_cat_id = names_rev["General Merchandise"]
+        t_cat_id = names_rev["general merchandise"]
         txn = Transaction(
             account_id=acct.id_,
             date=today,
@@ -177,7 +177,7 @@ class TestBudgetAssignment(TestBase):
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            category_id=names_rev["Other Income"],
+            category_id=names_rev["other income"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -189,7 +189,7 @@ class TestBudgetAssignment(TestBase):
             (Decimal(0), Decimal(-10), Decimal(-10), Decimal(0)),
         )
         self.assertEqual(
-            categories[names_rev["Other Income"]],
+            categories[names_rev["other income"]],
             (Decimal(0), Decimal(100), Decimal(0), Decimal(0)),
         )
         self.assertEqual(assignable, Decimal(100))
@@ -230,7 +230,7 @@ class TestBudgetAssignment(TestBase):
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            category_id=names_rev["Other Income"],
+            category_id=names_rev["other income"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -354,7 +354,7 @@ class TestTarget(TestBase):
         today_ord = today.toordinal()
 
         d = {
-            "category_id": names_rev["General Merchandise"],
+            "category_id": names_rev["general merchandise"],
             "amount": self.random_decimal(1, 10),
             "type_": TargetType.BALANCE,
             "period": TargetPeriod.ONCE,

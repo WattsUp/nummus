@@ -1,0 +1,27 @@
+<a
+  class="btn-text text-on-surface relative block px-6"
+  href="{{ url_for('accounts.page', uri=acct.uri) }}"
+  hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
+  hx-disabled-elt="this"
+>
+  <div class="flex justify-between">
+    <b>{{ acct.name }}</b>
+    <span>{{ acct.value | money }}</span>
+  </div>
+  <div class="text-on-surface-variant flex justify-between text-sm">
+    {% if acct.closed %}
+      <span class="text-error"
+        >Account was closed {{ acct.updated_days_ago | days }} ago</span
+      >
+    {% elif acct.updated_days_ago == 0 %}
+      <span
+        >{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }}
+        today</span
+      >
+      <span>{{ acct.change_today | money }}</span>
+    {% else %}
+      Updated {{ acct.updated_days_ago | days }} ago
+    {% endif %}
+  </div>
+  <icon class="absolute right-0 top-1/2 -translate-y-1/2">chevron_forward</icon>
+</a>

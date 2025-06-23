@@ -1,87 +1,62 @@
-'use strict';
+"use strict";
 const assets = {
-    chart: null,
-    /**
-     * Create Asset Chart
-     *
-     * @param {Object} raw Raw data from assets controller
-     */
-    update: function(raw) {
-        const labels = raw.labels;
-        const dateMode = raw.date_mode;
-        const values = raw.values.map(v => Number(v));
-        const min = raw.min && raw.min.map(v => Number(v));
-        const max = raw.max && raw.max.map(v => Number(v));
+  chart: null,
+  /**
+   * Create Asset Chart
+   *
+   * @param {Object} raw Raw data from assets controller
+   */
+  update: function (raw) {
+    const labels = raw.labels;
+    const dateMode = raw.date_mode;
+    const values = raw.values;
 
-        // If only single day data, duplicate for prettier charts
-        if (labels.length == 1) {
-            labels.push(labels[0]);
-            values.push(values[0]);
-            if (min) min.push(min[0]);
-            if (max) max.push(max[0]);
-        }
-
-        {
-            const canvas = document.getElementById('asset-chart-canvas');
-            const ctx = canvas.getContext('2d');
-            const datasets = [];
-            if (min == null) {
-                const blue = getThemeColor('blue');
-                const yellow = getThemeColor('yellow');
-                datasets.push({
-                    type: 'line',
-                    data: values,
-                    borderColor: getThemeColor('grey-500'),
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    hoverRadius: 0,
-                    fill: {
-                        target: 'origin',
-                        above: blue + '80',
-                        below: yellow + '80',
-                    },
-                });
-            } else {
-                const grey = getThemeColor('grey-500');
-                // Plot average as a line and fill between min/max
-                datasets.push({
-                    label: 'Max',
-                    type: 'line',
-                    data: max,
-                    borderWidth: 0,
-                    pointRadius: 0,
-                    hoverRadius: 0,
-                    fill: 2,
-                    backgroundColor: grey + '40',
-                });
-                datasets.push({
-                    label: 'Average',
-                    type: 'line',
-                    data: values,
-                    borderWidth: 2,
-                    pointRadius: 0,
-                    hoverRadius: 0,
-                    borderColor: grey,
-                });
-                datasets.push({
-                    label: 'Min',
-                    type: 'line',
-                    data: min,
-                    borderWidth: 0,
-                    pointRadius: 0,
-                    hoverRadius: 0,
-                });
-            }
-            if (this.chart && ctx == this.chart.ctx) {
-                nummusChart.update(this.chart, labels, dateMode, datasets);
-            } else {
-                this.chart = nummusChart.create(
-                    ctx,
-                    labels,
-                    dateMode,
-                    datasets,
-                );
-            }
-        }
-    },
-}
+    const canvas = document.getElementById("asset-chart-canvas");
+    const ctx = canvas.getContext("2d");
+    const datasets = [
+      {
+        label: "Value",
+        type: "line",
+        data: values,
+        borderColorRaw: "primary",
+        backgroundColorRaw: ["primary-container", "80"],
+        borderWidth: 2,
+        pointRadius: 0,
+        hoverRadius: 0,
+        fill: {
+          target: "origin",
+          aboveRaw: ["primary-container", "80"],
+          belowRaw: ["error-container", "80"],
+        },
+      },
+    ];
+    if (this.chart) this.chart.destroy();
+    this.ctx = ctx;
+    this.chart = nummusChart.create(ctx, labels, dateMode, datasets);
+  },
+  /**
+   * On change of period select, hide or show date input
+   */
+  changeTablePeriod: function () {
+    const select = htmx.find("#valuation-filters [name='period']");
+    const notCustom = select.value != "custom";
+    htmx.findAll("#valuation-filters [type='date']").forEach((e) => {
+      e.disabled = notCustom;
+    });
+  },
+  /**
+   * On click of delete valuation, confirm action
+   *
+   * @param {Event} evt Triggering event
+   */
+  confirmDelete: function (evt) {
+    dialog.confirm(
+      "Delete Valuation",
+      "Delete",
+      () => {
+        htmx.trigger(evt.target, "delete");
+      },
+      "Valuation will be deleted.",
+    );
+  },
+};

@@ -101,3 +101,10 @@ class TestSQL(TestBase):
         with path.open("rb") as file:
             data = file.read()
             self.assertNotIn(b"SQLite", data)
+
+    def test_escape(self) -> None:
+        result = sql.escape("abc")
+        self.assertEqual(result, "abc")
+
+        result = sql.escape("where")
+        self.assertEqual(result, "`where`")

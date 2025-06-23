@@ -1,53 +1,67 @@
-<div id="performance-config"
-     class="w-full my-1 font-serif flex justify-between max-lg:flex-col gap-1"
-     hx-swap-oob="{{ oob }}"
-     hx-include="#performance-config"
-     hx-target="#performance-chart-data"
-     hx-swap="outerHTML"
-     hx-indicator=".spinner">
-    <div class="flex justify-center items-center gap-1">
-        Selected index
-        <select name="index"
-                hx-get="{{ url_for('performance.chart') }}"
-                autocomplete="off">
-            {% for index, selected in chart["indices"].items() %}
-                <option value="{{ index }}" {% if selected %}selected{% endif %}>{{ index }}</option>
-            {% endfor %}
-        </select>
-        <div class="tooltip max-md:hidden">
-            {% with class = "w-6 h-6 inline-block align-bottom" %}
-                {% include "svg/help.svg" %}
-            {% endwith %}
-            <div class="tooltip-text left-1/2 -translate-x-1/2 mt-1 font-sans after:bottom-full after:border-b-grey-800 after:-ml-[4px] after:top-[unset] after:left-1/2">
-                {{ chart["index_description"] }}
-            </div>
-        </div>
+<div
+  id="performance-config"
+  class="my-1 flex w-full justify-between gap-1 font-serif max-lg:flex-col"
+  hx-swap-oob="{{ oob }}"
+  hx-include="#performance-config"
+  hx-target="#performance-chart-data"
+  hx-swap="outerHTML"
+  hx-indicator=".spinner"
+>
+  <div class="flex items-center justify-center gap-1">
+    Selected index
+    <select
+      name="index"
+      hx-get="{{ url_for('performance.chart') }}"
+      autocomplete="off"
+    >
+      {% for index, selected in chart["indices"].items() %}
+        <option value="{{ index }}" {% if selected %}selected{% endif %}>
+          {{ index }}
+        </option>
+      {% endfor %}
+    </select>
+    <div class="tooltip max-md:hidden">
+      {% with class = "w-6 h-6 inline-block align-bottom" %}
+        {% include "svg/help.svg" %}
+      {% endwith %}
+      <div
+        class="tooltip-text after:border-b-grey-800 left-1/2 mt-1 -translate-x-1/2 font-sans after:bottom-full after:left-1/2 after:top-[unset] after:-ml-[4px]"
+      >
+        {{ chart["index_description"] }}
+      </div>
     </div>
-    <div class="italic md:hidden">{{ chart["index_description"] }}</div>
-    <div class="flex justify-center items-center gap-1">
-        <select name="period"
-                hx-get="{{ url_for('performance.chart') }}"
-                autocomplete="off">
-            {% with period = chart["period"] %}
-                {% include "shared/period-options.jinja" %}
-            {% endwith %}
-        </select>
-        <input type="date"
-               name="start"
-               value="{{ chart["start"] }}"
-               hx-get="{{ url_for('performance.chart', period='custom') }}"
-               hx-trigger="blur changed,keyup[keyCode==13] changed"
-               hx-validate="true"
-               hx-on::validation:failed="event.target.classList.add('border-red')"
-               autocomplete="off">
-        to
-        <input type="date"
-               name="end"
-               value="{{ chart["end"] }}"
-               hx-get="{{ url_for('performance.chart', period='custom') }}"
-               hx-trigger="blur changed,keyup[keyCode==13] changed"
-               hx-validate="true"
-               hx-on::validation:failed="event.target.classList.add('border-red')"
-               autocomplete="off">
-    </div>
+  </div>
+  <div class="italic md:hidden">{{ chart["index_description"] }}</div>
+  <div class="flex items-center justify-center gap-1">
+    <select
+      name="period"
+      hx-get="{{ url_for('performance.chart') }}"
+      autocomplete="off"
+    >
+      {% with period = chart["period"] %}
+        {% include "shared/period-options.jinja" %}
+      {% endwith %}
+    </select>
+    <input
+      type="date"
+      name="start"
+      value="{{ chart["start"] }}"
+      hx-get="{{ url_for('performance.chart', period='custom') }}"
+      hx-trigger="blur changed,keyup[keyCode==13] changed"
+      hx-validate="true"
+      hx-on::validation:failed="event.target.classList.add('border-red')"
+      autocomplete="off"
+    />
+    to
+    <input
+      type="date"
+      name="end"
+      value="{{ chart["end"] }}"
+      hx-get="{{ url_for('performance.chart', period='custom') }}"
+      hx-trigger="blur changed,keyup[keyCode==13] changed"
+      hx-validate="true"
+      hx-on::validation:failed="event.target.classList.add('border-red')"
+      autocomplete="off"
+    />
+  </div>
 </div>

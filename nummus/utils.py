@@ -202,7 +202,10 @@ def confirm(
 
 def _eval_node(node: ast.expr) -> Decimal:
     if isinstance(node, ast.Constant):
-        return Decimal(node.value)
+        if isinstance(node.value, int | float | str):
+            return Decimal(node.value)
+        msg = f"Unknown constant type: {node.value}({type(node.value)})"
+        raise TypeError(msg)
     if isinstance(node, ast.BinOp):
         return REAL_OPERATORS[type(node.op)](
             _eval_node(node.left),
@@ -228,7 +231,7 @@ def evaluate_real_statement(s: str | None, precision: int = 2) -> Decimal | None
         return None
     try:
         value = _eval_node(ast.parse(s, mode="eval").body)
-    except (exc.EvaluationError, SyntaxError):
+    except (exc.EvaluationError, SyntaxError, TypeError):
         return None
     return round(value, precision)
 
@@ -307,11 +310,11 @@ def format_days(days: int, labels: list[str] | None = None) -> str:
 
     Returns:
         x days
-        x wks
-        x mos
-        x yrs
+        x weeks
+        x months
+        x years
     """
-    labels = labels or ["days", "wks", "mos", "yrs"]
+    labels = labels or ["days", "weeks", "months", "years"]
     years = days / DAYS_IN_YEAR
     months = years * MONTHS_IN_YEAR
     if months > THRESHOLD_MONTHS:
@@ -337,15 +340,15 @@ def format_seconds(
         labels_days: Override day labels, passed to format_days
 
     Returns:
-        x s
-        x min
-        x hrs
+        x seconds
+        x minutes
+        x hours
         x days
-        x wks
-        x mos
-        x yrs
+        x weeks
+        x months
+        x years
     """
-    labels = labels or ["s", "min", "hrs"]
+    labels = labels or ["seconds", "minutes", "hours"]
     hours = seconds / SECONDS_IN_HOUR
     if hours > THRESHOLD_HOURS:
         days = int(seconds // SECONDS_IN_DAY)
@@ -747,7 +750,7 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
     cash_flows[n - 1] = float(values[-1]) + cash_flows.get(n - 1, 0)
     if len(cash_flows) == 1:
         r = profit[-1] / (values[-1] - profit[-1]) + 1
-        return round(r**DAYS_IN_YEAR - 1, 6)
+        return Decimal(-1) if r < 0 else round(r**DAYS_IN_YEAR - 1, 6)
 
     def xnpv(r: float, cfs: dict[int, float]) -> float:
         if r <= 0:

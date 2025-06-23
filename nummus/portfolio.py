@@ -16,12 +16,12 @@ from typing import TYPE_CHECKING
 
 import sqlalchemy
 import tqdm
-from rapidfuzz import process
-from sqlalchemy import func, orm, Row
+from packaging.version import Version
+from sqlalchemy import func, orm
 
-from nummus import encryption
+from nummus import __version__, encryption
 from nummus import exceptions as exc
-from nummus import importers, models, sql, utils, version
+from nummus import importers, migrations, models, sql
 from nummus.models import (
     Account,
     Asset,
@@ -46,15 +46,23 @@ class Portfolio:
 
     _ENCRYPTION_TEST_VALUE = "nummus encryption test string"
 
-    def __init__(self, path: str | Path, key: str | None) -> None:
+    def __init__(
+        self,
+        path: str | Path,
+        key: str | None,
+        *,
+        check_migration: bool = True,
+    ) -> None:
         """Initialize Portfolio.
 
         Args:
             path: Path to database file
             key: String password to unlock database encryption
+            check_migration: True will check if migration is required
 
         Raises:
             FileNotFoundError if database does not exist
+            MigrationRequiredError if migration is required
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
@@ -79,6 +87,10 @@ class Portfolio:
         self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
+
+        if check_migration and (v := self.migration_required()):
+            msg = f"Portfolio requires migration to v{v}"
+            raise exc.MigrationRequiredError(msg)
 
     @property
     def path(self) -> Path:
@@ -170,9 +182,16 @@ class Portfolio:
                 models.metadata_create_all(s)
 
             with s.begin():
+                # If developing a migration, current version will be less
+                # Set new portfolio to max of nummus version and MIGRATORS
+                v = max(
+                    Version(__version__),
+                    *[m.min_version for m in migrations.MIGRATORS],
+                )
+
                 c_version = Config(
                     key=ConfigKey.VERSION,
-                    value=str(version.__version__),
+                    value=str(v),
                 )
                 c_enc_test = Config(
                     key=ConfigKey.ENCRYPTION_TEST,
@@ -298,6 +317,38 @@ class Portfolio:
         """
         return self.decrypt(enc_secret).decode()
 
+    @property
+    def db_version(self) -> Version:
+        """Check the version of portfolio is current and does not need migration.
+
+        Returns:
+            Version of database
+        """
+        with self.begin_session() as s:
+            try:
+                v = (
+                    s.query(Config.value)
+                    .where(Config.key == ConfigKey.VERSION)
+                    .one()[0]
+                )
+            except exc.NoResultFound as e:
+                msg = "Config.VERSION not found"
+                raise exc.ProtectedObjectNotFoundError(msg) from e
+
+            return Version(v)
+
+    def migration_required(self) -> Version | None:
+        """Check if migration is required.
+
+        Returns:
+            Version to migrate to or None if migration not required
+        """
+        v_db = self.db_version
+        for m in migrations.MIGRATORS[::-1]:
+            if v_db < m.min_version:
+                return m.min_version
+        return None
+
     def import_file(self, path: Path, path_debug: Path, *, force: bool = False) -> None:
         """Import a file into the Portfolio.
 
@@ -335,9 +386,9 @@ class Portfolio:
         today = datetime.date.today()
 
         with self.begin_session() as s:
-            categories: dict[str, TransactionCategory] = {
-                cat.name: cat for cat in s.query(TransactionCategory).all()
-            }
+            categories = TransactionCategory.map_name(s)
+            # Reverse categories for LUT
+            categories = {v: k for k, v in categories.items()}
             # Cache a mapping from account/asset name to the ID
             acct_mapping: dict[str, int] = {}
             asset_mapping: dict[str, tuple[int, str]] = {}
@@ -356,6 +407,8 @@ class Portfolio:
                     acct = self.find_account(acct_raw, session=s)
                     if not isinstance(acct, Account):
                         msg = f"Could not find Account by '{acct_raw}', ctx={ctx}"
+                        # TODO (WattsUp): Gracefully handle
+                        # import-files command should catch all expected exceptions
                         raise KeyError(msg)
                     acct_id = acct.id_
                     acct_mapping[acct_raw] = acct_id
@@ -379,14 +432,14 @@ class Portfolio:
                     if not statement:
                         statement = f"Asset Transaction {asset_name}"
 
-                category_name = d["category"] or "Uncategorized"
+                category_name = (d["category"] or "uncategorized").lower()
 
                 if d["date"] > today:
                     raise exc.FutureTransactionError
 
                 match_id: int | None = None
                 if asset_id is not None:
-                    if category_name == "Investment Fees":
+                    if category_name == "investment fees":
                         # Associate fees with asset
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
@@ -400,31 +453,28 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
-                            linked=True,
-                            # Asset transactions are immediately locked
-                            locked=True,
+                            payee=d["payee"],
+                            cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
+                            memo=d["memo"],
+                            category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=-qty,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Investment Fees"].id_,
+                            memo=d["memo"],
+                            category_id=categories["investment fees"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
                         s.add_all((txn, t_split_0, t_split_1))
                         continue
-                    if category_name == "Dividends Received":
+                    if category_name == "dividends received":
                         # Associate dividends with asset
                         amount = abs(d["amount"])
                         qty = d["asset_quantity"]
@@ -441,25 +491,22 @@ class Portfolio:
                             amount=0,
                             date=d["date"],
                             statement=statement,
-                            linked=True,
-                            # Asset transactions are immediately locked
-                            locked=True,
+                            payee=d["payee"],
+                            cleared=True,
                         )
                         t_split_0 = TransactionSplit(
                             parent=txn,
                             amount=amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Dividends Received"].id_,
+                            memo=d["memo"],
+                            category_id=categories["dividends received"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=0,
                         )
                         t_split_1 = TransactionSplit(
                             parent=txn,
                             amount=-amount,
-                            payee=d["payee"],
-                            description=d["description"],
-                            category_id=categories["Securities Traded"].id_,
+                            memo=d["memo"],
+                            category_id=categories["securities traded"],
                             asset_id=asset_id,
                             asset_quantity_unadjusted=qty,
                         )
@@ -479,7 +526,7 @@ class Portfolio:
                             Transaction.amount == d["amount"],
                             Transaction.date_ord >= date_ord - 5,
                             Transaction.date_ord <= date_ord + 5,
-                            Transaction.linked.is_(False),
+                            Transaction.cleared.is_(False),
                         )
                         .all(),
                     )
@@ -491,15 +538,14 @@ class Portfolio:
                         match_id = matches[0][0]
 
                 try:
-                    category_id = categories[category_name].id_
-                except KeyError as e:
-                    msg = f"Could not find category '{category_name}', ctx={ctx}"
-                    raise exc.UnknownCategoryError(msg) from e
+                    category_id = categories[category_name]
+                except KeyError:
+                    category_id = categories["uncategorized"]
 
                 if match_id:
                     s.query(Transaction).where(Transaction.id_ == match_id).update(
                         {
-                            "linked": True,
+                            "cleared": True,
                             "statement": Transaction.clean_strings(
                                 "statement",
                                 statement,
@@ -508,21 +554,19 @@ class Portfolio:
                     )
                     s.query(TransactionSplit).where(
                         TransactionSplit.parent_id == match_id,
-                    ).update({"linked": True})
+                    ).update({"cleared": True})
                 else:
                     txn = Transaction(
                         account_id=acct_id,
                         amount=d["amount"],
                         date=d["date"],
                         statement=statement,
-                        linked=True,
-                        # Asset transactions are immediately locked
-                        locked=asset_id is not None,
+                        payee=d["payee"],
+                        cleared=True,
                     )
                     t_split = TransactionSplit(
                         amount=d["amount"],
-                        payee=d["payee"],
-                        description=d["description"],
+                        memo=d["memo"],
                         tag=d["tag"],
                         category_id=category_id,
                         asset_id=asset_id,
@@ -666,182 +710,6 @@ class Portfolio:
         if acct_id is None:
             return None
         return session.query(Asset).where(Asset.id_ == acct_id).one()
-
-    def find_similar_transaction(
-        self,
-        txn: Transaction,
-        *,
-        cache_ok: bool = True,
-        set_property: bool = True,
-    ) -> int | None:
-        """Find the most similar Transaction.
-
-        Args:
-            txn: Transaction to compare to
-            cache_ok: If available, use Transaction.similar_txn_id
-            set_property: If match found, set similar_txn_id
-
-        Returns:
-            Most similar Transaction.id_
-        """
-        s = orm.object_session(txn)
-        if s is None:
-            raise exc.UnboundExecutionError
-
-        if cache_ok and txn.similar_txn_id is not None:
-            return txn.similar_txn_id
-
-        # Similar transaction must be within this range
-        amount_min = min(
-            txn.amount * (1 - utils.MATCH_PERCENT),
-            txn.amount - utils.MATCH_ABSOLUTE,
-        )
-        amount_max = max(
-            txn.amount * (1 + utils.MATCH_PERCENT),
-            txn.amount + utils.MATCH_ABSOLUTE,
-        )
-
-        def set_match(matching_row: int | Row[tuple[int]]) -> int:
-            id_ = matching_row if isinstance(matching_row, int) else matching_row[0]
-            if set_property:
-                txn.similar_txn_id = id_
-                s.flush()
-            return id_
-
-        # Convert txn.amount to the raw SQL value to make a raw query
-        amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
-        sort_closest_amount = sqlalchemy.text(f"abs({amount_raw} - amount)")
-
-        cat_asset_linked = {
-            t_cat_id
-            for t_cat_id, in s.query(TransactionCategory.id_)
-            .where(TransactionCategory.asset_linked.is_(True))
-            .all()
-        }
-
-        # Check within Account first, exact matches
-        # If this matches, great, no post filtering needed
-        query = (
-            s.query(Transaction.id_)
-            .where(
-                Transaction.account_id == txn.account_id,
-                Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
-                Transaction.amount >= amount_min,
-                Transaction.amount <= amount_max,
-                Transaction.statement == txn.statement,
-            )
-            .order_by(sort_closest_amount)
-        )
-        row = query.first()
-        if row is not None:
-            return set_match(row)
-
-        # Maybe exact statement but different account
-        query = (
-            s.query(Transaction.id_)
-            .where(
-                Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
-                Transaction.amount >= amount_min,
-                Transaction.amount <= amount_max,
-                Transaction.statement == txn.statement,
-            )
-            .order_by(sort_closest_amount)
-        )
-        row = query.first()
-        if row is not None:
-            return set_match(row)
-
-        # Maybe exact statement but different amount
-        query = (
-            s.query(Transaction.id_)
-            .where(
-                Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
-                Transaction.statement == txn.statement,
-            )
-            .order_by(sort_closest_amount)
-        )
-        row = query.first()
-        if row is not None:
-            return set_match(row)
-
-        # No statements match, choose highest fuzzy matching statement
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.id_,
-                Transaction.statement,
-            )
-            .where(
-                Transaction.id_ != txn.id_,
-                Transaction.locked.is_(True),
-                Transaction.amount >= amount_min,
-                Transaction.amount <= amount_max,
-            )
-            .order_by(sort_closest_amount)
-        )
-        statements: dict[int, str] = {
-            t_id: re.sub(r"[0-9]+", "", statement).lower()
-            for t_id, statement in query.yield_per(YIELD_PER)
-        }
-        if len(statements) == 0:
-            return None
-        # Don't match a Transaction if it has a Securities Traded split
-        has_asset_linked = {
-            id_
-            for id_, in s.query(TransactionSplit.parent_id)
-            .where(
-                TransactionSplit.parent_id.in_(statements),
-                TransactionSplit.category_id.in_(cat_asset_linked),
-            )
-            .distinct()
-        }
-        statements = {
-            t_id: statement
-            for t_id, statement in statements.items()
-            if t_id not in has_asset_linked
-        }
-        if len(statements) == 0:
-            return None
-        extracted = process.extract(
-            re.sub(r"[0-9]+", "", txn.statement).lower(),
-            statements,
-            limit=None,
-            score_cutoff=utils.SEARCH_THRESHOLD,
-        )
-        if len(extracted) == 0:
-            # There are transactions with similar amounts but not close statement
-            # Return the closest in amount and account
-            # Aka proceed with all matches
-            matches = {t_id: 50 for t_id in statements}
-        else:
-            matches = {t_id: score for _, score, t_id in extracted}
-
-        # Add a bonuse points for closeness in price and same account
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.id_,
-                Transaction.account_id,
-                Transaction.amount,
-            )
-            .where(Transaction.id_.in_(matches))
-        )
-        matches_bonus: dict[int, float] = {}
-        for t_id, acct_id, amount in query.yield_per(YIELD_PER):
-            # 5% off will reduce score by 5%
-            amount_diff_percent = abs(amount - txn.amount) / txn.amount
-            score = matches[t_id] * float(1 - amount_diff_percent)
-            if acct_id == txn.account_id:
-                # Extra 10 points for same account
-                score += 10
-            matches_bonus[t_id] = score
-
-        # Sort by best score and return best id
-        best_id = sorted(matches_bonus.items(), key=lambda item: -item[1])[0][0]
-        return set_match(best_id)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.

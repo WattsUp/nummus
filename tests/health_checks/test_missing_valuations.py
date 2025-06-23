@@ -73,7 +73,7 @@ class TestMissingValuations(TestBase):
             t_split = TransactionSplit(
                 amount=txn.amount,
                 parent=txn,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
                 asset_id=a_id,
                 asset_quantity_unadjusted=self.random_decimal(1, 10),
             )

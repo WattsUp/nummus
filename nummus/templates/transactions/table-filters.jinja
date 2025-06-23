@@ -1,0 +1,147 @@
+{% if not only_inner %}
+  <form
+    id="txn-filters"
+    class="not-open:hidden bg-surface-container {{ 'open' if ctx.any_filters }} mx-auto mb-2 grid max-w-2xl grid-cols-2 gap-2 rounded-xl p-2 md:grid-cols-3"
+    {# innerHTML to preserve open state #}
+    hx-swap-oob="{{ 'innerHTML' if oob }}"
+    hx-include="#txn-filters,#txn-search"
+    hx-target="#txn-table"
+    hx-indicator="#txn-table,#txn-indicator"
+    hx-get="{{ url_for(endpoint,  **url_args) }}"
+  >
+    {% block inner %}
+      <label class="input-outlined input-bg-surface-container">
+        <select
+          name="period"
+          autocomplete="off"
+          onchange="txn.changePeriod()"
+          hx-target="#txn-filters"
+          hx-indicator="unset"
+          hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+        >
+          {% for label, value in ctx.options_period %}
+            <option
+              value="{{ value }}"
+              {% if value == ctx.selected_period %}selected{% endif %}
+            >
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+        <div>
+          <div>Date range</div>
+        </div>
+      </label>
+      <label class="input-outlined input-bg-surface-container">
+        <input
+          id="txn-filter-start"
+          name="start"
+          type="date"
+          autocomplete="off"
+          value="{{ ctx.start or '' }}"
+          {% if ctx.selected_period != "custom" %}disabled{% endif %}
+          hx-target="#txn-filters"
+          hx-indicator="unset"
+          hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+        />
+        <div>
+          <div>Start date</div>
+        </div>
+      </label>
+      <label class="input-outlined input-bg-surface-container">
+        <input
+          id="txn-filter-end"
+          name="end"
+          type="date"
+          autocomplete="off"
+          value="{{ ctx.end or '' }}"
+          {% if ctx.selected_period != "custom" %}disabled{% endif %}
+          hx-target="#txn-filters"
+          hx-indicator="unset"
+          hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+        />
+        <div>
+          <div>End date</div>
+        </div>
+      </label>
+      {% if acct %}
+        <div class="col-start-2 max-md:row-start-1 md:col-start-1"></div>
+      {% else %}
+        <label
+          class="input-outlined input-bg-surface-container col-start-2 max-md:row-start-1 md:col-start-1"
+        >
+          <select
+            name="account"
+            autocomplete="off"
+            {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
+            hx-target="#txn-filters"
+            hx-indicator="unset"
+            hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          >
+            <option value=""></option>
+            {% for label, value in ctx.options_account %}
+              <option
+                value="{{ value }}"
+                {% if value == ctx.selected_account %}selected{% endif %}
+              >
+                {{ label }}
+              </option>
+            {% endfor %}
+          </select>
+          <div>
+            <div>Account</div>
+          </div>
+        </label>
+      {% endif %}
+      <label class="input-outlined input-bg-surface-container col-span-2">
+        <select
+          name="category"
+          autocomplete="off"
+          {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}
+          hx-target="#txn-filters"
+          hx-indicator="unset"
+          hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+        >
+          <option value=""></option>
+          {% for label, value, _ in ctx.options_category %}
+            <option
+              value="{{ value }}"
+              {% if value == ctx.selected_category %}selected{% endif %}
+            >
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+        <div>
+          <div>Category</div>
+        </div>
+      </label>
+      <label class="toggle col-span-full col-start-1 mx-auto gap-4">
+        <input
+          name="uncleared"
+          type="checkbox"
+          autocomplete="off"
+          {% if ctx.uncleared %}checked{% endif %}
+          hx-target="#txn-filters"
+          hx-indicator="unset"
+          hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+        />
+        <div>Only uncleared</div>
+        <switch></switch>
+      </label>
+      <div class="col-span-full flex justify-around">
+        <button class="btn-filled">Apply filter</button>
+        <button
+          class="btn-text"
+          type="button"
+          hx-include="unset"
+          hx-get="{{ url_for(endpoint,  **url_args) }}"
+        >
+          Clear all filters
+        </button>
+      </div>
+    {% endblock inner %}
+  </form>
+{% else %}
+  {{ self.inner() }}
+{% endif %}

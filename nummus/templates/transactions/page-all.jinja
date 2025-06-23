@@ -1,0 +1,25 @@
+<div
+  class="flex items-center justify-between"
+  hx-target="#main"
+  hx-include="#txn-filters,#txn-search"
+  hx-trigger="transaction from:body"
+  hx-get="{{ url_for('transactions.page_all') }}"
+>
+  {# TODO (WattsUp): Can updating be optimized to just affected rows?
+        Return oob for the two date sections affected.
+        If in search mode, fire update-transaction for first page only.
+        This also fires for new & import
+    #}
+  <h1 class="text-primary font-serif text-3xl">Transactions</h1>
+  <button
+    class="btn-tonal"
+    hx-target="#dialog"
+    hx-include="unset"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('transactions.new') }}"
+  >
+    <icon>note_stack_add</icon>New
+  </button>
+</div>
+{% include "transactions/table.jinja" %}

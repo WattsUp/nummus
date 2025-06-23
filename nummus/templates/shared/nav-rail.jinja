@@ -1,0 +1,59 @@
+<nav id="nav-rail" hx-push-url="true" hx-swap="innerHTML show:window:top">
+  <a
+    href="{{ url_for('dashboard.page') }}"
+    hx-get="{{ url_for('dashboard.page') }}"
+    hx-disabled-elt="this"
+    >nummus</a
+  >
+  <section>
+    <button class="btn-text text-on-surface" onclick="nav.openDrawer()">
+      <icon>menu</icon>
+    </button>
+    <button
+      class="fab"
+      title="Add Transaction"
+      hx-get="{{ url_for('transactions.new') }}"
+      hx-include="next .current-account"
+      hx-target="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
+      hx-push-url="false"
+      hx-disabled-elt="this"
+    >
+      <icon>note_stack_add</icon>
+    </button>
+  </section>
+  <section>
+    {% for label, (icon, endpoint, link) in nav_items[0][1].items() %}
+      {% if link == "PAGE" %}
+        <a
+          href="{{ url_for(endpoint) }}"
+          hx-get="{{ url_for(endpoint) }}"
+          hx-disabled-elt="this"
+        >
+          <icon>{{ icon }}</icon>
+          <div>{{ label }}</div>
+        </a>
+      {% elif link == "DIALOG" %}
+        <button
+          hx-get="{{ url_for(endpoint) }}"
+          hx-target="#dialog"
+          hx-swap="innerHTML show:#dialog:top"
+          hx-push-url="false"
+          hx-disabled-elt="this"
+        >
+          <icon>{{ icon }}</icon>
+          <div>{{ label }}</div>
+        </button>
+      {% elif link == "HX_POST" %}
+        <button
+          hx-post="{{ url_for(endpoint) }}"
+          hx-push-url="false"
+          hx-disabled-elt="this"
+        >
+          <icon>{{ icon }}</icon>
+          <div>{{ label }}</div>
+        </button>
+      {% endif %}
+    {% endfor %}
+  </section>
+</nav>

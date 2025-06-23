@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import datetime
-
-import flask
+from decimal import Decimal
 
 from nummus import models, utils, web_utils
 from nummus.models import Account, AccountCategory, base_uri
@@ -40,100 +39,84 @@ class TestWebUtils(TestBase):
     def test_parse_period(self) -> None:
         today = datetime.date.today()
 
-        result = web_utils.parse_period("custom", None, None)
-        self.assertEqual(result, (today, today))
-
-        result = web_utils.parse_period("custom", "", "")
-        self.assertEqual(result, (today, today))
-
-        start = datetime.date(today.year, today.month, 4)
-        end = datetime.date(today.year, today.month, 10)
-        result = web_utils.parse_period("custom", start, end)
-        self.assertEqual(result, (start, end))
-        result = web_utils.parse_period("custom", end, start)
-        self.assertEqual(result, (end, end))
-
-        start = datetime.date(today.year, today.month, 1)
+        start = utils.date_add_months(today, -1)
         end = today
-        result = web_utils.parse_period("this-month", None, None)
+        result = web_utils.parse_period("1m")
         self.assertEqual(result, (start, end))
 
-        end = datetime.date(today.year, today.month, 1) - datetime.timedelta(days=1)
-        start = datetime.date(end.year, end.month, 1)
-        result = web_utils.parse_period("last-month", None, None)
-        self.assertEqual(result, (start, end))
-
-        start = today - datetime.timedelta(days=30)
+        start = utils.date_add_months(today, -6)
         end = today
-        result = web_utils.parse_period("30-days", None, None)
+        result = web_utils.parse_period("6m")
         self.assertEqual(result, (start, end))
 
-        start = today - datetime.timedelta(days=90)
+        start = datetime.date(today.year - 1, today.month, today.day)
         end = today
-        result = web_utils.parse_period("90-days", None, None)
-        self.assertEqual(result, (start, end))
-
-        start = utils.date_add_months(datetime.date(today.year, today.month, 1), -6)
-        end = today
-        result = web_utils.parse_period("6-months", None, None)
-        self.assertEqual(result, (start, end))
-
-        start = datetime.date(today.year - 1, today.month, 1)
-        end = today
-        result = web_utils.parse_period("1-year", None, None)
-        self.assertEqual(result, (start, end))
-
-        start = datetime.date(today.year - 5, today.month, 1)
-        end = today
-        result = web_utils.parse_period("5-years", None, None)
+        result = web_utils.parse_period("1yr")
         self.assertEqual(result, (start, end))
 
         start = datetime.date(today.year, 1, 1)
         end = today
-        result = web_utils.parse_period("this-year", None, None)
+        result = web_utils.parse_period("ytd")
         self.assertEqual(result, (start, end))
 
-        start = datetime.date(today.year - 1, 1, 1)
-        end = datetime.date(today.year - 1, 12, 31)
-        result = web_utils.parse_period("last-year", None, None)
-        self.assertEqual(result, (start, end))
-
-        result = web_utils.parse_period("all", None, None)
+        start = None
         end = today
-        self.assertEqual(result, (None, end))
+        result = web_utils.parse_period("max")
+        self.assertEqual(result, (start, end))
 
-        self.assertHTTPRaises(
-            400,
-            web_utils.parse_period,
-            self.random_string(),
-            None,
-            None,
+        self.assertHTTPRaises(400, web_utils.parse_period, self.random_string())
+
+    def test_date_labels(self) -> None:
+        today = datetime.date.today()
+
+        start = today - datetime.timedelta(days=utils.DAYS_IN_WEEK)
+        end = today
+        result, result_date_mode = web_utils.date_labels(
+            start.toordinal(),
+            end.toordinal(),
         )
+        self.assertEqual(result[0], start.isoformat())
+        self.assertEqual(result[-1], end.isoformat())
+        self.assertEqual(result_date_mode, "days")
 
-    def test_validate_image_upload(self) -> None:
-        # Missing length
-        req = flask.Request({})
-        self.assertHTTPRaises(411, web_utils.validate_image_upload, req)
-
-        # Still missing type
-        req = flask.Request({"CONTENT_LENGTH": "1000001"})
-        self.assertHTTPRaises(422, web_utils.validate_image_upload, req)
-
-        # Still bad type
-        req = flask.Request(
-            {"CONTENT_TYPE": "application/pdf", "CONTENT_LENGTH": "1000001"},
+        start = utils.date_add_months(today, -1)
+        end = today
+        result, result_date_mode = web_utils.date_labels(
+            start.toordinal(),
+            end.toordinal(),
         )
-        self.assertHTTPRaises(415, web_utils.validate_image_upload, req)
+        self.assertEqual(result[0], start.isoformat())
+        self.assertEqual(result[-1], end.isoformat())
+        self.assertEqual(result_date_mode, "weeks")
 
-        # Still bad type
-        req = flask.Request({"CONTENT_TYPE": "image/pdf", "CONTENT_LENGTH": "1000001"})
-        self.assertHTTPRaises(415, web_utils.validate_image_upload, req)
+        start = utils.date_add_months(today, -3)
+        end = today
+        result, result_date_mode = web_utils.date_labels(
+            start.toordinal(),
+            end.toordinal(),
+        )
+        self.assertEqual(result[0], start.isoformat())
+        self.assertEqual(result[-1], end.isoformat())
+        self.assertEqual(result_date_mode, "months")
 
-        # Still too long
-        req = flask.Request({"CONTENT_TYPE": "image/png", "CONTENT_LENGTH": "1000001"})
-        self.assertHTTPRaises(413, web_utils.validate_image_upload, req)
+        start = utils.date_add_months(today, -24)
+        end = today
+        result, result_date_mode = web_utils.date_labels(
+            start.toordinal(),
+            end.toordinal(),
+        )
+        self.assertEqual(result[0], start.isoformat())
+        self.assertEqual(result[-1], end.isoformat())
+        self.assertEqual(result_date_mode, "years")
 
-        # All good
-        req = flask.Request({"CONTENT_TYPE": "image/png", "CONTENT_LENGTH": "1000000"})
-        suffix = web_utils.validate_image_upload(req)
-        self.assertEqual(suffix, ".png")
+    def test_ctx_to_json(self) -> None:
+        ctx: dict[str, object] = {"number": Decimal("1234.1234")}
+        result = web_utils.ctx_to_json(ctx)
+        target = '{"number":1234.12}'
+        self.assertEqual(result, target)
+
+        class Fake:
+            pass
+
+        ctx = {"fake": Fake()}
+        self.assertRaises(TypeError, web_utils.ctx_to_json, ctx)

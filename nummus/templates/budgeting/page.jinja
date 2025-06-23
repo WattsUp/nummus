@@ -1,0 +1,125 @@
+<div
+  class="grid grid-flow-row-dense grid-cols-2 gap-2 pb-2 md:grid-cols-4"
+  hx-target="#main"
+  hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
+  hx-get="{{ url_for("budgeting.page") }}"
+  hx-include="#budget-sidebar-uri"
+>
+  <h1 class="text-primary mr-auto font-serif text-3xl">Budgeting</h1>
+  <div id="budget-status" class="w-md col-span-2 mx-auto max-w-full">
+    {% include "budgeting/status.jinja" %}
+  </div>
+  <div class="flex h-9 items-center justify-end">
+    <button
+      class="btn-text btn-sq"
+      hx-get="{{ url_for("budgeting.page", month=ctx.month_prev) }}"
+      hx-push-url="true"
+      hx-swap="innerHTML show:window:top"
+    >
+      <icon>chevron_left</icon>
+    </button>
+    <h1 class="text-primary font-serif text-3xl">{{ ctx.month }}</h1>
+    <button
+      class="btn-text btn-sq"
+      hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
+      hx-push-url="true"
+      hx-swap="innerHTML show:window:top"
+      {% if not ctx.month_next %}disabled{% endif %}
+    >
+      <icon>chevron_right</icon>
+    </button>
+  </div>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About budgeting in nummus</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      nummus employs a zero-based budgeting technique. Every single dollar is
+      assigned to a category for spending. The goal is to know what the role is
+      for every cent in your accounts.
+    </p>
+    <p>
+      Don't have enough funds for a purchase? Then move funds from a category
+      that has some to spare. Have extra income? Allocate to a savings category
+      or fun money!
+    </p>
+    <p>
+      Targets are ways to keep you on track on regular spending and savings. Go
+      grocery shopping once a week? Set a weekly target to set aside some for
+      that errand. Do you have rent or a mortgage? Set a monthly target for
+      that! Always forget to save for car insurance every 6 months? Set a
+      recurring target to save a bit each month so you are never surprised
+      again.
+    </p>
+  </div>
+</details>
+<div class="grid-flow-row-dense grid-cols-[1fr_275px] gap-2 lg:grid">
+  <div
+    id="budget-table"
+    class="relative pb-8"
+    hx-put="{{ url_for("budgeting.reorder") }}"
+    hx-include="this"
+    hx-target="#no-target"
+    hx-trigger="reorder"
+  >
+    <error id="budget-error" class="status-error"></error>
+    <label class="toggle not-edit:absolute bottom-0 w-full">
+      <input
+        type="checkbox"
+        autocomplete="off"
+        oninput="budgeting.toggleEdit(this)"
+      />
+      <div>Edit groups and reorder</div>
+      <switch></switch>
+    </label>
+    <button
+      class="btn-filled not-edit:hidden mx-auto mb-2"
+      hx-post="{{ url_for("budgeting.new_group") }}"
+      hx-target="this"
+      hx-swap="afterend"
+    >
+      New Group
+    </button>
+    {% for group in ctx.groups %}
+      <div
+        id="group-{{ group.uri or "ungrouped" }}"
+        class="budget-group {{ "open" if group.is_open }}"
+      >
+        {% include "budgeting/group.jinja" %}
+      </div>
+    {% endfor %}
+  </div>
+  <div id="budget-sidebar" class="max-lg:hidden">
+    {% include "budgeting/sidebar.jinja" %}
+  </div>
+</div>
+<div id="budget-button-bar">
+  <input type="hidden" name="destination" />
+  <button
+    hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
+    hx-include="#budget-button-bar"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="false"
+    hx-disabled-elt="this"
+  >
+    <icon>payments</icon>
+    <div>Assign</div>
+  </button>
+  <button onclick="budgeting.onBarMove()">
+    <icon>swap_vert</icon>
+    <div>Move Money</div>
+  </button>
+  <button onclick="budgeting.onBarTarget()">
+    <icon>target</icon>
+    <div>Target</div>
+  </button>
+</div>
+<script>
+  budgeting.reset();
+</script>

@@ -1,0 +1,11 @@
+<div
+  id="health-checks-timestamp"
+  class="text-on-surface-variant text-center italic"
+  hx-swap-oob="{{ oob }}"
+>
+  {% if ctx.last_update_ago is none %}
+    Health checks never ran
+  {% else %}
+    Last checks ran {{ ctx.last_update_ago | seconds }} ago
+  {% endif %}
+</div>

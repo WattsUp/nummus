@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import health_checks, portfolio, utils
+from nummus import health_checks, portfolio, web_utils
 from nummus.controllers import common
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 
@@ -16,17 +16,76 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-class HealthCheckContext(TypedDict):
+class _HealthContext(TypedDict):
+    """Type definition for health page context."""
+
+    last_update_ago: float | None
+    checks: list[_HealthCheckContext]
+
+
+class _HealthCheckContext(TypedDict):
     """Type definition for health check context."""
 
     name: str
-    is_closed: bool
+    uri: str
     description: str
     is_severe: bool
     issues: dict[str, str]
 
 
-def ctx_checks(*, run: bool) -> dict[str, object]:
+def page() -> flask.Response:
+    """GET /health.
+
+    Returns:
+        string HTML response
+    """
+    return common.page(
+        "health/page.jinja",
+        title="Health",
+        ctx=ctx_checks(run=False),
+    )
+
+
+def refresh() -> str:
+    """POST /h/health/refresh.
+
+    Returns:
+        string HTML response
+    """
+    return flask.render_template(
+        "health/checks.jinja",
+        ctx=ctx_checks(run=True),
+        include_oob=True,
+    )
+
+
+def ignore(uri: str) -> str:
+    """POST /h/health/i/<uri>/ignore.
+
+    Args:
+        uri: HealthCheckIssue uri to ignore
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+
+    with p.begin_session() as s:
+        c = web_utils.find(s, HealthCheckIssue, uri)
+        c.ignore = True
+        name = c.check
+
+    checks = ctx_checks(run=False)["checks"]
+
+    return flask.render_template(
+        "health/check-row.jinja",
+        check=next(c for c in checks if c["name"] == name),
+        oob=True,
+    )
+
+
+def ctx_checks(*, run: bool) -> _HealthContext:
     """Get the context to build the health checks.
 
     Args:
@@ -39,7 +98,6 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     utc_now = datetime.datetime.now(datetime.timezone.utc)
-    checks_open: list[str] = flask.session.get("checks_open", [])
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     with p.begin_session() as s:
@@ -73,20 +131,21 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
             for i in query.yield_per(YIELD_PER):
                 issues[i.check][i.uri] = i.msg
 
-    checks: list[HealthCheckContext] = []
+    checks: list[_HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
+        name = check_type.name
 
         if run:
             c = check_type(p)
             c.test()
             c_issues = c.issues
         else:
-            c_issues = issues[check_type.name]
+            c_issues = issues[name]
 
         checks.append(
             {
-                "name": check_type.name,
-                "is_closed": check_type.name not in checks_open,
+                "name": name,
+                "uri": name.replace(" ", "-").lower(),
                 "description": check_type.description,
                 "is_severe": check_type.is_severe,
                 "issues": dict(sorted(c_issues.items(), key=lambda item: item[1])),
@@ -95,87 +154,13 @@ def ctx_checks(*, run: bool) -> dict[str, object]:
     return {
         "checks": checks,
         "last_update_ago": (
-            None
-            if last_update is None
-            else utils.format_seconds((utc_now - last_update).total_seconds())
+            None if last_update is None else (utc_now - last_update).total_seconds()
         ),
     }
-
-
-def page() -> flask.Response:
-    """GET /health.
-
-    Returns:
-        string HTML response
-    """
-    return common.page(
-        "health/index-content.jinja",
-        title="Health",
-        checks=ctx_checks(run=False),
-    )
-
-
-def refresh() -> str:
-    """POST /h/health/refresh.
-
-    Returns:
-        string HTML response
-    """
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=True),
-        oob=True,
-    )
-
-
-def check(name: str) -> str:
-    """PUT /h/health/c/<name>.
-
-    Returns:
-        string HTML response
-    """
-    is_open = "closed" not in flask.request.form
-
-    checks_open: list[str] = flask.session.get("checks_open", [])
-    checks_open = [x for x in checks_open if x != name]
-    if is_open:
-        checks_open.append(name)
-    flask.session["checks_open"] = checks_open
-
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=False),
-        oob=True,
-    )
-
-
-def ignore(uri: str) -> str:
-    """POST /h/health/i/<uri>/ignore.
-
-    Args:
-        uri: HealthCheckIssue uri to ignore
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    with p.begin_session() as s:
-        s.query(HealthCheckIssue).where(
-            HealthCheckIssue.id_ == HealthCheckIssue.uri_to_id(uri),
-        ).update({"ignore": True})
-
-    return flask.render_template(
-        "health/checks.jinja",
-        checks=ctx_checks(run=False),
-        oob=True,
-    )
 
 
 ROUTES: Routes = {
     "/health": (page, ["GET"]),
     "/h/health/refresh": (refresh, ["POST"]),
-    "/h/health/c/<path:name>": (check, ["PUT"]),
     "/h/health/i/<path:uri>/ignore": (ignore, ["PUT"]),
 }

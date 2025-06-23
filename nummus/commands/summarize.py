@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 from typing_extensions import override
 
-from nummus.commands.base import Base
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
@@ -51,7 +51,7 @@ class _Summary(TypedDict):
     db_size: int
 
 
-class Summarize(Base):
+class Summarize(BaseCommand):
     """Print summary information and statistics on Portfolio."""
 
     NAME = "summarize"
@@ -103,10 +103,10 @@ class Summarize(Base):
             Dictionary of statistics
         """
         # Defer for faster time to main
-        from sqlalchemy import func
+        from sqlalchemy import func  # noqa: PLC0415
 
-        from nummus import utils
-        from nummus.models import (
+        from nummus import utils  # noqa: PLC0415
+        from nummus.models import (  # noqa: PLC0415
             Account,
             Asset,
             AssetCategory,
@@ -233,7 +233,7 @@ class Summarize(Base):
             summary: Summary dictionary
         """
         # Defer for faster time to main
-        from nummus import utils
+        from nummus import utils  # noqa: PLC0415
 
         def is_are(i: int) -> str:
             return "is" if i == 1 else "are"

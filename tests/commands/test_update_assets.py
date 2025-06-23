@@ -66,7 +66,7 @@ class TestUpdateAssets(TestBase):
                 parent=txn,
                 asset_id=a.id_,
                 asset_quantity_unadjusted=1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -125,7 +125,7 @@ class TestUpdateAssets(TestBase):
                 parent=txn,
                 asset_id=a_id,
                 asset_quantity_unadjusted=-1,
-                category_id=categories["Securities Traded"],
+                category_id=categories["securities traded"],
             )
             s.add_all((txn, t_split))
             s.flush()

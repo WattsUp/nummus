@@ -1,8 +1,8 @@
 <div id="allocation-chart-data" hx-swap-oob="{{ oob }}">
-    <script>
-        allocation.update(
-            JSON.parse('{{ allocation["categories"] | tojson }}'),
-            JSON.parse('{{ allocation["sectors"] | tojson }}'),
-        )
-    </script>
+  <script>
+    allocation.update(
+      JSON.parse('{{ allocation["categories"] | tojson }}'),
+      JSON.parse('{{ allocation["sectors"] | tojson }}'),
+    );
+  </script>
 </div>

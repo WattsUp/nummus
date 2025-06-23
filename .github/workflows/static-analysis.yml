@@ -18,10 +18,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -38,10 +38,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -60,10 +60,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -75,15 +75,28 @@ jobs:
       - name: Run black
         run: |
           black . --check
+  formatting-web:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+
+    steps:
+      - uses: actions/checkout@v4
+      - run:  npm install -D prettier prettier-plugin-tailwindcss prettier-plugin-jinja-template
+      - name: Run prettier
+        uses: creyD/prettier_action@v4.6
+        with:
+          dry: true
+          prettier_plugins: "prettier-plugin-tailwindcss prettier-plugin-jinja-template"
   imports:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -100,10 +113,10 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -114,16 +127,16 @@ jobs:
           python -m pip install codespell tomli
       - name: Run codespell
         run: |
-          codespell . --toml pyproject.toml
+          codespell .
   linting-jinja:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.13"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v4
         with:
@@ -134,4 +147,4 @@ jobs:
           python -m pip install djlint
       - name: Run djlint
         run: |
-          djlint . --check --lint
+          djlint .

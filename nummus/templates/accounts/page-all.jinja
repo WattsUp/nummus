@@ -1,0 +1,105 @@
+<div
+  class="flex items-center justify-between"
+  hx-target="#main"
+  hx-trigger="account from:body, valuation from:body"
+  hx-get="{{ url_for('accounts.page_all') }}"
+>
+  <h1 class="text-primary font-serif text-3xl">Accounts</h1>
+  <button
+    class="btn-tonal"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-disabled-elt="this"
+    hx-get="{{ url_for('accounts.new') }}"
+    disabled
+  >
+    <icon>add</icon>New
+  </button>
+</div>
+<div
+  class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold"
+>
+  <div class="col-span-2">
+    <h2 class="text-xl">Net Worth</h2>
+    <h1 class="text-tertiary font-serif text-6xl">
+      {{ ctx.net_worth | money0 }}
+    </h1>
+  </div>
+  <div class="max-lg:col-start-1">
+    <h2 class="text-xl">Assets</h2>
+    <h1 class="text-tertiary font-serif text-4xl">{{ ctx.assets | money0 }}</h1>
+    <div class="border-primary h-2 w-full rounded-xl border">
+      <div
+        class="bg-primary h-full rounded-xl"
+        style="width: {{ ctx.assets_w }}%"
+      ></div>
+    </div>
+  </div>
+  <div>
+    <h2 class="text-xl">Liabilites</h2>
+    <h1 class="text-tertiary font-serif text-4xl">
+      {{ ctx.liabilities | money0 }}
+    </h1>
+    <div class="border-primary h-2 w-full rounded-xl border">
+      <div
+        class="bg-primary h-full rounded-xl"
+        style="width: {{ ctx.liabilities_w }}%"
+      ></div>
+    </div>
+  </div>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About account classification</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Assets are accounts with a positive valuation. This is commonly cash,
+      stocks, and other investments. Liabilites are accounts with a negative
+      valuation. This is commonly lines of credit, mortgages, and other loans.
+      Net worth is the sum of all account valuations.
+    </p>
+  </div>
+</details>
+<div
+  class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
+>
+  {% for category, (total, accounts) in ctx.categories.items() %}
+    <div class="mb-4">
+      <div class="w-full">
+        <div
+          class="text-primary bg-surface sticky top-10 z-10 flex justify-between font-serif text-2xl md:top-0"
+        >
+          <span>{{ category.pretty }}</span>
+          <span>{{ total | money }}</span>
+        </div>
+        {% for acct in accounts %}
+          {% include "accounts/account-row.jinja" %}
+          {% if not loop.last %}<hr class="mx-4 my-1" />{% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% endfor %}
+</div>
+<label class="toggle max-w-60">
+  <input
+    type="checkbox"
+    autocomplete="off"
+    {% if ctx.include_closed %}checked{% endif %}
+    hx-push-url="true"
+    hx-get="{{ url_for('accounts.page_all', include_closed=not ctx.include_closed) }}"
+  />
+  <div>
+    {% if ctx.include_closed %}
+      Hide closed accounts
+    {% else %}
+      Show closed accounts
+    {% endif %}
+  </div>
+  <switch></switch>
+</label>

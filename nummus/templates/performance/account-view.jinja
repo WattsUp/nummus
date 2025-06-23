@@ -1,18 +1,30 @@
-<a id="account-{{ account["uri"] }}"
-   class="w-full flex even:bg-grey-50 hover:bg-grey-100 min-w-[650px]"
-   href="{{ url_for('accounts.page', uri=account['uri']) }}"
-   hx-get="{{ url_for('accounts.page', uri=account['uri']) }}"
-   hx-target="#main"
-   hx-swap="innerHTML"
-   hx-push-url="true">
-    <div class="w-28 shrink-0 grow-[4] p-1 truncate">{{ account["name"] }}</div>
-    <div class="w-28 shrink-0 grow p-1 text-right">{{ account["initial"] | money }}</div>
-    <div class="w-28 shrink-0 grow p-1 text-right">{{ account["cash_flow"] | money }}</div>
-    <div class="w-28 shrink-0 grow p-1 text-right">{{ account["end"] | money }}</div>
-    <div class="w-28 shrink-0 grow p-1 text-right text-{{ account["profit"] | pnl_color }}">
-        {{ account["profit"] | money }}
-    </div>
-    <div class="w-24 shrink-0 grow p-1 text-right text-{{ account["mwrr"] | pnl_color }}">
-        {{ account["mwrr"] | percent }}
-    </div>
+<a
+  id="account-{{ account["uri"] }}"
+  class="even:bg-grey-50 hover:bg-grey-100 flex w-full min-w-[650px]"
+  href="{{ url_for('accounts.page', uri=account['uri']) }}"
+  hx-get="{{ url_for('accounts.page', uri=account['uri']) }}"
+  hx-target="#main"
+  hx-swap="innerHTML"
+  hx-push-url="true"
+>
+  <div class="w-28 shrink-0 grow-[4] truncate p-1">{{ account["name"] }}</div>
+  <div class="w-28 shrink-0 grow p-1 text-right">
+    {{ account["initial"] | money }}
+  </div>
+  <div class="w-28 shrink-0 grow p-1 text-right">
+    {{ account["cash_flow"] | money }}
+  </div>
+  <div class="w-28 shrink-0 grow p-1 text-right">
+    {{ account["end"] | money }}
+  </div>
+  <div
+    class="text-{{ account["profit"] | pnl_color }} w-28 shrink-0 grow p-1 text-right"
+  >
+    {{ account["profit"] | money }}
+  </div>
+  <div
+    class="text-{{ account["mwrr"] | pnl_color }} w-24 shrink-0 grow p-1 text-right"
+  >
+    {{ account["mwrr"] | percent }}
+  </div>
 </a>

@@ -1,0 +1,46 @@
+<nav id="nav-bar" hx-push-url="true" hx-swap="innerHTML show:window:top">
+  {% for label, (icon, endpoint, link) in nav_items[0][1].items() %}
+    {% if link == "PAGE" %}
+      <a
+        href="{{ url_for(endpoint) }}"
+        hx-get="{{ url_for(endpoint) }}"
+        hx-disabled-elt="this"
+      >
+        <icon>{{ icon }}</icon>
+        <div>{{ label }}</div>
+      </a>
+    {% elif link == "DIALOG" %}
+      <button
+        hx-get="{{ url_for(endpoint) }}"
+        hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:top"
+        hx-push-url="false"
+        hx-disabled-elt="this"
+      >
+        <icon>{{ icon }}</icon>
+        <div>{{ label }}</div>
+      </button>
+    {% elif link == "HX_POST" %}
+      <button
+        hx-post="{{ url_for(endpoint) }}"
+        hx-push-url="false"
+        hx-disabled-elt="this"
+      >
+        <icon>{{ icon }}</icon>
+        <div>{{ label }}</div>
+      </button>
+    {% endif %}
+  {% endfor %}
+  <button
+    title="Add Transaction"
+    id="nav-fab"
+    hx-get="{{ url_for('transactions.new') }}"
+    hx-include="previous .current-account"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="false"
+    hx-disabled-elt="this"
+  >
+    <icon>note_stack_add</icon>
+  </button>
+</nav>

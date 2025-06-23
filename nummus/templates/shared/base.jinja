@@ -1,59 +1,61 @@
 <!DOCTYPE html>
+{# djlint: off #}
+{# ignore missing <head> #}
 <html lang="en-US">
-    <head>
-        <title>
-            {% block title %}
-                nummus
-            {% endblock title %}
-        </title>
-        <meta charset="utf-8">
-        <meta name="viewport"
-              content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
-        <meta name="description"
-              content="A personal financial information aggregator and planning tool." />
-        <meta name="keywords" content="">
-        <link rel="icon"
-              type="image/x-icon"
-              href="{{ url_for('static', filename='img/favicon.ico') }}">
-        {% assets "css" %}
-            <link rel="stylesheet" href="{{ ASSET_URL }}">
-        {% endassets %}
-        {% assets "js" %}
-            <script type="text/javascript" src="{{ ASSET_URL }}"></script>
-            {# DELETE is supposed to use request parameters but form is way better #}
-            {# htmx 2.x followed the spec properly, revert #}
-            <script>htmx.config.methodsThatUseUrlParams = ["get"]</script>
-        {% endassets %}
-    </head>
-    <body class="antialiased bg-grey-100 h-screen w-screen relative text-black"
-          hx-swap="outerHTML"
-          hx-on::send-error="nummusSendError(event)"
-          hx-on::response-error="nummusResponseError(event)">
-        {% block header %}
-            {% include "/shared/header.jinja" %}
-        {% endblock header %}
-        <div class="pt-8 md:pt-12 h-full flex">
-            {% block sidebar %}
-                {% include "/shared/sidebar.jinja" %}
-            {% endblock sidebar %}
-            <div class="sidebar-spacer">
-                <div class="sidebar-opener p-1 md:hover:bg-green-100 text-center group transition cursor-pointer"
-                     onclick="navigation.openSidebar()">
-                    {% with class="w-[32px] h-[32px] fill-green-800" %}
-                        {% include "svg/dock-left.svg" %}
-                    {% endwith %}
-                </div>
-            </div>
-            <div class="grow flex flex-col overflow-y-auto">
-                <main class="md:p-2 grow max-w-[100vw]" id="main">
-                    {% block content %}
-                    {% endblock content %}
-                </main>
-                {% block footer %}
-                    {% include "/shared/footer.jinja" %}
-                {% endblock footer %}
-            </div>
-        </div>
-        {% include "/shared/overlay.jinja" %}
-    </body>
+  {# djlint: on #}
+  {% include "shared/head.jinja" %}
+  <body
+    hx-on::send-error="nummusSendError(event)"
+    hx-on::response-error="nummusResponseError(event)"
+    hx-on::history-cache-miss-load-error="nummusResponseError(event)"
+    hx-on::history-cache-miss="progress.update(null, 0);progress.update(null, 0.3)"
+    hx-on::history-cache-miss-load="progress.update(null, 1)"
+    hx-on::before-request="progress.update(event, 0)"
+    hx-on::before-send="progress.update(event, 0.3)"
+    hx-on::before-swap="progress.update(event, 0.6)"
+    hx-on::after-swap="progress.update(event, 0.7)"
+    hx-on::after-request="progress.update(event, 0.9)"
+    hx-on::after-settle="progress.update(event, 1)"
+    hx-target="#main"
+  >
+    {# Default current-account is blank #}
+    <input class="current-account" name="account" type="hidden" />
+    <script id="history-script"></script>
+    <div id="page-progress"></div>
+    {% include "shared/hx-error.jinja" %}
+    {% include "shared/nav-header.jinja" %}
+    {% include "shared/nav-rail.jinja" %}
+    {% include "shared/nav-drawer.jinja" %}
+    <div id="main-wrapper">
+      <main id="main" hx-history-elt>
+        {% block content required %}
+        {% endblock content %}
+      </main>
+      <div id="main-footer">
+        <p>Copyright © {{ current_year }} nummus</p>
+        <p>Version: {{ version }}</p>
+      </div>
+    </div>
+    {% include "shared/nav-bar.jinja" %}
+    <div id="snackbar" onclick="snackbar.hide()"></div>
+    <script id="snackbar-script"></script>
+    <div class="dialog-wrapper z-48">{% include "shared/dialog.jinja" %}</div>
+    <div
+      id="scrim"
+      class="scrim z-47"
+      onclick="dialog.close();nav.closeDrawer()"
+    ></div>
+    <div class="dialog-wrapper z-50">
+      <div id="confirm-dialog" class="dialog max-w-80"></div>
+    </div>
+    <div
+      id="confirm-scrim"
+      class="scrim z-49"
+      onclick="dialog.closeConfirm()"
+    ></div>
+    {# Default current-account is blank #}
+    <input class="current-account" name="account" type="hidden" />
+    {# Dummy element when no response from server expected #}
+    <div id="no-target"></div>
+  </body>
 </html>

@@ -1,0 +1,76 @@
+@utility txn-header {
+  @apply sticky top-10 z-10 md:top-0;
+  @apply font-bold;
+  @apply bg-surface border-surface border-t-8;
+
+  & > div {
+    @apply rounded-md px-2 py-1;
+    @apply bg-primary-container text-on-primary-container;
+  }
+}
+
+@utility txn {
+  @apply relative my-1;
+
+  & > label {
+    @apply absolute bottom-0 left-0 top-0 w-10;
+
+    & > icon {
+      @apply m-0;
+    }
+  }
+
+  & > div {
+    @apply w-full pl-10;
+    @apply rounded-md;
+    @apply transition-colors;
+
+    @variant hover {
+      background-color: color-mix(
+        in oklab,
+        var(--color-primary) 8%,
+        transparent
+      );
+    }
+
+    @variant active {
+      background-color: color-mix(
+        in oklab,
+        var(--color-primary) 10%,
+        transparent
+      );
+    }
+
+    & > div {
+      @apply flex h-6 items-center gap-2;
+
+      @variant first-of-type {
+        @apply font-bold;
+
+        & > div {
+          @apply last-of-type:shrink-0;
+        }
+      }
+
+      @variant last-of-type {
+        @apply text-on-surface-variant;
+      }
+
+      & > div {
+        @apply truncate;
+        @apply first-of-type:grow;
+      }
+
+      & icon {
+        @apply block w-6 shrink-0;
+      }
+    }
+  }
+}
+
+@layer components {
+  #txn-table.htmx-request {
+    /* Hide table when query is in flight */
+    @apply hidden;
+  }
+}

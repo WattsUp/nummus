@@ -37,8 +37,8 @@ class TestUnbalancedTransfers(TestBase):
 
             categories = TransactionCategory.map_name(s)
             categories = {v: k for k, v in categories.items()}
-            t_cat_id_0 = categories["Transfers"]
-            t_cat_id_1 = categories["Credit Card Payments"]
+            t_cat_id_0 = categories["transfers"]
+            t_cat_id_1 = categories["credit card payments"]
 
             acct_checking = Account(
                 name="Monkey Bank Checking",

@@ -256,23 +256,119 @@ class TestServer(TestBase):
             result = flask.render_template_string("{{ number | qty }}", **context)
             self.assertEqual(result, target)
 
-            target = "green-600"
+            target = "text-primary"
             result = flask.render_template_string("{{ number | pnl_color }}", **context)
             self.assertEqual(result, target)
 
+            target = "arrow_upward"
+            result = flask.render_template_string("{{ number | pnl_arrow }}", **context)
+            self.assertEqual(result, target)
+
+            target = "1000.1"
+            result = flask.render_template_string(
+                "{{ number | input_value }}",
+                **context,
+            )
+            self.assertEqual(result, target)
+
             context = {"number": Decimal("-0.12345")}
-            target = "red-600"
+            target = "text-error"
             result = flask.render_template_string("{{ number | pnl_color }}", **context)
+            self.assertEqual(result, target)
+
+            target = "arrow_downward"
+            result = flask.render_template_string("{{ number | pnl_arrow }}", **context)
+            self.assertEqual(result, target)
+
+            context = {"number": Decimal(0)}
+            target = ""
+            result = flask.render_template_string("{{ number | pnl_color }}", **context)
+            self.assertEqual(result, target)
+
+            target = ""
+            result = flask.render_template_string("{{ number | pnl_arrow }}", **context)
+            self.assertEqual(result, target)
+
+            target = ""
+            result = flask.render_template_string(
+                "{{ number | input_value }}",
+                **context,
+            )
+            self.assertEqual(result, target)
+
+            context = {"number": Decimal("1000.0000")}
+            target = "1000"
+            result = flask.render_template_string(
+                "{{ number | input_value }}",
+                **context,
+            )
+            self.assertEqual(result, target)
+
+            context = {"duration": 14}
+            target = "2 weeks"
+            result = flask.render_template_string("{{ duration | days }}", **context)
             self.assertEqual(result, target)
 
             context = {"duration": 14}
             target = "2 wks"
-            result = flask.render_template_string("{{ duration | days }}", **context)
+            result = flask.render_template_string(
+                "{{ duration | days_abv }}",
+                **context,
+            )
             self.assertEqual(result, target)
 
             context = {"number": Decimal("0.123456")}
             target = "12.35%"
             result = flask.render_template_string("{{ number | percent }}", **context)
+            self.assertEqual(result, target)
+
+    def test_url_for(self) -> None:
+        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+        p = portfolio.Portfolio.create(path_db, None)
+
+        path_cert = self._DATA_ROOT.joinpath("cert_ss.pem")
+        path_key = self._DATA_ROOT.joinpath("key_ss.pem")
+
+        shutil.copyfile(path_cert, p.ssl_cert_path)
+        shutil.copyfile(path_key, p.ssl_key_path)
+
+        host = "127.0.0.1"
+        port = 8080
+        debug = True
+        with (
+            mock.patch("sys.stderr", new=io.StringIO()) as _,
+            mock.patch("sys.stdout", new=io.StringIO()) as _,
+        ):
+            s = web.Server(p, host, port, debug=debug)
+        flask_app = s._app  # noqa: SLF001
+
+        with flask_app.app_context(), flask_app.test_request_context():
+            result = flask_app.url_for("dashboard.page")
+            target = "/"
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", boolean=True)
+            target = "/?boolean="
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", boolean=False)
+            target = "/"
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", uri=None)
+            target = "/"
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", string="abc")
+            target = "/?string=abc"
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", string="")
+            target = "/"
+            self.assertEqual(result, target)
+
+            result = flask_app.url_for("dashboard.page", integer=0)
+            target = "/?integer=0"
             self.assertEqual(result, target)
 
 

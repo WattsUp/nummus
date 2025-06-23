@@ -20,7 +20,7 @@ class UnusedCategories(Base):
             # Only check unlocked categories
             query = (
                 s.query(TransactionCategory)
-                .with_entities(TransactionCategory.id_, TransactionCategory.name)
+                .with_entities(TransactionCategory.id_, TransactionCategory.emoji_name)
                 .where(TransactionCategory.locked.is_(False))
             )
             categories: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]

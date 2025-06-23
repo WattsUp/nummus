@@ -8,14 +8,14 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import Base, unlock
+from nummus.commands.base import BaseCommand, unlock
 
 if TYPE_CHECKING:
     import argparse
     from pathlib import Path
 
 
-class Backup(Base):
+class Backup(BaseCommand):
     """Backup portfolio."""
 
     NAME = "backup"
@@ -33,7 +33,7 @@ class Backup(Base):
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
         """
-        super().__init__(path_db, path_password)
+        super().__init__(path_db, path_password, check_migration=False)
 
     @override
     @classmethod
@@ -50,7 +50,7 @@ class Backup(Base):
         return 0
 
 
-class Restore(Base):
+class Restore(BaseCommand):
     """Restore portfolio from backup."""
 
     NAME = "restore"
@@ -99,7 +99,7 @@ class Restore(Base):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio, utils
+        from nummus import portfolio, utils  # noqa: PLC0415
 
         try:
             if self._list_ver:
@@ -124,6 +124,6 @@ class Restore(Base):
         except FileNotFoundError as e:
             print(f"{Fore.RED}{e}")
             return -1
-        p = unlock(self._path_db, self._path_password)
+        p = unlock(self._path_db, self._path_password, check_migration=False)
         print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
         return 0

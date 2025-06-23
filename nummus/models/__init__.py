@@ -31,7 +31,12 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
-from nummus.models.utils import paginate, query_count, search
+from nummus.models.utils import (
+    dump_table_configs,
+    get_constraints,
+    paginate,
+    query_count,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -62,11 +67,12 @@ __all__ = [
     "TransactionCategoryGroup",
     "TransactionSplit",
     "USSector",
+    "dump_table_configs",
+    "get_constraints",
     "load_cipher",
     "metadata_create_all",
     "paginate",
     "query_count",
-    "search",
 ]
 
 _MODELS: list[type[Base]] = [

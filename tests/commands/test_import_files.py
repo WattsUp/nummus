@@ -22,6 +22,20 @@ class TestImport(TestBase):
         p = portfolio.Portfolio(path_db, None)
         path_debug = path_db.with_suffix(".importer_debug")
 
+        file_dir = self._TEST_ROOT.joinpath("statements")
+        file_dir.mkdir(parents=True, exist_ok=True)
+        file_dir.joinpath("subdirectory").mkdir()
+
+        file_a = self._TEST_ROOT.joinpath("file_a.csv")
+        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_required.csv"), file_a)
+        file_missing = self._TEST_ROOT.joinpath("file_missing.csv")
+
+        file_b = file_dir.joinpath("file_b.csv")
+        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_extras.csv"), file_b)
+
+        file_c = file_dir.joinpath("file_c.csv")
+        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_lacking.csv"), file_c)
+
         # Create Accounts and Assets
         with p.begin_session() as s:
             acct_checking = Account(
@@ -41,20 +55,6 @@ class TestImport(TestBase):
             asset = Asset(name="BANANA", category=AssetCategory.STOCKS)
             s.add_all((acct_checking, acct_invest, asset))
             s.commit()
-
-        file_dir = self._TEST_ROOT.joinpath("statements")
-        file_dir.mkdir(parents=True, exist_ok=True)
-        file_dir.joinpath("subdirectory").mkdir()
-
-        file_a = self._TEST_ROOT.joinpath("file_a.csv")
-        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_required.csv"), file_a)
-        file_missing = self._TEST_ROOT.joinpath("file_missing.csv")
-
-        file_b = file_dir.joinpath("file_b.csv")
-        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_extras.csv"), file_b)
-
-        file_c = file_dir.joinpath("file_c.csv")
-        shutil.copyfile(self._DATA_ROOT.joinpath("transactions_lacking.csv"), file_c)
 
         # Try importing with a missing file, should restore from backup
         paths = [file_a, file_missing]

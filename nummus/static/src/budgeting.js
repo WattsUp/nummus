@@ -1,561 +1,609 @@
-'use strict';
+"use strict";
 const budgeting = {
-    sidebarChart: null,
-    table: null,
-    trash: null,
-    trashSVG: null,
-    trashRect: null,
-    isGroup: false,
-    dragItem: null,
-    dragItemHeight: null,
-    dragItemParent: null,
-    dragItemSibling: null,
-    dragItemGroup: null,
-    scrollContainer: null,
-    staticItems: [],
-    staticItemsY: [],
-    initialX: null,
-    initialY: null,
-    initialScroll: null,
-    initialMouseX: null,
-    initialMouseY: null,
-    mouseOffsetX: null,
-    mouseOffsetY: null,
-    isDragging: false,
-    groupOpen: {},
-    /**
-     * Set up budgeting drag listeners
-     */
-    setup: function() {
-        this.table = document.querySelector('#budget-table');
-        this.trash = document.querySelector('#budget-trash');
-        this.trashSVG = this.trash.querySelector('svg');
-        this.scrollContainer = document.querySelector('#main').parentNode;
+  editing: false,
+  sidebarChart: null,
+  table: null,
+  isGroup: false,
+  dragItem: null,
+  dragItemHeight: null,
+  staticItems: [],
+  staticItemsY: [],
+  initialScroll: null,
+  doScroll: 0,
+  initialMouseX: null,
+  initialMouseY: null,
+  mouseOffsetX: null,
+  mouseOffsetY: null,
+  isDragging: false,
+  currentURI: null,
+  barOn: true,
+  barHeight: null,
+  barTranslate: 0,
+  bar: null,
+  isTouch: false,
+  /**
+   * Set up budgeting drag listeners
+   */
+  setupDrag() {
+    this.table = document.querySelector("#budget-table");
 
-        // Remove any that exist
-        this.table.removeEventListener('mousedown', this.dragStart);
-        document.removeEventListener('mouseup', this.dragEnd);
+    this.dragStartBound = this.dragStart.bind(this);
+    this.dragEndBound = this.dragEnd.bind(this);
+    htmx.on(this.table, "mousedown", this.dragStartBound);
+    htmx.on(this.table, "touchstart", this.dragStartBound);
+    htmx.on("mouseup", this.dragEndBound);
+    htmx.on("touchend", this.dragEndBound);
+  },
+  /**
+   * On click, record initial positions and such
+   *
+   * @param {Event} evt Triggering event
+   */
+  dragStart(evt) {
+    const target = evt.target;
+    if (!target.matches(".budget-drag")) {
+      // Not a handle, ignore mouse up
+      return;
+    }
+    // Don't scroll on mobile
+    if (evt.type == "touchstart") {
+      this.isTouch = true;
+      evt.preventDefault();
+    }
+    if (target.matches(".budget-category, .budget-category *")) {
+      this.isGroup = false;
+      this.dragItem = target.closest(".budget-category");
+      this.staticItems = Array.from(
+        htmx.findAll(".budget-group>label, .budget-category"),
+      );
+    } else {
+      this.isGroup = true;
+      this.dragItem = target.closest(".budget-group");
+      this.staticItems = Array.from(
+        htmx.findAll(".budget-group:not(#group-ungrouped)"),
+      );
+    }
 
-        this.table.addEventListener('mousedown', this.dragStart);
-        document.addEventListener('mouseup', this.dragEnd);
-    },
-    /**
-     * On click, record initial positions and such
-     *
-     * @param {Event} event Triggering event
-     */
-    dragStart: function(event) {
-        const target = event.target;
-        if (target.matches('.budget-group-handle, .budget-group-handle *')) {
-            budgeting.isGroup = true;
-            budgeting.dragItem = target.closest('.budget-group');
-            budgeting.staticItems = document.querySelectorAll('.budget-group');
-        } else if (target.matches('.budget-row-handle, .budget-row-handle *')) {
-            budgeting.isGroup = false;
-            budgeting.dragItem = target.closest('.budget-row');
-            // Transform both rows and headers
-            budgeting.staticItems = document.querySelectorAll(
-                '.budget-row, .budget-group-header, .budget-group-toggle-label');
+    let firstGroup = true;
+    this.staticItems = this.staticItems.filter((e) => {
+      if (e == this.dragItem) return false;
+      if (this.isGroup || !firstGroup) return true;
+      if (e.matches("label")) {
+        firstGroup = false;
+        return false;
+      }
+      return true;
+    });
+
+    // Set position attribute
+    htmx.findAll(".budget-category").forEach((e, i) => {
+      e.setAttribute("position", i);
+    });
+    htmx.findAll(".budget-group").forEach((e, i) => {
+      e.setAttribute("position", i);
+    });
+
+    // Record initial position
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
+    const rect = this.dragItem.getBoundingClientRect();
+    this.mouseOffsetX = evtX - rect.x;
+    this.mouseOffsetY = evtY - rect.y;
+    this.initialMouseX = evtX;
+    this.initialMouseY = evtY;
+    this.initialScroll = window.scrollY;
+    this.dragItemHeight = rect.height;
+
+    // Make nothing selectable
+    htmx.addClass(this.table, "select-none");
+
+    this.dragStartTestBound = this.dragStartTest.bind(this);
+    htmx.on(this.isTouch ? "touchmove" : "mousemove", this.dragStartTestBound, {
+      passive: false,
+    });
+  },
+  /**
+   * Once mouse moves enough, actually start dragging
+   *
+   * @param {Event} evt Triggering event
+   */
+  dragStartTest(evt) {
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
+    const dx = evtX - this.initialMouseX;
+    const dy =
+      evtY - this.initialMouseY + (window.scrollY - this.initialScroll);
+    const delta = Math.sqrt(dx * dx + dy * dy);
+
+    if (delta < 10) {
+      return;
+    }
+    htmx.off("mousemove", this.dragStartTestBound);
+    htmx.off("touchmove", this.dragStartTestBound);
+    this.dragStartTestBound = null;
+
+    htmx.addClass(this.dragItem, "budget-dragging");
+
+    this.isDragging = true;
+
+    const scrollY = window.scrollY;
+    if (this.isGroup) {
+      htmx.findAll(".budget-group-items").forEach((e) => {
+        htmx.addClass(e, "hidden");
+      });
+    }
+    const dyScroll = window.scrollY - scrollY;
+    this.initialScroll += dyScroll;
+
+    // After toggling open, compute initial location
+    const rect = this.dragItem.getBoundingClientRect();
+    this.initialMouseX = rect.x + this.mouseOffsetX;
+    this.initialMouseY = rect.y + this.mouseOffsetY;
+    this.dragItemHeight = rect.height;
+
+    this.staticItems.forEach((e, i) => {
+      const rect = e.getBoundingClientRect();
+      // Center of dragItem
+      this.staticItemsY[i] = rect.y + rect.height / 2;
+    });
+
+    this.drag(evt);
+
+    // Add move listener
+    this.dragBound = this.drag.bind(this);
+    htmx.on(this.isTouch ? "touchmove" : "mousemove", this.dragBound, {
+      passive: false,
+    });
+  },
+  doScrollFrame() {
+    if (!this.doScroll) return;
+    window.scrollBy(0, this.doScroll);
+    requestAnimationFrame(this.doScrollFrame.bind(this));
+  },
+  /**
+   * On mouse move, translate rows
+   *
+   * @param {Event} evt Triggering event
+   */
+  drag(evt) {
+    const evtX = evt.clientX ?? evt.targetTouches[0].clientX;
+    const evtY = evt.clientY ?? evt.targetTouches[0].clientY;
+    if (evt.type == "touchmove") {
+      evt.preventDefault();
+      const prevDoScroll = this.doScroll;
+      const th = 150;
+      if (evtY < th) this.doScroll = (evtY - th) * 2;
+      else if (evtY > window.innerHeight - th)
+        this.doScroll = evtY - window.innerHeight + th;
+      else this.doScroll = 0;
+
+      if (this.doScroll && !prevDoScroll)
+        requestAnimationFrame(this.doScrollFrame.bind(this));
+    }
+    const offsetX = evtX - this.initialMouseX;
+    const scrollY = window.scrollY - this.initialScroll;
+    const offsetY = evtY - this.initialMouseY + scrollY;
+    this.dragItem.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
+
+    const dragItemYTop = evtY - this.mouseOffsetY + scrollY;
+    const dragItemYBot = dragItemYTop + this.dragItemHeight;
+
+    this.staticItems.forEach((e, i) => {
+      const initialY = this.staticItemsY[i];
+      let offset = 0;
+      if (offsetY > 0) {
+        if (initialY < dragItemYBot && initialY > this.initialMouseY) {
+          // dragItem is going down
+          // and e is between initial and new positions
+          // so move e up
+          offset = -this.dragItemHeight;
+          e.setAttribute("reorder", "up");
         } else {
-            // Not a handle, ignore mouse up
-            return;
+          e.setAttribute("reorder", "");
         }
-
-        let firstGroup = true;
-        let firstGroupLabel = true;
-        budgeting.staticItems =
-            Array.from(budgeting.staticItems).filter((e) => {
-                if (e == budgeting.dragItem) {
-                    return false;
-                }
-                if (!budgeting.isGroup) {
-                    if (e.matches('.budget-group-header') && firstGroup) {
-                        firstGroup = false;
-                        return false;
-                    }
-                    if (e.matches('.budget-group-toggle-label') &&
-                        firstGroupLabel) {
-                        firstGroupLabel = false;
-                        return false;
-                    }
-                }
-                return true;
-            });
-        budgeting.dragItemParent = budgeting.dragItem.parentNode;
-        budgeting.dragItemSibling = budgeting.dragItem.nextSibling;
-        budgeting.dragItemGroup = budgeting.dragItem.closest('.budget-group');
-
-        // Set position attribute
-        document.querySelectorAll('.budget-row').forEach((e, i) => {
-            e.setAttribute('position', i);
-        });
-        document.querySelectorAll('.budget-group').forEach((e, i) => {
-            e.setAttribute('position', i);
-        });
-
-        // Record initial position
-        const rect = budgeting.dragItem.getBoundingClientRect();
-        budgeting.mouseOffsetX = event.clientX - rect.x;
-        budgeting.mouseOffsetY = event.clientY - rect.y;
-        budgeting.initialMouseX = event.clientX;
-        budgeting.initialMouseY = event.clientY;
-        budgeting.initialScroll = budgeting.scrollContainer.scrollTop;
-
-        // Make nothing selectable
-        budgeting.table.classList.add('select-none');
-
-        document.addEventListener('mousemove', budgeting.dragStartTest);
-    },
-    /**
-     * Once mouse moves enough, actually start dragging
-     *
-     * @param {Event} event Triggering event
-     */
-    dragStartTest(event) {
-        const dx = event.clientX - budgeting.initialMouseX;
-        const dy = (event.clientY - budgeting.initialMouseY) +
-            (budgeting.scrollContainer.scrollTop - budgeting.initialScroll);
-        const delta = Math.sqrt(dx * dx + dy * dy);
-
-        if (delta < 10) {
-            return;
-        }
-        document.removeEventListener('mousemove', budgeting.dragStartTest);
-
-        // If dragging a row, move to top so it is visible
-        // Also moving group to top makes everything only translate down
-        if (budgeting.isGroup) {
-            document.querySelector('#budget-temp-group')
-                .append(budgeting.dragItem);
-            budgeting.trash.classList.remove('hidden');
+      } else {
+        if (initialY > dragItemYTop && initialY < this.initialMouseY) {
+          // dragItem is going up
+          // and e is between initial and new positions
+          // so move e down
+          offset = this.dragItemHeight;
+          e.setAttribute("reorder", "down");
         } else {
-            document.querySelector('#budget-temp-row')
-                .append(budgeting.dragItem);
+          e.setAttribute("reorder", "");
         }
+      }
+      e.style.transform = `translateY(${offset}px)`;
+    });
+  },
+  /**
+   * On mouse release, move rows and submit PUT
+   *
+   * @param {Event} evt Triggering event
+   */
+  dragEnd(evt) {
+    if (!this.isDragging) {
+      this.cleanUpDrag();
+      return;
+    }
+    let anyMoved = false;
+    // Get the final state and submit
+    let lastChange = null;
+    let invalid = false;
+    const movedUp = Array.from(
+      htmx.findAll(
+        `.budget-${this.isGroup ? "group" : "category"}:not(.budget-dragging)[reorder="up"]`,
+      ),
+    );
+    const movedDown = Array.from(
+      htmx.findAll(
+        `.budget-${this.isGroup ? "group" : "category"}:not(.budget-dragging)[reorder="down"]`,
+      ),
+    );
+    const groupLabelsMovedUp = Array.from(
+      htmx.findAll('.budget-group>label:not(.budget-dragging)[reorder="up"]'),
+    );
+    const groupLabelsMovedDown = Array.from(
+      htmx.findAll('.budget-group>label:not(.budget-dragging)[reorder="down"]'),
+    );
 
-        // Prepare for dragging
-        budgeting.dragItem.classList.add('dragging');
-
-        budgeting.isDragging = true;
-        // Add move listener
-        document.addEventListener('mousemove', budgeting.drag);
-
-        // Close all groups if dragging a group
-        document.querySelectorAll('.budget-group-toggle').forEach((e) => {
-            budgeting.groupOpen[e.id] = e.checked;
-            e.checked = budgeting.isGroup;
-        });
-
-        budgeting.updateInitialOffset(event);
-    },
-    /**
-     * Update the initial locations once opening/closing groups finishes
-     *
-     * @param {Event} event Triggering event
-     */
-    updateInitialOffset(event) {
-        // After toggling open, compute initial location
-        const rect = budgeting.dragItem.getBoundingClientRect();
-        budgeting.initialX = rect.x + budgeting.mouseOffsetX;
-        budgeting.initialY = rect.y + budgeting.mouseOffsetY;
-        budgeting.dragItemHeight = rect.height;
-
-        budgeting.staticItems.forEach((e, i) => {
-            const rect = e.getBoundingClientRect();
-            budgeting.staticItemsY[i] = rect.y;
-        });
-
-        budgeting.trashRect = budgeting.trash.getBoundingClientRect();
-
-        budgeting.drag(event);
-    },
-    /**
-     * On mouse move, translate rows
-     *
-     * @param {Event} event Triggering event
-     */
-    drag: function(event) {
-        const offsetX = event.clientX - budgeting.initialX;
-        const scrollY =
-            budgeting.scrollContainer.scrollTop - budgeting.initialScroll
-        const offsetY = (event.clientY - budgeting.initialY) + scrollY;
-        const dragItemY = event.clientY - budgeting.mouseOffsetY -
-            budgeting.dragItemHeight / 2 + scrollY;
-
-        if (budgeting.isGroup && event.clientX >= budgeting.trashRect.left &&
-            event.clientX <= budgeting.trashRect.right &&
-            event.clientY >= budgeting.trashRect.top &&
-            event.clientY <= budgeting.trashRect.bottom) {
-            budgeting.trashSVG.classList.add('fill-red');
-        } else {
-            budgeting.trashSVG.classList.remove('fill-red');
+    let items = null;
+    let before = null;
+    if (movedUp.length) {
+      // Insert dragItem after last one
+      let last = movedUp[movedUp.length - 1];
+      items = last.parentNode;
+      before = last.nextElementSibling;
+      if (groupLabelsMovedUp.length) {
+        // Groups also moved see if the last one to move is different from last's group
+        const group =
+          groupLabelsMovedUp[groupLabelsMovedUp.length - 1].parentNode;
+        if (group != last.closest(".budget-group")) {
+          items = htmx.find(group, ".budget-group-items");
+          before = items.firstChild;
         }
-
-        budgeting.dragItem.style.transform =
-            `translate(${offsetX}px, ${offsetY}px)`;
-
-        budgeting.staticItems.forEach((e, i) => {
-            const initialY = budgeting.staticItemsY[i];
-            let offset = 0;
-            if (offsetY > 0) {
-                if (initialY < dragItemY && initialY > budgeting.initialY) {
-                    // dragItem is going down
-                    // and e is between initial and new positions
-                    // so move e up
-                    offset = -budgeting.dragItemHeight;
-                    e.setAttribute('reorder', 'up');
-                } else {
-                    e.setAttribute('reorder', '');
-                }
-            } else {
-                if (initialY > dragItemY && initialY < budgeting.initialY) {
-                    // dragItem is going up
-                    // and e is between initial and new positions
-                    // so move e down
-                    offset = budgeting.dragItemHeight;
-                    e.setAttribute('reorder', 'down');
-                } else {
-                    e.setAttribute('reorder', '');
-                }
-            }
-            e.style.transform = `translateY(${offset}px)`;
-        });
-    },
-    /**
-     * On mouse release, move rows and submit PUT
-     *
-     * @param {Event} event Triggering event
-     */
-    dragEnd: function(event) {
-        let anyMoved = false;
-        if (budgeting.isDragging) {
-            // Get the final state and submit
-            let lastChange = null;
-            let invalid = false;
-            if (budgeting.isGroup) {
-                if (event.clientX >= budgeting.trashRect.left &&
-                    event.clientX <= budgeting.trashRect.right &&
-                    event.clientY >= budgeting.trashRect.top &&
-                    event.clientY <= budgeting.trashRect.bottom) {
-                    budgeting.cleanUp();
-                    htmx.trigger(`#${budgeting.dragItem.id}`, 'trash-group');
-                    return;
-                }
-                invalid = true;
-                document.querySelectorAll('.budget-group:not(.dragging)')
-                    .forEach((e) => {
-                        const group = e.closest('.budget-group');
-                        const groupChange =
-                            group.getAttribute('reorder') || null;
-
-                        if (groupChange != null && groupChange != lastChange) {
-                            group.parentNode.insertBefore(
-                                budgeting.dragItem, group);
-                            invalid = false;
-                        }
-
-                        lastChange = groupChange;
-                    });
-            } else {
-                let lastGroup = null;
-                let lastGroupName = null;
-                let wasMoved = false;
-                document.querySelectorAll('.budget-row:not(.dragging)')
-                    .forEach((e) => {
-                        const group = e.closest('.budget-group');
-                        const groupHeader =
-                            group.querySelector('.budget-group-header');
-                        const rowChange = e.getAttribute('reorder') || null;
-                        const groupChange =
-                            groupHeader.getAttribute('reorder') || null;
-                        const groupURI = group.id.slice(13);
-
-                        if (rowChange != null && rowChange != lastChange) {
-                            if (groupChange == null) {
-                                group.querySelector('.budget-group-fold')
-                                    .insertBefore(budgeting.dragItem, e);
-                                wasMoved = true;
-                            } else if (lastGroup == null) {
-                                // Invalid placed outside a group
-                                invalid = true;
-                            } else {
-                                let nextGroup =
-                                    lastGroup.parentNode.querySelector(
-                                        `#${lastGroup.id} + .budget-group`);
-                                let nextGroupHeader = nextGroup &&
-                                    nextGroup.querySelector(
-                                        '.budget-group-header');
-                                if (nextGroup &&
-                                    nextGroupHeader.getAttribute('reorder')) {
-                                    // If next group exist and was moved, add to
-                                    // lastGroup
-                                    lastGroup
-                                        .querySelector('.budget-group-fold')
-                                        .append(budgeting.dragItem);
-                                } else {
-                                    nextGroup
-                                        .querySelector('.budget-group-fold')
-                                        .append(budgeting.dragItem);
-                                }
-                                wasMoved = true;
-                            }
-                        }
-
-                        lastChange = rowChange;
-                        lastGroup = group;
-                    });
-                // Move to last group if not moved yet
-                if (!invalid && !wasMoved) {
-                    const ungroup = document.querySelector('#budget-group-');
-                    const ungroupHeader =
-                        ungroup.querySelector('.budget-group-header');
-                    const ungroupChange =
-                        ungroupHeader.getAttribute('reorder') || null;
-
-                    if (ungroupChange) {
-                        let nextGroup = lastGroup.parentNode.querySelector(
-                            `#${lastGroup.id} + .budget-group`);
-                        let nextGroupHeader = nextGroup &&
-                            nextGroup.querySelector('.budget-group-header');
-                        if (nextGroup &&
-                            nextGroupHeader.getAttribute('reorder')) {
-                            // If next group exist and was moved, add to
-                            // lastGroup
-                            lastGroup.querySelector('.budget-group-fold')
-                                .append(budgeting.dragItem);
-                        } else {
-                            nextGroup.querySelector('.budget-group-fold')
-                                .append(budgeting.dragItem);
-                        }
-                    } else {
-                        document
-                            .querySelector(
-                                '#budget-group- > .budget-group-fold')
-                            .append(budgeting.dragItem);
-                    }
-                }
-            }
-
-            if (invalid) {
-                // Put dragItem back
-                budgeting.dragItemParent.insertBefore(
-                    budgeting.dragItem, budgeting.dragItemSibling);
-            } else {
-                // Add group input on each row
-                anyMoved = budgeting.dragItemGroup !=
-                    budgeting.dragItem.closest('.budget-group');
-                document.querySelectorAll('.budget-row').forEach((e, i) => {
-                    if (i != e.getAttribute('position')) {
-                        anyMoved = true;
-                    }
-
-                    const group = e.closest('.budget-group');
-                    const groupURI = group ? group.id.slice(13) : '';
-
-                    const inputGroup = document.createElement('input');
-                    inputGroup.name = 'group';
-                    inputGroup.type = 'text';
-                    inputGroup.value = groupURI;
-                    inputGroup.hidden = true;
-                    e.append(inputGroup);
-                });
-                document.querySelectorAll('.budget-group').forEach((e, i) => {
-                    if (i != e.getAttribute('position')) {
-                        anyMoved = true;
-                    }
-                });
-            }
+      }
+    } else if (movedDown.length) {
+      // Insert dragItem before first one
+      const first = movedDown[0];
+      items = first.parentNode;
+      before = first;
+      if (groupLabelsMovedDown.length) {
+        const group = groupLabelsMovedDown[0].parentNode;
+        const prevGroup = group.previousElementSibling;
+        if (
+          prevGroup &&
+          !htmx.find(prevGroup, '.budget-category:not([reorder=""])')
+        ) {
+          // previous to first moved group had no changes
+          // move dragItem to end of prevGroup
+          items = htmx.find(prevGroup, ".budget-group-items");
+          before = null;
         }
+      }
+    } else if (groupLabelsMovedUp.length) {
+      // Insert dragItem at top of last one's items
+      items =
+        groupLabelsMovedUp[groupLabelsMovedUp.length - 1].nextElementSibling;
+      before = items.firstChild;
+    } else if (groupLabelsMovedDown.length) {
+      // Insert dragItem at bottom of previous one's items
+      const prevGroup =
+        groupLabelsMovedDown[0].parentNode.previousElementSibling;
+      if (prevGroup) {
+        items = htmx.find(prevGroup, ".budget-group-items");
+        before = null;
+      }
+    }
 
-        budgeting.cleanUp();
-        if (anyMoved) {
-            htmx.trigger('#budget-table', 'reorder-rows');
-        } else {
-            document.querySelectorAll('.budget-row input[name=group]')
-                .forEach((e) => {
-                    e.remove();
-                })
-        }
-    },
-    cleanUp: function() {
-        // Restore open states
-        if (budgeting.isDragging) {
-            document.querySelectorAll('.budget-group-toggle').forEach((e) => {
-                e.checked = budgeting.groupOpen[e.id];
-            });
-        }
-        if (budgeting.staticItems) {
-            // Finish dragging
-            budgeting.staticItems.forEach((e) => {
-                e.style.transform = '';
-            })
-        }
-        if (budgeting.dragItem) {
-            budgeting.dragItem.style.transform = '';
-            budgeting.dragItem.classList.remove('dragging');
-        }
-        budgeting.table.classList.remove('select-none');
-        // Remove styles and listeners
-        document.removeEventListener('mousemove', budgeting.drag);
-        document.removeEventListener('mousemove', budgeting.dragStartTest);
-        budgeting.isDragging = false;
-        budgeting.trash.classList.add('hidden');
-    },
-    /**
-     * Create budgeting sidebar Chart
-     *
-     * @param {Number} assigned Amount of money assigned to target
-     * @param {Number} targetAmount Full target amount
-     * @param {Boolean} onTrack True if target is on track
-     */
-    update: function(assigned, targetAmount, onTrack) {
-        const remaining = targetAmount - assigned;
-        const percent = Math.min(100, assigned / targetAmount * 100);
+    if (!items) {
+      // Nothing moved
+      this.cleanUpDrag();
+      return;
+    }
+    try {
+      items.insertBefore(this.dragItem, before);
+    } catch (error) {
+      // There's a bug with self-ancestor
+      // Hard to catch so add context to error next time it shows up
+      console.log(this.dragItem, items, before);
+      console.error(error);
+    }
 
-        const canvas = document.getElementById('budget-sidebar-canvas');
-        const ctx = canvas.getContext('2d');
-        const datasets = [
-            {
-                name: 'Assigned',
-                amount: assigned,
-                color: getThemeColor(onTrack ? 'green' : 'yellow'),
-            },
-        ];
-        if (remaining > 0) {
-            datasets.push({
+    // Add group input on each row
+    htmx.findAll(".budget-category").forEach((e, i) => {
+      const group = e.closest(".budget-group");
+      const groupURI = group.id.slice(6);
 
-                name: 'Assigned',
-                amount: remaining,
-                color: getThemeColor('grey-500'),
-            });
-        }
-        if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
-            nummusChart.updatePie(this.sidebarChart, datasets);
-        } else {
-            this.sidebarChart = nummusChart.createPie(
-                ctx,
-                datasets,
-                null,
-                {
-                    plugins: {doughnutText: {text: `${percent.toFixed(0)}%`}},
-                    animations: false,
-                },
-            );
-        }
-    },
+      const inputGroup = document.createElement("input");
+      inputGroup.name = "group";
+      inputGroup.type = "text";
+      inputGroup.value = groupURI;
+      inputGroup.hidden = true;
+      e.append(inputGroup);
+    });
+    htmx.trigger("#budget-table", "reorder");
+    this.cleanUpDrag();
+  },
+  /**
+   * Clean up dragging listeners
+   */
+  cleanUpDrag() {
+    // Remove styles and listeners
+    this.staticItems.forEach((e) => {
+      e.style.transform = "";
+    });
+    this.staticItems.length = 0;
+    this.isTouch = false;
+    this.doScroll = 0;
 
-    /**
-     * On click of budgeting header, toggle group
-     *
-     * @param {String} uri Group URI
-     * @param {Event} event Triggering event
-     */
-    onClickHeader: function(uri, event) {
-        const target = event.target;
-        if (target.matches(
-                'input, .budget-group-handle, .budget-group-handle *')) {
-            return;
-        }
-        // Not a click meant for something else, toggle group
-        const toggleId = uri ? `#toggle-${uri}` : '#toggle-ungrouped';
-        const toggle = document.querySelector(toggleId);
-        toggle.checked = !toggle.checked;
-        htmx.trigger(toggleId, 'click');
-    },
-    /**
-     * On click of budgeting row, focus assignment
-     *
-     * @param {String} uri Category URI
-     * @param {Event} event Triggering event
-     */
-    onClickRow: function(uri, event, toGo) {
-        // Only do stuff for mobile
-        if (window.screen.width >= 768) {
-            return;
-        }
-        const target = event.target;
-        if (target.matches('input, .budget-row-handle, .budget-row-handle *')) {
-            return;
-        }
-        if (target.hasAttribute('hx-get')) {
-            return;
-        }
-        // Not a click meant for something else, toggle group
-        const activity = document.querySelector(`#amount-${uri}`);
-        const buttons = document.querySelector('#budgeting-buttons');
-        const status = document.querySelector('#budgeting-buttons-status');
-        const newTxn = document.querySelector('#budgeting-new-txn');
-        if (activity.parentNode.classList.contains('hover-active')) {
-            buttons.classList.add('hidden');
+    if (this.dragBound) {
+      htmx.off("mousemove", this.dragBound);
+      htmx.off("touchmove", this.dragBound);
+      this.dragBound = null;
+    }
+    if (this.dragStartTestBound) {
+      htmx.off("mousemove", this.dragStartTestBound);
+      htmx.off("touchmove", this.dragStartTestBound);
+      this.dragStartTestBound = null;
+    }
 
-            activity.parentNode.classList.remove('hover-active');
-            activity.blur();
+    htmx.findAll(".budget-group-items").forEach((e) => {
+      htmx.removeClass(e, "hidden");
+    });
 
-            budgeting.activeCategory = null;
+    if (this.dragItem) {
+      this.dragItem.style.transform = "";
+      htmx.removeClass(this.dragItem, "budget-dragging");
+      // Scroll drag item back into view if uncollapsing groups
+      if (this.isGroup) this.dragItem.scrollIntoView({ block: "center" });
+      this.dragItem = null;
+    }
 
-            setTimeout(() => {
-                newTxn.classList.add('sticky');
-            }, 150)
-        } else {
-            status.innerHTML = toGo > 0 ?
-                `Assign $${toGo.toFixed(2)} more to reach your target` :
-                '';
+    htmx.removeClass(this.table, "select-none");
 
-            newTxn.classList.remove('sticky');
+    htmx.findAll('.budget-category>input[name="group"]').forEach((e) => {
+      htmx.remove(e);
+    });
 
-            activity.parentNode.classList.add('hover-active');
-            activity.focus({preventScroll: true});
-            activity.selectionStart = activity.value.length;
-            activity.selectionEnd = activity.value.length;
+    this.isDragging = false;
+  },
+  /**
+   * Create budgeting sidebar Chart
+   *
+   * @param {Number} assigned Amount of money assigned to target
+   * @param {Number} targetAmount Full target amount
+   * @param {Boolean} onTrack True if target is on track
+   */
+  update(assigned, targetAmount, onTrack) {
+    const remaining = targetAmount - assigned;
+    const percent = Math.min(100, (assigned / targetAmount) * 100);
 
-            budgeting.activeCategory = uri;
+    const canvas = htmx.find("#budget-sidebar-canvas");
+    const ctx = canvas.getContext("2d");
+    const datasets = [
+      {
+        name: "Assigned",
+        amount: assigned,
+        borderColorRaw: "primary",
+        backgroundColorRaw: "primary-container",
+      },
+    ];
+    if (remaining > 0) {
+      datasets.push({
+        name: "Remaining",
+        amount: remaining,
+        borderColorRaw: "tertiary",
+        backgroundColorRaw: "tertiary-container",
+      });
+    }
+    if (this.sidebarChart && ctx == this.sidebarChart.ctx) {
+      nummusChart.updatePie(
+        this.sidebarChart,
+        datasets,
+        `${percent.toFixed(0)}%`,
+      );
+    } else {
+      this.sidebarChart = nummusChart.createPie(ctx, datasets, null, {
+        plugins: { doughnutText: { text: `${percent.toFixed(0)}%` } },
+        animations: false,
+      });
+    }
+  },
+  /**
+   * Update group open state from checkbox
+   *
+   * @param {Element} e Checkbox input element
+   * @param {String} uri URI of group to update
+   */
+  openGroup(e, uri) {
+    // do nothing during edit
+    if (this.editing) return;
 
-            // Add a delay to allow keyboard to animate up
-            setTimeout(() => {
-                buttons.classList.remove('hidden');
-                activity.scrollIntoView({block: 'nearest', behavior: 'smooth'});
-            }, 150);
+    htmx.trigger(e, "send-state");
+    const isOpen = e.checked;
+    if (isOpen) {
+      htmx.addClass(htmx.find(`#group-${uri}`), "open");
+    } else {
+      htmx.removeClass(htmx.find(`#group-${uri}`), "open");
+    }
+  },
+  /**
+   * On click of category, activate assigned input
+   *
+   * @param {Element} e Category element
+   * @param {Event} evt Triggering event
+   */
+  onClickCategory(e, evt) {
+    // do nothing during edit
+    if (this.editing) return;
+
+    if (!e) {
+      if (
+        this.currentURI &&
+        (!evt || !evt.target.matches(".budget-category, .budget-category * "))
+      ) {
+        // Click was not on a category, deactivate
+        htmx.removeClass(
+          htmx.find(`#category-${this.currentURI}`),
+          "budget-category-active",
+        );
+        this.currentURI = null;
+        this.updateBar(false);
+        nav.setOverrideBarOff(true);
+      }
+
+      return;
+    }
+
+    if (window.screen.width < 768) {
+      // for small, activate budget-bar
+      const uri = e.id.slice(9);
+      if (this.currentURI == uri) {
+        this.currentURI = null;
+        this.updateBar(false);
+        nav.setOverrideBarOff(true);
+        htmx.removeClass(e, "budget-category-active");
+      } else {
+        if (this.currentURI) {
+          htmx.removeClass(
+            htmx.find(`#category-${this.currentURI}`),
+            "budget-category-active",
+          );
         }
-    },
-    /**
-     * On click of outside of row activity, blur input
-     *
-     * @param {Event} event Triggering event
-     */
-    closeRow: function(event) {
-        if (!event ||
-            !event.target.matches('.budgeting-amount, .budgeting-amount *')) {
-            const targetRow = event.target.closest('.budget-row');
-            let anyActive = false;
-            document.querySelectorAll('.hover-active').forEach((e) => {
-                const row = e.closest('.budget-row');
-                if (targetRow == row) {
-                    anyActive = true;
-                } else {
-                    e.classList.remove('hover-active');
-                }
-            });
-            if (!anyActive) {
-                const buttons = document.querySelector('#budgeting-buttons');
-                const newTxn = document.querySelector('#budgeting-new-txn');
+        htmx.find("#budget-button-bar input").value = uri;
+        this.currentURI = uri;
+        this.updateBar(true);
+        nav.setOverrideBarOff();
+        htmx.addClass(e, "budget-category-active");
+      }
 
-                setTimeout(() => {
-                    newTxn.classList.add('sticky');
-                }, 150)
-                buttons.classList.add('hidden');
-            }
-        }
-    },
-    onClickMove: function() {
-        if (budgeting.activeCategory) {
-            htmx.trigger(`#move-${budgeting.activeCategory}`, 'click');
-        }
-    },
-    onClickTarget: function() {
-        if (budgeting.activeCategory) {
-            htmx.trigger(`#target-${budgeting.activeCategory}`, 'click');
-        }
-    },
+      return;
+    }
+    // for larger, activate sidebar
+    htmx.trigger(e, "sidebar");
+  },
+  /**
+   * Update bar translate
+   *
+   * @param {Boolean} on true show the bar
+   */
+  updateBar(on) {
+    this.barOn = on;
+
+    if (this.bar == null) this.bar = htmx.find("#budget-button-bar");
+    if (this.barHeight == null) {
+      const rect = this.bar.getBoundingClientRect();
+      this.barHeight = rect.height;
+    }
+
+    this.barTranslate = on ? 0 : this.barHeight * 1.1;
+    this.bar.style.translate = `0 ${this.barTranslate}px`;
+  },
+  /**
+   * On click of delete target, confirm action
+   *
+   * @param {Event} evt Triggering event
+   */
+  confirmDelete(evt) {
+    dialog.confirm(
+      "Delete Target",
+      "Delete",
+      () => {
+        htmx.trigger(evt.target, "delete");
+      },
+      "Target will be deleted.",
+    );
+  },
+  /**
+   * On click of move bar button, trigger the category
+   */
+  onBarMove() {
+    const e = htmx.find(`#category-${this.currentURI} .hx-assign`);
+    htmx.trigger(e, "button");
+  },
+  /**
+   * On click of target bar button, trigger the category
+   */
+  onBarTarget() {
+    const e = htmx.find(`#category-${this.currentURI} .hx-target`);
+    htmx.trigger(e, "button");
+  },
+  /**
+   * Reset budgeting JS states
+   */
+  reset() {
+    this.bar = null;
+    if (this.currentURI) {
+      this.currentURI = null;
+      this.updateBar(false);
+      nav.setOverrideBarOff(true);
+    }
+  },
+  /**
+   * On click of edit switch, change edit mode
+   *
+   * @param {Element} e Toggle element
+   */
+  toggleEdit(e) {
+    this.editing = e.checked;
+    htmx
+      .findAll(
+        ".budget-category button, .budget-sidebar-target select, .budget-sidebar-target button",
+      )
+      .forEach((button) => {
+        button.setAttribute("disabled", "");
+      });
+    if (this.editing) {
+      htmx.addClass(htmx.find("#budget-table"), "edit");
+      this.setupDrag();
+    } else {
+      this.cleanUpDrag();
+      // On exit of editing, refresh budget page
+      // This sets new group names and resets buttons
+      htmx.trigger(document.body, "budget");
+    }
+  },
+  /**
+   * Delete group, move items to neighbor
+   *
+   * @param {Element} btn - Triggering button
+   */
+  deleteGroup(btn) {
+    const group = btn.closest(".budget-group");
+    const items = htmx.find(group, ".budget-group-items");
+    const prevGroup = group.previousElementSibling;
+    if (prevGroup && prevGroup.matches(".budget-group")) {
+      const newItems = htmx.find(prevGroup, ".budget-group-items");
+      htmx.findAll(items, ".budget-category").forEach((e) => {
+        newItems.insertBefore(e, null);
+      });
+      htmx.remove(group);
+    } else {
+      const nextGroup = group.nextElementSibling;
+      const newItems = htmx.find(nextGroup, ".budget-group-items");
+      const first = newItems.firstChild;
+      htmx.findAll(items, ".budget-category").forEach((e) => {
+        newItems.insertBefore(e, first);
+      });
+      htmx.remove(group);
+    }
+
+    htmx.findAll(".budget-category").forEach((e, i) => {
+      const group = e.closest(".budget-group");
+      const groupURI = group.id.slice(6);
+
+      const inputGroup = document.createElement("input");
+      inputGroup.name = "group";
+      inputGroup.type = "text";
+      inputGroup.value = groupURI;
+      inputGroup.hidden = true;
+      e.append(inputGroup);
+    });
+    htmx.trigger("#budget-table", "reorder");
+    this.cleanUpDrag();
+  },
 };
 
-window.addEventListener('click', budgeting.closeRow);
+htmx.on("click", (evt) => {
+  budgeting.onClickCategory(null, evt);
+});

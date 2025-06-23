@@ -1,47 +1,52 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
-     onclick="overlayEditor.close()"></div>
-<div class="w-full max-md:min-h-full md:w-[500px] md:h-[400px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
-     hx-swap="innerHTML">
-    <div class="flex items-start mb-2">
-        <h1 class="font-serif text-2xl text-green-600 grow">Move available funds</h1>
-        <button class="shrink-0" onclick="overlayEditor.close()">
-            {% with class="w-[32px] h-[32px]" %}
-                {% include "svg/x.svg" %}
-            {% endwith %}
-        </button>
+{% with headline="Move available funds", save_url=url_for("budgeting.move", uri=category.uri, month=category.month) %}
+  {% include "shared/dialog-headline.jinja" %}
+{% endwith %}
+<form class="w-88 grid gap-2" onsubmit="return false">
+  <div>
+    {{ category.name or "Assignable income" }} has
+    {{ category.available | money }} available
+  </div>
+  <label
+    class="input-outlined input-bg-surface-container-high {{ split_class }}"
+  >
+    <input
+      name="amount"
+      enterkeyhint="next"
+      placeholder=""
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for("budgeting.validation") }}"
+      autocomplete="off"
+    />
+    <icon>attach_money</icon>
+    <div>
+      <div>Move Amount</div>
     </div>
-    <div class="flex w-full gap-1 flex-col grow" id="form-edit-budget">
-        {% if category["name"] is none %}
-            <div>Assignable income has {{ category["available"] | money }} available</div>
-        {% else %}
-            <div>{{ category["name"] }} has {{ category["available"] | money }} available</div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high">
+    <select name="destination" required autocomplete="off">
+      {% for uri, name, available, group in category.options %}
+        {% if not loop.previtem or loop.previtem[3] != group %}
+          <option disabled>{{ group.pretty }}</option>
         {% endif %}
-        <div class="flex gap-1 flex-wrap min-h-7 items-center">
-            <div class="w-16 shrink-1">Move:</div>
-            <input class="grow"
-                   inputmode="tel"
-                   placeholder="0.00"
-                   name="amount"
-                   autofocus>
-        </div>
-        <div class="flex gap-1 flex-wrap min-h-7 items-center">
-            <div class="w-16 shrink-1">To:</div>
-            <select class="grow truncate" name="destination">
-                {% for uri, name, available in category["options"] %}
-                    <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
-                {% endfor %}
-            </select>
-        </div>
+        <option
+          value="{{ uri }}"
+          {% if uri == category.dest %}selected{% endif %}
+        >
+          {{ name }} {{ available | money }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Destination</div>
     </div>
-    <div id="overlay-error"
-         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
-        <div class="grow"></div>
-        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
-        <button hx-put="{{ url_for('budgeting.move', uri=category['uri'], month=category['month']) }}"
-                hx-target="#overlay-error"
-                hx-include="#form-edit-budget"
-                class="button bg-green">Save</button>
-    </div>
-    <script>overlayEditor.addListeners("form-edit-budget");</script>
-</div>
+  </label>
+</form>
+<div id="dialog-error" class="status-error"></div>
+<script>
+  dialog.onLoad();
+</script>

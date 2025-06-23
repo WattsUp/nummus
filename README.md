@@ -74,6 +74,7 @@ Run `web` command to launch a website to interact with the module.
 ---
 
 ## Running Tests
+
 Does not test front-end at all and minimally tests web controllers. This is out of scope for the foreseeable future.
 
 Unit tests
@@ -95,21 +96,21 @@ Coverage report
 Code development of this project adheres to [Google Python Guide](https://google.github.io/styleguide/pyguide.html)
 
 Linters
-```bash
-> ruff .
-> djlint .
-> codespell .
-```
+
+- `ruff` for Python
+- `pyright` for Python type analysis
+- `djlint` for Jinja HTML templates
+- `codespell` for all files
 
 Formatters
-```bash
-> isort .
-> black .
-> djlint . --reformat
-> clang-format $EACH_JS_FILE
-```
+
+- `isort` for Python import order
+- `black` for Python
+- `prettier` for Jinja HTML templates, CSS, and JS
+- `taplo` for TOML
 
 ### Tools
+
 - `formatters.sh` will run every formatter
 - `linters.sh` will run every linter
 - `make_test_portfolio.py` will create a portfolio with pseudorandom data
@@ -123,6 +124,7 @@ Formatters
 Most configuration is made per portfolio via the web interface
 
 There is a global config file for common user options, found at `~/.nummus/.config.ini`. Defaults are:
+
 ```ini
 [nummus]
 secure-icon = ⚿ # Icon to print on secure CLI prompts such as unlocking password

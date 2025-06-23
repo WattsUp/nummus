@@ -65,3 +65,15 @@ def get_engine(
             db_path = f"sqlite:////{path}"
         engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
     return engine
+
+
+def escape(s: str) -> str:
+    """Escape a string if it is reserved.
+
+    Args:
+        s: String to escape
+
+    Returns:
+        `s` if escaping is needed else s
+    """
+    return f"`{s}`" if s in sqlalchemy.sql.compiler.RESERVED_WORDS else s

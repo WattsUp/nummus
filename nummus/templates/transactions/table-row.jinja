@@ -1,0 +1,54 @@
+<div
+  class="txn"
+  hx-get="{{ url_for('transactions.transaction', uri=txn.parent_uri) }}"
+>
+  <label class="checkbox">
+    {# TODO (WattsUp): Add bulk editor #}
+    <input type="checkbox" autocomplete="off" disabled />
+    <icon>check_box_outline_blank</icon>
+    <icon>check_box</icon>
+  </label>
+  <div>
+    {# TODO (WattsUp): Add emphasis to matching terms when searching #}
+    <div>
+      <div>
+        {% if txn.asset_name %}
+          {% if txn.asset_quantity > 0 %}
+            Buy
+          {% elif txn.asset_quantity == 0 %}
+            {% if txn.amount > 0 %}
+              Dividend from
+            {% else %}
+              Fee from
+            {% endif %}
+          {% else %}
+            Sell
+          {% endif %}
+          {% if txn.asset_ticker %}{{ txn.asset_ticker }}:{% endif %}
+          {{ txn.asset_name }}
+        {% else %}
+          {{ txn.payee or "Payee needed" }}
+        {% endif %}
+      </div>
+      {% set class_amount = "text-primary" if txn.amount > 0 %}
+      <div class="{{ class_amount }}">{{ txn.amount | money }}</div>
+      {% set class_cleared = "text-primary filled" if txn.cleared > 0 %}
+      <icon class="{{ class_cleared }}">check_circle</icon>
+    </div>
+    <div>
+      <div>
+        {% if txn.asset_quantity %}
+          {{ txn.asset_quantity | abs | qty }}
+          shares @ {{ txn.asset_price | money }}
+        {% else %}
+          {{ txn.category }}
+        {% endif %}
+        <span class="max-md:hidden">
+          {% if txn.tag %}#{{ txn.tag }}{% endif %}
+        </span>
+      </div>
+      <div>{{ txn.account }}</div>
+      <icon> {% if txn.is_split %}arrow_split{% endif %} </icon>
+    </div>
+  </div>
+</div>

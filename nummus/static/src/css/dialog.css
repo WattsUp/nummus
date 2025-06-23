@@ -1,0 +1,61 @@
+@utility dialog-wrapper {
+  @apply fixed;
+  @apply max-h-full overflow-y-scroll scroll-smooth;
+  @apply left-[50vw] top-[50vh] -translate-x-1/2 -translate-y-1/2;
+
+  max-width: calc(100vw - var(--spacing) * 4);
+
+  &:has(.dialog:empty) {
+    @apply hidden;
+  }
+
+  &:has(.dialog:not(:empty)) + .scrim {
+    @apply translate-x-0 opacity-100;
+    transition:
+      opacity 0.3s,
+      translate 0s;
+  }
+
+  @variant max-md {
+    &:has(.full-screen) {
+      @apply translate-0 inset-0 max-w-full;
+    }
+  }
+}
+
+@utility dialog {
+  @apply rounded-3xl p-3;
+  @apply min-h-full min-w-64 max-w-full;
+  @apply bg-surface-container-high;
+
+  & > div:first-child {
+    @apply mb-2;
+    @apply bg-surface-container-high sticky top-0 z-10;
+
+    & h1 {
+      @apply text-primary mr-12 grow whitespace-nowrap font-serif text-2xl;
+    }
+
+    & button {
+      @apply btn-text;
+    }
+
+    & > div {
+      @apply flex items-center gap-1;
+    }
+
+    & > error {
+      @apply text-error block h-5 text-center text-sm;
+    }
+  }
+
+  & > form {
+    @apply max-w-full;
+  }
+
+  @variant max-md {
+    &:has(.full-screen) {
+      @apply rounded-none;
+    }
+  }
+}

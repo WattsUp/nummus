@@ -33,6 +33,7 @@ __all__ = [
     "InvalidORMValueError",
     "InvalidTargetValueError",
     "InvalidURIError",
+    "MigrationRequiredError",
     "MissingAssetError",
     "MultipleResultsFound",
     "NoAssetWebSourceError",
@@ -43,7 +44,6 @@ __all__ = [
     "ParentAttributeError",
     "ProtectedObjectNotFoundError",
     "UnboundExecutionError",
-    "UnknownCategoryError",
     "UnknownEncryptionVersionError",
     "UnknownImporterError",
     "UnlockingError",
@@ -212,10 +212,6 @@ class FutureTransactionError(Exception):
         super().__init__(msg)
 
 
-class UnknownCategoryError(Exception):
-    """Error when a category is not recognized."""
-
-
 class MissingAssetError(Exception):
     """Error when transaction is missing Asset information."""
 
@@ -230,3 +226,7 @@ class InvalidTargetValueError(Exception):
 
 class EvaluationError(Exception):
     """Error encountered when evaluating expression."""
+
+
+class MigrationRequiredError(Exception):
+    """Error when a migration is needed to operate."""

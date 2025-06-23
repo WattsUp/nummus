@@ -27,7 +27,7 @@ def import_file() -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     if flask.request.method == "GET":
-        return flask.render_template("import/overlay.jinja")
+        return flask.render_template("import/dialog.jinja")
 
     file = flask.request.files.get("file")
     if file is None or file.filename == "":
@@ -59,8 +59,8 @@ def import_file() -> str | flask.Response:
         error = f"{e.importer} failed to import file"
     except exc.EmptyImportError as e:
         error = f"{e.importer} did not import any transactions for file"
-    except Exception as e:  # noqa: BLE001
-        return common.error(e)
+    except exc.FutureTransactionError:
+        error = "Cannot create transaction in the future"
     finally:
         path_file_local.unlink()
 
@@ -68,17 +68,10 @@ def import_file() -> str | flask.Response:
         return common.error(error)
 
     html = flask.render_template(
-        "import/overlay.jinja",
+        "import/dialog.jinja",
         success=True,
     )
-    return common.overlay_swap(
-        html,
-        event=[
-            "update-account",
-            "update-asset",
-            "update-transaction",
-        ],
-    )
+    return common.dialog_swap(html, event="account")
 
 
 ROUTES: Routes = {

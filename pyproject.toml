@@ -24,7 +24,7 @@ dependencies = [
   "flask-login",
   "typing-extensions",
   "pdfplumber",
-  "yfinance",
+  "yfinance>=0.2.54",
   "pyspellchecker",
   "tqdm",
   "argcomplete",
@@ -32,6 +32,7 @@ dependencies = [
   "emoji",
   "werkzeug>=3",
   "prometheus-flask-exporter",
+  "packaging",
 ]
 description = "A personal financial information aggregator and planning tool"
 license = { file = "LICENSE" }
@@ -46,9 +47,9 @@ classifiers = [
   "Intended Audience :: End Users/Desktop",
   "Topic :: Office/Business :: Financial",
   "Topic :: Office/Business :: Financial :: Accounting",
-  "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
 ]
 requires-python = ">=3.10"
 
@@ -74,19 +75,19 @@ test = [
 ]
 dev = [
   "nummus[test]",     # Development needs tests too
-  "ruff>=0.9.0",
-  "codespell>=2.3.0",
-  "black",
+  "ruff>=0.12.0",
+  "codespell>=2.4.1",
+  "black>=25",
   "isort",
   "viztracer",
   "pre-commit",
   "djlint>=1.36.4",
-  "pyright>=1.1.387",
+  "pyright>=1.1.402",
   "taplo",
 ]
 
 [tool.black]
-target-version = ["py310", "py311", "py312"]
+target-version = ["py310", "py311", "py312", "py313"]
 preview = true
 
 [tool.codespell]
@@ -141,6 +142,7 @@ exclude_lines = [
 [tool.djlint]
 extension = "jinja"
 profile = "jinja"
+ignore = "H020"
 
 [tool.isort]
 profile = "black"
@@ -150,7 +152,16 @@ force_alphabetical_sort_within_sections = true
 
 [tool.pyright]
 include = ["nummus", "tests", "tools"]
-exclude = ["**/__pycache__"]
+exclude = [
+  "**/__pycache__",
+  # Not updated yet
+  "nummus/controllers/cash_flow.py",
+  "nummus/controllers/net_worth.py",
+  "nummus/controllers/performance.py",
+  "tests/controllers/test_cash_flow.py",
+  "tests/controllers/test_net_worth.py",
+  "tests/controllers/test_performance.py",
+]
 venvPath = "."
 venv = ".venv"
 
@@ -226,6 +237,13 @@ exclude = [
   ".env",
   "venv",
   ".venv",
+  # Not updated yet
+  "nummus/controllers/cash_flow.py",
+  "nummus/controllers/net_worth.py",
+  "nummus/controllers/performance.py",
+  "tests/controllers/test_cash_flow.py",
+  "tests/controllers/test_net_worth.py",
+  "tests/controllers/test_performance.py",
 ]
 
 [tool.ruff.lint.pydocstyle]

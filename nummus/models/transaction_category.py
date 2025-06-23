@@ -6,7 +6,6 @@ from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 from typing_extensions import override
 
 from nummus import exceptions as exc
-from nummus import utils
 from nummus.models.base import (
     Base,
     BaseEnum,
@@ -60,8 +59,12 @@ class TransactionCategory(Base):
     budget_position: ORMIntOpt
 
     __table_args__ = (
-        *string_column_args("name"),
+        *string_column_args("name", lower_check=True),
         *string_column_args("emoji_name"),
+        CheckConstraint(
+            f"not essential OR `group` != {TransactionCategoryGroup.INCOME.value}",
+            name="INCOME cannot be essential",
+        ),
         CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
             name="group and position same null state",
@@ -75,8 +78,7 @@ class TransactionCategory(Base):
             msg = "Call TransactionSplit.emoji_name = x. Do not set name directly"
             raise exc.ParentAttributeError(msg)
         if name == "emoji_name" and isinstance(value, str):
-            value_no_emojis = utils.strip_emojis(value).strip()
-            super().__setattr__("name", value_no_emojis)
+            super().__setattr__("name", self.clean_emoji_name(value))
         super().__setattr__(name, value)
 
     @orm.validates("name", "emoji_name")
@@ -85,7 +87,7 @@ class TransactionCategory(Base):
         return self.clean_strings(key, field)
 
     @orm.validates("essential")
-    def validate_essential(self, _: str, field: bool | None) -> bool | None:
+    def validate_essential(self, _: str, field: object) -> bool:
         """Validates income groups are not marked essential.
 
         Args:
@@ -97,6 +99,9 @@ class TransactionCategory(Base):
         Raises:
             InvalidORMValueError if field is essential
         """
+        if not isinstance(field, bool):
+            msg = f"field is not of type bool: {type(field)}"
+            raise TypeError(msg)
         if field and self.group in (
             TransactionCategoryGroup.INCOME,
             TransactionCategoryGroup.OTHER,
@@ -206,7 +211,7 @@ class TransactionCategory(Base):
                     essential=essential,
                 )
                 s.add(cat)
-                d[name] = cat
+                d[cat.name] = cat
         return d
 
     @override

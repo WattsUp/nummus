@@ -8,12 +8,11 @@ import time
 import urllib.parse
 import warnings
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 from unittest import mock
 
 import autodict
 import flask
-import flask.testing
 import sqlalchemy
 
 from nummus import portfolio, web
@@ -43,6 +42,47 @@ TreeNode = Tree | tuple[str, Tree] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 
+class PortfolioSetup(TypedDict):
+    acct_id: int
+    acct_uri: str
+    acct_name: str
+
+    txn_0_id: int
+    txn_0_uri: str
+
+    txn_1_id: int
+    txn_1_uri: str
+
+    t_split_0_id: int
+    t_split_0_uri: str
+
+    t_split_1_id: int
+    t_split_1_uri: str
+
+    payee_0: str
+    payee_1: str
+
+    tag_1: str
+
+    cat_0_id: int
+    cat_0_uri: str
+    cat_0_name: str
+    cat_0_emoji_name: str
+
+    cat_1_id: int
+    cat_1_uri: str
+    cat_1_name: str
+    cat_1_emoji_name: str
+
+    asset_0_id: int
+    asset_0_uri: str
+    asset_0_name: str
+
+    asset_1_id: int
+    asset_1_uri: str
+    asset_1_name: str
+
+
 class WebTestBase(TestBase):
     def assertValidHTML(self, s: str) -> None:  # noqa: N802
         """Test HTML is valid based on tags.
@@ -50,7 +90,7 @@ class WebTestBase(TestBase):
         Args:
             s: String to test
         """
-        tags: list[str] = re.findall(r"<(/?\w+)(?: [^<>]+)?>", s)
+        tags: list[str] = re.findall(r"<(/?\w+)(?:[ \n][^<>]+)?>", s)
 
         tree: Tree = {"__parent__": (None, None)}
         current_node = tree
@@ -92,27 +132,11 @@ class WebTestBase(TestBase):
         duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
         self.assertEqual(duplicates, set(), "Duplicate element ids")
 
-    def _setup_portfolio(self) -> dict[str, str]:
+    def _setup_portfolio(self) -> PortfolioSetup:
         """Create accounts and transactions to test with.
 
         Returns:
-            {
-                "acct": Account name
-                "acct_uri": URI for Account
-                "t_0": URI for transaction 0
-                "t_split_0": URI for split 0
-                "t_1": URI for transaction 1
-                "t_split_1": URI for split 1
-                "payee_0": Payee for transaction 0
-                "payee_1": Payee for transaction 1
-                "cat_0": Payee for transaction 0
-                "cat_1": Payee for transaction 1
-                "tag_1": Tag for transaction 1
-                "a_0": Asset 0 name,
-                "a_uri_0": URI for Asset 0
-                "a_1": Asset 1 name,
-                "a_uri_1": URI for Asset 1
-            }
+            PortfolioSetup
         """
         self._clear_portfolio()
         p = self._portfolio
@@ -123,10 +147,15 @@ class WebTestBase(TestBase):
         payee_0 = "Apple"
         payee_1 = "Banana"
 
-        cat_0 = "Interest"
-        cat_1 = "Uncategorized"
+        cat_0_name = "interest"
+        cat_0_emoji_name = "😀 Interest"
+        cat_1_name = "travel"
+        cat_1_emoji_name = "Travel"
 
         tag_1 = self.random_string()
+
+        asset_0_name = "Banana Inc."
+        asset_1_name = "Fruit Ct. House"
 
         with p.begin_session() as s:
             acct = Account(
@@ -138,7 +167,7 @@ class WebTestBase(TestBase):
             )
             s.add(acct)
             s.flush()
-
+            acct_id = acct.id_
             acct_uri = acct.uri
 
             TransactionCategory.add_default(s)
@@ -147,26 +176,28 @@ class WebTestBase(TestBase):
             categories = {v: k for k, v in categories.items()}
 
             s.query(TransactionCategory).where(
-                TransactionCategory.name == cat_0,
-            ).update({"emoji_name": "😀 " + cat_0})
+                TransactionCategory.name == cat_0_name,
+            ).update({"emoji_name": cat_0_emoji_name})
 
             txn = Transaction(
                 account_id=acct.id_,
                 date=today,
                 amount=100,
                 statement=self.random_string(),
-                linked=True,
+                payee=payee_0,
+                cleared=False,
             )
             t_split = TransactionSplit(
-                amount=txn.amount,
                 parent=txn,
-                payee=payee_0,
-                category_id=categories[cat_0],
+                amount=txn.amount,
+                category_id=categories[cat_0_name],
             )
             s.add_all((txn, t_split))
             s.flush()
 
-            t_0_uri = txn.uri
+            txn_0_id = txn.id_
+            txn_0_uri = txn.uri
+            t_split_0_id = t_split.id_
             t_split_0_uri = t_split.uri
 
             txn = Transaction(
@@ -174,49 +205,61 @@ class WebTestBase(TestBase):
                 date=today,
                 amount=-10,
                 statement=self.random_string(),
-                locked=True,
-                linked=True,
+                payee=payee_1,
+                cleared=True,
             )
             t_split = TransactionSplit(
-                amount=txn.amount,
                 parent=txn,
-                payee=payee_1,
-                category_id=categories[cat_1],
+                amount=txn.amount,
+                category_id=categories[cat_1_name],
                 tag=tag_1,
             )
             s.add_all((txn, t_split))
             s.flush()
-
-            t_1_uri = txn.uri
+            txn_1_id = txn.id_
+            txn_1_uri = txn.uri
+            t_split_1_id = t_split.id_
             t_split_1_uri = t_split.uri
 
-            a_name_0 = "Banana Inc."
-            a_0 = Asset(name=a_name_0, category=AssetCategory.ITEM)
-            a_name_1 = "Fruit Ct. House"
-            a_1 = Asset(name=a_name_1, category=AssetCategory.REAL_ESTATE)
+            a_0 = Asset(name=asset_0_name, category=AssetCategory.ITEM)
+            a_1 = Asset(name=asset_1_name, category=AssetCategory.REAL_ESTATE)
 
             s.add_all((a_0, a_1))
             s.flush()
-            a_uri_0 = a_0.uri
-            a_uri_1 = a_1.uri
+            asset_0_id = a_0.id_
+            asset_0_uri = a_0.uri
+            asset_1_id = a_1.id_
+            asset_1_uri = a_1.uri
 
         return {
-            "acct": acct_name,
+            "acct_id": acct_id,
             "acct_uri": acct_uri,
-            "t_0": t_0_uri,
-            "t_split_0": t_split_0_uri,
-            "t_1": t_1_uri,
-            "t_split_1": t_split_1_uri,
+            "acct_name": acct_name,
+            "txn_0_id": txn_0_id,
+            "txn_0_uri": txn_0_uri,
+            "txn_1_id": txn_1_id,
+            "txn_1_uri": txn_1_uri,
+            "t_split_0_id": t_split_0_id,
+            "t_split_0_uri": t_split_0_uri,
+            "t_split_1_id": t_split_1_id,
+            "t_split_1_uri": t_split_1_uri,
             "payee_0": payee_0,
             "payee_1": payee_1,
-            "cat_0": cat_0,
-            "cat_0_emoji": f"😀 {cat_0}",
-            "cat_1": cat_1,
             "tag_1": tag_1,
-            "a_0": a_name_0,
-            "a_uri_0": a_uri_0,
-            "a_1": a_name_1,
-            "a_uri_1": a_uri_1,
+            "cat_0_id": categories[cat_0_name],
+            "cat_0_uri": TransactionCategory.id_to_uri(categories[cat_0_name]),
+            "cat_0_name": cat_0_name,
+            "cat_0_emoji_name": cat_0_emoji_name,
+            "cat_1_id": categories[cat_1_name],
+            "cat_1_uri": TransactionCategory.id_to_uri(categories[cat_1_name]),
+            "cat_1_name": cat_1_name,
+            "cat_1_emoji_name": cat_1_emoji_name,
+            "asset_0_id": asset_0_id,
+            "asset_0_uri": asset_0_uri,
+            "asset_0_name": asset_0_name,
+            "asset_1_id": asset_1_id,
+            "asset_1_uri": asset_1_uri,
+            "asset_1_name": asset_1_name,
         }
 
     def _clear_portfolio(self) -> None:
@@ -372,6 +415,11 @@ class WebTestBase(TestBase):
                 if response.status_code != HTTP_CODE_REDIRECT:
                     # werkzeug redirect doesn't have close tags
                     self.assertValidHTML(html)
+                # Remove whitespace
+                html = "".join(html.split("\n"))
+                html = re.sub(r" +", " ", html)
+                html = re.sub(r" ?> ?", ">", html)
+                html = re.sub(r" ?< ?", "<", html)
                 return html, response.headers
             return response.data, response.headers
         finally:

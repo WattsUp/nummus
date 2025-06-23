@@ -8,6 +8,7 @@ from decimal import Decimal
 from unittest import mock
 
 import numpy_financial as npf
+from colorama import Fore
 
 from nummus import utils
 from tests.base import TestBase
@@ -104,6 +105,67 @@ class TestUtils(TestBase):
             mock.builtins.input = original_input  # type: ignore[attr-defined]
             utils.getpass.getpass = original_get_pass
 
+    def test_get_password(self) -> None:
+        key = self.random_string()
+        queue: list[str | None] = []
+
+        def mock_input(to_print: str, *, secure: bool) -> str | None:
+            self.assertTrue(secure)
+            print(to_print)
+            if len(queue) == 1:
+                return queue[0]
+            return queue.pop(0)
+
+        original_get_input = utils.get_input
+        try:
+            utils.get_input = mock_input
+
+            queue = [key, key]
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                result = utils.get_password()
+
+            fake_stdout = fake_stdout.getvalue()
+            target = "Please enter password: \nPlease confirm password: \n"
+            self.assertEqual(fake_stdout, target)
+            self.assertEqual(result, key)
+
+            queue = [self.random_string(7), key, key + "typo", key, key]
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                result = utils.get_password()
+
+            fake_stdout = fake_stdout.getvalue()
+            target = (
+                "Please enter password: \n"
+                f"{Fore.RED}Password must be at least 8 characters\n"
+                "Please enter password: \n"
+                "Please confirm password: \n"
+                f"{Fore.RED}Passwords must match\n"
+                "Please enter password: \n"
+                "Please confirm password: \n"
+            )
+            self.assertEqual(fake_stdout, target)
+            self.assertEqual(result, key)
+
+            queue = [None]
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                result = utils.get_password()
+
+            fake_stdout = fake_stdout.getvalue()
+            target = "Please enter password: \n"
+            self.assertEqual(fake_stdout, target)
+            self.assertIsNone(result)
+
+            queue = [key, None]
+            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+                result = utils.get_password()
+
+            fake_stdout = fake_stdout.getvalue()
+            target = "Please enter password: \nPlease confirm password: \n"
+            self.assertEqual(fake_stdout, target)
+            self.assertIsNone(result)
+        finally:
+            utils.get_input = original_get_input
+
     def test_confirm(self) -> None:
         prompt = self.random_string()
         prompt_input = self.random_string(length=50)
@@ -165,6 +227,10 @@ class TestUtils(TestBase):
         self.assertIsNone(result)
 
         s = "__import__('os').system('rm -rf /')"
+        result = utils.evaluate_real_statement(s)
+        self.assertIsNone(result)
+
+        s = "2+5j"
         result = utils.evaluate_real_statement(s)
         self.assertIsNone(result)
 
@@ -270,48 +336,48 @@ class TestUtils(TestBase):
 
         d = 11
         result = utils.format_days(d)
-        self.assertEqual(result, "2 wks")
+        self.assertEqual(result, "2 weeks")
 
         d = 8 * 7
         result = utils.format_days(d)
-        self.assertEqual(result, "8 wks")
+        self.assertEqual(result, "8 weeks")
 
         d = 8 * 7 + 1
         result = utils.format_days(d)
-        self.assertEqual(result, "2 mos")
+        self.assertEqual(result, "2 months")
 
         d = int(18 * 365.25 / 12)
         result = utils.format_days(d)
-        self.assertEqual(result, "18 mos")
+        self.assertEqual(result, "18 months")
 
         d = int(18 * 365.25 / 12 + 1)
         result = utils.format_days(d)
-        self.assertEqual(result, "2 yrs")
+        self.assertEqual(result, "2 years")
 
     def test_format_seconds(self) -> None:
         s = 0.0
         result = utils.format_seconds(s)
-        self.assertEqual(result, "0.0 s")
+        self.assertEqual(result, "0.0 seconds")
 
         s = 60.0
         result = utils.format_seconds(s)
-        self.assertEqual(result, "60.0 s")
+        self.assertEqual(result, "60.0 seconds")
 
         s = 90.1
         result = utils.format_seconds(s)
-        self.assertEqual(result, "1.5 min")
+        self.assertEqual(result, "1.5 minutes")
 
         s = 5400.1
         result = utils.format_seconds(s)
-        self.assertEqual(result, "1.5 hrs")
+        self.assertEqual(result, "1.5 hours")
 
         s = 86400.0
         result = utils.format_seconds(s)
-        self.assertEqual(result, "24.0 hrs")
+        self.assertEqual(result, "24.0 hours")
 
         s = 86400 * 4.0
         result = utils.format_seconds(s)
-        self.assertEqual(result, "96.0 hrs")
+        self.assertEqual(result, "96.0 hours")
 
         s = 86400 * 4.1
         result = utils.format_seconds(s)

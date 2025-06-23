@@ -378,7 +378,7 @@ class TestAccount(TestBase):
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            category_id=categories["Interest"],
+            category_id=categories["interest"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -424,7 +424,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[0].id_,
             asset_quantity_unadjusted=q0,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -474,7 +474,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[0].id_,
             asset_quantity_unadjusted=-q0,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -572,7 +572,7 @@ class TestAccount(TestBase):
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            category_id=categories["Other Income"],
+            category_id=categories["other income"],
         )
         s.add_all((txn, t_split))
         t3 = self.random_decimal(-10, -1)
@@ -585,7 +585,7 @@ class TestAccount(TestBase):
         t_split = TransactionSplit(
             parent=txn,
             amount=txn.amount,
-            category_id=categories["Groceries"],
+            category_id=categories["groceries"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -641,7 +641,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[1].id_,
             asset_quantity_unadjusted=q0,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -669,7 +669,7 @@ class TestAccount(TestBase):
             amount=txn.amount,
             asset_id=assets[1].id_,
             asset_quantity_unadjusted=-q0,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -700,8 +700,8 @@ class TestAccount(TestBase):
 
         categories = TransactionCategory.add_default(s)
         s.commit()
-        t_cat_fund = categories["Transfers"]
-        t_cat_trade = categories["Securities Traded"]
+        t_cat_fund = categories["transfers"]
+        t_cat_trade = categories["securities traded"]
 
         start = today_ord - 3
         end = today_ord + 3
@@ -874,7 +874,7 @@ class TestAccount(TestBase):
             parent=txn,
             asset_id=a_house_id,
             asset_quantity_unadjusted=1,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -936,7 +936,7 @@ class TestAccount(TestBase):
             parent=txn,
             asset_id=a_house_id,
             asset_quantity_unadjusted=-1,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -978,7 +978,7 @@ class TestAccount(TestBase):
             parent=txn,
             asset_id=a_banana_id,
             asset_quantity_unadjusted=1,
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()
@@ -994,14 +994,14 @@ class TestAccount(TestBase):
             parent=txn,
             asset_id=a_banana_id,
             asset_quantity_unadjusted=0,
-            category_id=categories["Dividends Received"],
+            category_id=categories["dividends received"],
         )
         t_split_1 = TransactionSplit(
             amount=-1,
             parent=txn,
             asset_id=a_banana_id,
             asset_quantity_unadjusted=Decimal("0.1"),
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split_0, t_split_1))
         s.commit()
@@ -1017,7 +1017,7 @@ class TestAccount(TestBase):
             parent=txn,
             asset_id=a_banana_id,
             asset_quantity_unadjusted=Decimal("-1.1"),
-            category_id=categories["Securities Traded"],
+            category_id=categories["securities traded"],
         )
         s.add_all((txn, t_split))
         s.commit()

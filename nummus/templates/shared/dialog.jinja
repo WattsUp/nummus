@@ -1,0 +1,20 @@
+<div
+  id="dialog"
+  class="dialog"
+  hx-swap-oob="{{ oob }}"
+  hx-target="#dialog-error"
+  hx-on::oob-before-swap="dialog.reset()"
+  hx-on::after-settle="dialog.updateSave()"
+>
+  {{- content | safe -}}
+</div>
+{% if snackbar %}
+  <script id="snackbar-script" hx-swap-oob="true">
+    snackbar.show("{{ snackbar }}");
+  </script>
+{% endif %}
+{% if clear_history %}
+  <script id="history-script" hx-swap-oob="true">
+    nummusClearHistory();
+  </script>
+{% endif %}

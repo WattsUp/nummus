@@ -1,79 +1,99 @@
-<div class="absolute inset-0 bg-grey-500 opacity-50 z-[-1] cursor-pointer max-md:hidden"
-     onclick="overlayEditor.close()"></div>
-<div class="w-full max-md:min-h-full md:w-[750px] md:h-[580px] md:max-h-[90vh] bg-white opacity-100 m-auto flex flex-col py-2 px-6"
-     hx-swap="innerHTML">
-    <div class="flex items-start mb-2">
-        <h1 class="font-serif text-2xl text-green-600 grow">Edit asset</h1>
-        <button class="shrink-0" onclick="overlayEditor.close()">
-            {% with class="w-[32px] h-[32px]" %}
-                {% include "svg/x.svg" %}
-            {% endwith %}
-        </button>
+{% if asset.uri %}
+  {% with headline="Edit asset", save_url=url_for("assets.asset", uri=asset.uri) %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
+{% else %}
+  {% with headline="New asset", save_url=url_for("assets.new"), save_method="post" %}
+    {% include "shared/dialog-headline.jinja" %}
+  {% endwith %}
+{% endif %}
+<form class="w-88 grid grid-cols-2 gap-2" onsubmit="return false">
+  <label class="input-outlined input-bg-surface-container-high col-span-2">
+    <input
+      name="name"
+      required
+      enterkeyhint="next"
+      placeholder=""
+      value="{{ asset.name or "" }}"
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Name</div>
     </div>
-    <div class="flex w-full gap-4 min-h-0 max-md:flex-col grow"
-         id="form-asset">
-        <div class="md:w-5/12 flex flex-col items-center">
-            <hr class="w-full border-grey-200">
-            <div class="font-serif text-2xl">
-                {% if asset["value"] < 0.1 %}
-                    {{ asset["value"] | money6 }}
-                {% else %}
-                    {{ asset["value"] | money }}
-                {% endif %}
-            </div>
-            {% if asset["value_date"] %}
-                <div class="italic">as of {{ asset["value_date"] }}</div>
-            {% else %}
-                <div class="italic">no valuations</div>
-            {% endif %}
-        </div>
-        <div class="md:w-7/12">
-            <h1 class="font-bold">Edit details</h1>
-            <hr class="w-full border-grey-200">
-            <div class="flex gap-1 flex-wrap min-h-7">
-                <div class="w-20 shrink-1">Name</div>
-                <div class="grow">
-                    <input class="w-full"
-                           name="name"
-                           value="{{ asset["name"] | e }}"
-                           autocomplete="off">
-                </div>
-            </div>
-            <div class="flex gap-1 flex-wrap min-h-7">
-                <div class="w-20 shrink-1">Ticker</div>
-                <div class="grow">
-                    <input class="w-full"
-                           name="ticker"
-                           value="{{ (asset["ticker"] or "") | e }}"
-                           autocomplete="off">
-                </div>
-            </div>
-            <div class="flex gap-1 flex-wrap min-h-7">
-                <div class="w-20 shrink-1">Class</div>
-                <div class="grow">
-                    <select class="w-full" name="category" autocomplete="off">
-                        {% for cat in asset["category_type"] %}
-                            {% if cat != "INDEX" %}
-                                <option value="{{ cat.name }}"
-                                        {% if cat == asset["category"] %}selected{% endif %}>{{ cat.pretty }}</option>
-                            {% endif %}
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            <div>Description</div>
-            <textarea class="w-full min-h-32" name="description" autocomplete="off">{{ asset["description"] or "" }}</textarea>
-        </div>
+    <div>
+      <error></error>
     </div>
-    <div id="overlay-error"
-         class="w-full bg-red p-1 text-xl empty:hidden my-1"></div>
-    <div class="w-full flex justify-between items-center text-xl gap-4 flex-wrap">
-        <div class="grow"></div>
-        <button class="button hover-green" onclick="overlayEditor.close()">Cancel</button>
-        <button hx-put="{{ url_for('assets.asset', uri=asset['uri']) }}"
-                hx-target="#overlay-error"
-                hx-include="#form-asset"
-                class="button bg-green">Save</button>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high">
+    <input
+      name="ticker"
+      enterkeyhint="next"
+      placeholder=""
+      value="{{ asset.ticker or "" }}"
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    />
+    <div>
+      <div>Ticker</div>
     </div>
-    <script>overlayEditor.addListeners("form-asset");</script>
-</div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-start-2">
+    <select name="category" required autocomplete="off">
+      <option
+        value=""
+        disabled
+        hidden
+        {% if not asset.group %}selected{% endif %}
+      ></option>
+      {% for cat in asset.category_type %}
+        <option
+          value="{{ cat.name }}"
+          {% if cat == asset.category %}selected{% endif %}
+          {% if cat =="INDEX" %}disabled hidden{% endif %}
+        >
+          {{ cat.pretty }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Category</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container-high col-span-full">
+    <textarea
+      name="description"
+      enterkeyhint="next"
+      placeholder=""
+      hx-target="next error"
+      hx-trigger="input delay:200ms"
+      hx-include="this"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      autocomplete="off"
+      spellcheck="true"
+    >
+{{ asset.description or "" }}</textarea
+    >
+    <div>
+      <div>Description</div>
+    </div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+</form>
+<div id="dialog-error" class="status-error"></div>
+<script>
+  dialog.onLoad();
+</script>

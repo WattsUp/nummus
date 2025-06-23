@@ -13,24 +13,26 @@ from nummus.commands.create import Create
 from nummus.commands.export import Export
 from nummus.commands.health import Health
 from nummus.commands.import_files import Import
+from nummus.commands.migrate import Migrate
 from nummus.commands.summarize import Summarize
 from nummus.commands.unlock import Unlock
 from nummus.commands.update_assets import UpdateAssets
 from nummus.commands.web import Web
 
 if TYPE_CHECKING:
-    from nummus.commands.base import Base
+    from nummus.commands.base import BaseCommand
 
 
 colorama.init(autoreset=True)
 
 
-COMMANDS: dict[str, type[Base]] = {
+COMMANDS: dict[str, type[BaseCommand]] = {
     cls.NAME: cls
     for cls in [
         Create,
         Web,
         Unlock,
+        Migrate,
         Backup,
         Restore,
         Clean,

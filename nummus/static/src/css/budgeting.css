@@ -1,0 +1,171 @@
+@utility budget-group {
+  @apply relative mb-2 rounded-md;
+  @apply not-edit:bg-surface-container-low;
+
+  @variant error {
+    & > label {
+      @apply bg-error-container text-on-error-container;
+    }
+  }
+
+  & > label {
+    @apply flex items-center;
+    @apply edit:pl-8 relative h-11 rounded-md pl-1 pr-2;
+    @apply bg-surface-container-highest;
+
+    @variant error {
+      @apply bg-error-container text-on-error-container;
+    }
+
+    & > input:first-of-type {
+      @apply h-0 w-0 opacity-0;
+    }
+
+    & > h1 {
+      @apply mr-auto;
+    }
+
+    & > div {
+      @apply w-28 shrink-0 text-right;
+    }
+  }
+
+  & > div {
+    @apply not-edit:not-open:hidden;
+  }
+
+  & hr {
+    @apply edit:hidden;
+  }
+
+  @variant edit {
+    @variant last-of-type {
+      & > label {
+        @apply mb-6;
+
+        &::before {
+          @apply absolute left-0 top-11 w-full;
+          @apply text-on-surface-variant text-center italic;
+          content: "Ungrouped cannot be moved nor reorganized";
+        }
+      }
+    }
+  }
+}
+
+@utility budget-category {
+  @apply edit:pl-8 relative px-2 py-1;
+
+  & > div:first-of-type > div {
+    @apply w-28 shrink-0;
+    @apply text-right;
+    @apply relative;
+
+    @variant first-of-type {
+      & > input {
+        @apply absolute inset-0;
+        @apply opacity-0;
+        @apply text-right;
+
+        @variant not-edit {
+          @variant [:active, :focus-visible, :focus-within] {
+            @apply opacity-100;
+
+            & ~ span {
+              @apply opacity-0;
+            }
+          }
+        }
+      }
+
+      @variant not-edit {
+        @variant hover {
+          & > span {
+            @apply opacity-0;
+            @apply pointer-events-none;
+          }
+
+          & > input {
+            @apply opacity-100;
+          }
+        }
+      }
+    }
+  }
+}
+
+@utility budget-dragging {
+  @apply z-50 m-0;
+
+  &::before {
+    @apply -z-1 absolute -inset-1 content-[""];
+    @apply border-outline bg-surface-container-lowest border-2;
+    @apply shadow-xl;
+  }
+}
+
+@utility budget-drag {
+  @apply not-edit:hidden absolute left-1 top-1/2 -translate-y-1/2;
+  @apply cursor-grab;
+}
+
+@utility budget-category-active {
+  @variant max-md {
+    @apply outline-3 outline-secondary;
+  }
+}
+
+@utility budget-bar {
+  @apply flex h-[6px] w-full gap-1;
+
+  & > div {
+    @apply relative h-full grow;
+    @apply bg-surface-container-highest;
+
+    /* big radius to get pill shape */
+    border-radius: 100em;
+
+    & > div {
+      @apply absolute left-0 top-0 h-full;
+
+      /* big radius to get pill shape */
+      border-radius: 100em;
+
+      @variant last-of-type {
+        @apply pattern-diagonal-lines pattern-opacity-100;
+      }
+    }
+  }
+}
+
+@utility budget-sidebar-summary {
+  @apply rounded-md p-2;
+  @apply bg-surface-container-high;
+
+  & > div {
+    @apply flex items-center justify-between gap-1;
+  }
+
+  & label {
+    @apply input-bg-surface-container-high;
+  }
+}
+
+@utility budget-sidebar-target {
+  @apply budget-sidebar-summary;
+  @apply mt-2;
+}
+
+#budget-button-bar {
+  @apply nav-section z-10;
+  @apply fixed bottom-0 left-0 w-full justify-evenly pt-2 md:hidden;
+  @apply bg-tertiary;
+  @apply translate-y-[110%];
+
+  transition: translate 0.5s;
+
+  & > button,
+  & > a {
+    @apply btn-text-on-tertiary btn-stacked btn-size-lg mx-0 last:w-min;
+  }
+}
