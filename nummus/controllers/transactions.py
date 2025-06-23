@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import NotRequired, TYPE_CHECKING, TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func, orm
@@ -23,6 +23,8 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    from typing_extensions import NotRequired
+
     from nummus.controllers.base import Routes
 
 PAGE_LEN = 25
