@@ -82,6 +82,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - run:  npm install -D prettier prettier-plugin-tailwindcss prettier-plugin-jinja-template
       - name: Run prettier
         uses: creyD/prettier_action@v4.6
         with:
