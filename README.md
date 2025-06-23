@@ -140,5 +140,5 @@ Versioning of this projects adheres to [Semantic Versioning](https://semver.org/
 [unittest-url]: https://github.com/WattsUp/nummus/actions/workflows/test.yml
 [static-analysis-image]: https://github.com/WattsUp/nummus/actions/workflows/static-analysis.yml/badge.svg
 [static-analysis-url]: https://github.com/WattsUp/nummus/actions/workflows/static-analysis.yml
-[coverage-image]: https://gist.githubusercontent.com/WattsUp/36d9705addcd44fb0fccec1d23dc1338/raw/2df69443d1196e290ffc7d96ebd422708c77d939/nummus__heads_master.svg
+[coverage-image]: https://gist.githubusercontent.com/WattsUp/36d9705addcd44fb0fccec1d23dc1338/raw/nummus__heads_master.svg
 [coverage-url]: https://github.com/WattsUp/nummus/actions/workflows/coverage.yml
