@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import tempfile
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -56,8 +57,10 @@ def import_file() -> str | flask.Response:
     except exc.UnknownImporterError:
         error = "Could not find an importer for file"
     except exc.FailedImportError as e:
+        traceback.print_exception(e)  # For logs
         error = f"{e.importer} failed to import file"
     except exc.EmptyImportError as e:
+        traceback.print_exception(e)  # For logs
         error = f"{e.importer} did not import any transactions for file"
     except exc.FutureTransactionError:
         error = "Cannot create transaction in the future"
