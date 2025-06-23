@@ -86,7 +86,7 @@ jobs:
         uses: creyD/prettier_action@v4.6
         with:
           dry: true
-          prettier_plugins: "@prettier/prettier-plugin-tailwindcss @prettier/prettier-plugin-jinja-template"
+          prettier_plugins: "@prettier/plugin-tailwindcss @prettier/plugin-jinja-template"
   imports:
     runs-on: ubuntu-latest
     strategy:
