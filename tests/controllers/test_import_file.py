@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import datetime
 import io
+from unittest import mock
 
 from nummus.models import Account, AccountCategory
 from tests.controllers.base import WebTestBase
@@ -33,35 +34,47 @@ class TestImportFile(WebTestBase):
         self.assertIn("No file selected", result)
 
         path = self._DATA_ROOT.joinpath("transactions_lacking.csv")
-        result, _ = self.web_post(
-            endpoint,
-            data={"file": (path, path.name)},
-        )
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+            result, _ = self.web_post(
+                endpoint,
+                data={"file": (path, path.name)},
+            )
         self.assertIn("Could not find an importer for file", result)
+        # stack trace not printed
+        self.assertEqual(fake_stderr.getvalue(), "")
 
         path = self._DATA_ROOT.joinpath("transactions_corrupt.csv")
-        result, _ = self.web_post(
-            endpoint,
-            data={"file": (path, path.name)},
-        )
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+            result, _ = self.web_post(
+                endpoint,
+                data={"file": (path, path.name)},
+            )
         self.assertIn("CSVTransactionImporter failed to import file", result)
+        # stack trace printed
+        self.assertNotEqual(fake_stderr.getvalue(), "")
 
         path = self._DATA_ROOT.joinpath("transactions_future.csv")
-        result, _ = self.web_post(
-            endpoint,
-            data={"file": (path, path.name)},
-        )
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+            result, _ = self.web_post(
+                endpoint,
+                data={"file": (path, path.name)},
+            )
         self.assertIn("Cannot create transaction in the future", result)
+        # stack trace not printed
+        self.assertEqual(fake_stderr.getvalue(), "")
 
         file = io.BytesIO(b"Account,Date,Amount,Statement\n")
-        result, _ = self.web_post(
-            endpoint,
-            data={"file": (file, "transactions_empty.csv")},
-        )
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+            result, _ = self.web_post(
+                endpoint,
+                data={"file": (file, "transactions_empty.csv")},
+            )
         self.assertIn(
             "CSVTransactionImporter did not import any transactions for file",
             result,
         )
+        # stack trace printed
+        self.assertNotEqual(fake_stderr.getvalue(), "")
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
         result, _ = self.web_post(
@@ -71,12 +84,15 @@ class TestImportFile(WebTestBase):
         self.assertIn("File successfully imported", result)
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
-        result, _ = self.web_post(
-            endpoint,
-            data={"file": (path, path.name)},
-        )
+        with mock.patch("sys.stderr", new=io.StringIO()) as fake_stderr:
+            result, _ = self.web_post(
+                endpoint,
+                data={"file": (path, path.name)},
+            )
         self.assertIn(f"File already imported on {today}", result)
         self.assertIn("Force Import", result)
+        # stack trace not printed
+        self.assertEqual(fake_stderr.getvalue(), "")
 
         path = self._DATA_ROOT.joinpath("transactions_required.csv")
         result, _ = self.web_post(

@@ -88,6 +88,7 @@ class TestORMBase(TestBase):
 
         parent = Parent()
         self.assertIsNone(parent.id_)
+        self.assertRaises(exc.NoIDError, getattr, parent, "uri")
         s.add(parent)
         s.commit()
         self.assertIsNotNone(parent.id_)
@@ -124,7 +125,7 @@ class TestORMBase(TestBase):
         self.assertIsInstance(child.color, Derived)
         self.assertEqual(child.color, Derived.RED)
 
-        no_uri = NoURI()
+        no_uri = NoURI(id_=1)
         self.assertRaises(exc.NoURIError, getattr, no_uri, "uri")
 
     def test_comparators(self) -> None:
