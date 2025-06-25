@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils, web_utils
+from nummus import portfolio, utils
 from nummus.controllers import common
 from nummus.models import (
     TransactionCategory,
@@ -15,6 +15,7 @@ from nummus.models import (
     TransactionSplit,
 )
 from nummus.models.base import YIELD_PER
+from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes

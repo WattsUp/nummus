@@ -11,7 +11,7 @@ import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils, web_utils
+from nummus import portfolio, utils
 from nummus.controllers import common, transactions
 from nummus.models import (
     Account,
@@ -23,6 +23,7 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes

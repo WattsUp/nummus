@@ -8,9 +8,10 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import health_checks, portfolio, web_utils
+from nummus import health_checks, portfolio
 from nummus.controllers import common
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
+from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes

@@ -10,7 +10,7 @@ import flask
 
 from nummus import exceptions as exc
 from nummus import models
-from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
+from nummus.web.utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
     from nummus import portfolio

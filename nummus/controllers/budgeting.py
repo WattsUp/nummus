@@ -11,7 +11,7 @@ import flask
 from sqlalchemy import sql
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils, web_utils
+from nummus import portfolio, utils
 from nummus.controllers import common
 from nummus.models import (
     BudgetAssignment,
@@ -23,6 +23,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     YIELD_PER,
 )
+from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
