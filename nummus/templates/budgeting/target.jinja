@@ -32,10 +32,11 @@
   <label class="input-outlined input-bg-surface-container-high col-span-full">
     <input
       name="amount"
+      value="{{ target.amount | input_value }}"
       required
       enterkeyhint="next"
       placeholder=""
-      value="{{ target.amount | input_value }}"
+      inputmode="tel"
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"

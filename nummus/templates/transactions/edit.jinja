@@ -73,6 +73,7 @@
         required
         enterkeyhint="next"
         placeholder=""
+        inputmode="tel"
         hx-target="next error"
         hx-trigger="input delay:200ms"
         hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
@@ -254,6 +255,7 @@
           value="{{ split.amount | input_value }}"
           enterkeyhint="next"
           placeholder=""
+          inputmode="tel"
           hx-target="next error"
           hx-trigger="input delay:200ms"
           hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
