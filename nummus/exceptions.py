@@ -37,6 +37,7 @@ __all__ = [
     "MissingAssetError",
     "MultipleResultsFound",
     "NoAssetWebSourceError",
+    "NoIDError",
     "NoResultFound",
     "NoURIError",
     "NonAssetTransactionError",
@@ -155,6 +156,10 @@ class NonAssetTransactionError(Exception):
 
 class ProtectedObjectNotFoundError(Exception):
     """Error when a protected object (non-deletable) could not be found."""
+
+
+class NoIDError(Exception):
+    """Error when model does not have id_ yet, likely a flush is needed."""
 
 
 class NoURIError(Exception):

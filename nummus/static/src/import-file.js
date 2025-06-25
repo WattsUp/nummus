@@ -1,26 +1,35 @@
 "use strict";
 const importFile = {
-  beforeSend: function () {
-    document.querySelector("#import-button>button").disabled = true;
-    const success = document.querySelector("#import-success");
+  /** Before sending file, hide the previous success */
+  beforeSend() {
+    const success = htmx.find("#import-success");
     if (success) {
       success.remove();
     }
   },
-  xhrLoadStart: function (evt) {
-    const file = document.querySelector("#import-form>input[type=file]").value;
+  /**
+   * When file upload starts, display progress bar
+   *
+   * @param {Event} evt - Triggering event
+   */
+  xhrLoadStart(evt) {
+    const file = htmx.find("#dialog>form input[type=file]").value;
     if (file) {
-      document
-        .querySelector("#import-upload-progress")
-        .classList.remove("hidden");
+      htmx.removeClass(htmx.find("#import-upload-progress"), "hidden");
     }
   },
-  xhrProgress: function (evt) {
-    document
-      .querySelector("#import-upload-progress>progress")
+  /**
+   * On file upload progress, update progress bar
+   *
+   * @param {Event} evt - Triggering event
+   */
+  xhrProgress(evt) {
+    htmx
+      .find("#import-upload-progress>progress")
       .setAttribute("value", (evt.detail.loaded / evt.detail.total) * 100);
   },
-  xhrLoadEnd: function () {
-    document.querySelector("#import-upload-progress").classList.add("hidden");
+  /** After sending file, hide progress bar */
+  xhrLoadEnd() {
+    htmx.addClass(htmx.find("#import-upload-progress"), "hidden");
   },
 };

@@ -38,31 +38,30 @@ class TestAccount(WebTestBase):
         self.assertIn(acct_name, result)
         matches = re.findall(r"(-?\$\d+)<", result)
         self.assertEqual(matches, ["$90", "$90", "$0"])
+        self.assertIn("2 transactions today", result)
 
         with p.begin_session() as s:
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
-            # Account shouldn't be closed with non-zero balance
-            # But it's fine
-            s.query(Account).where(Account.id_ == acct_id).update(
-                {Account.closed: True},
-            )
-
-            # Make account a liability
+            # Zero out account
             txn = Transaction(
                 account_id=acct_id,
                 date=today,
-                amount=-100,
+                amount=-90,
                 statement=self.random_string(),
             )
             t_split = TransactionSplit(
                 parent=txn,
-                amount=-100,
+                amount=txn.amount,
                 category_id=categories["groceries"],
             )
             s.add_all((txn, t_split))
+            # And close
+            s.query(Account).where(Account.id_ == acct_id).update(
+                {Account.closed: True},
+            )
 
         result, _ = self.web_get(
             endpoint,
@@ -86,7 +85,37 @@ class TestAccount(WebTestBase):
         self.assertIn(acct_uri, result)
         self.assertIn(acct_name, result)
         matches = re.findall(r"(-?\$\d+)<", result)
-        self.assertEqual(matches, ["-$10", "$0", "-$10"])
+        self.assertEqual(matches, ["$0", "$0", "$0"])
+
+        with p.begin_session() as s:
+            # Reopen
+            s.query(Account).where(Account.id_ == acct_id).update(
+                {Account.closed: False},
+            )
+            # Add future transaction
+            txn = Transaction(
+                account_id=acct_id,
+                date=today + datetime.timedelta(days=1),
+                amount=-90,
+                statement=self.random_string(),
+            )
+            t_split = TransactionSplit(
+                parent=txn,
+                amount=txn.amount,
+                category_id=categories["groceries"],
+            )
+            s.add_all((txn, t_split))
+
+        result, _ = self.web_get(endpoint, headers=headers)
+        self.assertIn("Accounts", result)
+        self.assertIn("Cash", result)
+        self.assertNotIn("Investment", result)
+        self.assertIn(acct_uri, result)
+        self.assertIn(acct_name, result)
+        matches = re.findall(r"(-?\$\d+)<", result)
+        # Net worth does not include future
+        self.assertEqual(matches, ["$0", "$0", "$0"])
+        self.assertIn("1 future transaction pending", result)
 
     def test_page(self) -> None:
         d = self._setup_portfolio()

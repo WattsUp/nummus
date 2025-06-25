@@ -34,10 +34,11 @@
   <label class="input-outlined input-bg-surface-container-high">
     <input
       name="value"
+      value="{{ valuation.value | input_value }}"
       required
       enterkeyhint="next"
       placeholder=""
-      value="{{ valuation.value | input_value }}"
+      inputmode="tel"
       hx-target="next error"
       hx-trigger="input delay:200ms"
       hx-include="this"

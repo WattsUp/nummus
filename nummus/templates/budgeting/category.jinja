@@ -17,8 +17,9 @@
     >
       <input
         name="amount"
-        placeholder="0.00"
         value="{{ category.assigned | input_value }}"
+        placeholder="0.00"
+        inputmode="tel"
         hx-target="#group-{{ group.uri or "ungrouped" }}"
         hx-put="{{ url_for("budgeting.assign", uri=category.uri, month=ctx.month) }}"
         autocomplete="off"

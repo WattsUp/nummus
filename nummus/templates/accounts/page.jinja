@@ -37,14 +37,19 @@
   {% endif %}
   <span class="ml-auto">
     {% if acct.closed %}
-      <span class="text-error"
-        >Account was closed {{ acct.updated_days_ago | days }} ago</span
-      >
+      <span class="text-error">
+        Account was closed {{ acct.updated_days_ago | days }} ago
+      </span>
+    {% elif acct.updated_days_ago < 0 %}
+      <span>
+        {{ acct.n_future }} future transaction{{ 's' if acct.n_future != 1 }}
+        pending
+      </span>
+      <span>{{ acct.change_future | money }}</span>
     {% elif acct.updated_days_ago == 0 %}
-      <span
-        >{{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }}
-        today</span
-      >
+      <span>
+        {{ acct.n_today }} transaction{{ 's' if acct.n_today != 1 }} today
+      </span>
       <span>{{ acct.change_today | money }}</span>
     {% else %}
       Updated {{ acct.updated_days_ago | days }} ago

@@ -84,6 +84,9 @@ class Base(orm.DeclarativeBase):
     @property
     def uri(self) -> str:
         """Uniform Resource Identifier derived from id_ and __table_id__."""
+        if self.id_ is None:
+            msg = f"{self.__class__.__name__} does not have an id_, maybe flush"
+            raise exc.NoIDError(msg)
         return self.id_to_uri(self.id_)
 
     @override
