@@ -74,8 +74,9 @@ class Web(BaseCommand):  # pragma: no cover
 
         # Defer for faster time to main
         if self._production:
-            raise NotImplementedError
-        from nummus.web.server_debug import Server  # noqa: PLC0415
+            from nummus.web.server_production import Server  # noqa: PLC0415
+        else:
+            from nummus.web.server_debug import Server  # noqa: PLC0415
 
         s = Server(self._p, self._host, self._port)
         s.run()

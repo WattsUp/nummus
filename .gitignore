@@ -19,7 +19,6 @@ package*
 .coverage
 coverage.json
 test_log.json
-portfolio*
 result.json
 
 # Secrets

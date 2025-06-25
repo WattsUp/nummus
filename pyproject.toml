@@ -33,6 +33,7 @@ dependencies = [
   "werkzeug>=3",
   "prometheus-flask-exporter",
   "packaging",
+  "gunicorn",
 ]
 description = "A personal financial information aggregator and planning tool"
 license = { file = "LICENSE" }
@@ -282,7 +283,7 @@ required-imports = ["from __future__ import annotations"]
 packages = ["nummus"]
 
 [tool.setuptools.cmdclass]
-build_py = "nummus.web_assets.BuildAssets"
+build_py = "nummus.web.assets.BuildAssets"
 
 [tool.setuptools.package-data]
 nummus = ["static/dist/*", "templates/*"]
