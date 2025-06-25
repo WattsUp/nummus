@@ -341,9 +341,9 @@ function word_wrap(rawLines, maxWidth, maxLines, ctx) {
  */
 function nummusSendError(evt) {
   const url = evt.detail.pathInfo.finalRequestPath;
-  const e = document.querySelector("#hx-error");
-  e.classList.remove("hidden");
-  e.querySelector("span").innerHTML = `Failed to send request for '${url}'`;
+  const e = htmx.find("#hx-error");
+  htmx.removeClass(e, "hidden");
+  htmx.find(e, "span").innerHTML = `Failed to send request for '${url}'`;
 }
 
 /**
@@ -352,9 +352,9 @@ function nummusSendError(evt) {
  * @param {Event} event Triggering event
  */
 function nummusResponseError(evt) {
-  const e = document.querySelector("#hx-error");
-  e.classList.remove("hidden");
-  e.querySelector("span").innerHTML = evt.detail.error;
+  const e = htmx.find("#hx-error");
+  htmx.removeClass(e, "hidden");
+  htmx.find(e, "span").innerHTML = evt.detail.error;
 }
 
 /**

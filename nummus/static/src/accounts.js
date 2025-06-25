@@ -13,7 +13,7 @@ const accounts = {
     const costBases = raw.cost_bases;
     const minLine = values.map((v, i) => Math.min(v, costBases[i]));
 
-    const canvas = document.getElementById("account-chart-canvas");
+    const canvas = htmx.find("#account-chart-canvas");
     const ctx = canvas.getContext("2d");
     const datasets = [
       {

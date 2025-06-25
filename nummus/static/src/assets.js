@@ -11,7 +11,7 @@ const assets = {
     const dateMode = raw.date_mode;
     const values = raw.values;
 
-    const canvas = document.getElementById("asset-chart-canvas");
+    const canvas = htmx.find("#asset-chart-canvas");
     const ctx = canvas.getContext("2d");
     const datasets = [
       {

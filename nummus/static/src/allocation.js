@@ -41,7 +41,7 @@ const allocation = {
     });
 
     {
-      const canvas = document.getElementById("category-chart-canvas");
+      const canvas = htmx.find("#category-chart-canvas");
       const ctx = canvas.getContext("2d");
       const datasets = [
         {
@@ -68,7 +68,7 @@ const allocation = {
     }
 
     {
-      const canvas = document.getElementById("sector-chart-canvas");
+      const canvas = htmx.find("#sector-chart-canvas");
       const ctx = canvas.getContext("2d");
       const datasets = [
         {

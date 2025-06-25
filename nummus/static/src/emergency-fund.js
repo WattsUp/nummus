@@ -13,7 +13,7 @@ const emergencyFund = {
     const spendingLower = raw.spending_lower;
     const spendingUpper = raw.spending_upper;
 
-    const canvas = document.getElementById("e-fund-chart-canvas");
+    const canvas = htmx.find("#e-fund-chart-canvas");
     const ctx = canvas.getContext("2d");
     const datasets = [
       {
@@ -71,7 +71,7 @@ const emergencyFund = {
     const spendingLower = raw.spending_lower;
     const spendingUpper = raw.spending_upper;
 
-    const canvas = document.getElementById("e-fund-chart-canvas-dashboard");
+    const canvas = htmx.find("#e-fund-chart-canvas-dashboard");
     const ctx = canvas.getContext("2d");
     const datasets = [
       {

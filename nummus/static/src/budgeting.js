@@ -25,7 +25,7 @@ const budgeting = {
    * Set up budgeting drag listeners
    */
   setupDrag() {
-    this.table = document.querySelector("#budget-table");
+    this.table = htmx.find("#budget-table");
 
     this.dragStartBound = this.dragStart.bind(this);
     this.dragEndBound = this.dragEnd.bind(this);
