@@ -41,7 +41,9 @@ class _AccountContext(TypedDict):
     budgeted: bool
     updated_days_ago: int
     n_today: int
+    n_future: int
     change_today: Decimal
+    change_future: Decimal
     value: Decimal
 
     performance: _PerformanceContext | None
@@ -289,7 +291,9 @@ def ctx_account(
     if skip_today:
         current_value = Decimal(0)
         change_today = Decimal(0)
+        change_future = Decimal(0)
         n_today = 0
+        n_future = 0
         updated_on_ord = today_ord
     else:
         updated_on_ord = acct.updated_on_ord or today_ord
@@ -307,6 +311,19 @@ def ctx_account(
         )
         n_today, change_today = query.one()
 
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                func.count(Transaction.id_),
+                func.sum(Transaction.amount),
+            )
+            .where(
+                Transaction.date_ord > today_ord,
+                Transaction.account_id == acct.id_,
+            )
+        )
+        n_future, change_future = query.one()
+
         values, _, _ = acct.get_value(today_ord, today_ord)
         current_value = values[0]
 
@@ -322,7 +339,9 @@ def ctx_account(
         "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
         "change_today": change_today,
+        "change_future": change_future,
         "n_today": n_today,
+        "n_future": n_future,
         "performance": None,
         "assets": [],
     }
@@ -356,7 +375,10 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
     query = (
         s.query(TransactionSplit)
         .with_entities(TransactionSplit.category_id, func.sum(TransactionSplit.amount))
-        .where(TransactionSplit.account_id == acct.id_)
+        .where(
+            TransactionSplit.date_ord <= end_ord,
+            TransactionSplit.account_id == acct.id_,
+        )
         .group_by(TransactionSplit.category_id)
     )
     for cat_id, value in query.yield_per(YIELD_PER):
@@ -566,6 +588,25 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
             change_today: Decimal
             accounts[acct_id]["n_today"] = n_today
             accounts[acct_id]["change_today"] = change_today
+
+        # Get n_future
+        query = (
+            s.query(Transaction)
+            .with_entities(
+                Transaction.account_id,
+                func.count(Transaction.id_),
+                func.sum(Transaction.amount),
+            )
+            .where(Transaction.date_ord > today_ord)
+            .group_by(Transaction.account_id)
+            .where(Transaction.account_id.in_(accounts))
+        )
+        for acct_id, n_future, change_future in query.all():
+            acct_id: int
+            n_future: int
+            change_future: Decimal
+            accounts[acct_id]["n_future"] = n_future
+            accounts[acct_id]["change_future"] = change_future
 
         # Get all Account values
         acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
