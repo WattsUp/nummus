@@ -67,12 +67,10 @@ class Portfolio:
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
         self._path_importers = self._path_db.with_suffix(".importers")
-        self._path_ssl = self._path_db.with_suffix(".ssl")
         if not self._path_db.exists():
             msg = f"Portfolio at {self._path_db} does not exist, use Portfolio.create()"
             raise FileNotFoundError(msg)
         self._path_importers.mkdir(exist_ok=True)  # Make if it doesn't exist
-        self._path_ssl.mkdir(exist_ok=True)  # Make if it doesn't exist
 
         if key is None:
             self._enc = None
@@ -150,13 +148,9 @@ class Portfolio:
         name = path_db.with_suffix("").name
         path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
-        # TODO (WattsUp): Remove SSL
-        path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
-        path_ssl.mkdir(exist_ok=True)
-        path_ssl.chmod(0o700)  # Only owner can read/write
 
         enc = None
         enc_config = None
@@ -736,9 +730,6 @@ class Portfolio:
 
             if self._path_salt.exists():
                 files.append(self._path_salt)
-            if self.ssl_cert_path.exists():
-                files.append(self.ssl_cert_path)
-                files.append(self.ssl_key_path)
 
             for file in files:
                 tar.add(file, arcname=file.relative_to(parent))
@@ -931,20 +922,6 @@ class Portfolio:
         path = path_db.with_suffix(".importers")
         if path.exists() and not path.is_symlink():
             shutil.rmtree(path)
-
-        path = path_db.with_suffix(".ssl")
-        if path.exists() and not path.is_symlink():
-            shutil.rmtree(path)
-
-    @property
-    def ssl_cert_path(self) -> Path:
-        """Get path to SSL certificate."""
-        return self._path_ssl.joinpath("cert.pem")
-
-    @property
-    def ssl_key_path(self) -> Path:
-        """Get path to SSL certificate key."""
-        return self._path_ssl.joinpath("key.pem")
 
     def update_assets(self, *, no_bars: bool = False) -> list[
         tuple[

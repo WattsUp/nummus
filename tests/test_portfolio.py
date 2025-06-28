@@ -53,7 +53,6 @@ class TestPortfolio(TestBase):
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath("portfolio.importers")
-        path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         # Create unencrypted portfolio
         p = portfolio.Portfolio.create(path_db)
@@ -61,14 +60,9 @@ class TestPortfolio(TestBase):
         self.assertFalse(path_salt.exists(), "Salt unexpectedly exists")
         self.assertTrue(path_importers.exists(), "importers does not exist")
         self.assertTrue(path_importers.is_dir(), "importers is not a directory")
-        self.assertTrue(path_ssl.exists(), "ssl does not exist")
-        self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
         self.assertEqual(p.importers_path, path_importers)
         self.assertEqual(p.path, path_db)
-        self.assertEqual(p.ssl_cert_path, path_ssl.joinpath("cert.pem"))
-        self.assertEqual(p.ssl_key_path, path_ssl.joinpath("key.pem"))
 
         self.assertRaises(exc.NotEncryptedError, p.encrypt, "")
         self.assertRaises(exc.NotEncryptedError, p.decrypt, "")
@@ -190,7 +184,6 @@ class TestPortfolio(TestBase):
 
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         path_salt = path_db.with_suffix(".nacl")
-        path_ssl = path_db.parent.joinpath("portfolio.ssl")
 
         key = self.random_string()
 
@@ -198,10 +191,7 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_salt.exists(), "Salt does not exist")
-        self.assertTrue(path_ssl.exists(), "ssl does not exist")
-        self.assertTrue(path_ssl.is_dir(), "ssl is not a directory")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(path_ssl.stat().st_mode & 0o777, 0o700)
 
         secret = self.random_string()
         enc_secret = p.encrypt(secret)
@@ -781,40 +771,6 @@ class TestPortfolio(TestBase):
         path_backup_1.unlink()
         path_backup_2.unlink()
         self.assertRaises(FileNotFoundError, portfolio.Portfolio.restore, p)
-
-        # Backups should include the SSL certs
-        path_cert = p.ssl_cert_path
-        path_key = p.ssl_key_path
-        path_cert_rel = str(path_cert.relative_to(self._TEST_ROOT))
-        path_key_rel = str(path_key.relative_to(self._TEST_ROOT))
-        ssl_cert = self.random_string().encode()
-        ssl_key = self.random_string().encode()
-
-        path_cert.parent.mkdir(exist_ok=True)
-        with path_cert.open("wb") as file:
-            file.write(ssl_cert)
-        with path_key.open("wb") as file:
-            file.write(ssl_key)
-
-        p.backup()
-        with tarfile.open(path_backup_1, "r") as tar:
-            buf_backup = tar.extractfile(path_cert_rel).read()  # type: ignore[attr-defined]
-            self.assertEqual(buf_backup, ssl_cert)
-            buf_backup = tar.extractfile(path_key_rel).read()  # type: ignore[attr-defined]
-            self.assertEqual(buf_backup, ssl_key)
-        buf_backup = None
-
-        path_db.unlink()
-        path_cert.unlink()
-        path_key.unlink()
-
-        # Restoring brings certs back too
-        portfolio.Portfolio.restore(path_db)
-
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(path_cert.exists(), "SSL cert does not exist")
-        self.assertTrue(path_key.exists(), "SSL key does not exist")
-        self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
 
         # For encrypted portfolios, backup should include the salt
         if not encryption.AVAILABLE:

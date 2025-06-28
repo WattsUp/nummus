@@ -18,7 +18,6 @@ dependencies = [
   "gevent",
   "colorama",
   "rapidfuzz",
-  "cryptography",
   "flask>=3",
   "flask-assets",
   "flask-login",
