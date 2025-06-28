@@ -79,7 +79,6 @@ dev = [
   "codespell>=2.4.1",
   "black>=25",
   "isort",
-  "viztracer",
   "pre-commit",
   "djlint>=1.36.4",
   "pyright>=1.1.402",
