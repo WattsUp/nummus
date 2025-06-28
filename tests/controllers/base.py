@@ -3,14 +3,11 @@ from __future__ import annotations
 import datetime
 import io
 import re
-import time
-import urllib.parse
 import warnings
 from collections import defaultdict
 from typing import TYPE_CHECKING, TypedDict
 from unittest import mock
 
-import autodict
 import flask
 import sqlalchemy
 
@@ -26,15 +23,12 @@ from nummus.models import (
 )
 from nummus.web import server_base
 from nummus.web.utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
-from tests import TEST_LOG
 from tests.base import TestBase
 
 if TYPE_CHECKING:
     import werkzeug
     import werkzeug.datastructures
 
-
-_RE_URI = re.compile(r"^[0-9a-f]{8}$")
 
 ResultType = dict[str, object] | str | bytes
 Tree = dict[str, "TreeNode"]
@@ -141,7 +135,7 @@ class WebTestBase(TestBase):
         self._clear_portfolio()
         p = self._portfolio
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_name = "Monkey Bank Checking"
         payee_0 = "Apple"
@@ -345,35 +339,12 @@ class WebTestBase(TestBase):
                 _external=False,
                 **url_args,
             )
-            clean_args = {
-                k: (
-                    "<values>"
-                    if isinstance(v, list)
-                    else (
-                        "{uri}"
-                        if isinstance(v, str) and _RE_URI.match(v)
-                        else "<value>"
-                    )
-                )
-                for k, v in url_args.items()
-            }
-            clean_url = urllib.parse.unquote(
-                flask.url_for(
-                    endpoint,
-                    _anchor=None,
-                    _method=None,
-                    _scheme=None,
-                    _external=False,
-                    **clean_args,
-                ),
-            )
 
         kwargs["method"] = method
         response: werkzeug.test.TestResponse | None = None
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                start = time.perf_counter()
                 if rc == HTTP_CODE_OK:
                     response = self._client.open(
                         url,
@@ -389,14 +360,8 @@ class WebTestBase(TestBase):
                             follow_redirects=False,
                             **kwargs,
                         )
-            duration = time.perf_counter() - start
             self.assertEqual(response.status_code, rc)
             self.assertEqual(response.content_type, content_type)
-
-            with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-                if clean_url not in d["web_latency"]:
-                    d["web_latency"][clean_url] = []
-                d["web_latency"][clean_url].append(duration)
 
             if content_type == "text/html; charset=utf-8":
                 html = response.text

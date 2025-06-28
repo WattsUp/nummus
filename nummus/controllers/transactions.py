@@ -190,6 +190,7 @@ def new() -> str | flask.Response:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         query = (
@@ -238,7 +239,6 @@ def new() -> str | flask.Response:
             filter(None, (item for item, in query.distinct())),
             key=lambda item: item.lower(),
         )
-        today = datetime.date.today()
         empty_split: _SplitContext = {
             "parent_uri": "",
             "category": "",
@@ -346,7 +346,7 @@ def new() -> str | flask.Response:
 
         if date is None:
             return common.error("Transaction date must not be empty")
-        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+        if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
             return common.error("Date can only be up to a week in the future")
         if amount is None:
             return common.error("Transaction amount must not be empty")
@@ -393,6 +393,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         txn = web_utils.find(s, Transaction, uri)
@@ -424,9 +425,7 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 date = utils.parse_date(form.get("date"))
                 if date is None:
                     return common.error("Transaction date must not be empty")
-                if date > (
-                    datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)
-                ):
+                if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
                     return common.error("Date can only be up to a week in the future")
                 txn.date = date
                 txn.payee = form.get("payee")
@@ -640,7 +639,8 @@ def validation() -> str:
         if date is None:  # pragma: no cover
             # Type guard, should not be called
             return "Unable to parse"
-        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+        today = datetime.datetime.now().astimezone().date()
+        if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
             return "Only up to a week in advance"
         return ""
 
@@ -847,6 +847,7 @@ def ctx_txn(
     # Run similar transaction
     similar_id = txn.find_similar(set_property=False)
     similar_uri = None if similar_id is None else Transaction.id_to_uri(similar_id)
+    today = datetime.datetime.now().astimezone().date()
     return {
         "uri": txn.uri,
         "account": accounts[account_id][0],
@@ -857,7 +858,7 @@ def ctx_txn(
         ],
         "cleared": txn.cleared,
         "date": datetime.date.fromordinal(txn.date_ord) if date is None else date,
-        "date_max": datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK),
+        "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
         "amount": txn.amount if amount is None else amount,
         "statement": txn.statement,
         "payee": txn.payee if payee is None else payee,
@@ -958,7 +959,7 @@ def ctx_options(
     """
     query = query.order_by(None)
 
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [

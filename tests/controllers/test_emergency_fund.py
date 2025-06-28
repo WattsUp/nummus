@@ -20,7 +20,7 @@ class TestEmergencyFund(WebTestBase):
         p = self._portfolio
         _ = self._setup_portfolio()
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 
@@ -113,7 +113,7 @@ class TestEmergencyFund(WebTestBase):
         m = re.search(
             r"Groceries.*\$(\d+\.\d+)",
             result,
-            re.S,
+            re.DOTALL,
         )
         if m is None:
             self.fail("Could not find Groceries row")
@@ -139,7 +139,7 @@ class TestEmergencyFund(WebTestBase):
         p = self._portfolio
         _ = self._setup_portfolio()
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 

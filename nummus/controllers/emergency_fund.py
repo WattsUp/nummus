@@ -56,7 +56,7 @@ def ctx_page() -> dict[str, object]:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()

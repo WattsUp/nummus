@@ -19,7 +19,7 @@ class TestAccount(WebTestBase):
     def test_page_all(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -120,7 +120,7 @@ class TestAccount(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -202,7 +202,7 @@ class TestAccount(WebTestBase):
     def test_account(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -316,7 +316,7 @@ class TestAccount(WebTestBase):
     def test_performance(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -415,7 +415,7 @@ class TestAccount(WebTestBase):
 
     def test_txns(self) -> None:
         d = self._setup_portfolio()
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_name = d["acct_name"]
         acct_uri = d["acct_uri"]

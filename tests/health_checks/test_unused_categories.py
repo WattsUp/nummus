@@ -23,7 +23,7 @@ class TestUnusedCategories(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         # Lock all categories
         with p.begin_session() as s:
@@ -103,7 +103,7 @@ class TestUnusedCategories(TestBase):
             s.query(TransactionSplit).delete()
             s.query(Transaction).delete()
 
-            today = datetime.date.today()
+            today = datetime.datetime.now().astimezone().date()
             month = utils.start_of_month(today)
             month_ord = month.toordinal()
 

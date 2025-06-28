@@ -29,7 +29,7 @@ class OutlierAssetPrice(Base):
 
     @override
     def test(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         with self._p.begin_session() as s:
             start_ord = (

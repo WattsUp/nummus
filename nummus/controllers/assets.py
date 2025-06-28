@@ -101,7 +101,7 @@ def page_all() -> flask.Response:
     with p.begin_session() as s:
         categories: dict[AssetCategory, list[_RowContext]] = defaultdict(list)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         accounts = Account.get_asset_qty_all(s, today_ord, today_ord)
@@ -303,6 +303,7 @@ def validation(uri: str) -> str:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.datetime.now().astimezone().date()
 
     # dict{key: (required, prop if unique required)}
     properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
@@ -346,7 +347,7 @@ def validation(uri: str) -> str:
         if date is None:  # pragma: no cover
             # Type guard, should not be called
             return "Unable to parse"
-        if date > (datetime.date.today() + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+        if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
             return "Only up to a week in advance"
         with p.begin_session() as s:
             n = (
@@ -380,7 +381,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
     if flask.request.method == "GET":
         ctx: _ValuationContext = {
@@ -443,11 +444,11 @@ def valuation(uri: str) -> str | flask.Response:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         v = web_utils.find(s, AssetValuation, uri)
 
-        today = datetime.date.today()
         date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
         if flask.request.method == "GET":
             return flask.render_template(
@@ -689,7 +690,7 @@ def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
     # There are no more if there wasn't enough for a full page
     no_more = len(valuations) < PAGE_LEN
 
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [

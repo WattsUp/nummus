@@ -67,7 +67,10 @@ class TestExceptions(TestBase):
             "DuplicateURLError",  # DuplicateURLError only raised with bad endpoints
         }
         folder = Path(__file__).parent
-        re_raises = re.compile(r"^ *self\.assertRaises\([ \n]*exc\.(\w+),", re.M)
+        re_raises = re.compile(
+            r"^ *self\.assertRaises\([ \n]*exc\.(\w+),",
+            re.MULTILINE,
+        )
         for path in folder.glob("**/test_*.py"):
             with path.open(encoding="utf-8") as file:
                 buf = file.read()

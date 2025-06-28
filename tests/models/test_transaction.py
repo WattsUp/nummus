@@ -23,7 +23,7 @@ class TestTransaction(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct = Account(
             name=self.random_string(),
@@ -65,7 +65,7 @@ class TestTransactionSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct = Account(
             name=self.random_string(),
@@ -198,7 +198,7 @@ class TestTransactionSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct = Account(
             name=self.random_string(),
@@ -264,7 +264,7 @@ class TestTransactionSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct = Account(
             name=self.random_string(),
@@ -377,7 +377,7 @@ class TestTransactionSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         categories = TransactionCategory.add_default(s)
         s.commit()

@@ -67,7 +67,7 @@ class TestTransactionCategory(WebTestBase):
         acct_uri = d["acct_uri"]
         acct_id = Account.uri_to_id(acct_uri)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with p.begin_session() as s:
             t_cat = (

@@ -19,7 +19,7 @@ class TestAsset(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         asset_0_name = d["asset_0_name"]
@@ -106,7 +106,7 @@ class TestAsset(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         asset_0_name = d["asset_0_name"]
@@ -210,7 +210,7 @@ class TestAsset(WebTestBase):
     def test_performance(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -235,7 +235,7 @@ class TestAsset(WebTestBase):
     def test_table(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -308,7 +308,7 @@ class TestAsset(WebTestBase):
     def test_validation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -429,7 +429,7 @@ class TestAsset(WebTestBase):
     def test_new_valuation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         asset_0_id = d["asset_0_id"]
@@ -482,7 +482,7 @@ class TestAsset(WebTestBase):
     def test_valuation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
         yesterday_ord = yesterday.toordinal()

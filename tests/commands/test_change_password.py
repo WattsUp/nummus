@@ -16,7 +16,7 @@ class MockPortfolio(portfolio.Portfolio):
 
     # Changing password takes a while so mock the actual function
     def change_key(self, key: str) -> None:
-        print(f"Changing key to {key}")
+        print(f"Changing key to {key}")  # noqa: T201
 
 
 class TestChangePassword(TestBase):
@@ -37,7 +37,7 @@ class TestChangePassword(TestBase):
         queue: list[str | None] = []
 
         def mock_input(to_print: str) -> str | None:
-            print(to_print)
+            print(to_print)  # noqa: T201
             if len(queue) == 0:
                 return None
             return queue.pop(0)

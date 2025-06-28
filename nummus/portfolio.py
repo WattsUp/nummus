@@ -378,7 +378,7 @@ class Portfolio:
         if i is None:
             raise exc.UnknownImporterError(path)
         ctx = f"<importer={i.__class__.__name__}, file={path}>"
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with self.begin_session() as s:
             categories = TransactionCategory.map_name(s)
@@ -950,7 +950,7 @@ class Portfolio:
                 ...
             ]
         """
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         updated: list[
             tuple[

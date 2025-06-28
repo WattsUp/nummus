@@ -75,7 +75,7 @@ class TestAssetSplit(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         a = Asset(name=self.random_string(), category=AssetCategory.CASH)
@@ -118,7 +118,7 @@ class TestAssetValuation(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         a = Asset(name=self.random_string(), category=AssetCategory.CASH)
@@ -156,7 +156,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {
@@ -227,7 +227,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {
@@ -252,7 +252,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         tomorrow_ord = today_ord + 1
 
@@ -378,7 +378,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         multiplier_0 = 10
@@ -588,7 +588,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         # Create assets and accounts
@@ -791,7 +791,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         # Create assets and accounts
@@ -1065,7 +1065,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         # Add index which should be updated through today
@@ -1112,7 +1112,7 @@ class TestAsset(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {

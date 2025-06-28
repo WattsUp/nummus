@@ -104,7 +104,7 @@ def page() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.date.today())
+        utils.start_of_month(datetime.datetime.now().astimezone().date())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -702,7 +702,7 @@ def target(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         try:
@@ -974,7 +974,7 @@ def sidebar() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.date.today())
+        utils.start_of_month(datetime.datetime.now().astimezone().date())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -1059,7 +1059,7 @@ def ctx_target(
         total_to_go = total_target - total_assigned
 
         on_track = assigned >= target_assigned
-        next_due_date = datetime.date.today()
+        next_due_date = datetime.datetime.now().astimezone().date()
         if month.year == next_due_date.year and month.month == next_due_date.month:
             # Move next_due_date to next weekday
             n_days = weekday - next_due_date.weekday()
@@ -1283,7 +1283,7 @@ def ctx_budget(
 
     month_str = month.isoformat()[:7]
     title = f"Budgeting { month_str}"
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
     )

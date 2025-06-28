@@ -25,7 +25,7 @@ class TestTransactions(WebTestBase):
     def test_table(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -258,7 +258,7 @@ class TestTransactions(WebTestBase):
     def test_new(self) -> None:
         p = self._portfolio
         d = self._setup_portfolio()
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         acct_uri = d["acct_uri"]
@@ -344,7 +344,7 @@ class TestTransactions(WebTestBase):
                 s.query(Transaction)
                 .where(
                     Transaction.account_id == acct_id,
-                    Transaction.amount == Decimal("1000"),
+                    Transaction.amount == Decimal(1000),
                 )
                 .one()
             )
@@ -355,7 +355,7 @@ class TestTransactions(WebTestBase):
                 s.query(TransactionSplit)
                 .where(
                     TransactionSplit.account_id == acct_id,
-                    TransactionSplit.amount == Decimal("1000"),
+                    TransactionSplit.amount == Decimal(1000),
                 )
                 .one()
             )
@@ -365,7 +365,7 @@ class TestTransactions(WebTestBase):
 
     def test_transaction(self) -> None:
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         d = self._setup_portfolio()
 
         acct_uri = d["acct_uri"]
@@ -611,7 +611,7 @@ class TestTransactions(WebTestBase):
         self.assertIn('name="split-amount" value=""', result)
 
     def test_validation(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         endpoint = "transactions.validation"
 

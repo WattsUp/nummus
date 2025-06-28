@@ -23,7 +23,7 @@ class TestUnbalancedTransfers(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         yesterday = today - datetime.timedelta(days=1)
 
         c = UnbalancedTransfers(p)
@@ -205,7 +205,7 @@ class TestUnbalancedTransfers(TestBase):
             s.query(TransactionSplit).where(
                 TransactionSplit.id_ == t_split_savings_id,
             ).update(
-                {"amount": Decimal("-20")},
+                {"amount": Decimal(-20)},
             )
 
         c = UnbalancedTransfers(p)

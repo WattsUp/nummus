@@ -84,7 +84,7 @@ class NummusRequest(flask.Request):
         Returns:
             logger string
         """
-        now = datetime.datetime.now().replace(microsecond=0)
+        now = datetime.datetime.now().astimezone().replace(microsecond=0)
 
         if duration_s > RESPONSE_TOO_SLOW:
             duration = f"{Fore.RED}{duration_s:.3f}s{Fore.RESET}"
@@ -221,7 +221,7 @@ def create_flask_app(p: portfolio.Portfolio, *, debug: bool = False) -> flask.Fl
     app.context_processor(
         lambda: {
             "version": __version__,
-            "current_year": datetime.date.today().year,
+            "current_year": datetime.datetime.now().astimezone().year,
             "url_args": {},
         },
     )

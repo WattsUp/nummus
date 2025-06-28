@@ -38,7 +38,7 @@ class TestWebUtils(TestBase):
         self.assertHTTPRaises(400, web_utils.find, s, Account, bad_uri)
 
     def test_parse_period(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         start = utils.date_add_months(today, -1)
         end = today
@@ -68,7 +68,7 @@ class TestWebUtils(TestBase):
         self.assertHTTPRaises(400, web_utils.parse_period, self.random_string())
 
     def test_date_labels(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         start = today - datetime.timedelta(days=utils.DAYS_IN_WEEK)
         end = today

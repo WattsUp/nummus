@@ -76,7 +76,7 @@ class TestBudgetAssignment(TestBase):
         s.commit()
         t_cat_id = t_cat.id_
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 
@@ -107,7 +107,7 @@ class TestBudgetAssignment(TestBase):
         names = TransactionCategory.map_name(s)
         names_rev = {v: k for k, v in names.items()}
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         categories, assignable, future_assigned = (
@@ -350,7 +350,7 @@ class TestTarget(TestBase):
         names = TransactionCategory.map_name(s)
         names_rev = {v: k for k, v in names.items()}
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {

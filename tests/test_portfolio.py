@@ -502,9 +502,7 @@ class TestPortfolio(TestBase):
 
         with p.begin_session() as s:
             # Unclear one so it'll link
-            txn = (
-                s.query(Transaction).where(Transaction.amount == Decimal("1000")).one()
-            )
+            txn = s.query(Transaction).where(Transaction.amount == Decimal(1000)).one()
             txn.cleared = False
             txn.statement = "Overwrite me"
             t_split = (
@@ -520,9 +518,7 @@ class TestPortfolio(TestBase):
         self.assertFalse(path_debug.exists(), "Debug file unexpectedly exists")
 
         with p.begin_session() as s:
-            txn = (
-                s.query(Transaction).where(Transaction.amount == Decimal("1000")).one()
-            )
+            txn = s.query(Transaction).where(Transaction.amount == Decimal(1000)).one()
             t_split = (
                 s.query(TransactionSplit)
                 .where(TransactionSplit.parent_id == txn.id_)
@@ -629,7 +625,7 @@ class TestPortfolio(TestBase):
                 else:
                     # Fees
                     t_split = splits[0]
-                    self.assertEqual(t_split.amount, Decimal("-900"))
+                    self.assertEqual(t_split.amount, Decimal(-900))
                     self.assertEqual(t_split.asset_quantity, 0)
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
@@ -638,7 +634,7 @@ class TestPortfolio(TestBase):
                     )
 
                     t_split = splits[1]
-                    self.assertEqual(t_split.amount, Decimal("900"))
+                    self.assertEqual(t_split.amount, Decimal(900))
                     self.assertEqual(t_split.asset_quantity, Decimal("-32.1234"))
                     self.assertEqual(t_split.asset_id, a_id)
                     self.assertEqual(
@@ -850,7 +846,7 @@ class TestPortfolio(TestBase):
         p = portfolio.Portfolio.create(path_db)
         _ = portfolio.Portfolio.create(path_other_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         path_dir = path_db.with_suffix(".things")
@@ -946,7 +942,7 @@ class TestPortfolio(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with p.begin_session() as s:
             # Delete index assets

@@ -84,7 +84,7 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
         start, end dates
         start is None for "all"
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     if period == "1yr":
         start = datetime.date(today.year - 1, today.month, today.day)
     elif period == "ytd":

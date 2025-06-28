@@ -127,7 +127,7 @@ class TestImport(TestBase):
         self.assertNotEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         target = (
             f"{Fore.RED}Already imported {file_a} on {today}\n"
             f"{Fore.YELLOW}Delete file or run import with --force flag "

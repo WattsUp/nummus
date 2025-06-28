@@ -192,7 +192,7 @@ class TestNummusRequest(TestBase):
     def test_format(self) -> None:
         utc_now = datetime.datetime.now(datetime.timezone.utc)
         with time_machine.travel(utc_now, tick=False):
-            now = datetime.datetime.now().replace(microsecond=0)
+            now = datetime.datetime.now().astimezone().replace(microsecond=0)
 
         target = (
             f"127.0.0.1 [{now}] {Fore.RED}0.200s{Fore.RESET} "

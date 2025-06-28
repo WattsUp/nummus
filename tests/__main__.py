@@ -1,24 +1,27 @@
 from __future__ import annotations
 
+import json
 import sys
 import unittest
 
-import autodict
 import colorama
 
 from nummus.version import __version__
-from tests import TEST_LOG
+from tests import TEST_LOG, TestLog
 
 colorama.init(autoreset=True)
 
 
 def pre_tests() -> None:
     """Things to run before all tests."""
-    print(f"Testing version {__version__}")
+    print(f"Testing version {__version__}")  # noqa: T201
     TEST_LOG.unlink(missing_ok=True)
-    with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-        d["classes"] = {}
-        d["methods"] = {}
+    d: TestLog = {
+        "classes": {},
+        "methods": {},
+    }
+    with TEST_LOG.open("w", encoding="utf-8") as file:
+        json.dump(d, file)
 
 
 def post_tests() -> bool:
@@ -28,32 +31,24 @@ def post_tests() -> bool:
         True if post tests were successful, False otherwise
     """
     n_slowest = 10
-    with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-        classes = sorted(d["classes"].items(), key=lambda item: -item[1])
-        methods = sorted(d["methods"].items(), key=lambda item: -item[1])
-        web_latency = sorted(d["web_latency"].items(), key=lambda item: -max(item[1]))
+    with TEST_LOG.open("r", encoding="utf-8") as file:
+        d: TestLog = json.load(file)
+    classes = sorted(d["classes"].items(), key=lambda item: -item[1])
+    methods = sorted(d["methods"].items(), key=lambda item: -item[1])
 
-    print(f"{n_slowest} slowest classes")
+    print(f"{n_slowest} slowest classes")  # noqa: T201
     if len(classes) != 0:
         classes = classes[:n_slowest]
         n_pad = max(len(k) for k, _ in classes) + 1
         for cls, duration in classes:
-            print(f"  {cls:{n_pad}}: {duration:6.2f}s")
+            print(f"  {cls:{n_pad}}: {duration:6.2f}s")  # noqa: T201
 
-    print(f"{n_slowest} slowest tests")
+    print(f"{n_slowest} slowest tests")  # noqa: T201
     if len(methods) != 0:
         methods = methods[:n_slowest]
         n_pad = max(len(k) for k, _ in methods) + 1
         for method, duration in methods:
-            print(f"  {method:{n_pad}}: {duration:6.2f}s")
-
-    print(f"{n_slowest} slowest web calls")
-    if len(web_latency) != 0:
-        web_latency = web_latency[:n_slowest]
-        n_pad = max(len(k) for k, _ in web_latency) + 1
-        for method, durations in web_latency:
-            duration_ms = max(durations) * 1000
-            print(f"  {method:{n_pad}}: {duration_ms:6.1f}ms")
+            print(f"  {method:{n_pad}}: {duration:6.2f}s")  # noqa: T201
 
     return True
 

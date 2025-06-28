@@ -73,7 +73,7 @@ class Testbase(TestBase):
         queue: list[str | None] = []
 
         def mock_input(to_print: str) -> str | None:
-            print(to_print)
+            print(to_print)  # noqa: T201
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)

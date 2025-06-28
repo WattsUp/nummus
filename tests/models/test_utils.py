@@ -22,7 +22,7 @@ class TestUtils(TestBase):
         models.metadata_create_all(s)
 
         n_transactions = 10
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         # Create accounts
         acct = Account(

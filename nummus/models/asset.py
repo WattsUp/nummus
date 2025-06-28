@@ -497,7 +497,7 @@ class Asset(Base):
         if s is None:
             raise exc.UnboundExecutionError
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         query = s.query(TransactionSplit).with_entities(

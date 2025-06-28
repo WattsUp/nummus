@@ -25,7 +25,7 @@ class TestBudgeting(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -215,7 +215,7 @@ class TestBudgeting(WebTestBase):
         self.assertEqual(available, ["$0.00", "$240.00", "$100.00"])
 
     def test_validation(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         endpoint = "budgeting.validation"
 
@@ -262,7 +262,7 @@ class TestBudgeting(WebTestBase):
     def test_assign(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -297,7 +297,7 @@ class TestBudgeting(WebTestBase):
     def test_overspending(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -432,7 +432,7 @@ class TestBudgeting(WebTestBase):
     def test_move(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -839,7 +839,7 @@ class TestBudgeting(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         next_year = utils.date_add_months(month, 12)
 
@@ -1035,7 +1035,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
             # On track, be 2 weeks in
-            now = datetime.datetime(month.year, month.month, 6)
+            now = datetime.datetime(month.year, month.month, 6).astimezone()
             with time_machine.travel(now, tick=False):
                 ctx = budgeting.ctx_target(
                     tar,
@@ -1061,7 +1061,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
             # Not on track, be 3 weeks in
-            now = datetime.datetime(month.year, month.month, 17)
+            now = datetime.datetime(month.year, month.month, 17).astimezone()
             with time_machine.travel(now, tick=False):
                 ctx = budgeting.ctx_target(
                     tar,
@@ -1328,7 +1328,7 @@ class TestBudgeting(WebTestBase):
     def test_target(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         cat_1_id = d["cat_1_id"]
         cat_1_uri = d["cat_1_uri"]

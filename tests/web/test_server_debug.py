@@ -41,8 +41,8 @@ class TestServerDebug(TestBase):
             s = server_debug.Server(p, host, port)
         s_server = s._server  # noqa: SLF001
 
-        s_server.serve_forever = lambda *_: print("serve_forever")  # type: ignore[attr-defined]
-        s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined]
+        s_server.serve_forever = lambda *_: print("serve_forever")  # type: ignore[attr-defined] # noqa: T201
+        s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined] # noqa: T201
 
         with (
             time_machine.travel(utc_now, tick=False),
@@ -63,7 +63,7 @@ class TestServerDebug(TestBase):
             raise KeyboardInterrupt
 
         s_server.serve_forever = raise_keyboard_interrupt  # type: ignore[attr-defined]
-        s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined]
+        s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined] # noqa: T201
 
         with (
             time_machine.travel(utc_now, tick=False),

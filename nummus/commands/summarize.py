@@ -118,7 +118,7 @@ class Summarize(BaseCommand):
             msg = "Portfolio is None"
             raise ValueError(msg)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         with self._p.begin_session() as s:

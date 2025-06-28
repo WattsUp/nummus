@@ -31,7 +31,7 @@ class TestMigrator(TestBase):
         p = portfolio.Portfolio.create(path_db)
         m = migrations.SchemaMigrator(set())
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with p.begin_session() as s:
             a_name = self.random_string()

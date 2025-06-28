@@ -21,7 +21,7 @@ class TestUnnecessarySplits(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         c = UnnecessarySplits(p)
         c.test()

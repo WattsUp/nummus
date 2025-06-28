@@ -23,7 +23,7 @@ class TestImportFile(WebTestBase):
             )
             s.add(acct)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         endpoint = "import_file.import_file"
         result, _ = self.web_get(endpoint)

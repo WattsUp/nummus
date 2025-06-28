@@ -64,7 +64,6 @@ Issues = "https://github.com/WattsUp/nummus/issues"
 [project.optional-dependencies]
 encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodome"]
 test = [
-  "AutoDict",
   "coverage",
   "numpy",
   "time-machine",
@@ -168,63 +167,21 @@ venv = ".venv"
 target-version = "py310"
 
 [tool.ruff.lint]
-select = [
-  "RUF",   # ruff
-  "F",     # pyflakes
-  "W",     # pycodestyle warnings
-  "E",     # pycodestyle errors
-  "I",     # isort
-  "N",     # pep8-naming
-  "D",     # pydocstyle
-  "UP",    # pyupgrade
-  "YTT",   # flake8-2020
-  "ANN",   # flake8-annotations
-  "ASYNC", # flask8-async
-  "S",     # flake8-bandit
-  "BLE",   # flake8-blind-except
-  "FBT",   # flake8-boolean-trap
-  "B",     # flake8-bugbear
-  "A",     # flake8-builtins
-  "COM",   # flake8-commas
-  "C4",    # flake8-comprehensions
-  "T10",   # flake8-debugger
-  "EM",    # flake8-errmsg
-  "EXE",   # flake8-executable
-  "FA",    # flake8-future-annotations
-  "ISC",   # flake8-implicit-str-concat
-  "ICN",   # flake8-import-conventions
-  "G",     # flake8-logging-format
-  "INP",   # flake8-no-pep420
-  "PIE",   # flake8-pie
-  #"T20",  # flake8-print TODO (WattsUp) Remove prints
-  "PYI",  # flake8-pyi
-  "Q",    # flake8-quotes
-  "RSE",  # flake8-raise
-  "RET",  # flake8-return
-  "SLF",  # flake8-self
-  "SLOT", # flake8-slots
-  "SIM",  # flake8-simplify
-  "TID",  # flake8-tidy-imports
-  "TC",   # flake8-type-checking
-  "INT",  # flake8-gettext
-  "ARG",  # flake8-unused-argument
-  "PTH",  # flake8-use-pathlib
-  "TD",   # flake8-todos
-  "ERA",  # eradicate
-  "PGH",  # pygrep-hooks
-  "PL",   # pylint
-  "TRY",  # tryceratops
-  "FLY",  # flynt
-  "PERF", # perflint
-]
+select = ["ALL"]
 
 ignore = [
-  "I001",    # mismatch between ruff and isort
+  "FIX002",  # Permit TODOs
   "TD003",   # issue links not required for TODOs
+  "I001",    # mismatch between ruff and isort
   "PLR0911", # Too many return statements
   "PLR0912", # Too many branches
   "PLR0913", # Too many arguments
   "PLR0915", # Too many statements
+  "PT009",   # TODO (WattsUp): Remove
+  "PT027",   # TODO (WattsUp): Remove
+  "T201",    # TODO (WattsUp): Remove
+  "RUF100",  # TODO (WattsUp): Remove
+  "C901",    # TODO (WattsUp): Remove
 ]
 
 exclude = [
@@ -236,6 +193,8 @@ exclude = [
   ".env",
   "venv",
   ".venv",
+  # Ugly code only for testing
+  "tools/make_test_portfolio.py",
   # Not updated yet
   "nummus/controllers/cash_flow.py",
   "nummus/controllers/net_worth.py",
@@ -259,10 +218,6 @@ convention = "google"
   "D106",
   "D107",
   "S608", # Disable possible SQL injection
-]
-"tools/*.py" = [
-  "INP001",  # Outside of a package
-  "PLR2004", # Allow magic values
 ]
 
 [tool.ruff.lint.flake8-annotations]

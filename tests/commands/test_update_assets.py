@@ -29,7 +29,7 @@ class TestUpdateAssets(TestBase):
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         p = portfolio.Portfolio(path_db, None)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with p.begin_session() as s:
             # Delete index assets

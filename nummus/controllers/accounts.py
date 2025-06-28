@@ -154,7 +154,7 @@ def account(uri: str) -> str | flask.Response:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
@@ -287,7 +287,7 @@ def ctx_account(
     Returns:
         Dictionary HTML context
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     if skip_today:
         current_value = Decimal(0)
@@ -429,7 +429,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     Returns:
         Dictionary HTML context
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start_ord = acct.opened_on_ord or today_ord
 
@@ -535,7 +535,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     # Create sidebar context
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     assets = Decimal(0)
