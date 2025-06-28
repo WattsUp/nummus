@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+import logging
+
 from nummus.encryption.base import EncryptionInterface, NoEncryption
 
 try:
     from nummus.encryption.aes import EncryptionAES
 except ImportError:
-    print("Could not import nummus.encryption, encryption not available")
-    print("Install libsqlcipher: apt install libsqlcipher-dev")
-    print("Install encrypt extra: pip install nummus[encrypt]")
+    logger = logging.getLogger(__name__)
+    logger.warning("Could not import nummus.encryption, encryption not available")
+    logger.warning("Install libsqlcipher: apt install libsqlcipher-dev")
+    logger.warning("Install encrypt extra: pip install nummus[encrypt]")
     Encryption = NoEncryption
     AVAILABLE = False
 else:

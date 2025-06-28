@@ -148,7 +148,7 @@ def get_password() -> str | None:
             return None
 
         if len(key) < MIN_PASS_LEN:
-            print(
+            print(  # noqa: T201
                 f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters",
             )
             key = None
@@ -159,7 +159,7 @@ def get_password() -> str | None:
             return None
 
         if key != repeat:
-            print(f"{Fore.RED}Passwords must match")
+            print(f"{Fore.RED}Passwords must match")  # noqa: T201
             key = None
 
     return key
@@ -195,9 +195,7 @@ def confirm(
             return True
         if input_ in ["N", "n"]:
             return False
-        print()
-        print("Please enter y or n.")
-        print()
+        print("\nPlease enter y or n.\n")  # noqa: T201
 
 
 def _eval_node(node: ast.expr) -> Decimal:
@@ -765,7 +763,7 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
     return round(Decimal(result - 1), 6)
 
 
-def print_table(table: list[list[str] | None]) -> None:
+def pretty_table(table: list[list[str] | None]) -> list[str]:
     """Pretty print tabular data.
 
     First row is header, able to configure how columns behave
@@ -777,6 +775,9 @@ def print_table(table: list[list[str] | None]) -> None:
 
     Args:
         table: List of table rows, None will print a horizontal line
+
+    Returns:
+        list of lines to print
     """
     if len(table) < 1:
         msg = "Table has no rows"
@@ -830,26 +831,28 @@ def print_table(table: list[list[str] | None]) -> None:
         formats.append(f"{align}{n}")
 
     # Print the box
-    print("╭" + "┬".join("─" * n for n in col_widths) + "╮")
+    lines: list[str] = []
+    lines.append("╭" + "┬".join("─" * n for n in col_widths) + "╮")
     buf = "│".join(f"{c:^{n}}" for c, n in zip(table[0], col_widths, strict=True))
-    print("│" + buf + "│")
+    lines.append("│" + buf + "│")
     for row in table[1:]:
         if row is None:
-            print("╞" + "╪".join("═" * n for n in col_widths) + "╡")
-        else:
-            formatted_row = []
-            for i, cell in enumerate(row):
-                if len(cell) > col_widths[i]:
-                    cell_truncated = cell[: col_widths[i] - 1]
-                    formatted_row.append(cell_truncated + "…")
-                elif has_extra[i]:
-                    c = f" {cell} "
-                    formatted_row.append(f"{c:{formats[i]}}")
-                else:
-                    formatted_row.append(f"{cell:{formats[i]}}")
-            print("│" + "│".join(formatted_row) + "│")
+            lines.append("╞" + "╪".join("═" * n for n in col_widths) + "╡")
+            continue
+        formatted_row = []
+        for i, cell in enumerate(row):
+            if len(cell) > col_widths[i]:
+                cell_truncated = cell[: col_widths[i] - 1]
+                formatted_row.append(cell_truncated + "…")
+            elif has_extra[i]:
+                c = f" {cell} "
+                formatted_row.append(f"{c:{formats[i]}}")
+            else:
+                formatted_row.append(f"{cell:{formats[i]}}")
+        lines.append("│" + "│".join(formatted_row) + "│")
 
-    print("╰" + "┴".join("─" * n for n in col_widths) + "╯")
+    lines.append("╰" + "┴".join("─" * n for n in col_widths) + "╯")
+    return lines
 
 
 def dedupe(strings: Iterable[str]) -> set[str]:

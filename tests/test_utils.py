@@ -967,12 +967,12 @@ class TestUtils(TestBase):
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
-    def test_print_table(self) -> None:
+    def test_pretty_table(self) -> None:
         table: list[list[str] | None] = []
-        self.assertRaises(ValueError, utils.print_table, table)
+        self.assertRaises(ValueError, utils.pretty_table, table)
 
         table = [None]
-        self.assertRaises(ValueError, utils.print_table, table)
+        self.assertRaises(ValueError, utils.pretty_table, table)
 
         original_terminal_size = shutil.get_terminal_size
         try:
@@ -985,13 +985,10 @@ class TestUtils(TestBase):
                 """\
             ╭────┬────┬────┬────┬────┬────╮
             │ H1 │ H2 │ H3 │ H4 │ H5 │ H6 │
-            ╰────┴────┴────┴────┴────┴────╯
-            """,
+            ╰────┴────┴────┴────┴────┴────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             table = [
                 ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
@@ -1002,13 +999,10 @@ class TestUtils(TestBase):
             ╭────┬────┬────┬────┬────┬────╮
             │ H1 │ H2 │ H3 │ H4 │ H5 │ H6 │
             ╞════╪════╪════╪════╪════╪════╡
-            ╰────┴────┴────┴────┴────┴────╯
-            """,
+            ╰────┴────┴────┴────┴────┴────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             table = [
                 ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
@@ -1025,13 +1019,10 @@ class TestUtils(TestBase):
             │ Short     │     Short │ Short     │   Short   │ Short     │ Short     │
             ╞═══════════╪═══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
             │ Long word │ Long word │ Long word │ Long word │ Long word │ Long word │
-            ╰───────────┴───────────┴───────────┴───────────┴───────────┴───────────╯
-            """,
+            ╰───────────┴───────────┴───────────┴───────────┴───────────┴───────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, extra space goes first
             shutil.get_terminal_size = lambda: (70, 24)
@@ -1043,13 +1034,10 @@ class TestUtils(TestBase):
             │ Short     │     Short │ Short     │   Short   │Short    │Short    │
             ╞═══════════╪═══════════╪═══════════╪═══════════╪═════════╪═════════╡
             │ Long word │ Long word │ Long word │ Long word │Long word│Long word│
-            ╰───────────┴───────────┴───────────┴───────────┴─────────┴─────────╯
-            """,
+            ╰───────────┴───────────┴───────────┴───────────┴─────────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, truncate column goes next
             shutil.get_terminal_size = lambda: (60, 24)
@@ -1061,13 +1049,10 @@ class TestUtils(TestBase):
             │Short    │    Short│Short    │  Short  │Short  │Short    │
             ╞═════════╪═════════╪═════════╪═════════╪═══════╪═════════╡
             │Long word│Long word│Long word│Long word│Long w…│Long word│
-            ╰─────────┴─────────┴─────────┴─────────┴───────┴─────────╯
-            """,
+            ╰─────────┴─────────┴─────────┴─────────┴───────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, other columns go next
             shutil.get_terminal_size = lambda: (50, 24)
@@ -1079,13 +1064,10 @@ class TestUtils(TestBase):
             │Short  │  Short│Short  │ Short  │Sho…│Short    │
             ╞═══════╪═══════╪═══════╪════════╪════╪═════════╡
             │Long w…│Long w…│Long w…│Long wo…│Lon…│Long word│
-            ╰───────┴───────┴───────┴────────┴────┴─────────╯
-            """,
+            ╰───────┴───────┴───────┴────────┴────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal tiny, other columns go next, never last
             shutil.get_terminal_size = lambda: (10, 24)
@@ -1097,13 +1079,10 @@ class TestUtils(TestBase):
             │Sho…│Sho…│Sho…│Sho…│Sho…│Short    │
             ╞════╪════╪════╪════╪════╪═════════╡
             │Lon…│Lon…│Lon…│Lon…│Lon…│Long word│
-            ╰────┴────┴────┴────┴────┴─────────╯
-            """,
+            ╰────┴────┴────┴────┴────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
         finally:
             shutil.get_terminal_size = original_terminal_size
 

@@ -179,7 +179,6 @@ ignore = [
   "PLR0915", # Too many statements
   "PT009",   # TODO (WattsUp): Remove
   "PT027",   # TODO (WattsUp): Remove
-  "T201",    # TODO (WattsUp): Remove
   "RUF100",  # TODO (WattsUp): Remove
   "C901",    # TODO (WattsUp): Remove
 ]
@@ -208,6 +207,9 @@ exclude = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
+"nummus/commands/*.py" = [
+  "T201", # Allow printing for commands
+]
 "tests/*.py" = [
   "D100", # Disable missing docstrings in tests
   "D101",

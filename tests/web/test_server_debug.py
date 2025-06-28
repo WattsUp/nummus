@@ -1,11 +1,7 @@
 from __future__ import annotations
 
-import datetime
 import io
 from unittest import mock
-
-import time_machine
-from colorama import Fore
 
 from nummus import portfolio
 from nummus.web import server_base, server_debug
@@ -20,20 +16,13 @@ class TestServerDebug(TestBase):
 
         host = "127.0.0.1"
         port = 8080
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            s = server_debug.Server(p, host, port)
-
-        target = f"{Fore.YELLOW}Running in debug mode, not meant for production\n"
-        self.assertEqual(fake_stdout.getvalue(), target)
-
+        s = server_debug.Server(p, host, port)
         app = s._app  # noqa: SLF001
         self.assertTrue(app.debug)
 
     def test_run(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
         p = portfolio.Portfolio.create(path_db, None)
-
-        utc_now = datetime.datetime.now(datetime.timezone.utc)
 
         host = "127.0.0.1"
         port = 8080
@@ -44,19 +33,9 @@ class TestServerDebug(TestBase):
         s_server.serve_forever = lambda *_: print("serve_forever")  # type: ignore[attr-defined] # noqa: T201
         s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined] # noqa: T201
 
-        with (
-            time_machine.travel(utc_now, tick=False),
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-        ):
+        with (mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,):
             s.run()
-
-        url = f"http://{host}:{port}"
-        now_str = utc_now.isoformat(timespec="seconds")
-        target = (
-            f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
-            "serve_forever\n"
-            f"{Fore.YELLOW}nummus web shutdown at {now_str}Z\n"
-        )
+        target = "serve_forever\n"
         self.assertEqual(fake_stdout.getvalue(), target)
 
         def raise_keyboard_interrupt() -> None:
@@ -65,34 +44,18 @@ class TestServerDebug(TestBase):
         s_server.serve_forever = raise_keyboard_interrupt  # type: ignore[attr-defined]
         s_server.stop = lambda **_: print("stop")  # type: ignore[attr-defined] # noqa: T201
 
-        with (
-            time_machine.travel(utc_now, tick=False),
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-        ):
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
 
-        target = (
-            f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
-            f"{Fore.YELLOW}Shutting down on interrupt\n"
-            f"{Fore.YELLOW}nummus web shutdown at {now_str}Z\n"
-        )
-        self.assertEqual(fake_stdout.getvalue(), target)
+        self.assertEqual(fake_stdout.getvalue(), "")
 
         # Artificially set started=True
         s_server._stop_event.clear()  # noqa: SLF001 # type: ignore[attr-defined]
-        with (
-            time_machine.travel(utc_now, tick=False),
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-        ):
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             s.run()
 
         fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)\n"
-            f"{Fore.YELLOW}Shutting down on interrupt\n"
-            "stop\n"
-            f"{Fore.YELLOW}nummus web shutdown at {now_str}Z\n"
-        )
+        target = "stop\n"
         self.assertEqual(fake_stdout, target)
 
 

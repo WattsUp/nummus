@@ -284,7 +284,7 @@ class Summarize(BaseCommand):
             f"There {is_are(n)} {n:,} account{plural(n)}, "
             f"{n_table:,} of which {is_are(n_table)} currently open",
         )
-        utils.print_table(table)
+        print("\n".join(utils.pretty_table(table)))
 
         # Assets
         table = [
@@ -326,7 +326,7 @@ class Summarize(BaseCommand):
             f"There {is_are(n)} {n:,} asset{plural(n)}, "
             f"{n_table:,} of which {is_are(n_table)} currently held",
         )
-        utils.print_table(table)
+        print("\n".join(utils.pretty_table(table)))
 
         n = summary["n_valuations"]
         print(f"There {is_are(n)} {n:,} asset valuation{plural(n)}")
