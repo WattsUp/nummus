@@ -36,8 +36,8 @@ class TailwindCSSFilter(webassets.filter.Filter):
         """
         if pytailwindcss is None:
             raise NotImplementedError
-        path_web = Path(__file__).parent.resolve()
-        path_in = path_web.joinpath("static", "src", "css", "main.css")
+        path_root = Path(__file__).parent.parent.resolve()
+        path_in = path_root / "static" / "src" / "css" / "main.css"
 
         args = [
             "-i",
@@ -83,9 +83,9 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
     stub_dist_js = "dist/main.js"
 
     path_static = Path(app.static_folder or "static").resolve()
-    path_src = path_static.joinpath("src")
-    path_dist_css = path_static.joinpath(stub_dist_css)
-    path_dist_js = path_static.joinpath(stub_dist_js)
+    path_src = path_static / "src"
+    path_dist_css = path_static / stub_dist_css
+    path_dist_js = path_static / stub_dist_js
     if not path_src.exists():  # pragma: no cover
         # Too difficult to test for simple logic, skip tests
         if not path_dist_css.exists() or not path_dist_js.exists():
@@ -143,6 +143,7 @@ class BuildAssets(build_py.build_py):
 
     def run(self) -> None:
         """Build assets during build command."""
-        app = flask.Flask(__name__, root_path=str(Path(__file__).parent))
+        path_root = Path(__file__).parent.parent.resolve()
+        app = flask.Flask(__name__, root_path=str(path_root))
         build_bundles(app, debug=False, force=True)
         return super().run()

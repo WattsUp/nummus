@@ -3,8 +3,9 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-from nummus import models, utils, web_utils
+from nummus import models, utils
 from nummus.models import Account, AccountCategory, base_uri
+from nummus.web import utils as web_utils
 from tests.base import TestBase
 
 

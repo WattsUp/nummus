@@ -59,7 +59,6 @@ class EmptyFields(Base):
 
             txn_fields = [
                 TransactionSplit.payee,
-                TransactionSplit.memo,
             ]
             for field in txn_fields:
                 query = (

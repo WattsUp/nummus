@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import io
 import urllib.parse
 import warnings
-from unittest import mock
 
 import flask
 
-from nummus import encryption, portfolio, web
+from nummus import encryption, portfolio
+from nummus.web import server_base
 from tests.controllers.base import HTTP_CODE_REDIRECT, WebTestBase
 
 
@@ -25,13 +24,7 @@ class TestAuth(WebTestBase):
         path_db = cls._TEST_ROOT.joinpath("portfolio.db")
         cls._portfolio = portfolio.Portfolio.create(path_db, cls._key)
 
-        with (
-            mock.patch("sys.stderr", new=io.StringIO()) as _,
-            mock.patch("sys.stdout", new=io.StringIO()) as _,
-        ):
-            # Ignore SSL warnings
-            s = web.Server(cls._portfolio, "127.0.0.1", 8080, debug=False)
-        cls._flask_app: flask.Flask = s._app  # noqa: SLF001
+        cls._flask_app = server_base.create_flask_app(cls._portfolio, debug=True)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             cls._client = cls._flask_app.test_client()

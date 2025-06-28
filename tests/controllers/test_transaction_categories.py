@@ -9,7 +9,7 @@ from nummus.models import (
     TransactionCategoryGroup,
     TransactionSplit,
 )
-from nummus.web_utils import HTTP_CODE_FORBIDDEN
+from nummus.web.utils import HTTP_CODE_FORBIDDEN
 from tests.controllers.base import WebTestBase
 
 

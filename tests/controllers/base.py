@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime
 import io
 import re
-import shutil
 import time
 import urllib.parse
 import warnings
@@ -15,7 +14,7 @@ import autodict
 import flask
 import sqlalchemy
 
-from nummus import portfolio, web
+from nummus import portfolio
 from nummus.models import (
     Account,
     AccountCategory,
@@ -25,7 +24,8 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from nummus.web_utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
+from nummus.web import server_base
+from nummus.web.utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 from tests import TEST_LOG
 from tests.base import TestBase
 
@@ -281,19 +281,7 @@ class WebTestBase(TestBase):
         path_db = cls._TEST_ROOT.joinpath("portfolio.db")
         cls._portfolio = portfolio.Portfolio.create(path_db, None)
 
-        path_cert = cls._DATA_ROOT.joinpath("cert_ss.pem")
-        path_key = cls._DATA_ROOT.joinpath("key_ss.pem")
-
-        shutil.copyfile(path_cert, cls._portfolio.ssl_cert_path)
-        shutil.copyfile(path_key, cls._portfolio.ssl_key_path)
-
-        with (
-            mock.patch("sys.stderr", new=io.StringIO()) as _,
-            mock.patch("sys.stdout", new=io.StringIO()) as _,
-        ):
-            # Ignore SSL warnings
-            s = web.Server(cls._portfolio, "127.0.0.1", 8080, debug=False)
-        cls._flask_app: flask.Flask = s._app  # noqa: SLF001
+        cls._flask_app = server_base.create_flask_app(cls._portfolio, debug=True)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             cls._client = cls._flask_app.test_client()

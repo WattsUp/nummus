@@ -1,4 +1,4 @@
-"""Common API Controller."""
+"""Web utility functions."""
 
 from __future__ import annotations
 

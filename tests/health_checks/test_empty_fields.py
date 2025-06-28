@@ -75,7 +75,6 @@ class TestEmptyFields(TestBase):
                 parent=txn,
                 category_id=categories["uncategorized"],
                 # missing category
-                # missing memo
             )
             s.add_all((txn, t_split))
             s.flush()
@@ -87,7 +86,7 @@ class TestEmptyFields(TestBase):
 
         with p.begin_session() as s:
             n = s.query(HealthCheckIssue).count()
-            self.assertEqual(n, 5)
+            self.assertEqual(n, 4)
 
             i = (
                 s.query(HealthCheckIssue)
@@ -121,21 +120,12 @@ class TestEmptyFields(TestBase):
             self.assertEqual(i.check, c.name)
             i_t_payee_uri = i.uri
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{t_uri}.memo")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            i_t_memo_uri = i.uri
-
         t_split_str = f"{today} - Monkey Bank Checking"
         target = {
             i_acct_uri: "Account Monkey Bank Checking      has an empty number",
             i_a_uri: "Asset Banana Inc.                 has an empty description",
             i_t_category_uri: f"{t_split_str} is uncategorized",
             i_t_payee_uri: f"{t_split_str} has an empty payee",
-            i_t_memo_uri: f"{t_split_str} has an empty memo",
         }
         self.assertEqual(c.issues, target)
 
@@ -160,7 +150,6 @@ class TestEmptyFields(TestBase):
                 {
                     "category_id": t_cat_id,
                     "payee": self.random_string(),
-                    "memo": self.random_string(),
                 },
             )
 

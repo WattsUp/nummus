@@ -2,15 +2,14 @@
 
 from __future__ import annotations
 
-import argparse
 from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
-from nummus import version
 from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
+    import argparse
     from pathlib import Path
 
 
@@ -29,7 +28,7 @@ class Web(BaseCommand):  # pragma: no cover
         host: str,
         port: int,
         *,
-        debug: bool,
+        production: bool,
     ) -> None:
         """Initize clean command.
 
@@ -38,12 +37,12 @@ class Web(BaseCommand):  # pragma: no cover
             path_password: Path to password file, None will prompt when necessary
             host: IP to bind to
             port: Network port to bind to
-            debug: True will run Flask in debug mode
+            production: True will use production web server
         """
         super().__init__(path_db, path_password)
         self._host = host
         self._port = port
-        self._debug = debug
+        self._production = production
 
     @override
     @classmethod
@@ -62,27 +61,23 @@ class Web(BaseCommand):  # pragma: no cover
             help="specify network port for web server",
         )
         parser.add_argument(
-            "--debug",
-            # Default to if it detects a dev install
-            # Aka not at a clean tag
-            default=(len(version.version_tuple) > 3),  # noqa: PLR2004
+            "--production",
+            default=False,
             action="store_true",
-            help=argparse.SUPPRESS,
-        )
-        parser.add_argument(
-            "--no-debug",
-            dest="debug",
-            action="store_false",
-            help=argparse.SUPPRESS,
+            help="run using production server",
         )
 
     @override
     def run(self) -> int:
-        # Defer for faster time to main
-        from nummus import web  # noqa: PLC0415
-
         if self._p is None:
             return 1
-        s = web.Server(self._p, self._host, self._port, debug=self._debug)
+
+        # Defer for faster time to main
+        if self._production:
+            from nummus.web.server_production import Server  # noqa: PLC0415
+        else:
+            from nummus.web.server_debug import Server  # noqa: PLC0415
+
+        s = Server(self._p, self._host, self._port)
         s.run()
         return 0

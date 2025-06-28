@@ -18,7 +18,6 @@ dependencies = [
   "gevent",
   "colorama",
   "rapidfuzz",
-  "cryptography",
   "flask>=3",
   "flask-assets",
   "flask-login",
@@ -33,6 +32,7 @@ dependencies = [
   "werkzeug>=3",
   "prometheus-flask-exporter",
   "packaging",
+  "gunicorn",
 ]
 description = "A personal financial information aggregator and planning tool"
 license = { file = "LICENSE" }
@@ -79,7 +79,6 @@ dev = [
   "codespell>=2.4.1",
   "black>=25",
   "isort",
-  "viztracer",
   "pre-commit",
   "djlint>=1.36.4",
   "pyright>=1.1.402",
@@ -206,7 +205,7 @@ select = [
   "SLOT", # flake8-slots
   "SIM",  # flake8-simplify
   "TID",  # flake8-tidy-imports
-  "TCH",  # flake8-type-checking
+  "TC",   # flake8-type-checking
   "INT",  # flake8-gettext
   "ARG",  # flake8-unused-argument
   "PTH",  # flake8-use-pathlib
@@ -282,7 +281,7 @@ required-imports = ["from __future__ import annotations"]
 packages = ["nummus"]
 
 [tool.setuptools.cmdclass]
-build_py = "nummus.web_assets.BuildAssets"
+build_py = "nummus.web.assets.BuildAssets"
 
 [tool.setuptools.package-data]
 nummus = ["static/dist/*", "templates/*"]
