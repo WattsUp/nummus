@@ -7,7 +7,7 @@ import flask
 import time_machine
 from colorama import Fore
 
-from nummus import __version__, portfolio
+from nummus import __version__, encryption, portfolio
 from nummus.models import Config, ConfigKey
 from nummus.web import server_base
 from tests.base import TestBase
@@ -36,6 +36,8 @@ class TestServerBase(TestBase):
         self.assertEqual(app.secret_key, secret_key)
         self.assertEqual(len(app.before_request_funcs[None]), 1)
 
+        if not encryption.AVAILABLE:
+            return
         path_db.unlink()
         p = portfolio.Portfolio.create(path_db, self.random_string())
         app = server_base.create_flask_app(p, debug=debug)

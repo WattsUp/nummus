@@ -79,7 +79,7 @@ class Portfolio:
                 enc_config = file.read()
             self._enc = encryption.Encryption(key, enc_config)  # type: ignore[attr-defined]
         else:
-            msg = f"Portfolio at {self._path_db} does have salt file"
+            msg = f"Portfolio at {self._path_db} does not have salt file"
             raise FileNotFoundError(msg)
         self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
         self._unlock()
