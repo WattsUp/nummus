@@ -150,6 +150,7 @@ class Portfolio:
         name = path_db.with_suffix("").name
         path_salt = path_db.with_suffix(".nacl")
         path_importers = path_db.parent.joinpath(f"{name}.importers")
+        # TODO (WattsUp): Remove SSL
         path_ssl = path_db.parent.joinpath(f"{name}.ssl")
 
         path_db.parent.mkdir(parents=True, exist_ok=True)

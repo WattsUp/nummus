@@ -52,7 +52,7 @@ class GunicornLogger(gunicorn.glogging.Logger):
         )
         try:
             self.access_log.info(msg)
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001 # pragma: no cover
             self.error(traceback.format_exc())
 
 
@@ -88,24 +88,28 @@ class Server(gunicorn.app.base.BaseApplication):
             "when_ready": self.when_ready,
             "child_exit": self.child_exit,
         }
-        if self.cfg is None:
+        if self.cfg is None:  # pragma: no cover
             msg = "cfg is None"
             raise TypeError(msg)
         for k, v in config.items():
             self.cfg.set(k, v)
 
     @override
-    def load(self) -> WSGIApplication:
+    def load(self) -> WSGIApplication:  # pragma: no cover
         return self._app
 
-    def when_ready(self, _) -> None:
+    def when_ready(self, _) -> None:  # pragma: no cover
         """When server is ready, start GunicornPrometheusMetrics."""
         GunicornPrometheusMetrics.start_http_server_when_ready(
             port=self._port + 1,
             host=self._host,
         )
 
-    def child_exit(self, _, worker: gunicorn.workers.base.Worker) -> None:
+    def child_exit(
+        self,
+        _,
+        worker: gunicorn.workers.base.Worker,
+    ) -> None:  # pragma: no cover
         """When server is ready, start GunicornPrometheusMetrics."""
         GunicornPrometheusMetrics.mark_process_dead_on_child_exit(
             worker.pid,

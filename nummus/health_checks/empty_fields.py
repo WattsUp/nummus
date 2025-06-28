@@ -59,6 +59,7 @@ class EmptyFields(Base):
 
             txn_fields = [
                 TransactionSplit.payee,
+                # TODO (WattsUp): Remove empty memo test
                 TransactionSplit.memo,
             ]
             for field in txn_fields:

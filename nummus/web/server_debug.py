@@ -43,7 +43,7 @@ class Handler(gevent.pywsgi.WSGIHandler):
             duration_s=(self.time_finish - self.time_start) if self.time_finish else -1,
             method=method,
             path=path,
-            length_bytes=self.response_length,
+            length_bytes=getattr(self, "response_length", 0),
             status=self.code or 0,
         )
 
@@ -78,7 +78,7 @@ class Server:
 
     def run(self) -> None:
         """Start and run the server."""
-        url = f"http://localhost:{self._server.server_port}"
+        url = f"http://{self._server.server_host}:{self._server.server_port}"
         print(f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)")
         try:
             self._server.serve_forever()

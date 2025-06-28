@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import enum
 from decimal import Decimal
 
 import flask
@@ -12,12 +11,6 @@ from nummus import __version__, portfolio
 from nummus.models import Config, ConfigKey
 from nummus.web import server_base
 from tests.base import TestBase
-
-
-class Derived(enum.IntEnum):
-    RED = 1
-    BLUE = 2
-    SEAFOAM_GREEN = 3
 
 
 class TestServerBase(TestBase):
