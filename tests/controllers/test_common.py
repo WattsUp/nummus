@@ -6,11 +6,13 @@ import warnings
 from typing import TYPE_CHECKING
 from unittest import mock
 
+import flask
+
 from nummus import controllers
 from nummus import exceptions as exc
 from nummus.controllers import common
 from nummus.models import Asset, TransactionCategory, TransactionCategoryGroup
-from nummus.web_utils import HTTP_CODE_OK
+from nummus.web.utils import HTTP_CODE_OK
 from tests.controllers.base import WebTestBase
 
 if TYPE_CHECKING:
@@ -134,8 +136,9 @@ class TestCommon(WebTestBase):
         self.assertIn("HX-Request", headers["Vary"])
 
     def test_add_routes(self) -> None:
-        controllers.add_routes(self._flask_app, debug=False)
-        routes = self._flask_app.url_map
+        app = flask.Flask(__file__)
+        controllers.add_routes(app, debug=False)
+        routes = app.url_map
         for rule in routes.iter_rules():
             self.assertFalse(rule.endpoint.startswith("nummus.controllers."))
             self.assertFalse(rule.endpoint.startswith("."))

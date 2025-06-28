@@ -10,7 +10,7 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from nummus.web_utils import HTTP_CODE_BAD_REQUEST
+from nummus.web.utils import HTTP_CODE_BAD_REQUEST
 from tests.controllers.base import WebTestBase
 
 

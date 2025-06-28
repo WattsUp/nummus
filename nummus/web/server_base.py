@@ -162,8 +162,8 @@ def create_flask_app(p: portfolio.Portfolio, *, debug: bool = False) -> flask.Fl
     path_root = Path(__file__).parent.parent.resolve()
     app = NummusApp(
         __name__,
-        static_folder=str(path_root.joinpath("static")),
-        template_folder=str(path_root.joinpath("templates")),
+        static_folder=str(path_root / "static"),
+        template_folder=str(path_root / "templates"),
     )
     app.request_class = NummusRequest
 
