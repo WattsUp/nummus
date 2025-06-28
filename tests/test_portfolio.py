@@ -784,13 +784,13 @@ class TestPortfolio(TestBase):
         with time_machine.travel(utc_now, tick=False):
             result, tar_ver = p.backup()
 
-        self.assertEqual(result, path_backup_2)
-        self.assertEqual(tar_ver, 2)
+        self.assertEqual(result, path_backup_1)
+        self.assertEqual(tar_ver, 1)
 
-        self.assertTrue(path_backup_2.exists(), "Backup portfolio does not exist")
-        self.assertEqual(path_backup_2.stat().st_mode & 0o777, 0o600)
+        self.assertTrue(path_backup_1.exists(), "Backup portfolio does not exist")
+        self.assertEqual(path_backup_1.stat().st_mode & 0o777, 0o600)
 
-        with tarfile.open(path_backup_2, "r") as tar:
+        with tarfile.open(path_backup_1, "r") as tar:
             buf_backup = tar.extractfile(path_salt.name).read()  # type: ignore[attr-defined]
             with path_salt.open("rb") as file:
                 buf = file.read()
@@ -852,6 +852,9 @@ class TestPortfolio(TestBase):
 
         today = datetime.date.today()
         today_ord = today.toordinal()
+
+        path_dir = path_db.with_suffix(".things")
+        path_dir.mkdir()
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
@@ -919,6 +922,7 @@ class TestPortfolio(TestBase):
 
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(path_other_db.exists(), "Portfolio does not exist")
+        self.assertFalse(path_dir.exists(), "Portfolio things directory does exist")
         self.assertEqual(path_db.stat().st_mode & 0o777, 0o600)
         self.assertEqual(path_other_db.stat().st_mode & 0o777, 0o600)
 
