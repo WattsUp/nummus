@@ -57,6 +57,7 @@ class BaseCommand(ABC):
             print(
                 f"{Fore.RED}Portfolio does not exist at {path_db}. "
                 "Run nummus create",
+                file=sys.stderr,
             )
             sys.exit(1)
         key: str | None = None
@@ -71,8 +72,8 @@ class BaseCommand(ABC):
                 check_migration=check_migration,
             )
         except exc.MigrationRequiredError as e:
-            print(f"{Fore.RED}{e}")
-            print(f"{Fore.YELLOW}Run nummus migrate to resolve")
+            print(f"{Fore.RED}{e}", file=sys.stderr)
+            print(f"{Fore.YELLOW}Run nummus migrate to resolve", file=sys.stderr)
             sys.exit(1)
         else:
             print(f"{Fore.GREEN}Portfolio is unlocked")
@@ -127,7 +128,10 @@ class BaseCommand(ABC):
             try:
                 p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
             except exc.UnlockingError:
-                print(f"{Fore.RED}Could not decrypt with password file")
+                print(
+                    f"{Fore.RED}Could not decrypt with password file",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
             else:
                 return p
@@ -140,10 +144,10 @@ class BaseCommand(ABC):
             try:
                 p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
             except exc.UnlockingError:
-                print(f"{Fore.RED}Incorrect password")
+                print(f"{Fore.RED}Incorrect password", file=sys.stderr)
                 # Try again
             else:
                 return p
 
-        print(f"{Fore.RED}Too many incorrect attempts")
+        print(f"{Fore.RED}Too many incorrect attempts", file=sys.stderr)
         sys.exit(1)

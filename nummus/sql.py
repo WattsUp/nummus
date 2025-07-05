@@ -59,10 +59,11 @@ def get_engine(
         db_path = f"sqlite+pysqlcipher://:{db_key}@{sep}{path}"
         engine = sqlalchemy.create_engine(db_path, module=sqlcipher3, **_ENGINE_ARGS)
     else:
-        if sys.platform == "win32" or not path.is_absolute():
-            db_path = f"sqlite:///{path}"
-        else:
-            db_path = f"sqlite:////{path}"
+        db_path = (
+            f"sqlite:///{path}"
+            if sys.platform == "win32" or not path.is_absolute()
+            else f"sqlite:////{path}"
+        )
         engine = sqlalchemy.create_engine(db_path, **_ENGINE_ARGS)
     return engine
 

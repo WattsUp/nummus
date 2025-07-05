@@ -1,42 +1,39 @@
 from __future__ import annotations
 
-import io
 import subprocess
-from unittest import mock
+from typing import TYPE_CHECKING
 
-from nummus import commands, main, version
-from tests.base import TestBase
+import pytest
+from colorama import Fore
+
+from nummus import main, version
+
+if TYPE_CHECKING:
+    from tests.conftest import EmptyPortfolio
 
 
-class TestMain(TestBase):
-    def test_entrypoints(self) -> None:
-        # Check can execute entrypoint
-        with subprocess.Popen(
-            ["nummus", "--version"],  # noqa: S607
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        ) as process:
-            stdout, stderr = process.communicate()
-            stdout = stdout.decode().strip("\r\n").strip("\n")
-            stderr = stderr.decode().strip("\r\n").strip("\n")
-            self.assertEqual(stderr, "")
-            self.assertEqual(stdout, version.__version__)
+def test_entrypoints() -> None:
+    # Check can execute entrypoint
+    with subprocess.Popen(
+        ["nummus", "--version"],  # noqa: S607
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) as process:
+        stdout, stderr = process.communicate()
+        stdout = stdout.decode().strip("\r\n").strip("\n")
+        stderr = stderr.decode().strip("\r\n").strip("\n")
+        assert not stderr
+        assert stdout == version.__version__
 
-    def test_unlock(self) -> None:
-        path = self._TEST_ROOT.joinpath("portfolio.db")
 
-        # Try unlocking non-existent Portfolio
-        args = ["--portfolio", str(path), "unlock"]
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            self.assertRaises(SystemExit, main.main, args)
+def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: EmptyPortfolio) -> None:
+    p = empty_portfolio()
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            commands.Create(path, None, force=False, no_encrypt=True).run()
+    # Try unlocking non-existent Portfolio
+    args = ["--portfolio", str(p.path.with_suffix(".non-existent")), "unlock"]
+    with pytest.raises(SystemExit):
+        main.main(args)
 
-        args = ["--portfolio", str(path), "unlock"]
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = main.main(args)
-        self.assertEqual(rc, 0)
-
-        fake_stdout = fake_stdout.getvalue()
-        self.assertIn("Portfolio is unlocked", fake_stdout)
+    args = ["--portfolio", str(p.path), "unlock"]
+    assert main.main(args) == 0
+    assert capsys.readouterr().out == f"{Fore.GREEN}Portfolio is unlocked\n"
