@@ -4,17 +4,13 @@ import datetime
 import random
 import shutil
 import string
-from typing import TYPE_CHECKING
 
 import pytest
 from sqlalchemy import orm
 
 from nummus import global_config, sql
-from nummus.models import base, base_uri
+from nummus.models import base_uri
 from nummus.portfolio import Portfolio
-
-if TYPE_CHECKING:
-    from pathlib import Path
 
 
 def id_func(val: object) -> str | None:
@@ -30,7 +26,7 @@ class RandomStringGenerator:
         return "".join(random.choice(string.ascii_letters) for _ in range(length))
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def rand_str_generator() -> RandomStringGenerator:
     """Returns a random string generator.
 
@@ -108,17 +104,10 @@ def today() -> datetime.date:
 
 
 @pytest.fixture
-def session(tmp_path: Path) -> orm.Session:
+def session(empty_portfolio_generator: EmptyPortfolioGenerator) -> orm.Session:
     """Create SQL session.
-
-    Args:
-        tmp_path: Temp path to create DB in
 
     Returns:
         Session generator
     """
-    path = tmp_path / "sql.db"
-    s = orm.Session(sql.get_engine(path, None))
-    base.Base.metadata.create_all(s.get_bind())
-    s.commit()
-    return s
+    return orm.Session(sql.get_engine(empty_portfolio_generator().path, None))

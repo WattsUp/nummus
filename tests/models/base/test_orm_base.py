@@ -102,54 +102,28 @@ def session(tmp_path: Path) -> orm.Session:
 
 
 @pytest.fixture
-def parent_pair(session: orm.Session) -> tuple[orm.Session, Parent]:
-    """Create a Parent.
-
-    Returns:
-        tuple(session, Parent)
-    """
-    p = Parent()
-    session.add(p)
-    session.commit()
-    return session, p
-
-
-@pytest.fixture
-def parent(parent_pair: tuple[orm.Session, Parent]) -> Parent:
+def parent(session: orm.Session) -> Parent:
     """Create a Parent.
 
     Returns:
         Parent
     """
-    _, p = parent_pair
+    p = Parent()
+    session.add(p)
+    session.commit()
     return p
 
 
 @pytest.fixture
-def child_pair(parent_pair: tuple[orm.Session, Parent]) -> tuple[orm.Session, Child]:
-    """Create a Child.
-
-    Returns:
-        tuple(session, Child)
-    """
-    s, parent = parent_pair
-    c = Child(parent=parent)
-    s.add(c)
-    s.commit()
-    return s, c
-
-
-@pytest.fixture
-def child(parent_pair: tuple[orm.Session, Parent]) -> Child:
+def child(session: orm.Session, parent: Parent) -> Child:
     """Create a Child.
 
     Returns:
         Child
     """
-    s, parent = parent_pair
     c = Child(parent=parent)
-    s.add(c)
-    s.commit()
+    session.add(c)
+    session.commit()
     return c
 
 
@@ -174,11 +148,7 @@ def test_detached_child() -> None:
     assert child.parent_id is None
 
 
-def test_link_child(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, parent = parent_pair
-    child = Child(parent=parent)
-    s.add(child)
-    s.commit()
+def test_link_child(parent: Parent, child: Child) -> None:
     assert child.id_ is not None
     assert child.parent == parent
     assert child.parent_id == parent.id_
@@ -189,26 +159,23 @@ def test_wrong_uri_type(parent: Parent) -> None:
         Child.uri_to_id(parent.uri)
 
 
-def test_set_decimal_none(child_pair: tuple[orm.Session, Child]) -> None:
-    s, child = child_pair
+def test_set_decimal_none(session: orm.Session, child: Child) -> None:
     child.height = None
-    s.commit()
+    session.commit()
     assert child.height is None
 
 
-def test_set_decimal_value(child_pair: tuple[orm.Session, Child]) -> None:
-    s, child = child_pair
+def test_set_decimal_value(session: orm.Session, child: Child) -> None:
     height = Decimal("1.2")
     child.height = height
-    s.commit()
+    session.commit()
     assert isinstance(child.height, Decimal)
     assert child.height == height
 
 
-def test_set_enum(child_pair: tuple[orm.Session, Child]) -> None:
-    s, child = child_pair
+def test_set_enum(session: orm.Session, child: Child) -> None:
     child.color = Derived.RED
-    s.commit()
+    session.commit()
     assert isinstance(child.color, Derived)
     assert child.color == Derived.RED
 
@@ -229,10 +196,9 @@ def test_comparators_same_session(session: orm.Session) -> None:
     assert parent_a != parent_b
 
 
-def test_comparators_different_session(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, parent = parent_pair
+def test_comparators_different_session(session: orm.Session, parent: Parent) -> None:
     # Make a new s to same DB
-    with orm.create_session(bind=s.get_bind()) as session_2:
+    with orm.create_session(bind=session.get_bind()) as session_2:
         # Get same parent_a but in a different Python object
         parent_a_queried = (
             session_2.query(Parent).where(Parent.id_ == parent.id_).first()
@@ -286,28 +252,28 @@ def test_clean_strings_short(parent: Parent) -> None:
         parent.name = "a"
 
 
-def test_string_check_none(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, _ = parent_pair
+def test_string_check_none(session: orm.Session, parent: Parent) -> None:
     with pytest.raises(exc.IntegrityError):
-        s.query(Parent).update({Parent.name: ""})
+        session.query(Parent).where(Parent.id_ == parent.id_).update({Parent.name: ""})
 
 
-def test_string_check_leading(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, _ = parent_pair
+def test_string_check_leading(session: orm.Session, parent: Parent) -> None:
     with pytest.raises(exc.IntegrityError):
-        s.query(Parent).update({Parent.name: " leading"})
+        session.query(Parent).where(Parent.id_ == parent.id_).update(
+            {Parent.name: " leading"},
+        )
 
 
-def test_string_check_trailing(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, _ = parent_pair
+def test_string_check_trailing(session: orm.Session, parent: Parent) -> None:
     with pytest.raises(exc.IntegrityError):
-        s.query(Parent).update({Parent.name: "trailing "})
+        session.query(Parent).where(Parent.id_ == parent.id_).update(
+            {Parent.name: "trailing "},
+        )
 
 
-def test_string_check_short(parent_pair: tuple[orm.Session, Parent]) -> None:
-    s, _ = parent_pair
+def test_string_check_short(session: orm.Session, parent: Parent) -> None:
     with pytest.raises(exc.IntegrityError):
-        s.query(Parent).update({Parent.name: "a"})
+        session.query(Parent).where(Parent.id_ == parent.id_).update({Parent.name: "a"})
 
 
 def test_clean_decimals() -> None:
