@@ -64,6 +64,7 @@ Issues = "https://github.com/WattsUp/nummus/issues"
 [project.optional-dependencies]
 encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodome"]
 test = [
+  "pytest",
   "coverage",
   "numpy",
   "time-machine",
@@ -93,7 +94,7 @@ skip = "3rd-party,dist,*.pem,*.json"
 ignore-words-list = ["assertIn", "initialY"]
 
 [tool.coverage.run]
-command_line = "-m tests discover -s tests -t . --locals"
+command_line = "-m pytest"
 branch = true
 source = ["nummus"]
 omit = [
@@ -163,6 +164,9 @@ exclude = [
 venvPath = "."
 venv = ".venv"
 
+[tool.pytest.ini_options]
+addopts = ["--import-mode=importlib"]
+
 [tool.ruff]
 target-version = "py310"
 
@@ -182,8 +186,6 @@ ignore = [
   "PLR0915", # Too many statements
   "PLR0917", # Too many positional arguments
   "CPY001",  # No copyright
-  "PT009",   # TODO (WattsUp): Remove
-  "PT027",   # TODO (WattsUp): Remove
   "S413",    # TODO (WattsUp): Remove
 ]
 
@@ -218,6 +220,9 @@ convention = "google"
   "S608",    # Disable possible SQL injection
   "PLC2701", # Private import
   "S404",    # subprocess import
+  "S101",    # Uses asserts in pytest
+  "S311",    # Uses random in pytest
+  "PLR2004", # Uses magic numbers in pytest
 ]
 
 [tool.ruff.lint.flake8-annotations]
