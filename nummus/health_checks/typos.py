@@ -9,7 +9,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import spellchecker
-from sqlalchemy import func
+from sqlalchemy import func, orm
 from typing_extensions import override
 
 from nummus import utils
@@ -47,6 +47,12 @@ class Typos(Base):
         super().__init__(p, no_ignores=no_ignores)
         self._no_description_typos = no_description_typos
 
+        # Create a dict of every word found with the first instance detected
+        # Dictionary {word.lower(): (word, source, field)}
+        self._words: dict[str, tuple[str, str, str]] = {}
+        self._frequency: dict[str, int] = defaultdict(int)
+        self._proper_nouns: set[str] = set()
+
     @override
     def test(self) -> None:
         spell = spellchecker.SpellChecker()
@@ -55,137 +61,23 @@ class Typos(Base):
             accounts = Account.map_name(s)
             assets = Asset.map_name(s)
             issues: dict[str, tuple[str, str, str]] = {}
+            self._proper_nouns.update(accounts.values())
+            self._proper_nouns.update(assets.values())
 
-            # Create a dict of every word found with the first instance detected
-            # Dictionary {word.lower(): (word, source, field)}
-            words: dict[str, tuple[str, str, str]] = {}
-            frequency: dict[str, int] = defaultdict(int)
-            proper_nouns: set[str] = {*accounts.values(), *assets.values()}
-
-            def add(s: str, source: str, field: str, count: int) -> None:
-                if not s:
-                    return
-                try:
-                    float(s)
-                except ValueError:
-                    pass
-                else:
-                    # Skip numbers
-                    return
-                if s in string.punctuation:
-                    return
-                if s not in words:
-                    words[s] = (s, source, field)
-                frequency[s] += count
-
-            def check_duplicates() -> None:
-                words_dedupe = utils.dedupe(words.keys())
-                issues.update(
-                    {
-                        word: item
-                        for word, item in words.items()
-                        if word not in words_dedupe
-                        and frequency[word] < _LIMIT_FREQUENCY
-                    },
-                )
-                words.clear()
-                frequency.clear()
-
-            query = s.query(Account).with_entities(
-                Account.id_,
-                Account.institution,
-            )
-            for acct_id, institution in query.yield_per(YIELD_PER):
-                acct_id: int
-                institution: str
-                name = accounts[acct_id]
-                source = f"Account {name}"
-                add(institution, source, "institution", 1)
-                proper_nouns.add(institution)
-            check_duplicates()
-
-            txn_fields = [
-                TransactionSplit.payee,
-                TransactionSplit.tag,
-            ]
-            for field in txn_fields:
-                query = (
-                    s.query(TransactionSplit)
-                    .with_entities(
-                        TransactionSplit.date_ord,
-                        TransactionSplit.account_id,
-                        field,
-                        func.count(),
-                    )
-                    .group_by(field)
-                )
-                for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
-                    date_ord: int
-                    acct_id: int
-                    value: str | None
-                    if value is None:
-                        continue
-                    date = datetime.date.fromordinal(date_ord)
-                    source = f"{date} - {accounts[acct_id]}"
-                    add(value, source, field.key, count)
-                    proper_nouns.add(value)
-                check_duplicates()
+            issues.update(self._test_accounts(s, accounts))
+            issues.update(self._test_transactions(s, accounts))
 
             # Escape words and sort to replace longest words first
             # So long words aren't partially replaced if they contain a short word
             proper_nouns_re = [
                 re.escape(word)
-                for word in sorted(proper_nouns, key=lambda x: len(x), reverse=True)
+                for word in sorted(self._proper_nouns, key=len, reverse=True)
             ]
             # Remove proper nouns indicated by word boundary or space at end
             re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")
 
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.date_ord,
-                    TransactionSplit.account_id,
-                    TransactionSplit.memo,
-                    func.count(),
-                )
-                .group_by(TransactionSplit.memo)
-            )
-            for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
-                date_ord: int
-                acct_id: int
-                value: str | None
-                if value is None:
-                    continue
-                date = datetime.date.fromordinal(date_ord)
-                source = f"{date} - {accounts[acct_id]}"
-                cleaned = re_cleaner.sub("", value).lower()
-                for word in self._RE_WORDS.split(cleaned):
-                    add(word, source, "memo", count)
-
-            query = (
-                s.query(Asset)
-                .with_entities(
-                    Asset.id_,
-                    Asset.description,
-                )
-                .where(Asset.category != AssetCategory.INDEX)
-            )
-            for a_id, value in query.yield_per(YIELD_PER):
-                a_id: int
-                value: str | None
-                if value is None:
-                    continue
-                source = f"Asset {assets[a_id]}"
-                cleaned = re_cleaner.sub("", value).lower()
-                for word in self._RE_WORDS.split(cleaned):
-                    add(word, source, "description", 1)
-
-            words = {
-                k: v
-                for k, v in words.items()
-                if k not in spell.word_frequency.dictionary
-            }
-            issues.update(words)
+            issues.update(self._test_transaction_splits(s, accounts, re_cleaner, spell))
+            issues.update(self._test_assets(s, assets, re_cleaner, spell))
 
             if len(issues) != 0:
                 source_len = 0
@@ -211,3 +103,152 @@ class Typos(Base):
                 for uri, issue in self._issues.items()
                 if "description" not in issue and "memo" not in issue
             }
+
+    def _add(self, s: str, source: str, field: str, count: int) -> None:
+        if not s:
+            return
+        try:
+            float(s)
+        except ValueError:
+            pass
+        else:
+            # Skip numbers
+            return
+        if s in string.punctuation:
+            return
+        if s not in self._words:
+            self._words[s] = (s, source, field)
+        self._frequency[s] += count
+
+    def _create_issues(self) -> dict[str, tuple[str, str, str]]:
+        words_dedupe = utils.dedupe(self._words.keys())
+        issues: dict[str, tuple[str, str, str]] = {
+            word: item
+            for word, item in self._words.items()
+            if word not in words_dedupe and self._frequency[word] < _LIMIT_FREQUENCY
+        }
+        self._words.clear()
+        self._frequency.clear()
+        return issues
+
+    def _test_accounts(
+        self,
+        s: orm.Session,
+        accounts: dict[int, str],
+    ) -> dict[str, tuple[str, str, str]]:
+        query = s.query(Account).with_entities(
+            Account.id_,
+            Account.institution,
+        )
+        for acct_id, institution in query.yield_per(YIELD_PER):
+            acct_id: int
+            institution: str
+            name = accounts[acct_id]
+            source = f"Account {name}"
+            self._add(institution, source, "institution", 1)
+            self._proper_nouns.add(institution)
+        return self._create_issues()
+
+    def _test_transactions(
+        self,
+        s: orm.Session,
+        accounts: dict[int, str],
+    ) -> dict[str, tuple[str, str, str]]:
+        issues: dict[str, tuple[str, str, str]] = {}
+        txn_fields = [
+            TransactionSplit.payee,
+            TransactionSplit.tag,
+        ]
+        for field in txn_fields:
+            query = (
+                s.query(TransactionSplit)
+                .with_entities(
+                    TransactionSplit.date_ord,
+                    TransactionSplit.account_id,
+                    field,
+                    func.count(),
+                )
+                .group_by(field)
+            )
+            for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
+                date_ord: int
+                acct_id: int
+                value: str | None
+                if value is None:
+                    continue
+                date = datetime.date.fromordinal(date_ord)
+                source = f"{date} - {accounts[acct_id]}"
+                self._add(value, source, field.key, count)
+                self._proper_nouns.add(value)
+            issues.update(self._create_issues())
+        return issues
+
+    def _test_transaction_splits(
+        self,
+        s: orm.Session,
+        accounts: dict[int, str],
+        re_cleaner: re.Pattern,
+        spell: spellchecker.SpellChecker,
+    ) -> dict[str, tuple[str, str, str]]:
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit.account_id,
+                TransactionSplit.memo,
+                func.count(),
+            )
+            .group_by(TransactionSplit.memo)
+        )
+        for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
+            date_ord: int
+            acct_id: int
+            value: str | None
+            if value is None:
+                continue
+            date = datetime.date.fromordinal(date_ord)
+            source = f"{date} - {accounts[acct_id]}"
+            cleaned = re_cleaner.sub("", value).lower()
+            for word in self._RE_WORDS.split(cleaned):
+                self._add(word, source, "memo", count)
+
+        issues = {
+            k: v
+            for k, v in self._words.items()
+            if k not in spell.word_frequency.dictionary
+        }
+        self._words.clear()
+        return issues
+
+    def _test_assets(
+        self,
+        s: orm.Session,
+        assets: dict[int, str],
+        re_cleaner: re.Pattern,
+        spell: spellchecker.SpellChecker,
+    ) -> dict[str, tuple[str, str, str]]:
+        query = (
+            s.query(Asset)
+            .with_entities(
+                Asset.id_,
+                Asset.description,
+            )
+            .where(Asset.category != AssetCategory.INDEX)
+        )
+        for a_id, value in query.yield_per(YIELD_PER):
+            a_id: int
+            value: str | None
+            if value is None:
+                continue
+            source = f"Asset {assets[a_id]}"
+            cleaned = re_cleaner.sub("", value).lower()
+            for word in self._RE_WORDS.split(cleaned):
+                self._add(word, source, "description", 1)
+
+        issues = {
+            k: v
+            for k, v in self._words.items()
+            if k not in spell.word_frequency.dictionary
+        }
+        self._words.clear()
+        return issues

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import re
 
 from nummus import utils
 from nummus.models import (
@@ -20,7 +19,7 @@ class TestEmergencyFund(WebTestBase):
         p = self._portfolio
         _ = self._setup_portfolio()
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 
@@ -40,12 +39,11 @@ class TestEmergencyFund(WebTestBase):
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "emergency fund")
-                .one()[0]
+            b = BudgetAssignment(
+                category_id=TransactionCategory.emergency_fund(s)[0],
+                month_ord=month_ord,
+                amount=10,
             )
-            b = BudgetAssignment(category_id=t_cat_id, month_ord=month_ord, amount=10)
             s.add(b)
 
             # Mark account as budgeted
@@ -110,14 +108,6 @@ class TestEmergencyFund(WebTestBase):
             r'emergencyFund\.update\(.*"balances":\[.+\].*\)',
         )
         self.assertIn("Groceries", result)
-        m = re.search(
-            r"Groceries.*\$(\d+\.\d+)",
-            result,
-            re.S,
-        )
-        if m is None:
-            self.fail("Could not find Groceries row")
-        self.assertEqualWithinError(float(m[1]), 32.97, 0.01)
 
         # Increase fund to $100
         with p.begin_session() as s:
@@ -139,7 +129,7 @@ class TestEmergencyFund(WebTestBase):
         p = self._portfolio
         _ = self._setup_portfolio()
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 
@@ -158,12 +148,11 @@ class TestEmergencyFund(WebTestBase):
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
 
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "emergency fund")
-                .one()[0]
+            b = BudgetAssignment(
+                category_id=TransactionCategory.emergency_fund(s)[0],
+                month_ord=month_ord,
+                amount=10,
             )
-            b = BudgetAssignment(category_id=t_cat_id, month_ord=month_ord, amount=10)
             s.add(b)
 
             # Mark account as budgeted

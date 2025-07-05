@@ -6,6 +6,7 @@ from nummus.models import (
     Asset,
     AssetCategory,
     AssetValuation,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -19,7 +20,7 @@ class TestAsset(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         acct_id = d["acct_id"]
         asset_0_name = d["asset_0_name"]
@@ -106,7 +107,7 @@ class TestAsset(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         asset_0_name = d["asset_0_name"]
@@ -210,7 +211,7 @@ class TestAsset(WebTestBase):
     def test_performance(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -235,7 +236,7 @@ class TestAsset(WebTestBase):
     def test_table(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -308,7 +309,7 @@ class TestAsset(WebTestBase):
     def test_validation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         asset_0_id = d["asset_0_id"]
         asset_0_uri = d["asset_0_uri"]
@@ -382,7 +383,7 @@ class TestAsset(WebTestBase):
             "v": v_uri,
         }
         result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Only up to a week in advance", result)
+        self.assertEqual("Only up to 7 days in advance", result)
 
         args = {
             "uri": asset_0_uri,
@@ -429,7 +430,7 @@ class TestAsset(WebTestBase):
     def test_new_valuation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         asset_0_id = d["asset_0_id"]
@@ -482,7 +483,7 @@ class TestAsset(WebTestBase):
     def test_valuation(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         yesterday = today - datetime.timedelta(days=1)
         yesterday_ord = yesterday.toordinal()
@@ -555,7 +556,7 @@ class TestAsset(WebTestBase):
         self.assertEqual(headers.get("HX-Trigger"), "valuation")
 
         with p.begin_session() as s:
-            n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+            n = query_count(s.query(AssetValuation).where(AssetValuation.id_ == v_id))
             self.assertEqual(n, 0)
 
     def test_update(self) -> None:

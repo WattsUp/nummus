@@ -21,12 +21,20 @@ class ImportedFile(Base):
 
     hash_: ORMStr = orm.MappedColumn(unique=True)
     date_ord: ORMInt = orm.MappedColumn(
-        default=lambda: datetime.date.today().toordinal(),
+        default=lambda: datetime.datetime.now().astimezone().date().toordinal(),
     )
 
     __table_args__ = (*string_column_args("hash_"),)
 
     @orm.validates("hash_")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)

@@ -49,9 +49,6 @@ class Migrate(BaseCommand):
         from nummus.models import Config, ConfigKey  # noqa: PLC0415
 
         p = self._p
-        if p is None:  # pragma: no cover
-            msg = "Portfolio is None"
-            raise ValueError(msg)
 
         # Back up Portfolio
         _, tar_ver = p.backup()

@@ -11,6 +11,7 @@ from nummus.models import (
     AccountCategory,
     BudgetAssignment,
     HealthCheckIssue,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -23,7 +24,7 @@ class TestUnusedCategories(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         # Lock all categories
         with p.begin_session() as s:
@@ -35,7 +36,7 @@ class TestUnusedCategories(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             s.query(TransactionCategory).where(
@@ -51,7 +52,7 @@ class TestUnusedCategories(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).one()
@@ -96,14 +97,14 @@ class TestUnusedCategories(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Only BudgetAssignments now
             s.query(TransactionSplit).delete()
             s.query(Transaction).delete()
 
-            today = datetime.date.today()
+            today = datetime.datetime.now().astimezone().date()
             month = utils.start_of_month(today)
             month_ord = month.toordinal()
 
@@ -120,5 +121,5 @@ class TestUnusedCategories(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)

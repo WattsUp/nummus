@@ -5,6 +5,7 @@ import secrets
 from decimal import Decimal
 
 from packaging.version import Version
+from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import migrations, portfolio
@@ -16,6 +17,7 @@ class MockMigrator(migrations.Migrator):
 
     _VERSION = "999.0.0"
 
+    @override
     def migrate(self, p: portfolio.Portfolio) -> list[str]:
         _ = p
         return ["Comments"]
@@ -31,7 +33,7 @@ class TestMigrator(TestBase):
         p = portfolio.Portfolio.create(path_db)
         m = migrations.SchemaMigrator(set())
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         with p.begin_session() as s:
             a_name = self.random_string()

@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from colorama import Fore
 from typing_extensions import override
 
-from nummus.commands.base import BaseCommand, unlock
+from nummus.commands.base import BaseCommand
 
 if TYPE_CHECKING:
     import argparse
@@ -43,8 +43,6 @@ class Backup(BaseCommand):
 
     @override
     def run(self) -> int:
-        if self._p is None:  # pragma: no cover
-            return 1
         backup_tar, _ = self._p.backup()
         print(f"{Fore.GREEN}Portfolio backed up to {backup_tar}")
         return 0
@@ -124,6 +122,5 @@ class Restore(BaseCommand):
         except FileNotFoundError as e:
             print(f"{Fore.RED}{e}")
             return -1
-        p = unlock(self._path_db, self._path_password, check_migration=False)
-        print(f"{Fore.GREEN}Portfolio restored for {p and p.path}")
+        print(f"{Fore.GREEN}Portfolio restored for {self._path_db}")
         return 0

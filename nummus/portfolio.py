@@ -6,6 +6,7 @@ import base64
 import datetime
 import hashlib
 import io
+import operator
 import re
 import secrets
 import shutil
@@ -25,9 +26,11 @@ from nummus import importers, migrations, models, sql
 from nummus.models import (
     Account,
     Asset,
+    Base,
     Config,
     ConfigKey,
     ImportedFile,
+    one_or_none,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -36,6 +39,8 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     import contextlib
+
+    from nummus.importers.base import TxnDict
 
 
 class Portfolio:
@@ -61,8 +66,8 @@ class Portfolio:
             check_migration: True will check if migration is required
 
         Raises:
-            FileNotFoundError if database does not exist
-            MigrationRequiredError if migration is required
+            FileNotFoundError: If database does not exist
+            MigrationRequiredError: If migration is required
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
@@ -111,7 +116,7 @@ class Portfolio:
             True if Portfolio is encrypted
 
         Raises:
-            FileNotFound if database or configuration does not exist
+            FileNotFoundError: If database or configuration does not exist
         """
         path_db = Path(path)
         if not path_db.exists():
@@ -139,7 +144,7 @@ class Portfolio:
             Portfolio linked to newly created database
 
         Raises:
-            FileExistsError if database already exists
+            FileExistsError: If database already exists
         """
         path_db = Path(path).resolve()
         if path_db.exists():
@@ -221,8 +226,8 @@ class Portfolio:
         """Unlock the database.
 
         Raises:
-            UnlockingError if database file fails to open
-            ProtectedObjectNotFoundError if URI cipher is missing
+            UnlockingError: If database file fails to open
+            ProtectedObjectNotFoundError: If URI cipher is missing
         """
         try:
             with self.begin_session() as s:
@@ -279,7 +284,7 @@ class Portfolio:
             base64 encoded encrypted object
 
         Raises:
-            NotEncryptedError if portfolio does not support encryption
+            NotEncryptedError: If portfolio does not support encryption
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -295,7 +300,7 @@ class Portfolio:
             bytes decoded object
 
         Raises:
-            NotEncryptedError if portfolio does not support encryption
+            NotEncryptedError: If portfolio does not support encryption
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -318,6 +323,9 @@ class Portfolio:
 
         Returns:
             Version of database
+
+        Raises:
+            ProtectedObjectNotFoundError: If VERSION is not found
         """
         with self.begin_session() as s:
             try:
@@ -353,226 +361,59 @@ class Portfolio:
             force: True will not check for already imported files
 
         Raises:
-            FileAlreadyImportedError if file has already been imported
-            UnknownImporterError if no importer is found for file
-            TypeError if importer returns wrong types
-            KeyError if account or asset cannot be resolved
+            FileAlreadyImportedError: If file has already been imported
+            FutureTransactionError: If transaction date is in the future
+            FailedImportError: If importer encounters an error
+            EmptyImportError: If importer returns no transactions
         """
         # Compute hash of file contents to check if already imported
         sha = hashlib.sha256()
         with path.open("rb") as file:
             sha.update(file.read())
         h = sha.hexdigest()
-        if not force:
-            with self.begin_session() as s:
-                existing_date_ord: int | None = (
-                    s.query(ImportedFile.date_ord)
-                    .where(ImportedFile.hash_ == h)
-                    .scalar()
-                )
-                if existing_date_ord is not None:
-                    date = datetime.date.fromordinal(existing_date_ord)
-                    raise exc.FileAlreadyImportedError(date, path)
-
-        i = importers.get_importer(path, path_debug, self._importers)
-        if i is None:
-            raise exc.UnknownImporterError(path)
-        ctx = f"<importer={i.__class__.__name__}, file={path}>"
-        today = datetime.date.today()
-
         with self.begin_session() as s:
+            if force:
+                s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
+            existing_date_ord: int | None = (
+                s.query(ImportedFile.date_ord).where(ImportedFile.hash_ == h).scalar()
+            )
+            if existing_date_ord is not None:
+                date = datetime.date.fromordinal(existing_date_ord)
+                raise exc.FileAlreadyImportedError(date, path)
+
+            i = importers.get_importer(path, path_debug, self._importers)
+            today = datetime.datetime.now().astimezone().date()
+
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
             categories = {v: k for k, v in categories.items()}
             # Cache a mapping from account/asset name to the ID
-            acct_mapping: dict[str, int] = {}
-            asset_mapping: dict[str, tuple[int, str]] = {}
+            acct_mapping: dict[str, tuple[int, str | None]] = {}
+            asset_mapping: dict[str, tuple[int, str | None]] = {}
             try:
                 txns_raw = i.run()
             except Exception as e:
-                msg = f"Importer failed, ctx={ctx}"
                 raise exc.FailedImportError(path, i) from e
             if not txns_raw:
                 raise exc.EmptyImportError(path, i)
             for d in txns_raw:
+                if d["date"] > today:
+                    raise exc.FutureTransactionError
+
                 # Create a single split for each transaction
                 acct_raw = d["account"]
-                acct_id = acct_mapping.get(acct_raw)
-                if acct_id is None:
-                    acct = self.find_account(acct_raw, session=s)
-                    if not isinstance(acct, Account):
-                        msg = f"Could not find Account by '{acct_raw}', ctx={ctx}"
-                        # TODO (WattsUp): Gracefully handle
-                        # import-files command should catch all expected exceptions
-                        raise KeyError(msg)
-                    acct_id = acct.id_
-                    acct_mapping[acct_raw] = acct_id
-
-                statement = d["statement"]
+                acct_id, _ = self.find(s, Account, acct_raw, acct_mapping)
 
                 asset_raw = d["asset"]
                 asset_id: int | None = None
                 if asset_raw:
-                    # Find its ID
-                    try:
-                        asset_id, asset_name = asset_mapping[asset_raw]
-                    except KeyError as e:
-                        asset = self.find_asset(asset_raw, session=s)
-                        if not isinstance(asset, Asset):
-                            msg = f"Could not find Asset by '{asset_raw}', ctx={ctx}"
-                            raise KeyError(msg) from e
-                        asset_id = asset.id_
-                        asset_name = asset.name
-                        asset_mapping[asset_raw] = (asset_id, asset_name)
-                    if not statement:
-                        statement = f"Asset Transaction {asset_name}"
+                    asset_id, asset_name = self.find(s, Asset, asset_raw, asset_mapping)
+                    if not d["statement"]:
+                        d["statement"] = f"Asset Transaction {asset_name}"
 
-                category_name = (d["category"] or "uncategorized").lower()
-
-                if d["date"] > today:
-                    raise exc.FutureTransactionError
-
-                match_id: int | None = None
-                if asset_id is not None:
-                    if category_name == "investment fees":
-                        # Associate fees with asset
-                        amount = abs(d["amount"])
-                        qty = d["asset_quantity"]
-                        if qty is None or asset_id is None:
-                            msg = f"Investment Fees needs Asset and quantity, ctx={ctx}"
-                            raise exc.MissingAssetError(msg)
-                        qty = abs(qty)
-
-                        txn = Transaction(
-                            account_id=acct_id,
-                            amount=0,
-                            date=d["date"],
-                            statement=statement,
-                            payee=d["payee"],
-                            cleared=True,
-                        )
-                        t_split_0 = TransactionSplit(
-                            parent=txn,
-                            amount=amount,
-                            memo=d["memo"],
-                            category_id=categories["securities traded"],
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=-qty,
-                        )
-                        t_split_1 = TransactionSplit(
-                            parent=txn,
-                            amount=-amount,
-                            memo=d["memo"],
-                            category_id=categories["investment fees"],
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=0,
-                        )
-                        s.add_all((txn, t_split_0, t_split_1))
-                        continue
-                    if category_name == "dividends received":
-                        # Associate dividends with asset
-                        amount = abs(d["amount"])
-                        qty = d["asset_quantity"]
-                        if qty is None or asset_id is None:
-                            msg = (
-                                "Dividends Received needs Asset and quantity,"
-                                f" ctx={ctx}"
-                            )
-                            raise exc.MissingAssetError(msg)
-                        qty = abs(qty)
-
-                        txn = Transaction(
-                            account_id=acct_id,
-                            amount=0,
-                            date=d["date"],
-                            statement=statement,
-                            payee=d["payee"],
-                            cleared=True,
-                        )
-                        t_split_0 = TransactionSplit(
-                            parent=txn,
-                            amount=amount,
-                            memo=d["memo"],
-                            category_id=categories["dividends received"],
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=0,
-                        )
-                        t_split_1 = TransactionSplit(
-                            parent=txn,
-                            amount=-amount,
-                            memo=d["memo"],
-                            category_id=categories["securities traded"],
-                            asset_id=asset_id,
-                            asset_quantity_unadjusted=qty,
-                        )
-                        s.add_all((txn, t_split_0))
-                        if qty != 0:
-                            # Zero quantity means cash dividends, not reinvested
-                            s.add(t_split_1)
-                        continue
-                else:
-                    # Don't match if an asset transaction
-                    date_ord = d["date"].toordinal()
-                    matches = list(
-                        s.query(Transaction)
-                        .with_entities(Transaction.id_, Transaction.date_ord)
-                        .where(
-                            Transaction.account_id == acct_id,
-                            Transaction.amount == d["amount"],
-                            Transaction.date_ord >= date_ord - 5,
-                            Transaction.date_ord <= date_ord + 5,
-                            Transaction.cleared.is_(False),
-                        )
-                        .all(),
-                    )
-                    matches = sorted(matches, key=lambda x: abs(x[1] - date_ord))
-                    # If only one match on closest day, link transaction
-                    if len(matches) == 1 or (
-                        len(matches) > 1 and matches[0][1] != matches[1][1]
-                    ):
-                        match_id = matches[0][0]
-
-                try:
-                    category_id = categories[category_name]
-                except KeyError:
-                    category_id = categories["uncategorized"]
-
-                if match_id:
-                    s.query(Transaction).where(Transaction.id_ == match_id).update(
-                        {
-                            "cleared": True,
-                            "statement": Transaction.clean_strings(
-                                "statement",
-                                statement,
-                            ),
-                        },
-                    )
-                    s.query(TransactionSplit).where(
-                        TransactionSplit.parent_id == match_id,
-                    ).update({"cleared": True})
-                else:
-                    txn = Transaction(
-                        account_id=acct_id,
-                        amount=d["amount"],
-                        date=d["date"],
-                        statement=statement,
-                        payee=d["payee"],
-                        cleared=True,
-                    )
-                    t_split = TransactionSplit(
-                        amount=d["amount"],
-                        memo=d["memo"],
-                        tag=d["tag"],
-                        category_id=category_id,
-                        asset_id=asset_id,
-                        asset_quantity_unadjusted=d["asset_quantity"],
-                    )
-                    t_split.parent = txn
-                    s.add_all((txn, t_split))
+                self._import_transaction(s, d, acct_id, asset_id, categories)
 
             # Add file hash to prevent importing again
-            if force:
-                s.query(ImportedFile).where(ImportedFile.hash_ == h).delete()
             s.add(ImportedFile(hash_=h))
 
             # Update splits on each touched
@@ -585,126 +426,236 @@ class Portfolio:
         # If successful, delete the temp file
         path_debug.unlink()
 
-    def find_account(
+    def _import_transaction(
         self,
-        search: int | str,
-        session: orm.Session | None = None,
-    ) -> int | Account | None:
-        """Find a matching Account by name, URI, institution, or ID.
+        s: orm.Session,
+        d: TxnDict,
+        acct_id: int,
+        asset_id: int | None,
+        categories: dict[str, int],
+    ) -> None:
+        if asset_id is not None:
+            self._import_asset_transaction(s, d, acct_id, asset_id, categories)
+            return
+
+        # See if anything matches
+        date_ord = d["date"].toordinal()
+        matches = list(
+            s.query(Transaction)
+            .with_entities(Transaction.id_, Transaction.date_ord)
+            .where(
+                Transaction.account_id == acct_id,
+                Transaction.amount == d["amount"],
+                Transaction.date_ord >= date_ord - 5,
+                Transaction.date_ord <= date_ord + 5,
+                Transaction.cleared.is_(False),
+            )
+            .all(),
+        )
+        matches = sorted(matches, key=lambda x: abs(x[1] - date_ord))
+        # If only one match on closest day, link transaction
+        if len(matches) == 1 or (len(matches) > 1 and matches[0][1] != matches[1][1]):
+            match_id = matches[0][0]
+            statement_clean = Transaction.clean_strings("statement", d["statement"])
+            s.query(Transaction).where(Transaction.id_ == match_id).update(
+                {
+                    "cleared": True,
+                    "statement": statement_clean,
+                },
+            )
+            s.query(TransactionSplit).where(
+                TransactionSplit.parent_id == match_id,
+            ).update({"cleared": True})
+            return
+
+        category_name = (d["category"] or "uncategorized").lower()
+        try:
+            category_id = categories[category_name]
+        except KeyError:
+            category_id = categories["uncategorized"]
+
+        txn = Transaction(
+            account_id=acct_id,
+            amount=d["amount"],
+            date=d["date"],
+            statement=d["statement"],
+            payee=d["payee"],
+            cleared=True,
+        )
+        t_split = TransactionSplit(
+            amount=d["amount"],
+            memo=d["memo"],
+            tag=d["tag"],
+            category_id=category_id,
+        )
+        t_split.parent = txn
+        s.add_all((txn, t_split))
+
+    @classmethod
+    def _import_asset_transaction(
+        cls,
+        s: orm.Session,
+        d: TxnDict,
+        acct_id: int,
+        asset_id: int,
+        categories: dict[str, int],
+    ) -> None:
+        category_name = (d["category"] or "uncategorized").lower()
+        if category_name == "investment fees":
+            # Associate fees with asset
+            amount = abs(d["amount"])
+            qty = d["asset_quantity"]
+            if qty is None:
+                msg = "Investment Fees needs Asset and quantity"
+                raise exc.MissingAssetError(msg)
+            qty = abs(qty)
+
+            txn = Transaction(
+                account_id=acct_id,
+                amount=0,
+                date=d["date"],
+                statement=d["statement"],
+                payee=d["payee"],
+                cleared=True,
+            )
+            t_split_0 = TransactionSplit(
+                parent=txn,
+                amount=amount,
+                memo=d["memo"],
+                category_id=categories["securities traded"],
+                asset_id=asset_id,
+                asset_quantity_unadjusted=-qty,
+            )
+            t_split_1 = TransactionSplit(
+                parent=txn,
+                amount=-amount,
+                memo=d["memo"],
+                category_id=categories["investment fees"],
+                asset_id=asset_id,
+                asset_quantity_unadjusted=0,
+            )
+            s.add_all((txn, t_split_0, t_split_1))
+            return
+        if category_name == "dividends received":
+            # Associate dividends with asset
+            amount = abs(d["amount"])
+            qty = d["asset_quantity"]
+            if qty is None or asset_id is None:
+                msg = "Dividends Received needs Asset and quantity"
+                raise exc.MissingAssetError(msg)
+            qty = abs(qty)
+
+            txn = Transaction(
+                account_id=acct_id,
+                amount=0,
+                date=d["date"],
+                statement=d["statement"],
+                payee=d["payee"],
+                cleared=True,
+            )
+            t_split_0 = TransactionSplit(
+                parent=txn,
+                amount=amount,
+                memo=d["memo"],
+                category_id=categories["dividends received"],
+                asset_id=asset_id,
+                asset_quantity_unadjusted=0,
+            )
+            t_split_1 = TransactionSplit(
+                parent=txn,
+                amount=-amount,
+                memo=d["memo"],
+                category_id=categories["securities traded"],
+                asset_id=asset_id,
+                asset_quantity_unadjusted=qty,
+            )
+            s.add_all((txn, t_split_0))
+            if qty != 0:
+                # Zero quantity means cash dividends, not reinvested
+                s.add(t_split_1)
+            return
+        if category_name == "securities traded":
+            txn = Transaction(
+                account_id=acct_id,
+                amount=d["amount"],
+                date=d["date"],
+                statement=d["statement"],
+                payee=d["payee"],
+                cleared=True,
+            )
+            t_split = TransactionSplit(
+                amount=d["amount"],
+                memo=d["memo"],
+                tag=d["tag"],
+                category_id=categories[category_name],
+                asset_id=asset_id,
+                asset_quantity_unadjusted=d["asset_quantity"],
+            )
+            t_split.parent = txn
+            s.add_all((txn, t_split))
+            return
+
+        msg = f"'{category_name}' is not a valid category for asset transaction"
+        raise ValueError(msg)
+
+    @classmethod
+    def find(
+        cls,
+        s: orm.Session,
+        model: type[Base],
+        search: str,
+        cache: dict[str, tuple[int, str | None]],
+    ) -> tuple[int, str | None]:
+        """Find a matching object by  uri, or field value.
 
         Args:
+            s: Session to use
+            model: Type of model to search for
             search: Search query
-            session: Session to use, will return Account not id
+            cache: Cache results to speed up look ups
 
         Returns:
-            Account ID or None if no matches found
-            If session is not None: return Account object or None
+            tuple(id_, name)
+
+        Raises:
+            LookupError: if object not found
         """
+        id_, name = cache.get(search, (None, None))
+        if id_ is not None:
+            return id_, name
 
-        def _find(s: orm.Session) -> int | None:
-            if isinstance(search, int):
-                # See if search is an ID first...
-                query = s.query(Account.id_).where(Account.id_ == search)
-                return search if query.count() == 1 else None
-            try:
-                # See if query is an URI
-                id_ = Account.uri_to_id(search)
-            except (exc.InvalidURIError, exc.WrongURITypeError):
-                pass
-            else:
-                query = s.query(Account.id_).where(Account.id_ == id_)
-                try:
-                    return query.one()[0]
-                except (exc.NoResultFound, exc.MultipleResultsFound):
-                    pass
+        def cache_and_return(m: Base) -> tuple[int, str | None]:
+            id_ = m.id_
+            name: str | None = getattr(m, "name", None)
+            cache[search] = id_, name
+            return id_, name
 
-            # Maybe a number next
-            query = s.query(Account.id_).where(Account.number == search)
-            try:
-                return query.one()[0]
-            except (exc.NoResultFound, exc.MultipleResultsFound):
-                pass
+        try:
+            # See if query is an URI
+            id_ = model.uri_to_id(search)
+        except (exc.InvalidURIError, exc.WrongURITypeError):
+            pass
+        else:
+            query = s.query(model).where(model.id_ == id_)
+            if m := one_or_none(query):
+                return cache_and_return(m)
 
-            # Maybe an institution next
-            query = s.query(Account.id_).where(Account.institution == search)
-            try:
-                return query.one()[0]
-            except (exc.NoResultFound, exc.MultipleResultsFound):
-                pass
+        properties = {
+            Account: [Account.number, Account.institution, Account.name],
+            Asset: [Asset.ticker, Asset.name],
+        }[model]
+        for prop in properties:
+            query = s.query(model).where(prop == search)
+            if m := one_or_none(query):
+                return cache_and_return(m)
 
-            # Maybe a name next
-            query = s.query(Account.id_).where(Account.name == search)
-            try:
-                return query.one()[0]
-            except (exc.NoResultFound, exc.MultipleResultsFound):
-                pass
+            # For account number, see if there is one ending in the search
+            query = s.query(model).where(prop.like(f"%{search}"))
+            if prop == Account.number and (m := one_or_none(query)):
+                return cache_and_return(m)
 
-            return None
-
-        if session is None:
-            with self.begin_session() as s:
-                return _find(s)
-        a_id = _find(session)
-        if a_id is None:
-            return None
-        return session.query(Account).where(Account.id_ == a_id).one()
-
-    def find_asset(
-        self,
-        search: int | str,
-        session: orm.Session | None = None,
-    ) -> int | Asset | None:
-        """Find a matching Asset by name, URI, or ID.
-
-        Args:
-            search: Search query
-            session: Session to use, will return Asset not id
-
-        Returns:
-            Asset ID or None if no matches found
-            If session is not None: return Asset object or None
-        """
-
-        def _find(s: orm.Session) -> int | None:
-            if isinstance(search, int):
-                # See if search is an ID first...
-                query = s.query(Asset.id_).where(Asset.id_ == search)
-                return search if query.count() == 1 else None
-            try:
-                # See if search is an URI
-                id_ = Asset.uri_to_id(search)
-            except (exc.InvalidURIError, exc.WrongURITypeError):
-                pass
-            else:
-                query = s.query(Asset.id_).where(Asset.id_ == id_)
-                try:
-                    return query.one()[0]
-                except (exc.NoResultFound, exc.MultipleResultsFound):
-                    pass
-
-            # Maybe a ticker next
-            query = s.query(Asset.id_).where(Asset.ticker == search)
-            try:
-                return query.one()[0]
-            except (exc.NoResultFound, exc.MultipleResultsFound):
-                pass
-
-            # Maybe a name next
-            query = s.query(Asset.id_).where(Asset.name == search)
-            try:
-                return query.one()[0]
-            except (exc.NoResultFound, exc.MultipleResultsFound):
-                pass
-
-            return None
-
-        if session is None:
-            with self.begin_session() as s:
-                return _find(s)
-        acct_id = _find(session)
-        if acct_id is None:
-            return None
-        return session.query(Asset).where(Asset.id_ == acct_id).one()
+        msg = f"{model} matching '{search}' could not be found"
+        raise LookupError(msg)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.
@@ -751,6 +702,9 @@ class Portfolio:
 
         Returns:
             List[(tar_ver, created timestamp), ...]
+
+        Raises:
+            InvalidBackupTarError: If backup is missing timestamp
         """
         backups: list[tuple[int, datetime.datetime]] = []
 
@@ -781,7 +735,7 @@ class Portfolio:
                 ts = datetime.datetime.fromisoformat(file_ts.read().decode())
                 ts = ts.replace(tzinfo=datetime.timezone.utc)
                 backups.append((tar_ver, ts))
-        return sorted(backups, key=lambda item: item[0])
+        return sorted(backups, key=operator.itemgetter(0))
 
     def clean(self) -> tuple[int, int]:
         """Delete any unused files, creates a new backup.
@@ -812,7 +766,7 @@ class Portfolio:
 
         # Delete all files that start with name except the fresh backups
         for file in parent.iterdir():
-            if file in (path_backup, path_backup_optimized):
+            if file in {path_backup, path_backup_optimized}:
                 continue
             if file == self._path_importers:
                 continue
@@ -847,27 +801,17 @@ class Portfolio:
             tar_ver: Backup version to restore, None will use latest
 
         Raises:
-            FileNotFoundError if backup does not exist
+            FileNotFoundError: If backup does not exist
+            InvalidBackupTarError: If backup is missing required files
         """
         path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
         path_db = path_db.resolve().with_suffix(".db")
         parent = path_db.parent
-        name = path_db.with_suffix("").name
+        stem = path_db.stem
 
-        if tar_ver is None:
-            # Find latest backup file for this Portfolio
-            i = 0
-            re_filter = re.compile(rf"^{name}.backup(\d+).tar$")
-            for file in parent.iterdir():
-                m = re_filter.match(file.name)
-                if m is not None:
-                    i = max(i, int(m.group(1)))
-            if i == 0:
-                msg = f"No backup exists for {path_db}"
-                raise FileNotFoundError(msg)
-            tar_ver = i
+        tar_ver = tar_ver or cls._latest_backup_version(path_db)
 
-        path_backup = parent.joinpath(f"{name}.backup{tar_ver}.tar")
+        path_backup = parent.joinpath(f"{stem}.backup{tar_ver}.tar")
         if not path_backup.exists():
             msg = f"Backup does not exist {path_backup}"
             raise FileNotFoundError(msg)
@@ -880,10 +824,11 @@ class Portfolio:
             }
             members = tar.getmembers()
             member_paths = [member.path for member in members]
-            for member in required:
-                if member not in member_paths:
-                    msg = f"Backup is missing required file: {member}"
-                    raise exc.InvalidBackupTarError(msg)
+            missing = [m for m in required if m not in member_paths]
+            if missing:
+                msg = f"Backup is missing required files: {missing}"
+                raise exc.InvalidBackupTarError(msg)
+
             cls.delete_files(path_db)
             for member in members:
                 if member.path == "_timestamp":
@@ -908,6 +853,32 @@ class Portfolio:
         # Reload Portfolio
         if isinstance(p, Portfolio):
             p._unlock()  # noqa: SLF001
+
+    @classmethod
+    def _latest_backup_version(cls, path_db: Path) -> int:
+        """Get the latest backup version available.
+
+        Args:
+            path_db: Path to portfolio
+
+        Returns:
+            latest version
+
+        Raises:
+            FileNotFoundError: if no backups exists
+        """
+        parent = path_db.parent
+        stem = path_db.stem
+        # Find latest backup file for this Portfolio
+        i = 0
+        re_filter = re.compile(rf"^{stem}.backup(\d+).tar$")
+        for file in parent.iterdir():
+            if m := re_filter.match(file.name):
+                i = max(i, int(m.group(1)))
+        if i == 0:
+            msg = f"No backup exists for {path_db}"
+            raise FileNotFoundError(msg)
+        return i
 
     @classmethod
     def delete_files(cls, path_db: Path) -> None:
@@ -950,7 +921,7 @@ class Portfolio:
                 ...
             ]
         """
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
         updated: list[
             tuple[

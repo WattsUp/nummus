@@ -24,6 +24,7 @@ __all__ = [
     "DatabaseError",
     "DuplicateURLError",
     "EmptyImportError",
+    "EmptySearchError",
     "EvaluationError",
     "FailedImportError",
     "FileAlreadyImportedError",
@@ -117,7 +118,7 @@ class FailedImportError(Exception):
     """Error when a importer fails to import a file."""
 
     def __init__(self, path: Path, importer: object) -> None:
-        """Initialize EmptyImportError.
+        """Initialize FailedImportError.
 
         Args:
             path: Path to empty file
@@ -235,3 +236,7 @@ class EvaluationError(Exception):
 
 class MigrationRequiredError(Exception):
     """Error when a migration is needed to operate."""
+
+
+class EmptySearchError(Exception):
+    """Error when search query has no tokens."""

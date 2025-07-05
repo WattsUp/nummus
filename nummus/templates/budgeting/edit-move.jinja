@@ -1,49 +1,56 @@
-{% with headline="Move available funds", save_url=url_for("budgeting.move", uri=category.uri, month=category.month) %}
+{% set overspent = category.available < 0 %}
+{% with headline="Cover overspending" if overspent else "Move available funds", save_url=url_for("budgeting.move", uri=category.uri, month=category.month) %}
   {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
 <form class="w-88 grid gap-2" onsubmit="return false">
   <div>
-    {{ category.name or "Assignable income" }} has
-    {{ category.available | money }} available
+    {% if not overspent %}
+      {{ category.name or "Assignable income" }}
+      has {{ category.available | money }} available
+    {% elif category.name is none %}
+      More money is assigned than held by {{ -category.available | money }}
+    {% else %}
+      {{ category.name }}
+      is overspent by {{ -category.available | money }}
+    {% endif %}
   </div>
-  <label
-    class="input-outlined input-bg-surface-container-high {{ split_class }}"
-  >
-    <input
-      name="amount"
-      enterkeyhint="next"
-      placeholder=""
-      inputmode="tel"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for("budgeting.validation") }}"
-      autocomplete="off"
-    />
-    <icon>attach_money</icon>
-    <div>
-      <div>Move Amount</div>
-    </div>
-    <div>
-      <error></error>
-    </div>
-  </label>
+  {% if overspent %}
+
+  {% else %}
+    <label
+      class="input-outlined input-bg-surface-container-high {{ split_class }}"
+    >
+      <input
+        name="amount"
+        enterkeyhint="next"
+        placeholder=""
+        inputmode="tel"
+        hx-target="next error"
+        hx-trigger="input delay:200ms"
+        hx-include="this"
+        hx-get="{{ url_for("budgeting.validation") }}"
+        autocomplete="off"
+      />
+      <icon>attach_money</icon>
+      <div>
+        <div>Move Amount</div>
+      </div>
+      <div>
+        <error></error>
+      </div>
+    </label>
+  {% endif %}
   <label class="input-outlined input-bg-surface-container-high">
     <select name="destination" required autocomplete="off">
       {% for uri, name, available, group in category.options %}
         {% if not loop.previtem or loop.previtem[3] != group %}
           <option disabled>{{ group.pretty }}</option>
         {% endif %}
-        <option
-          value="{{ uri }}"
-          {% if uri == category.dest %}selected{% endif %}
-        >
-          {{ name }} {{ available | money }}
-        </option>
+        <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
       {% endfor %}
     </select>
     <div>
-      <div>Destination</div>
+      <div>{{ "Cover with" if overspent else "Destination" }}</div>
     </div>
   </label>
 </form>

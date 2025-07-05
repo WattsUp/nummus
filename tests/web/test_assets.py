@@ -25,9 +25,9 @@ class TestWebAssets(TestBase):
     def test_jsmin_filter(self) -> None:
         f = assets.JSMinFilter()
 
-        _in = io.StringIO("const abc = 123;  \nconst string = `${abc} = abc`")
+        in_ = io.StringIO("const abc = 123;  \nconst string = `${abc} = abc`")
         out = io.StringIO()
-        f.output(_in, out)
+        f.output(in_, out)
         buf = out.getvalue()
         target = "const abc=123;const string=`${abc} = abc`"
         self.assertEqual(buf, target)

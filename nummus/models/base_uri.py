@@ -55,6 +55,12 @@ class Cipher:
 
         Args:
             box: A shuffled range
+
+        Returns:
+            The reversed box
+
+        Raises:
+            ValueError: if box is not properly defined
         """
         # Validate box is a box
         n = len(box)
@@ -86,7 +92,7 @@ class Cipher:
         out = 0
         for _ in range(ID_BYTES):
             out = (out << 8) | box[n & 0xFF]
-            n = n >> 8
+            n >>= 8
         return out
 
     @staticmethod
@@ -117,7 +123,7 @@ class Cipher:
         """
         n = pt
         for i in range(_ROUNDS):
-            n = n ^ self._keys[i]  # XOR with KEYS
+            n ^= self._keys[i]  # XOR with KEYS
             n = self._substitute(n, self._sbox)
             n = self._permutate(n, self._pbox)
         return n ^ self._keys[-1]
@@ -132,11 +138,11 @@ class Cipher:
             Plain text number
         """
         n = ct
-        n = n ^ self._keys_rev[0]
+        n ^= self._keys_rev[0]
         for i in range(_ROUNDS):
             n = self._permutate(n, self._pbox_rev)
             n = self._substitute(n, self._sbox_rev)
-            n = n ^ self._keys_rev[i]
+            n ^= self._keys_rev[i]
         return n
 
     @staticmethod
@@ -166,10 +172,7 @@ class Cipher:
             String of bytes containing keys and boxes
         """
         buf = [k.to_bytes(ID_BYTES, _ORDER) for k in self._keys]
-
-        buf.append(bytes(self._sbox))
-
-        buf.append(bytes(self._pbox))
+        buf.extend((bytes(self._sbox), bytes(self._pbox)))
 
         return b"".join(buf)
 
@@ -184,8 +187,8 @@ class Cipher:
             Loaded Cipher
 
         Raises:
-            TypeError if buf is not bytes
-            ValueError if Cipher fails to load
+            TypeError: if buf is not bytes
+            ValueError: if Cipher fails to load
         """
         if not isinstance(buf, bytes):
             msg = f"Expected bytes, got: {type(buf)}"
@@ -239,7 +242,7 @@ def uri_to_id(uri: str) -> int:
         ID, 1:1 mapping
 
     Raises:
-        InvalidURIError if uri is not the correct length
+        InvalidURIError: if uri is not the correct length
     """
     if len(uri) != URI_BYTES:
         msg = f"URI is not {URI_BYTES} bytes long: {uri}"

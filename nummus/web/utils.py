@@ -12,9 +12,10 @@ from typing_extensions import TypeVar
 
 from nummus import exceptions as exc
 from nummus import utils
-from nummus.models import Base
+from nummus.models import Base, query_count
 
 if TYPE_CHECKING:
+    import sqlalchemy
     from sqlalchemy import orm
 
 
@@ -59,8 +60,8 @@ def find(s: orm.Session, cls: type[T], uri: str) -> T:
         Object
 
     Raises:
-        HTTPError(400) if URI is malformed
-        HTTPError(404) if object is not found
+        BadRequest: If URI is malformed
+        NotFound: If object is not found
     """
     try:
         id_ = cls.uri_to_id(uri)
@@ -83,8 +84,11 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     Returns:
         start, end dates
         start is None for "all"
+
+    Raises:
+        BadRequest: If period is unknown
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     if period == "1yr":
         start = datetime.date(today.year - 1, today.month, today.day)
     elif period == "ytd":
@@ -141,3 +145,167 @@ def ctx_to_json(d: dict[str, object]) -> str:
         raise TypeError(msg)
 
     return json.dumps(d, default=default, separators=(",", ":"))
+
+
+def validate_string(
+    value: str,
+    *,
+    is_required: bool = False,
+    check_length: bool = True,
+    session: orm.Session | None = None,
+    no_duplicates: orm.QueryableAttribute | None = None,
+    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None = None,
+) -> str:
+    """Validate a string matches requirements.
+
+    Args:
+        value: String to test
+        is_required: True will require the value be non-empty
+        check_length: True will require value to be MIN_STR_LEN long
+        session: SQL session to use for no_duplicates
+        no_duplicates: Property to test for duplicate values
+        no_duplicate_wheres: Additional where clauses to add to no_duplicates
+
+    Returns:
+        Error message or ""
+    """
+    value = value.strip()
+    if not value:
+        return "Required" if is_required else ""
+    if check_length and len(value) < utils.MIN_STR_LEN:
+        # Ticker can be short
+        return f"{utils.MIN_STR_LEN} characters required"
+    if no_duplicates is None:
+        return ""
+    return _test_duplicates(
+        value,
+        session,
+        no_duplicates,
+        no_duplicate_wheres,
+    )
+
+
+def _test_duplicates(
+    value: object,
+    session: orm.Session | None,
+    no_duplicates: orm.QueryableAttribute,
+    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None,
+) -> str:
+    if session is None:
+        msg = "Cannot test no_duplicates without a session"
+        raise TypeError(msg)
+    query = session.query(no_duplicates.parent).where(
+        no_duplicates == value,
+        *(no_duplicate_wheres or []),
+    )
+    n = query_count(query)
+    if n != 0:
+        return "Must be unique"
+    return ""
+
+
+def validate_date(
+    value: str,
+    *,
+    is_required: bool = False,
+    max_future: int | None = utils.DAYS_IN_WEEK,
+    session: orm.Session | None = None,
+    no_duplicates: orm.QueryableAttribute | None = None,
+    no_duplicate_wheres: list[sqlalchemy.ColumnExpressionArgument] | None = None,
+) -> str:
+    """Validate a date string matches requirements.
+
+    Args:
+        value: Date string to test
+        is_required: True will require the value be non-empty
+        max_future: Maximum number of days date is allowed in the future
+        session: SQL session to use for no_duplicates
+        no_duplicates: Property to test for duplicate values
+        no_duplicate_wheres: Additional where clauses to add to no_duplicates
+
+    Returns:
+        Error message or ""
+    """
+    value = value.strip()
+    if not value:
+        return "Required" if is_required else ""
+    try:
+        date = utils.parse_date(value)
+    except ValueError:
+        return "Unable to parse"
+    if date is None:  # pragma: no cover
+        # Type guard, should not be called
+        return "Unable to parse"
+
+    if max_future == 0:
+        today = datetime.datetime.now().astimezone().date()
+        if date > today:
+            return "Cannot be in the future"
+    elif max_future is not None:
+        today = datetime.datetime.now().astimezone().date()
+        if date > (today + datetime.timedelta(days=max_future)):
+            return f"Only up to {utils.format_days(max_future)} in advance"
+
+    if no_duplicates is None:
+        return ""
+    return _test_duplicates(
+        date.toordinal(),
+        session,
+        no_duplicates,
+        no_duplicate_wheres,
+    )
+
+
+def validate_real(
+    value: str,
+    *,
+    is_required: bool = False,
+    is_positive: bool = False,
+) -> str:
+    """Validate a number string matches requirements.
+
+    Args:
+        value: Number string to test
+        is_required: True will require the value be non-empty
+        is_positive: True will require the value be > 0
+
+    Returns:
+        Error message or ""
+    """
+    value = value.strip()
+    if not value:
+        return "Required" if is_required else ""
+    n = utils.evaluate_real_statement(value)
+    if n is None:
+        return "Unable to parse"
+    if is_positive and n <= 0:
+        return "Must be positive"
+    return ""
+
+
+def validate_int(
+    value: str,
+    *,
+    is_required: bool = False,
+    is_positive: bool = False,
+) -> str:
+    """Validate an integer string matches requirements.
+
+    Args:
+        value: Number string to test
+        is_required: True will require the value be non-empty
+        is_positive: True will require the value be > 0
+
+    Returns:
+        Error message or ""
+    """
+    value = value.strip()
+    if not value:
+        return "Required" if is_required else ""
+    try:
+        n = int(value)
+    except ValueError:
+        return "Unable to parse"
+    if is_positive and n <= 0:
+        return "Must be positive"
+    return ""

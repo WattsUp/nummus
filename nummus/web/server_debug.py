@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING
 
 import gevent.pool
 import gevent.pywsgi
-from colorama import Fore
 
 from nummus.web import server_base
 
@@ -19,7 +17,11 @@ class Handler(gevent.pywsgi.WSGIHandler):
     """Custom WSGIHandler, mainly for request formatting."""
 
     def format_request(self) -> str:
-        """Format request as a single line."""
+        """Format request as a single line.
+
+        Returns:
+            Request log
+        """
         if "X-Real-IP" in self.headers:
             client_address = self.headers["X-Real-IP"]
         elif isinstance(self.client_address, tuple):
@@ -64,7 +66,6 @@ class Server:
             host: IP to bind to
             port: Network port to bind to
         """
-        print(f"{Fore.YELLOW}Running in debug mode, not meant for production")
         self._app = server_base.create_flask_app(p, debug=True)
 
         self._pool = gevent.pool.Pool(1000)
@@ -78,17 +79,10 @@ class Server:
 
     def run(self) -> None:
         """Start and run the server."""
-        url = f"http://{self._server.server_host}:{self._server.server_port}"
-        print(f"{Fore.GREEN}nummus running on {url} (Press CTRL+C to quit)")
         try:
             self._server.serve_forever()
         except KeyboardInterrupt:
-            print(f"{Fore.YELLOW}Shutting down on interrupt")
             if self._server.started:
                 self._server.stop(timeout=1)
         finally:
             self._server.close()
-            now = datetime.datetime.now(datetime.timezone.utc).isoformat(
-                timespec="seconds",
-            )
-            print(f"{Fore.YELLOW}nummus web shutdown at {now}Z")

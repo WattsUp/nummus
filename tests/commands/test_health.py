@@ -9,7 +9,7 @@ from typing_extensions import override
 
 from nummus import health_checks, portfolio
 from nummus.commands import create, health
-from nummus.models import HealthCheckIssue
+from nummus.models import HealthCheckIssue, query_count
 from tests.base import TestBase
 
 
@@ -96,7 +96,7 @@ class TestHealth(TestBase):
             self.assertNotEqual(rc, 0)
 
             with p.begin_session() as s:
-                n = s.query(HealthCheckIssue).count()
+                n = query_count(s.query(HealthCheckIssue))
                 self.assertEqual(n, 2)
 
                 c = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
@@ -232,7 +232,7 @@ class TestHealth(TestBase):
             self.assertEqual(rc, 0)
 
             with p.begin_session() as s:
-                n = s.query(HealthCheckIssue).count()
+                n = query_count(s.query(HealthCheckIssue))
                 self.assertEqual(n, 0)
 
             fake_stdout = fake_stdout.getvalue()

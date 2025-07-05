@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import math
+import operator
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -16,6 +17,7 @@ from nummus.controllers import common
 from nummus.models import (
     BudgetAssignment,
     BudgetGroup,
+    query_count,
     Target,
     TargetPeriod,
     TargetType,
@@ -29,6 +31,14 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from nummus.controllers.base import Routes
+
+PERIOD_OPTIONS = {
+    TargetPeriod.ONCE: "Once",
+    TargetPeriod.WEEK: "Weekly",
+    TargetPeriod.MONTH: "Monthly",
+    TargetPeriod.YEAR: "Annually",
+}
+PERIOD_OPTIONS_REV = {v: k for k, v in PERIOD_OPTIONS.items()}
 
 
 class _TargetContext(TypedDict):
@@ -104,7 +114,7 @@ def page() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.date.today())
+        utils.start_of_month(datetime.datetime.now().astimezone().date())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -138,38 +148,30 @@ def validation() -> flask.Response | str:
         return response
 
     if "date" in args:
-        value = args["date"].strip()
-        if value == "":
-            return "Required"
-        try:
-            date = utils.parse_date(value)
-        except ValueError:
-            return "Unable to parse"
-        if date is None:  # pragma: no cover
-            # Type guard, should not be called
-            return "Unable to parse"
-        return update_target_desc()
+        return (
+            web_utils.validate_date(args["date"], is_required=True, max_future=None)
+            or update_target_desc()
+        )
 
     if "amount" in args:
-        value = args["amount"].strip()
-        if value == "":
-            return "Required"
-        amount = utils.evaluate_real_statement(value)
-        if amount is None:
-            return "Unable to parse"
-        return update_target_desc()
+        return (
+            web_utils.validate_real(
+                args["amount"],
+                is_required=True,
+                is_positive=True,
+            )
+            or update_target_desc()
+        )
 
     if "repeat" in args:
-        value = args["repeat"].strip()
-        if value == "":
-            return "Required"
-        try:
-            value = int(value)
-        except ValueError:
-            return "Unable to parse"
-        if value < 1:
-            return "Must be positive"
-        return update_target_desc()
+        return (
+            web_utils.validate_int(
+                args["repeat"],
+                is_required=True,
+                is_positive=True,
+            )
+            or update_target_desc()
+        )
 
     raise NotImplementedError
 
@@ -241,142 +243,6 @@ def assign(uri: str) -> str:
     )
 
 
-def overspending(uri: str) -> str | flask.Response:
-    """GET & PUT /h/budgeting/c/<uri>/overspending.
-
-    Args:
-        uri: Category URI
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
-    args = flask.request.args
-
-    month_str = args["month"]
-    month = datetime.date.fromisoformat(month_str + "-01")
-    month_ord = month.toordinal()
-
-    with p.begin_session() as s:
-        t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
-        categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
-
-        if flask.request.method == "PUT":
-            if t_cat is None:
-                available = assignable
-            else:
-                _, _, available, _ = categories[t_cat.id_]
-            source = flask.request.form["source"]
-            if source == "income":
-                source_id = None
-                source_available = assignable
-            else:
-                source_id = TransactionCategory.uri_to_id(source)
-                _, _, source_available, _ = categories[source_id]
-            to_move = min(source_available, -available)
-
-            # Add assignment
-            if t_cat is not None:
-                a = (
-                    s.query(BudgetAssignment)
-                    .where(
-                        BudgetAssignment.category_id == t_cat.id_,
-                        BudgetAssignment.month_ord == month_ord,
-                    )
-                    .one_or_none()
-                )
-                if a is None:
-                    a = BudgetAssignment(
-                        month_ord=month_ord,
-                        amount=to_move,
-                        category_id=t_cat.id_,
-                    )
-                    s.add(a)
-                else:
-                    a.amount += to_move
-
-            if source_id is not None:
-                a = (
-                    s.query(BudgetAssignment)
-                    .where(
-                        BudgetAssignment.category_id == source_id,
-                        BudgetAssignment.month_ord == month_ord,
-                    )
-                    .one_or_none()
-                )
-                if a is None:
-                    a = BudgetAssignment(
-                        month_ord=month_ord,
-                        amount=-to_move,
-                        category_id=source_id,
-                    )
-                    s.add(a)
-                elif a.amount == to_move:
-                    s.delete(a)
-                else:
-                    a.amount -= to_move
-
-            return common.dialog_swap(
-                event="budget",
-                snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
-            )
-
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-                TransactionCategory.group,
-            )
-            .where(
-                TransactionCategory.group.not_in(
-                    (TransactionCategoryGroup.INCOME, TransactionCategoryGroup.OTHER),
-                ),
-            )
-            .order_by(TransactionCategory.group, TransactionCategory.name)
-        )
-        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
-        for t_cat_id, name, group in query.yield_per(YIELD_PER):
-            t_cat_id: int
-            name: str
-            group: TransactionCategoryGroup
-
-            t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
-            available = categories[t_cat_id][2]
-            if available > 0:
-                options.append((t_cat_uri, name, available, group))
-        if t_cat is None:
-            available = assignable
-        else:
-            _, _, available, _ = categories[t_cat.id_]
-        if assignable > 0:
-            options.insert(
-                0,
-                (
-                    "income",
-                    "Assignable income",
-                    assignable,
-                    TransactionCategoryGroup.INCOME,
-                ),
-            )
-
-        month_str = month.isoformat()[:7]
-        category = {
-            "uri": uri,
-            "name": None if t_cat is None else t_cat.emoji_name,
-            "available": available,
-            "month": month_str,
-            "options": options,
-        }
-    return flask.render_template(
-        "budgeting/edit-overspending.jinja",
-        category=category,
-    )
-
-
 def move(uri: str) -> str | flask.Response:
     """GET & PUT /h/budgeting/c/<uri>/move.
 
@@ -396,62 +262,35 @@ def move(uri: str) -> str | flask.Response:
     month_ord = month.toordinal()
 
     with p.begin_session() as s:
-        t_cat: TransactionCategory | None
-        t_cat = None if uri == "income" else web_utils.find(s, TransactionCategory, uri)
         categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
+        if uri == "income":
+            src_cat = None
+            src_cat_id = None
+            src_available = assignable
+        else:
+            src_cat = web_utils.find(s, TransactionCategory, uri)
+            src_cat_id = src_cat.id_
+            _, _, src_available, _ = categories[src_cat_id]
 
         if flask.request.method == "PUT":
-            if t_cat is None:
-                available = assignable
-            else:
-                _, _, available, _ = categories[t_cat.id_]
             dest = flask.request.form["destination"]
-            to_move = utils.evaluate_real_statement(flask.request.form.get("amount"))
-            if to_move is None:
-                return common.error("Amount to move must not be blank")
-
-            dest_id = None if dest == "income" else TransactionCategory.uri_to_id(dest)
-
-            # Add assignment
-            if t_cat is not None:
-                a = (
-                    s.query(BudgetAssignment)
-                    .where(
-                        BudgetAssignment.category_id == t_cat.id_,
-                        BudgetAssignment.month_ord == month_ord,
-                    )
-                    .one_or_none()
+            if dest == "income":
+                dest_cat_id = None
+                dest_available = assignable
+            else:
+                dest_cat_id = TransactionCategory.uri_to_id(dest)
+                _, _, dest_available, _ = categories[dest_cat_id]
+            if src_available > 0:
+                to_move = utils.evaluate_real_statement(
+                    flask.request.form.get("amount"),
                 )
-                if a is None:
-                    a = BudgetAssignment(
-                        month_ord=month_ord,
-                        amount=-to_move,
-                        category_id=t_cat.id_,
-                    )
-                    s.add(a)
-                elif a.amount == to_move:
-                    s.delete(a)
-                else:
-                    a.amount -= to_move
+                if to_move is None:
+                    return common.error("Amount to move must not be blank")
+            else:
+                # Min of the positive number is max of negative
+                to_move = max(src_available, -dest_available)
 
-            if dest_id is not None:
-                a = (
-                    s.query(BudgetAssignment)
-                    .where(
-                        BudgetAssignment.category_id == dest_id,
-                        BudgetAssignment.month_ord == month_ord,
-                    )
-                    .one_or_none()
-                )
-                if a is None:
-                    a = BudgetAssignment(
-                        month_ord=month_ord,
-                        amount=to_move,
-                        category_id=dest_id,
-                    )
-                    s.add(a)
-                else:
-                    a.amount += to_move
+            BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, to_move)
 
             return common.dialog_swap(
                 event="budget",
@@ -480,13 +319,10 @@ def move(uri: str) -> str | flask.Response:
 
             t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
             available = categories[t_cat_id][2]
-            options.append((t_cat_uri, name, available, group))
+            if src_available > 0 or available > 0:
+                options.append((t_cat_uri, name, available, group))
 
-        if t_cat is None:
-            available = assignable
-        else:
-            _, _, available, _ = categories[t_cat.id_]
-        if t_cat is not None:
+        if src_cat_id is not None and (src_available > 0 or assignable > 0):
             options.insert(
                 0,
                 (
@@ -500,11 +336,10 @@ def move(uri: str) -> str | flask.Response:
         month_str = month.isoformat()[:7]
         category = {
             "uri": uri,
-            "name": None if t_cat is None else t_cat.emoji_name,
-            "available": available,
+            "name": None if src_cat is None else src_cat.emoji_name,
+            "available": src_available,
             "month": month_str,
             "options": options,
-            "dest": args.get("destination"),
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",
@@ -608,6 +443,9 @@ def group(uri: str) -> str:
 
     Returns:
         string HTML response
+
+    Raises:
+        BadRequest: If ungrouped is renamed
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -650,14 +488,14 @@ def new_group() -> str:
     with p.begin_session() as s:
         # Ensure the name isn't a duplicate
         i = 1
-        n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+        n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
         while n != 0:
             i += 1
             name = f"New Group {i}"
-            n = s.query(BudgetGroup).where(BudgetGroup.name == name).count()
+            n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
 
         # Move existing groups down one
-        n = s.query(BudgetGroup).count()
+        n = query_count(s.query(BudgetGroup))
         for i in range(n, -1, -1):
             # Do one at a time in reverse order to prevent duplicate value
             s.query(BudgetGroup).where(BudgetGroup.position == i).update(
@@ -702,7 +540,7 @@ def target(uri: str) -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         try:
@@ -717,14 +555,6 @@ def target(uri: str) -> str | flask.Response:
             .where(TransactionCategory.id_ == t_cat_id)
             .one()[0]
         )
-
-        period_options = {
-            TargetPeriod.ONCE: "Once",
-            TargetPeriod.WEEK: "Weekly",
-            TargetPeriod.MONTH: "Monthly",
-            TargetPeriod.YEAR: "Annually",
-        }
-        period_options_rev = {v: k for k, v in period_options.items()}
 
         new_target = tar is None
         if tar is None:
@@ -744,51 +574,10 @@ def target(uri: str) -> str | flask.Response:
             error = "Cannot have multiple targets per category"
             return common.error(error)
 
-        # Parse form
-        period = args.get("period")
-        if period is not None:
-            tar.period = period_options_rev[period]
-        due = args.get("due") or None
-        if "change" in args:
-            due = "0" if tar.period == TargetPeriod.WEEK else today.isoformat()
-        amount = utils.evaluate_real_statement(args.get("amount"))
-        if amount is not None:
-            tar.amount = amount
-        tar_type = args.get("type", type=TargetType)
-        if tar_type is not None:
-            tar.type_ = tar_type
-        repeat_every = args.get("repeat", type=int)
-        if repeat_every is not None:
-            tar.repeat_every = repeat_every
-        elif tar.period != TargetPeriod.ONCE:
-            tar.repeat_every = max(1, tar.repeat_every)
-        if due is not None:
-            if tar.period == TargetPeriod.WEEK:
-                # due is day of week, get a date that works
-                due_date = today + datetime.timedelta(
-                    days=int(due) - today.weekday(),
-                )
-            else:
-                due_date = datetime.date.fromisoformat(due)
-            tar.due_date_ord = due_date.toordinal()
-        elif tar.period == TargetPeriod.ONCE:
-            has_due_date = args.get("has-due")
-            due_month = args.get("due-month", type=int)
-            due_year = args.get("due-year", type=int)
-            if has_due_date == "on":
-                if due_month is not None and due_year is not None:
-                    due_date = datetime.date(due_year, due_month, 1)
-                else:
-                    due_date = today
-                tar.due_date_ord = due_date.toordinal()
-            elif has_due_date == "off":
-                tar.due_date_ord = None
+        # TODO (WattsUp): Move edit logic out
 
-        if tar.period == TargetPeriod.ONCE:
-            tar.repeat_every = 0
-            tar.type_ = TargetType.BALANCE
-        elif tar.period == TargetPeriod.WEEK:
-            tar.repeat_every = 1
+        # Parse form
+        parse_target_form(tar)
 
         if flask.request.method == "PUT":
             return common.dialog_swap(event="budget")
@@ -812,7 +601,7 @@ def target(uri: str) -> str | flask.Response:
             "category": emoji_name,
             "type": tar.type_,
             "period": tar.period,
-            "period_options": period_options,
+            "period_options": PERIOD_OPTIONS,
             "repeat_every": tar.repeat_every,
             "due_date": due_date,
             "due_date_weekday": None if due_date is None else due_date.weekday(),
@@ -836,6 +625,64 @@ def target(uri: str) -> str | flask.Response:
             ),
             target=ctx,
         )
+
+
+def parse_target_form(target: Target) -> None:
+    """Parse edit target form and modify target.
+
+    Args:
+        target: Target to modify
+    """
+    args = flask.request.args if flask.request.method == "GET" else flask.request.form
+    today = datetime.datetime.now().astimezone().date()
+
+    period = args.get("period")
+    if period is not None:
+        target.period = PERIOD_OPTIONS_REV[period]
+
+    due = args.get("due") or None
+    if "change" in args:
+        due = "0" if target.period == TargetPeriod.WEEK else today.isoformat()
+
+    amount = utils.evaluate_real_statement(args.get("amount"))
+    target.amount = amount or target.amount
+
+    tar_type = args.get("type", type=TargetType)
+    target.type_ = tar_type or target.type_
+
+    repeat_every = args.get("repeat", type=int)
+    target.repeat_every = repeat_every or max(1, target.repeat_every)
+
+    if due is not None:
+        # due is day of week, get a date that works
+        due_date = (
+            today
+            + datetime.timedelta(
+                days=int(due) - today.weekday(),
+            )
+            if target.period == TargetPeriod.WEEK
+            else datetime.date.fromisoformat(due)
+        )
+        target.due_date_ord = due_date.toordinal()
+    elif target.period == TargetPeriod.ONCE:
+        has_due_date = args.get("has-due")
+        if has_due_date == "on":
+            due_month = args.get("due-month", type=int)
+            due_year = args.get("due-year", type=int)
+            due_date = (
+                datetime.date(due_year, due_month, 1)
+                if due_month is not None and due_year is not None
+                else today
+            )
+            target.due_date_ord = due_date.toordinal()
+        elif has_due_date == "off":
+            target.due_date_ord = None
+
+    if target.period == TargetPeriod.ONCE:
+        target.repeat_every = 0
+        target.type_ = TargetType.BALANCE
+    elif target.period == TargetPeriod.WEEK:
+        target.repeat_every = 1
 
 
 def ctx_sidebar(
@@ -974,7 +821,7 @@ def sidebar() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.date.today())
+        utils.start_of_month(datetime.datetime.now().astimezone().date())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -1059,7 +906,7 @@ def ctx_target(
         total_to_go = total_target - total_assigned
 
         on_track = assigned >= target_assigned
-        next_due_date = datetime.date.today()
+        next_due_date = datetime.datetime.now().astimezone().date()
         if month.year == next_due_date.year and month.month == next_due_date.month:
             # Move next_due_date to next weekday
             n_days = weekday - next_due_date.weekday()
@@ -1126,7 +973,7 @@ def ctx_target(
     total_to_go = tar.amount - total_assigned
 
     n_months = utils.date_months_between(month, due_date)
-    target_assigned = target_assigned / (n_months + 1)
+    target_assigned /= n_months + 1
 
     return {
         "target_assigned": target_assigned,
@@ -1214,7 +1061,6 @@ def ctx_budget(
         if available < 0:
             n_overspent += 1
 
-        bar_dollars: list[Decimal] = []
         if tar is None:
             bar_dollars = [max(available, Decimal(0)) - activity]
             target_ctx = None
@@ -1228,30 +1074,6 @@ def ctx_budget(
             )
             bar_dollars = target_ctx["progress_bars"]
 
-        bar_dollars_sum = sum(bar_dollars)
-        bars: list[tuple[Decimal, Decimal, Decimal]] = []
-        bar_start = Decimal(0)
-        total_assigned = available - activity
-        max_bar_dollars = max(total_assigned, -activity)
-        if max_bar_dollars > bar_dollars_sum:
-            bar_dollars[-1] += max_bar_dollars - bar_dollars_sum
-            bar_dollars_sum = max_bar_dollars
-        for v in bar_dollars:
-            bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
-
-            if v == 0:
-                bg_fill_w = Decimal(0)
-                fg_fill_w = Decimal(0)
-            elif available < 0:
-                bg_fill_w = utils.clamp((-activity - bar_start) / v)
-                fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
-            else:
-                bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
-                fg_fill_w = utils.clamp((-activity - bar_start) / v)
-
-            bars.append((bar_w, bg_fill_w, fg_fill_w))
-            bar_start += v
-
         cat_ctx: _CategoryContext = {
             "position": t_cat.budget_position,
             "uri": t_cat.uri,
@@ -1261,7 +1083,7 @@ def ctx_budget(
             "activity": activity,
             "available": available,
             "hidden": hidden,
-            "bars": bars,
+            "bars": ctx_progress_bars(available, activity, bar_dollars),
             "target": target_ctx,
         }
         g = groups.get(t_cat.budget_group_id, ungrouped)
@@ -1272,7 +1094,7 @@ def ctx_budget(
         if available < 0:
             g["has_error"] = True
 
-    groups_list = sorted(groups.values(), key=lambda item: item["position"])
+    groups_list = sorted(groups.values(), key=operator.itemgetter("position"))
     groups_list.append(ungrouped)
 
     for g in groups_list:
@@ -1283,7 +1105,7 @@ def ctx_budget(
 
     month_str = month.isoformat()[:7]
     title = f"Budgeting { month_str}"
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
     )
@@ -1298,11 +1120,55 @@ def ctx_budget(
     }, title
 
 
+def ctx_progress_bars(
+    available: Decimal,
+    activity: Decimal,
+    bar_dollars: list[Decimal],
+) -> list[tuple[Decimal, Decimal, Decimal]]:
+    """Create the budget progress bars.
+
+    Args:
+        available: Money available to spend
+        activity: Money spent this month
+        bar_dollars: List of targets for this month
+
+    Returns:
+        list[(
+            bar width, [0, 1]
+            background fill width, [0, 1]
+            foreground fill width, [0, 1]
+        )
+    """
+    bar_dollars_sum = sum(bar_dollars)
+    bars: list[tuple[Decimal, Decimal, Decimal]] = []
+    bar_start = Decimal(0)
+    total_assigned = available - activity
+    max_bar_dollars = max(total_assigned, -activity)
+    if max_bar_dollars > bar_dollars_sum:
+        bar_dollars[-1] += max_bar_dollars - bar_dollars_sum
+        bar_dollars_sum = max_bar_dollars
+    for v in bar_dollars:
+        bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
+
+        if v == 0:
+            bg_fill_w = Decimal(0)
+            fg_fill_w = Decimal(0)
+        elif available < 0:
+            bg_fill_w = utils.clamp((-activity - bar_start) / v)
+            fg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+        else:
+            bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
+            fg_fill_w = utils.clamp((-activity - bar_start) / v)
+
+        bars.append((bar_w, bg_fill_w, fg_fill_w))
+        bar_start += v
+    return bars
+
+
 ROUTES: Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/validation": (validation, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),
-    "/h/budgeting/c/<path:uri>/overspending": (overspending, ["GET", "PUT"]),
     "/h/budgeting/c/<path:uri>/move": (move, ["GET", "PUT"]),
     "/h/budgeting/reorder": (reorder, ["PUT"]),
     "/h/budgeting/g/<path:uri>": (group, ["PUT"]),

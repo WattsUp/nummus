@@ -57,7 +57,7 @@ class TestAccount(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {
@@ -117,7 +117,7 @@ class TestAccount(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         acct = Account(
@@ -305,7 +305,7 @@ class TestAccount(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         acct = Account(
@@ -684,7 +684,7 @@ class TestAccount(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         acct = Account(
@@ -828,7 +828,7 @@ class TestAccount(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         acct = Account(

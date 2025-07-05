@@ -19,7 +19,8 @@ class TestUnlock(TestBase):
             create.Create(path_db, None, force=False, no_encrypt=True).run()
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
             c = unlock.Unlock(path_db, None)
-            c.run()
+            rc = c.run()
+        self.assertEqual(rc, 0)
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.GREEN}Portfolio is unlocked\n"

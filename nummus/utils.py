@@ -8,7 +8,9 @@ import datetime
 import getpass
 import operator as op
 import re
+import shlex
 import shutil
+import string
 import sys
 from decimal import Decimal
 from typing import Generic, TYPE_CHECKING, TypeVar
@@ -95,7 +97,14 @@ MONTHS = [
 
 
 def camel_to_snake(s: str) -> str:
-    """Transform CamelCase to snake_case."""
+    """Transform CamelCase to snake_case.
+
+    Args:
+        s: CamelCase to transform
+
+    Returns:
+        snake_case
+    """
     s = _REGEX_CC_SC_0.sub(r"\1_\2", s)  # _ at the start of Words
     return _REGEX_CC_SC_1.sub(r"\1_\2", s).lower()  # _ at then end of Words
 
@@ -148,7 +157,7 @@ def get_password() -> str | None:
             return None
 
         if len(key) < MIN_PASS_LEN:
-            print(
+            print(  # noqa: T201
                 f"{Fore.RED}Password must be at least {MIN_PASS_LEN} characters",
             )
             key = None
@@ -159,7 +168,7 @@ def get_password() -> str | None:
             return None
 
         if key != repeat:
-            print(f"{Fore.RED}Passwords must match")
+            print(f"{Fore.RED}Passwords must match")  # noqa: T201
             key = None
 
     return key
@@ -188,16 +197,14 @@ def confirm(
         prompt += " [y/N]: "
 
     while True:
-        input_ = input(prompt)
+        input_ = (input(prompt) or "").lower()
         if not input_:
             return default
-        if input_ in ["Y", "y"]:
+        if input_ == "y":
             return True
-        if input_ in ["N", "n"]:
+        if input_ == "n":
             return False
-        print()
-        print("Please enter y or n.")
-        print()
+        print("\nPlease enter y or n.\n")  # noqa: T201
 
 
 def _eval_node(node: ast.expr) -> Decimal:
@@ -249,7 +256,7 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     if s is None:
         return None
     clean = _REGEX_REAL_CLEAN.sub("", s)
-    if clean == "":
+    if not clean:
         return None
     value = -Decimal(clean) if "-" in s or "(" in s else Decimal(clean)
     return round(value, precision)
@@ -282,9 +289,9 @@ def parse_bool(s: str | None) -> bool | None:
     Returns:
         Parsed bool
     """
-    if s is None or s == "":
+    if s is None or not s:
         return None
-    return s.lower() in ["true", "t", "1"]
+    return s.lower() in {"true", "t", "1"}
 
 
 def parse_date(s: str | None) -> datetime.date | None:
@@ -296,7 +303,7 @@ def parse_date(s: str | None) -> datetime.date | None:
     Returns:
         Date or None
     """
-    if s is None or s == "":
+    if s is None or not s:
         return None
     return datetime.date.fromisoformat(s)
 
@@ -482,13 +489,13 @@ def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     end_m = end.month
     months: dict[str, tuple[int, int]] = {}
     while y < end_y or (y == end_y and m <= end_m):
-        _start_of_month = datetime.date(y, m, 1).toordinal()
-        _end_of_month = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
+        start_of_month_ = datetime.date(y, m, 1).toordinal()
+        end_of_month_ = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
         months[f"{y:04}-{m:02}"] = (
-            max(start_ord, _start_of_month),
-            min(end_ord, _end_of_month),
+            max(start_ord, start_of_month_),
+            min(end_ord, end_of_month_),
         )
-        y = y + (m // 12)
+        y += m // 12
         m = (m % 12) + 1
     return months
 
@@ -713,7 +720,7 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
         cost_basis = v - daily_profit if prev_value == 0 else prev_value
 
         if cost_basis != 0:
-            current_ratio = current_ratio * (1 + daily_profit / cost_basis)
+            current_ratio *= 1 + daily_profit / cost_basis
             current_return = current_ratio - 1
 
         daily_returns[i] = current_return
@@ -733,6 +740,9 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
 
     Returns:
         Annual profit ratio [-1, inf), rounded to 6 decimals due to float conversion
+
+    Raises:
+        TypeError: If optimize result is not float
     """
     if not any(values):
         return Decimal(0)
@@ -765,7 +775,7 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
     return round(Decimal(result - 1), 6)
 
 
-def print_table(table: list[list[str] | None]) -> None:
+def pretty_table(table: list[list[str] | None]) -> list[str]:
     """Pretty print tabular data.
 
     First row is header, able to configure how columns behave
@@ -777,34 +787,39 @@ def print_table(table: list[list[str] | None]) -> None:
 
     Args:
         table: List of table rows, None will print a horizontal line
+
+    Returns:
+        list of lines to print
+
+    Raises:
+        ValueError: If table has no rows
+        ValueError: If first row is None
     """
     if len(table) < 1:
         msg = "Table has no rows"
         raise ValueError(msg)
     table = list(table)
 
-    header_raw = table[0]
+    header_raw = table.pop(0)
     if header_raw is None:
         msg = "First row cannot be None"
         raise ValueError(msg)
 
-    col_widths = [0] * len(header_raw)
-    table[0] = [c.strip("<>^./") for c in header_raw]
-    label_widths = [max(4, len(c)) for c in table[0]]
-    for row in table:
-        if row is None:
-            continue
-        for i, cell in enumerate(row):
-            col_widths[i] = max(len(cell), col_widths[i])
+    header = [c.strip("<>^./") for c in header_raw]
+    label_widths = [max(4, len(c)) for c in header]
+    col_widths = [
+        max(len(h), *[len(row[i]) if row else 0 for row in table]) if table else len(h)
+        for i, h in enumerate(header)
+    ]
 
     # Adjust col widths if sum is over terminal width
     margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
     excess: list[int] = []
-    no_extra = False
+    extra = True
     has_extra: list[bool] = [False] * len(header_raw)
     for i, cell in enumerate(header_raw):
         n_label = label_widths[i]
-        if not no_extra and margin > 1:
+        if extra and margin > 1:
             # If there is extra room, add some space to each column
             col_widths[i] += 2
             margin -= 2
@@ -814,8 +829,10 @@ def print_table(table: list[list[str] | None]) -> None:
             n_trim = col_widths[i] - n
             col_widths[i] = n
             margin += n_trim
-            no_extra = True
+            extra = False
         excess.append(0 if cell[-1] == "/" else col_widths[i] - n_label)
+
+    # Distribute excess
     while margin < 0 and any(excess):
         for i, e in enumerate(excess):
             if margin < 0 and e > 0:
@@ -828,28 +845,38 @@ def print_table(table: list[list[str] | None]) -> None:
         align = cell[0]
         align = align if align in "<>^" else ""
         formats.append(f"{align}{n}")
+    return _table_to_lines(header, table, col_widths, formats, has_extra)
+
+
+def _table_to_lines(
+    header: list[str],
+    table: list[list[str] | None],
+    col_widths: list[int],
+    formats: list[str],
+    has_extra: list[bool],
+) -> list[str]:
 
     # Print the box
-    print("╭" + "┬".join("─" * n for n in col_widths) + "╮")
-    buf = "│".join(f"{c:^{n}}" for c, n in zip(table[0], col_widths, strict=True))
-    print("│" + buf + "│")
-    for row in table[1:]:
+    lines: list[str] = []
+    lines.append("╭" + "┬".join("─" * n for n in col_widths) + "╮")
+    buf = "│".join(f"{c:^{n}}" for c, n in zip(header, col_widths, strict=True))
+    lines.append("│" + buf + "│")
+    for row in table:
         if row is None:
-            print("╞" + "╪".join("═" * n for n in col_widths) + "╡")
-        else:
-            formatted_row = []
-            for i, cell in enumerate(row):
-                if len(cell) > col_widths[i]:
-                    cell_truncated = cell[: col_widths[i] - 1]
-                    formatted_row.append(cell_truncated + "…")
-                elif has_extra[i]:
-                    c = f" {cell} "
-                    formatted_row.append(f"{c:{formats[i]}}")
-                else:
-                    formatted_row.append(f"{cell:{formats[i]}}")
-            print("│" + "│".join(formatted_row) + "│")
+            lines.append("╞" + "╪".join("═" * n for n in col_widths) + "╡")
+            continue
+        formatted_row = [
+            (
+                cell[: col_widths[i] - 1] + "…"
+                if len(cell) > col_widths[i]
+                else f"{{:{formats[i]}}}".format(f" {cell} " if has_extra[i] else cell)
+            )
+            for i, cell in enumerate(row)
+        ]
+        lines.append("│" + "│".join(formatted_row) + "│")
 
-    print("╰" + "┴".join("─" * n for n in col_widths) + "╯")
+    lines.append("╰" + "┴".join("─" * n for n in col_widths) + "╯")
+    return lines
 
 
 def dedupe(strings: Iterable[str]) -> set[str]:
@@ -935,7 +962,18 @@ class classproperty(Generic[T]):  # noqa: N801
         self.__doc__ = fget.__doc__
 
     def __get__(self, _: object, cls: type | None = None) -> T:
-        """Get classproperty value."""
+        """Get classproperty value.
+
+        Args:
+            cls: Class to get value from
+
+        Returns:
+            Value
+
+        Raises:
+            TypeError: If decorator is not on a class
+            TypeError: If fget is not set
+        """
         if cls is None:  # pragma: no cover
             # Don't need to test debug code
             msg = "Decorator not on a class"
@@ -945,3 +983,80 @@ class classproperty(Generic[T]):  # noqa: N801
             msg = "No fget set"
             raise TypeError(msg)
         return self.fget(cls)
+
+
+def tokenize_search_str(search_str: str) -> tuple[set[str], set[str], set[str]]:
+    """Parse a search string into tokens.
+
+    Args:
+        search_str: String to search
+
+    Returns:
+        tokens_must, tokens_can,tokens_not
+
+    Raises:
+        EmptySearchError: If cleaned search_str is too short
+    """
+    # Clean a bit
+    for s in string.punctuation:
+        if s not in '"+-':
+            search_str = search_str.replace(s, " ")
+
+    # Replace +- not following a space with a space
+    # Skip +- at start
+    search_str = re.sub(r"(?<!^)(?<! )[+-]", " ", search_str)
+
+    search_str = search_str.strip().lower()
+
+    if len(search_str) < MIN_STR_LEN:
+        raise exc.EmptySearchError
+
+    # tokenize search_str
+    tokens_must: set[str] = set()
+    tokens_can: set[str] = set()
+    tokens_not: set[str] = set()
+
+    # If unbalanced quote, remove right most one
+    n = search_str.count('"')
+    if (n % 2) == 1:
+        i = search_str.rfind('"')
+        search_str = search_str[:i] + search_str[i + 1 :]
+
+    for raw in shlex.split(search_str):
+        if raw[0] == "+":
+            dest = tokens_must
+            token = raw[1:]
+        elif raw[0] == "-":
+            dest = tokens_not
+            token = raw[1:]
+        else:
+            dest = tokens_can
+            token = raw
+
+        token = re.sub(r"  +", " ", token.strip())
+        if token:
+            dest.add(token)
+
+    return tokens_must, tokens_can, tokens_not
+
+
+def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:
+    """Apply a low pass filter to Decimal data.
+
+    Args:
+        data: Data to filter
+        rc: Number of samples in time constant
+
+    Returns:
+        Smoothed data
+    """
+    a = 2 / Decimal(rc + 1)
+
+    data = data.copy()
+
+    current = data[0]
+    for i, x in enumerate(data):
+        current = a * x + (1 - a) * current
+        data[i] = current
+
+    return data

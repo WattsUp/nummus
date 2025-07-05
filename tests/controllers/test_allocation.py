@@ -16,7 +16,7 @@ class TestAllocation(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         acct_id = d["acct_id"]

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
@@ -66,7 +67,7 @@ def ctx_allocation() -> dict[str, object]:
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
@@ -134,7 +135,7 @@ def ctx_allocation() -> dict[str, object]:
         {
             "name": cat.pretty,
             "value": sum(a["value"] for a in assets) or Decimal(0),
-            "assets": sorted(assets, key=lambda item: item["name"]),
+            "assets": sorted(assets, key=operator.itemgetter("name")),
         }
         for cat, assets in assets_by_category.items()
     ]
@@ -142,7 +143,7 @@ def ctx_allocation() -> dict[str, object]:
         {
             "name": sector.pretty,
             "value": sum(a["value"] for a in assets) or Decimal(0),
-            "assets": sorted(assets, key=lambda item: item["name"]),
+            "assets": sorted(assets, key=operator.itemgetter("name")),
         }
         for sector, assets in assets_by_sector.items()
     ]
@@ -159,8 +160,8 @@ def ctx_allocation() -> dict[str, object]:
         ]
 
     return {
-        "categories": sorted(categories, key=lambda item: item["name"]),
-        "sectors": sorted(sectors, key=lambda item: item["name"]),
+        "categories": sorted(categories, key=operator.itemgetter("name")),
+        "sectors": sorted(sectors, key=operator.itemgetter("name")),
         "chart": {
             "categories": {
                 item["name"]: chart_assets(item["assets"]) for item in categories

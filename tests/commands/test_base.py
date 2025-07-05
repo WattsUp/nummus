@@ -5,9 +5,10 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 from colorama import Fore
+from typing_extensions import override
 
 from nummus import encryption, portfolio
-from nummus.commands import base, create
+from nummus.commands import base
 from nummus.models import Config, ConfigKey
 from tests.base import TestBase
 
@@ -21,6 +22,7 @@ class MockCommand(base.BaseCommand):
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
         _ = parser
 
+    @override
     def run(self) -> int:
         return 0
 
@@ -29,25 +31,29 @@ class Testbase(TestBase):
     def test_unlock_unencrypted(self) -> None:
         path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
-        # Non-existent Portfolio
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            p = base.unlock(path_db, None)
-        self.assertIsNone(p)
-
+            self.assertRaises(
+                SystemExit,
+                MockCommand,
+                path_db,
+                None,
+            )
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create\n"
         self.assertEqual(fake_stdout, target)
 
+        # No issues if not unlocking
+        MockCommand(path_db, None, do_unlock=False)
+
         # Create and unlock unencrypted Portfolio
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create.Create(path_db, None, force=False, no_encrypt=True).run()
+        portfolio.Portfolio.create(path_db, None)
         with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            p = base.unlock(path_db, None)
+            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
         if p is None:
             self.fail("portfolio is None")
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio is unlocked\n"
+        target = ""
         self.assertEqual(fake_stdout, target)
 
         # Force migration required
@@ -73,7 +79,7 @@ class Testbase(TestBase):
         queue: list[str | None] = []
 
         def mock_input(to_print: str) -> str | None:
-            print(to_print)
+            print(to_print)  # noqa: T201
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
@@ -82,79 +88,67 @@ class Testbase(TestBase):
 
         # Create and unlock encrypted Portfolio
         key = self.random_string()
-        queue = [key, key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            create.Create(path_db, None, force=True, no_encrypt=False).run()
+        portfolio.Portfolio.create(path_db, key)
         self.assertTrue(path_db.exists(), "Portfolio does not exist")
         self.assertTrue(
             portfolio.Portfolio.is_encrypted_path(path_db),
             "Portfolio is not encrypted",
         )
 
-        # Password file does not exist
-        path_password = self._TEST_ROOT.joinpath(".password")
-        self.assertFalse(path_password.exists(), "Password does exist")
         queue = [key]
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, path_password)
+            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
         self.assertIsNotNone(p)
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
+        target = "Please enter password: \n"
         self.assertEqual(fake_stdout, target)
 
-        # Password file does exist
-        with path_password.open("w", encoding="utf-8") as file:
-            file.write(f"{key}\n")
         queue = []
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, path_password)
+            p = base.BaseCommand._unlock(path_db, key)  # noqa: SLF001
         self.assertIsNotNone(p)
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio is unlocked\n"
+        target = ""
         self.assertEqual(fake_stdout, target)
 
-        # Password file does exist but incorrect
-        with path_password.open("w", encoding="utf-8") as file:
-            file.write(f"not the {key}\n")
         queue = []
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, path_password)
-        self.assertIsNone(p)
+            self.assertRaises(
+                SystemExit,
+                base.BaseCommand._unlock,  # noqa: SLF001
+                path_db,
+                "not the " + key,
+            )
 
         fake_stdout = fake_stdout.getvalue()
         target = f"{Fore.RED}Could not decrypt with password file\n"
         self.assertEqual(fake_stdout, target)
 
-        # No password file at all
         queue = [key]
         with (
             mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, None)
+            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
         self.assertIsNotNone(p)
 
         fake_stdout = fake_stdout.getvalue()
-        target = f"Please enter password: \n{Fore.GREEN}Portfolio is unlocked\n"
+        target = "Please enter password: \n"
         self.assertEqual(fake_stdout, target)
 
         # Cancel entry
@@ -164,8 +158,12 @@ class Testbase(TestBase):
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, None)
-        self.assertIsNone(p)
+            self.assertRaises(
+                SystemExit,
+                base.BaseCommand._unlock,  # noqa: SLF001
+                path_db,
+                None,
+            )
 
         fake_stdout = fake_stdout.getvalue()
         target = "Please enter password: \n"
@@ -178,8 +176,12 @@ class Testbase(TestBase):
             mock.patch("builtins.input", new=mock_input) as _,
             mock.patch("getpass.getpass", new=mock_input) as _,
         ):
-            p = base.unlock(path_db, None)
-        self.assertIsNone(p)
+            self.assertRaises(
+                SystemExit,
+                base.BaseCommand._unlock,  # noqa: SLF001
+                path_db,
+                None,
+            )
 
         fake_stdout = fake_stdout.getvalue()
         target = (
@@ -191,4 +193,14 @@ class Testbase(TestBase):
             f"{Fore.RED}Incorrect password\n"
             f"{Fore.RED}Too many incorrect attempts\n"
         )
+        self.assertEqual(fake_stdout, target)
+
+        path_password = path_db.with_suffix(".password")
+        with path_password.open("w", encoding="utf-8") as file:
+            file.write(key)
+
+        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
+            MockCommand(path_db, path_password)
+        fake_stdout = fake_stdout.getvalue()
+        target = f"{Fore.GREEN}Portfolio is unlocked\n"
         self.assertEqual(fake_stdout, target)

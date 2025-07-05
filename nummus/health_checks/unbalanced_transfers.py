@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 import textwrap
 from collections import defaultdict
 from decimal import Decimal
@@ -38,55 +39,6 @@ class UnbalancedTransfers(Base):
 
             accounts = Account.map_name(s)
 
-            def add_issue(
-                date_ord: int,
-                categories: dict[int, list[tuple[str, Decimal]]],
-            ) -> None:
-                date = datetime.date.fromordinal(date_ord)
-                date_str = date.isoformat()
-                msg_l = [
-                    f"{date}: Sum of transfers on this day are non-zero",
-                ]
-
-                all_splits: list[tuple[str, Decimal, int]] = []
-                for t_cat_id, splits in categories.items():
-                    # Remove any that are exactly equal since those are probably
-                    # balanced amongst themselves
-                    i = 0
-                    # Do need to run len(current_splits) every time since it
-                    # will change length during iteration
-                    while i < len(splits):
-                        # Look for inverse amount in remaining splits
-                        v_search = -splits[i][1]
-                        found_any = False
-                        for ii in range(i + 1, len(splits)):
-                            if v_search == splits[ii][1]:
-                                # If found, pop both positive and negative ones
-                                splits.pop(ii)
-                                splits.pop(i)
-                                found_any = True
-                                break
-                        # Don't increase iterator if popped any since there is a
-                        # new value at i
-                        if not found_any:
-                            i += 1
-                    all_splits.extend(
-                        (account, amount, t_cat_id) for account, amount in splits
-                    )
-
-                all_splits = sorted(
-                    all_splits,
-                    key=lambda item: (item[2], item[0], item[1]),
-                )
-                acct_len = max(len(item[0]) for item in all_splits)
-                msg_l.extend(
-                    f"  {acct:{acct_len}}: "
-                    f"{utils.format_financial(amount, plus=True):>14} "
-                    f"{cat_transfers_ids[t_cat_id]}"
-                    for acct, amount, t_cat_id in all_splits
-                )
-                self._issues_raw[date_str] = "\n".join(msg_l)
-
             query = (
                 s.query(TransactionSplit)
                 .with_entities(
@@ -109,7 +61,11 @@ class UnbalancedTransfers(Base):
                     current_date_ord = date_ord
                 if date_ord != current_date_ord:
                     if any(v != 0 for v in total.values()):
-                        add_issue(current_date_ord, current_splits)
+                        self._add_issue(
+                            current_date_ord,
+                            current_splits,
+                            cat_transfers_ids,
+                        )
                     current_date_ord = date_ord
                     total = defaultdict(Decimal)
                     current_splits = defaultdict(list)
@@ -118,6 +74,52 @@ class UnbalancedTransfers(Base):
                 current_splits[t_cat_id].append((accounts[acct_id], amount))
 
             if any(v != 0 for v in total.values()) and current_date_ord is not None:
-                add_issue(current_date_ord, current_splits)
+                self._add_issue(current_date_ord, current_splits, cat_transfers_ids)
 
         self._commit_issues()
+
+    def _add_issue(
+        self,
+        date_ord: int,
+        categories: dict[int, list[tuple[str, Decimal]]],
+        cat_transfers_ids: dict[int, str],
+    ) -> None:
+        date = datetime.date.fromordinal(date_ord)
+        date_str = date.isoformat()
+        msg_l = [
+            f"{date}: Sum of transfers on this day are non-zero",
+        ]
+
+        all_splits: list[tuple[str, Decimal, int]] = []
+        for t_cat_id, splits in categories.items():
+            # Remove any that are exactly equal since those are probably
+            # balanced amongst themselves
+            i = 0
+            # Do need to run len(current_splits) every time since it
+            # will change length during iteration
+            while i < len(splits):
+                # Look for inverse amount in remaining splits
+                v_search = -splits[i][1]
+                found_any = False
+                for ii in range(i + 1, len(splits)):
+                    if v_search == splits[ii][1]:
+                        # If found, pop both positive and negative ones
+                        splits.pop(ii)
+                        splits.pop(i)
+                        found_any = True
+                        break
+                # Don't increase iterator if popped any since there is a
+                # new value at i
+                if not found_any:
+                    i += 1
+            all_splits.extend((account, amount, t_cat_id) for account, amount in splits)
+
+        all_splits = sorted(all_splits, key=operator.itemgetter(2, 0, 1))
+        acct_len = max(len(item[0]) for item in all_splits)
+        msg_l.extend(
+            f"  {acct:{acct_len}}: "
+            f"{utils.format_financial(amount, plus=True):>14} "
+            f"{cat_transfers_ids[t_cat_id]}"
+            for acct, amount, t_cat_id in all_splits
+        )
+        self._issues_raw[date_str] = "\n".join(msg_l)

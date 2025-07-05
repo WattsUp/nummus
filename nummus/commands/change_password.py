@@ -32,8 +32,6 @@ class ChangePassword(BaseCommand):
         from nummus import portfolio, utils  # noqa: PLC0415
 
         p = self._p
-        if p is None:  # pragma: no cover
-            return 1
 
         new_db_key: str | None = None
         change_db_key = utils.confirm("Change portfolio password?")

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from typing_extensions import override
+
+from nummus import exceptions as exc
 from nummus import importers
 from nummus.importers import base
 from tests import base as test_base
@@ -18,6 +21,7 @@ class Derived(base.TransactionImporter):
         _ = buf_pdf
         return False
 
+    @override
     def run(self) -> base.TxnDicts:
         return []
 
@@ -48,10 +52,16 @@ class TestCSVTransactionImporter(test_base.TestBase):
         }
         for f, cls in files.items():
             path = self._DATA_ROOT.joinpath(f)
-            i = importers.get_importer(path, path_debug, available)
             if cls is None:
-                self.assertIsNone(i, f"{f} did not return None")
+                self.assertRaises(
+                    exc.UnknownImporterError,
+                    importers.get_importer,
+                    path,
+                    path_debug,
+                    available,
+                )
             else:
+                i = importers.get_importer(path, path_debug, available)
                 self.assertIsInstance(i, cls, f"{f} did not return {cls}")
             self.assertTrue(
                 path_debug.exists(),

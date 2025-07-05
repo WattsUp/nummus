@@ -47,7 +47,7 @@ class TestSummarize(TestBase):
         result = c._get_summary()  # noqa: SLF001
         self.assertEqual(result, target)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         with p.begin_session() as s:

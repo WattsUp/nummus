@@ -88,8 +88,6 @@ class Summarize(BaseCommand):
 
     @override
     def run(self) -> int:
-        if self._p is None:  # pragma: no cover
-            return 1
         summary = self._get_summary()
         self._print_summary(summary)
         return 0
@@ -111,14 +109,11 @@ class Summarize(BaseCommand):
             Asset,
             AssetCategory,
             AssetValuation,
+            query_count,
             TransactionSplit,
         )
 
-        if self._p is None:  # pragma: no cover
-            msg = "Portfolio is None"
-            raise ValueError(msg)
-
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         with self._p.begin_session() as s:
@@ -139,9 +134,9 @@ class Summarize(BaseCommand):
             )
 
             n_accounts = len(accts)
-            n_transactions = s.query(TransactionSplit).count()
+            n_transactions = query_count(s.query(TransactionSplit))
             n_assets = len(assets)
-            n_valuations = s.query(AssetValuation).count()
+            n_valuations = query_count(s.query(AssetValuation))
 
             value_accts, profit_accts, value_assets = Account.get_value_all(
                 s,
@@ -226,7 +221,8 @@ class Summarize(BaseCommand):
             "db_size": self._p.path.stat().st_size,
         }
 
-    def _print_summary(self, summary: _Summary) -> None:
+    @classmethod
+    def _print_summary(cls, summary: _Summary) -> None:
         """Print summary statistics as a pretty table.
 
         Args:
@@ -242,7 +238,7 @@ class Summarize(BaseCommand):
             return "" if i == 1 else "s"
 
         size: int = summary["db_size"]
-        print(f"Portfolio file size is {size/1000:,.1f}KB/{size/1024:,.1f}KiB")
+        print(f"Portfolio file size is {size / 1000:,.1f}KB/{size / 1024:,.1f}KiB")
 
         # Accounts
         table: list[list[str] | None] = [
@@ -267,16 +263,18 @@ class Summarize(BaseCommand):
             ]
             for acct in summary["accounts"]
         )
-        table.append(None)
-        table.append(
-            [
-                "Total",
-                "",
-                "",
-                utils.format_financial(summary["net_worth"]),
-                "",
-                "",
-            ],
+        table.extend(
+            (
+                None,
+                [
+                    "Total",
+                    "",
+                    "",
+                    utils.format_financial(summary["net_worth"]),
+                    "",
+                    "",
+                ],
+            ),
         )
         n = summary["n_accounts"]
         n_table = len(summary["accounts"])
@@ -284,7 +282,7 @@ class Summarize(BaseCommand):
             f"There {is_are(n)} {n:,} account{plural(n)}, "
             f"{n_table:,} of which {is_are(n_table)} currently open",
         )
-        utils.print_table(table)
+        print("\n".join(utils.pretty_table(table)))
 
         # Assets
         table = [
@@ -326,7 +324,7 @@ class Summarize(BaseCommand):
             f"There {is_are(n)} {n:,} asset{plural(n)}, "
             f"{n_table:,} of which {is_are(n_table)} currently held",
         )
-        utils.print_table(table)
+        print("\n".join(utils.pretty_table(table)))
 
         n = summary["n_valuations"]
         print(f"There {is_are(n)} {n:,} asset valuation{plural(n)}")

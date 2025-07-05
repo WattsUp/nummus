@@ -1,16 +1,17 @@
 from __future__ import annotations
 
 import datetime
+import json
 import secrets
 import shutil
 import string
+import sys
 import time
 import unittest
 from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-import autodict
 import numpy as np
 import pandas as pd
 import yfinance
@@ -20,7 +21,7 @@ from sqlalchemy import orm, pool
 from nummus import exceptions as exc
 from nummus import global_config, sql
 from nummus.models import base_uri
-from tests import TEST_LOG
+from tests import TEST_LOG, TestLog
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -74,7 +75,7 @@ class MockTicker:
         if not raise_errors:
             msg = "raise_errors must be True"
             raise ValueError(msg)
-        if self._symbol not in ["BANANA", "^BANANA"]:
+        if self._symbol not in {"BANANA", "^BANANA"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
             raise Exception(msg)  # noqa: TRY002
 
@@ -90,7 +91,7 @@ class MockTicker:
         )
         while dt.date() <= end:
             weekday = dt.weekday()
-            if weekday in [5, 6]:
+            if weekday in {5, 6}:
                 # No valuations on weekends
                 dt += datetime.timedelta(days=1)
                 continue
@@ -236,8 +237,11 @@ class TestBase(unittest.TestCase):
 
     def tearDown(self, *, clean: bool = True) -> None:
         duration = time.perf_counter() - self._test_start
-        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-            d["methods"][self.id()] = duration
+        with TEST_LOG.open("r", encoding="utf-8") as file:
+            d: TestLog = json.load(file)
+        d["methods"][self.id()] = duration
+        with TEST_LOG.open("w", encoding="utf-8") as file:
+            json.dump(d, file)
         if clean:
             self._clean_test_root()
 
@@ -245,23 +249,14 @@ class TestBase(unittest.TestCase):
         time.sleep = self._original_sleep
         yfinance.Ticker = self._original_ticker
 
-    def log_speed(self, slow_duration: float, fast_duration: float) -> None:
-        """Log the duration of a slow/fast A/B comparison test.
-
-        Args:
-            slow_duration: Duration of slow test
-            fast_duration: Duration of fast test
-        """
-        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-            d["speed"][self.id()] = {
-                "slow": slow_duration,
-                "fast": fast_duration,
-                "increase": slow_duration / fast_duration,
-            }
-
     @classmethod
     def setUpClass(cls) -> None:
-        print(f"{cls.__module__}.{cls.__qualname__}[", end="", flush=True)
+        print(  # noqa: T201
+            f"{cls.__module__}.{cls.__qualname__}[",
+            end="",
+            file=sys.stderr,
+            flush=True,
+        )
         cls._CLASS_START = time.perf_counter()
 
         # Change all engines to NullPool so timing isn't an issue
@@ -272,7 +267,10 @@ class TestBase(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls) -> None:
-        print("]done", flush=True)
+        print("]done", file=sys.stderr, flush=True)  # noqa: T201
         duration = time.perf_counter() - cls._CLASS_START
-        with autodict.JSONAutoDict(str(TEST_LOG)) as d:
-            d["classes"][f"{cls.__module__}.{cls.__qualname__}"] = duration
+        with TEST_LOG.open("r", encoding="utf-8") as file:
+            d: TestLog = json.load(file)
+        d["classes"][f"{cls.__module__}.{cls.__qualname__}"] = duration
+        with TEST_LOG.open("w", encoding="utf-8") as file:
+            json.dump(d, file)

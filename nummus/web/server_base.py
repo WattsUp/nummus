@@ -84,7 +84,7 @@ class NummusRequest(flask.Request):
         Returns:
             logger string
         """
-        now = datetime.datetime.now().replace(microsecond=0)
+        now = datetime.datetime.now().astimezone().replace(microsecond=0)
 
         if duration_s > RESPONSE_TOO_SLOW:
             duration = f"{Fore.RED}{duration_s:.3f}s{Fore.RESET}"
@@ -94,10 +94,7 @@ class NummusRequest(flask.Request):
             duration = f"{Fore.GREEN}{duration_s:.3f}s{Fore.RESET}"
 
         c, b = METHOD_COLORS.get(method, ("", ""))
-        method = (
-            f"{c}{b}{method}"
-            f"{'' if c == '' else Fore.RESET}{'' if b == '' else Back.RESET}"
-        )
+        method = f"{c}{b}{method}{c and Fore.RESET}{b and Back.RESET}"
 
         for partial, c in PATH_COLORS.items():
             if path.startswith(partial):
@@ -158,6 +155,9 @@ def create_flask_app(p: portfolio.Portfolio, *, debug: bool = False) -> flask.Fl
 
     Returns:
         Created flask app
+
+    Raises:
+        ProtectedObjectNotFoundError: If SECRET_KEY is not found
     """
     path_root = Path(__file__).parent.parent.resolve()
     app = NummusApp(
@@ -221,7 +221,7 @@ def create_flask_app(p: portfolio.Portfolio, *, debug: bool = False) -> flask.Fl
     app.context_processor(
         lambda: {
             "version": __version__,
-            "current_year": datetime.date.today().year,
+            "current_year": datetime.datetime.now().astimezone().year,
             "url_args": {},
         },
     )

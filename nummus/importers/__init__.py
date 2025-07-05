@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 import pdfplumber
 
+from nummus import exceptions as exc
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 from nummus.importers.raw_csv import CSVTransactionImporter
 
@@ -29,8 +30,11 @@ def get_importers(extra: Path | None) -> Sequence[type[TransactionImporter]]:
     Args:
         extra: Path to extra importers directory
 
-    Return:
+    Returns:
         List of base importers and any in extra directory
+
+    Raises:
+        ImportError: If importer fails to import
     """
     available: list[type[TransactionImporter]] = [
         CSVTransactionImporter,
@@ -71,7 +75,7 @@ def get_importer(
     path: Path,
     path_debug: Path,
     available: Sequence[type[TransactionImporter]],
-) -> TransactionImporter | None:
+) -> TransactionImporter:
     """Get the best importer for a file.
 
     Args:
@@ -81,6 +85,9 @@ def get_importer(
 
     Returns:
         Initialized Importer
+
+    Raises:
+        UnknownImporterError: if an importer cannot be found
     """
     suffix = path.suffix.lower()
 
@@ -102,4 +109,5 @@ def get_importer(
     for i in available:
         if i.is_importable(suffix, buf=buf, buf_pdf=buf_pdf):
             return i(buf=buf, buf_pdf=buf_pdf)
-    return None
+
+    raise exc.UnknownImporterError(path)

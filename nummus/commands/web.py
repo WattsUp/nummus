@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from colorama import Fore
 from typing_extensions import override
 
 from nummus.commands.base import BaseCommand
@@ -69,13 +70,11 @@ class Web(BaseCommand):  # pragma: no cover
 
     @override
     def run(self) -> int:
-        if self._p is None:
-            return 1
-
         # Defer for faster time to main
         if self._production:
             from nummus.web.server_production import Server  # noqa: PLC0415
         else:
+            print(f"{Fore.YELLOW}Running in debug mode, not meant for production")
             from nummus.web.server_debug import Server  # noqa: PLC0415
 
         s = Server(self._p, self._host, self._port)

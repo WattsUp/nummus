@@ -10,6 +10,7 @@ from unittest import mock
 import numpy_financial as npf
 from colorama import Fore
 
+from nummus import exceptions as exc
 from nummus import utils
 from tests.base import TestBase
 
@@ -49,19 +50,19 @@ class TestUtils(TestBase):
         original_get_pass = utils.getpass.getpass
 
         def mock_input(to_print: str) -> str | None:
-            print(to_print + prompt_input)
+            print(to_print + prompt_input)  # noqa: T201
             return prompt_input
 
         def mock_get_pass(to_print: str) -> str | None:
-            print(to_print)
+            print(to_print)  # noqa: T201
             return prompt_input
 
         def mock_input_interrupt(to_print: str) -> None:
-            print(to_print + prompt_input)
+            print(to_print + prompt_input)  # noqa: T201
             raise KeyboardInterrupt
 
         def mock_get_pass_eof(to_print: str) -> None:
-            print(to_print)
+            print(to_print)  # noqa: T201
             raise EOFError
 
         try:
@@ -111,7 +112,7 @@ class TestUtils(TestBase):
 
         def mock_input(to_print: str, *, secure: bool) -> str | None:
             self.assertTrue(secure)
-            print(to_print)
+            print(to_print)  # noqa: T201
             if len(queue) == 1:
                 return queue[0]
             return queue.pop(0)
@@ -250,7 +251,7 @@ class TestUtils(TestBase):
 
         s = "1000"
         result = utils.parse_real(s)
-        self.assertEqual(result, Decimal("1000"))
+        self.assertEqual(result, Decimal(1000))
 
         s = "1,000.1"
         result = utils.parse_real(s)
@@ -283,7 +284,7 @@ class TestUtils(TestBase):
         result = utils.format_financial(x)
         self.assertEqual(result, "-$1,000.10")
 
-        x = Decimal("0")
+        x = Decimal(0)
         result = utils.format_financial(x)
         self.assertEqual(result, "$0.00")
 
@@ -384,7 +385,7 @@ class TestUtils(TestBase):
         self.assertEqual(result, "4 days")
 
     def test_range_date(self) -> None:
-        start = datetime.date.today()
+        start = datetime.datetime.now().astimezone().date()
         end = start + datetime.timedelta(days=7)
         start_ord = start.toordinal()
         end_ord = end.toordinal()
@@ -967,12 +968,12 @@ class TestUtils(TestBase):
         result = utils.mwrr(values, profit)
         self.assertEqual(result, target)
 
-    def test_print_table(self) -> None:
+    def test_pretty_table(self) -> None:
         table: list[list[str] | None] = []
-        self.assertRaises(ValueError, utils.print_table, table)
+        self.assertRaises(ValueError, utils.pretty_table, table)
 
         table = [None]
-        self.assertRaises(ValueError, utils.print_table, table)
+        self.assertRaises(ValueError, utils.pretty_table, table)
 
         original_terminal_size = shutil.get_terminal_size
         try:
@@ -985,13 +986,10 @@ class TestUtils(TestBase):
                 """\
             ╭────┬────┬────┬────┬────┬────╮
             │ H1 │ H2 │ H3 │ H4 │ H5 │ H6 │
-            ╰────┴────┴────┴────┴────┴────╯
-            """,
+            ╰────┴────┴────┴────┴────┴────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             table = [
                 ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
@@ -1002,13 +1000,10 @@ class TestUtils(TestBase):
             ╭────┬────┬────┬────┬────┬────╮
             │ H1 │ H2 │ H3 │ H4 │ H5 │ H6 │
             ╞════╪════╪════╪════╪════╪════╡
-            ╰────┴────┴────┴────┴────┴────╯
-            """,
+            ╰────┴────┴────┴────┴────┴────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             table = [
                 ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
@@ -1025,13 +1020,10 @@ class TestUtils(TestBase):
             │ Short     │     Short │ Short     │   Short   │ Short     │ Short     │
             ╞═══════════╪═══════════╪═══════════╪═══════════╪═══════════╪═══════════╡
             │ Long word │ Long word │ Long word │ Long word │ Long word │ Long word │
-            ╰───────────┴───────────┴───────────┴───────────┴───────────┴───────────╯
-            """,
+            ╰───────────┴───────────┴───────────┴───────────┴───────────┴───────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, extra space goes first
             shutil.get_terminal_size = lambda: (70, 24)
@@ -1043,13 +1035,10 @@ class TestUtils(TestBase):
             │ Short     │     Short │ Short     │   Short   │Short    │Short    │
             ╞═══════════╪═══════════╪═══════════╪═══════════╪═════════╪═════════╡
             │ Long word │ Long word │ Long word │ Long word │Long word│Long word│
-            ╰───────────┴───────────┴───────────┴───────────┴─────────┴─────────╯
-            """,
+            ╰───────────┴───────────┴───────────┴───────────┴─────────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, truncate column goes next
             shutil.get_terminal_size = lambda: (60, 24)
@@ -1061,13 +1050,10 @@ class TestUtils(TestBase):
             │Short    │    Short│Short    │  Short  │Short  │Short    │
             ╞═════════╪═════════╪═════════╪═════════╪═══════╪═════════╡
             │Long word│Long word│Long word│Long word│Long w…│Long word│
-            ╰─────────┴─────────┴─────────┴─────────┴───────┴─────────╯
-            """,
+            ╰─────────┴─────────┴─────────┴─────────┴───────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal smaller, other columns go next
             shutil.get_terminal_size = lambda: (50, 24)
@@ -1079,13 +1065,10 @@ class TestUtils(TestBase):
             │Short  │  Short│Short  │ Short  │Sho…│Short    │
             ╞═══════╪═══════╪═══════╪════════╪════╪═════════╡
             │Long w…│Long w…│Long w…│Long wo…│Lon…│Long word│
-            ╰───────┴───────┴───────┴────────┴────┴─────────╯
-            """,
+            ╰───────┴───────┴───────┴────────┴────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
 
             # Make terminal tiny, other columns go next, never last
             shutil.get_terminal_size = lambda: (10, 24)
@@ -1097,13 +1080,10 @@ class TestUtils(TestBase):
             │Sho…│Sho…│Sho…│Sho…│Sho…│Short    │
             ╞════╪════╪════╪════╪════╪═════════╡
             │Lon…│Lon…│Lon…│Lon…│Lon…│Long word│
-            ╰────┴────┴────┴────┴────┴─────────╯
-            """,
+            ╰────┴────┴────┴────┴────┴─────────╯""",
             )
-            with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-                utils.print_table(table)
-            fake_stdout = fake_stdout.getvalue()
-            self.assertEqual(fake_stdout, target)
+            result = "\n".join(utils.pretty_table(table))
+            self.assertEqual(result, target)
         finally:
             shutil.get_terminal_size = original_terminal_size
 
@@ -1263,3 +1243,29 @@ class TestUtils(TestBase):
 
         self.assertEqual(Color.name, "RED")
         self.assertEqual(Color().name, "RED")
+
+    def test_tokenize_search_str(self) -> None:
+        s = "!{}"
+        self.assertRaises(exc.EmptySearchError, utils.tokenize_search_str, s)
+
+        s = '"query'
+        r_must, r_can, r_not = utils.tokenize_search_str(s)
+        self.assertEqual(r_must, set())
+        self.assertEqual(r_can, {"query"})
+        self.assertEqual(r_not, set())
+
+        s = '+query "keep together" -ignore "    "'
+        r_must, r_can, r_not = utils.tokenize_search_str(s)
+        self.assertEqual(r_must, {"query"})
+        self.assertEqual(r_can, {"keep together"})
+        self.assertEqual(r_not, {"ignore"})
+
+    def test_low_pass(self) -> None:
+        data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
+        target = data
+        result = utils.low_pass(data, 1)
+        self.assertEqual(result, target)
+
+        target = [Decimal(1), Decimal("0.5"), Decimal("0.25"), Decimal("0.125")]
+        result = utils.low_pass(data, 3)
+        self.assertEqual(result, target)

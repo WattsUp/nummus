@@ -53,7 +53,7 @@ class TestExport(TestBase):
             rows = list(reader)
             self.assertEqual(rows, [])
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         yesterday = today - datetime.timedelta(days=1)
 
         with p.begin_session() as s:

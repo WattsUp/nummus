@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from typing import TYPE_CHECKING, TypedDict
 
@@ -149,7 +150,7 @@ def ctx_checks(*, run: bool) -> _HealthContext:
                 "uri": name.replace(" ", "-").lower(),
                 "description": check_type.description,
                 "is_severe": check_type.is_severe,
-                "issues": dict(sorted(c_issues.items(), key=lambda item: item[1])),
+                "issues": dict(sorted(c_issues.items(), key=operator.itemgetter(1))),
             },
         )
     return {

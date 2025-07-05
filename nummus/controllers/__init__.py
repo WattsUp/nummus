@@ -32,6 +32,9 @@ def add_routes(app: flask.Flask, *, debug: bool) -> None:
     Args:
         app: Flask app to route under
         debug: True will add debug specific routes as well
+
+    Raises:
+        DuplicateURLError: If multiple routes have same URL
     """
     module = [
         accounts,

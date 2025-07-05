@@ -76,7 +76,7 @@ class TestBudgetAssignment(TestBase):
         s.commit()
         t_cat_id = t_cat.id_
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
 
@@ -107,7 +107,7 @@ class TestBudgetAssignment(TestBase):
         names = TransactionCategory.map_name(s)
         names_rev = {v: k for k, v in names.items()}
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         categories, assignable, future_assigned = (
@@ -341,6 +341,190 @@ class TestBudgetAssignment(TestBase):
         self.assertEqual(assignable, Decimal(40))
         self.assertEqual(future_assigned, 0)
 
+    def test_get_emergency_fund(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+        TransactionCategory.add_default(s)
+        categories = TransactionCategory.map_name(s)
+        # Reverse categories for LUT
+        categories = {v: k for k, v in categories.items()}
+
+        today = datetime.datetime.now().astimezone().date()
+        month = utils.start_of_month(today)
+        month_ord = month.toordinal()
+        end_ord = month_ord + 1
+        start_ord = month_ord - 8
+
+        n_smoothing = 15
+        n_lower = 20
+        n_upper = 40
+
+        # Empty if fine
+        r_lowers, r_uppers, r_balances, r_categories, r_categories_total = (
+            BudgetAssignment.get_emergency_fund(s, start_ord, end_ord, n_lower, n_upper)
+        )
+        self.assertEqual(r_lowers, [Decimal(0)] * 10)
+        self.assertEqual(r_uppers, [Decimal(0)] * 10)
+        self.assertEqual(r_balances, [Decimal(0)] * 10)
+        self.assertEqual(r_categories, {})
+        self.assertEqual(r_categories_total, {})
+
+        # Prepare portfolio
+        acct = Account(
+            name="Monkey Bank Checking",
+            institution="Monkey Bank",
+            category=AccountCategory.CASH,
+            closed=False,
+            budgeted=True,
+        )
+        s.add(acct)
+        b = BudgetAssignment(
+            category_id=TransactionCategory.emergency_fund(s)[0],
+            month_ord=month_ord,
+            amount=10,
+        )
+        s.add(b)
+        s.commit()
+
+        # Mark groceries as essential
+        s.query(TransactionCategory).where(
+            TransactionCategory.name == "groceries",
+        ).update({"essential": True})
+
+        # Add spending
+        txn = Transaction(
+            account_id=acct.id_,
+            date=month,
+            amount=-100,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            category_id=categories["groceries"],
+        )
+        s.add_all((txn, t_split))
+
+        # Add spending >3 months ago
+        txn = Transaction(
+            account_id=acct.id_,
+            date=month - datetime.timedelta(days=30),
+            amount=-100,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            category_id=categories["groceries"],
+        )
+        s.add_all((txn, t_split))
+
+        # Add spending >3 months ago
+        txn = Transaction(
+            account_id=acct.id_,
+            date=month - datetime.timedelta(days=300),
+            amount=-100,
+            statement=self.random_string(),
+        )
+        t_split = TransactionSplit(
+            amount=txn.amount,
+            parent=txn,
+            category_id=categories["groceries"],
+        )
+        s.add_all((txn, t_split))
+
+        s.commit()
+
+        r_lowers, r_uppers, r_balances, r_categories, r_categories_total = (
+            BudgetAssignment.get_emergency_fund(s, start_ord, end_ord, n_lower, n_upper)
+        )
+        n_target = 10 + n_lower + n_smoothing + 1
+        target = [
+            *([Decimal(0)] * 14),
+            *([Decimal(100)] * n_lower),
+            *([Decimal(0)] * (n_target - n_lower - 2 - 14)),
+            *([Decimal(100)] * 2),
+        ]
+        target = utils.low_pass(target, n_smoothing)[-10:]
+        self.assertEqual(r_lowers, target)
+        n_target = 10 + n_smoothing + 1
+        target = [
+            *([Decimal(100)] * (n_target - 2)),
+            *([Decimal(200)] * 2),
+        ]
+        target = utils.low_pass(target, n_smoothing)[-10:]
+        self.assertEqual(r_uppers, target)
+        target = [Decimal(0)] * 8 + [Decimal(10), Decimal(10)]
+        self.assertEqual(r_balances, target)
+        target = {
+            categories["groceries"]: ("groceries", "Groceries"),
+        }
+        self.assertEqual(r_categories, target)
+        target = {
+            categories["groceries"]: Decimal(-100),
+        }
+        self.assertEqual(r_categories_total, target)
+
+    def test_budget(self) -> None:
+        s = self.get_session()
+        models.metadata_create_all(s)
+        TransactionCategory.add_default(s)
+        categories = TransactionCategory.map_name(s)
+        # Reverse categories for LUT
+        categories = {v: k for k, v in categories.items()}
+
+        today = datetime.datetime.now().astimezone().date()
+        month = utils.start_of_month(today)
+        month_ord = month.toordinal()
+
+        src_cat_id = None
+        dest_cat_id = categories["groceries"]
+        BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+        s.commit()
+
+        a = s.query(BudgetAssignment).one()
+        self.assertEqual(a.category_id, dest_cat_id)
+        self.assertEqual(a.month_ord, month_ord)
+        self.assertEqual(a.amount, 100)
+
+        src_cat_id = None
+        dest_cat_id = categories["groceries"]
+        BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+        s.commit()
+
+        a = s.query(BudgetAssignment).one()
+        self.assertEqual(a.category_id, dest_cat_id)
+        self.assertEqual(a.month_ord, month_ord)
+        self.assertEqual(a.amount, 200)
+
+        src_cat_id = categories["groceries"]
+        dest_cat_id = None
+        BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+        s.commit()
+
+        a = s.query(BudgetAssignment).one()
+        self.assertEqual(a.category_id, src_cat_id)
+        self.assertEqual(a.month_ord, month_ord)
+        self.assertEqual(a.amount, 100)
+
+        src_cat_id = categories["groceries"]
+        dest_cat_id = None
+        BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+        s.commit()
+
+        a = s.query(BudgetAssignment).one_or_none()
+        self.assertIsNone(a)
+
+        src_cat_id = categories["groceries"]
+        dest_cat_id = None
+        BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+        s.commit()
+
+        a = s.query(BudgetAssignment).one()
+        self.assertEqual(a.category_id, src_cat_id)
+        self.assertEqual(a.month_ord, month_ord)
+        self.assertEqual(a.amount, -100)
+
 
 class TestTarget(TestBase):
     def test_init_properties(self) -> None:
@@ -350,7 +534,7 @@ class TestTarget(TestBase):
         names = TransactionCategory.map_name(s)
         names_rev = {v: k for k, v in names.items()}
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
 
         d = {

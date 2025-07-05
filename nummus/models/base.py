@@ -58,6 +58,9 @@ class Base(orm.DeclarativeBase):
 
         Returns:
             URI string
+
+        Raises:
+            NoURIError: If class does not have a table_id
         """
         if cls.__table_id__ is None:
             msg = f"{cls.__name__} does not have table_id"
@@ -73,6 +76,9 @@ class Base(orm.DeclarativeBase):
 
         Returns:
             Model ID
+
+        Raises:
+            WrongURITypeError: If URI does not belong to class
         """
         id_ = base_uri.uri_to_id(uri)
         table_id = id_ & base_uri.MASK_TABLE
@@ -83,7 +89,11 @@ class Base(orm.DeclarativeBase):
 
     @property
     def uri(self) -> str:
-        """Uniform Resource Identifier derived from id_ and __table_id__."""
+        """Uniform Resource Identifier derived from id_ and __table_id__.
+
+        Raises:
+            NoIDError: If object does not have id_
+        """
         if self.id_ is None:
             msg = f"{self.__class__.__name__} does not have an id_, maybe flush"
             raise exc.NoIDError(msg)
@@ -96,30 +106,16 @@ class Base(orm.DeclarativeBase):
         except orm.exc.DetachedInstanceError:
             return f"<{self.__class__.__name__} id=Detached Instance>"
 
+    @override
     def __hash__(self) -> int:
-        """Hash function for dictionary keys."""
         return self.id_
 
+    @override
     def __eq__(self, other: Base | object) -> bool:
-        """Test equality by URI.
-
-        Args:
-            other: Other object to test
-
-        Returns:
-            True if URIs match
-        """
         return isinstance(other, Base) and self.uri == other.uri
 
+    @override
     def __ne__(self, other: Base | object) -> bool:
-        """Test inequality by URI.
-
-        Args:
-            other: Other object to test
-
-        Returns:
-            True if URIs do not match
-        """
         return not isinstance(other, Base) or self.uri != other.uri
 
     @classmethod
@@ -133,7 +129,7 @@ class Base(orm.DeclarativeBase):
             Dictionary {id: name}
 
         Raises:
-            KeyError if model does not have name property
+            KeyError: if model does not have name property
         """
         if not hasattr(cls, "name"):
             msg = f"{cls} does not have name column"
@@ -161,12 +157,12 @@ class Base(orm.DeclarativeBase):
             field
 
         Raises:
-            InvalidORMValueError if field is too short
+            InvalidORMValueError: if field is too short
         """
         if field is None:
             return None
         field = field.strip()
-        if field == "":
+        if not field:
             return None
         if short_check and len(field) < utils.MIN_STR_LEN:
             table: str = cls.__tablename__  # type: ignore[attr-defined]
@@ -223,24 +219,24 @@ class BaseEnum(enum.IntEnum):
         """
         return {}  # pragma: no cover
 
+    @override
     def __eq__(self, value: object) -> bool:
-        """Equal to test."""
         if isinstance(value, str):
             return self.name == value
         return super().__eq__(value)
 
+    @override
     def __ne__(self, value: object) -> bool:
-        """Not equal to test."""
         if isinstance(value, str):
             return self.name != value
         return super().__ne__(value)
 
+    @override
     def __hash__(self) -> int:
-        """Hashing function for dictionary keys."""
         return self.value
 
+    @override
     def __str__(self) -> str:
-        """String representation."""
         return f"{self.__class__.__name__}.{self.name}"
 
     @property

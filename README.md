@@ -14,20 +14,24 @@ List of dependencies for package to run.
 
 - nummus python modules
   - sqlalchemy
-  - AutoDict
   - gevent
   - colorama
   - rapidfuzz
-  - cryptography
-  - flask-assets
-  - pytailwindcss
-  - jsmin
   - flask
+  - flask-assets
+  - flask-login
   - typing-extensions
   - pdfplumber
   - yfinance
+  - pyspellchecker
   - tqdm
   - argcomplete
+  - scipy
+  - emoji
+  - werkzeug
+  - prometheus-flask-exporter
+  - packaging
+  - gunicorn
 
 ### Optional
 

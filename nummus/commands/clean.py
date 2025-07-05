@@ -42,8 +42,6 @@ class Clean(BaseCommand):
 
     @override
     def run(self) -> int:
-        if self._p is None:  # pragma: no cover
-            return 1
         size_before, size_after = self._p.clean()
         print(f"{Fore.GREEN}Portfolio cleaned")
         p_change = size_before - size_after

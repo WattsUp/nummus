@@ -46,8 +46,6 @@ class UpdateAssets(BaseCommand):
         from nummus import portfolio  # noqa: PLC0415
 
         p = self._p
-        if p is None:  # pragma: no cover
-            return 1
         # Back up Portfolio
         _, tar_ver = p.backup()
 

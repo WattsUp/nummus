@@ -34,8 +34,12 @@ from nummus.models.transaction_category import (
 from nummus.models.utils import (
     dump_table_configs,
     get_constraints,
+    obj_session,
+    one_or_none,
     paginate,
     query_count,
+    update_rows,
+    update_rows_list,
 )
 
 if TYPE_CHECKING:
@@ -71,8 +75,12 @@ __all__ = [
     "get_constraints",
     "load_cipher",
     "metadata_create_all",
+    "obj_session",
+    "one_or_none",
     "paginate",
     "query_count",
+    "update_rows",
+    "update_rows_list",
 ]
 
 _MODELS: list[type[Base]] = [

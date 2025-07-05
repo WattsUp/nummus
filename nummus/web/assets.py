@@ -9,6 +9,7 @@ import flask
 import flask_assets
 import webassets.filter
 from setuptools.command import build_py
+from typing_extensions import override
 
 try:
     import jsmin
@@ -28,12 +29,8 @@ class TailwindCSSFilter(webassets.filter.Filter):
 
     DEBUG = False
 
+    @override
     def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
-        """Run filter and generate output file.
-
-        Args:
-            out: Output buffer
-        """
         if pytailwindcss is None:
             raise NotImplementedError
         path_root = Path(__file__).parent.parent.resolve()
@@ -57,12 +54,8 @@ class TailwindCSSFilterDebug(TailwindCSSFilter):
 class JSMinFilter(webassets.filter.Filter):
     """webassets Filter for running jsmin over."""
 
+    @override
     def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
-        """Run filter and generate output file.
-
-        Args:
-            out: Output buffer
-        """
         if jsmin is None:
             raise NotImplementedError
         # Add back tick to quote_chars for template strings
@@ -77,6 +70,10 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         app: Flask app to build for
         debug: True will not run jsmin filter
         force: True will force build bundles
+
+    Raises:
+        FileNotFoundError: If source does not exists and neither does dist
+        FileNotFoundError: If source does not exists and debug == True
     """
     env_assets = flask_assets.Environment(app)
     stub_dist_css = "dist/main.css"
@@ -134,8 +131,8 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
 class BuildAssets(build_py.build_py):
     """Build assets during build command."""
 
+    @override
     def __init__(self, dist: setuptools.Distribution) -> None:
-        """Initialize BuildAssets."""
         if pytailwindcss is None or jsmin is None:  # pragma: no cover
             msg = "Filters not installed for BuildAssets"
             raise ImportError(msg)

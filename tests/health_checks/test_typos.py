@@ -11,6 +11,7 @@ from nummus.models import (
     Asset,
     AssetCategory,
     HealthCheckIssue,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -23,7 +24,7 @@ class TestTypos(TestBase):
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         c = Typos(p)
         c.test()
@@ -31,7 +32,7 @@ class TestTypos(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Add a single transaction
@@ -112,7 +113,7 @@ class TestTypos(TestBase):
 
         with p.begin_session() as s:
             # Ignore description typos but issue still exists
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 5)
 
             n = len(c.issues)
@@ -122,7 +123,7 @@ class TestTypos(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 5)
 
             n = len(c.issues)
@@ -220,7 +221,7 @@ class TestTypos(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
     def test_ignore(self) -> None:
@@ -233,7 +234,7 @@ class TestTypos(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Add a single transaction

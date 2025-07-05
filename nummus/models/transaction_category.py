@@ -83,7 +83,15 @@ class TransactionCategory(Base):
 
     @orm.validates("name", "emoji_name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)
 
     @orm.validates("essential")
@@ -97,15 +105,16 @@ class TransactionCategory(Base):
             field
 
         Raises:
-            InvalidORMValueError if field is essential
+            InvalidORMValueError: If field is essential
+            TypeError: If field is not bool
         """
         if not isinstance(field, bool):
             msg = f"field is not of type bool: {type(field)}"
             raise TypeError(msg)
-        if field and self.group in (
+        if field and self.group in {
             TransactionCategoryGroup.INCOME,
             TransactionCategoryGroup.OTHER,
-        ):
+        }:
             msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)
         return field
@@ -276,3 +285,58 @@ class TransactionCategory(Base):
         if no_asset_linked:
             query = query.where(TransactionCategory.asset_linked.is_(False))
         return dict(query.all())  # type: ignore[attr-defined]
+
+    @classmethod
+    def _get_protected_id(cls, s: orm.Session, name: str) -> tuple[int, str]:
+        """Get the ID and URI of a protected category.
+
+        Args:
+            s: SQL session to use
+            name: Name of protected category to fetch
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFoundError: If not found
+        """
+        try:
+            id_ = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == name)
+                .one()[0]
+            )
+        except exc.NoResultFound as e:
+            msg = f"Category {name} not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        return id_, cls.id_to_uri(id_)
+
+    @classmethod
+    def uncategorized(cls, s: orm.Session) -> tuple[int, str]:
+        """Get the ID and URI of the uncategorized category.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        return cls._get_protected_id(s, "uncategorized")
+
+    @classmethod
+    def emergency_fund(cls, s: orm.Session) -> tuple[int, str]:
+        """Get the ID and URI of the emergency fund category.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        return cls._get_protected_id(s, "emergency fund")

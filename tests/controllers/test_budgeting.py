@@ -11,6 +11,7 @@ from nummus.controllers import budgeting
 from nummus.models import (
     BudgetAssignment,
     BudgetGroup,
+    query_count,
     Target,
     TargetPeriod,
     TargetType,
@@ -25,7 +26,7 @@ class TestBudgeting(WebTestBase):
     def test_page(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -215,7 +216,7 @@ class TestBudgeting(WebTestBase):
         self.assertEqual(available, ["$0.00", "$240.00", "$100.00"])
 
     def test_validation(self) -> None:
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         endpoint = "budgeting.validation"
 
@@ -262,7 +263,7 @@ class TestBudgeting(WebTestBase):
     def test_assign(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -291,148 +292,13 @@ class TestBudgeting(WebTestBase):
         form = {"amount": "0"}
         _, _ = self.web_put(url, data=form)
         with p.begin_session() as s:
-            n = s.query(BudgetAssignment).count()
+            n = query_count(s.query(BudgetAssignment))
             self.assertEqual(n, 0)
-
-    def test_overspending(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.date.today()
-        month = utils.start_of_month(today)
-        month_ord = month.toordinal()
-        month_str = month.isoformat()[:7]
-        month_last = utils.date_add_months(month, -1)
-
-        cat_1_id = d["cat_1_id"]
-        cat_1_uri = d["cat_1_uri"]
-        cat_1_emoji_name = d["cat_1_emoji_name"]
-
-        with p.begin_session() as s:
-            cat_2_emoji_name = "General Merchandise"
-            cat_2_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == cat_2_emoji_name.lower())
-                .one()[0]
-            )
-            cat_2_uri = TransactionCategory.id_to_uri(cat_2_id)
-
-        endpoint = "budgeting.overspending"
-        url = endpoint, {"uri": cat_1_uri, "month": month_str}
-        result, _ = self.web_get(url)
-        self.assertIn(f"{cat_1_emoji_name} is overspent by $10.00", result)
-        self.assertIn(
-            '<option value="income">Assignable income $100.00</option>',
-            result,
-        )
-        # 2 for empty option, 2 for group label, 2 for Assignable
-        self.assertEqual(result.count("option"), 6)
-
-        form = {"source": "income"}
-        _, headers = self.web_put(url, data=form)
-        self.assertEqual(headers.get("HX-Trigger"), "budget")
-        with p.begin_session() as s:
-            a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, cat_1_id)
-            self.assertEqual(a.amount, Decimal(10))
-            self.assertEqual(a.month_ord, month_ord)
-
-            a.amount = Decimal(5)
-
-            a = BudgetAssignment(month_ord=month_ord, amount=10, category_id=cat_2_id)
-            s.add(a)
-
-        result, _ = self.web_get(url)
-        self.assertIn(f"{cat_1_emoji_name} is overspent by $5.00", result)
-        self.assertIn(
-            '<option value="income">Assignable income $85.00</option>',
-            result,
-        )
-        self.assertIn(
-            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $10.00</option>',
-            result,
-        )
-        # 2 for empty option, 4 for group labels, 2 for Assignable, 2 for General
-        self.assertEqual(result.count("option"), 10)
-
-        form = {"source": cat_2_uri}
-        self.web_put(url, data=form)
-        with p.begin_session() as s:
-            a = (
-                s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == cat_1_id)
-                .one()
-            )
-            self.assertEqual(a.amount, Decimal(10))
-            self.assertEqual(a.month_ord, month_ord)
-            a.amount = Decimal(100)
-
-            a = (
-                s.query(BudgetAssignment)
-                .where(BudgetAssignment.category_id == cat_2_id)
-                .one()
-            )
-            self.assertEqual(a.amount, Decimal(5))
-            self.assertEqual(a.month_ord, month_ord)
-
-        url = endpoint, {"uri": "income", "month": month_str}
-        result, _ = self.web_get(url)
-        self.assertIn("More money is assigned than held by $5.00", result)
-        self.assertIn(
-            f'<option value="{cat_1_uri}">{cat_1_emoji_name} $90.00</option>',
-            result,
-        )
-        self.assertIn(
-            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $5.00</option>',
-            result,
-        )
-        # 2 for empty option, 2 for group label, 2 for Assignable, 2 for General
-        self.assertEqual(result.count("option"), 8)
-
-        form = {"source": cat_2_uri}
-        self.web_put(url, data=form)
-        with p.begin_session() as s:
-            # cat_2 would have been deleted
-            a = s.query(BudgetAssignment).one()
-            self.assertEqual(a.category_id, cat_1_id)
-            self.assertEqual(a.amount, Decimal(100))
-            self.assertEqual(a.month_ord, month_ord)
-
-            a.amount = Decimal(200)
-            a.month_ord = month_last.toordinal()
-
-        url = endpoint, {"uri": "income", "month": month_str}
-        result, _ = self.web_get(url)
-        self.assertIn("More money is assigned than held by $100.00", result)
-        self.assertIn(
-            f'<option value="{cat_1_uri}">{cat_1_emoji_name} $190.00</option>',
-            result,
-        )
-        self.assertEqual(result.count("option"), 6)
-
-        form = {"source": cat_1_uri}
-        self.web_put(url, data=form)
-        with p.begin_session() as s:
-            # cat_2 would have been deleted
-            a = (
-                s.query(BudgetAssignment)
-                .where(BudgetAssignment.month_ord == month_last.toordinal())
-                .one()
-            )
-            self.assertEqual(a.category_id, cat_1_id)
-            self.assertEqual(a.amount, Decimal(200))
-
-            a = (
-                s.query(BudgetAssignment)
-                .where(BudgetAssignment.month_ord == month_ord)
-                .one()
-            )
-            self.assertEqual(a.category_id, cat_1_id)
-            self.assertEqual(a.amount, Decimal(-100))
 
     def test_move(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         month_ord = month.toordinal()
         month_str = month.isoformat()[:7]
@@ -452,6 +318,23 @@ class TestBudgeting(WebTestBase):
             cat_2_uri = TransactionCategory.id_to_uri(cat_2_id)
 
         endpoint = "budgeting.move"
+        # cat_1 is overspent
+        url = endpoint, {"uri": cat_1_uri, "month": month_str}
+        result, _ = self.web_get(url)
+        self.assertIn(f"{cat_1_emoji_name} is overspent by $10.00", result)
+        self.assertNotIn(
+            f'<option value="{cat_1_uri}">{cat_1_emoji_name} -$10.00</option>',
+            result,
+        )
+        self.assertNotIn(
+            f'<option value="{cat_2_uri}">{cat_2_emoji_name} $0.00</option>',
+            result,
+        )
+        self.assertIn(
+            '<option value="income">Assignable income $100.00</option>',
+            result,
+        )
+
         url = endpoint, {"uri": "income", "month": month_str}
         result, _ = self.web_get(url)
         self.assertIn("Assignable income has $100.00 available", result)
@@ -461,6 +344,10 @@ class TestBudgeting(WebTestBase):
         )
         self.assertIn(
             f'<option value="{cat_2_uri}">{cat_2_emoji_name} $0.00</option>',
+            result,
+        )
+        self.assertNotIn(
+            '<option value="income">Assignable income -$10.00</option>',
             result,
         )
 
@@ -547,6 +434,7 @@ class TestBudgeting(WebTestBase):
                 .one()
             )
             self.assertEqual(a.amount, Decimal(100))
+            a.amount = Decimal(0)
 
             a = (
                 s.query(BudgetAssignment)
@@ -557,6 +445,22 @@ class TestBudgeting(WebTestBase):
                 .one()
             )
             self.assertEqual(a.amount, Decimal(-50))
+
+        # Cover overspending with income
+        url = endpoint, {"uri": cat_1_uri, "month": month_str}
+        form = {"destination": "income"}
+        self.web_put(url, data=form)
+
+        with p.begin_session() as s:
+            a = (
+                s.query(BudgetAssignment)
+                .where(
+                    BudgetAssignment.category_id == cat_1_id,
+                    BudgetAssignment.month_ord == month_ord,
+                )
+                .one()
+            )
+            self.assertEqual(a.amount, Decimal(10))
 
     def test_reorder(self) -> None:
         _ = self._setup_portfolio()
@@ -725,7 +629,7 @@ class TestBudgeting(WebTestBase):
             g = s.query(BudgetGroup).where(BudgetGroup.id_ == g_id_0).one()
             self.assertEqual(g.position, 0)
 
-            n = s.query(BudgetGroup).count()
+            n = query_count(s.query(BudgetGroup))
             self.assertEqual(n, 1)
 
             t_cat = (
@@ -755,7 +659,7 @@ class TestBudgeting(WebTestBase):
         self.assertEqual(result, "")
 
         with p.begin_session() as s:
-            n = s.query(BudgetGroup).count()
+            n = query_count(s.query(BudgetGroup))
             self.assertEqual(n, 0)
 
     def test_group(self) -> None:
@@ -839,7 +743,7 @@ class TestBudgeting(WebTestBase):
         d = self._setup_portfolio()
         p = self._portfolio
 
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
         month = utils.start_of_month(today)
         next_year = utils.date_add_months(month, 12)
 
@@ -1035,7 +939,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
             # On track, be 2 weeks in
-            now = datetime.datetime(month.year, month.month, 6)
+            now = datetime.datetime(month.year, month.month, 6).astimezone()
             with time_machine.travel(now, tick=False):
                 ctx = budgeting.ctx_target(
                     tar,
@@ -1061,7 +965,7 @@ class TestBudgeting(WebTestBase):
             self.assertEqual(ctx, target)
 
             # Not on track, be 3 weeks in
-            now = datetime.datetime(month.year, month.month, 17)
+            now = datetime.datetime(month.year, month.month, 17).astimezone()
             with time_machine.travel(now, tick=False):
                 ctx = budgeting.ctx_target(
                     tar,
@@ -1328,7 +1232,7 @@ class TestBudgeting(WebTestBase):
     def test_target(self) -> None:
         d = self._setup_portfolio()
         p = self._portfolio
-        today = datetime.date.today()
+        today = datetime.datetime.now().astimezone().date()
 
         cat_1_id = d["cat_1_id"]
         cat_1_uri = d["cat_1_uri"]
@@ -1469,7 +1373,7 @@ class TestBudgeting(WebTestBase):
         _, headers = self.web_delete(url)
         self.assertEqual(headers.get("HX-Trigger"), "budget")
         with p.begin_session() as s:
-            n = s.query(Target).count()
+            n = query_count(s.query(Target))
             self.assertEqual(n, 0)
 
     def test_sidebar(self) -> None:

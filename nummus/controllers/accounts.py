@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
@@ -154,7 +155,7 @@ def account(uri: str) -> str | flask.Response:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
@@ -245,28 +246,20 @@ def validation(uri: str) -> str:
         "number": (False, Account.number),
     }
 
-    args = flask.request.args
-    for key, (required, prop) in properties.items():
-        if key not in args:
-            continue
-        value = args[key].strip()
-        if value == "":
-            return "Required" if required else ""
-        if len(value) < utils.MIN_STR_LEN:
-            return f"{utils.MIN_STR_LEN} characters required"
-        if prop is not None:
-            with p.begin_session() as s:
-                n = (
-                    s.query(Account)
-                    .where(
-                        prop == value,
-                        Account.id_ != Account.uri_to_id(uri),
-                    )
-                    .count()
-                )
-                if n != 0:
-                    return "Must be unique"
-        return ""
+    with p.begin_session() as s:
+        args = flask.request.args
+        for key, (required, prop) in properties.items():
+            if key not in args:
+                continue
+            return web_utils.validate_string(
+                args[key],
+                is_required=required,
+                session=s,
+                no_duplicates=prop,
+                no_duplicate_wheres=[
+                    Account.id_ != Account.uri_to_id(uri),
+                ],
+            )
 
     raise NotImplementedError
 
@@ -287,7 +280,7 @@ def ctx_account(
     Returns:
         Dictionary HTML context
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     if skip_today:
         current_value = Decimal(0)
@@ -429,7 +422,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     Returns:
         Dictionary HTML context
     """
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start_ord = acct.opened_on_ord or today_ord
 
@@ -535,7 +528,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     # Create sidebar context
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
+    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     assets = Decimal(0)
@@ -633,7 +626,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
 
     # Removed empty categories and sort
     categories = {
-        cat: sorted(accounts, key=lambda acct: acct["name"])
+        cat: sorted(accounts, key=operator.itemgetter("name"))
         for cat, accounts in categories.items()
         if len(accounts) > 0
     }

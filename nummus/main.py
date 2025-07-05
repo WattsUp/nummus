@@ -24,7 +24,7 @@ def main(command_line: list[str] | None = None) -> int:
     Args:
         command_line: command line arguments, None for sys.argv
 
-    Return:
+    Returns:
         0 on success
         non-zero on failure
     """

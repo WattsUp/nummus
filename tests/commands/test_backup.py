@@ -59,7 +59,6 @@ class TestBackUp(TestBase):
         fake_stdout = fake_stdout.getvalue()
         target = (
             f"{Fore.CYAN}Extracted backup tar\n"
-            f"{Fore.GREEN}Portfolio is unlocked\n"
             f"{Fore.GREEN}Portfolio restored for {path_db}\n"
         )
         self.assertEqual(fake_stdout, target)

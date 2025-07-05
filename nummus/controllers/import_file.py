@@ -31,7 +31,7 @@ def import_file() -> str | flask.Response:
         return flask.render_template("import/dialog.jinja")
 
     file = flask.request.files.get("file")
-    if file is None or file.filename == "":
+    if file is None or not file.filename:
         return common.error("No file selected")
 
     force = "force" in flask.request.form

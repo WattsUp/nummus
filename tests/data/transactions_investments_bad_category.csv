@@ -1,0 +1,4 @@
+Account,Date,Amount,Statement,Payee,Description,Asset,ASSET_QUANTITY,Tag,Category
+Monkey Investments,2023-01-03,-900,,Monkey Investments,,BANANA,32.1234,,Groceries
+Monkey Investments,2023-02-01,1234.56,Profit Maker,Monkey Investments,Profit Maker,BANANA,-32.1234,,Dividends Received
+Monkey Investments,2023-02-01,1234.56,Cash Maker,Monkey Investments,Profit Maker,BANANA,0,,Dividends Received

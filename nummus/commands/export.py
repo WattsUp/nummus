@@ -76,9 +76,6 @@ class Export(BaseCommand):
         # Defer for faster time to main
         from nummus.models import TransactionSplit  # noqa: PLC0415
 
-        if self._p is None:  # pragma: no cover
-            return 1
-
         with self._p.begin_session() as s:
             query = (
                 s.query(TransactionSplit)
@@ -117,6 +114,7 @@ def write_csv(
     from nummus import utils  # noqa: PLC0415
     from nummus.models import (  # noqa: PLC0415
         Account,
+        query_count,
         TransactionCategory,
         TransactionSplit,
         YIELD_PER,
@@ -135,7 +133,7 @@ def write_csv(
         TransactionSplit.tag,
         TransactionSplit.amount,
     ).order_by(TransactionSplit.date_ord)
-    n = query.count()
+    n = query_count(query)
 
     header = [
         "Date",
