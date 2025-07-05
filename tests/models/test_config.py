@@ -3,38 +3,36 @@ from __future__ import annotations
 from nummus import exceptions as exc
 from nummus import models
 from nummus.models import config
-from tests.base import TestBase
 
 
-class TestConfig(TestBase):
-    def test_init_properties(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
+def test_init_properties() -> None:
+    s = self.get_session()
+    models.metadata_create_all(s)
 
-        d = {
-            "key": config.ConfigKey.VERSION,
-            "value": self.random_string(),
-        }
+    d = {
+        "key": config.ConfigKey.VERSION,
+        "value": self.random_string(),
+    }
 
-        c = config.Config(**d)
-        s.add(c)
-        s.commit()
+    c = config.Config(**d)
+    s.add(c)
+    s.commit()
 
-        self.assertEqual(c.key, d["key"])
-        self.assertEqual(c.value, d["value"])
+    assert c.key == d["key"]
+    assert c.value == d["value"]
 
-        # Duplicate keys are bad
-        c = config.Config(key=d["key"], value=self.random_string())
-        s.add(c)
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
+    # Duplicate keys are bad
+    c = config.Config(key=d["key"], value=self.random_string())
+    s.add(c)
+    self.assertRaises(exc.IntegrityError, s.commit)
+    s.rollback()
 
-        # Empty values are bad
-        c = config.Config(key=config.ConfigKey.SECRET_KEY, value="")
-        s.add(c)
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
+    # Empty values are bad
+    c = config.Config(key=config.ConfigKey.SECRET_KEY, value="")
+    s.add(c)
+    self.assertRaises(exc.IntegrityError, s.commit)
+    s.rollback()
 
-        # Short values are bad
-        d["value"] = "a"
-        self.assertRaises(exc.InvalidORMValueError, config.Config, **d)
+    # Short values are bad
+    d["value"] = "a"
+    self.assertRaises(exc.InvalidORMValueError, config.Config, **d)

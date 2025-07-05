@@ -9,7 +9,7 @@ from colorama import Fore
 from nummus import main, version
 
 if TYPE_CHECKING:
-    from tests.conftest import EmptyPortfolio
+    from nummus.portfolio import Portfolio
 
 
 def test_entrypoints() -> None:
@@ -26,20 +26,21 @@ def test_entrypoints() -> None:
         assert stdout == version.__version__
 
 
-def test_unlock_non_existant(empty_portfolio: EmptyPortfolio) -> None:
-    p = empty_portfolio()
-
+def test_unlock_non_existant(empty_portfolio: Portfolio) -> None:
     # Try unlocking non-existent Portfolio
-    args = ["--portfolio", str(p.path.with_suffix(".non-existent")), "unlock"]
+    args = [
+        "--portfolio",
+        str(empty_portfolio.path.with_suffix(".non-existent")),
+        "unlock",
+    ]
     with pytest.raises(SystemExit):
         main.main(args)
 
 
 def test_unlock_successful(
     capsys: pytest.CaptureFixture,
-    empty_portfolio: EmptyPortfolio,
+    empty_portfolio: Portfolio,
 ) -> None:
-    p = empty_portfolio()
-    args = ["--portfolio", str(p.path), "unlock"]
+    args = ["--portfolio", str(empty_portfolio.path), "unlock"]
     assert main.main(args) == 0
     assert capsys.readouterr().out == f"{Fore.GREEN}Portfolio is unlocked\n"

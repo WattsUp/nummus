@@ -9,8 +9,6 @@ if TYPE_CHECKING:
 
     import pytest
 
-    from tests.conftest import RandomString
-
 
 def test_get_non_existant(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "config.ini"
@@ -41,13 +39,12 @@ def test_get_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
 def test_get_populated(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
-    rand_str: RandomString,
+    rand_str: str,
 ) -> None:
     path = tmp_path / "config.ini"
     monkeypatch.setattr(global_config, "_PATH", path)
-    secure_icon = rand_str()
     with path.open("w", encoding="utf-8") as file:
-        file.write(f"[nummus]\nsecure-icon = {secure_icon}\n")
+        file.write(f"[nummus]\nsecure-icon = {rand_str}\n")
 
-    assert global_config.get(global_config.ConfigKey.SECURE_ICON) == secure_icon
-    assert global_config.get("secure-icon") == secure_icon
+    assert global_config.get(global_config.ConfigKey.SECURE_ICON) == rand_str
+    assert global_config.get("secure-icon") == rand_str

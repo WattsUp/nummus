@@ -4,12 +4,17 @@ import datetime
 import random
 import shutil
 import string
+from typing import TYPE_CHECKING
 
 import pytest
+from sqlalchemy import orm
 
-from nummus import global_config
-from nummus.models import base_uri
+from nummus import global_config, sql
+from nummus.models import base, base_uri
 from nummus.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 def id_func(val: object) -> str | None:
@@ -18,7 +23,7 @@ def id_func(val: object) -> str | None:
     return None
 
 
-class RandomString:
+class RandomStringGenerator:
 
     @classmethod
     def __call__(cls, length: int = 20) -> str:
@@ -26,16 +31,26 @@ class RandomString:
 
 
 @pytest.fixture
-def rand_str() -> RandomString:
+def rand_str_generator() -> RandomStringGenerator:
     """Returns a random string generator.
 
     Returns:
         RandomString generator
     """
-    return RandomString()
+    return RandomStringGenerator()
 
 
-class EmptyPortfolio:
+@pytest.fixture
+def rand_str(rand_str_generator: RandomStringGenerator) -> str:
+    """Returns a random string.
+
+    Returns:
+        RandomString generator
+    """
+    return rand_str_generator()
+
+
+class EmptyPortfolioGenerator:
 
     def __init__(self, tmp_path_factory: pytest.TempPathFactory) -> None:
         # Create the portfolio once, then copy the file each time called
@@ -49,13 +64,25 @@ class EmptyPortfolio:
 
 
 @pytest.fixture(scope="session")
-def empty_portfolio(tmp_path_factory: pytest.TempPathFactory) -> EmptyPortfolio:
-    """Returns an empty portfolio.
+def empty_portfolio_generator(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> EmptyPortfolioGenerator:
+    """Returns an empty portfolio generator.
 
     Returns:
         EmptyPortfolio generator
     """
-    return EmptyPortfolio(tmp_path_factory)
+    return EmptyPortfolioGenerator(tmp_path_factory)
+
+
+@pytest.fixture
+def empty_portfolio(empty_portfolio_generator: EmptyPortfolioGenerator) -> Portfolio:
+    """Returns an empty portfolio.
+
+    Returns:
+        Portfolio
+    """
+    return empty_portfolio_generator()
 
 
 @pytest.fixture(autouse=True)
@@ -78,3 +105,20 @@ def today() -> datetime.date:
         today datetime.date
     """
     return datetime.datetime.now().astimezone().date()
+
+
+@pytest.fixture
+def session(tmp_path: Path) -> orm.Session:
+    """Create SQL session.
+
+    Args:
+        tmp_path: Temp path to create DB in
+
+    Returns:
+        Session generator
+    """
+    path = tmp_path / "sql.db"
+    s = orm.Session(sql.get_engine(path, None))
+    base.Base.metadata.create_all(s.get_bind())
+    s.commit()
+    return s

@@ -13,7 +13,7 @@ from nummus import utils
 from tests import conftest
 
 if TYPE_CHECKING:
-    from tests.conftest import RandomString
+    from tests.conftest import RandomStringGenerator
 
 
 @pytest.mark.parametrize(
@@ -33,10 +33,10 @@ def test_camel_to_snake(s: str, c: str) -> None:
 def test_get_input_insecure(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str_generator: RandomStringGenerator,
 ) -> None:
-    prompt = rand_str()
-    prompt_input = rand_str()
+    prompt = rand_str_generator()
+    prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
         print(to_print + prompt_input)  # noqa: T201
@@ -50,10 +50,10 @@ def test_get_input_insecure(
 def test_get_input_insecure_abort(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str_generator: RandomStringGenerator,
 ) -> None:
-    prompt = rand_str()
-    prompt_input = rand_str()
+    prompt = rand_str_generator()
+    prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
         print(to_print + prompt_input)  # noqa: T201
@@ -67,10 +67,10 @@ def test_get_input_insecure_abort(
 def test_get_input_secure(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str_generator: RandomStringGenerator,
 ) -> None:
-    prompt = rand_str()
-    prompt_input = rand_str()
+    prompt = rand_str_generator()
+    prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
         print(to_print)  # noqa: T201
@@ -84,26 +84,24 @@ def test_get_input_secure(
 def test_get_input_secure_abort(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str: str,
 ) -> None:
-    prompt = rand_str()
-
     def mock_get_pass(to_print: str) -> str | None:
         print(to_print)  # noqa: T201
         raise EOFError
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
-    assert utils.get_input(prompt=prompt, secure=True, print_key=False) is None
-    assert capsys.readouterr().out == prompt + "\n"
+    assert utils.get_input(prompt=rand_str, secure=True, print_key=False) is None
+    assert capsys.readouterr().out == rand_str + "\n"
 
 
 def test_get_input_secure_with_icon(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str_generator: RandomStringGenerator,
 ) -> None:
-    prompt = rand_str()
-    prompt_input = rand_str()
+    prompt = rand_str_generator()
+    prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
         print(to_print)  # noqa: T201
@@ -152,13 +150,11 @@ def test_get_password(
 def test_confirm(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    rand_str: RandomString,
+    rand_str: str,
     queue: list[str | None],
     default: bool,
     target: bool | None,
 ) -> None:
-    prompt = rand_str()
-
     retries = len(queue) > 1
 
     def mock_input(to_print: str) -> str | None:
@@ -168,10 +164,10 @@ def test_confirm(
         return queue.pop(0)
 
     monkeypatch.setattr("builtins.input", mock_input)
-    assert utils.confirm(prompt=prompt, default=default) == target
+    assert utils.confirm(prompt=rand_str, default=default) == target
 
     out = capsys.readouterr().out
-    assert prompt in out
+    assert rand_str in out
     if default:
         assert "[Y/n]" in out
     else:
@@ -269,8 +265,8 @@ def test_format_days(d: int, target: str) -> None:
     assert utils.format_days(d) == target
 
 
-def test_format_days_custom_labels(rand_str: RandomString) -> None:
-    labels = [rand_str() for _ in range(4)]
+def test_format_days_custom_labels(rand_str_generator: RandomStringGenerator) -> None:
+    labels = [rand_str_generator() for _ in range(4)]
     assert utils.format_days(2, labels=labels) == f"2 {labels[0]}"
 
 
@@ -945,9 +941,8 @@ def test_clamp_custom_min() -> None:
 
 
 @pytest.mark.parametrize("suffix", ["", "😀"])
-def test_strip_emojis(rand_str: RandomString, suffix: str) -> None:
-    text = rand_str()
-    assert utils.strip_emojis(text + suffix) == text
+def test_strip_emojis(rand_str: str, suffix: str) -> None:
+    assert utils.strip_emojis(rand_str + suffix) == rand_str
 
 
 class _Color:

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
     from pathlib import Path
 
-    from tests.conftest import RandomString
+    from tests.conftest import RandomStringGenerator
 
 
 class Bytes:
@@ -81,7 +81,16 @@ class NoURI(base.Base):
     __table_id__ = None
 
 
-def test_init_properties(tmp_path: Path) -> None:
+@pytest.fixture
+def session(tmp_path: Path) -> orm.Session:
+    """Create SQL session.
+
+    Args:
+        tmp_path: Temp path to create DB in
+
+    Returns:
+        Session generator
+    """
     path = tmp_path / "sql.db"
     s = orm.Session(sql.get_engine(path, None))
     base.Base.metadata.create_all(
@@ -89,148 +98,216 @@ def test_init_properties(tmp_path: Path) -> None:
         tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
     )
     s.commit()
+    return s
 
+
+@pytest.fixture
+def parent_pair(session: orm.Session) -> tuple[orm.Session, Parent]:
+    """Create a Parent.
+
+    Returns:
+        tuple(session, Parent)
+    """
+    p = Parent()
+    session.add(p)
+    session.commit()
+    return session, p
+
+
+@pytest.fixture
+def parent(parent_pair: tuple[orm.Session, Parent]) -> Parent:
+    """Create a Parent.
+
+    Returns:
+        Parent
+    """
+    _, p = parent_pair
+    return p
+
+
+@pytest.fixture
+def child_pair(parent_pair: tuple[orm.Session, Parent]) -> tuple[orm.Session, Child]:
+    """Create a Child.
+
+    Returns:
+        tuple(session, Child)
+    """
+    s, parent = parent_pair
+    c = Child(parent=parent)
+    s.add(c)
+    s.commit()
+    return s, c
+
+
+@pytest.fixture
+def child(parent_pair: tuple[orm.Session, Parent]) -> Child:
+    """Create a Child.
+
+    Returns:
+        Child
+    """
+    s, parent = parent_pair
+    c = Child(parent=parent)
+    s.add(c)
+    s.commit()
+    return c
+
+
+def test_detached() -> None:
     parent = Parent()
     assert parent.id_ is None
     with pytest.raises(exc.NoIDError):
         _ = parent.uri
-    s.add(parent)
-    s.commit()
+
+
+def test_init_properties(parent: Parent) -> None:
     assert parent.id_ is not None
     assert parent.uri is not None
     assert Parent.uri_to_id(parent.uri) == parent.id_
     assert hash(parent) == parent.id_
 
+
+def test_detached_child() -> None:
     child = Child()
     assert child.id_ is None
     assert child.parent is None
     assert child.parent_id is None
-    child.parent = parent
+
+
+def test_link_child(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, parent = parent_pair
+    child = Child(parent=parent)
     s.add(child)
     s.commit()
     assert child.id_ is not None
     assert child.parent == parent
     assert child.parent_id == parent.id_
 
-    with pytest.raises(exc.WrongURITypeError):
-        Parent.uri_to_id(child.uri)
 
+def test_wrong_uri_type(parent: Parent) -> None:
+    with pytest.raises(exc.WrongURITypeError):
+        Child.uri_to_id(parent.uri)
+
+
+def test_set_decimal_none(child_pair: tuple[orm.Session, Child]) -> None:
+    s, child = child_pair
     child.height = None
     s.commit()
     assert child.height is None
 
+
+def test_set_decimal_value(child_pair: tuple[orm.Session, Child]) -> None:
+    s, child = child_pair
     height = Decimal("1.2")
     child.height = height
     s.commit()
     assert isinstance(child.height, Decimal)
     assert child.height == height
 
+
+def test_set_enum(child_pair: tuple[orm.Session, Child]) -> None:
+    s, child = child_pair
     child.color = Derived.RED
     s.commit()
     assert isinstance(child.color, Derived)
     assert child.color == Derived.RED
 
+
+def test_no_uri() -> None:
     no_uri = NoURI(id_=1)
     with pytest.raises(exc.NoURIError):
         _ = no_uri.uri
 
 
-def test_comparators(tmp_path: Path) -> None:
-    path = tmp_path / "sql.db"
-    s = orm.Session(sql.get_engine(path, None))
-    base.Base.metadata.create_all(
-        s.get_bind(),
-        tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
-    )
-    s.commit()
-
+def test_comparators_same_session(session: orm.Session) -> None:
     parent_a = Parent()
     parent_b = Parent()
-    s.add_all([parent_a, parent_b])
-    s.commit()
+    session.add_all([parent_a, parent_b])
+    session.commit()
 
     assert parent_a == parent_a  # noqa: PLR0124
     assert parent_a != parent_b
 
+
+def test_comparators_different_session(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, parent = parent_pair
     # Make a new s to same DB
     with orm.create_session(bind=s.get_bind()) as session_2:
         # Get same parent_a but in a different Python object
         parent_a_queried = (
-            session_2.query(Parent).where(Parent.id_ == parent_a.id_).first()
+            session_2.query(Parent).where(Parent.id_ == parent.id_).first()
         )
-        assert id(parent_a) != id(parent_a_queried)
-        assert parent_a == parent_a_queried
+        assert id(parent) != id(parent_a_queried)
+        assert parent == parent_a_queried
 
 
-def test_map_name(tmp_path: Path, rand_str: RandomString) -> None:
-    path = tmp_path / "sql.db"
-    s = orm.Session(sql.get_engine(path, None))
-    base.Base.metadata.create_all(
-        s.get_bind(),
-        tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
-    )
-    s.commit()
-
+def test_map_name_none(session: orm.Session) -> None:
     with pytest.raises(KeyError, match="Base does not have name column"):
-        base.Base.map_name(s)
+        base.Base.map_name(session)
 
-    parent_a = Parent(name=rand_str())
-    parent_b = Parent(name=rand_str())
-    s.add_all([parent_a, parent_b])
-    s.commit()
+
+def test_map_name_parent(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    parent_a = Parent(name=rand_str_generator())
+    parent_b = Parent(name=rand_str_generator())
+    session.add_all([parent_a, parent_b])
+    session.commit()
 
     target = {
         parent_a.id_: parent_a.name,
         parent_b.id_: parent_b.name,
     }
-    assert Parent.map_name(s) == target
+    assert Parent.map_name(session) == target
 
 
-def test_clean_strings(tmp_path: Path, rand_str: RandomString) -> None:
-    path = tmp_path / "sql.db"
-    s = orm.Session(sql.get_engine(path, None))
-    base.Base.metadata.create_all(
-        s.get_bind(),
-        tables=[Parent.__table__, Child.__table__],  # type: ignore[attr-defined]
-    )
-    s.commit()
-
-    parent = Parent()
-    s.add(parent)
-    s.commit()
-
+def test_clean_strings_none(parent: Parent) -> None:
     parent.name = None
     assert parent.name is None
 
+
+def test_clean_strings_empty(parent: Parent) -> None:
     parent.name = "    "
     assert parent.name is None
 
-    field = rand_str(3)
+
+def test_clean_strings_good(
+    parent: Parent,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    field = rand_str_generator(3)
     parent.name = field
     assert parent.name == field
 
+
+def test_clean_strings_short(parent: Parent) -> None:
     with pytest.raises(exc.InvalidORMValueError):
         parent.name = "a"
 
-    # SQL errors when dirty strings get in
-    s.query(Parent).update({Parent.name: None})
-    s.commit()
 
+def test_string_check_none(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, _ = parent_pair
     with pytest.raises(exc.IntegrityError):
         s.query(Parent).update({Parent.name: ""})
-    s.rollback()
 
+
+def test_string_check_leading(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, _ = parent_pair
     with pytest.raises(exc.IntegrityError):
         s.query(Parent).update({Parent.name: " leading"})
-    s.rollback()
 
+
+def test_string_check_trailing(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, _ = parent_pair
     with pytest.raises(exc.IntegrityError):
         s.query(Parent).update({Parent.name: "trailing "})
-    s.rollback()
 
+
+def test_string_check_short(parent_pair: tuple[orm.Session, Parent]) -> None:
+    s, _ = parent_pair
     with pytest.raises(exc.IntegrityError):
         s.query(Parent).update({Parent.name: "a"})
-    s.rollback()
 
 
 def test_clean_decimals() -> None:
@@ -242,7 +319,11 @@ def test_clean_decimals() -> None:
     assert child.height == Decimal("1.234567")
 
 
-def test_clean_emoji_name(rand_str: RandomString) -> None:
-    text = rand_str().lower()
-    assert base.Base.clean_emoji_name(text.upper()) == text
-    assert base.Base.clean_emoji_name(text + "😀 ") == text
+def test_clean_emoji_name(rand_str: str) -> None:
+    text = rand_str.lower()
+    assert base.Base.clean_emoji_name(text + " 😀 ") == text
+
+
+def test_clean_emoji_name_upper(rand_str: str) -> None:
+    text = rand_str.lower()
+    assert base.Base.clean_emoji_name(text.upper() + " 😀 ") == text

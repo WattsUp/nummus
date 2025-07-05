@@ -1,0 +1,50 @@
+from __future__ import annotations
+
+import datetime
+from decimal import Decimal
+
+from nummus import exceptions as exc
+from nummus import models
+from nummus.models import Asset, AssetCategory, AssetSplit
+
+
+def test_init_properties() -> None:
+    s = self.get_session()
+    models.metadata_create_all(s)
+
+    today = datetime.datetime.now().astimezone().date()
+    today_ord = today.toordinal()
+
+    a = Asset(name=self.random_string(), category=AssetCategory.CASH)
+    s.add(a)
+    s.commit()
+
+    d = {
+        "asset_id": a.id_,
+        "multiplier": self.random_decimal(1, 10),
+        "date_ord": today_ord,
+    }
+
+    v = AssetSplit(**d)
+    s.add(v)
+    s.commit()
+
+    assert v.asset_id == d["asset_id"]
+    assert v.multiplier == d["multiplier"]
+    assert v.date_ord == d["date_ord"]
+
+    # Negative multiplier are bad
+    v.multiplier = Decimal(-1)
+    self.assertRaises(exc.IntegrityError, s.commit)
+    s.rollback()
+
+    # Zero multiplier are bad
+    v.multiplier = Decimal(0)
+    self.assertRaises(exc.IntegrityError, s.commit)
+    s.rollback()
+
+    # Duplicate dates are bad
+    v = AssetSplit(**d)
+    s.add(v)
+    self.assertRaises(exc.IntegrityError, s.commit)
+    s.rollback()

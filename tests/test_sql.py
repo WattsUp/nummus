@@ -11,8 +11,6 @@ from nummus import encryption, sql
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from tests.conftest import RandomString
-
 
 class ORMBase(orm.DeclarativeBase):
     @orm.declared_attr  # type: ignore[attr-defined]
@@ -45,10 +43,10 @@ def test_get_engine_unencrypted(tmp_path: Path) -> None:
         assert b"SQLite" in file.read()
 
 
-def test_get_engine_encrypted(tmp_path: Path, rand_str: RandomString) -> None:
+def test_get_engine_encrypted(tmp_path: Path, rand_str: str) -> None:
     if not encryption.AVAILABLE:
         pytest.skip("Encryption is not installed")
-    key = rand_str().encode()
+    key = rand_str.encode()
     enc, _ = encryption.Encryption.create(key)
 
     # Absolute file
