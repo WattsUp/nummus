@@ -168,7 +168,7 @@ class TestCommon(WebTestBase):
             response: werkzeug.test.TestResponse | None = None
             try:
                 data: dict[str, str] | None = None
-                if method in ["POST", "PUT", "DELETE"]:
+                if method in {"POST", "PUT", "DELETE"}:
                     data = {
                         "name": "",
                         "institution": "",
@@ -190,7 +190,7 @@ class TestCommon(WebTestBase):
                 self.assertEqual(
                     response.status_code,
                     HTTP_CODE_OK,
-                    msg=stderr if stderr else f"{request} {page}",
+                    msg=stderr or f"{request} {page}",
                 )
                 self.assertEqual(response.content_type, "text/html; charset=utf-8")
 

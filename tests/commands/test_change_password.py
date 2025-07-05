@@ -5,6 +5,7 @@ import io
 from unittest import mock
 
 from colorama import Fore
+from typing_extensions import override
 
 from nummus import encryption, portfolio
 from nummus.commands import change_password, create
@@ -15,6 +16,7 @@ from tests.base import TestBase
 class MockPortfolio(portfolio.Portfolio):
 
     # Changing password takes a while so mock the actual function
+    @override
     def change_key(self, key: str) -> None:
         print(f"Changing key to {key}")  # noqa: T201
 

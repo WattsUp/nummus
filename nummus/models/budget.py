@@ -46,7 +46,15 @@ class BudgetGroup(Base):
 
     @orm.validates("name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)
 
 
@@ -69,7 +77,15 @@ class BudgetAssignment(Base):
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)
 
     @classmethod
@@ -512,5 +528,13 @@ class Target(Base):
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)

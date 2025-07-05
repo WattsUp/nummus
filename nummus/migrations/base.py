@@ -44,7 +44,11 @@ class Migrator(ABC):
 
     @classproperty
     def min_version(self) -> Version:
-        """Minimum version that satisfies migrator."""
+        """Minimum version that satisfies migrator.
+
+        Returns:
+            Version
+        """
         return Version(self._VERSION)
 
     def add_column(

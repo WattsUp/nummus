@@ -168,17 +168,23 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["ALL"]
+preview = true
 
 ignore = [
   "FIX002",  # Permit TODOs
   "TD003",   # issue links not required for TODOs
   "I001",    # mismatch between ruff and isort
+  "PLR0904", # Too many public methods
   "PLR0911", # Too many return statements
   "PLR0912", # Too many branches
   "PLR0913", # Too many arguments
+  "PLR0914", # Too many local variables
   "PLR0915", # Too many statements
+  "PLR0917", # Too many positional arguments
+  "CPY001",  # No copyright
   "PT009",   # TODO (WattsUp): Remove
   "PT027",   # TODO (WattsUp): Remove
+  "S413",    # TODO (WattsUp): Remove
 ]
 
 exclude = [
@@ -201,7 +207,7 @@ convention = "google"
   "T201", # Allow printing for commands
 ]
 "tests/*.py" = [
-  "D100", # Disable missing docstrings in tests
+  "D100",    # Disable missing docstrings in tests
   "D101",
   "D102",
   "D103",
@@ -209,7 +215,9 @@ convention = "google"
   "D105",
   "D106",
   "D107",
-  "S608", # Disable possible SQL injection
+  "S608",    # Disable possible SQL injection
+  "PLC2701", # Private import
+  "S404",    # subprocess import
 ]
 
 [tool.ruff.lint.flake8-annotations]

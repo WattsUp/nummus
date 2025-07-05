@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 import re
 import string
 from collections import defaultdict
@@ -98,24 +99,40 @@ class TransactionSplit(Base):
 
     @orm.validates("payee", "memo", "tag", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)
 
     @orm.validates("amount", "asset_quantity", "_asset_qty_unadjusted")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)
 
     @override
     def __setattr__(self, name: str, value: object) -> None:
-        if name in [
+        if name in {
             "parent_id",
             "date_ord",
             "month_ord",
             "payee",
             "cleared",
             "account_id",
-        ]:
+        }:
             msg = (
                 "Call TransactionSplit.parent = Transaction. "
                 f"Do not set parent property '{name}' directly"
@@ -137,7 +154,7 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
         # update text_fields
-        if name in ("memo", "tag"):
+        if name in {"memo", "tag"}:
             self._update_text_fields()
 
     def _update_text_fields(self) -> None:
@@ -170,6 +187,10 @@ class TransactionSplit(Base):
 
         Args:
             multiplier: Adjusted = unadjusted * multiplier
+
+        Raises:
+            NonAssetTransactionError: If transaction does not have
+                asset_quantity_unadjusted
         """
         qty = self.asset_quantity_unadjusted
         if qty is None:
@@ -181,6 +202,10 @@ class TransactionSplit(Base):
 
         Args:
             residual: Error amount in asset_quantity
+
+        Raises:
+            NonAssetTransactionError: If transaction does not have
+                asset_quantity_unadjusted
         """
         qty = self.asset_quantity
         if qty is None:
@@ -290,7 +315,7 @@ class TransactionSplit(Base):
                     matches.append((t_id, n, date_ord))
 
         # Sort by n token matches then date
-        matches = sorted(matches, key=lambda item: (item[1], item[2]), reverse=True)
+        matches = sorted(matches, key=operator.itemgetter(1, 2), reverse=True)
         return [item[0] for item in matches]
 
 
@@ -354,12 +379,28 @@ class Transaction(Base):
 
     @orm.validates("statement", "payee")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)
 
     @property
@@ -539,5 +580,5 @@ class Transaction(Base):
             matches_bonus[t_id] = score
 
         # Sort by best score and return best id
-        best_id = sorted(matches_bonus.items(), key=lambda item: -item[1])[0][0]
+        best_id = min(matches_bonus.items(), key=lambda item: -item[1])[0]
         return set_match(best_id)

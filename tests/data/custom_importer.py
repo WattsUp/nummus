@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing_extensions import override
+
 from nummus.importers import base
 
 
@@ -17,5 +19,6 @@ class BananaBankImporter(base.TransactionImporter):
         _ = buf_pdf
         return suffix == ".pdf"
 
+    @override
     def run(self) -> base.TxnDicts:
         return []

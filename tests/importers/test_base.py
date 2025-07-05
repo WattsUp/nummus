@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing_extensions import override
+
 from nummus import exceptions as exc
 from nummus import importers
 from nummus.importers import base
@@ -19,6 +21,7 @@ class Derived(base.TransactionImporter):
         _ = buf_pdf
         return False
 
+    @override
     def run(self) -> base.TxnDicts:
         return []
 

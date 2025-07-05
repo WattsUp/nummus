@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import math
+import operator
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -442,6 +443,9 @@ def group(uri: str) -> str:
 
     Returns:
         string HTML response
+
+    Raises:
+        BadRequest: If ungrouped is renamed
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -969,7 +973,7 @@ def ctx_target(
     total_to_go = tar.amount - total_assigned
 
     n_months = utils.date_months_between(month, due_date)
-    target_assigned = target_assigned / (n_months + 1)
+    target_assigned /= n_months + 1
 
     return {
         "target_assigned": target_assigned,
@@ -1090,7 +1094,7 @@ def ctx_budget(
         if available < 0:
             g["has_error"] = True
 
-    groups_list = sorted(groups.values(), key=lambda item: item["position"])
+    groups_list = sorted(groups.values(), key=operator.itemgetter("position"))
     groups_list.append(ungrouped)
 
     for g in groups_list:

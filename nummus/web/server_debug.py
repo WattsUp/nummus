@@ -17,7 +17,11 @@ class Handler(gevent.pywsgi.WSGIHandler):
     """Custom WSGIHandler, mainly for request formatting."""
 
     def format_request(self) -> str:
-        """Format request as a single line."""
+        """Format request as a single line.
+
+        Returns:
+            Request log
+        """
         if "X-Real-IP" in self.headers:
             client_address = self.headers["X-Real-IP"]
         elif isinstance(self.client_address, tuple):

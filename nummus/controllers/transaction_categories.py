@@ -89,6 +89,9 @@ def category(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
+    Raises:
+        Forbidden: If locked category is edited
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -174,7 +177,7 @@ def validation() -> str:
     category_id = uri and TransactionCategory.uri_to_id(uri)
     if "name" in args:
         name = TransactionCategory.clean_emoji_name(args["name"])
-        if name == "":
+        if not name:
             return "Required"
         if len(name) < utils.MIN_STR_LEN:
             return f"{utils.MIN_STR_LEN} characters required"

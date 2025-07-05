@@ -71,11 +71,7 @@ class Typos(Base):
             # So long words aren't partially replaced if they contain a short word
             proper_nouns_re = [
                 re.escape(word)
-                for word in sorted(
-                    self._proper_nouns,
-                    key=lambda x: len(x),
-                    reverse=True,
-                )
+                for word in sorted(self._proper_nouns, key=len, reverse=True)
             ]
             # Remove proper nouns indicated by word boundary or space at end
             re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")

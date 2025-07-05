@@ -97,7 +97,14 @@ MONTHS = [
 
 
 def camel_to_snake(s: str) -> str:
-    """Transform CamelCase to snake_case."""
+    """Transform CamelCase to snake_case.
+
+    Args:
+        s: CamelCase to transform
+
+    Returns:
+        snake_case
+    """
     s = _REGEX_CC_SC_0.sub(r"\1_\2", s)  # _ at the start of Words
     return _REGEX_CC_SC_1.sub(r"\1_\2", s).lower()  # _ at then end of Words
 
@@ -190,12 +197,12 @@ def confirm(
         prompt += " [y/N]: "
 
     while True:
-        input_ = input(prompt)
+        input_ = (input(prompt) or "").lower()
         if not input_:
             return default
-        if input_ in ["Y", "y"]:
+        if input_ == "y":
             return True
-        if input_ in ["N", "n"]:
+        if input_ == "n":
             return False
         print("\nPlease enter y or n.\n")  # noqa: T201
 
@@ -249,7 +256,7 @@ def parse_real(s: str | None, precision: int = 2) -> Decimal | None:
     if s is None:
         return None
     clean = _REGEX_REAL_CLEAN.sub("", s)
-    if clean == "":
+    if not clean:
         return None
     value = -Decimal(clean) if "-" in s or "(" in s else Decimal(clean)
     return round(value, precision)
@@ -282,9 +289,9 @@ def parse_bool(s: str | None) -> bool | None:
     Returns:
         Parsed bool
     """
-    if s is None or s == "":
+    if s is None or not s:
         return None
-    return s.lower() in ["true", "t", "1"]
+    return s.lower() in {"true", "t", "1"}
 
 
 def parse_date(s: str | None) -> datetime.date | None:
@@ -296,7 +303,7 @@ def parse_date(s: str | None) -> datetime.date | None:
     Returns:
         Date or None
     """
-    if s is None or s == "":
+    if s is None or not s:
         return None
     return datetime.date.fromisoformat(s)
 
@@ -482,13 +489,13 @@ def period_months(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     end_m = end.month
     months: dict[str, tuple[int, int]] = {}
     while y < end_y or (y == end_y and m <= end_m):
-        _start_of_month = datetime.date(y, m, 1).toordinal()
-        _end_of_month = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
+        start_of_month_ = datetime.date(y, m, 1).toordinal()
+        end_of_month_ = datetime.date(y, m, calendar.monthrange(y, m)[1]).toordinal()
         months[f"{y:04}-{m:02}"] = (
-            max(start_ord, _start_of_month),
-            min(end_ord, _end_of_month),
+            max(start_ord, start_of_month_),
+            min(end_ord, end_of_month_),
         )
-        y = y + (m // 12)
+        y += m // 12
         m = (m % 12) + 1
     return months
 
@@ -713,7 +720,7 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
         cost_basis = v - daily_profit if prev_value == 0 else prev_value
 
         if cost_basis != 0:
-            current_ratio = current_ratio * (1 + daily_profit / cost_basis)
+            current_ratio *= 1 + daily_profit / cost_basis
             current_return = current_ratio - 1
 
         daily_returns[i] = current_return
@@ -733,6 +740,9 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
 
     Returns:
         Annual profit ratio [-1, inf), rounded to 6 decimals due to float conversion
+
+    Raises:
+        TypeError: If optimize result is not float
     """
     if not any(values):
         return Decimal(0)
@@ -780,6 +790,10 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
 
     Returns:
         list of lines to print
+
+    Raises:
+        ValueError: If table has no rows
+        ValueError: If first row is None
     """
     if len(table) < 1:
         msg = "Table has no rows"
@@ -948,7 +962,18 @@ class classproperty(Generic[T]):  # noqa: N801
         self.__doc__ = fget.__doc__
 
     def __get__(self, _: object, cls: type | None = None) -> T:
-        """Get classproperty value."""
+        """Get classproperty value.
+
+        Args:
+            cls: Class to get value from
+
+        Returns:
+            Value
+
+        Raises:
+            TypeError: If decorator is not on a class
+            TypeError: If fget is not set
+        """
         if cls is None:  # pragma: no cover
             # Don't need to test debug code
             msg = "Decorator not on a class"
@@ -968,6 +993,9 @@ def tokenize_search_str(search_str: str) -> tuple[set[str], set[str], set[str]]:
 
     Returns:
         tokens_must, tokens_can,tokens_not
+
+    Raises:
+        EmptySearchError: If cleaned search_str is too short
     """
     # Clean a bit
     for s in string.punctuation:

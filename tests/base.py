@@ -75,7 +75,7 @@ class MockTicker:
         if not raise_errors:
             msg = "raise_errors must be True"
             raise ValueError(msg)
-        if self._symbol not in ["BANANA", "^BANANA"]:
+        if self._symbol not in {"BANANA", "^BANANA"}:
             msg = f"{self._symbol}: No timezone found, symbol may be delisted"
             raise Exception(msg)  # noqa: TRY002
 
@@ -91,7 +91,7 @@ class MockTicker:
         )
         while dt.date() <= end:
             weekday = dt.weekday()
-            if weekday in [5, 6]:
+            if weekday in {5, 6}:
                 # No valuations on weekends
                 dt += datetime.timedelta(days=1)
                 continue

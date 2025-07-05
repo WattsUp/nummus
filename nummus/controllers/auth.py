@@ -103,6 +103,9 @@ def login() -> str | werkzeug.Response:
 
     Returns:
         HTML response
+
+    Raises:
+        ProtectedObjectNotFoundError: If WEB_KEY not found
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
@@ -119,7 +122,7 @@ def login() -> str | werkzeug.Response:
         )
         if expected_encoded is None:  # pragma: no cover
             # Don't need to test ProtectedObjectNotFoundError
-            msg = "Web user not found in portfolio"
+            msg = "WEB_KEY not found in portfolio"
             raise exc.ProtectedObjectNotFoundError(msg)
 
         expected = p.decrypt(expected_encoded)

@@ -45,6 +45,9 @@ class TransactionImporter(ABC):
             Provide one or the other
             buf: Contents of file
             buf_pdf: Contents of PDF pages as text
+
+        Raises:
+            ValueError: If both bufs are None
         """
         super().__init__()
 

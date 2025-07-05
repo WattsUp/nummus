@@ -35,7 +35,7 @@ def ctx_base() -> dict[str, object]:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     # list[(group label, subpages {label: (icon name, endpoint, link type)})]
-    nav_items: list[tuple[str, dict[str, None | tuple[str, str, LinkType]]]] = [
+    nav_items: list[tuple[str, dict[str, tuple[str, str, LinkType] | None]]] = [
         (
             "",
             {
@@ -184,6 +184,9 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
         content_template: Path to content template
         title: Title of the page
         context: context passed to render_template
+
+    Returns:
+        Whole page or just main body
     """
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content

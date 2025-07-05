@@ -105,8 +105,9 @@ class Server(gunicorn.app.base.BaseApplication):
             host=self._host,
         )
 
+    @classmethod
     def child_exit(
-        self,
+        cls,
         _,
         worker: gunicorn.workers.base.Worker,
     ) -> None:  # pragma: no cover

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 from colorama import Fore
+from typing_extensions import override
 
 from nummus import encryption, portfolio
 from nummus.commands import base
@@ -21,6 +22,7 @@ class MockCommand(base.BaseCommand):
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
         _ = parser
 
+    @override
     def run(self) -> int:
         return 0
 

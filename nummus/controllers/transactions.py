@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -944,7 +945,7 @@ def ctx_options(
             (accounts[acct_id], Account.id_to_uri(acct_id))
             for acct_id, in query_options.yield_per(YIELD_PER)
         ],
-        key=lambda item: item[0],
+        key=operator.itemgetter(0),
     )
     if len(options_account) == 0 and selected_account:
         acct_id = Account.uri_to_id(selected_account)
@@ -960,7 +961,7 @@ def ctx_options(
             )
             for cat_id, in query_options.yield_per(YIELD_PER)
         ],
-        key=lambda item: item[2],
+        key=operator.itemgetter(2),
     )
     if len(options_category) == 0 and selected_category:
         cat_id = TransactionCategory.uri_to_id(selected_category)
@@ -1179,7 +1180,7 @@ def _table_results(
         )
 
     # sort by reverse date or search ranking
-    t_splits_flat = sorted(t_splits_flat, key=lambda item: item[1])
+    t_splits_flat = sorted(t_splits_flat, key=operator.itemgetter(1))
 
     # Split by date boundaries but don't put dates together
     # since that messes up search ranking
@@ -1222,7 +1223,7 @@ def _table_title(
         Title string
 
     Raises:
-        exc.http.BadRequest: period is unknown
+        BadRequest: period is unknown
     """
     if len(flask.request.args) == 0:
         return "Transactions"

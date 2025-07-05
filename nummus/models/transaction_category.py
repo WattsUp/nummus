@@ -83,7 +83,15 @@ class TransactionCategory(Base):
 
     @orm.validates("name", "emoji_name")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field)
 
     @orm.validates("essential")
@@ -97,15 +105,16 @@ class TransactionCategory(Base):
             field
 
         Raises:
-            InvalidORMValueError if field is essential
+            InvalidORMValueError: If field is essential
+            TypeError: If field is not bool
         """
         if not isinstance(field, bool):
             msg = f"field is not of type bool: {type(field)}"
             raise TypeError(msg)
-        if field and self.group in (
+        if field and self.group in {
             TransactionCategoryGroup.INCOME,
             TransactionCategoryGroup.OTHER,
-        ):
+        }:
             msg = f"{self.group.name.capitalize()} cannot be essential"
             raise exc.InvalidORMValueError(msg)
         return field
@@ -289,7 +298,7 @@ class TransactionCategory(Base):
             tuple(id_, URI)
 
         Raises:
-            ProtectedObjectNotFound if not found
+            ProtectedObjectNotFoundError: If not found
         """
         try:
             id_ = (

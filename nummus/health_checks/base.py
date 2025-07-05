@@ -41,13 +41,13 @@ class Base(ABC):
         self._p = p
 
     @classproperty
-    def name(cls) -> str:  # noqa: N805
-        """Health check name."""
+    def name(cls) -> str:  # noqa: N805,
+        """Health check name."""  # noqa: DOC201
         return utils.camel_to_snake(cls.__name__).replace("_", " ").title()
 
     @classproperty
     def description(cls) -> str:  # noqa: N805
-        """Health check description."""
+        """Health check description."""  # noqa: DOC201
         return cls._DESC
 
     @property
@@ -62,7 +62,7 @@ class Base(ABC):
 
     @classproperty
     def is_severe(cls) -> bool:  # noqa: N805
-        """True if issues are severe."""
+        """True if issues are severe."""  # noqa: DOC201
         return cls._SEVERE
 
     @abstractmethod

@@ -99,7 +99,7 @@ class WebTestBase(TestBase):
                 current_tag, parent = item
                 current_node = parent
                 self.assertEqual(current_tag, tag[1:])
-            elif tag in ["link", "meta", "path", "input", "hr"]:
+            elif tag in {"link", "meta", "path", "input", "hr"}:
                 # Tags without close tags
                 current_node[tag] = {}
             else:

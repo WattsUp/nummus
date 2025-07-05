@@ -145,7 +145,7 @@ def obj_session(m: Base) -> orm.Session:
         Session
 
     Raises:
-        UnboundExecutionError if model is unbound
+        UnboundExecutionError: if model is unbound
     """
     s = orm.object_session(m)
     if s is None:

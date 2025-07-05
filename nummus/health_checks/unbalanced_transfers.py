@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 import textwrap
 from collections import defaultdict
 from decimal import Decimal
@@ -113,10 +114,7 @@ class UnbalancedTransfers(Base):
                     i += 1
             all_splits.extend((account, amount, t_cat_id) for account, amount in splits)
 
-        all_splits = sorted(
-            all_splits,
-            key=lambda item: (item[2], item[0], item[1]),
-        )
+        all_splits = sorted(all_splits, key=operator.itemgetter(2, 0, 1))
         acct_len = max(len(item[0]) for item in all_splits)
         msg_l.extend(
             f"  {acct:{acct_len}}: "

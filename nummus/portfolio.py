@@ -6,6 +6,7 @@ import base64
 import datetime
 import hashlib
 import io
+import operator
 import re
 import secrets
 import shutil
@@ -65,8 +66,8 @@ class Portfolio:
             check_migration: True will check if migration is required
 
         Raises:
-            FileNotFoundError if database does not exist
-            MigrationRequiredError if migration is required
+            FileNotFoundError: If database does not exist
+            MigrationRequiredError: If migration is required
         """
         self._path_db = Path(path).resolve().with_suffix(".db")
         self._path_salt = self._path_db.with_suffix(".nacl")
@@ -115,7 +116,7 @@ class Portfolio:
             True if Portfolio is encrypted
 
         Raises:
-            FileNotFound if database or configuration does not exist
+            FileNotFoundError: If database or configuration does not exist
         """
         path_db = Path(path)
         if not path_db.exists():
@@ -143,7 +144,7 @@ class Portfolio:
             Portfolio linked to newly created database
 
         Raises:
-            FileExistsError if database already exists
+            FileExistsError: If database already exists
         """
         path_db = Path(path).resolve()
         if path_db.exists():
@@ -225,8 +226,8 @@ class Portfolio:
         """Unlock the database.
 
         Raises:
-            UnlockingError if database file fails to open
-            ProtectedObjectNotFoundError if URI cipher is missing
+            UnlockingError: If database file fails to open
+            ProtectedObjectNotFoundError: If URI cipher is missing
         """
         try:
             with self.begin_session() as s:
@@ -283,7 +284,7 @@ class Portfolio:
             base64 encoded encrypted object
 
         Raises:
-            NotEncryptedError if portfolio does not support encryption
+            NotEncryptedError: If portfolio does not support encryption
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -299,7 +300,7 @@ class Portfolio:
             bytes decoded object
 
         Raises:
-            NotEncryptedError if portfolio does not support encryption
+            NotEncryptedError: If portfolio does not support encryption
         """
         if self._enc is None:
             raise exc.NotEncryptedError
@@ -322,6 +323,9 @@ class Portfolio:
 
         Returns:
             Version of database
+
+        Raises:
+            ProtectedObjectNotFoundError: If VERSION is not found
         """
         with self.begin_session() as s:
             try:
@@ -357,10 +361,10 @@ class Portfolio:
             force: True will not check for already imported files
 
         Raises:
-            FileAlreadyImportedError if file has already been imported
-            UnknownImporterError if no importer is found for file
-            TypeError if importer returns wrong types
-            KeyError if account or asset cannot be resolved
+            FileAlreadyImportedError: If file has already been imported
+            FutureTransactionError: If transaction date is in the future
+            FailedImportError: If importer encounters an error
+            EmptyImportError: If importer returns no transactions
         """
         # Compute hash of file contents to check if already imported
         sha = hashlib.sha256()
@@ -487,8 +491,9 @@ class Portfolio:
         t_split.parent = txn
         s.add_all((txn, t_split))
 
+    @classmethod
     def _import_asset_transaction(
-        self,
+        cls,
         s: orm.Session,
         d: TxnDict,
         acct_id: int,
@@ -593,8 +598,9 @@ class Portfolio:
         msg = f"'{category_name}' is not a valid category for asset transaction"
         raise ValueError(msg)
 
+    @classmethod
     def find(
-        self,
+        cls,
         s: orm.Session,
         model: type[Base],
         search: str,
@@ -612,7 +618,7 @@ class Portfolio:
             tuple(id_, name)
 
         Raises:
-            LookupError if object not found
+            LookupError: if object not found
         """
         id_, name = cache.get(search, (None, None))
         if id_ is not None:
@@ -696,6 +702,9 @@ class Portfolio:
 
         Returns:
             List[(tar_ver, created timestamp), ...]
+
+        Raises:
+            InvalidBackupTarError: If backup is missing timestamp
         """
         backups: list[tuple[int, datetime.datetime]] = []
 
@@ -726,7 +735,7 @@ class Portfolio:
                 ts = datetime.datetime.fromisoformat(file_ts.read().decode())
                 ts = ts.replace(tzinfo=datetime.timezone.utc)
                 backups.append((tar_ver, ts))
-        return sorted(backups, key=lambda item: item[0])
+        return sorted(backups, key=operator.itemgetter(0))
 
     def clean(self) -> tuple[int, int]:
         """Delete any unused files, creates a new backup.
@@ -757,7 +766,7 @@ class Portfolio:
 
         # Delete all files that start with name except the fresh backups
         for file in parent.iterdir():
-            if file in (path_backup, path_backup_optimized):
+            if file in {path_backup, path_backup_optimized}:
                 continue
             if file == self._path_importers:
                 continue
@@ -792,7 +801,8 @@ class Portfolio:
             tar_ver: Backup version to restore, None will use latest
 
         Raises:
-            FileNotFoundError if backup does not exist
+            FileNotFoundError: If backup does not exist
+            InvalidBackupTarError: If backup is missing required files
         """
         path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
         path_db = path_db.resolve().with_suffix(".db")
@@ -855,7 +865,7 @@ class Portfolio:
             latest version
 
         Raises:
-            FileNotFoundError if no backups exists
+            FileNotFoundError: if no backups exists
         """
         parent = path_db.parent
         stem = path_db.stem

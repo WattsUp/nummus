@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -106,7 +107,15 @@ class AssetSplit(Base):
 
     @orm.validates("multiplier")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)
 
 
@@ -135,7 +144,15 @@ class AssetValuation(Base):
 
     @orm.validates("value")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimal fields satisfy constraints."""
+        """Validates decimal fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_decimals(key, field)
 
 
@@ -187,7 +204,15 @@ class Asset(Base):
 
     @orm.validates("name", "description", "ticker")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints."""
+        """Validates string fields satisfy constraints.
+
+        Args:
+            key: Field being updated
+            field: Updated value
+
+        Returns:
+            field
+        """
         return self.clean_strings(key, field, short_check=key != "ticker")
 
     @classmethod
@@ -286,7 +311,7 @@ class Asset(Base):
 
         assets_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for a_id, valuations in valuations_assets.items():
-            valuations_sorted = sorted(valuations, key=lambda item: item[0])
+            valuations_sorted = sorted(valuations, key=operator.itemgetter(0))
             if a_id in interpolated_assets:
                 assets_values[a_id] = utils.interpolate_linear(valuations_sorted, n)
             else:
@@ -335,7 +360,7 @@ class Asset(Base):
             s_date_ord: int
             s_multiplier: Decimal
             # Compound splits as we go
-            multiplier = multiplier * s_multiplier
+            multiplier *= s_multiplier
             splits.append((s_date_ord, multiplier))
         splits.reverse()
         try:
@@ -492,8 +517,8 @@ class Asset(Base):
             Might be None if there are no Transactions for this Asset
 
         Raises:
-            NoAssetWebSourceError if Asset has no ticker
-            AssetWebError if failed to download data
+            NoAssetWebSourceError: If Asset has no ticker
+            AssetWebError: If failed to download data
         """
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
@@ -519,7 +544,7 @@ class Asset(Base):
         if start_ord is None or end_ord is None:
             return None, None
 
-        start_ord = start_ord - utils.DAYS_IN_WEEK
+        start_ord -= utils.DAYS_IN_WEEK
         end_ord = today_ord if through_today else end_ord + utils.DAYS_IN_WEEK
 
         start = datetime.date.fromordinal(start_ord)
@@ -579,8 +604,7 @@ class Asset(Base):
         """Update AssetSector from web sources.
 
         Raises:
-            NoAssetWebSourceError if Asset has no ticker
-            AssetWebError if failed to download data
+            NoAssetWebSourceError: If Asset has no ticker
         """
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
@@ -647,6 +671,9 @@ class Asset(Base):
 
         Returns:
             list[price ratios]
+
+        Raises:
+            ProtectedObjectNotFoundError: If index is not found
         """
         try:
             a_id = s.query(Asset.id_).where(Asset.name == name).one()[0]
@@ -663,9 +690,6 @@ class Asset(Base):
 
         Args:
             s: SQL session to use
-
-        Returns:
-            list[price ratios]
         """
         indices: dict[str, dict[str, str]] = {
             "^GSPC": {

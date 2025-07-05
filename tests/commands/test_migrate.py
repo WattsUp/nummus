@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from unittest import mock
 
 from colorama import Fore
+from typing_extensions import override
 
 from nummus import migrations
 from nummus.commands import create, migrate
@@ -20,6 +21,7 @@ class MockMigrator(migrations.Migrator):
 
     _VERSION = "999.0.0"
 
+    @override
     def migrate(self, p: portfolio.Portfolio) -> list[str]:
         _ = p
         return ["Comments encountered during migration"]

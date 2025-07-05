@@ -30,8 +30,11 @@ def get_importers(extra: Path | None) -> Sequence[type[TransactionImporter]]:
     Args:
         extra: Path to extra importers directory
 
-    Return:
+    Returns:
         List of base importers and any in extra directory
+
+    Raises:
+        ImportError: If importer fails to import
     """
     available: list[type[TransactionImporter]] = [
         CSVTransactionImporter,
@@ -84,7 +87,7 @@ def get_importer(
         Initialized Importer
 
     Raises:
-        UnknownImporterError if an importer cannot be found
+        UnknownImporterError: if an importer cannot be found
     """
     suffix = path.suffix.lower()
 

@@ -60,8 +60,8 @@ def find(s: orm.Session, cls: type[T], uri: str) -> T:
         Object
 
     Raises:
-        HTTPError(400) if URI is malformed
-        HTTPError(404) if object is not found
+        BadRequest: If URI is malformed
+        NotFound: If object is not found
     """
     try:
         id_ = cls.uri_to_id(uri)
@@ -84,6 +84,9 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     Returns:
         start, end dates
         start is None for "all"
+
+    Raises:
+        BadRequest: If period is unknown
     """
     today = datetime.datetime.now().astimezone().date()
     if period == "1yr":
@@ -167,7 +170,7 @@ def validate_string(
         Error message or ""
     """
     value = value.strip()
-    if value == "":
+    if not value:
         return "Required" if is_required else ""
     if check_length and len(value) < utils.MIN_STR_LEN:
         # Ticker can be short
@@ -224,7 +227,7 @@ def validate_date(
         Error message or ""
     """
     value = value.strip()
-    if value == "":
+    if not value:
         return "Required" if is_required else ""
     try:
         date = utils.parse_date(value)
@@ -270,7 +273,7 @@ def validate_real(
         Error message or ""
     """
     value = value.strip()
-    if value == "":
+    if not value:
         return "Required" if is_required else ""
     n = utils.evaluate_real_statement(value)
     if n is None:
@@ -297,7 +300,7 @@ def validate_int(
         Error message or ""
     """
     value = value.strip()
-    if value == "":
+    if not value:
         return "Required" if is_required else ""
     try:
         n = int(value)

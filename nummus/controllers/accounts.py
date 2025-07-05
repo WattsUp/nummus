@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
@@ -625,7 +626,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
 
     # Removed empty categories and sort
     categories = {
-        cat: sorted(accounts, key=lambda acct: acct["name"])
+        cat: sorted(accounts, key=operator.itemgetter("name"))
         for cat, accounts in categories.items()
         if len(accounts) > 0
     }

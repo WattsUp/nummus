@@ -2,19 +2,10 @@ from __future__ import annotations
 
 import shutil
 
-from nummus import migrations, portfolio
+from nummus import portfolio
 from nummus.migrations.v_0_2 import MigratorV0_2
 from nummus.models import dump_table_configs, Transaction, TransactionSplit
 from tests.base import TestBase
-
-
-class MockMigrator(migrations.Migrator):
-
-    _VERSION = "999.0.0"
-
-    def migrate(self, p: portfolio.Portfolio) -> list[str]:
-        _ = p
-        return ["Comments"]
 
 
 class TestMigratorV0_2(TestBase):  # noqa: N801

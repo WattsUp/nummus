@@ -32,6 +32,9 @@ class EncryptionAES(base.EncryptionInterface):
         Args:
             key: encryption key
             config: Encryption config string
+
+        Raises:
+            UnknownEncryptionVersionError: If encryption version is unknown
         """
         super().__init__(key, config)
         key = key.encode() if isinstance(key, str) else bytes(key)
