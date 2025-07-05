@@ -12,14 +12,9 @@ if TYPE_CHECKING:
     from tests.conftest import RandomString
 
 
-def test_get(
-    monkeypatch: pytest.MonkeyPatch,
-    tmp_path: Path,
-    rand_str: RandomString,
-) -> None:
+def test_get_non_existant(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     path = tmp_path / "config.ini"
     monkeypatch.setattr(global_config, "_PATH", path)
-    global_config._CACHE.clear()  # noqa: SLF001
 
     # Config file doesn't exist so expect defaults
     config = global_config.get()
@@ -28,6 +23,10 @@ def test_get(
         assert config.pop(k) == v
     assert len(config) == 0
 
+
+def test_get_empty(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    path = tmp_path / "config.ini"
+    monkeypatch.setattr(global_config, "_PATH", path)
     with path.open("w", encoding="utf-8") as file:
         file.write("[nummus]\n")
 
@@ -38,6 +37,14 @@ def test_get(
         assert config.pop(k) == v
     assert len(config) == 0
 
+
+def test_get_populated(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    rand_str: RandomString,
+) -> None:
+    path = tmp_path / "config.ini"
+    monkeypatch.setattr(global_config, "_PATH", path)
     secure_icon = rand_str()
     with path.open("w", encoding="utf-8") as file:
         file.write(f"[nummus]\nsecure-icon = {secure_icon}\n")

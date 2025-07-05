@@ -7,43 +7,30 @@ from typing import TYPE_CHECKING
 
 import numpy_financial as npf
 import pytest
-from colorama import Fore
 
 from nummus import exceptions as exc
 from nummus import utils
+from tests import conftest
 
 if TYPE_CHECKING:
     from tests.conftest import RandomString
 
 
-def test_camel_to_snake() -> None:
-    s = "CamelCase"
-    target = "camel_case"
-    result = utils.camel_to_snake(s)
-    assert result == target
-
-    s = "Camel"
-    target = "camel"
-    result = utils.camel_to_snake(s)
-    assert result == target
-
-    s = "camel"
-    target = "camel"
-    result = utils.camel_to_snake(s)
-    assert result == target
-
-    s = "HTTPClass"
-    target = "http_class"
-    result = utils.camel_to_snake(s)
-    assert result == target
-
-    s = "HTTPClassXYZ"
-    target = "http_class_xyz"
-    result = utils.camel_to_snake(s)
-    assert result == target
+@pytest.mark.parametrize(
+    ("s", "c"),
+    [
+        ("CamelCase", "camel_case"),
+        ("Camel", "camel"),
+        ("camel", "camel"),
+        ("HTTPClass", "http_class"),
+        ("HTTPClassXYZ", "http_class_xyz"),
+    ],
+)
+def test_camel_to_snake(s: str, c: str) -> None:
+    assert utils.camel_to_snake(s) == c
 
 
-def test_get_input(
+def test_get_input_insecure(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     rand_str: RandomString,
@@ -55,233 +42,324 @@ def test_get_input(
         print(to_print + prompt_input)  # noqa: T201
         return prompt_input
 
-    def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
-        return prompt_input
-
-    def mock_input_interrupt(to_print: str) -> None:
-        print(to_print + prompt_input)  # noqa: T201
-        raise KeyboardInterrupt
-
-    def mock_get_pass_eof(to_print: str) -> None:
-        print(to_print)  # noqa: T201
-        raise EOFError
-
     monkeypatch.setattr("builtins.input", mock_input)
     assert utils.get_input(prompt=prompt, secure=False) == prompt_input
     assert capsys.readouterr().out == prompt + prompt_input + "\n"
+
+
+def test_get_input_insecure_abort(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    rand_str: RandomString,
+) -> None:
+    prompt = rand_str()
+    prompt_input = rand_str()
+
+    def mock_input(to_print: str) -> str | None:
+        print(to_print + prompt_input)  # noqa: T201
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr("builtins.input", mock_input)
+    assert utils.get_input(prompt=prompt, secure=False) is None
+    assert capsys.readouterr().out == prompt + prompt_input + "\n"
+
+
+def test_get_input_secure(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    rand_str: RandomString,
+) -> None:
+    prompt = rand_str()
+    prompt_input = rand_str()
+
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print)  # noqa: T201
+        return prompt_input
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
     assert utils.get_input(prompt=prompt, secure=True, print_key=False) == prompt_input
     assert capsys.readouterr().out == prompt + "\n"
 
-    assert utils.get_input(prompt=prompt, secure=True, print_key=True) == prompt_input
-    assert capsys.readouterr().out == "\u26bf  " + prompt + "\n"
 
-    monkeypatch.setattr("builtins.input", mock_input_interrupt)
-    assert utils.get_input(prompt=prompt, secure=False) is None
-    assert capsys.readouterr().out == prompt + prompt_input + "\n"
-
-    monkeypatch.setattr("getpass.getpass", mock_get_pass_eof)
-    assert utils.get_input(prompt=prompt, secure=True, print_key=False) is None
-    assert capsys.readouterr().out == prompt + "\n"
-
-
-def test_get_password(
+def test_get_input_secure_abort(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
     rand_str: RandomString,
 ) -> None:
-    key = rand_str()
-    queue: list[str | None] = []
+    prompt = rand_str()
+
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print)  # noqa: T201
+        raise EOFError
+
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
+    assert utils.get_input(prompt=prompt, secure=True, print_key=False) is None
+    assert capsys.readouterr().out == prompt + "\n"
+
+
+def test_get_input_secure_with_icon(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    rand_str: RandomString,
+) -> None:
+    prompt = rand_str()
+    prompt_input = rand_str()
+
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print)  # noqa: T201
+        return prompt_input
+
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
+    assert utils.get_input(prompt=prompt, secure=True, print_key=True) == prompt_input
+    assert capsys.readouterr().out == "\u26bf  " + prompt + "\n"
+
+
+@pytest.mark.parametrize(
+    ("queue", "target"),
+    [
+        (["password", "password"], "password"),
+        (["short", "password", "typo", "password", "password"], "password"),
+        ([None], None),
+        (["password", None], None),
+    ],
+)
+def test_get_password(
+    monkeypatch: pytest.MonkeyPatch,
+    queue: list[str | None],
+    target: str,
+) -> None:
 
     def mock_input(to_print: str, *, secure: bool) -> str | None:
         assert secure
+        print(to_print)  # noqa: T201
+        return queue.pop(0)
+
+    monkeypatch.setattr(utils, "get_input", mock_input)
+
+    assert utils.get_password() == target
+
+
+@pytest.mark.parametrize(
+    ("queue", "default", "target"),
+    [
+        ([None], False, False),
+        ([None], True, True),
+        (["Y"], False, True),
+        (["N"], False, False),
+        (["bad", "y"], False, True),
+    ],
+)
+def test_confirm(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    rand_str: RandomString,
+    queue: list[str | None],
+    default: bool,
+    target: bool | None,
+) -> None:
+    prompt = rand_str()
+
+    retries = len(queue) > 1
+
+    def mock_input(to_print: str) -> str | None:
         print(to_print)  # noqa: T201
         if len(queue) == 1:
             return queue[0]
         return queue.pop(0)
 
-    monkeypatch.setattr(utils, "get_input", mock_input)
-
-    queue = [key, key]
-    target = "Please enter password: \nPlease confirm password: \n"
-    assert utils.get_password() == key
-    assert capsys.readouterr().out == target
-
-    queue = [rand_str(7), key, key + "typo", key, key]
-    target = (
-        "Please enter password: \n"
-        f"{Fore.RED}Password must be at least 8 characters\n"
-        "Please enter password: \n"
-        "Please confirm password: \n"
-        f"{Fore.RED}Passwords must match\n"
-        "Please enter password: \n"
-        "Please confirm password: \n"
-    )
-    assert utils.get_password() == key
-    assert capsys.readouterr().out == target
-
-    queue = [None]
-    target = "Please enter password: \n"
-    assert utils.get_password() is None
-    assert capsys.readouterr().out == target
-
-    queue = [key, None]
-    target = "Please enter password: \nPlease confirm password: \n"
-    assert utils.get_password() is None
-    assert capsys.readouterr().out == target
-
-
-def test_confirm(monkeypatch: pytest.MonkeyPatch, rand_str: RandomString) -> None:
-    prompt = rand_str()
-    prompt_input = rand_str(length=50)
-
-    monkeypatch.setattr("builtins.input", lambda _: None)
-    assert not utils.confirm(prompt=None, default=False)
-    assert utils.confirm(prompt=prompt, default=True)
-
-    monkeypatch.setattr("builtins.input", lambda _: "Y")
-    assert utils.confirm(prompt=prompt)
-
-    monkeypatch.setattr("builtins.input", lambda _: "N")
-    assert not utils.confirm(prompt=prompt)
-
-    queue = [prompt_input, "y"]
-
-    def mock_input(_) -> str | None:
-        if len(queue) == 1:
-            return queue[0]
-        return queue.pop(0)
-
     monkeypatch.setattr("builtins.input", mock_input)
-    assert utils.confirm(prompt=prompt)
+    assert utils.confirm(prompt=prompt, default=default) == target
+
+    out = capsys.readouterr().out
+    assert prompt in out
+    if default:
+        assert "[Y/n]" in out
+    else:
+        assert "[y/N]" in out
+
+    assert ("Please enter y or n" in out) == retries
 
 
-def test_evaluate_real_statement() -> None:
-    assert utils.evaluate_real_statement(None) is None
-
-    s = "(+21.3e-5*-.1234e5/81.7)*100"
-    target = Decimal("21.3e-5") * Decimal("-.1234e5") / Decimal("81.7") * 100
-    assert utils.evaluate_real_statement(s) == round(target, 2)
-
-    assert utils.evaluate_real_statement("2>3") is None
-    assert utils.evaluate_real_statement("2+5j") is None
-
-    s = "(+21.3e-5*-.1234e5/81.7)*"
-    assert utils.evaluate_real_statement(s) is None
-    s = "__import__('os').system('rm -rf /')"
-    assert utils.evaluate_real_statement(s) is None
-
-
-def test_parse_real() -> None:
-    assert utils.parse_real(None) is None
-    assert utils.parse_real("") is None
-    assert utils.parse_real("Not a number") is None
-
-    assert utils.parse_real("1000.1") == Decimal("1000.1")
-    assert utils.parse_real("1000") == Decimal(1000)
-    assert utils.parse_real("1,000.101") == Decimal("1000.1")
-    assert utils.parse_real("$1,000.101") == Decimal("1000.1")
-    assert utils.parse_real("$1,000.101", precision=3) == Decimal("1000.101")
-    assert utils.parse_real("-$1,000.101") == Decimal("-1000.1")
-    assert utils.parse_real("-$1,000.101", precision=3) == Decimal("-1000.101")
+@pytest.mark.parametrize(
+    ("s", "target"),
+    [
+        (None, None),
+        ("(+21.3e-5*-.1234e5/81.7)*100", Decimal("-3.22")),
+        ("2>3", None),
+        ("2+5j", None),
+        ("(+21.3e-5*-.1234e5/81.7)*", None),
+        ("__import__('os').system('rm -rf /')", None),
+    ],
+)
+def test_evaluate_real_statement(s: str | None, target: Decimal | None) -> None:
+    assert utils.evaluate_real_statement(s) == target
 
 
-def test_format_financial() -> None:
-    assert utils.format_financial(Decimal("1000.1")) == "$1,000.10"
-    assert utils.format_financial(Decimal("1000.1"), plus=True) == "+$1,000.10"
-    assert utils.format_financial(Decimal("-1000.1")) == "-$1,000.10"
-    assert utils.format_financial(Decimal(0)) == "$0.00"
+@pytest.mark.parametrize(
+    ("s", "precision", "target"),
+    [
+        (None, 2, None),
+        ("", 2, None),
+        ("Not a number", 2, None),
+        ("1000.1", 2, Decimal("1000.1")),
+        ("1000", 2, Decimal(1000)),
+        ("$1,000.101", 2, Decimal("1000.1")),
+        ("$1,000.101", 3, Decimal("1000.101")),
+        ("-$1,000.101", 2, Decimal("-1000.1")),
+        ("-$1,000.101", 3, Decimal("-1000.101")),
+    ],
+)
+def test_parse_real(s: str | None, precision: int, target: Decimal | None) -> None:
+    assert utils.parse_real(s, precision=precision) == target
 
 
-def test_parse_bool() -> None:
-    assert utils.parse_bool("") is None
-    assert utils.parse_bool("TRUE")
-    assert not utils.parse_bool("FALSE")
-    assert utils.parse_bool("t")
-    assert not utils.parse_bool("f")
-    assert utils.parse_bool("1")
-    assert not utils.parse_bool("0")
+@pytest.mark.parametrize(
+    ("x", "plus", "target"),
+    [
+        (Decimal("1000.1"), False, "$1,000.10"),
+        (Decimal("1000.1"), True, "+$1,000.10"),
+        (Decimal("-1000.1"), False, "-$1,000.10"),
+        (Decimal(0), False, "$0.00"),
+    ],
+)
+def test_format_financial(x: Decimal, plus: bool, target: str) -> None:
+    assert utils.format_financial(x, plus=plus) == target
 
 
-def test_parse_date() -> None:
-    assert utils.parse_date("") is None
-    assert utils.parse_date("2024-01-01") == datetime.date(2024, 1, 1)
+@pytest.mark.parametrize(
+    ("s", "target"),
+    [
+        ("", None),
+        ("TRUE", True),
+        ("FALSE", False),
+        ("t", True),
+        ("f", False),
+        ("1", True),
+        ("0", False),
+    ],
+)
+def test_parse_bool(s: str, target: bool | None) -> None:
+    assert utils.parse_bool(s) == target
 
 
-def test_format_days(rand_str: RandomString) -> None:
-    assert utils.format_days(0) == "0 days"
-    assert utils.format_days(10) == "10 days"
-    assert utils.format_days(11) == "2 weeks"
-    assert utils.format_days(8 * 7) == "8 weeks"
-    assert utils.format_days(8 * 7 + 1) == "2 months"
-    assert utils.format_days(int(18 * 365.25 // 12)) == "18 months"
-    assert utils.format_days(int(18 * 365.25 // 12 + 1)) == "2 years"
+@pytest.mark.parametrize(
+    ("s", "target"),
+    [
+        ("", None),
+        ("2024-01-01", datetime.date(2024, 1, 1)),
+    ],
+)
+def test_parse_date(s: str, target: datetime.date | None) -> None:
+    assert utils.parse_date(s) == target
 
+
+@pytest.mark.parametrize(
+    ("d", "target"),
+    [
+        (0, "0 days"),
+        (10, "10 days"),
+        (11, "2 weeks"),
+        (8 * 7, "8 weeks"),
+        (8 * 7 + 1, "2 months"),
+        (int(18 * 365.25 / 12), "18 months"),
+        (int(18 * 365.25 / 12 + 1), "2 years"),
+    ],
+)
+def test_format_days(d: int, target: str) -> None:
+    assert utils.format_days(d) == target
+
+
+def test_format_days_custom_labels(rand_str: RandomString) -> None:
     labels = [rand_str() for _ in range(4)]
     assert utils.format_days(2, labels=labels) == f"2 {labels[0]}"
 
 
-def test_format_seconds() -> None:
-    assert utils.format_seconds(0) == "0.0 seconds"
-    assert utils.format_seconds(60) == "60.0 seconds"
-    assert utils.format_seconds(90.1) == "1.5 minutes"
-    assert utils.format_seconds(5400.1) == "1.5 hours"
-    assert utils.format_seconds(86400) == "24.0 hours"
-    assert utils.format_seconds(86400 * 4) == "96.0 hours"
-    assert utils.format_seconds(86400 * 4.1) == "4 days"
+@pytest.mark.parametrize(
+    ("s", "target"),
+    [
+        (0, "0.0 seconds"),
+        (60, "60.0 seconds"),
+        (90.1, "1.5 minutes"),
+        (5400.1, "1.5 hours"),
+        (86400, "24.0 hours"),
+        (86400 * 4, "96.0 hours"),
+        (86400 * 4.1, "4 days"),
+    ],
+)
+def test_format_seconds(s: float, target: str) -> None:
+    assert utils.format_seconds(s) == target
 
 
-def test_range_date() -> None:
-    start = datetime.datetime.now().astimezone().date()
-    end = start + datetime.timedelta(days=7)
-    start_ord = start.toordinal()
-    end_ord = end.toordinal()
+@pytest.mark.parametrize(
+    ("include_end", "n"),
+    [
+        (True, 8),
+        (False, 7),
+    ],
+)
+def test_range_date(today: datetime.date, include_end: bool, n: int) -> None:
+    end = today + datetime.timedelta(days=7)
 
-    result = utils.range_date(start, end, include_end=True)
-    assert len(result) == 8
-    assert result[0] == start
-    assert result[-1] == end
-
-    result = utils.range_date(start_ord, end_ord, include_end=True)
-    assert len(result) == 8
-    assert result[0] == start
-    assert result[-1] == end
-
-    result = utils.range_date(start, end, include_end=False)
-    assert len(result) == 7
-    assert result[0] == start
-    assert result[-1] == end - datetime.timedelta(days=1)
-
-    result = utils.range_date(start_ord, end_ord, include_end=False)
-    assert len(result) == 7
-    assert result[0] == start
-    assert result[-1] == end - datetime.timedelta(days=1)
+    result = utils.range_date(today, end, include_end=include_end)
+    assert len(result) == n
+    assert result[0] == today
+    if include_end:
+        assert result[-1] == end
+    else:
+        assert result[-1] == end - datetime.timedelta(days=1)
 
 
-def test_date_add_months() -> None:
-    start = datetime.date(2023, 1, 1)
-    assert utils.date_add_months(start, 0) == start
-    assert utils.date_add_months(start, 1) == datetime.date(2023, 2, 1)
-    assert utils.date_add_months(start, 12) == datetime.date(2024, 1, 1)
-    assert utils.date_add_months(start, 11) == datetime.date(2023, 12, 1)
-    assert utils.date_add_months(start, -1) == datetime.date(2022, 12, 1)
-    assert utils.date_add_months(start, -12) == datetime.date(2022, 1, 1)
-    assert utils.date_add_months(start, -11) == datetime.date(2022, 2, 1)
+@pytest.mark.parametrize(
+    ("include_end", "n"),
+    [
+        (True, 8),
+        (False, 7),
+    ],
+)
+def test_range_date_ordinal_input(
+    today: datetime.date,
+    include_end: bool,
+    n: int,
+) -> None:
+    end = today + datetime.timedelta(days=7)
 
-    start = datetime.date(2023, 6, 30)
-    assert utils.date_add_months(start, 0) == start
-    assert utils.date_add_months(start, 1) == datetime.date(2023, 7, 30)
-    assert utils.date_add_months(start, 12) == datetime.date(2024, 6, 30)
-    assert utils.date_add_months(start, 23) == datetime.date(2025, 5, 30)
-    assert utils.date_add_months(start, -4) == datetime.date(2023, 2, 28)
+    result = utils.range_date(
+        today.toordinal(),
+        end.toordinal(),
+        include_end=include_end,
+    )
+    assert len(result) == n
+    assert result[0] == today
+    if include_end:
+        assert result[-1] == end
+    else:
+        assert result[-1] == end - datetime.timedelta(days=1)
 
-    start = datetime.date(2020, 1, 31)
-    assert utils.date_add_months(start, 1) == datetime.date(2020, 2, 29)
+
+@pytest.mark.parametrize(
+    ("start", "n", "target"),
+    [
+        (datetime.date(2023, 1, 1), 0, datetime.date(2023, 1, 1)),
+        (datetime.date(2023, 1, 1), 1, datetime.date(2023, 2, 1)),
+        (datetime.date(2023, 1, 1), 12, datetime.date(2024, 1, 1)),
+        (datetime.date(2023, 1, 1), 11, datetime.date(2023, 12, 1)),
+        (datetime.date(2023, 1, 1), -1, datetime.date(2022, 12, 1)),
+        (datetime.date(2023, 1, 1), -12, datetime.date(2022, 1, 1)),
+        (datetime.date(2023, 1, 1), -11, datetime.date(2022, 2, 1)),
+        (datetime.date(2023, 6, 30), 0, datetime.date(2023, 6, 30)),
+        (datetime.date(2023, 6, 30), 1, datetime.date(2023, 7, 30)),
+        (datetime.date(2023, 6, 30), 12, datetime.date(2024, 6, 30)),
+        (datetime.date(2023, 6, 30), 23, datetime.date(2025, 5, 30)),
+        (datetime.date(2023, 6, 30), -4, datetime.date(2023, 2, 28)),
+        (datetime.date(2020, 1, 31), 1, datetime.date(2020, 2, 29)),
+    ],
+    ids=conftest.id_func,
+)
+def test_date_add_months(start: datetime.date, n: int, target: datetime.date) -> None:
+    assert utils.date_add_months(start, n) == target
 
 
-def test_period_months() -> None:
+def test_period_months_single() -> None:
     start = datetime.date(2023, 1, 10)
     start_ord = start.toordinal()
     end = datetime.date(2023, 1, 28)
@@ -291,6 +369,10 @@ def test_period_months() -> None:
     }
     assert utils.period_months(start_ord, end_ord) == target
 
+
+def test_period_months_multiple() -> None:
+    start = datetime.date(2023, 1, 10)
+    start_ord = start.toordinal()
     end = datetime.date(2023, 2, 14)
     end_ord = end.toordinal()
     target = {
@@ -300,7 +382,7 @@ def test_period_months() -> None:
     assert utils.period_months(start_ord, end_ord) == target
 
 
-def test_period_years() -> None:
+def test_period_years_single_month() -> None:
     start = datetime.date(2023, 1, 10)
     start_ord = start.toordinal()
     end = datetime.date(2023, 1, 28)
@@ -310,6 +392,10 @@ def test_period_years() -> None:
     }
     assert utils.period_years(start_ord, end_ord) == target
 
+
+def test_period_years_two_months() -> None:
+    start = datetime.date(2023, 1, 10)
+    start_ord = start.toordinal()
     end = datetime.date(2023, 2, 14)
     end_ord = end.toordinal()
     target = {
@@ -317,6 +403,10 @@ def test_period_years() -> None:
     }
     assert utils.period_years(start_ord, end_ord) == target
 
+
+def test_period_years_two_years() -> None:
+    start = datetime.date(2023, 1, 10)
+    start_ord = start.toordinal()
     end = datetime.date(2025, 2, 14)
     end_ord = end.toordinal()
     target = {
@@ -330,7 +420,7 @@ def test_period_years() -> None:
     assert utils.period_years(start_ord, end_ord) == target
 
 
-def test_downsample() -> None:
+def test_downsample_range() -> None:
     start = datetime.date(2023, 1, 10)
     start_ord = start.toordinal()
     end = datetime.date(2023, 1, 28)
@@ -345,6 +435,8 @@ def test_downsample() -> None:
     assert r_avg == [Decimal(n - 1) / 2]
     assert r_max == [Decimal(n - 1)]
 
+
+def test_downsample_range_doubled() -> None:
     start = datetime.date(2023, 1, 30)
     start_ord = start.toordinal()
     end = datetime.date(2023, 2, 2)
@@ -375,394 +467,234 @@ def test_round_list() -> None:
     assert l_round[0] == round(list_[0], 6)
 
 
-def test_integrate() -> None:
-    deltas: list[Decimal | None] = []
-    assert utils.integrate(deltas) == []
-
-    deltas = [Decimal(0)] * 5
-    target = [Decimal(0)] * 5
+@pytest.mark.parametrize(
+    ("deltas", "target"),
+    [
+        pytest.param([], [], id="empty"),
+        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, id="zeros"),
+        pytest.param([None] * 5, [Decimal(0)] * 5, id="nones"),
+        pytest.param(
+            [None, None, Decimal(20), None, None],
+            [Decimal(0), Decimal(0), Decimal(20), Decimal(20), Decimal(20)],
+            id="one sample",
+        ),
+        pytest.param(
+            [Decimal(1), Decimal(3), Decimal(5)],
+            [Decimal(1), Decimal(4), Decimal(9)],
+            id="all samples",
+        ),
+    ],
+)
+def test_integrate(deltas: list[Decimal | None], target: list[Decimal]) -> None:
     assert utils.integrate(deltas) == target
 
-    deltas = [None] * 5
-    target = [Decimal(0)] * 5
-    assert utils.integrate(deltas) == target
 
-    deltas[2] = Decimal(20)
-    target[2] += Decimal(20)
-    target[3] += Decimal(20)
-    target[4] += Decimal(20)
-    assert utils.integrate(deltas) == target
-
-
-def test_interpolate_step() -> None:
-    n = 6
-    values: list[tuple[int, Decimal]] = []
-
-    target = [Decimal(0)] * n
-    assert utils.interpolate_step(values, n) == target
-
-    values.append((-3, Decimal(-1)))
-    target = [Decimal(-1)] * n
-    assert utils.interpolate_step(values, n) == target
-
-    values.append((1, Decimal(1)))
-    target = [Decimal(1)] * n
-    target[0] = Decimal(-1)
-    assert utils.interpolate_step(values, n) == target
-
-    values.append((4, Decimal(3)))
-    target[4] = Decimal(3)
-    target[5] = Decimal(3)
-    assert utils.interpolate_step(values, n) == target
+@pytest.mark.parametrize(
+    ("values", "target"),
+    [
+        pytest.param([], [Decimal(0)] * 5, id="empty"),
+        pytest.param([(-3, Decimal(-1))], [Decimal(-1)] * 5, id="past"),
+        pytest.param(
+            [(-3, Decimal(-1)), (1, Decimal(1))],
+            [Decimal(-1)] + [Decimal(1)] * 4,
+            id="one in range",
+        ),
+        pytest.param(
+            [(-3, Decimal(-1)), (1, Decimal(1)), (3, Decimal(3))],
+            [Decimal(-1), Decimal(1), Decimal(1), Decimal(3), Decimal(3)],
+            id="two in range",
+        ),
+    ],
+)
+def test_interpolate_step(
+    values: list[tuple[int, Decimal]],
+    target: list[Decimal],
+) -> None:
+    assert utils.interpolate_step(values, 5) == target
 
 
-def test_interpolate_linear() -> None:
-    n = 6
-    values: list[tuple[int, Decimal]] = []
-
-    target = [Decimal(0)] * n
-    assert utils.interpolate_linear(values, n) == target
-
-    values.append((-3, Decimal(-1)))
-    target = [Decimal(-1)] * n
-    assert utils.interpolate_linear(values, n) == target
-
-    values.append((1, Decimal(1)))
-    target = [
-        Decimal("0.5"),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-    ]
-    assert utils.interpolate_linear(values, n) == target
-
-    values.append((4, Decimal(3)))
-    target = [
-        Decimal("0.5"),
-        Decimal(1),
-        Decimal(1) + Decimal(2) / Decimal(3),
-        Decimal(1) + Decimal(2) / Decimal(3) * Decimal(2),
-        Decimal(3),
-        Decimal(3),  # Stay flat at the end
-    ]
-    assert utils.interpolate_linear(values, n) == target
-
-    values = [
-        (2, Decimal(1)),
-        (4, Decimal(3)),
-    ]
-    target = [
-        Decimal(0),
-        Decimal(0),
-        Decimal(1),
-        Decimal(2),
-        Decimal(3),
-        Decimal(3),
-    ]
-    assert utils.interpolate_linear(values, n) == target
+@pytest.mark.parametrize(
+    ("values", "target"),
+    [
+        pytest.param([], [Decimal(0)] * 5, id="empty"),
+        pytest.param([(-3, Decimal(-1))], [Decimal(-1)] * 5, id="past"),
+        pytest.param(
+            [(-3, Decimal(-1)), (1, Decimal(1))],
+            [Decimal("0.5"), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
+            id="one in range",
+        ),
+        pytest.param(
+            [(-3, Decimal(-1)), (1, Decimal(1)), (3, Decimal(3))],
+            [Decimal("0.5"), Decimal(1), Decimal(2), Decimal(3), Decimal(3)],
+            id="two in range",
+        ),
+    ],
+)
+def test_interpolate_linear(
+    values: list[tuple[int, Decimal]],
+    target: list[Decimal],
+) -> None:
+    assert utils.interpolate_linear(values, 5) == target
 
 
-def test_twrr() -> None:
-    n = 5
-    values = [Decimal(0)] * n
-    profit = [Decimal(0)] * n
-    target = [Decimal(0)] * n
-    assert utils.twrr(values, profit) == target
-
-    # Still no profit, no profit percent
-    values = [
-        Decimal(0),
-        Decimal(10),
-        Decimal(10),
-        Decimal(10),
-        Decimal(0),
-    ]
-    target = [Decimal(0)] * n
-    assert utils.twrr(values, profit) == target
-
-    # Profit on buy day
-    values = [
-        Decimal(0),
-        Decimal(11),
-        Decimal(11),
-        Decimal(11),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-    ]
-    target = [
-        Decimal(0),
-        Decimal("0.1"),
-        Decimal("0.1"),
-        Decimal("0.1"),
-        Decimal("0.1"),
-    ]
-    assert utils.twrr(values, profit) == target
-
-    # Profit on buy and sell day
-    values = [
-        Decimal(0),
-        Decimal(11),
-        Decimal(11),
-        Decimal(11),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(12),
-    ]
-    target = [
-        Decimal(0),
-        Decimal("0.1"),
-        Decimal("0.1"),
-        Decimal("0.1"),
-        Decimal("1.2"),
-    ]
-    assert utils.twrr(values, profit) == target
-    assert utils.twrr(values[1:], profit[1:]) == target[1:]
-
-    values = [
-        Decimal(10),
-        Decimal(21),
-        Decimal(42),
-        Decimal(42),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(22),
-        Decimal(22),
-        Decimal(22),
-    ]
-    target = [
-        Decimal(0),
-        Decimal("0.1"),
-        Decimal("1.2"),
-        Decimal("1.2"),
-        Decimal("1.2"),
-    ]
-    assert utils.twrr(values, profit) == target
-
-    values = [
-        Decimal(10),
-        Decimal(11),
-        Decimal(12),
-        Decimal(13),
-        Decimal(14),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(2),
-        Decimal(3),
-        Decimal(4),
-    ]
-    target = [
-        Decimal(0),
-        Decimal("0.1"),
-        Decimal("0.2"),
-        Decimal("0.3"),
-        Decimal("0.4"),
-    ]
-    assert utils.twrr(values, profit) == target
-
-    values = [
-        # Buy 100 shares at $100
-        Decimal(10000),
-        # Buy 100 more at $500
-        Decimal(100000),
-        # Sell 100 at $50
-        Decimal(5000),
-        # Returns to $100
-        Decimal(10000),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(40000),
-        Decimal(-50000),
-        Decimal(-45000),
-    ]
-    target = [
-        Decimal(0),
-        Decimal(4),
-        Decimal("-0.5"),
-        Decimal(0),
-    ]
+@pytest.mark.parametrize(
+    ("values", "profit", "target"),
+    [
+        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, [Decimal(0)] * 5, id="empty"),
+        pytest.param(
+            [Decimal(0), Decimal(10), Decimal(10), Decimal(10), Decimal(0)],
+            [Decimal(0)] * 5,
+            [Decimal(0)] * 5,
+            id="no profit",
+        ),
+        pytest.param(
+            [Decimal(0), Decimal(11), Decimal(11), Decimal(11), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
+            [
+                Decimal(0),
+                Decimal("0.1"),
+                Decimal("0.1"),
+                Decimal("0.1"),
+                Decimal("0.1"),
+            ],
+            id="profit on buy day",
+        ),
+        pytest.param(
+            [Decimal(0), Decimal(11), Decimal(11), Decimal(11), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(12)],
+            [
+                Decimal(0),
+                Decimal("0.1"),
+                Decimal("0.1"),
+                Decimal("0.1"),
+                Decimal("1.2"),
+            ],
+            id="profit on buy and sell day",
+        ),
+        pytest.param(
+            [Decimal(10), Decimal(21), Decimal(42), Decimal(42), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(22), Decimal(22), Decimal(22)],
+            [
+                Decimal(0),
+                Decimal("0.1"),
+                Decimal("1.2"),
+                Decimal("1.2"),
+                Decimal("1.2"),
+            ],
+            id="profit on buy and mid day",
+        ),
+        pytest.param(
+            [
+                # Buy 100 shares at $100
+                Decimal(10000),
+                # Buy 100 more at $500
+                Decimal(100000),
+                # Sell 100 at $50
+                Decimal(5000),
+                # Returns to $100
+                Decimal(10000),
+            ],
+            [Decimal(0), Decimal(40000), Decimal(-50000), Decimal(-45000)],
+            [Decimal(0), Decimal(4), Decimal("-0.5"), Decimal(0)],
+            id="profit and loss",
+        ),
+    ],
+)
+def test_twrr(
+    values: list[Decimal],
+    profit: list[Decimal],
+    target: list[Decimal],
+) -> None:
     assert utils.twrr(values, profit) == target
 
 
-def test_mwrr() -> None:
-    n = 5
-    values = [Decimal(0)] * n
-    profit = [Decimal(0)] * n
-
-    assert utils.mwrr(values, profit) == Decimal(0)
-
-    # Still no profit, no profit percent
-    values = [
-        Decimal(0),
-        Decimal(10),
-        Decimal(10),
-        Decimal(10),
-        Decimal(0),
-    ]
-    assert utils.mwrr(values, profit) == Decimal(0)
-
-    values = [Decimal(101)]
-    profit = [Decimal(1)]
-    target = round(Decimal((101 / 100) ** 365.25) - 1, 6)
-    assert utils.mwrr(values, profit) == target
-
-    values = [Decimal(20)]
-    profit = [Decimal(-100)]
-    assert utils.mwrr(values, profit) == Decimal(-1)
-
-    # Profit on buy day
-    values = [
-        Decimal(0),
-        Decimal(101),
-        Decimal(101),
-        Decimal(101),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-    ]
-    cash_flows = [
-        Decimal(0),
-        Decimal(-100),
-        Decimal(0),
-        Decimal(0),
-        Decimal(101),
-    ]
-    target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
-    assert utils.mwrr(values, profit) == target
-
-    # Profit on buy and sell day
-    values = [
-        Decimal(0),
-        Decimal(101),
-        Decimal(101),
-        Decimal(101),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(1),
-        Decimal(1),
-        Decimal(2),
-    ]
-    cash_flows = [
-        Decimal(0),
-        Decimal(-100),
-        Decimal(0),
-        Decimal(0),
-        Decimal(102),
-    ]
-    target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
-    assert utils.mwrr(values, profit) == target
-
-    values = [
-        Decimal(100),
-        Decimal(201),
-        Decimal(202),
-        Decimal(202),
-        Decimal(0),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(2),
-        Decimal(2),
-        Decimal(2),
-    ]
-    cash_flows = [
-        Decimal(-100),
-        Decimal(-100),
-        Decimal(0),
-        Decimal(0),
-        Decimal(202),
-    ]
-    target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
-    assert utils.mwrr(values, profit) == target
-
-    values = [
-        Decimal(100),
-        Decimal(101),
-        Decimal(102),
-        Decimal(103),
-        Decimal(104),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(1),
-        Decimal(2),
-        Decimal(3),
-        Decimal(4),
-    ]
-    cash_flows = [
-        Decimal(-100),
-        Decimal(0),
-        Decimal(0),
-        Decimal(0),
-        Decimal(104),
-    ]
-    target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
-    assert utils.mwrr(values, profit) == target
-
-    values = [
-        # Buy 100 shares at $100
-        Decimal(10000),
-        # Buy 100 more at $500
-        Decimal(100000),
-        # Sell 100 at $50
-        Decimal(5000),
-        # Returns to $100
-        Decimal(10000),
-    ]
-    profit = [
-        Decimal(0),
-        Decimal(40000),
-        Decimal(-50000),
-        Decimal(-45000),
-    ]
-    cash_flows = [
-        Decimal(-10000),
-        Decimal(-50000),
-        Decimal(5000),
-        Decimal(10000),
-    ]
-    target = round(Decimal((npf.irr(cash_flows) + 1) ** 365.25) - 1, 6)
+@pytest.mark.parametrize(
+    ("values", "profit", "target"),
+    [
+        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, Decimal(0), id="empty"),
+        pytest.param(
+            [Decimal(0), Decimal(10), Decimal(10), Decimal(10), Decimal(0)],
+            [Decimal(0)] * 5,
+            Decimal(0),
+            id="no profit",
+        ),
+        pytest.param(
+            [Decimal(101)],
+            [Decimal(1)],
+            round(Decimal((101 / 100) ** 365.25) - 1, 6),
+            id="one day profit",
+        ),
+        pytest.param(
+            [Decimal(20)],
+            [Decimal(-100)],
+            Decimal(-1),
+            id="one day loss",
+        ),
+        pytest.param(
+            [Decimal(0), Decimal(101), Decimal(101), Decimal(101), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
+            [Decimal(0), Decimal(-100), Decimal(0), Decimal(0), Decimal(101)],
+            id="profit on buy",
+        ),
+        pytest.param(
+            [Decimal(0), Decimal(101), Decimal(101), Decimal(101), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(2)],
+            [Decimal(0), Decimal(-100), Decimal(0), Decimal(0), Decimal(102)],
+            id="profit on buy and sell day",
+        ),
+        pytest.param(
+            [Decimal(100), Decimal(201), Decimal(202), Decimal(202), Decimal(0)],
+            [Decimal(0), Decimal(1), Decimal(2), Decimal(2), Decimal(2)],
+            [Decimal(-100), Decimal(-100), Decimal(0), Decimal(0), Decimal(202)],
+            id="profit on buy and mid day",
+        ),
+        pytest.param(
+            [Decimal(100), Decimal(101), Decimal(102), Decimal(103), Decimal(104)],
+            [Decimal(0), Decimal(1), Decimal(2), Decimal(3), Decimal(4)],
+            [Decimal(-100), Decimal(0), Decimal(0), Decimal(0), Decimal(104)],
+            id="profit on every day",
+        ),
+        pytest.param(
+            [
+                # Buy 100 shares at $100
+                Decimal(10000),
+                # Buy 100 more at $500
+                Decimal(100000),
+                # Sell 100 at $50
+                Decimal(5000),
+                # Returns to $100
+                Decimal(10000),
+            ],
+            [Decimal(0), Decimal(40000), Decimal(-50000), Decimal(-45000)],
+            [Decimal(-10000), Decimal(-50000), Decimal(5000), Decimal(10000)],
+            id="profit and loss",
+        ),
+    ],
+)
+def test_mwrr(
+    values: list[Decimal],
+    profit: list[Decimal],
+    target: Decimal | list[Decimal],
+) -> None:
+    if isinstance(target, list):
+        # target is cash_flows
+        target = round(Decimal((npf.irr(target) + 1) ** 365.25) - 1, 6)
     assert utils.mwrr(values, profit) == target
 
 
-def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
-    table: list[list[str] | None] = []
+def test_pretty_table_no_rows() -> None:
     with pytest.raises(ValueError, match="Table has no rows"):
-        utils.pretty_table(table)
+        utils.pretty_table([])
 
-    table = [None]
+
+def test_pretty_table_no_header() -> None:
     with pytest.raises(ValueError, match="First row cannot be None"):
-        utils.pretty_table(table)
+        utils.pretty_table([None])
 
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: (80, 24))
-    table = [
+
+def test_pretty_table_only_header(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
+    table: list[list[str] | None] = [
         ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
     ]
     target = textwrap.dedent(
@@ -773,7 +705,13 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    table = [
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+def test_pretty_table_only_separator(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
+    table: list[list[str] | None] = [
         ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
         None,
     ]
@@ -786,13 +724,26 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
-    table = [
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+@pytest.fixture
+def table() -> list[list[str] | None]:
+    return [
         ["H1", ">H2", "<H3", "^H4", "H5.", "H6/"],
         None,
         ["Short"] * 6,
         None,
         ["Long word"] * 6,
     ]
+
+
+def test_pretty_table_width_80(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[list[str] | None],
+) -> None:
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (80, 24))
     target = textwrap.dedent(
         """\
     ╭───────────┬───────────┬───────────┬───────────┬───────────┬───────────╮
@@ -805,8 +756,16 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+def test_pretty_table_width_70(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[list[str] | None],
+) -> None:
     # Make terminal smaller, extra space goes first
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: (70, 24))
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (70, 24))
     target = textwrap.dedent(
         """\
     ╭───────────┬───────────┬───────────┬───────────┬─────────┬─────────╮
@@ -819,8 +778,16 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+def test_pretty_table_width_60(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[list[str] | None],
+) -> None:
     # Make terminal smaller, truncate column goes next
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: (60, 24))
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (60, 24))
     target = textwrap.dedent(
         """\
     ╭─────────┬─────────┬─────────┬─────────┬───────┬─────────╮
@@ -833,8 +800,16 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+def test_pretty_table_width_50(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[list[str] | None],
+) -> None:
     # Make terminal smaller, other columns go next
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: (50, 24))
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (50, 24))
     target = textwrap.dedent(
         """\
     ╭───────┬───────┬───────┬────────┬────┬─────────╮
@@ -847,8 +822,16 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
+
+
+def test_pretty_table_width_10(
+    monkeypatch: pytest.MonkeyPatch,
+    table: list[list[str] | None],
+) -> None:
     # Make terminal tiny, other columns go next, never last
-    monkeypatch.setattr("shutil.get_terminal_size", lambda: (10, 24))
+    monkeypatch.setattr("shutil.get_terminal_size", lambda **_: (10, 24))
     target = textwrap.dedent(
         """\
     ╭────┬────┬────┬────┬────┬─────────╮
@@ -861,96 +844,74 @@ def test_pretty_table(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     assert "\n".join(utils.pretty_table(table)) == target
 
+    # Reset terminal width before verbose info is printed
+    monkeypatch.undo()
 
-def test_dedupe() -> None:
-    # Set without duplicates not changed
-    items = {
-        "Apple",
-        "Banana",
-        "Strawberry",
-    }
-    assert utils.dedupe(items) == items
 
-    items = {
-        "Apple",
-        "Banana",
-        "Bananas",
-        "Strawberry",
-    }
-    target = {
-        "Apple",
-        "Banana",
-        "Strawberry",
-    }
-    assert utils.dedupe(items) == target
-
-    items = {
-        "Apple",
-        "Banana",
-        "Bananas",
-        "Strawberry",
-        "Mango",
-        "Mengo",
-        "A bunch of chocolate pies",
-        "A bunch of chocolate cake",
-        "A bunch of chocolate tart",
-    }
-    target = {
-        "Apple",
-        "Banana",
-        "Strawberry",
-        "Mango",
-        "A bunch of chocolate cake",
-    }
+@pytest.mark.parametrize(
+    ("items", "target"),
+    [
+        pytest.param(
+            {"Apple", "Banana", "Strawberry"},
+            {"Apple", "Banana", "Strawberry"},
+            id="no duplicates",
+        ),
+        pytest.param(
+            {"Apple", "Banana", "Bananas", "Strawberry"},
+            {"Apple", "Banana", "Strawberry"},
+            id="one duplicate",
+        ),
+        pytest.param(
+            {
+                "Apple",
+                "Banana",
+                "Bananas",
+                "Strawberry",
+                "Mango",
+                "Mengo",
+                "A bunch of chocolate pies",
+                "A bunch of chocolate cake",
+                "A bunch of chocolate tart",
+            },
+            {"Apple", "Banana", "Strawberry", "Mango", "A bunch of chocolate cake"},
+            id="typos",
+        ),
+    ],
+)
+def test_dedupe(items: set[str], target: set[str]) -> None:
     assert utils.dedupe(items) == target
 
 
-def test_date_months_between() -> None:
-    # Same date is zero
-    start = datetime.date(2024, 11, 1)
-    end = start
-    assert utils.date_months_between(start, end) == 0
-    assert utils.date_months_between(end, start) == 0
-
-    # Same month is zero
-    start = datetime.date(2024, 11, 1)
-    end = datetime.date(2024, 11, 30)
-    assert utils.date_months_between(start, end) == 0
-    assert utils.date_months_between(end, start) == 0
-
-    # Next month is one
-    start = datetime.date(2024, 11, 1)
-    end = datetime.date(2024, 12, 31)
-    assert utils.date_months_between(start, end) == 1
-    assert utils.date_months_between(end, start) == -1
-
-    # 11 months is 11
-    start = datetime.date(2023, 11, 1)
-    end = datetime.date(2024, 10, 15)
-    assert utils.date_months_between(start, end) == 11
-    assert utils.date_months_between(end, start) == -11
-
-    # 13 months is 13
-    start = datetime.date(2024, 11, 1)
-    end = datetime.date(2023, 10, 15)
-    assert utils.date_months_between(start, end) == -13
-    assert utils.date_months_between(end, start) == 13
+@pytest.mark.parametrize(
+    ("start", "end", "n"),
+    [
+        (datetime.date(2024, 11, 1), datetime.date(2024, 11, 1), 0),
+        (datetime.date(2024, 11, 1), datetime.date(2024, 11, 30), 0),
+        (datetime.date(2024, 11, 1), datetime.date(2024, 12, 31), 1),
+        (datetime.date(2023, 11, 1), datetime.date(2024, 10, 15), 11),
+        (datetime.date(2024, 11, 1), datetime.date(2023, 10, 15), -13),
+    ],
+)
+def test_date_months_between(start: datetime.date, end: datetime.date, n: int) -> None:
+    assert utils.date_months_between(start, end) == n
+    assert utils.date_months_between(end, start) == -n
 
 
-def test_weekdays_in_month() -> None:
+@pytest.mark.parametrize(
+    ("weekday", "n"),
+    [
+        (0, 4),
+        (1, 4),
+        (2, 4),
+        (3, 4),
+        (4, 5),
+        (5, 5),
+        (6, 4),
+    ],
+)
+def test_weekdays_in_month(weekday: int, n: int) -> None:
     date = datetime.date(2024, 11, 1)
-
-    # weekday is Friday, there are 5 Fridays
-    weekday = date.weekday()  # Friday
-    assert utils.weekdays_in_month(weekday, date) == 5
-
-    # weekday is Saturday, there are 5 Saturday
-    weekday = (weekday + 1) % 7
-    assert utils.weekdays_in_month(weekday, date) == 5
-
-    # weekday is Sunday, there are 4 Sundays
-    weekday = (weekday + 1) % 7
-    assert utils.weekdays_in_month(weekday, date) == 4
+    assert utils.weekdays_in_month(weekday, date) == n
 
 
 def test_start_of_month() -> None:
@@ -963,44 +924,62 @@ def test_end_of_month() -> None:
     assert utils.end_of_month(date) == datetime.date(2024, 2, 29)
 
 
-def test_clamp() -> None:
-    assert utils.clamp(Decimal("0.5")) == Decimal("0.5")
-    assert utils.clamp(Decimal("-0.5")) == Decimal(0)
-    assert utils.clamp(Decimal("1.5")) == Decimal(1)
+@pytest.mark.parametrize(
+    ("x", "target"),
+    [
+        (Decimal("0.5"), Decimal("0.5")),
+        (Decimal("-0.5"), Decimal(0)),
+        (Decimal("1.5"), Decimal(1)),
+    ],
+)
+def test_clamp(x: Decimal, target: Decimal) -> None:
+    assert utils.clamp(x) == target
 
+
+def test_clamp_custom_max() -> None:
     assert utils.clamp(Decimal(150), c_max=Decimal(100)) == Decimal(100)
+
+
+def test_clamp_custom_min() -> None:
     assert utils.clamp(Decimal(-150), c_min=Decimal(-100)) == Decimal(-100)
 
 
-def test_strip_emojis(rand_str: RandomString) -> None:
+@pytest.mark.parametrize("suffix", ["", "😀"])
+def test_strip_emojis(rand_str: RandomString, suffix: str) -> None:
     text = rand_str()
-    assert utils.strip_emojis(text) == text
-    assert utils.strip_emojis(text + "😀") == text
+    assert utils.strip_emojis(text + suffix) == text
 
 
-def test_classproperty() -> None:
+class _Color:
 
-    class Color:
-
-        @utils.classproperty
-        def name(cls) -> str:  # noqa: N805
-            return "RED"
-
-    assert Color.name == "RED"
-    assert Color().name == "RED"
+    @utils.classproperty
+    def name(cls) -> str:  # noqa: N805
+        return "RED"
 
 
-def test_tokenize_search_str() -> None:
+def test_classproperty_get_on_class() -> None:
+    assert _Color.name == "RED"
+
+
+def test_classproperty_get_on_object() -> None:
+    assert _Color().name == "RED"
+
+
+def test_tokenize_search_str_only_symbols() -> None:
     s = "!{}"
     with pytest.raises(exc.EmptySearchError):
         utils.tokenize_search_str(s)
 
+
+def test_tokenize_search_str_unbalanced_quote() -> None:
     s = '"query'
     r_must, r_can, r_not = utils.tokenize_search_str(s)
     assert r_must == set()
     assert r_can == {"query"}
     assert r_not == set()
 
+
+def test_tokenize_search_str_everything() -> None:
     s = '+query "keep together" -ignore "    "'
     r_must, r_can, r_not = utils.tokenize_search_str(s)
     assert r_must == {"query"}
@@ -1008,9 +987,12 @@ def test_tokenize_search_str() -> None:
     assert r_not == {"ignore"}
 
 
-def test_low_pass() -> None:
+def test_low_pass_n1() -> None:
     data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
     assert utils.low_pass(data, 1) == data
 
+
+def test_low_pass_n3() -> None:
+    data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
     target = [Decimal(1), Decimal("0.5"), Decimal("0.25"), Decimal("0.125")]
     assert utils.low_pass(data, 3) == target

@@ -62,6 +62,9 @@ def test_get_engine_encrypted(tmp_path: Path, rand_str: RandomString) -> None:
         assert b"SQLite" not in file.read()
 
 
-def test_escape() -> None:
+def test_escape_not_reserved() -> None:
     assert sql.escape("abc") == "abc"
+
+
+def test_escape_reserved() -> None:
     assert sql.escape("where") == "`where`"

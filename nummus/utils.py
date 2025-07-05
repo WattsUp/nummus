@@ -188,13 +188,8 @@ def confirm(
     Returns:
         bool True for yes, False for no
     """
-    if prompt is None:
-        prompt = "Confirm"
-
-    if default:
-        prompt += " [Y/n]: "
-    else:
-        prompt += " [y/N]: "
+    prompt = prompt or "Confirm"
+    prompt += " [Y/n]: " if default else " [y/N]: "
 
     while True:
         input_ = (input(prompt) or "").lower()

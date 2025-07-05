@@ -26,7 +26,7 @@ def test_entrypoints() -> None:
         assert stdout == version.__version__
 
 
-def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: EmptyPortfolio) -> None:
+def test_unlock_non_existant(empty_portfolio: EmptyPortfolio) -> None:
     p = empty_portfolio()
 
     # Try unlocking non-existent Portfolio
@@ -34,6 +34,12 @@ def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: EmptyPortfolio) 
     with pytest.raises(SystemExit):
         main.main(args)
 
+
+def test_unlock_successful(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio: EmptyPortfolio,
+) -> None:
+    p = empty_portfolio()
     args = ["--portfolio", str(p.path), "unlock"]
     assert main.main(args) == 0
     assert capsys.readouterr().out == f"{Fore.GREEN}Portfolio is unlocked\n"
