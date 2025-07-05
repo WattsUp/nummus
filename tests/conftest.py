@@ -6,6 +6,7 @@ import string
 
 import pytest
 
+from nummus.models import base_uri
 from nummus.portfolio import Portfolio
 
 
@@ -47,3 +48,9 @@ def empty_portfolio(tmp_path_factory: pytest.TempPathFactory) -> EmptyPortfolio:
         EmptyPortfolio generator
     """
     return EmptyPortfolio(tmp_path_factory)
+
+
+@pytest.fixture(autouse=True)
+def uri_cipher() -> None:
+    """Generate a URI cipher."""
+    base_uri._CIPHER = base_uri.Cipher.generate()  # noqa: SLF001
