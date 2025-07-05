@@ -13,7 +13,14 @@ from sqlalchemy import func, orm
 from nummus import exceptions as exc
 from nummus import portfolio, utils
 from nummus.controllers import common
-from nummus.models import Account, Asset, AssetCategory, AssetValuation, YIELD_PER
+from nummus.models import (
+    Account,
+    Asset,
+    AssetCategory,
+    AssetValuation,
+    query_count,
+    YIELD_PER,
+)
 from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
@@ -303,7 +310,6 @@ def validation(uri: str) -> str:
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.datetime.now().astimezone().date()
 
     # dict{key: (required, prop if unique required)}
     properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
@@ -312,65 +318,39 @@ def validation(uri: str) -> str:
         "ticker": (False, Asset.ticker),
     }
 
-    args = flask.request.args
-    for key, (required, prop) in properties.items():
-        if key not in args:
-            continue
-        value = args[key].strip()
-        if value == "":
-            return "Required" if required else ""
-        if key != "ticker" and len(value) < utils.MIN_STR_LEN:
-            # Ticker can be short
-            return f"{utils.MIN_STR_LEN} characters required"
-        if prop is not None:
-            with p.begin_session() as s:
-                n = (
-                    s.query(Asset)
-                    .where(
-                        prop == value,
-                        Asset.id_ != Asset.uri_to_id(uri),
-                    )
-                    .count()
-                )
-                if n != 0:
-                    return "Must be unique"
-        return ""
-
-    if "date" in args:
-        value = args["date"].strip()
-        if value == "":
-            return "Required"
-        try:
-            date = utils.parse_date(value)
-        except ValueError:
-            return "Unable to parse"
-        if date is None:  # pragma: no cover
-            # Type guard, should not be called
-            return "Unable to parse"
-        if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-            return "Only up to a week in advance"
-        with p.begin_session() as s:
-            n = (
-                s.query(AssetValuation)
-                .where(
-                    AssetValuation.date_ord == date.toordinal(),
-                    AssetValuation.asset_id == Asset.uri_to_id(uri),
-                    AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
-                )
-                .count()
+    with p.begin_session() as s:
+        args = flask.request.args
+        for key, (required, prop) in properties.items():
+            if key not in args:
+                continue
+            return web_utils.validate_string(
+                args[key],
+                is_required=required,
+                check_length=key != "ticker",
+                session=s,
+                no_duplicates=prop,
+                no_duplicate_wheres=[
+                    Asset.id_ != Asset.uri_to_id(uri),
+                ],
             )
-            if n != 0:
-                return "Must be unique"
-        return ""
 
-    if "value" in args:
-        value = args["value"].strip()
-        if value == "":
-            return "Required"
-        amount = utils.evaluate_real_statement(value)
-        if amount is None:
-            return "Unable to parse"
-        return ""
+        if "date" in args:
+            return web_utils.validate_date(
+                args["date"],
+                is_required=True,
+                session=s,
+                no_duplicates=AssetValuation.date_ord,
+                no_duplicate_wheres=[
+                    AssetValuation.id_ == Asset.uri_to_id(uri),
+                    AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
+                ],
+            )
+
+        if "value" in args:
+            return web_utils.validate_real(
+                args["value"],
+                is_required=True,
+            )
 
     raise NotImplementedError
 
@@ -509,7 +489,7 @@ def update() -> str | flask.Response:
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
     with p.begin_session() as s:
-        n = s.query(Asset).where(Asset.ticker.is_not(None)).count()
+        n = query_count(s.query(Asset).where(Asset.ticker.is_not(None)))
     if flask.request.method == "GET":
         return flask.render_template(
             "assets/update.jinja",

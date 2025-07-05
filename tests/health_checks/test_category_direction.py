@@ -10,6 +10,7 @@ from nummus.models import (
     Account,
     AccountCategory,
     HealthCheckIssue,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -30,7 +31,7 @@ class TestCategoryDirection(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Add a single transaction
@@ -68,7 +69,7 @@ class TestCategoryDirection(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).one()
@@ -97,7 +98,7 @@ class TestCategoryDirection(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).one()
@@ -128,5 +129,5 @@ class TestCategoryDirection(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)

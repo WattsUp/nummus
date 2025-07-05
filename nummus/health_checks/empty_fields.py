@@ -6,7 +6,6 @@ import datetime
 
 from typing_extensions import override
 
-from nummus import exceptions as exc
 from nummus.health_checks.base import Base
 from nummus.models import (
     Account,
@@ -85,15 +84,7 @@ class EmptyFields(Base):
                         (f"{uri}.{field.key}", source, f"has an empty {field.key}"),
                     )
 
-            try:
-                t_cat_uncategorized = (
-                    s.query(TransactionCategory.id_)
-                    .where(TransactionCategory.name == "uncategorized")
-                    .one()[0]
-                )
-            except exc.NoResultFound as e:  # pragma: no cover
-                msg = "Category Uncategorized not found"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
+            uncategorized_id, _ = TransactionCategory.uncategorized(s)
             query = (
                 s.query(TransactionSplit)
                 .with_entities(
@@ -101,7 +92,7 @@ class EmptyFields(Base):
                     TransactionSplit.date_ord,
                     TransactionSplit.account_id,
                 )
-                .where(TransactionSplit.category_id == t_cat_uncategorized)
+                .where(TransactionSplit.category_id == uncategorized_id)
             )
             for t_id, date_ord, acct_id in query.yield_per(YIELD_PER):
                 t_id: int

@@ -28,6 +28,7 @@ from nummus.models.base import (
     YIELD_PER,
 )
 from nummus.models.transaction import TransactionSplit
+from nummus.models.utils import obj_session, query_count, update_rows
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -213,15 +214,10 @@ class Asset(Base):
 
         # Get a list of valuations (date offset, value) for each Asset
         valuations_assets: dict[int, list[tuple[int, Decimal]]] = defaultdict(list)
-        interpolated_assets: set[int] = set()
-        query = s.query(Asset).with_entities(Asset.id_, Asset.interpolate)
+        query = s.query(Asset.id_).where(Asset.interpolate)
         if ids is not None:
             query = query.where(Asset.id_.in_(ids))
-        for a_id, interpolate in query.all():
-            a_id: int
-            interpolate: bool
-            if interpolate:
-                interpolated_assets.add(a_id)
+        interpolated_assets: set[int] = {r[0] for r in query.all()}
 
         # Get latest Valuation before or including start date
         query = (
@@ -308,9 +304,7 @@ class Asset(Base):
         Returns:
             list[values]
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
@@ -325,9 +319,7 @@ class Asset(Base):
         # This function is best here but need to avoid circular imports
         from nummus.models import TransactionSplit  # noqa: PLC0415
 
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         multiplier = Decimal(1)
         splits: list[tuple[int, Decimal]] = []
@@ -389,12 +381,10 @@ class Asset(Base):
         Returns:
             Number of AssetValuations pruned
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
         if self.category == AssetCategory.INDEX:
             # If asset is an INDEX, do not prune
             return 0
+        s = obj_session(self)
 
         # Date when quantity is zero
         date_ord_zero: int | None = None
@@ -412,7 +402,7 @@ class Asset(Base):
             .where(TransactionSplit.asset_id == self.id_)
             .order_by(TransactionSplit.date_ord)
         )
-        if query.count() == 0:
+        if query_count(query) == 0:
             # No transactions, prune all
             return (
                 s.query(AssetValuation)
@@ -438,6 +428,21 @@ class Asset(Base):
         if current_qty == 0 and date_ord_zero is not None:
             periods_zero.append((date_ord_zero, date_ord_non_zero))
 
+        return self._delete_valuations(periods_zero)
+
+    def _delete_valuations(
+        self,
+        periods_zero: list[tuple[int | None, int | None]],
+    ) -> int:
+        """Delete valuations during periods where zero assets are held.
+
+        Args:
+            periods_zero: list[(date_ord_sell, date_ord_buy)]
+
+        Returns:
+            Number of valuations deleted
+        """
+        s = obj_session(self)
         n_deleted = 0
         for date_ord_sell, date_ord_buy in periods_zero:
             trim_start: int | None = None
@@ -493,9 +498,7 @@ class Asset(Base):
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
 
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
@@ -517,9 +520,7 @@ class Asset(Base):
             return None, None
 
         start_ord = start_ord - utils.DAYS_IN_WEEK
-        end_ord = end_ord + utils.DAYS_IN_WEEK
-        if through_today:
-            end_ord = today_ord
+        end_ord = today_ord if through_today else end_ord + utils.DAYS_IN_WEEK
 
         start = datetime.date.fromordinal(start_ord)
         end = datetime.date.fromordinal(end_ord)
@@ -540,48 +541,34 @@ class Asset(Base):
         valuations: dict[int, float] = {
             k.to_pydatetime().date().toordinal(): v for k, v in raw["Close"].items()  # type: ignore[attr-defined]
         }
-        valuations = {k: v for k, v in valuations.items() if start_ord <= k <= end_ord}
         query = s.query(AssetValuation).where(AssetValuation.asset_id == self.id_)
-        for valuation in query.yield_per(YIELD_PER):
-            date_ord = valuation.date_ord
-            value = valuations.pop(date_ord, None)
-            if value is None:
-                # Delete excess valuations
-                s.delete(valuation)
-            else:
-                valuation.value = Decimal(value)
-
-        # Add any missing ones
-        for date_ord, value in valuations.items():
-            valuation = AssetValuation(
-                asset_id=self.id_,
-                date_ord=date_ord,
-                value=Decimal(value),
-            )
-            s.add(valuation)
+        update_rows(
+            s,
+            AssetValuation,
+            query,
+            "date_ord",
+            {
+                k: {"value": Decimal(v), "asset_id": self.id_}
+                for k, v in valuations.items()
+                if start_ord <= k <= end_ord
+            },
+        )
 
         raw_splits = raw.loc[raw["Stock Splits"] != 0]["Stock Splits"]
         splits: dict[int, float] = {
             k.to_pydatetime().date().toordinal(): v for k, v in raw_splits.items()  # type: ignore[attr-defined]
         }
         query = s.query(AssetSplit).where(AssetSplit.asset_id == self.id_)
-        for split in query.yield_per(YIELD_PER):
-            date_ord = split.date_ord
-            multiplier = splits.pop(date_ord, None)
-            if multiplier is None:
-                # Delete excess splits
-                s.delete(split)
-            else:
-                split.multiplier = Decimal(multiplier)
-
-        # Add any missing ones
-        for date_ord, multiplier in splits.items():
-            split = AssetSplit(
-                asset_id=self.id_,
-                date_ord=date_ord,
-                multiplier=Decimal(multiplier),
-            )
-            s.add(split)
+        update_rows(
+            s,
+            AssetSplit,
+            query,
+            "date_ord",
+            {
+                k: {"multiplier": Decimal(v), "asset_id": self.id_}
+                for k, v in splits.items()
+            },
+        )
 
         # Run update_splits to fix transactions
         self.update_splits()
@@ -598,9 +585,7 @@ class Asset(Base):
         if self.ticker is None:
             raise exc.NoAssetWebSourceError
 
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         yf_ticker = yfinance.Ticker(self.ticker)
         funds = yf_ticker.funds_data
@@ -741,9 +726,7 @@ class Asset(Base):
 
         Does not commit changes, call s.commit() afterwards.
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         query = (
             s.query(AssetValuation.date_ord)

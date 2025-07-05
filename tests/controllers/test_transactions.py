@@ -3,7 +3,12 @@ from __future__ import annotations
 import datetime
 from decimal import Decimal
 
-from nummus.models import Transaction, TransactionCategory, TransactionSplit
+from nummus.models import (
+    query_count,
+    Transaction,
+    TransactionCategory,
+    TransactionSplit,
+)
 from tests.controllers.base import WebTestBase
 
 
@@ -279,7 +284,7 @@ class TestTransactions(WebTestBase):
 
         form = {"date": today + datetime.timedelta(days=10)}
         result, _ = self.web_post(endpoint, data=form)
-        self.assertIn("Date can only be up to a week in the future", result)
+        self.assertIn("Date can only be up to 7 days in advance", result)
 
         form = {"date": today}
         result, _ = self.web_post(endpoint, data=form)
@@ -530,13 +535,11 @@ class TestTransactions(WebTestBase):
         self.assertIn("snackbar-script", result)
         self.assertEqual(headers.get("HX-Trigger"), "account")
         with p.begin_session() as s:
-            n = s.query(Transaction).where(Transaction.id_ == txn_1_id).count()
+            n = query_count(s.query(Transaction).where(Transaction.id_ == txn_1_id))
             self.assertEqual(n, 0)
 
-            n = (
-                s.query(TransactionSplit)
-                .where(TransactionSplit.parent_id == txn_1_id)
-                .count()
+            n = query_count(
+                s.query(TransactionSplit).where(TransactionSplit.parent_id == txn_1_id),
             )
             self.assertEqual(n, 0)
 
@@ -637,7 +640,7 @@ class TestTransactions(WebTestBase):
         result, _ = self.web_get(
             (endpoint, {"date": (today + datetime.timedelta(days=10)).isoformat()}),
         )
-        self.assertEqual("Only up to a week in advance", result)
+        self.assertEqual("Only up to 7 days in advance", result)
 
         result, _ = self.web_get(
             (endpoint, {"date": (today + datetime.timedelta(days=1)).isoformat()}),
@@ -645,11 +648,14 @@ class TestTransactions(WebTestBase):
         self.assertEqual("", result)
 
         result, _ = self.web_get(
-            (endpoint, {"split-amount": "a", "split": " ", "amount": " "}),
+            (endpoint, {"split-amount": "a", "split": True}),
         )
         self.assertEqual("Unable to parse", result)
 
-        result, _ = self.web_get((endpoint, {"split-amount": "a", "amount": " "}))
+        result, _ = self.web_get((endpoint, {"amount": "a"}))
+        self.assertEqual("Unable to parse", result)
+
+        result, _ = self.web_get((endpoint, {"amount": " "}))
         self.assertEqual("Required", result)
 
         result, _ = self.web_get(
@@ -659,16 +665,7 @@ class TestTransactions(WebTestBase):
         self.assertIn("Sum of splits $3.00 not equal to total $10.00", result)
 
         result, _ = self.web_get(
-            (endpoint, {"split-amount": ["1", "2"], "amount": "3"}),
+            (endpoint, {"split-amount": ["1", "2"], "amount": "3", "split": True}),
         )
         self.assertIn("dialog-headline-error", result)
         self.assertIn("></error>", result)
-
-        result, _ = self.web_get((endpoint, {"amount": " "}))
-        self.assertEqual("Required", result)
-
-        result, _ = self.web_get((endpoint, {"amount": "a"}))
-        self.assertEqual("Unable to parse", result)
-
-        result, _ = self.web_get((endpoint, {"amount": "10"}))
-        self.assertEqual("", result)

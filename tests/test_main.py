@@ -28,8 +28,7 @@ class TestMain(TestBase):
         # Try unlocking non-existent Portfolio
         args = ["--portfolio", str(path), "unlock"]
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            rc = main.main(args)
-        self.assertNotEqual(rc, 0)
+            self.assertRaises(SystemExit, main.main, args)
 
         with mock.patch("sys.stdout", new=io.StringIO()) as _:
             commands.Create(path, None, force=False, no_encrypt=True).run()

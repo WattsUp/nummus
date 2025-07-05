@@ -9,6 +9,7 @@ from nummus.models import (
     Account,
     AccountCategory,
     HealthCheckIssue,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -30,7 +31,7 @@ class TestDuplicateTransactions(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Add a single transaction
@@ -72,7 +73,7 @@ class TestDuplicateTransactions(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             # Add a duplicate transaction
@@ -93,7 +94,7 @@ class TestDuplicateTransactions(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
             amount_raw = Transaction.amount.type.process_bind_param(amount, None)
 
@@ -119,5 +120,5 @@ class TestDuplicateTransactions(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)

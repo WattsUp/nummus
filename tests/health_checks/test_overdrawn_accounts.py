@@ -9,6 +9,7 @@ from nummus.models import (
     Account,
     AccountCategory,
     HealthCheckIssue,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -30,7 +31,7 @@ class TestOverdrawnAccounts(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             categories = TransactionCategory.map_name(s)
@@ -87,7 +88,7 @@ class TestOverdrawnAccounts(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).one()

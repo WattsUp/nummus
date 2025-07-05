@@ -15,10 +15,13 @@ from nummus.controllers import common
 from nummus.models import (
     Account,
     Asset,
+    obj_session,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
+    update_rows_list,
     YIELD_PER,
 )
 from nummus.web import utils as web_utils
@@ -215,18 +218,7 @@ def new() -> str | flask.Response:
             r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
         }
 
-        try:
-            uncategorized_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "uncategorized")
-                .one()[0]
-            )
-        except exc.NoResultFound as e:  # pragma: no cover
-            # Don't need to test ProtectedObjectNotFoundError
-            msg = "Category Uncategorized not found"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-        else:
-            uncategorized_uri = TransactionCategory.id_to_uri(uncategorized_id)
+        _, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         query = s.query(Transaction.payee)
         payees = sorted(
@@ -347,7 +339,7 @@ def new() -> str | flask.Response:
         if date is None:
             return common.error("Transaction date must not be empty")
         if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-            return common.error("Date can only be up to a week in the future")
+            return common.error("Date can only be up to 7 days in advance")
         if amount is None:
             return common.error("Transaction amount must not be empty")
         if account is None:
@@ -381,24 +373,22 @@ def new() -> str | flask.Response:
         )
 
 
-def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
+def transaction(uri: str) -> str | flask.Response:
     """GET, PUT, & DELETE /h/transactions/t/<uri>.
 
     Args:
         uri: URI of Transaction
-        force_get: True will force a GET request
 
     Returns:
         string HTML response
     """
     with flask.current_app.app_context():
         p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         txn = web_utils.find(s, Transaction, uri)
 
-        if force_get or flask.request.method == "GET":
+        if flask.request.method == "GET":
             return flask.render_template(
                 "transactions/edit.jinja",
                 txn=ctx_txn(txn),
@@ -417,90 +407,93 @@ def transaction(uri: str, *, force_get: bool = False) -> str | flask.Response:
                 snackbar=f"Transaction on {date} deleted",
             )
 
-        amount_changed = False
         try:
+            amount_before = txn.amount
             with s.begin_nested():
-                form = flask.request.form
-
-                date = utils.parse_date(form.get("date"))
-                if date is None:
-                    return common.error("Transaction date must not be empty")
-                if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-                    return common.error("Date can only be up to a week in the future")
-                txn.date = date
-                txn.payee = form.get("payee")
-
-                if not txn.cleared:
-                    amount = utils.evaluate_real_statement(form.get("amount"))
-                    if amount is None:
-                        return common.error("Transaction amount must not be empty")
-                    amount_changed = txn.amount != amount
-                    txn.amount = amount
-                    acct_id = Account.uri_to_id(form["account"])
-                    txn.account_id = acct_id
-
-                split_memos = form.getlist("memo")
-                split_categories = [
-                    TransactionCategory.uri_to_id(x) for x in form.getlist("category")
-                ]
-                split_tags = form.getlist("tag")
-                split_amounts = [
-                    utils.evaluate_real_statement(x)
-                    for x in form.getlist("split-amount")
-                ]
-
-                if len(split_categories) < 1:
-                    msg = "Transaction must have at least one split"
-                    return common.error(msg)
-                if len(split_categories) == 1:
-                    split_amounts = [txn.amount]
-                elif sum(filter(None, split_amounts)) != txn.amount:
-                    msg = "Non-zero remaining amount to be assigned"
-                    return common.error(msg)
-
-                split_rows: list[tuple[int, str | None, str | None, Decimal]] = [
-                    (cat_id, memo, tag, amount)
-                    for cat_id, memo, tag, amount in zip(
-                        split_categories,
-                        split_memos,
-                        split_tags,
-                        split_amounts,
-                        strict=True,
-                    )
-                    if amount
-                ]
-
-                splits = txn.splits
-
-                # Add or remove splits to match desired
-                n_add = len(split_rows) - len(splits)
-                while n_add > 0:
-                    splits.append(TransactionSplit())
-                    n_add -= 1
-                if n_add < 0:
-                    for t_split in splits[n_add:]:
-                        s.delete(t_split)
-                    splits = splits[:n_add]
-
-                # Update parent properties
-                for t_split, (cat_id, memo, tag, amount) in zip(
-                    splits,
-                    split_rows,
-                    strict=True,
-                ):
-                    t_split.parent = txn
-
-                    t_split.memo = memo
-                    t_split.category_id = cat_id
-                    t_split.tag = tag
-                    t_split.amount = amount
+                if err := _transaction_edit(s, txn):
+                    return err
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return common.error(e)
 
         return common.dialog_swap(
-            event="account" if amount_changed else "transaction",
+            event="account" if txn.amount != amount_before else "transaction",
             snackbar="All changes saved",
         )
+
+
+def _transaction_edit(s: orm.Session, txn: Transaction) -> str:
+    """Edit transaction from form.
+
+    Args:
+        s: SQL session to use
+        txn: Transaction to edit
+
+    Returns:
+        Error string or ""
+    """
+    today = datetime.datetime.now().astimezone().date()
+    form = flask.request.form
+
+    date = utils.parse_date(form.get("date"))
+    if date is None:
+        return common.error("Transaction date must not be empty")
+    if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
+        return common.error("Date can only be up to a week in the future")
+    txn.date = date
+    txn.payee = form.get("payee")
+
+    if not txn.cleared:
+        amount = utils.evaluate_real_statement(form.get("amount"))
+        if amount is None:
+            return common.error("Transaction amount must not be empty")
+        txn.amount = amount
+        acct_id = Account.uri_to_id(form["account"])
+        txn.account_id = acct_id
+
+    split_memos = form.getlist("memo")
+    split_categories = [
+        TransactionCategory.uri_to_id(x) for x in form.getlist("category")
+    ]
+    split_tags = form.getlist("tag")
+    split_amounts = [
+        utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
+    ]
+
+    if len(split_categories) < 1:
+        msg = "Transaction must have at least one split"
+        return common.error(msg)
+    if len(split_categories) == 1:
+        split_amounts = [txn.amount]
+    elif sum(filter(None, split_amounts)) != txn.amount:
+        msg = "Non-zero remaining amount to be assigned"
+        return common.error(msg)
+
+    splits = [
+        {
+            "parent": txn,
+            "category_id": cat_id,
+            "memo": memo,
+            "tag": tag,
+            "amount": amount,
+        }
+        for cat_id, memo, tag, amount in zip(
+            split_categories,
+            split_memos,
+            split_tags,
+            split_amounts,
+            strict=True,
+        )
+        if amount
+    ]
+    query = s.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_)
+    update_rows_list(
+        s,
+        TransactionSplit,
+        query,
+        splits,
+    )
+
+    return ""
 
 
 def split(uri: str) -> str:
@@ -540,18 +533,7 @@ def split(uri: str) -> str:
             split_tags.append(None)
             split_amounts.append(None)
 
-        try:
-            uncategorized_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "uncategorized")
-                .one()[0]
-            )
-        except exc.NoResultFound as e:  # pragma: no cover
-            # Don't need to test ProtectedObjectNotFoundError
-            msg = "Category Uncategorized not found"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-        else:
-            uncategorized_uri = TransactionCategory.id_to_uri(uncategorized_id)
+        _, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         ctx_splits: list[_SplitContext] = []
         for memo, cat_uri, tag, amount in zip(
@@ -621,39 +603,35 @@ def validation() -> str:
     for key, required in properties.items():
         if key not in args:
             continue
-        value = args[key].strip()
-        if value == "":
-            return "Required" if required else ""
-        if len(value) < utils.MIN_STR_LEN:
-            return f"{utils.MIN_STR_LEN} characters required"
-        return ""
+        return web_utils.validate_string(
+            args[key],
+            is_required=required,
+        )
 
     if "date" in args:
-        value = args["date"].strip()
-        if value == "":
-            return "Required"
-        try:
-            date = utils.parse_date(value)
-        except ValueError:
-            return "Unable to parse"
-        if date is None:  # pragma: no cover
-            # Type guard, should not be called
-            return "Unable to parse"
-        today = datetime.datetime.now().astimezone().date()
-        if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-            return "Only up to a week in advance"
-        return ""
+        return web_utils.validate_date(
+            args["date"],
+            is_required=True,
+        )
 
-    if "split-amount" in args:
-        if "split" in args:
-            value = args["split-amount"].strip()
-        else:
-            value = args["amount"].strip()
-            if value == "":
-                return "Required"
-        amount = utils.evaluate_real_statement(value)
-        if value != "" and amount is None:
-            return "Unable to parse"
+    validate_splits = False
+    if "split" in args:
+        # Editing a split
+        if r := web_utils.validate_real(args["split-amount"]):
+            return r
+        validate_splits = True
+    elif "amount" in args:
+        # Editing a split
+        if r := web_utils.validate_real(
+            args["amount"],
+            is_required=True,
+        ):
+            return r
+        validate_splits = True
+    else:
+        raise NotImplementedError
+
+    if validate_splits:
         parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal(0)
         split_amounts = [
             utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
@@ -678,14 +656,6 @@ def validation() -> str:
             oob=True,
             headline_error=msg,
         )
-    if "amount" in args:
-        value = args["amount"].strip()
-        if value == "":
-            return "Required"
-        amount = utils.evaluate_real_statement(value)
-        if amount is None:
-            return "Unable to parse"
-        return ""
 
     raise NotImplementedError
 
@@ -792,9 +762,7 @@ def ctx_txn(
     Returns:
         Dictionary HTML context
     """
-    s = orm.object_session(txn)
-    if s is None:
-        raise exc.UnboundExecutionError
+    s = obj_session(txn)
 
     account_id = txn.account_id if account_id is None else account_id
 
@@ -1068,11 +1036,11 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
         )
 
         # Do search
-        matches = (
-            TransactionSplit.search(query, search_str, categories)
-            if search_str
-            else None
-        )
+        try:
+            matches = TransactionSplit.search(query, search_str or "", categories)
+        except exc.EmptySearchError:
+            matches = None
+
         if matches is not None:
             any_filters = True
             query = query.where(TransactionSplit.id_.in_(matches))
@@ -1117,91 +1085,29 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
                 else datetime.date.fromordinal(min(included_date_ords) - 1)
             )
 
-        # Iterate first to get required second queries
-        t_splits: list[TransactionSplit] = []
-        parent_ids: set[int] = set()
-        for t_split in query.yield_per(YIELD_PER):
-            t_splits.append(t_split)
-            parent_ids.add(t_split.parent_id)
-
-        # There are no more if there wasn't enough for a full page
-        no_more = len(t_splits) < PAGE_LEN
-
-        query = (
-            s.query(Transaction.id_)
-            .join(TransactionSplit)
-            .where(
-                Transaction.id_.in_(parent_ids),
-            )
-            .group_by(Transaction.id_)
-            .having(func.count() > 1)
+        n_matches = query_count(query)
+        groups = _table_results(
+            query,
+            assets,
+            accounts,
+            categories_emoji,
+            t_split_order,
         )
-        has_splits = {r[0] for r in query.yield_per(YIELD_PER)}
-
-        t_splits_flat: list[tuple[_RowContext, int]] = []
-        for t_split in t_splits:
-            t_split_ctx = ctx_row(
-                t_split,
-                assets,
-                accounts,
-                categories_emoji,
-                has_splits,
-            )
-            t_splits_flat.append(
-                (t_split_ctx, t_split_order.get(t_split.id_, -t_split.date_ord)),
-            )
-
-        # sort by reverse date or search ranking
-        t_splits_flat = sorted(t_splits_flat, key=lambda item: item[1])
-
-        # Split by date boundaries but don't put dates together
-        # since that messes up search ranking
-        last_date: datetime.date | None = None
-        groups: list[tuple[datetime.date, list[_SplitContext]]] = []
-        current_group: list[_SplitContext] = []
-        for t_split_ctx, _ in t_splits_flat:
-            date = t_split_ctx["date"]
-            if last_date and date != last_date:
-                groups.append((last_date, current_group))
-                current_group = []
-            current_group.append(t_split_ctx)
-            last_date = date
-        if last_date and current_group:
-            groups.append((last_date, current_group))
-
-        if len(args) == 0:
-            title = "Transactions"
-        else:
-            if not selected_period:
-                title = ""
-            elif selected_period != "custom":
-                title = selected_period.title()
-            elif selected_start and selected_end:
-                title = f"{selected_start} to {selected_end}"
-            elif selected_start:
-                title = f"from {selected_start}"
-            elif selected_end:
-                title = f"to {selected_end}"
-            else:  # pragma: no cover
-                msg = "Invalid period option"
-                raise exc.http.BadRequest(msg)
-            title += " Transactions"
-
-            if selected_account:
-                acct_id = Account.uri_to_id(selected_account)
-                title += f", {accounts[acct_id]}"
-            if selected_category:
-                cat_id = TransactionCategory.uri_to_id(selected_category)
-                title += f", {categories_emoji[cat_id]}"
-            if uncleared:
-                title += ", Uncleared"
-
+        title = _table_title(
+            selected_period,
+            selected_start,
+            selected_end,
+            selected_account and accounts[Account.uri_to_id(selected_account)],
+            selected_category
+            and categories_emoji[TransactionCategory.uri_to_id(selected_category)],
+            uncleared=uncleared,
+        )
         return {
             "uri": acct_uri,
             "transactions": groups,
             "query_total": query_total.scalar() or 0,
-            "no_matches": len(t_splits_flat) == 0 and page_start is None,
-            "next_page": None if no_more else next_page,
+            "no_matches": n_matches == 0 and page_start is None,
+            "next_page": None if n_matches < PAGE_LEN else next_page,
             "any_filters": any_filters,
             "search": search_str,
             **options,
@@ -1212,6 +1118,136 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
             "start": selected_start,
             "end": selected_end,
         }, title
+
+
+def _table_results(
+    query: orm.Query[TransactionSplit],
+    assets: dict[int, tuple[str, str | None]],
+    accounts: dict[int, str],
+    categories: dict[int, str],
+    t_split_order: dict[int, int],
+) -> list[tuple[datetime.date, list[_SplitContext]]]:
+    """Get the table results from query.
+
+    Args:
+        query: TransactionSplit query for table
+        assets: Dict {id: (asset name, ticker)}
+        accounts: Account name mapping
+        categories: Account name mapping
+        t_split_order: Mapping of id_ to order if it matters
+
+    Returns:
+        TransactionSplits grouped by date
+        list[(
+            date,
+            list[_SplitContext],
+        )]
+    """
+    s = query.session
+
+    # Iterate first to get required second querie
+    t_splits: list[TransactionSplit] = []
+    parent_ids: set[int] = set()
+    for t_split in query.yield_per(YIELD_PER):
+        t_splits.append(t_split)
+        parent_ids.add(t_split.parent_id)
+
+    # There are no more if there wasn't enough for a full page
+
+    query_has_splits = (
+        s.query(Transaction.id_)
+        .join(TransactionSplit)
+        .where(
+            Transaction.id_.in_(parent_ids),
+        )
+        .group_by(Transaction.id_)
+        .having(func.count() > 1)
+    )
+    has_splits = {r[0] for r in query_has_splits.yield_per(YIELD_PER)}
+
+    t_splits_flat: list[tuple[_RowContext, int]] = []
+    for t_split in t_splits:
+        t_split_ctx = ctx_row(
+            t_split,
+            assets,
+            accounts,
+            categories,
+            has_splits,
+        )
+        t_splits_flat.append(
+            (t_split_ctx, t_split_order.get(t_split.id_, -t_split.date_ord)),
+        )
+
+    # sort by reverse date or search ranking
+    t_splits_flat = sorted(t_splits_flat, key=lambda item: item[1])
+
+    # Split by date boundaries but don't put dates together
+    # since that messes up search ranking
+    last_date: datetime.date | None = None
+    groups: list[tuple[datetime.date, list[_SplitContext]]] = []
+    current_group: list[_SplitContext] = []
+    for t_split_ctx, _ in t_splits_flat:
+        date = t_split_ctx["date"]
+        if last_date and date != last_date:
+            groups.append((last_date, current_group))
+            current_group = []
+        current_group.append(t_split_ctx)
+        last_date = date
+    if last_date and current_group:
+        groups.append((last_date, current_group))
+
+    return groups
+
+
+def _table_title(
+    period: str | None,
+    start: str | None,
+    end: str | None,
+    account: str | None,
+    category: str | None,
+    *,
+    uncleared: bool,
+) -> str:
+    """Create the table title.
+
+    Args:
+        period: Selected period
+        start: Selected start date
+        end: Selected stop date
+        account: Selected account name
+        category: Selected category name
+        uncleared: Uncleared only or not
+
+    Returns:
+        Title string
+
+    Raises:
+        exc.http.BadRequest: period is unknown
+    """
+    if len(flask.request.args) == 0:
+        return "Transactions"
+    if not period:
+        title = ""
+    elif period != "custom":
+        title = period.title()
+    elif start and end:
+        title = f"{start} to {end}"
+    elif start:
+        title = f"from {start}"
+    elif end:
+        title = f"to {end}"
+    else:  # pragma: no cover
+        msg = "Invalid period option"
+        raise exc.http.BadRequest(msg)
+    title += " Transactions"
+
+    if account:
+        title += f", {account}"
+    if category:
+        title += f", {category}"
+    if uncleared:
+        title += ", Uncleared"
+    return title
 
 
 ROUTES: Routes = {

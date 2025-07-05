@@ -24,6 +24,7 @@ from nummus.models import (
     AssetValuation,
     Config,
     ConfigKey,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -79,14 +80,16 @@ class TestPortfolio(TestBase):
             )[0]
             self.assertGreaterEqual(Version(value), Version(__version__))
 
-            n = s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST).count()
+            n = query_count(
+                s.query(Config).where(Config.key == ConfigKey.ENCRYPTION_TEST),
+            )
             self.assertEqual(n, 1)
 
-            n = s.query(Config).where(Config.key == ConfigKey.SECRET_KEY).count()
+            n = query_count(s.query(Config).where(Config.key == ConfigKey.SECRET_KEY))
             self.assertEqual(n, 1)
 
             # No web key since no encryption
-            n = s.query(Config).where(Config.key == ConfigKey.WEB_KEY).count()
+            n = query_count(s.query(Config).where(Config.key == ConfigKey.WEB_KEY))
             self.assertEqual(n, 0)
         self.assertFalse(p.is_encrypted)
 
@@ -200,7 +203,7 @@ class TestPortfolio(TestBase):
         self.assertTrue(p.is_encrypted)
 
         with p.begin_session() as s:
-            n = s.query(Config).where(Config.key == ConfigKey.WEB_KEY).count()
+            n = query_count(s.query(Config).where(Config.key == ConfigKey.WEB_KEY))
             self.assertEqual(n, 1)
 
         p = None
@@ -261,29 +264,37 @@ class TestPortfolio(TestBase):
             "Database is unexpectedly unencrypted",
         )
 
-    def test_find_account(self) -> None:
+    def test_find(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
         p = portfolio.Portfolio.create(path_db)
 
-        result = p.find_account("Monkey Bank Checking")
-        self.assertIsNone(result)
+        cache: dict[str, tuple[int, str | None]] = {}
 
         with p.begin_session() as s:
-            result = p.find_account("Monkey Bank Checking", s)
-            self.assertIsNone(result)
+            acct_checking_name = "Monkey Bank Checking"
+            acct_checking_number = "MONKEY-0123"
+            institution = "Monkey Bank"
+            self.assertRaises(
+                LookupError,
+                p.find,
+                s,
+                Account,
+                acct_checking_name,
+                cache,
+            )
 
             # Create accounts
             acct_checking = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                number="MONKEY-0123",
+                name=acct_checking_name,
+                institution=institution,
+                number=acct_checking_number,
                 category=AccountCategory.CASH,
                 closed=False,
                 budgeted=True,
             )
             acct_invest_0 = Account(
                 name="Primate Investments",
-                institution="Monkey Bank",
+                institution=institution,
                 number="MONKEY-9999",
                 category=AccountCategory.INVESTMENT,
                 closed=False,
@@ -300,102 +311,45 @@ class TestPortfolio(TestBase):
             s.flush()
             acct_checking_id = acct_checking.id_
             acct_checking_uri = acct_checking.uri
-            acct_invest_0_id = acct_invest_0.id_
-            acct_invest_1_id = acct_invest_1.id_
 
-        # Find by ID, kinda redundant but lol: id = find(id)
-        result = p.find_account(acct_checking_id)
-        self.assertEqual(result, acct_checking_id)
-        result = p.find_account(acct_invest_0_id)
-        self.assertEqual(result, acct_invest_0_id)
-        result = p.find_account(acct_invest_1_id)
-        self.assertEqual(result, acct_invest_1_id)
-        result = p.find_account(10)
-        self.assertIsNone(result)
+            r_id, r_name = p.find(s, Account, acct_checking_uri, cache)
+            self.assertEqual(r_id, acct_checking_id)
+            self.assertEqual(r_name, acct_checking_name)
 
-        # Find by URI
-        result = p.find_account(acct_checking_uri)
-        self.assertEqual(result, acct_checking_id)
-
-        # No match with random URI
-        result = p.find_account(Account.id_to_uri(0x0FFFFFFF))
-        self.assertIsNone(result)
-
-        # Find by number
-        result = p.find_account("MONKEY-0123")
-        self.assertEqual(result, acct_checking_id)
-
-        # Find by name
-        result = p.find_account("Monkey Bank Checking")
-        self.assertEqual(result, acct_checking_id)
-
-        # More than 1 match by institution
-        result = p.find_account("Monkey Bank")
-        self.assertIsNone(result)
-
-        # Find by institution
-        result = p.find_account("Gorilla Bank")
-        self.assertEqual(result, acct_invest_1_id)
-
-        with p.begin_session() as s:
-            result = p.find_account("Gorilla Bank", s)
-            self.assertIsInstance(result, Account)
-
-    def test_find_asset(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
-
-        result = p.find_asset("BANANA")
-        self.assertIsNone(result)
-
-        with p.begin_session() as s:
-            result = p.find_asset("BANANA", s)
-            self.assertIsNone(result)
-
-            # Create assets
-            a_banana = Asset(name="Banana", category=AssetCategory.ITEM)
-            a_apple_0 = Asset(name="Apple", category=AssetCategory.ITEM)
-            a_apple_1 = Asset(
-                name="Tech Company",
-                category=AssetCategory.STOCKS,
-                ticker="APPLE",
+            # No match with random URI
+            self.assertRaises(
+                LookupError,
+                p.find,
+                s,
+                Account,
+                Account.id_to_uri(0x0FFFFFFF),
+                cache,
             )
-            s.add_all((a_banana, a_apple_0, a_apple_1))
-            s.flush()
-            a_banana_id = a_banana.id_
-            a_banana_uri = a_banana.uri
-            a_apple_0_id = a_apple_0.id_
-            a_apple_1_id = a_apple_1.id_
 
-        # Find by ID, kinda redundant but lol: id = find(id)
-        result = p.find_asset(a_banana_id)
-        self.assertEqual(result, a_banana_id)
-        result = p.find_asset(a_apple_0_id)
-        self.assertEqual(result, a_apple_0_id)
-        result = p.find_asset(a_apple_1_id)
-        self.assertEqual(result, a_apple_1_id)
-        result = p.find_asset(10)
-        self.assertIsNone(result)
+            # Find by number
+            r_id, r_name = p.find(s, Account, acct_checking_number, cache)
+            self.assertEqual(r_id, acct_checking_id)
+            self.assertEqual(r_name, acct_checking_name)
 
-        # Find by URI
-        result = p.find_asset(a_banana_uri)
-        self.assertEqual(result, a_banana_id)
+            # Find by partial number
+            r_id, r_name = p.find(s, Account, acct_checking_number[-4:], cache)
+            self.assertEqual(r_id, acct_checking_id)
+            self.assertEqual(r_name, acct_checking_name)
 
-        # No match with random URI
-        result = p.find_asset(Asset.id_to_uri(0x0FFFFFFF))
-        self.assertIsNone(result)
+            # Find by name
+            r_id, r_name = p.find(s, Account, acct_checking_name, cache)
+            self.assertEqual(r_id, acct_checking_id)
+            self.assertEqual(r_name, acct_checking_name)
 
-        # Find by name
-        result = p.find_asset("Banana")
-        self.assertEqual(result, a_banana_id)
-
-        # Find by ticker
-        result = p.find_asset("APPLE")
-        self.assertEqual(result, a_apple_1_id)
-
-        with p.begin_session() as s:
-            result = p.find_asset("APPLE", s)
-            self.assertIsInstance(result, Asset)
+            # More than 1 match by institution
+            self.assertRaises(
+                LookupError,
+                p.find,
+                s,
+                Account,
+                institution,
+                cache,
+            )
 
     def test_import_file(self) -> None:
         path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
@@ -411,7 +365,7 @@ class TestPortfolio(TestBase):
 
         # Fail to match Accounts and Assets
         path = self._DATA_ROOT.joinpath("transactions_extras.csv")
-        self.assertRaises(KeyError, p.import_file, path, path_debug)
+        self.assertRaises(LookupError, p.import_file, path, path_debug)
         self.assertTrue(path_debug.exists(), "Debug file unexpectedly does not exists")
         path_debug.unlink()
 
@@ -440,7 +394,7 @@ class TestPortfolio(TestBase):
             acct_invest_id = acct_invest.id_
 
         # Still missing assets
-        self.assertRaises(KeyError, p.import_file, path, path_debug)
+        self.assertRaises(LookupError, p.import_file, path, path_debug)
         self.assertTrue(
             path_debug.exists(),
             "Debug file unexpectedly does not exists",
@@ -555,6 +509,15 @@ class TestPortfolio(TestBase):
         path = self._DATA_ROOT.joinpath("transactions_future.csv")
         self.assertRaises(
             exc.FutureTransactionError,
+            p.import_file,
+            path,
+            path_debug,
+        )
+
+        # Cannot import asset transactions need specific categories
+        path = self._DATA_ROOT.joinpath("transactions_investments_bad_category.csv")
+        self.assertRaises(
+            ValueError,
             p.import_file,
             path,
             path_debug,
@@ -869,7 +832,7 @@ class TestPortfolio(TestBase):
             s.add(acct)
             s.flush()
 
-            n = s.query(Account).count()
+            n = query_count(s.query(Account))
             self.assertEqual(n, 1)
 
             a = Asset(
@@ -887,7 +850,7 @@ class TestPortfolio(TestBase):
             s.add(av)
             s.flush()
 
-            n = s.query(AssetValuation).count()
+            n = query_count(s.query(AssetValuation))
             self.assertEqual(n, 1)
 
         path_backup_1, tar_ver = p.backup()
@@ -929,13 +892,13 @@ class TestPortfolio(TestBase):
 
         # Check AssetValuations were pruned
         with p.begin_session() as s:
-            n = s.query(AssetValuation).count()
+            n = query_count(s.query(AssetValuation))
             self.assertEqual(n, 0)
 
         # Validate restoring only backup goes back before the prune
         portfolio.Portfolio.restore(p)
         with p.begin_session() as s:
-            n = s.query(AssetValuation).count()
+            n = query_count(s.query(AssetValuation))
             self.assertEqual(n, 1)
 
     def test_update_assets(self) -> None:

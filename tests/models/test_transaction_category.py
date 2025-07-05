@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from nummus import exceptions as exc
 from nummus import models
-from nummus.models import BudgetGroup, TransactionCategory, TransactionCategoryGroup
+from nummus.models import (
+    BudgetGroup,
+    query_count,
+    TransactionCategory,
+    TransactionCategoryGroup,
+)
 from tests.base import TestBase
 
 
@@ -101,8 +106,23 @@ class TestTransactionCategory(TestBase):
         s = self.get_session()
         models.metadata_create_all(s)
 
+        self.assertRaises(
+            exc.ProtectedObjectNotFoundError,
+            TransactionCategory.emergency_fund,
+            s,
+        )
+
         result = TransactionCategory.add_default(s)
+        s.commit()
         self.assertIsInstance(result, dict)
+
+        cat = result["emergency fund"]
+        target = (cat.id_, cat.uri)
+        self.assertEqual(TransactionCategory.emergency_fund(s), target)
+
+        cat = result["uncategorized"]
+        target = (cat.id_, cat.uri)
+        self.assertEqual(TransactionCategory.uncategorized(s), target)
 
         n_income = 0
         n_expense = 0
@@ -118,33 +138,32 @@ class TestTransactionCategory(TestBase):
             elif cat.group == TransactionCategoryGroup.OTHER:
                 n_other += 1
 
-        query = s.query(TransactionCategory)
-        query = query.where(
+        query = s.query(TransactionCategory).where(
             TransactionCategory.group == TransactionCategoryGroup.INCOME,
         )
-        self.assertEqual(query.count(), n_income)
+        self.assertEqual(query_count(query), n_income)
 
-        query = s.query(TransactionCategory)
-        query = query.where(
+        query = s.query(TransactionCategory).where(
             TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
         )
-        self.assertEqual(query.count(), n_expense)
+        self.assertEqual(query_count(query), n_expense)
 
-        query = s.query(TransactionCategory)
-        query = query.where(
+        query = s.query(TransactionCategory).where(
             TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
         )
-        self.assertEqual(query.count(), n_transfer)
+        self.assertEqual(query_count(query), n_transfer)
 
-        query = s.query(TransactionCategory)
-        query = query.where(
+        query = s.query(TransactionCategory).where(
             TransactionCategory.group == TransactionCategoryGroup.OTHER,
         )
-        self.assertEqual(query.count(), n_other)
+        self.assertEqual(query_count(query), n_other)
 
         query = s.query(TransactionCategory)
-        self.assertEqual(query.count(), n_income + n_expense + n_transfer + n_other)
-        self.assertEqual(query.count(), 62)
+        self.assertEqual(
+            query_count(query),
+            n_income + n_expense + n_transfer + n_other,
+        )
+        self.assertEqual(query_count(query), 62)
 
     def test_map_name_emoji(self) -> None:
         s = self.get_session()

@@ -21,7 +21,7 @@
     {% elif ctx.assignable < 0 %}
       <button
         class="btn-filled-error"
-        hx-get="{{ url_for("budgeting.overspending", uri="income", month=ctx.month) }}"
+        hx-get="{{ url_for("budgeting.move", uri="income", month=ctx.month) }}"
         hx-target="#dialog"
         hx-swap="innerHTML show:#dialog:top"
         hx-disabled-elt="this"

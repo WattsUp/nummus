@@ -88,8 +88,6 @@ class Summarize(BaseCommand):
 
     @override
     def run(self) -> int:
-        if self._p is None:  # pragma: no cover
-            return 1
         summary = self._get_summary()
         self._print_summary(summary)
         return 0
@@ -111,6 +109,7 @@ class Summarize(BaseCommand):
             Asset,
             AssetCategory,
             AssetValuation,
+            query_count,
             TransactionSplit,
         )
 
@@ -139,9 +138,9 @@ class Summarize(BaseCommand):
             )
 
             n_accounts = len(accts)
-            n_transactions = s.query(TransactionSplit).count()
+            n_transactions = query_count(s.query(TransactionSplit))
             n_assets = len(assets)
-            n_valuations = s.query(AssetValuation).count()
+            n_valuations = query_count(s.query(AssetValuation))
 
             value_accts, profit_accts, value_assets = Account.get_value_all(
                 s,

@@ -15,6 +15,7 @@ from nummus.models import (
     AssetSector,
     AssetSplit,
     AssetValuation,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
@@ -621,19 +622,19 @@ class TestAsset(TestBase):
             s.add(av)
         s.commit()
 
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 7)
 
         n_deleted = a.prune_valuations()
         self.assertEqual(n_deleted, 7)
 
         # No transactions should prune all
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 0)
 
         # prune_valuations doesn't commit so rollback should work
         s.rollback()
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 7)
 
         # Add a transaction before first day
@@ -665,7 +666,7 @@ class TestAsset(TestBase):
         self.assertEqual(n_deleted, 3)
 
         # Should be left with one valuation on and all after
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 4)
         date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
@@ -716,7 +717,7 @@ class TestAsset(TestBase):
         self.assertEqual(n_deleted, 5)
 
         # Should be left with one valuation on and one after
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 2)
         date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
@@ -760,7 +761,7 @@ class TestAsset(TestBase):
         self.assertEqual(n_deleted, 4)
 
         # Should be left with one valuation on, one after, and on last
-        n = s.query(AssetValuation).count()
+        n = query_count(s.query(AssetValuation))
         self.assertEqual(n, 3)
         date_ord = s.query(func.min(AssetValuation.date_ord)).scalar()
         self.assertEqual(date_ord, today_ord)
@@ -784,7 +785,7 @@ class TestAsset(TestBase):
         n_deleted = a.prune_valuations()
         self.assertEqual(n_deleted, 0)
 
-        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        n = query_count(s.query(AssetValuation).where(AssetValuation.asset_id == a.id_))
         self.assertEqual(n, 7)
 
     def test_update_valuations(self) -> None:
@@ -865,7 +866,7 @@ class TestAsset(TestBase):
         self.assertEqual(r_end, date + datetime.timedelta(days=7))
 
         # There are 11 weekdays within date±7days
-        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        n = query_count(s.query(AssetValuation).where(AssetValuation.asset_id == a.id_))
         self.assertEqual(n, 11)
 
         # Check price is correct
@@ -917,7 +918,7 @@ class TestAsset(TestBase):
 
         # Number of Mondays between date and today
         target = (today_ord - (date_ord - 7)) // 7 + 1
-        n = s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).count()
+        n = query_count(s.query(AssetSplit).where(AssetSplit.asset_id == a.id_))
         self.assertEqual(n, target)
 
         # Currently holding some, download through today
@@ -937,9 +938,9 @@ class TestAsset(TestBase):
         self.assertEqual(v and v.date_ord, last_weekday.toordinal())
 
         # Should have reused existing rows
-        n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+        n = query_count(s.query(AssetValuation).where(AssetValuation.id_ == v_id))
         self.assertEqual(n, 1)
-        n = s.query(AssetSplit).where(AssetSplit.id_ == split_id).count()
+        n = query_count(s.query(AssetSplit).where(AssetSplit.id_ == split_id))
         self.assertEqual(n, 1)
 
         # Move transaction forward so it'll have to delete valuations and splits
@@ -955,7 +956,7 @@ class TestAsset(TestBase):
         self.assertEqual(r_end, date + datetime.timedelta(days=7))
 
         # There are 11 weekdays within date±7days
-        n = s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).count()
+        n = query_count(s.query(AssetValuation).where(AssetValuation.asset_id == a.id_))
         self.assertEqual(n, 11)
 
         # Check split is correct
@@ -972,7 +973,7 @@ class TestAsset(TestBase):
 
         # Number of Mondays between date and today
         target = (today_ord - (date_ord - 7)) // 7 + 1
-        n = s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).count()
+        n = query_count(s.query(AssetSplit).where(AssetSplit.asset_id == a.id_))
         self.assertEqual(n, target)
 
         # Add index which should be updated through today
@@ -1101,11 +1102,11 @@ class TestAsset(TestBase):
 
         Asset.add_indices(s)
 
-        n = s.query(Asset).count()
+        n = query_count(s.query(Asset))
         self.assertEqual(n, 6)
 
         # They should all be indices
-        n = s.query(Asset).where(Asset.category == AssetCategory.INDEX).count()
+        n = query_count(s.query(Asset).where(Asset.category == AssetCategory.INDEX))
         self.assertEqual(n, 6)
 
     def test_autodetect_interpolate(self) -> None:

@@ -247,6 +247,204 @@ class BudgetAssignment(Base):
 
         return categories, assignable, future_assigned
 
+    @classmethod
+    def get_emergency_fund(
+        cls,
+        s: orm.Session,
+        start_ord: int,
+        end_ord: int,
+        n_lower: int,
+        n_upper: int,
+    ) -> tuple[
+        list[Decimal],
+        list[Decimal],
+        list[Decimal],
+        dict[int, tuple[str, str]],
+        dict[int, Decimal],
+    ]:
+        """Get the emergency fund target range and assigned balance.
+
+        Args:
+            s: SQL session to use
+            start_ord: First day of calculated range
+            end_ord: Last day of calculated range
+            n_lower: Number of days in sliding lower period
+            n_upper: Number of days in sliding upper period
+
+        Returns:
+            tuple(
+                total spending in lower period,
+                total spending in upper period,
+                balances,
+                categories,
+                categories_total,
+            )
+        """
+        n = end_ord - start_ord + 1
+        n_smoothing = 15
+
+        accounts: dict[int, str] = dict(
+            s.query(Account)  # type: ignore[attr-defined]
+            .with_entities(Account.id_, Account.name)
+            .where(Account.budgeted)
+            .all(),
+        )
+
+        t_cat_id, _ = TransactionCategory.emergency_fund(s)
+
+        balance = s.query(func.sum(BudgetAssignment.amount)).where(
+            BudgetAssignment.category_id == t_cat_id,
+            BudgetAssignment.month_ord <= start_ord,
+        ).scalar() or Decimal(0)
+
+        balances: list[Decimal] = []
+
+        query = (
+            s.query(BudgetAssignment)
+            .with_entities(BudgetAssignment.month_ord, BudgetAssignment.amount)
+            .where(
+                BudgetAssignment.category_id == t_cat_id,
+                BudgetAssignment.month_ord > start_ord,
+                BudgetAssignment.month_ord <= end_ord,
+            )
+            .order_by(BudgetAssignment.month_ord)
+        )
+        date_ord = start_ord
+        for b_ord, amount in query.all():
+            while date_ord < b_ord:
+                balances.append(balance)
+                date_ord += 1
+            balance += amount
+        while date_ord <= end_ord:
+            balances.append(balance)
+            date_ord += 1
+
+        categories: dict[int, tuple[str, str]] = {}
+        categories_total: dict[int, Decimal] = {}
+
+        daily = Decimal(0)
+        dailys: list[Decimal] = []
+
+        query = (
+            s.query(TransactionCategory)
+            .with_entities(
+                TransactionCategory.id_,
+                TransactionCategory.name,
+                TransactionCategory.emoji_name,
+            )
+            .where(TransactionCategory.essential)
+        )
+        for t_cat_id, name, emoji_name in query.all():
+            categories[t_cat_id] = name, emoji_name
+            categories_total[t_cat_id] = Decimal(0)
+
+        start_ord_dailys = start_ord - n_upper - n_smoothing
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.date_ord,
+                TransactionSplit.category_id,
+                func.sum(TransactionSplit.amount),
+            )
+            .where(
+                TransactionSplit.account_id.in_(accounts),
+                TransactionSplit.category_id.in_(categories),
+                TransactionSplit.date_ord >= start_ord_dailys,
+            )
+            .group_by(TransactionSplit.date_ord, TransactionSplit.category_id)
+        )
+        date_ord = start_ord_dailys
+        for t_ord, t_cat_id, amount in query.yield_per(YIELD_PER):
+            while date_ord < t_ord:
+                dailys.append(daily)
+                date_ord += 1
+                daily = Decimal(0)
+
+            daily += amount
+
+            if t_ord >= start_ord:
+                categories_total[t_cat_id] += amount
+
+        while date_ord <= end_ord:
+            dailys.append(daily)
+            date_ord += 1
+            daily = Decimal(0)
+
+        totals_lower: list[Decimal] = [
+            Decimal(-sum(dailys[i : i + n_lower]))
+            for i in range(len(dailys) - n_lower + 1)
+        ]
+        totals_upper: list[Decimal] = [
+            Decimal(-sum(dailys[i : i + n_upper]))
+            for i in range(len(dailys) - n_upper + 1)
+        ]
+
+        totals_lower = utils.low_pass(totals_lower, n_smoothing)
+        totals_upper = utils.low_pass(totals_upper, n_smoothing)
+        totals_lower = totals_lower[-n:]
+        totals_upper = totals_upper[-n:]
+
+        return totals_lower, totals_upper, balances, categories, categories_total
+
+    @classmethod
+    def move(
+        cls,
+        s: orm.Session,
+        month_ord: int,
+        src_cat_id: int | None,
+        dest_cat_id: int | None,
+        to_move: Decimal,
+    ) -> None:
+        """Move funds between budget assignments.
+
+        Args:
+            s: SQL session to use
+            month_ord: Month of BudgetAssignment
+            src_cat_id: Source category ID, or None
+            dest_cat_id: Destination category ID, or None
+            to_move: Amount to move
+        """
+        if src_cat_id is not None:
+            # Remove to_move from src_cat_id
+            a = (
+                s.query(BudgetAssignment)
+                .where(
+                    BudgetAssignment.category_id == src_cat_id,
+                    BudgetAssignment.month_ord == month_ord,
+                )
+                .one_or_none()
+            )
+            if a is None:
+                a = BudgetAssignment(
+                    month_ord=month_ord,
+                    amount=-to_move,
+                    category_id=src_cat_id,
+                )
+                s.add(a)
+            elif a.amount == to_move:
+                s.delete(a)
+            else:
+                a.amount -= to_move
+
+        if dest_cat_id is not None:
+            a = (
+                s.query(BudgetAssignment)
+                .where(
+                    BudgetAssignment.category_id == dest_cat_id,
+                    BudgetAssignment.month_ord == month_ord,
+                )
+                .one_or_none()
+            )
+            if a is None:
+                a = BudgetAssignment(
+                    month_ord=month_ord,
+                    amount=to_move,
+                    category_id=dest_cat_id,
+                )
+                s.add(a)
+            else:
+                a.amount += to_move
+
 
 class TargetType(BaseEnum):
     """Type of budget target."""

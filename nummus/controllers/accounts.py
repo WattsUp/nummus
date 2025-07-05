@@ -245,28 +245,20 @@ def validation(uri: str) -> str:
         "number": (False, Account.number),
     }
 
-    args = flask.request.args
-    for key, (required, prop) in properties.items():
-        if key not in args:
-            continue
-        value = args[key].strip()
-        if value == "":
-            return "Required" if required else ""
-        if len(value) < utils.MIN_STR_LEN:
-            return f"{utils.MIN_STR_LEN} characters required"
-        if prop is not None:
-            with p.begin_session() as s:
-                n = (
-                    s.query(Account)
-                    .where(
-                        prop == value,
-                        Account.id_ != Account.uri_to_id(uri),
-                    )
-                    .count()
-                )
-                if n != 0:
-                    return "Must be unique"
-        return ""
+    with p.begin_session() as s:
+        args = flask.request.args
+        for key, (required, prop) in properties.items():
+            if key not in args:
+                continue
+            return web_utils.validate_string(
+                args[key],
+                is_required=required,
+                session=s,
+                no_duplicates=prop,
+                no_duplicate_wheres=[
+                    Account.id_ != Account.uri_to_id(uri),
+                ],
+            )
 
     raise NotImplementedError
 

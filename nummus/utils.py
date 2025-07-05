@@ -8,7 +8,9 @@ import datetime
 import getpass
 import operator as op
 import re
+import shlex
 import shutil
+import string
 import sys
 from decimal import Decimal
 from typing import Generic, TYPE_CHECKING, TypeVar
@@ -784,28 +786,26 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
         raise ValueError(msg)
     table = list(table)
 
-    header_raw = table[0]
+    header_raw = table.pop(0)
     if header_raw is None:
         msg = "First row cannot be None"
         raise ValueError(msg)
 
-    col_widths = [0] * len(header_raw)
-    table[0] = [c.strip("<>^./") for c in header_raw]
-    label_widths = [max(4, len(c)) for c in table[0]]
-    for row in table:
-        if row is None:
-            continue
-        for i, cell in enumerate(row):
-            col_widths[i] = max(len(cell), col_widths[i])
+    header = [c.strip("<>^./") for c in header_raw]
+    label_widths = [max(4, len(c)) for c in header]
+    col_widths = [
+        max(len(h), *[len(row[i]) if row else 0 for row in table]) if table else len(h)
+        for i, h in enumerate(header)
+    ]
 
     # Adjust col widths if sum is over terminal width
     margin = shutil.get_terminal_size()[0] - sum(col_widths) - len(col_widths) - 2
     excess: list[int] = []
-    no_extra = False
+    extra = True
     has_extra: list[bool] = [False] * len(header_raw)
     for i, cell in enumerate(header_raw):
         n_label = label_widths[i]
-        if not no_extra and margin > 1:
+        if extra and margin > 1:
             # If there is extra room, add some space to each column
             col_widths[i] += 2
             margin -= 2
@@ -815,8 +815,10 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
             n_trim = col_widths[i] - n
             col_widths[i] = n
             margin += n_trim
-            no_extra = True
+            extra = False
         excess.append(0 if cell[-1] == "/" else col_widths[i] - n_label)
+
+    # Distribute excess
     while margin < 0 and any(excess):
         for i, e in enumerate(excess):
             if margin < 0 and e > 0:
@@ -829,26 +831,34 @@ def pretty_table(table: list[list[str] | None]) -> list[str]:
         align = cell[0]
         align = align if align in "<>^" else ""
         formats.append(f"{align}{n}")
+    return _table_to_lines(header, table, col_widths, formats, has_extra)
+
+
+def _table_to_lines(
+    header: list[str],
+    table: list[list[str] | None],
+    col_widths: list[int],
+    formats: list[str],
+    has_extra: list[bool],
+) -> list[str]:
 
     # Print the box
     lines: list[str] = []
     lines.append("╭" + "┬".join("─" * n for n in col_widths) + "╮")
-    buf = "│".join(f"{c:^{n}}" for c, n in zip(table[0], col_widths, strict=True))
+    buf = "│".join(f"{c:^{n}}" for c, n in zip(header, col_widths, strict=True))
     lines.append("│" + buf + "│")
-    for row in table[1:]:
+    for row in table:
         if row is None:
             lines.append("╞" + "╪".join("═" * n for n in col_widths) + "╡")
             continue
-        formatted_row = []
-        for i, cell in enumerate(row):
-            if len(cell) > col_widths[i]:
-                cell_truncated = cell[: col_widths[i] - 1]
-                formatted_row.append(cell_truncated + "…")
-            elif has_extra[i]:
-                c = f" {cell} "
-                formatted_row.append(f"{c:{formats[i]}}")
-            else:
-                formatted_row.append(f"{cell:{formats[i]}}")
+        formatted_row = [
+            (
+                cell[: col_widths[i] - 1] + "…"
+                if len(cell) > col_widths[i]
+                else f"{{:{formats[i]}}}".format(f" {cell} " if has_extra[i] else cell)
+            )
+            for i, cell in enumerate(row)
+        ]
         lines.append("│" + "│".join(formatted_row) + "│")
 
     lines.append("╰" + "┴".join("─" * n for n in col_widths) + "╯")
@@ -948,3 +958,77 @@ class classproperty(Generic[T]):  # noqa: N801
             msg = "No fget set"
             raise TypeError(msg)
         return self.fget(cls)
+
+
+def tokenize_search_str(search_str: str) -> tuple[set[str], set[str], set[str]]:
+    """Parse a search string into tokens.
+
+    Args:
+        search_str: String to search
+
+    Returns:
+        tokens_must, tokens_can,tokens_not
+    """
+    # Clean a bit
+    for s in string.punctuation:
+        if s not in '"+-':
+            search_str = search_str.replace(s, " ")
+
+    # Replace +- not following a space with a space
+    # Skip +- at start
+    search_str = re.sub(r"(?<!^)(?<! )[+-]", " ", search_str)
+
+    search_str = search_str.strip().lower()
+
+    if len(search_str) < MIN_STR_LEN:
+        raise exc.EmptySearchError
+
+    # tokenize search_str
+    tokens_must: set[str] = set()
+    tokens_can: set[str] = set()
+    tokens_not: set[str] = set()
+
+    # If unbalanced quote, remove right most one
+    n = search_str.count('"')
+    if (n % 2) == 1:
+        i = search_str.rfind('"')
+        search_str = search_str[:i] + search_str[i + 1 :]
+
+    for raw in shlex.split(search_str):
+        if raw[0] == "+":
+            dest = tokens_must
+            token = raw[1:]
+        elif raw[0] == "-":
+            dest = tokens_not
+            token = raw[1:]
+        else:
+            dest = tokens_can
+            token = raw
+
+        token = re.sub(r"  +", " ", token.strip())
+        if token:
+            dest.add(token)
+
+    return tokens_must, tokens_can, tokens_not
+
+
+def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:
+    """Apply a low pass filter to Decimal data.
+
+    Args:
+        data: Data to filter
+        rc: Number of samples in time constant
+
+    Returns:
+        Smoothed data
+    """
+    a = 2 / Decimal(rc + 1)
+
+    data = data.copy()
+
+    current = data[0]
+    for i, x in enumerate(data):
+        current = a * x + (1 - a) * current
+        data[i] = current
+
+    return data

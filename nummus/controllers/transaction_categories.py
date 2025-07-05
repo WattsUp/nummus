@@ -10,6 +10,7 @@ from nummus import exceptions as exc
 from nummus import portfolio, utils
 from nummus.controllers import common
 from nummus.models import (
+    query_count,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -116,15 +117,7 @@ def category(uri: str) -> str | flask.Response:
                 msg = f"Locked category {cat.name} cannot be modified"
                 raise exc.http.Forbidden(msg)
             # Move all transactions to uncategorized
-            query = s.query(TransactionCategory.id_).where(
-                TransactionCategory.name == "uncategorized",
-            )
-            try:
-                uncategorized_id: int = query.one()[0]
-            except exc.NoResultFound as e:  # pragma: no cover
-                # Uncategorized is locked and cannot be deleted
-                msg = "Could not find uncategorized id"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
+            uncategorized_id, _ = TransactionCategory.uncategorized(s)
 
             s.query(TransactionSplit).where(
                 TransactionSplit.category_id == cat.id_,
@@ -197,13 +190,11 @@ def validation() -> str:
             )
             if locked_name and locked_name != name:
                 return "May only add/remove emojis"
-            n = (
-                s.query(TransactionCategory)
-                .where(
+            n = query_count(
+                s.query(TransactionCategory).where(
                     TransactionCategory.name == name,
                     TransactionCategory.id_ != category_id,
-                )
-                .count()
+                ),
             )
             if n != 0:
                 return "Must be unique"

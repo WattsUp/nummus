@@ -7,7 +7,7 @@ from pandas.core.indexes.api import textwrap
 
 from nummus import portfolio
 from nummus.health_checks.database_integrity import DatabaseIntegrity
-from nummus.models import Account, AccountCategory, HealthCheckIssue
+from nummus.models import Account, AccountCategory, HealthCheckIssue, query_count
 from tests.base import TestBase
 
 
@@ -22,7 +22,7 @@ class TestDatabaseIntegrity(TestBase):
         self.assertEqual(c.issues, target)
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             acct_checking = Account(
@@ -72,7 +72,7 @@ class TestDatabaseIntegrity(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).one()

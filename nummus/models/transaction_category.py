@@ -276,3 +276,58 @@ class TransactionCategory(Base):
         if no_asset_linked:
             query = query.where(TransactionCategory.asset_linked.is_(False))
         return dict(query.all())  # type: ignore[attr-defined]
+
+    @classmethod
+    def _get_protected_id(cls, s: orm.Session, name: str) -> tuple[int, str]:
+        """Get the ID and URI of a protected category.
+
+        Args:
+            s: SQL session to use
+            name: Name of protected category to fetch
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        try:
+            id_ = (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.name == name)
+                .one()[0]
+            )
+        except exc.NoResultFound as e:
+            msg = f"Category {name} not found"
+            raise exc.ProtectedObjectNotFoundError(msg) from e
+        return id_, cls.id_to_uri(id_)
+
+    @classmethod
+    def uncategorized(cls, s: orm.Session) -> tuple[int, str]:
+        """Get the ID and URI of the uncategorized category.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        return cls._get_protected_id(s, "uncategorized")
+
+    @classmethod
+    def emergency_fund(cls, s: orm.Session) -> tuple[int, str]:
+        """Get the ID and URI of the emergency fund category.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        return cls._get_protected_id(s, "emergency fund")

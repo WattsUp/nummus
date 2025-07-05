@@ -46,22 +46,36 @@ class BaseCommand(ABC):
 
         self._path_db = path_db
         self._path_password = path_password
-        self._p: Portfolio | None = None
 
         # Defer for faster time to main
         from nummus import exceptions as exc  # noqa: PLC0415
 
-        if do_unlock:
-            try:
-                self._p = unlock(
-                    path_db,
-                    path_password,
-                    check_migration=check_migration,
-                )
-            except exc.MigrationRequiredError as e:
-                print(f"{Fore.RED}{e}")
-                print(f"{Fore.YELLOW}Run nummus migrate to resolve")
-                sys.exit(1)
+        if not do_unlock:
+            return
+
+        if not path_db.exists():
+            print(
+                f"{Fore.RED}Portfolio does not exist at {path_db}. "
+                "Run nummus create",
+            )
+            sys.exit(1)
+        key: str | None = None
+        if path_password is not None and path_password.exists():
+            with path_password.open(encoding="utf-8") as file:
+                key = file.read().strip()
+
+        try:
+            self._p = self._unlock(
+                path_db,
+                key,
+                check_migration=check_migration,
+            )
+        except exc.MigrationRequiredError as e:
+            print(f"{Fore.RED}{e}")
+            print(f"{Fore.YELLOW}Run nummus migrate to resolve")
+            sys.exit(1)
+        else:
+            print(f"{Fore.GREEN}Portfolio is unlocked")
 
     @classmethod
     @abstractmethod
@@ -83,66 +97,53 @@ class BaseCommand(ABC):
         """
         raise NotImplementedError
 
+    @classmethod
+    def _unlock(
+        cls,
+        path_db: Path,
+        key: str | None,
+        *,
+        check_migration: bool = True,
+    ) -> Portfolio:
+        """Unlock an existing Portfolio.
 
-def unlock(
-    path_db: Path,
-    path_password: Path | None,
-    *,
-    check_migration: bool = True,
-) -> Portfolio | None:
-    """Unlock an existing Portfolio.
+        Args:
+            path_db: Path to Portfolio DB to unlock
+            key: Portfolio key, None will prompt when necessary
+            check_migration: True will check if migration is required
 
-    Args:
-        path_db: Path to Portfolio DB to create
-        path_password: Path to password file, None will prompt when necessary
-        check_migration: True will check if migration is required
+        Returns:
+            Unlocked Portfolio
+        """
+        # defer for faster time to main
+        from nummus import exceptions as exc  # noqa: PLC0415
+        from nummus import portfolio, utils  # noqa: PLC0415
 
-    Returns:
-        Unlocked Portfolio or None if unlocking failed
-    """
-    # defer for faster time to main
-    from nummus import exceptions as exc  # noqa: PLC0415
-    from nummus import portfolio, utils  # noqa: PLC0415
+        if not portfolio.Portfolio.is_encrypted_path(path_db):
+            return portfolio.Portfolio(path_db, None, check_migration=check_migration)
 
-    if not path_db.exists():
-        print(f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create")
-        return None
+        if key is not None:
+            # Try once with password file
+            try:
+                p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
+            except exc.UnlockingError:
+                print(f"{Fore.RED}Could not decrypt with password file")
+                sys.exit(1)
+            else:
+                return p
 
-    if not portfolio.Portfolio.is_encrypted_path(path_db):
-        p = portfolio.Portfolio(path_db, None, check_migration=check_migration)
-        print(f"{Fore.GREEN}Portfolio is unlocked")
-        return p
+        # 3 attempts
+        for _ in range(3):
+            key = utils.get_input("Please enter password: ", secure=True)
+            if key is None:
+                sys.exit(1)
+            try:
+                p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
+            except exc.UnlockingError:
+                print(f"{Fore.RED}Incorrect password")
+                # Try again
+            else:
+                return p
 
-    key: str | None = None
-
-    if path_password is not None and path_password.exists():
-        with path_password.open(encoding="utf-8") as file:
-            key = file.read().strip()
-
-    if key is not None:
-        # Try once with password file
-        try:
-            p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
-        except exc.UnlockingError:
-            print(f"{Fore.RED}Could not decrypt with password file")
-            return None
-        else:
-            print(f"{Fore.GREEN}Portfolio is unlocked")
-            return p
-
-    # 3 attempts
-    for _ in range(3):
-        key = utils.get_input("Please enter password: ", secure=True)
-        if key is None:
-            return None
-        try:
-            p = portfolio.Portfolio(path_db, key, check_migration=check_migration)
-        except exc.UnlockingError:
-            print(f"{Fore.RED}Incorrect password")
-            # Try again
-        else:
-            print(f"{Fore.GREEN}Portfolio is unlocked")
-            return p
-
-    print(f"{Fore.RED}Too many incorrect attempts")
-    return None
+        print(f"{Fore.RED}Too many incorrect attempts")
+        sys.exit(1)

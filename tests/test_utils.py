@@ -10,6 +10,7 @@ from unittest import mock
 import numpy_financial as npf
 from colorama import Fore
 
+from nummus import exceptions as exc
 from nummus import utils
 from tests.base import TestBase
 
@@ -1242,3 +1243,29 @@ class TestUtils(TestBase):
 
         self.assertEqual(Color.name, "RED")
         self.assertEqual(Color().name, "RED")
+
+    def test_tokenize_search_str(self) -> None:
+        s = "!{}"
+        self.assertRaises(exc.EmptySearchError, utils.tokenize_search_str, s)
+
+        s = '"query'
+        r_must, r_can, r_not = utils.tokenize_search_str(s)
+        self.assertEqual(r_must, set())
+        self.assertEqual(r_can, {"query"})
+        self.assertEqual(r_not, set())
+
+        s = '+query "keep together" -ignore "    "'
+        r_must, r_can, r_not = utils.tokenize_search_str(s)
+        self.assertEqual(r_must, {"query"})
+        self.assertEqual(r_can, {"keep together"})
+        self.assertEqual(r_not, {"ignore"})
+
+    def test_low_pass(self) -> None:
+        data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
+        target = data
+        result = utils.low_pass(data, 1)
+        self.assertEqual(result, target)
+
+        target = [Decimal(1), Decimal("0.5"), Decimal("0.25"), Decimal("0.125")]
+        result = utils.low_pass(data, 3)
+        self.assertEqual(result, target)

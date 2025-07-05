@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import datetime
 import re
-import shlex
 import string
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -31,6 +30,7 @@ from nummus.models.base import (
     YIELD_PER,
 )
 from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from decimal import Decimal
@@ -190,9 +190,7 @@ class TransactionSplit(Base):
     @property
     def parent(self) -> Transaction:
         """Parent Transaction."""
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
         query = s.query(Transaction).where(Transaction.id_ == self.parent_id)
         return query.one()
 
@@ -227,45 +225,7 @@ class TransactionSplit(Base):
             Ordered list of matches, from best to worst
             or None if search_str is invalid
         """
-        # Clean a bit
-        for s in string.punctuation:
-            if s not in '"+-':
-                search_str = search_str.replace(s, " ")
-
-        # Replace +- not following a space with a space
-        # Skip +- at start
-        search_str = re.sub(r"(?<!^)(?<! )[+-]", " ", search_str)
-
-        search_str = search_str.strip().lower()
-
-        if len(search_str) < utils.MIN_STR_LEN:
-            return None
-
-        # If unbalanced quote, remove right most one
-        n = search_str.count('"')
-        if (n % 2) == 1:
-            i = search_str.rfind('"')
-            search_str = search_str[:i] + search_str[i + 1 :]
-
-        # tokenize search_str
-        tokens_must: set[str] = set()
-        tokens_can: set[str] = set()
-        tokens_not: set[str] = set()
-
-        for raw in shlex.split(search_str):
-            if raw[0] == "+":
-                dest = tokens_must
-                token = raw[1:]
-            elif raw[0] == "-":
-                dest = tokens_not
-                token = raw[1:]
-            else:
-                dest = tokens_can
-                token = raw
-
-            token = re.sub(r"  +", " ", token.strip())
-            if token:
-                dest.add(token)
+        tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
         category_names = category_names or TransactionCategory.map_name(query.session)
 
@@ -428,9 +388,7 @@ class Transaction(Base):
         Returns:
             Most similar Transaction.id_
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         if cache_ok and self.similar_txn_id is not None:
             return self.similar_txn_id
@@ -551,13 +509,14 @@ class Transaction(Base):
             limit=None,
             score_cutoff=utils.SEARCH_THRESHOLD,
         )
-        if len(extracted) == 0:
-            # There are transactions with similar amounts but not close statement
-            # Return the closest in amount and account
-            # Aka proceed with all matches
-            matches = dict.fromkeys(statements, 50)
-        else:
-            matches = {t_id: score for _, score, t_id in extracted}
+        # There are transactions with similar amounts but not close statement
+        # Return the closest in amount and account
+        # Aka proceed with all matches
+        matches = (
+            dict.fromkeys(statements, 50)
+            if len(extracted) == 0
+            else {t_id: score for _, score, t_id in extracted}
+        )
 
         # Add a bonuse points for closeness in price and same account
         query = (
@@ -573,10 +532,10 @@ class Transaction(Base):
         for t_id, acct_id, amount in query.yield_per(YIELD_PER):
             # 5% off will reduce score by 5%
             amount_diff_percent = abs(amount - self.amount) / self.amount
-            score = matches[t_id] * float(1 - amount_diff_percent)
-            if acct_id == self.account_id:
-                # Extra 10 points for same account
-                score += 10
+            # Extra 10 points for same account
+            score = matches[t_id] * float(1 - amount_diff_percent) + (
+                10 if acct_id == self.account_id else 0
+            )
             matches_bonus[t_id] = score
 
         # Sort by best score and return best id

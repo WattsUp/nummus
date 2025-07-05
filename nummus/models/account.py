@@ -8,7 +8,6 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import func, orm, UniqueConstraint
 
-from nummus import exceptions as exc
 from nummus import utils
 from nummus.models.asset import Asset
 from nummus.models.base import (
@@ -23,6 +22,7 @@ from nummus.models.base import (
 )
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
+from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -79,9 +79,7 @@ class Account(Base):
     @property
     def opened_on_ord(self) -> int | None:
         """Date ordinal of first Transaction."""
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
         query = s.query(func.min(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
@@ -90,9 +88,7 @@ class Account(Base):
     @property
     def updated_on_ord(self) -> int | None:
         """Date ordinal of latest Transaction."""
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
         query = s.query(func.max(Transaction.date_ord)).where(
             Transaction.account_id == self.id_,
         )
@@ -136,6 +132,7 @@ class Account(Base):
         cost_basis_accounts: dict[int, list[Decimal | None]] = defaultdict(
             lambda: [None] * n,
         )
+        ids = ids or {r[0] for r in s.query(Account.id_).all()}
 
         # Profit = Interest + dividends + rewards + change in asset value - fees
         # Dividends, fees, and change in value can be assigned to an asset
@@ -153,11 +150,12 @@ class Account(Base):
                 TransactionSplit.account_id,
                 func.sum(TransactionSplit.amount),
             )
-            .where(TransactionSplit.date_ord <= start_ord)
+            .where(
+                TransactionSplit.date_ord <= start_ord,
+                TransactionSplit.account_id.in_(ids),
+            )
             .group_by(TransactionSplit.account_id)
         )
-        if ids is not None:
-            query = query.where(TransactionSplit.account_id.in_(ids))
         for acct_id, iv in query.all():
             acct_id: int
             iv: Decimal
@@ -173,11 +171,10 @@ class Account(Base):
             .where(
                 TransactionSplit.date_ord == start_ord,
                 TransactionSplit.category_id.in_(cost_basis_skip_ids),
+                TransactionSplit.account_id.in_(ids),
             )
             .group_by(TransactionSplit.account_id)
         )
-        if ids is not None:
-            query = query.where(TransactionSplit.account_id.in_(ids))
         for acct_id, iv in query.all():
             acct_id: int
             iv: Decimal
@@ -198,10 +195,9 @@ class Account(Base):
                 .where(
                     TransactionSplit.date_ord <= end_ord,
                     TransactionSplit.date_ord > start_ord,
+                    TransactionSplit.account_id.in_(ids),
                 )
             )
-            if ids is not None:
-                query = query.where(TransactionSplit.account_id.in_(ids))
 
             for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
                 acct_id: int
@@ -239,10 +235,9 @@ class Account(Base):
             .where(
                 TransactionSplit.asset_id.isnot(None),
                 TransactionSplit.date_ord == start_ord,
+                TransactionSplit.account_id.in_(ids),
             )
         )
-        if ids is not None:
-            query = query.where(TransactionSplit.account_id.in_(ids))
         assets_day_zero: dict[int, dict[int, Decimal]] = defaultdict(
             lambda: defaultdict(Decimal),
         )
@@ -252,28 +247,56 @@ class Account(Base):
             qty: Decimal
             assets_day_zero[acct_id][a_id] += qty
 
+        # Remove zeros
+        assets_accounts = {
+            acct_id: {
+                a_id: quantities
+                for a_id, quantities in assets.items()
+                if any(quantities)
+            }
+            for acct_id, assets in assets_accounts.items()
+        }
+        assets_day_zero = {
+            acct_id: {a_id: qty for a_id, qty in assets.items() if qty != 0}
+            for acct_id, assets in assets_day_zero.items()
+        }
+
         # Skip assets with zero quantity
         a_ids: set[int] = set()
         for assets in assets_accounts.values():
-            for a_id, quantities in list(assets.items()):
-                if not any(quantities):
-                    # Remove asset from account
-                    assets.pop(a_id)
-                else:
-                    a_ids.add(a_id)
+            a_ids.update(assets.keys())
         for assets in assets_day_zero.values():
-            for a_id, qty in list(assets.items()):
-                if qty == 0:
-                    assets.pop(a_id)
-                else:
-                    a_ids.add(a_id)
+            a_ids.update(assets.keys())
 
         asset_prices = Asset.get_value_all(s, start_ord, end_ord, a_ids)
 
+        return cls._merge_value_data(
+            n,
+            cash_flow_accounts,
+            cost_basis_accounts,
+            assets_accounts,
+            assets_day_zero,
+            asset_prices,
+        )
+
+    @classmethod
+    def _merge_value_data(
+        cls,
+        n: int,
+        cash_flow_accounts: dict[int, list[Decimal | None]],
+        cost_basis_accounts: dict[int, list[Decimal | None]],
+        assets_accounts: dict[int, dict[int, list[Decimal]]],
+        assets_day_zero: dict[int, dict[int, Decimal]],
+        asset_prices: dict[int, list[Decimal]],
+    ) -> tuple[
+        dict[int, list[Decimal]],
+        dict[int, list[Decimal]],
+        dict[int, list[Decimal]],
+    ]:
         acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for acct_id, cash_flow in cash_flow_accounts.items():
-            assets = assets_accounts[acct_id]
+            assets = assets_accounts.get(acct_id, {})
             cash = utils.integrate(cash_flow)
 
             if len(assets) == 0:
@@ -300,7 +323,7 @@ class Account(Base):
             v = values[0] if v is None else v + values[0]
 
             # Reduce the cost basis on day one to add the asset value to profit
-            for a_id, qty in assets_day_zero[acct_id].items():
+            for a_id, qty in assets_day_zero.get(acct_id, {}).items():
                 v -= qty * asset_prices[a_id][0]
 
             cost_basis_flow[0] = v
@@ -327,9 +350,7 @@ class Account(Base):
             Also returns value by Asset
             (list[values], list[profit], dict{Asset.id_: list[values]})
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
+        s = obj_session(self)
 
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
@@ -406,10 +427,7 @@ class Account(Base):
             dict{TransactionCategory: list[values]}
             Includes None in categories
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
-
+        s = obj_session(self)
         return self.get_cash_flow_all(s, start_ord, end_ord, [self.id_])
 
     @classmethod
@@ -435,6 +453,7 @@ class Account(Base):
         n = end_ord - start_ord + 1
 
         iv_accounts: dict[int, dict[int, Decimal]] = defaultdict(dict)
+        ids = ids or {r[0] for r in s.query(Account.id_).all()}
 
         # Get Asset quantities on start date
         query = (
@@ -447,14 +466,13 @@ class Account(Base):
             .where(
                 TransactionSplit.asset_id.is_not(None),
                 TransactionSplit.date_ord <= start_ord,
+                TransactionSplit.account_id.in_(ids),
             )
             .group_by(
                 TransactionSplit.account_id,
                 TransactionSplit.asset_id,
             )
         )
-        if ids is not None:
-            query = query.where(TransactionSplit.account_id.in_(ids))
 
         for acct_id, a_id, qty in query.yield_per(YIELD_PER):
             acct_id: int
@@ -485,11 +503,10 @@ class Account(Base):
                     TransactionSplit.date_ord <= end_ord,
                     TransactionSplit.date_ord > start_ord,
                     TransactionSplit.asset_id.is_not(None),
+                    TransactionSplit.account_id.in_(ids),
                 )
                 .order_by(TransactionSplit.account_id)
             )
-            if ids is not None:
-                query = query.where(TransactionSplit.account_id.in_(ids))
 
             current_acct_id = None
             deltas = {}
@@ -534,10 +551,7 @@ class Account(Base):
         Returns:
             dict{Asset.id_: list[values]}
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
-
+        s = obj_session(self)
         return self.get_asset_qty_all(s, start_ord, end_ord, [self.id_])[self.id_]
 
     @classmethod
@@ -634,10 +648,7 @@ class Account(Base):
         Returns:
             dict{Asset.id_: profit}
         """
-        s = orm.object_session(self)
-        if s is None:
-            raise exc.UnboundExecutionError
-
+        s = obj_session(self)
         return self.get_profit_by_asset_all(s, start_ord, end_ord, [self.id_])
 
     @classmethod

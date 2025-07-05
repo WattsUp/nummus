@@ -7,7 +7,7 @@ from typing_extensions import override
 from nummus import portfolio
 from nummus.health_checks import CHECKS
 from nummus.health_checks.base import Base
-from nummus.models import HealthCheckIssue
+from nummus.models import HealthCheckIssue, query_count
 from tests.base import TestBase
 
 
@@ -56,7 +56,7 @@ class TestCheckBase(TestBase):
         MockCheck.ignore(p, {uri_0})
         with p.begin_session() as s:
             # No issues to ignore
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 0)
 
             i = HealthCheckIssue(
@@ -77,7 +77,7 @@ class TestCheckBase(TestBase):
 
         MockCheck.ignore(p, [uri_0, uri_1])
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 2)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
@@ -87,7 +87,7 @@ class TestCheckBase(TestBase):
 
         MockCheck.ignore(p, [])
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 2)
 
             c = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
@@ -119,7 +119,7 @@ class TestCheckBase(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 2)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
@@ -143,7 +143,7 @@ class TestCheckBase(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 2)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
@@ -164,7 +164,7 @@ class TestCheckBase(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 2)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
@@ -188,7 +188,7 @@ class TestCheckBase(TestBase):
         c.test()
 
         with p.begin_session() as s:
-            n = s.query(HealthCheckIssue).count()
+            n = query_count(s.query(HealthCheckIssue))
             self.assertEqual(n, 1)
 
             i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()

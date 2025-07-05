@@ -4,6 +4,7 @@ import datetime
 
 from nummus.models import (
     Account,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
@@ -37,7 +38,7 @@ class TestTransactionCategory(WebTestBase):
         self._setup_portfolio()
 
         with p.begin_session() as s:
-            n_before = s.query(TransactionCategory).count()
+            n_before = query_count(s.query(TransactionCategory))
 
         endpoint = "transaction_categories.new"
         result, _ = self.web_get(endpoint)
@@ -50,7 +51,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertEqual(headers.get("HX-Trigger"), "category")
 
         with p.begin_session() as s:
-            n_after = s.query(TransactionCategory).count()
+            n_after = query_count(s.query(TransactionCategory))
             self.assertEqual(n_after, n_before + 1)
 
         e_str = "Transaction category name must be unique"
@@ -58,7 +59,7 @@ class TestTransactionCategory(WebTestBase):
         self.assertIn(e_str, result)
 
         with p.begin_session() as s:
-            n_after = s.query(TransactionCategory).count()
+            n_after = query_count(s.query(TransactionCategory))
             self.assertEqual(n_after, n_before + 1)
 
     def test_category(self) -> None:

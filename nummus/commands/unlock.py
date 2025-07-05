@@ -41,6 +41,4 @@ class Unlock(BaseCommand):
 
     @override
     def run(self) -> int:
-        if self._p is None:  # pragma: no cover
-            return 1
         return 0

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeVar
 
 import sqlalchemy
 from sqlalchemy import (
@@ -15,11 +15,14 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 
+from nummus import exceptions as exc
+from nummus.models.base import YIELD_PER
+
 if TYPE_CHECKING:
     from nummus.models.base import Base
 
 
-def query_count(query: orm.Query[Base]) -> int:
+def query_count(query: orm.Query) -> int:
     """Count the number of result a query will return.
 
     Args:
@@ -73,10 +76,9 @@ def paginate(
     return results, count, next_offset
 
 
-# Debug only code, no need to test
 def dump_table_configs(
     s: orm.Session,
-    model: type[Base] | None = None,
+    model: type[Base],
 ) -> list[str]:
     """Get the table configs (columns and constraints) and print.
 
@@ -87,12 +89,12 @@ def dump_table_configs(
     Returns:
         List of lines used to create tables
     """
-    table_filter = f"AND name='{model.__tablename__}'" if model else ""
     stmt = f"""
         SELECT sql
         FROM sqlite_master
         WHERE
-            type='table' {table_filter}
+            type='table'
+            AND name='{model.__tablename__}'
         """.strip()  # noqa: S608
     result = s.execute(sqlalchemy.text(stmt)).one()[0]
     result: str
@@ -131,3 +133,113 @@ def get_constraints(
         constraints.append((ForeignKeyConstraint, cols))
 
     return constraints
+
+
+def obj_session(m: Base) -> orm.Session:
+    """Get the SQL session for an object.
+
+    Args:
+        m: Model to get from
+
+    Returns:
+        Session
+
+    Raises:
+        UnboundExecutionError if model is unbound
+    """
+    s = orm.object_session(m)
+    if s is None:
+        raise exc.UnboundExecutionError
+    return s
+
+
+def update_rows(
+    s: orm.Session,
+    cls: type[Base],
+    query: orm.Query,
+    id_key: str,
+    updates: dict[object, dict[str, object]],
+) -> None:
+    """Update many rows, reusing leftovers when possible.
+
+    Args:
+        s: SQL session to use
+        cls: Type of model to update
+        query: Query to fetch all applicable models
+        id_key: Name of property used for identification
+        updates: dict{id_value: {parameter: value}}
+    """
+    updates = updates.copy()
+    leftovers: list[Base] = []
+
+    for m in query.yield_per(YIELD_PER):
+        update = updates.pop(getattr(m, id_key), None)
+        if update is None:
+            # No longer needed
+            leftovers.append(m)
+        else:
+            for k, v in update.items():
+                setattr(m, k, v)
+
+    # Add any missing ones
+    for id_, update in updates.items():
+        if leftovers:
+            m = leftovers.pop(0)
+            setattr(m, id_key, id_)
+            for k, v in update.items():
+                setattr(m, k, v)
+        else:
+            m = cls(**{id_key: id_, **update})
+            s.add(m)
+
+    # Delete any leftovers
+    for m in leftovers:
+        s.delete(m)
+
+
+def update_rows_list(
+    s: orm.Session,
+    cls: type[Base],
+    query: orm.Query,
+    updates: list[dict[str, object]],
+) -> None:
+    """Update many rows, reusing leftovers when possible.
+
+    Args:
+        s: SQL session to use
+        cls: Type of model to update
+        query: Query to fetch all applicable models
+        updates: list[{parameter: value}]
+    """
+    updates = updates.copy()
+    leftovers: list[Base] = []
+
+    for m in query.yield_per(YIELD_PER):
+        if len(updates) == 0:
+            # No longer needed
+            leftovers.append(m)
+        else:
+            update = updates.pop(0)
+            for k, v in update.items():
+                setattr(m, k, v)
+
+    for update in updates:
+        # Can't have leftovers and more updates
+        # So just add all remaining ones
+        m = cls(**update)
+        s.add(m)
+
+    # Delete any leftovers
+    for m in leftovers:
+        s.delete(m)
+
+
+T = TypeVar("T")
+
+
+def one_or_none(query: orm.Query[T]) -> T | None:
+    """Return one result. If no results or multiple, return None."""
+    try:
+        return query.one_or_none()
+    except (exc.NoResultFound, exc.MultipleResultsFound):
+        return None

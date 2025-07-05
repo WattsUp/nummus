@@ -179,19 +179,9 @@ ignore = [
   "PLR0915", # Too many statements
   "PT009",   # TODO (WattsUp): Remove
   "PT027",   # TODO (WattsUp): Remove
-  "RUF100",  # TODO (WattsUp): Remove
-  "C901",    # TODO (WattsUp): Remove
 ]
 
 exclude = [
-  "migrations",
-  "__pycache__",
-  "manage.py",
-  "settings.py",
-  "env",
-  ".env",
-  "venv",
-  ".venv",
   # Ugly code only for testing
   "tools/make_test_portfolio.py",
   # Not updated yet

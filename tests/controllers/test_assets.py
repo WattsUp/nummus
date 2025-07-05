@@ -6,6 +6,7 @@ from nummus.models import (
     Asset,
     AssetCategory,
     AssetValuation,
+    query_count,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -382,7 +383,7 @@ class TestAsset(WebTestBase):
             "v": v_uri,
         }
         result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Only up to a week in advance", result)
+        self.assertEqual("Only up to 7 days in advance", result)
 
         args = {
             "uri": asset_0_uri,
@@ -555,7 +556,7 @@ class TestAsset(WebTestBase):
         self.assertEqual(headers.get("HX-Trigger"), "valuation")
 
         with p.begin_session() as s:
-            n = s.query(AssetValuation).where(AssetValuation.id_ == v_id).count()
+            n = query_count(s.query(AssetValuation).where(AssetValuation.id_ == v_id))
             self.assertEqual(n, 0)
 
     def test_update(self) -> None:

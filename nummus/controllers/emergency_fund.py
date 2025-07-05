@@ -3,22 +3,17 @@
 from __future__ import annotations
 
 import datetime
-from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
-from sqlalchemy import func
 
-from nummus import exceptions as exc
 from nummus import portfolio, utils
 from nummus.controllers import common
-from nummus.models import Account
-from nummus.models.base import YIELD_PER
 from nummus.models.budget import BudgetAssignment
-from nummus.models.transaction import TransactionSplit
-from nummus.models.transaction_category import TransactionCategory
 
 if TYPE_CHECKING:
+    from decimal import Decimal
+
     from nummus.controllers.base import Routes
 
 
@@ -63,131 +58,20 @@ def ctx_page() -> dict[str, object]:
     n = today_ord - start_ord + 1
 
     with p.begin_session() as s:
-        accounts: dict[int, str] = dict(
-            s.query(Account)  # type: ignore[attr-defined]
-            .with_entities(Account.id_, Account.name)
-            .where(Account.budgeted)
-            .all(),
+        t_lowers, t_uppers, balances, categories, categories_total = (
+            BudgetAssignment.get_emergency_fund(
+                s,
+                start_ord,
+                today_ord,
+                utils.DAYS_IN_QUARTER,
+                utils.DAYS_IN_QUARTER * 2,
+            )
         )
-
-        try:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(TransactionCategory.name == "emergency fund")
-                .one()[0]
-            )
-        except exc.NoResultFound as e:  # pragma: no cover
-            msg = "Category emergency fund not found"
-            raise exc.ProtectedObjectNotFoundError(msg) from e
-
-        balance = s.query(func.sum(BudgetAssignment.amount)).where(
-            BudgetAssignment.category_id == t_cat_id,
-            BudgetAssignment.month_ord <= start_ord,
-        ).scalar() or Decimal(0)
-
-        date_ord = start_ord
-        balances: list[Decimal] = []
-
-        query = (
-            s.query(BudgetAssignment)
-            .with_entities(BudgetAssignment.month_ord, BudgetAssignment.amount)
-            .where(
-                BudgetAssignment.category_id == t_cat_id,
-                BudgetAssignment.month_ord > start_ord,
-            )
-            .order_by(BudgetAssignment.month_ord)
-        )
-        for b_ord, amount in query.all():
-            while date_ord < b_ord:
-                balances.append(balance)
-                date_ord += 1
-            balance += amount
-        while date_ord <= today_ord:
-            balances.append(balance)
-            date_ord += 1
-
-        n_smoothing = 15
-        n_lower = utils.DAYS_IN_QUARTER
-        n_upper = utils.DAYS_IN_QUARTER * 2
-
-        categories: dict[int, tuple[str, str]] = {}
-        categories_total: dict[int, Decimal] = {}
-
-        daily = Decimal(0)
-        dailys: list[Decimal] = []
-
-        date_ord = start_ord - n_upper - n_smoothing
-
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.name,
-                TransactionCategory.emoji_name,
-            )
-            .where(TransactionCategory.essential)
-        )
-        for t_cat_id, name, emoji_name in query.all():
-            categories[t_cat_id] = name, emoji_name
-            categories_total[t_cat_id] = Decimal(0)
-
-        query = (
-            s.query(TransactionSplit)
-            .with_entities(
-                TransactionSplit.date_ord,
-                TransactionSplit.category_id,
-                func.sum(TransactionSplit.amount),
-            )
-            .where(
-                TransactionSplit.account_id.in_(accounts),
-                TransactionSplit.category_id.in_(categories),
-                TransactionSplit.date_ord >= date_ord,
-            )
-            .group_by(TransactionSplit.date_ord, TransactionSplit.category_id)
-        )
-        for t_ord, t_cat_id, amount in query.yield_per(YIELD_PER):
-            while date_ord < t_ord:
-                dailys.append(daily)
-                date_ord += 1
-                daily = Decimal(0)
-
-            daily += amount
-
-            if t_ord >= start_ord:
-                categories_total[t_cat_id] += amount
-
-        while date_ord <= today_ord:
-            dailys.append(daily)
-            date_ord += 1
-            daily = Decimal(0)
-
-        dates = utils.range_date(start_ord, today_ord)
-
-    totals_lower = [
-        -sum(dailys[i : i + n_lower]) for i in range(len(dailys) - n_lower + 1)
-    ]
-    totals_upper = [
-        -sum(dailys[i : i + n_upper]) for i in range(len(dailys) - n_upper + 1)
-    ]
-
-    a_smoothing = 2 / Decimal(n_smoothing + 1)
-
-    current = totals_lower[0]
-    for i, x in enumerate(totals_lower):
-        current = a_smoothing * x + (1 - a_smoothing) * current
-        totals_lower[i] = current
-
-    current = totals_upper[0]
-    for i, x in enumerate(totals_upper):
-        current = a_smoothing * x + (1 - a_smoothing) * current
-        totals_upper[i] = current
-
-    totals_lower = totals_lower[-n:]
-    totals_upper = totals_upper[-n:]
+    dates = utils.range_date(start_ord, today_ord)
 
     current = balances[-1]
-    target_lower = totals_lower[-1]
-    target_upper = totals_upper[-1]
+    target_lower = t_lowers[-1]
+    target_upper = t_uppers[-1]
 
     delta_lower = target_lower - current
     delta_upper = current - target_upper
@@ -227,8 +111,8 @@ def ctx_page() -> dict[str, object]:
             "labels": [d.isoformat() for d in dates],
             "date_mode": "months",
             "balances": balances,
-            "spending_lower": totals_lower,
-            "spending_upper": totals_upper,
+            "spending_lower": t_lowers,
+            "spending_upper": t_uppers,
         },
         "current": current,
         "target_lower": target_lower,
