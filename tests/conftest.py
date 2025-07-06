@@ -203,6 +203,25 @@ def account(session: orm.Session) -> Account:
 
 
 @pytest.fixture
+def account_savings(session: orm.Session) -> Account:
+    """Create an Account.
+
+    Returns:
+        Savings Account, not closed, not budgeted
+    """
+    acct = Account(
+        name="Monkey Bank Savings",
+        institution="Monkey Bank",
+        category=AccountCategory.CASH,
+        closed=False,
+        budgeted=False,
+    )
+    session.add(acct)
+    session.commit()
+    return acct
+
+
+@pytest.fixture
 def categories(session: orm.Session) -> dict[str, int]:
     """Get default categories.
 
@@ -296,6 +315,7 @@ def transactions(
         parent=txn,
         amount=txn.amount,
         category_id=categories["other income"],
+        tag="engineer",
     )
     session.add_all((txn, t_split))
 
@@ -312,6 +332,7 @@ def transactions(
         asset_id=asset.id_,
         asset_quantity_unadjusted=10,
         category_id=categories["securities traded"],
+        tag="engineer",
     )
     session.add_all((txn, t_split))
 
@@ -328,6 +349,7 @@ def transactions(
         asset_id=asset.id_,
         asset_quantity_unadjusted=-5,
         category_id=categories["securities traded"],
+        memo="for rent",
     )
     session.add_all((txn, t_split))
 
@@ -344,6 +366,7 @@ def transactions(
         asset_id=asset.id_,
         asset_quantity_unadjusted=-5,
         category_id=categories["securities traded"],
+        memo="rent transfer",
     )
     session.add_all((txn, t_split))
 

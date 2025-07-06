@@ -238,7 +238,7 @@ class TransactionSplit(Base):
         query: orm.Query[TransactionSplit],
         search_str: str,
         category_names: dict[int, str] | None = None,
-    ) -> list[int] | None:
+    ) -> list[int]:
         """Search TransactionSplit text fields.
 
         Args:
@@ -248,7 +248,6 @@ class TransactionSplit(Base):
 
         Returns:
             Ordered list of matches, from best to worst
-            or None if search_str is invalid
         """
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
