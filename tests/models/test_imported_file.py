@@ -1,33 +1,34 @@
 from __future__ import annotations
 
-import datetime
+from typing import TYPE_CHECKING
+
+import pytest
 
 from nummus import exceptions as exc
-from nummus import models
 from nummus.models import imported_file
 
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
 
-    today = datetime.datetime.now().astimezone().date()
-    today_ord = today.toordinal()
-
-    d = {
-        "hash_": self.random_string(),
-    }
-
-    f = imported_file.ImportedFile(**d)
-    s.add(f)
-    s.commit()
+def test_init_properties(
+    session: orm.Session,
+    rand_str: str,
+    today_ord: int,
+) -> None:
+    f = imported_file.ImportedFile(hash_=rand_str)
+    session.add(f)
+    session.commit()
 
     # Default date is today
     assert f.date_ord == today_ord
-    assert f.hash_ == d["hash_"]
+    assert f.hash_ == rand_str
 
-    # Duplicate hash_ are bad
-    f = imported_file.ImportedFile(date_ord=today_ord + 1, hash_=d["hash_"])
-    s.add(f)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+
+def test_duplicates(session: orm.Session, rand_str: str) -> None:
+    f = imported_file.ImportedFile(hash_=rand_str)
+    session.add(f)
+    f = imported_file.ImportedFile(hash_=rand_str)
+    session.add(f)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()

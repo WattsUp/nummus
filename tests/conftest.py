@@ -6,10 +6,17 @@ import shutil
 import string
 
 import pytest
-from sqlalchemy import orm
+from sqlalchemy import orm, pool
 
 from nummus import global_config, sql
-from nummus.models import base_uri
+from nummus.models import (
+    Account,
+    AccountCategory,
+    Asset,
+    AssetCategory,
+    base_uri,
+    TransactionCategory,
+)
 from nummus.portfolio import Portfolio
 
 
@@ -46,6 +53,13 @@ def rand_str(rand_str_generator: RandomStringGenerator) -> str:
     return rand_str_generator()
 
 
+# TODO (WattsUp): Maybe not needed?
+@pytest.fixture
+def sql_engine_args() -> None:
+    """Change all engines to NullPool so timing isn't an issue."""
+    sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # noqa: SLF001
+
+
 class EmptyPortfolioGenerator:
 
     def __init__(self, tmp_path_factory: pytest.TempPathFactory) -> None:
@@ -54,7 +68,7 @@ class EmptyPortfolioGenerator:
         Portfolio.create(self._path)
 
     def __call__(self) -> Portfolio:
-        tmp_path = self._path.with_suffix(".tmp.db")
+        tmp_path = self._path.with_name(f"{RandomStringGenerator()}.db")
         shutil.copyfile(self._path, tmp_path)
         return Portfolio(tmp_path, None)
 
@@ -81,6 +95,16 @@ def empty_portfolio(empty_portfolio_generator: EmptyPortfolioGenerator) -> Portf
     return empty_portfolio_generator()
 
 
+@pytest.fixture
+def session(empty_portfolio_generator: EmptyPortfolioGenerator) -> orm.Session:
+    """Create SQL session.
+
+    Returns:
+        Session generator
+    """
+    return orm.Session(sql.get_engine(empty_portfolio_generator().path, None))
+
+
 @pytest.fixture(autouse=True)
 def uri_cipher() -> None:
     """Generate a URI cipher."""
@@ -93,7 +117,7 @@ def clear_config_cache() -> None:
     global_config._CACHE.clear()  # noqa: SLF001
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def today() -> datetime.date:
     """Get today's date.
 
@@ -103,11 +127,56 @@ def today() -> datetime.date:
     return datetime.datetime.now().astimezone().date()
 
 
-@pytest.fixture
-def session(empty_portfolio_generator: EmptyPortfolioGenerator) -> orm.Session:
-    """Create SQL session.
+@pytest.fixture(scope="session")
+def today_ord(today: datetime.date) -> int:
+    """Get today's date ordinal.
 
     Returns:
-        Session generator
+        today as ordinal
     """
-    return orm.Session(sql.get_engine(empty_portfolio_generator().path, None))
+    return today.toordinal()
+
+
+@pytest.fixture
+def account(session: orm.Session) -> Account:
+    """Create an Account.
+
+    Returns:
+        Checking Account, not closed, not budgeted
+    """
+    acct = Account(
+        name="Monkey Bank Checking",
+        institution="Monkey Bank",
+        category=AccountCategory.CASH,
+        closed=False,
+        budgeted=False,
+    )
+    session.add(acct)
+    session.commit()
+    return acct
+
+
+@pytest.fixture
+def categories(session: orm.Session) -> dict[str, int]:
+    """Get default categories.
+
+    Returns:
+        dict{name: category id}
+    """
+    return {name: id_ for id_, name in TransactionCategory.map_name(session).items()}
+
+
+@pytest.fixture
+def asset(session: orm.Session) -> Asset:
+    """Create an stock Asset.
+
+    Returns:
+        Banana Inc., STOCKS
+    """
+    asset = Asset(
+        name="Banana Inc.",
+        category=AssetCategory.STOCKS,
+    )
+    session.add(asset)
+    session.commit()
+    return asset
