@@ -17,6 +17,7 @@ from nummus.models import (
     AssetCategory,
     AssetValuation,
     base_uri,
+    BudgetGroup,
     TransactionCategory,
 )
 from nummus.portfolio import Portfolio
@@ -234,3 +235,16 @@ def asset_valuation(
     session.add(v)
     session.commit()
     return v
+
+
+@pytest.fixture
+def budget_group(session: orm.Session, rand_str: str) -> BudgetGroup:
+    """Create a BudgetGroup.
+
+    Returns:
+        BudgetGroup with position 0
+    """
+    g = BudgetGroup(name=rand_str, position=0)
+    session.add(g)
+    session.commit()
+    return g
