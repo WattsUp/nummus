@@ -1,53 +1,74 @@
 from __future__ import annotations
 
-import datetime
-from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus import models
-from nummus.models import Asset, AssetCategory, AssetSplit
+from nummus.models import Asset, AssetSplit
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomRealGenerator
 
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-
-    today = datetime.datetime.now().astimezone().date()
-    today_ord = today.toordinal()
-
-    a = Asset(name=self.random_string(), category=AssetCategory.CASH)
-    s.add(a)
-    s.commit()
-
+def test_init_properties(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+    rand_real_generator: RandomRealGenerator,
+) -> None:
     d = {
-        "asset_id": a.id_,
-        "multiplier": self.random_decimal(1, 10),
+        "asset_id": asset.id_,
+        "multiplier": rand_real_generator(1, 10),
         "date_ord": today_ord,
     }
 
     v = AssetSplit(**d)
-    s.add(v)
-    s.commit()
+    session.add(v)
+    session.commit()
 
     assert v.asset_id == d["asset_id"]
     assert v.multiplier == d["multiplier"]
     assert v.date_ord == d["date_ord"]
 
-    # Negative multiplier are bad
-    v.multiplier = Decimal(-1)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-    # Zero multiplier are bad
-    v.multiplier = Decimal(0)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+def test_multiplier_negative(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=-1)
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
 
-    # Duplicate dates are bad
-    v = AssetSplit(**d)
-    s.add(v)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+
+def test_multiplier_zero(today_ord: int, session: orm.Session, asset: Asset) -> None:
+    v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=0)
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_duplicate_dates(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+    rand_real_generator: RandomRealGenerator,
+) -> None:
+    v = AssetSplit(
+        asset_id=asset.id_,
+        date_ord=today_ord,
+        multiplier=rand_real_generator(1, 10),
+    )
+    session.add(v)
+    v = AssetSplit(
+        asset_id=asset.id_,
+        date_ord=today_ord,
+        multiplier=rand_real_generator(1, 10),
+    )
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()

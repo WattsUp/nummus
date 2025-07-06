@@ -219,7 +219,7 @@ def test_update_rows_list_edit(
     utils.update_rows_list(
         session,
         TransactionSplit,
-        session.query(TransactionSplit),
+        session.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_),
         updates,
     )
     session.commit()
@@ -240,6 +240,21 @@ def test_update_rows_list_edit(
     assert t_split_1.memo == memo_1
     assert t_split_1.tag == tag_1
     assert t_split_1.amount == new_split_amount
+
+
+def test_update_rows_list_delete(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+    utils.update_rows_list(
+        session,
+        TransactionSplit,
+        session.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_),
+        [],
+    )
+    session.commit()
+    assert len(txn.splits) == 0
 
 
 @pytest.mark.parametrize(

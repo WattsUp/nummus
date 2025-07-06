@@ -1,84 +1,17 @@
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import (
-    Account,
-    AccountCategory,
-    Asset,
-    AssetValuation,
-    Transaction,
-    TransactionSplit,
-)
+from nummus.models import Account, AccountCategory, Asset, AssetValuation, Transaction
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
     from tests.conftest import RandomStringGenerator
-
-
-@pytest.fixture
-def transactions(
-    today: datetime.date,
-    rand_str_generator: RandomStringGenerator,
-    session: orm.Session,
-    account: Account,
-    asset: Asset,
-    categories: dict[str, int],
-) -> list[Transaction]:
-    # Fund account on 3 days before today
-    txn = Transaction(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=3),
-        amount=100,
-        statement=rand_str_generator(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=categories["other income"],
-    )
-    session.add_all((txn, t_split))
-
-    # Buy asset on 2 days before today
-    txn = Transaction(
-        account_id=account.id_,
-        date=today - datetime.timedelta(days=2),
-        amount=-10,
-        statement=rand_str_generator(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=10,
-        category_id=categories["securities traded"],
-    )
-    session.add_all((txn, t_split))
-
-    # Sell asset tomorrow
-    txn = Transaction(
-        account_id=account.id_,
-        date=today + datetime.timedelta(days=1),
-        amount=50,
-        statement=rand_str_generator(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=-5,
-        category_id=categories["securities traded"],
-    )
-    session.add_all((txn, t_split))
-
-    session.commit()
-    return session.query(Transaction).all()
 
 
 def test_init_properties(
@@ -128,7 +61,7 @@ def test_date_properties(
 ) -> None:
     _ = transactions
     assert account.opened_on_ord == today_ord - 3
-    assert account.updated_on_ord == today_ord + 1
+    assert account.updated_on_ord == today_ord + 7
 
 
 def test_get_asset_qty_empty(

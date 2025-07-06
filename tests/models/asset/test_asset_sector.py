@@ -1,49 +1,68 @@
 from __future__ import annotations
 
-from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus import models
-from nummus.models import Asset, AssetCategory, AssetSector, USSector
+from nummus.models import Asset, AssetSector, USSector
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomRealGenerator
 
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-
-    a = Asset(name=self.random_string(), category=AssetCategory.CASH)
-    s.add(a)
-    s.commit()
-
+def test_init_properties(
+    session: orm.Session,
+    asset: Asset,
+    rand_real_generator: RandomRealGenerator,
+) -> None:
     d = {
-        "asset_id": a.id_,
+        "asset_id": asset.id_,
         "sector": USSector.REAL_ESTATE,
-        "weight": self.random_decimal(0, 1),
+        "weight": rand_real_generator(1, 10),
     }
 
     v = AssetSector(**d)
-    s.add(v)
-    s.commit()
+    session.add(v)
+    session.commit()
 
     assert v.asset_id == d["asset_id"]
     assert v.sector == d["sector"]
     assert v.weight == d["weight"]
 
-    # Negative weights are bad
-    v.weight = Decimal(-1)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-    # Zero weightsare bad
-    v.weight = Decimal(0)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+def test_weight_negative(session: orm.Session, asset: Asset) -> None:
+    v = AssetSector(asset_id=asset.id_, sector=USSector.REAL_ESTATE, weight=-1)
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
 
-    # Duplicate sectors are bad
-    v = AssetSector(**d)
-    s.add(v)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+
+def test_weight_zero(session: orm.Session, asset: Asset) -> None:
+    v = AssetSector(asset_id=asset.id_, sector=USSector.REAL_ESTATE, weight=0)
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_duplicate_sectors(
+    session: orm.Session,
+    asset: Asset,
+    rand_real_generator: RandomRealGenerator,
+) -> None:
+    v = AssetSector(
+        asset_id=asset.id_,
+        sector=USSector.REAL_ESTATE,
+        weight=rand_real_generator(1, 10),
+    )
+    session.add(v)
+    v = AssetSector(
+        asset_id=asset.id_,
+        sector=USSector.REAL_ESTATE,
+        weight=rand_real_generator(1, 10),
+    )
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()

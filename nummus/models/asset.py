@@ -627,31 +627,17 @@ class Asset(Base):
                 return
             weights = {USSector(sector): Decimal(1)}
 
-        leftovers: list[AssetSector] = []
         query = s.query(AssetSector).where(AssetSector.asset_id == self.id_)
-        for a_sector in query.all():
-            weight = weights.pop(a_sector.sector, None)
-            if weight is None:
-                leftovers.append(a_sector)
-            else:
-                a_sector.weight = weight
-
-        for sector, weight in weights.items():
-            if leftovers:
-                a_sector = leftovers.pop(0)
-                a_sector.sector = sector
-                a_sector.weight = weight
-            else:
-                a_sector = AssetSector(
-                    asset_id=self.id_,
-                    sector=sector,
-                    weight=weight,
-                )
-                s.add(a_sector)
-
-        # Remaining need to be deleted
-        for a_sector in leftovers:
-            s.delete(a_sector)
+        update_rows(
+            s,
+            AssetSector,
+            query,
+            "sector",
+            {
+                sector: {"asset_id": self.id_, "weight": v}
+                for sector, v in weights.items()
+            },
+        )
 
     @classmethod
     def index_twrr(
@@ -677,7 +663,7 @@ class Asset(Base):
         """
         try:
             a_id = s.query(Asset.id_).where(Asset.name == name).one()[0]
-        except exc.NoResultFound as e:  # pragma: no cover
+        except exc.NoResultFound as e:
             msg = f"Could not find asset index {name}"
             raise exc.ProtectedObjectNotFoundError(msg) from e
         values = cls.get_value_all(s, start_ord, end_ord, ids=[a_id])[a_id]

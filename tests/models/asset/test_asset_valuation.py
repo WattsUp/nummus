@@ -1,48 +1,69 @@
 from __future__ import annotations
 
-import datetime
-from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus import models
-from nummus.models import Asset, AssetCategory, AssetValuation
+from nummus.models import Asset, AssetValuation
+
+if TYPE_CHECKING:
+    from decimal import Decimal
+
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomRealGenerator
 
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-
-    today = datetime.datetime.now().astimezone().date()
-    today_ord = today.toordinal()
-
-    a = Asset(name=self.random_string(), category=AssetCategory.CASH)
-    s.add(a)
-    s.commit()
-
+def test_init_properties(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+    rand_real: Decimal,
+) -> None:
     d = {
-        "asset_id": a.id_,
-        "value": self.random_decimal(0, 1),
+        "asset_id": asset.id_,
         "date_ord": today_ord,
+        "value": rand_real,
     }
 
     v = AssetValuation(**d)
-    s.add(v)
-    s.commit()
+    session.add(v)
+    session.commit()
 
     assert v.asset_id == d["asset_id"]
     assert v.value == d["value"]
     assert v.date_ord == d["date_ord"]
 
-    # Negative amounts are bad
-    v.value = Decimal(-1)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-    # Duplicate dates are bad
-    v = AssetValuation(**d)
-    s.add(v)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+def test_multiplier_negative(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=-1)
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_duplicate_dates(
+    today_ord: int,
+    session: orm.Session,
+    asset: Asset,
+    rand_real_generator: RandomRealGenerator,
+) -> None:
+    v = AssetValuation(
+        asset_id=asset.id_,
+        date_ord=today_ord,
+        value=rand_real_generator(),
+    )
+    session.add(v)
+    v = AssetValuation(
+        asset_id=asset.id_,
+        date_ord=today_ord,
+        value=rand_real_generator(),
+    )
+    session.add(v)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()

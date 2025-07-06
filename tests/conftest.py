@@ -4,9 +4,11 @@ import datetime
 import random
 import shutil
 import string
+from collections.abc import Iterable
 from decimal import Decimal
 
 import pytest
+import yfinance
 from sqlalchemy import orm, pool
 
 from nummus import global_config, sql
@@ -15,17 +17,23 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    AssetSplit,
     AssetValuation,
     base_uri,
     BudgetGroup,
+    Transaction,
     TransactionCategory,
+    TransactionSplit,
 )
 from nummus.portfolio import Portfolio
+from tests.mock_yfinance import MockTicker
 
 
 def id_func(val: object) -> str | None:
     if isinstance(val, datetime.date):
         return val.isoformat()
+    if isinstance(val, Iterable):
+        return str(val)
     return None
 
 
@@ -214,6 +222,7 @@ def asset(session: orm.Session) -> Asset:
     asset = Asset(
         name="Banana Inc.",
         category=AssetCategory.STOCKS,
+        ticker="BANANA",
     )
     session.add(asset)
     session.commit()
@@ -238,6 +247,23 @@ def asset_valuation(
 
 
 @pytest.fixture
+def asset_split(
+    session: orm.Session,
+    asset: Asset,
+    today_ord: int,
+) -> AssetSplit:
+    """Create an AssetSplit.
+
+    Returns:
+        AssetSplit on today of 10:1
+    """
+    v = AssetSplit(asset_id=asset.id_, date_ord=today_ord, multiplier=10)
+    session.add(v)
+    session.commit()
+    return v
+
+
+@pytest.fixture
 def budget_group(session: orm.Session, rand_str: str) -> BudgetGroup:
     """Create a BudgetGroup.
 
@@ -248,3 +274,84 @@ def budget_group(session: orm.Session, rand_str: str) -> BudgetGroup:
     session.add(g)
     session.commit()
     return g
+
+
+@pytest.fixture
+def transactions(
+    today: datetime.date,
+    rand_str_generator: RandomStringGenerator,
+    session: orm.Session,
+    account: Account,
+    asset: Asset,
+    categories: dict[str, int],
+) -> list[Transaction]:
+    # Fund account on 3 days before today
+    txn = Transaction(
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=3),
+        amount=100,
+        statement=rand_str_generator(),
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        category_id=categories["other income"],
+    )
+    session.add_all((txn, t_split))
+
+    # Buy asset on 2 days before today
+    txn = Transaction(
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=2),
+        amount=-10,
+        statement=rand_str_generator(),
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        asset_id=asset.id_,
+        asset_quantity_unadjusted=10,
+        category_id=categories["securities traded"],
+    )
+    session.add_all((txn, t_split))
+
+    # Sell asset tomorrow
+    txn = Transaction(
+        account_id=account.id_,
+        date=today + datetime.timedelta(days=1),
+        amount=50,
+        statement=rand_str_generator(),
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        asset_id=asset.id_,
+        asset_quantity_unadjusted=-5,
+        category_id=categories["securities traded"],
+    )
+    session.add_all((txn, t_split))
+
+    # Sell remaining next week
+    txn = Transaction(
+        account_id=account.id_,
+        date=today + datetime.timedelta(days=7),
+        amount=50,
+        statement=rand_str_generator(),
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        asset_id=asset.id_,
+        asset_quantity_unadjusted=-5,
+        category_id=categories["securities traded"],
+    )
+    session.add_all((txn, t_split))
+
+    session.commit()
+    return session.query(Transaction).all()
+
+
+@pytest.fixture(autouse=True)
+def mock_yfinance(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Mock yfinance with MockTicker."""
+    monkeypatch.setattr(yfinance, "Ticker", MockTicker)
