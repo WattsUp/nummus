@@ -309,7 +309,6 @@ class Account(Base):
 
             if len(assets) == 0:
                 acct_values[acct_id] = cash
-
                 continue
 
             summed = cash
@@ -535,13 +534,12 @@ class Account(Base):
 
         # Integrate deltas
         qty_accounts: dict[int, dict[int, list[Decimal]]] = defaultdict(
-            lambda: defaultdict(lambda: [Decimal(0) * n]),
+            lambda: defaultdict(lambda: [Decimal(0)] * n),
         )
         for acct_id, deltas in deltas_accounts.items():
-            qty_assets: dict[int, list[Decimal]] = {}
+            qty_assets = qty_accounts[acct_id]
             for a_id, delta in deltas.items():
                 qty_assets[a_id] = utils.integrate(delta)
-            qty_accounts[acct_id] = qty_assets
 
         return qty_accounts
 

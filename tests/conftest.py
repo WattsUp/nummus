@@ -4,6 +4,7 @@ import datetime
 import random
 import shutil
 import string
+from decimal import Decimal
 
 import pytest
 from sqlalchemy import orm, pool
@@ -14,6 +15,7 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    AssetValuation,
     base_uri,
     TransactionCategory,
 )
@@ -38,7 +40,7 @@ def rand_str_generator() -> RandomStringGenerator:
     """Returns a random string generator.
 
     Returns:
-        RandomString generator
+        RandomStringGenerator
     """
     return RandomStringGenerator()
 
@@ -48,9 +50,44 @@ def rand_str(rand_str_generator: RandomStringGenerator) -> str:
     """Returns a random string.
 
     Returns:
-        RandomString generator
+        Random string with 20 characters
     """
     return rand_str_generator()
+
+
+class RandomRealGenerator:
+
+    @classmethod
+    def __call__(
+        cls,
+        low: str | float | Decimal = 0,
+        high: str | float | Decimal = 1,
+        precision: int = 6,
+    ) -> Decimal:
+        d_low = round(Decimal(low), precision)
+        d_high = round(Decimal(high), precision)
+        x = random.uniform(float(d_low), float(d_high))
+        return min(max(round(Decimal(x), precision), d_low), d_high)
+
+
+@pytest.fixture(scope="session")
+def rand_real_generator() -> RandomRealGenerator:
+    """Returns a random decimal generator.
+
+    Returns:
+        RandomRealGenerator
+    """
+    return RandomRealGenerator()
+
+
+@pytest.fixture
+def rand_real(rand_real_generator: RandomRealGenerator) -> Decimal:
+    """Returns a random decimal [0, 1].
+
+    Returns:
+        Real number between [0, 1] with 6 digits
+    """
+    return rand_real_generator()
 
 
 # TODO (WattsUp): Maybe not needed?
@@ -180,3 +217,20 @@ def asset(session: orm.Session) -> Asset:
     session.add(asset)
     session.commit()
     return asset
+
+
+@pytest.fixture
+def asset_valuation(
+    session: orm.Session,
+    asset: Asset,
+    today_ord: int,
+) -> AssetValuation:
+    """Create an AssetValuation.
+
+    Returns:
+        AssetValuation on today of $10
+    """
+    v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=10)
+    session.add(v)
+    session.commit()
+    return v
