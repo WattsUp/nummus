@@ -91,7 +91,7 @@ preview = true
 
 [tool.codespell]
 skip = "3rd-party,dist,*.pem,*.json"
-ignore-words-list = ["assertIn", "initialY"]
+ignore-words-list = ["initialY"]
 
 [tool.coverage.run]
 command_line = "-m pytest"
@@ -107,7 +107,6 @@ omit = [
   "nummus/controllers/*",
   "nummus/encryption/*",
   "nummus/health_checks/*",
-  "nummus/importers/*",
   "nummus/migrations/*",
   "nummus/web/*",
   "nummus/exceptions.py",
@@ -183,7 +182,6 @@ addopts = [
   "--ignore=tests/controllers",
   "--ignore=tests/encryption",
   "--ignore=tests/health_checks",
-  "--ignore=tests/importers",
   "--ignore=tests/migrations",
   "--ignore=tests/web",
   "--ignore=tests/test_exceptions.py",
