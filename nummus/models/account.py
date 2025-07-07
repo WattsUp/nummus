@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 from sqlalchemy import func, orm, UniqueConstraint
 
@@ -26,6 +26,22 @@ from nummus.models.utils import obj_session
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
+
+
+class ValueResult(NamedTuple):
+    """Type returned by get_value."""
+
+    values: list[Decimal]
+    profits: list[Decimal]
+    values_by_asset: dict[int, list[Decimal]]
+
+
+class ValueResultAll(NamedTuple):
+    """Type returned by get_value_all."""
+
+    values_by_account: dict[int, list[Decimal]]
+    profits: dict[int, list[Decimal]]
+    values_by_asset: dict[int, list[Decimal]]
 
 
 class AccountCategory(BaseEnum):
@@ -109,11 +125,7 @@ class Account(Base):
         start_ord: int,
         end_ord: int,
         ids: Iterable[int] | None = None,
-    ) -> tuple[
-        dict[int, list[Decimal]],
-        dict[int, list[Decimal]],
-        dict[int, list[Decimal]],
-    ]:
+    ) -> ValueResultAll:
         """Get the value of all Accounts from start to end date.
 
         Args:
@@ -123,13 +135,8 @@ class Account(Base):
             ids: Limit results to specific Accounts by ID
 
         Returns:
-            Also returns profit & loss for each Account
-            Also returns value by Assets, Accounts holding same Assets will sum
-            (
-                dict{Account.id_: list[values]} with defaultdict,
-                dict{Account.id_: list[profit]} with defaultdict,
-                dict{Asset.id_: list[values]} with defaultdict,
-            )
+            ValueResultAll
+            All defaultdict
             Accounts and assets with zero values omitted
         """
         n = end_ord - start_ord + 1
@@ -296,11 +303,7 @@ class Account(Base):
         assets_accounts: dict[int, dict[int, list[Decimal]]],
         assets_day_zero: dict[int, dict[int, Decimal]],
         asset_prices: dict[int, list[Decimal]],
-    ) -> tuple[
-        dict[int, list[Decimal]],
-        dict[int, list[Decimal]],
-        dict[int, list[Decimal]],
-    ]:
+    ) -> ValueResultAll:
         acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
         for acct_id, cash_flow in cash_flow_accounts.items():
@@ -339,13 +342,13 @@ class Account(Base):
             profit = [v - cb for v, cb in zip(values, cost_basis, strict=True)]
             acct_profit[acct_id] = profit
 
-        return acct_values, acct_profit, asset_values
+        return ValueResultAll(acct_values, acct_profit, asset_values)
 
     def get_value(
         self,
         start_ord: int,
         end_ord: int,
-    ) -> tuple[list[Decimal], list[Decimal], dict[int, list[Decimal]]]:
+    ) -> ValueResult:
         """Get the value of Account from start to end date.
 
         Args:
@@ -353,17 +356,19 @@ class Account(Base):
             end_ord: Last date ordinal to evaluate (inclusive)
 
         Returns:
-            Also returns profit & loss
-            Also returns value by Asset
-            (list[values], list[profit], dict{Asset.id_: list[values]})
+            ValueResult
         """
         s = obj_session(self)
 
         # Not reusing get_value_all is faster by ~2ms,
         # not worth maintaining two almost identical implementations
 
-        accts, profit, assets = self.get_value_all(s, start_ord, end_ord, [self.id_])
-        return accts[self.id_], profit[self.id_], assets
+        r = self.get_value_all(s, start_ord, end_ord, [self.id_])
+        return ValueResult(
+            r.values_by_account[self.id_],
+            r.profits[self.id_],
+            r.values_by_asset,
+        )
 
     @classmethod
     def get_cash_flow_all(
