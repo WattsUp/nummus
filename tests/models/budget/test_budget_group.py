@@ -1,44 +1,62 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 from nummus import exceptions as exc
 from nummus.models import BudgetGroup
 
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
+    from tests.conftest import RandomStringGenerator
 
+
+def test_init_properties(session: orm.Session, rand_str: str) -> None:
     d = {
-        "name": self.random_string(),
+        "name": rand_str,
         "position": 0,
     }
-
     g = BudgetGroup(**d)
-    s.add(g)
-    s.commit()
+    session.add(g)
+    session.commit()
 
-    self.assertEqual(g.name, d["name"])
-    self.assertEqual(g.position, d["position"])
+    assert g.name == d["name"]
+    assert g.position == d["position"]
 
-    # Short strings are bad
-    self.assertRaises(exc.InvalidORMValueError, setattr, g, "name", "b")
 
-    # No strings are bad
-    g.name = ""
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+def test_duplicate_names(
+    session: orm.Session,
+    rand_str: str,
+) -> None:
+    g = BudgetGroup(name=rand_str, position=0)
+    session.add(g)
+    g = BudgetGroup(name=rand_str, position=1)
+    session.add(g)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
 
-    # Duplicate names are bad
-    g = BudgetGroup(name=d["name"], position=1)
-    s.add(g)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-    # Duplicate positions are bad
-    g = BudgetGroup(name=self.random_string(), position=0)
-    s.add(g)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+def test_duplicate_position(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    g = BudgetGroup(name=rand_str_generator(), position=0)
+    session.add(g)
+    g = BudgetGroup(name=rand_str_generator(), position=0)
+    session.add(g)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_empty(session: orm.Session) -> None:
+    g = BudgetGroup(name="", position=0)
+    session.add(g)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_short() -> None:
+    with pytest.raises(exc.InvalidORMValueError):
+        BudgetGroup(name="a", position=0)

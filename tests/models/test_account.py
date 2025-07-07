@@ -325,3 +325,28 @@ def test_get_profit_by_asset_today(
     _ = transactions
     result = account.get_profit_by_asset(today_ord, today_ord)
     assert result == {asset.id_: Decimal(0)}
+
+
+def test_do_include(
+    today_ord: int,
+    account: Account,
+) -> None:
+    assert account.do_include(today_ord)
+
+
+def test_dont_include_closed(
+    today_ord: int,
+    account: Account,
+) -> None:
+    account.closed = True
+    assert not account.do_include(today_ord)
+
+
+def test_do_include_closed(
+    today_ord: int,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    account.closed = True
+    assert account.do_include(today_ord)

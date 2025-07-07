@@ -670,3 +670,17 @@ class Account(Base):
         """
         query = s.query(Account.id_).where(Account.category == category)
         return {acct_id for acct_id, in query.all()}
+
+    def do_include(self, date_ord: int) -> bool:
+        """Test if account should be included for data.
+
+        Args:
+            date_ord: First date in data
+
+        Returns:
+            True if not closed or has a transaction in data range
+        """
+        if not self.closed:
+            return True
+        updated_on_ord = self.updated_on_ord
+        return updated_on_ord is not None and updated_on_ord >= date_ord

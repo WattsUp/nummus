@@ -18,6 +18,7 @@ from nummus.models.base import Base, BaseEnum, YIELD_PER
 from nummus.models.base_uri import Cipher, load_cipher
 from nummus.models.budget import (
     BudgetAssignment,
+    BudgetAvailable,
     BudgetGroup,
     Target,
     TargetPeriod,
@@ -57,6 +58,7 @@ __all__ = [
     "Base",
     "BaseEnum",
     "BudgetAssignment",
+    "BudgetAvailable",
     "BudgetGroup",
     "Cipher",
     "Config",

@@ -1,27 +1,28 @@
 from __future__ import annotations
 
-import datetime
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus.models import Target, TargetPeriod, TargetType, TransactionCategory
+from nummus.models import Target, TargetPeriod, TargetType
+from tests import conftest
+
+if TYPE_CHECKING:
+    from decimal import Decimal
+
+    from sqlalchemy import orm
 
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-    TransactionCategory.add_default(s)
-    names = TransactionCategory.map_name(s)
-    names_rev = {v: k for k, v in names.items()}
-
-    today = datetime.datetime.now().astimezone().date()
-    today_ord = today.toordinal()
-
+def test_init_properties(
+    today_ord: int,
+    session: orm.Session,
+    rand_real: Decimal,
+    categories: dict[str, int],
+) -> None:
     d = {
-        "category_id": names_rev["general merchandise"],
-        "amount": self.random_decimal(1, 10),
+        "category_id": categories["uncategorized"],
+        "amount": rand_real,
         "type_": TargetType.BALANCE,
         "period": TargetPeriod.ONCE,
         "due_date_ord": today_ord,
@@ -29,8 +30,8 @@ def test_init_properties() -> None:
     }
 
     t = Target(**d)
-    s.add(t)
-    s.commit()
+    session.add(t)
+    session.commit()
 
     assert t.category_id == d["category_id"]
     assert t.amount == d["amount"]
@@ -39,59 +40,76 @@ def test_init_properties() -> None:
     assert t.due_date_ord == d["due_date_ord"]
     assert t.repeat_every == d["repeat_every"]
 
-    # ONCE cannot be REFILL
-    t.type_ = TargetType.REFILL
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-    # ONCE cannot be ACCUMULATE
-    t.type_ = TargetType.ACCUMULATE
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # ONCE cannot repeat
-    t.repeat_every = 2
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # BALANCE cannot have a due date
-    t.due_date_ord = None
-    s.commit()
-
-    # But not ONCE can be those things
-    t.period = TargetPeriod.WEEK
-    t.type_ = TargetType.ACCUMULATE
-    t.repeat_every = 1
-    t.due_date_ord = today_ord
-    s.commit()
-
-    # WEEK must repeat
-    t.repeat_every = 0
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # WEEK can only repeat every week
-    t.repeat_every = 2
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # MONTH and YEAR can repeat every other
-    t.period = TargetPeriod.MONTH
-    t.repeat_every = 2
-    s.commit()
-
-    # !ONCE cannot be BALANCE
-    t.type_ = TargetType.BALANCE
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # ACCUMULATE must have a due date
-    t.due_date_ord = None
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
-
-    # Duplicate category_id are bad
+@pytest.mark.parametrize(
+    ("period", "type_", "kwargs", "success"),
+    [
+        (TargetPeriod.ONCE, TargetType.REFILL, {}, False),
+        (TargetPeriod.ONCE, TargetType.ACCUMULATE, {}, False),
+        (TargetPeriod.ONCE, TargetType.BALANCE, {"repeat_every": 2}, False),
+        (TargetPeriod.WEEK, TargetType.REFILL, {"repeat_every": 1}, True),
+        (TargetPeriod.WEEK, TargetType.REFILL, {"repeat_every": 0}, False),
+        (TargetPeriod.WEEK, TargetType.REFILL, {"repeat_every": 2}, False),
+        (TargetPeriod.MONTH, TargetType.REFILL, {"repeat_every": 2}, True),
+        (TargetPeriod.YEAR, TargetType.REFILL, {"repeat_every": 2}, True),
+        (TargetPeriod.WEEK, TargetType.BALANCE, {}, False),
+        (TargetPeriod.MONTH, TargetType.BALANCE, {}, False),
+        (TargetPeriod.YEAR, TargetType.BALANCE, {}, False),
+        (
+            TargetPeriod.WEEK,
+            TargetType.REFILL,
+            {"repeat_every": 1, "due_date_ord": None},
+            False,
+        ),
+    ],
+    ids=conftest.id_func,
+)
+def test_check_constraints(
+    today_ord: int,
+    session: orm.Session,
+    rand_real: Decimal,
+    categories: dict[str, int],
+    period: TargetPeriod,
+    type_: TargetType,
+    kwargs: dict[str, object],
+    success: bool,
+) -> None:
+    d = {
+        "category_id": categories["uncategorized"],
+        "amount": rand_real,
+        "type_": type_,
+        "period": period,
+        "due_date_ord": today_ord,
+        "repeat_every": 0,
+    }
+    d.update(kwargs)
     t = Target(**d)
-    s.add(t)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
+    session.add(t)
+    if success:
+        session.commit()
+    else:
+        with pytest.raises(exc.IntegrityError):
+            session.commit()
+
+
+def test_duplicates(
+    today_ord: int,
+    session: orm.Session,
+    rand_real: Decimal,
+    categories: dict[str, int],
+) -> None:
+    d = {
+        "category_id": categories["uncategorized"],
+        "amount": rand_real,
+        "type_": TargetType.BALANCE,
+        "period": TargetPeriod.ONCE,
+        "due_date_ord": today_ord,
+        "repeat_every": 0,
+    }
+
+    t = Target(**d)
+    session.add(t)
+    t = Target(**d)
+    session.add(t)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()

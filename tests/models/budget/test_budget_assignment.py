@@ -2,502 +2,398 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nummus import exceptions as exc
-from nummus import models, utils
+from nummus import utils
 from nummus.models import (
     Account,
-    AccountCategory,
     BudgetAssignment,
+    BudgetAvailable,
     Transaction,
     TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
 )
 
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
-@pytest.mark.xfail
-def test_init_properties() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
 
-    t_cat = TransactionCategory(
-        emoji_name="Securities Traded",
-        group=TransactionCategoryGroup.OTHER,
-        locked=False,
-        is_profit_loss=False,
-        asset_linked=True,
-        essential=False,
+@pytest.fixture
+def budget_assignments(
+    month: datetime.date,
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+) -> list[BudgetAssignment]:
+    b = BudgetAssignment(
+        month_ord=month_ord,
+        amount=Decimal(50),
+        category_id=categories["groceries"],
     )
-    s.add(t_cat)
-    s.commit()
-    t_cat_id = t_cat.id_
+    session.add(b)
+    b = BudgetAssignment(
+        month_ord=month_ord,
+        amount=Decimal(100),
+        category_id=categories["emergency fund"],
+    )
+    session.add(b)
+    b = BudgetAssignment(
+        month_ord=utils.date_add_months(month, 1).toordinal(),
+        amount=Decimal(2000),
+        category_id=categories["rent"],
+    )
+    session.add(b)
+    session.commit()
+    return list(session.query(BudgetAssignment).all())
 
-    today = datetime.datetime.now().astimezone().date()
-    month = utils.start_of_month(today)
-    month_ord = month.toordinal()
 
+def test_init_properties(
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+    rand_real: Decimal,
+) -> None:
     d = {
         "month_ord": month_ord,
-        "amount": self.random_decimal(-1, 0),
-        "category_id": t_cat_id,
+        "amount": rand_real,
+        "category_id": categories["uncategorized"],
     }
 
     b = BudgetAssignment(**d)
-    s.add(b)
-    s.commit()
+    session.add(b)
+    session.commit()
 
     assert b.month_ord == d["month_ord"]
     assert b.amount == d["amount"]
     assert b.category_id == d["category_id"]
 
-    # Duplicate dates are bad
-    b = BudgetAssignment(month_ord=month_ord, amount=0, category_id=t_cat_id)
-    s.add(b)
-    self.assertRaises(exc.IntegrityError, s.commit)
-    s.rollback()
 
-
-@pytest.mark.xfail
-def test_get_monthly_available() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-    TransactionCategory.add_default(s)
-    names = TransactionCategory.map_name(s)
-    names_rev = {v: k for k, v in names.items()}
-
-    today = datetime.datetime.now().astimezone().date()
-    month = utils.start_of_month(today)
-    month_ord = month.toordinal()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    assert categories.keys() == names.keys()
-    non_zero = {k: v for k, v in categories.items() if any(vv != 0 for vv in v)}
-    assert non_zero == {}
-    assert assignable == 0
-    assert future_assigned == 0
-
-    acct = Account(
-        name=self.random_string(),
-        institution=self.random_string(),
-        category=AccountCategory.INVESTMENT,
-        closed=False,
-        budgeted=False,
-    )
-    s.add(acct)
-    s.commit()
-
-    t_cat_id = names_rev["general merchandise"]
-    txn = Transaction(
-        account_id=acct.id_,
-        date=today,
-        amount=Decimal(-10),
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=t_cat_id,
-    )
-    s.add_all((txn, t_split))
-    s.commit()
-
-    # Account not budgeted won't show up
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    non_zero = {k: v for k, v in categories.items() if any(vv != 0 for vv in v)}
-    assert non_zero == {}
-    assert assignable == 0
-    assert future_assigned == 0
-
-    # Show up with a budgeted account
-    acct.budgeted = True
-    s.commit()
-
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(0), Decimal(-10), Decimal(-10), Decimal(0)),
-    )
-    assert assignable == 0
-    assert future_assigned == 0
-
-    # Add income
-    txn = Transaction(
-        account_id=acct.id_,
-        date=today,
-        amount=Decimal(100),
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=names_rev["other income"],
-    )
-    s.add_all((txn, t_split))
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(0), Decimal(-10), Decimal(-10), Decimal(0)),
-    )
-    self.assertEqual(
-        categories[names_rev["other income"]],
-        (Decimal(0), Decimal(100), Decimal(0), Decimal(0)),
-    )
-    assert assignable == Decimal(100)
-    assert future_assigned == 0
-
-    # Add assignment
-    a = BudgetAssignment(
+def test_duplicate_months(
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+    rand_real: Decimal,
+) -> None:
+    b = BudgetAssignment(
         month_ord=month_ord,
-        amount=Decimal(10),
-        category_id=t_cat_id,
+        amount=rand_real,
+        category_id=categories["uncategorized"],
     )
-    s.add(a)
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
+    session.add(b)
+    b = BudgetAssignment(
+        month_ord=month_ord,
+        amount=rand_real,
+        category_id=categories["uncategorized"],
+    )
+    session.add(b)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_get_monthly_available_empty(
+    month: datetime.date,
+    session: orm.Session,
+    categories: dict[str, int],
+) -> None:
+    availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
+        session,
         month,
     )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(-10), Decimal(0), Decimal(0)),
-    )
-    assert assignable == Decimal(90)
+    assert set(availables.keys()) == set(categories.values())
+    non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
+    assert non_zero == {}
+    assert assignable == 0
     assert future_assigned == 0
 
-    # Add assignment to last month and more income
-    month_last = utils.date_add_months(month, -1)
-    a = BudgetAssignment(
-        month_ord=month_last.toordinal(),
-        amount=Decimal(10),
-        category_id=t_cat_id,
-    )
-    s.add(a)
-    txn = Transaction(
-        account_id=acct.id_,
-        date=month_last,
-        amount=Decimal(100),
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=names_rev["other income"],
-    )
-    s.add_all((txn, t_split))
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
+
+def test_get_monthly_available(
+    month: datetime.date,
+    session: orm.Session,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
+        session,
         month,
     )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(-10), Decimal(10), Decimal(10)),
+    availables.pop(categories["other income"])
+    target = BudgetAvailable(
+        Decimal(50),
+        Decimal(-20),
+        Decimal(30),
+        Decimal(0),
     )
-    assert assignable == Decimal(180)
-    assert future_assigned == 0
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month_last,
+    assert availables.pop(categories["groceries"]) == target
+    target = BudgetAvailable(
+        Decimal(0),
+        Decimal(-50),
+        Decimal(-50),
+        Decimal(0),
     )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(0), Decimal(10), Decimal(0)),
+    assert availables.pop(categories["rent"]) == target
+    target = BudgetAvailable(
+        Decimal(100),
+        Decimal(0),
+        Decimal(100),
+        Decimal(0),
     )
-    assert assignable == Decimal(80)
-    assert future_assigned == Decimal(10)
-
-    # Add prior activity with leftovers
-    txn = Transaction(
-        account_id=acct.id_,
-        date=month_last,
-        amount=Decimal(-5),
-        statement=self.random_string(),
+    assert availables.pop(categories["emergency fund"]) == target
+    target = BudgetAvailable(
+        Decimal(0),
+        Decimal(-50),
+        Decimal(-50),
+        Decimal(0),
     )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        category_id=t_cat_id,
-    )
-    s.add_all((txn, t_split))
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(-10), Decimal(5), Decimal(5)),
-    )
-    assert assignable == Decimal(180)
-    assert future_assigned == 0
-
-    # Remove prior assignment
-    a.amount = Decimal(0)
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(-10), Decimal(0), Decimal(0)),
-    )
-    assert assignable == Decimal(185)
-    assert future_assigned == 0
-
-    # Increase funding
-    a.amount = Decimal(90)
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month_last,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(90), Decimal(-5), Decimal(85), Decimal(0)),
-    )
+    assert availables.pop(categories["securities traded"]) == target
+    # Remaining all zero
+    non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
+    assert non_zero == {}
     assert assignable == Decimal(0)
-    assert future_assigned == Decimal(10)
+    assert future_assigned == Decimal(1170)  # Not 2000 since overassigned
 
-    # Increase funding
-    a.amount = Decimal(150)
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month_last,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(150), Decimal(-5), Decimal(145), Decimal(0)),
-    )
-    assert assignable == Decimal(-50)
-    assert future_assigned == Decimal(0)
 
-    # Close account, but still included cause it has transactions this month
+def test_get_monthly_available_next_month(
+    month: datetime.date,
+    session: orm.Session,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    availables, assignable, future_assigned = BudgetAssignment.get_monthly_available(
+        session,
+        utils.date_add_months(month, 1),
+    )
+    availables.pop(categories["other income"])
+    target = BudgetAvailable(
+        Decimal(0),
+        Decimal(0),
+        Decimal(30),
+        Decimal(30),
+    )
+    assert availables.pop(categories["groceries"]) == target
+    target = BudgetAvailable(
+        Decimal(2000),
+        Decimal(0),
+        Decimal(2000),
+        Decimal(0),
+    )
+    assert availables.pop(categories["rent"]) == target
+    target = BudgetAvailable(
+        Decimal(0),
+        Decimal(0),
+        Decimal(100),
+        Decimal(100),
+    )
+    assert availables.pop(categories["emergency fund"]) == target
+    # Remaining all zero
+    non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
+    assert non_zero == {}
+    assert assignable == Decimal(1200 - 30 - 2000 - 100)
+    assert future_assigned == 0
+
+
+def test_get_emergency_fund_empty(
+    today_ord: int,
+    session: orm.Session,
+) -> None:
+    start_ord = today_ord - 3
+    end_ord = today_ord + 3
+
+    n_lower = 20
+    n_upper = 40
+    result = BudgetAssignment.get_emergency_fund(
+        session,
+        start_ord,
+        end_ord,
+        n_lower,
+        n_upper,
+    )
+    assert result.spending_lower == [Decimal(0)] * 7
+    assert result.spending_upper == [Decimal(0)] * 7
+    assert result.balances == [Decimal(0)] * 7
+    assert result.categories == {}
+    assert result.categories_total == {}
+
+
+def test_get_emergency_fund(
+    today: datetime.date,
+    today_ord: int,
+    session: orm.Session,
+    account: Account,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+    rand_str: str,
+) -> None:
+    session.query(TransactionCategory).where(
+        TransactionCategory.name == "groceries",
+    ).update({"essential": True})
+    # Add a transaction 30 days ago
     txn = Transaction(
-        account_id=acct.id_,
-        date=today,
-        amount=Decimal(-185),
-        statement=self.random_string(),
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=30),
+        amount=-50,
+        statement=rand_str,
     )
     t_split = TransactionSplit(
         parent=txn,
         amount=txn.amount,
-        category_id=t_cat_id,
+        category_id=categories["groceries"],
     )
-    s.add_all((txn, t_split))
-    acct.closed = True
-    s.commit()
-    categories, assignable, future_assigned = BudgetAssignment.get_monthly_available(
-        s,
-        month,
-    )
-    self.assertEqual(
-        categories[t_cat_id],
-        (Decimal(10), Decimal(-195), Decimal(-40), Decimal(145)),
-    )
-    assert assignable == Decimal(40)
-    assert future_assigned == 0
+    session.add_all((txn, t_split))
+    session.commit()
 
-
-@pytest.mark.xfail
-def test_get_emergency_fund() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-    TransactionCategory.add_default(s)
-    categories = TransactionCategory.map_name(s)
-    # Reverse categories for LUT
-    categories = {v: k for k, v in categories.items()}
-
-    today = datetime.datetime.now().astimezone().date()
-    month = utils.start_of_month(today)
-    month_ord = month.toordinal()
-    end_ord = month_ord + 1
-    start_ord = month_ord - 8
+    _ = transactions_spending
+    _ = budget_assignments
+    start_ord = today_ord - 3
+    end_ord = today_ord + 3
 
     n_smoothing = 15
     n_lower = 20
     n_upper = 40
+    result = BudgetAssignment.get_emergency_fund(
+        session,
+        start_ord,
+        end_ord,
+        n_lower,
+        n_upper,
+    )
 
-    # Empty if fine
-    r_lowers, r_uppers, r_balances, r_categories, r_categories_total = (
-        BudgetAssignment.get_emergency_fund(s, start_ord, end_ord, n_lower, n_upper)
-    )
-    assert r_lowers == [Decimal(0)] * 10
-    assert r_uppers == [Decimal(0)] * 10
-    assert r_balances == [Decimal(0)] * 10
-    assert r_categories == {}
-    assert r_categories_total == {}
-
-    # Prepare portfolio
-    acct = Account(
-        name="Monkey Bank Checking",
-        institution="Monkey Bank",
-        category=AccountCategory.CASH,
-        closed=False,
-        budgeted=True,
-    )
-    s.add(acct)
-    b = BudgetAssignment(
-        category_id=TransactionCategory.emergency_fund(s)[0],
-        month_ord=month_ord,
-        amount=10,
-    )
-    s.add(b)
-    s.commit()
-
-    # Mark groceries as essential
-    s.query(TransactionCategory).where(
-        TransactionCategory.name == "groceries",
-    ).update({"essential": True})
-
-    # Add spending
-    txn = Transaction(
-        account_id=acct.id_,
-        date=month,
-        amount=-100,
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        amount=txn.amount,
-        parent=txn,
-        category_id=categories["groceries"],
-    )
-    s.add_all((txn, t_split))
-
-    # Add spending >3 months ago
-    txn = Transaction(
-        account_id=acct.id_,
-        date=month - datetime.timedelta(days=30),
-        amount=-100,
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        amount=txn.amount,
-        parent=txn,
-        category_id=categories["groceries"],
-    )
-    s.add_all((txn, t_split))
-
-    # Add spending >3 months ago
-    txn = Transaction(
-        account_id=acct.id_,
-        date=month - datetime.timedelta(days=300),
-        amount=-100,
-        statement=self.random_string(),
-    )
-    t_split = TransactionSplit(
-        amount=txn.amount,
-        parent=txn,
-        category_id=categories["groceries"],
-    )
-    s.add_all((txn, t_split))
-
-    s.commit()
-
-    r_lowers, r_uppers, r_balances, r_categories, r_categories_total = (
-        BudgetAssignment.get_emergency_fund(s, start_ord, end_ord, n_lower, n_upper)
-    )
-    n_target = 10 + n_lower + n_smoothing + 1
+    n_target = 7 + n_lower + n_smoothing + 1
     target = [
-        *([Decimal(0)] * 14),
-        *([Decimal(100)] * n_lower),
-        *([Decimal(0)] * (n_target - n_lower - 2 - 14)),
-        *([Decimal(100)] * 2),
+        *([Decimal(0)] * 9),
+        *([Decimal(50)] * n_lower),
+        *([Decimal(0)] * (n_target - n_lower - 4 - 9)),
+        *([Decimal(20)] * 4),
     ]
-    target = utils.low_pass(target, n_smoothing)[-10:]
-    assert r_lowers == target
-    n_target = 10 + n_smoothing + 1
+    assert len(target) == n_target
+    target = utils.low_pass(target, n_smoothing)[-7:]
+    assert result.spending_lower == target
+
+    n_target = 7 + n_smoothing + 1
     target = [
-        *([Decimal(100)] * (n_target - 2)),
-        *([Decimal(200)] * 2),
+        *([Decimal(50)] * (n_target - 4)),
+        *([Decimal(70)] * 4),
     ]
-    target = utils.low_pass(target, n_smoothing)[-10:]
-    assert r_uppers == target
-    target = [Decimal(0)] * 8 + [Decimal(10), Decimal(10)]
-    assert r_balances == target
+    assert len(target) == n_target
+    target = utils.low_pass(target, n_smoothing)[-7:]
+    assert result.spending_upper == target
+
+    assert result.balances[-1] == Decimal(100)
+
     target = {
         categories["groceries"]: ("groceries", "Groceries"),
     }
-    assert r_categories == target
+    assert result.categories == target
     target = {
-        categories["groceries"]: Decimal(-100),
+        categories["groceries"]: Decimal(-20),
     }
-    assert r_categories_total == target
+    assert result.categories_total == target
 
 
-@pytest.mark.xfail
-def test_budget() -> None:
-    s = self.get_session()
-    models.metadata_create_all(s)
-    TransactionCategory.add_default(s)
-    categories = TransactionCategory.map_name(s)
-    # Reverse categories for LUT
-    categories = {v: k for k, v in categories.items()}
+def test_get_emergency_fund_balance(
+    month_ord: int,
+    session: orm.Session,
+    budget_assignments: list[BudgetAssignment],
+) -> None:
+    _ = budget_assignments
+    start_ord = month_ord - 3
+    end_ord = month_ord + 3
 
-    today = datetime.datetime.now().astimezone().date()
-    month = utils.start_of_month(today)
-    month_ord = month.toordinal()
+    n_lower = 20
+    n_upper = 40
+    result = BudgetAssignment.get_emergency_fund(
+        session,
+        start_ord,
+        end_ord,
+        n_lower,
+        n_upper,
+    )
+    target = [
+        *([Decimal(0)] * 3),
+        *([Decimal(100)] * 4),
+    ]
+    assert result.balances == target
 
+
+def test_move_from_income(
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+) -> None:
     src_cat_id = None
     dest_cat_id = categories["groceries"]
-    BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    s.commit()
+    BudgetAssignment.move(session, month_ord, src_cat_id, dest_cat_id, Decimal(100))
+    session.commit()
 
-    a = s.query(BudgetAssignment).one()
+    a = session.query(BudgetAssignment).one()
     assert a.category_id == dest_cat_id
     assert a.month_ord == month_ord
     assert a.amount == 100
 
-    src_cat_id = None
-    dest_cat_id = categories["groceries"]
-    BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    s.commit()
 
-    a = s.query(BudgetAssignment).one()
-    assert a.category_id == dest_cat_id
-    assert a.month_ord == month_ord
-    assert a.amount == 200
+@pytest.mark.parametrize(
+    ("src", "dest", "to_move", "target_src", "target_dest"),
+    [
+        (None, "rent", Decimal(100), None, Decimal(100)),
+        (None, "groceries", Decimal(100), None, Decimal(150)),
+        ("groceries", None, Decimal(20), Decimal(30), None),
+        ("groceries", None, Decimal(50), None, None),
+        ("groceries", "rent", Decimal(20), Decimal(30), Decimal(20)),
+        ("rent", "groceries", Decimal(20), Decimal(-20), Decimal(70)),
+    ],
+)
+def test_move_to_income_partial(
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+    budget_assignments: list[BudgetAssignment],
+    src: str | None,
+    dest: str | None,
+    to_move: Decimal,
+    target_src: Decimal | None,
+    target_dest: Decimal | None,
+) -> None:
+    _ = budget_assignments
+    src_cat_id = None if src is None else categories[src]
+    dest_cat_id = None if dest is None else categories[dest]
+    BudgetAssignment.move(session, month_ord, src_cat_id, dest_cat_id, to_move)
+    session.commit()
 
-    src_cat_id = categories["groceries"]
-    dest_cat_id = None
-    BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    s.commit()
+    a = (
+        session.query(BudgetAssignment)
+        .where(
+            BudgetAssignment.category_id == src_cat_id,
+            BudgetAssignment.month_ord == month_ord,
+        )
+        .one_or_none()
+    )
+    if target_src is None:
+        assert a is None
+    else:
+        assert a is not None
+        assert a.month_ord == month_ord
+        assert a.amount == target_src
 
-    a = s.query(BudgetAssignment).one()
-    assert a.category_id == src_cat_id
-    assert a.month_ord == month_ord
-    assert a.amount == 100
-
-    src_cat_id = categories["groceries"]
-    dest_cat_id = None
-    BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    s.commit()
-
-    a = s.query(BudgetAssignment).one_or_none()
-    self.assertIsNone(a)
-
-    src_cat_id = categories["groceries"]
-    dest_cat_id = None
-    BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, Decimal(100))
-    s.commit()
-
-    a = s.query(BudgetAssignment).one()
-    assert a.category_id == src_cat_id
-    assert a.month_ord == month_ord
-    assert a.amount == -100
+    a = (
+        session.query(BudgetAssignment)
+        .where(
+            BudgetAssignment.category_id == dest_cat_id,
+            BudgetAssignment.month_ord == month_ord,
+        )
+        .one_or_none()
+    )
+    if target_dest is None:
+        assert a is None
+    else:
+        assert a is not None
+        assert a.month_ord == month_ord
+        assert a.amount == target_dest

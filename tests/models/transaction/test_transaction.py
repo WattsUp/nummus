@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus.models import Account, Asset, Transaction, TransactionSplit
+from nummus.models import Account, Transaction
 
 if TYPE_CHECKING:
     import datetime
+    from decimal import Decimal
 
     from sqlalchemy import orm
 
@@ -43,62 +43,6 @@ def test_init_properties(
     assert not txn.cleared
 
 
-@pytest.fixture
-def transactions(
-    today: datetime.date,
-    rand_str_generator: RandomStringGenerator,
-    session: orm.Session,
-    account: Account,
-    account_savings: Account,
-    asset: Asset,
-    categories: dict[str, int],
-) -> list[Transaction]:
-    statement_income = rand_str_generator()
-    statement_groceries = rand_str_generator()
-    statement_rent = rand_str_generator()
-    specs = [
-        (account, Decimal(100), statement_income, "other income"),
-        (account, Decimal(100), statement_income, "other income"),
-        (account, Decimal(120), statement_income, "other income"),
-        (account, Decimal(-10), statement_groceries, "groceries"),
-        (account, Decimal(-10), statement_groceries + " other word", "groceries"),
-        (account, Decimal(-50), statement_rent, "rent"),
-        (account, Decimal(1000), rand_str_generator(), "other income"),
-        (account_savings, Decimal(100), statement_income, "other income"),
-    ]
-    for acct, amount, statement, category in specs:
-        txn = Transaction(
-            account_id=acct.id_,
-            date=today,
-            amount=amount,
-            statement=statement,
-        )
-        t_split = TransactionSplit(
-            parent=txn,
-            amount=txn.amount,
-            category_id=categories[category],
-        )
-        session.add_all((txn, t_split))
-
-    txn = Transaction(
-        account_id=account.id_,
-        date=today,
-        amount=-50,
-        statement=statement_rent + " other word",
-    )
-    t_split = TransactionSplit(
-        parent=txn,
-        amount=txn.amount,
-        asset_id=asset.id_,
-        asset_quantity_unadjusted=10,
-        category_id=categories["securities traded"],
-    )
-    session.add_all((txn, t_split))
-
-    session.commit()
-    return session.query(Transaction).all()
-
-
 @pytest.mark.parametrize(
     ("i", "target"),
     [
@@ -113,29 +57,29 @@ def transactions(
     ],
 )
 def test_find_similar(
-    transactions: list[Transaction],
+    transactions_spending: list[Transaction],
     i: int,
     target: int | None,
 ) -> None:
-    txn = transactions[i]
+    txn = transactions_spending[i]
     result = txn.find_similar()
     if target is None:
         assert result is None
     else:
-        assert result == transactions[target].id_
-        assert txn.similar_txn_id == transactions[target].id_
+        assert result == transactions_spending[target].id_
+        assert txn.similar_txn_id == transactions_spending[target].id_
 
 
-def test_find_similar_no_set(transactions: list[Transaction]) -> None:
-    txn = transactions[0]
+def test_find_similar_no_set(transactions_spending: list[Transaction]) -> None:
+    txn = transactions_spending[0]
     result = txn.find_similar(set_property=False)
-    assert result == transactions[1].id_
+    assert result == transactions_spending[1].id_
     assert txn.similar_txn_id is None
 
 
-def test_find_similar_cache(transactions: list[Transaction]) -> None:
-    txn = transactions[0]
+def test_find_similar_cache(transactions_spending: list[Transaction]) -> None:
+    txn = transactions_spending[0]
     result = txn.find_similar(set_property=True)
-    assert result == transactions[1].id_
-    assert txn.similar_txn_id == transactions[1].id_
-    assert txn.find_similar(cache_ok=True) == transactions[1].id_
+    assert result == transactions_spending[1].id_
+    assert txn.similar_txn_id == transactions_spending[1].id_
+    assert txn.find_similar(cache_ok=True) == transactions_spending[1].id_

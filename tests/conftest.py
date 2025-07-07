@@ -183,19 +183,39 @@ def today_ord(today: datetime.date) -> int:
     return today.toordinal()
 
 
+@pytest.fixture(scope="session")
+def month(today: datetime.date) -> datetime.date:
+    """Get today's month.
+
+    Returns:
+        month datetime.date
+    """
+    return today.replace(day=1)
+
+
+@pytest.fixture(scope="session")
+def month_ord(month: datetime.date) -> int:
+    """Get today's month ordinal.
+
+    Returns:
+        month as ordinal
+    """
+    return month.toordinal()
+
+
 @pytest.fixture
 def account(session: orm.Session) -> Account:
     """Create an Account.
 
     Returns:
-        Checking Account, not closed, not budgeted
+        Checking Account, not closed, budgeted
     """
     acct = Account(
         name="Monkey Bank Checking",
         institution="Monkey Bank",
         category=AccountCategory.CASH,
         closed=False,
-        budgeted=False,
+        budgeted=True,
     )
     session.add(acct)
     session.commit()
@@ -367,6 +387,62 @@ def transactions(
         asset_quantity_unadjusted=-5,
         category_id=categories["securities traded"],
         memo="rent transfer",
+    )
+    session.add_all((txn, t_split))
+
+    session.commit()
+    return session.query(Transaction).all()
+
+
+@pytest.fixture
+def transactions_spending(
+    today: datetime.date,
+    rand_str_generator: RandomStringGenerator,
+    session: orm.Session,
+    account: Account,
+    account_savings: Account,
+    asset: Asset,
+    categories: dict[str, int],
+) -> list[Transaction]:
+    statement_income = rand_str_generator()
+    statement_groceries = rand_str_generator()
+    statement_rent = rand_str_generator()
+    specs = [
+        (account, Decimal(100), statement_income, "other income"),
+        (account, Decimal(100), statement_income, "other income"),
+        (account, Decimal(120), statement_income, "other income"),
+        (account, Decimal(-10), statement_groceries, "groceries"),
+        (account, Decimal(-10), statement_groceries + " other word", "groceries"),
+        (account, Decimal(-50), statement_rent, "rent"),
+        (account, Decimal(1000), rand_str_generator(), "other income"),
+        (account_savings, Decimal(100), statement_income, "other income"),
+    ]
+    for acct, amount, statement, category in specs:
+        txn = Transaction(
+            account_id=acct.id_,
+            date=today,
+            amount=amount,
+            statement=statement,
+        )
+        t_split = TransactionSplit(
+            parent=txn,
+            amount=txn.amount,
+            category_id=categories[category],
+        )
+        session.add_all((txn, t_split))
+
+    txn = Transaction(
+        account_id=account.id_,
+        date=today,
+        amount=-50,
+        statement=statement_rent + " other word",
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        asset_id=asset.id_,
+        asset_quantity_unadjusted=10,
+        category_id=categories["securities traded"],
     )
     session.add_all((txn, t_split))
 
