@@ -175,6 +175,7 @@ venv = ".venv"
 
 [tool.pytest.ini_options]
 addopts = [
+  "--durations=10",
   "--full-trace",
   "--import-mode=importlib",
   # TODO (WattsUp): Migrate tests

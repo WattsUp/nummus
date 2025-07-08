@@ -5,6 +5,8 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, TypedDict
 
+from nummus import exceptions as exc
+
 if TYPE_CHECKING:
     import datetime
     from decimal import Decimal
@@ -47,7 +49,7 @@ class TransactionImporter(ABC):
             buf_pdf: Contents of PDF pages as text
 
         Raises:
-            ValueError: If both bufs are None
+            NoImporterBufferError: If both bufs are None
         """
         super().__init__()
 
@@ -55,8 +57,7 @@ class TransactionImporter(ABC):
         self._buf_pdf = buf_pdf
 
         if buf is None and buf_pdf is None:
-            msg = "Must provide buffer or PDF pages"
-            raise ValueError(msg)
+            raise exc.NoImporterBufferError
 
     @classmethod
     @abstractmethod

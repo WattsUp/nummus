@@ -39,6 +39,7 @@ __all__ = [
     "MultipleResultsFound",
     "NoAssetWebSourceError",
     "NoIDError",
+    "NoImporterBufferError",
     "NoResultFound",
     "NoURIError",
     "NonAssetTransactionError",
@@ -49,6 +50,7 @@ __all__ = [
     "UnknownEncryptionVersionError",
     "UnknownImporterError",
     "UnlockingError",
+    "WrongImporterBufferError",
     "WrongURITypeError",
     "http",
 ]
@@ -115,7 +117,7 @@ class EmptyImportError(Exception):
 
 
 class FailedImportError(Exception):
-    """Error when a importer fails to import a file."""
+    """Error when an importer fails to import a file."""
 
     def __init__(self, path: Path, importer: object) -> None:
         """Initialize FailedImportError.
@@ -127,6 +129,14 @@ class FailedImportError(Exception):
         self.importer = importer.__class__.__name__
         msg = f"{importer.__class__.__name__} failed to import {path}"
         super().__init__(msg)
+
+
+class WrongImporterBufferError(Exception):
+    """Error when an importer is run with the wrong buffer type."""
+
+
+class NoImporterBufferError(Exception):
+    """Error when an importer is run without a buffer."""
 
 
 class UnlockingError(Exception):

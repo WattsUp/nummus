@@ -6,6 +6,7 @@ import shutil
 import string
 from collections.abc import Iterable
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 import yfinance
@@ -454,3 +455,13 @@ def transactions_spending(
 def mock_yfinance(monkeypatch: pytest.MonkeyPatch) -> None:
     """Mock yfinance with MockTicker."""
     monkeypatch.setattr(yfinance, "Ticker", MockTicker)
+
+
+@pytest.fixture(scope="session")
+def data_path() -> Path:
+    """Get path to data directory.
+
+    Returns:
+        Path to test data
+    """
+    return Path(__file__).with_name("data")
