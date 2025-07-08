@@ -43,9 +43,8 @@ def test_get_engine_unencrypted(tmp_path: Path) -> None:
         assert b"SQLite" in file.read()
 
 
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
 def test_get_engine_encrypted(tmp_path: Path, rand_str: str) -> None:
-    if not encryption.AVAILABLE:
-        pytest.skip("Encryption is not installed")
     key = rand_str.encode()
     enc, _ = encryption.Encryption.create(key)
 

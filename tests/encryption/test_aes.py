@@ -2,9 +2,15 @@ from __future__ import annotations
 
 import base64
 import hashlib
+from typing import TYPE_CHECKING
+
+import pytest
 
 from nummus import exceptions as exc
-from tests.base import TestBase
+from nummus.encryption.base import EncryptionInterface
+
+if TYPE_CHECKING:
+    from tests.conftest import RandomStringGenerator
 
 try:
     from nummus.encryption.aes import EncryptionAES as Encryption
@@ -15,49 +21,105 @@ else:
     NO_ENCRYPTION = False
 
 
-class TestEncryption(TestBase):
-    def setUp(self, *, clean: bool = True) -> None:
-        super().setUp(clean=clean)
-        if NO_ENCRYPTION:
-            self.skipTest("Encryption is not installed")
+@pytest.fixture
+def key(rand_str_generator: RandomStringGenerator) -> str:
+    """Generate a random key.
 
-    def test_encrypt_decrypt(self) -> None:
-        key = self.random_string()
-        secret = self.random_string()
+    Returns:
+        key
+    """
+    return rand_str_generator()
 
-        enc, enc_config = Encryption.create(key)
 
-        encrypted = enc.encrypt(secret)
-        self.assertNotEqual(encrypted, secret)
-        self.assertNotEqual(base64.b64decode(encrypted), secret)
-        decrypted = enc.decrypt_s(encrypted)
-        self.assertEqual(decrypted, secret)
+@pytest.fixture
+def secret(rand_str_generator: RandomStringGenerator) -> str:
+    """Generate a random secret.
 
-        # Make sure key actually got hashed
-        self.assertNotEqual(key, enc.hashed_key)
-        self.assertNotEqual(hashlib.sha256(key.encode()).digest(), enc.hashed_key)
-        self.assertNotIn(key.encode(), enc.hashed_key)
-        self.assertNotIn(key.encode(), enc_config)
+    Returns:
+        secret
+    """
+    return rand_str_generator()
 
-        # Load from enc_config
-        enc_loaded = Encryption(key, enc_config)
-        decrypted = enc_loaded.decrypt_s(encrypted)
-        self.assertEqual(decrypted, secret)
 
-        bad_key = key + self.random_string()
-        enc_bad = Encryption(bad_key, enc_config)
+@pytest.fixture
+def encryption(key: str) -> tuple[EncryptionInterface, bytes]:
+    """Generate an encryption object.
 
-        try:
-            secret_bad = enc_bad.decrypt_s(encrypted)
-            # Sometimes decrypting is valid but yields wrong secret
-            self.assertNotEqual(secret_bad, secret)
-        except ValueError:
-            pass  # Expected mismatch of padding
+    Returns:
+        tuple(Encryption, Encryption config)
+    """
+    return Encryption.create(key)
 
-        enc_config = b"a:bc"
-        self.assertRaises(
-            exc.UnknownEncryptionVersionError,
-            Encryption,
-            key,
-            enc_config,
-        )
+
+@pytest.fixture
+def secret_encrypted(encryption: tuple[EncryptionInterface, bytes], secret: str) -> str:
+    """Encrypt a secret.
+
+    Returns:
+        Encrypted secret
+    """
+    return encryption[0].encrypt(secret)
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_encrypt(secret: str, secret_encrypted: str) -> None:
+    assert secret_encrypted != secret
+    assert base64.b64decode(secret_encrypted) != secret
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_decrypt(
+    encryption: tuple[EncryptionInterface, bytes],
+    secret: str,
+    secret_encrypted: str,
+) -> None:
+    decrypted = encryption[0].decrypt_s(secret_encrypted)
+    assert decrypted == secret
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_key_hash(encryption: tuple[EncryptionInterface, bytes], key: str) -> None:
+    enc, enc_config = encryption
+    assert key != enc.hashed_key
+    assert hashlib.sha256(key.encode()).digest() != enc.hashed_key
+    assert key.encode() not in enc.hashed_key
+    assert key.encode() not in enc_config
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_load_config(
+    encryption: tuple[EncryptionInterface, bytes],
+    key: str,
+    secret: str,
+    secret_encrypted: str,
+) -> None:
+    # Load from enc_config
+    enc_loaded = Encryption(key, encryption[1])
+    decrypted = enc_loaded.decrypt_s(secret_encrypted)
+    assert decrypted == secret
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_load_config_bad_version() -> None:
+    with pytest.raises(exc.UnknownEncryptionVersionError):
+        Encryption("", b"a:bc")
+
+
+@pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+def test_bad_key(
+    rand_str_generator: RandomStringGenerator,
+    encryption: tuple[EncryptionInterface, bytes],
+    key: str,
+    secret: str,
+    secret_encrypted: str,
+) -> None:
+    bad_key = key + rand_str_generator()
+    enc_bad = Encryption(bad_key, encryption[1])
+
+    try:
+        secret_bad = enc_bad.decrypt_s(secret_encrypted)
+    except ValueError:
+        pass  # Expected mismatch of padding
+    else:
+        # Sometimes decrypting is valid but yields wrong secret
+        assert secret_bad != secret
