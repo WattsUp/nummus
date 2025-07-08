@@ -107,7 +107,6 @@ omit = [
   "nummus/controllers/*",
   "nummus/encryption/*",
   "nummus/health_checks/*",
-  "nummus/migrations/*",
   "nummus/web/*",
   "nummus/exceptions.py",
   "nummus/portfolio.py",
@@ -176,14 +175,12 @@ venv = ".venv"
 [tool.pytest.ini_options]
 addopts = [
   "--durations=10",
-  "--full-trace",
   "--import-mode=importlib",
   # TODO (WattsUp): Migrate tests
   "--ignore=tests/commands",
   "--ignore=tests/controllers",
   "--ignore=tests/encryption",
   "--ignore=tests/health_checks",
-  "--ignore=tests/migrations",
   "--ignore=tests/web",
   "--ignore=tests/test_exceptions.py",
   "--ignore=tests/test_portfolio.py",

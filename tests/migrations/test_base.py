@@ -1,16 +1,18 @@
 from __future__ import annotations
 
-import datetime
-import secrets
-from decimal import Decimal
+from typing import TYPE_CHECKING
 
+import pytest
 from packaging.version import Version
 from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import migrations, portfolio
+from nummus.migrations.base import SchemaMigrator
 from nummus.models import Asset, AssetCategory, AssetValuation, dump_table_configs
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
 class MockMigrator(migrations.Migrator):
@@ -23,83 +25,98 @@ class MockMigrator(migrations.Migrator):
         return ["Comments"]
 
 
-class TestMigrator(TestBase):
-    def test_init_properties(self) -> None:
-        m = MockMigrator()
-        self.assertEqual(m.min_version, Version(m._VERSION))  # noqa: SLF001
+def test_version() -> None:
+    m = MockMigrator()
+    assert m.min_version == Version(m._VERSION)  # noqa: SLF001
 
-    def test_modify_column(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
-        m = migrations.SchemaMigrator(set())
 
-        today = datetime.datetime.now().astimezone().date()
+def test_drop_column(session: orm.Session) -> None:
+    m = MockMigrator()
+    m.drop_column(session, Asset, "category")
+    session.commit()
+    assert m.pending_schema_updates == set()
 
-        with p.begin_session() as s:
-            a_name = self.random_string()
-            a = Asset(name=a_name, category=AssetCategory.ITEM)
-            s.add(a)
-            s.flush()
+    result = "\n".join(dump_table_configs(session, Asset))
+    assert "category" not in result
 
-            v = AssetValuation(
-                asset_id=a.id_,
-                date_ord=today.toordinal(),
-                value=self.random_decimal(1, 10),
-            )
-            s.add(v)
 
-        with p.begin_session() as s:
-            m.drop_column(s, Asset, "category")
-            self.assertEqual(m.pending_schema_updates, set())
+def test_drop_column_with_constraints(session: orm.Session) -> None:
+    m = MockMigrator()
+    m.drop_column(session, AssetValuation, "value")
+    session.commit()
+    assert m.pending_schema_updates == {AssetValuation}
 
-        with p.begin_session() as s:
-            result = "\n".join(dump_table_configs(s, Asset))
-            self.assertNotIn("category", result)
+    result = "\n".join(dump_table_configs(session, AssetValuation))
+    assert "value" not in result
 
-        with p.begin_session() as s:
-            # value has constraints on it that must go first
-            m.drop_column(s, AssetValuation, "value")
-            self.assertEqual(m.pending_schema_updates, {AssetValuation})
 
-        with p.begin_session() as s:
-            result = "\n".join(dump_table_configs(s, AssetValuation))
-            self.assertNotIn("value", result)
+def test_add_column_no_value_set(session: orm.Session, asset: Asset) -> None:
+    m = MockMigrator()
+    m.drop_column(session, Asset, "category")
+    session.commit()
+    m.pending_schema_updates.clear()
 
-        # Add them back
-        with p.begin_session() as s:
-            m.add_column(s, Asset, Asset.category)
-            m.add_column(s, AssetValuation, AssetValuation.value, Decimal(0))
-            self.assertEqual(m.pending_schema_updates, {Asset, AssetValuation})
+    m.add_column(session, Asset, Asset.category)
+    session.commit()
+    assert m.pending_schema_updates == {Asset}
 
-        # value got an initial value
-        with p.begin_session() as s:
-            v = s.query(AssetValuation.value).scalar()
-            self.assertEqual(v, Decimal(0))
+    result = "\n".join(dump_table_configs(session, Asset))
+    assert "category" in result
 
-            # value can be negative because schemas not updated
-            s.query(AssetValuation).update({"value": Decimal(-1)})
-            s.query(AssetValuation).update({"value": Decimal(1)})
+    assert asset.category is None
 
-            v = s.query(Asset.category).where(Asset.name == a_name).scalar()
-            self.assertIsNone(v)
 
-            s.query(Asset).update({"category": AssetCategory.CASH})
+def test_add_column_value_set(session: orm.Session, asset: Asset) -> None:
+    m = MockMigrator()
+    m.drop_column(session, Asset, "category")
+    session.commit()
+    m.pending_schema_updates.clear()
 
-        # Update schemas
-        m.migrate(p)
+    m.add_column(session, Asset, Asset.category, AssetCategory.STOCKS)
+    session.commit()
+    assert m.pending_schema_updates == {Asset}
 
-        with p.begin_session() as s:
-            # value can not be negative because schemas updated
-            self.assertRaises(
-                exc.IntegrityError,
-                s.query(AssetValuation).update,
-                {"value": Decimal(-1)},
-            )
+    result = "\n".join(dump_table_configs(session, Asset))
+    assert "category" in result
 
-        with p.begin_session() as s:
-            m.rename_column(s, Asset, "category", "class")
+    assert asset.category == AssetCategory.STOCKS
 
-        with p.begin_session() as s:
-            result = "\n".join(dump_table_configs(s, Asset))
-            self.assertNotIn("category", result)
-            self.assertIn("class", result)
+
+def test_rename_column(session: orm.Session) -> None:
+    m = MockMigrator()
+    m.rename_column(session, Asset, "category", "class")
+    session.commit()
+    assert m.pending_schema_updates == {Asset}
+
+    result = "\n".join(dump_table_configs(session, Asset))
+    assert "category" not in result
+    assert "class" in result
+
+
+def test_migrate_schemas_no_value_set(
+    empty_portfolio: portfolio.Portfolio,
+    asset: Asset,
+) -> None:
+    _ = asset
+    m = SchemaMigrator(set())
+    with empty_portfolio.begin_session() as s:
+        m.drop_column(s, Asset, "category")
+    with empty_portfolio.begin_session() as s:
+        m.add_column(s, Asset, Asset.category)
+
+    with pytest.raises(exc.IntegrityError):
+        m.migrate(empty_portfolio)
+
+
+def test_migrate_schemas_value_set(
+    empty_portfolio: portfolio.Portfolio,
+    asset: Asset,
+) -> None:
+    _ = asset
+    m = SchemaMigrator(set())
+    with empty_portfolio.begin_session() as s:
+        m.drop_column(s, Asset, "category")
+    with empty_portfolio.begin_session() as s:
+        m.add_column(s, Asset, Asset.category, AssetCategory.STOCKS)
+
+    assert m.migrate(empty_portfolio) == []
