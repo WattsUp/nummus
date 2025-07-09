@@ -17,7 +17,7 @@ from nummus.health_checks.base import Base
 from nummus.models import Account, Asset, AssetCategory, TransactionSplit, YIELD_PER
 
 if TYPE_CHECKING:
-    from nummus import portfolio
+    from sqlalchemy import orm
 
 _LIMIT_FREQUENCY = 10
 
@@ -28,11 +28,10 @@ class Typos(Base):
     _DESC = "Checks for very similar fields and common typos."
     _SEVERE = False
 
-    _RE_WORDS = re.compile(r"[ .,/()\[\]\-#:&!+?%'\";]")
+    _RE_WORDS = re.compile(rf"[ {re.escape(string.punctuation)}]")
 
     def __init__(
         self,
-        p: portfolio.Portfolio,
         *,
         no_ignores: bool = False,
         no_description_typos: bool = False,
@@ -44,7 +43,7 @@ class Typos(Base):
             no_ignores: True will print issues that have been ignored
             no_description_typos: True will not check descriptions or memos for typos
         """
-        super().__init__(p, no_ignores=no_ignores)
+        super().__init__(no_ignores=no_ignores)
         self._no_description_typos = no_description_typos
 
         # Create a dict of every word found with the first instance detected
@@ -54,46 +53,46 @@ class Typos(Base):
         self._proper_nouns: set[str] = set()
 
     @override
-    def test(self) -> None:
+    def test(self, s: orm.Session) -> None:
         spell = spellchecker.SpellChecker()
 
-        with self._p.begin_session() as s:
-            accounts = Account.map_name(s)
-            assets = Asset.map_name(s)
-            issues: dict[str, tuple[str, str, str]] = {}
-            self._proper_nouns.update(accounts.values())
-            self._proper_nouns.update(assets.values())
+        accounts = Account.map_name(s)
+        assets = Asset.map_name(s)
+        issues: dict[str, tuple[str, str, str]] = {}
+        self._proper_nouns.update(accounts.values())
+        self._proper_nouns.update(assets.values())
 
-            issues.update(self._test_accounts(s, accounts))
-            issues.update(self._test_transactions(s, accounts))
+        issues.update(self._test_accounts(s, accounts))
+        issues.update(self._test_transaction_nouns(s, accounts))
 
-            # Escape words and sort to replace longest words first
-            # So long words aren't partially replaced if they contain a short word
-            proper_nouns_re = [
-                re.escape(word)
-                for word in sorted(self._proper_nouns, key=len, reverse=True)
-            ]
-            # Remove proper nouns indicated by word boundary or space at end
-            re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")
+        # Escape words and sort to replace longest words first
+        # So long words aren't partially replaced if they contain a short word
+        proper_nouns_re = [
+            re.escape(word)
+            for word in sorted(self._proper_nouns, key=len, reverse=True)
+        ]
+        # Remove proper nouns indicated by word boundary or space at end
+        re_cleaner = re.compile(rf"\b(?:{'|'.join(proper_nouns_re)})(?:\b|(?= |$))")
 
-            issues.update(self._test_transaction_splits(s, accounts, re_cleaner, spell))
-            issues.update(self._test_assets(s, assets, re_cleaner, spell))
+        issues.update(self._test_transaction_texts(s, accounts, re_cleaner, spell))
+        issues.update(self._test_assets(s, assets, re_cleaner, spell))
 
-            if len(issues) != 0:
-                source_len = 0
-                field_len = 0
+        source_len = 0
+        field_len = 0
+        if len(issues) != 0:
+            for _, source, field in issues.values():
+                source_len = max(source_len, len(source))
+                field_len = max(field_len, len(field))
 
-                for _, source, field in issues.values():
-                    source_len = max(source_len, len(source))
-                    field_len = max(field_len, len(field))
-
-                for uri, (word, source, field) in issues.items():
-                    # Getting a suggested correction is slow and error prone,
-                    # Just say if a word is outside of the dictionary
-                    msg = f"{source:{source_len}} {field:{field_len}}: {word}"
-                    self._issues_raw[uri] = msg
-
-        self._commit_issues()
+        # Getting a suggested correction is slow and error prone,
+        # Just say if a word is outside of the dictionary
+        self._commit_issues(
+            s,
+            {
+                uri: f"{source:{source_len}} {field:{field_len}}: {word}"
+                for uri, (word, source, field) in issues.items()
+            },
+        )
 
         if self._no_description_typos:
             # Do commit and find issues as normal but hide the ones for description
@@ -113,8 +112,6 @@ class Typos(Base):
             pass
         else:
             # Skip numbers
-            return
-        if s in string.punctuation:
             return
         if s not in self._words:
             self._words[s] = (s, source, field)
@@ -149,7 +146,7 @@ class Typos(Base):
             self._proper_nouns.add(institution)
         return self._create_issues()
 
-    def _test_transactions(
+    def _test_transaction_nouns(
         self,
         s: orm.Session,
         accounts: dict[int, str],
@@ -183,7 +180,7 @@ class Typos(Base):
             issues.update(self._create_issues())
         return issues
 
-    def _test_transaction_splits(
+    def _test_transaction_texts(
         self,
         s: orm.Session,
         accounts: dict[int, str],
@@ -233,13 +230,14 @@ class Typos(Base):
                 Asset.id_,
                 Asset.description,
             )
-            .where(Asset.category != AssetCategory.INDEX)
+            .where(
+                Asset.category != AssetCategory.INDEX,
+                Asset.description.is_not(None),
+            )
         )
         for a_id, value in query.yield_per(YIELD_PER):
             a_id: int
-            value: str | None
-            if value is None:
-                continue
+            value: str
             source = f"Asset {assets[a_id]}"
             cleaned = re_cleaner.sub("", value).lower()
             for word in self._RE_WORDS.split(cleaned):

@@ -1,164 +1,116 @@
 from __future__ import annotations
 
-import datetime
-import secrets
+from typing import TYPE_CHECKING
 
-from nummus import portfolio
 from nummus.health_checks.empty_fields import EmptyFields
 from nummus.models import (
     Account,
-    AccountCategory,
     Asset,
-    AssetCategory,
     HealthCheckIssue,
     query_count,
     Transaction,
     TransactionCategory,
-    TransactionSplit,
 )
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
-class TestEmptyFields(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    c = EmptyFields()
+    c.test(session)
+    assert c.issues == {}
 
-        today = datetime.datetime.now().astimezone().date()
 
-        c = EmptyFields(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_no_issues(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    c = EmptyFields()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
 
-            # Add a single transaction
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
+def test_no_account_number(
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    account.number = None
+    session.commit()
+    _ = transactions
+    c = EmptyFields()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            acct = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-                # missing number
-            )
-            s.add(acct)
-            s.flush()
-            acct_id = acct.id_
-            acct_uri = acct.uri
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == f"{account.uri}.number"
+    uri = i.uri
 
-            a = Asset(
-                name="Banana Inc.",
-                category=AssetCategory.STOCKS,
-                interpolate=False,
-                # missing description
-            )
-            s.add(a)
-            s.flush()
-            a_id = a.id_
-            a_uri = a.uri
+    target = f"Account {account.name} has an empty number"
+    assert c.issues == {uri: target}
 
-            amount = self.random_decimal(-1, 1)
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=amount,
-                statement=self.random_string(),
-                # missing payee
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["uncategorized"],
-                # missing category
-            )
-            s.add_all((txn, t_split))
-            s.flush()
-            t_id = t_split.id_
-            t_uri = t_split.uri
 
-        c = EmptyFields(p)
-        c.test()
+def test_no_asset_description(
+    session: orm.Session,
+    asset: Asset,
+    transactions: list[Transaction],
+) -> None:
+    asset.description = None
+    session.commit()
+    _ = transactions
+    c = EmptyFields()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 4)
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == f"{asset.uri}.description"
+    uri = i.uri
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{acct_uri}.number")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            i_acct_uri = i.uri
+    target = f"Asset {asset.name} has an empty description"
+    assert c.issues == {uri: target}
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{a_uri}.description")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            i_a_uri = i.uri
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{t_uri}.category")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            i_t_category_uri = i.uri
+def test_no_txn_payee(
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+    txn.payee = None
+    session.commit()
+    c = EmptyFields()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.value == f"{t_uri}.payee")
-                .one()
-            )
-            self.assertEqual(i.check, c.name)
-            i_t_payee_uri = i.uri
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == f"{txn.uri}.payee"
+    uri = i.uri
 
-        t_split_str = f"{today} - Monkey Bank Checking"
-        target = {
-            i_acct_uri: "Account Monkey Bank Checking      has an empty number",
-            i_a_uri: "Asset Banana Inc.                 has an empty description",
-            i_t_category_uri: f"{t_split_str} is uncategorized",
-            i_t_payee_uri: f"{t_split_str} has an empty payee",
-        }
-        self.assertEqual(c.issues, target)
+    target = f"{txn.date} - {account.name} has an empty payee"
+    assert c.issues == {uri: target}
 
-        # Solve all issues
-        with p.begin_session() as s:
-            t_cat_id = (
-                s.query(TransactionCategory.id_)
-                .where(
-                    TransactionCategory.name == "savings",
-                )
-                .one()[0]
-            )
-            s.query(Account).where(Account.id_ == acct_id).update(
-                {"number": self.random_string()},
-            )
 
-            s.query(Asset).where(Asset.id_ == a_id).update(
-                {"description": self.random_string()},
-            )
+def test_uncategorized(
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    t_split = transactions[0].splits[0]
+    t_split.category_id = TransactionCategory.uncategorized(session)[0]
+    session.commit()
+    c = EmptyFields()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            s.query(TransactionSplit).where(TransactionSplit.id_ == t_id).update(
-                {
-                    "category_id": t_cat_id,
-                    "payee": self.random_string(),
-                },
-            )
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == f"{t_split.uri}.category"
+    uri = i.uri
 
-        c = EmptyFields(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
+    target = f"{t_split.date} - {account.name} is uncategorized"
+    assert c.issues == {uri: target}

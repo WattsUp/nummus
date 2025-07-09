@@ -16,6 +16,8 @@ from nummus.models.transaction_category import TransactionCategoryGroup
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from sqlalchemy import orm
+
 
 class CategoryDirection(Base):
     """Checks for direction (inflow/outflow) of transactions match category."""
@@ -28,95 +30,95 @@ class CategoryDirection(Base):
     _SEVERE = True
 
     @override
-    def test(self) -> None:
-        with self._p.begin_session() as s:
-            accounts = Account.map_name(s)
-            if len(accounts) == 0:
-                self._commit_issues()
-                return
-            acct_len = max(len(acct) for acct in accounts.values())
+    def test(self, s: orm.Session) -> None:
+        accounts = Account.map_name(s)
+        if len(accounts) == 0:
+            self._commit_issues(s, {})
+            return
+        acct_len = max(len(acct) for acct in accounts.values())
+        issues: dict[str, str] = {}
 
-            query = s.query(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-            ).where(
-                TransactionCategory.group == TransactionCategoryGroup.INCOME,
+        query = s.query(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+        ).where(
+            TransactionCategory.group == TransactionCategoryGroup.INCOME,
+        )
+        cat_income_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+        query = s.query(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+        ).where(
+            TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
+        )
+        cat_expense_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.id_,
+                TransactionSplit.account_id,
+                TransactionSplit.date_ord,
+                TransactionSplit.payee,
+                TransactionSplit.amount,
+                TransactionSplit.category_id,
             )
-            cat_income_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
-            query = s.query(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-            ).where(
-                TransactionCategory.group == TransactionCategoryGroup.EXPENSE,
+            .where(
+                TransactionSplit.category_id.in_(cat_income_ids),
+                TransactionSplit.amount <= 0,
             )
-            cat_expense_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+            .order_by(TransactionSplit.date_ord)
+        )
+        for t_id, acct_id, date_ord, payee, amount, t_cat_id in query.yield_per(
+            YIELD_PER,
+        ):
+            acct_id: int
+            date_ord: int
+            payee: str
+            amount: Decimal
+            uri = TransactionSplit.id_to_uri(t_id)
 
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.id_,
-                    TransactionSplit.account_id,
-                    TransactionSplit.date_ord,
-                    TransactionSplit.payee,
-                    TransactionSplit.amount,
-                    TransactionSplit.category_id,
-                )
-                .where(
-                    TransactionSplit.category_id.in_(cat_income_ids),
-                    TransactionSplit.amount <= 0,
-                )
-                .order_by(TransactionSplit.date_ord)
+            msg = (
+                f"{datetime.date.fromordinal(date_ord)} - "
+                f"{accounts[acct_id]:{acct_len}}: "
+                f"{utils.format_financial(amount)} to {payee or '[blank]'} "
+                "has negative amount with income category "
+                f"{cat_income_ids[t_cat_id]}"
             )
-            for t_id, acct_id, date_ord, payee, amount, t_cat_id in query.yield_per(
-                YIELD_PER,
-            ):
-                acct_id: int
-                date_ord: int
-                payee: str
-                amount: Decimal
-                uri = TransactionSplit.id_to_uri(t_id)
+            issues[uri] = msg
 
-                msg = (
-                    f"{datetime.date.fromordinal(date_ord)} - "
-                    f"{accounts[acct_id]:{acct_len}}: "
-                    f"{utils.format_financial(amount)} to {payee or '[blank]'} "
-                    "has negative amount with income category "
-                    f"{cat_income_ids[t_cat_id]}"
-                )
-                self._issues_raw[uri] = msg
-
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.id_,
-                    TransactionSplit.account_id,
-                    TransactionSplit.date_ord,
-                    TransactionSplit.payee,
-                    TransactionSplit.amount,
-                    TransactionSplit.category_id,
-                )
-                .where(
-                    TransactionSplit.category_id.in_(cat_expense_ids),
-                    TransactionSplit.amount >= 0,
-                )
-                .order_by(TransactionSplit.date_ord)
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.id_,
+                TransactionSplit.account_id,
+                TransactionSplit.date_ord,
+                TransactionSplit.payee,
+                TransactionSplit.amount,
+                TransactionSplit.category_id,
             )
-            for t_id, acct_id, date_ord, payee, amount, t_cat_id in query.yield_per(
-                YIELD_PER,
-            ):
-                acct_id: int
-                date_ord: int
-                payee: str
-                amount: Decimal
-                uri = TransactionSplit.id_to_uri(t_id)
+            .where(
+                TransactionSplit.category_id.in_(cat_expense_ids),
+                TransactionSplit.amount >= 0,
+            )
+            .order_by(TransactionSplit.date_ord)
+        )
+        for t_id, acct_id, date_ord, payee, amount, t_cat_id in query.yield_per(
+            YIELD_PER,
+        ):
+            acct_id: int
+            date_ord: int
+            payee: str
+            amount: Decimal
+            uri = TransactionSplit.id_to_uri(t_id)
 
-                msg = (
-                    f"{datetime.date.fromordinal(date_ord)} - "
-                    f"{accounts[acct_id]:{acct_len}}: "
-                    f"{utils.format_financial(amount)} to {payee or '[blank]'} "
-                    "has positive amount with expense category "
-                    f"{cat_expense_ids[t_cat_id]}"
-                )
-                self._issues_raw[uri] = msg
+            msg = (
+                f"{datetime.date.fromordinal(date_ord)} - "
+                f"{accounts[acct_id]:{acct_len}}: "
+                f"{utils.format_financial(amount)} to {payee or '[blank]'} "
+                "has positive amount with expense category "
+                f"{cat_expense_ids[t_cat_id]}"
+            )
+            issues[uri] = msg
 
-        self._commit_issues()
+        self._commit_issues(s, issues)

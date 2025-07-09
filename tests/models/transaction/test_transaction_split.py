@@ -60,6 +60,7 @@ def test_init_properties(
     assert t_split_0.asset_quantity == d["asset_quantity_unadjusted"]
     assert t_split_0.amount == d["amount"]
     assert t_split_0.date_ord == txn.date_ord
+    assert t_split_0.date == txn.date
     assert t_split_0.payee == txn.payee
     assert t_split_0.cleared == txn.cleared
     assert t_split_0.account_id == account.id_

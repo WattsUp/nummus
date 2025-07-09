@@ -100,10 +100,10 @@ def rand_real(rand_real_generator: RandomRealGenerator) -> Decimal:
     return rand_real_generator()
 
 
-# TODO (WattsUp): Maybe not needed?
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def sql_engine_args() -> None:
     """Change all engines to NullPool so timing isn't an issue."""
+    # Needed specifically for DatabaseIntegrity test
     sql._ENGINE_ARGS["poolclass"] = pool.NullPool  # noqa: SLF001
 
 
@@ -205,7 +205,7 @@ def month_ord(month: datetime.date) -> int:
 
 
 @pytest.fixture
-def account(session: orm.Session) -> Account:
+def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> Account:
     """Create an Account.
 
     Returns:
@@ -217,6 +217,7 @@ def account(session: orm.Session) -> Account:
         category=AccountCategory.CASH,
         closed=False,
         budgeted=True,
+        number=rand_str_generator(),
     )
     session.add(acct)
     session.commit()
@@ -224,7 +225,10 @@ def account(session: orm.Session) -> Account:
 
 
 @pytest.fixture
-def account_savings(session: orm.Session) -> Account:
+def account_savings(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> Account:
     """Create an Account.
 
     Returns:
@@ -236,6 +240,7 @@ def account_savings(session: orm.Session) -> Account:
         category=AccountCategory.CASH,
         closed=False,
         budgeted=False,
+        number=rand_str_generator(),
     )
     session.add(acct)
     session.commit()
@@ -260,9 +265,10 @@ def asset(session: orm.Session) -> Asset:
         Banana Inc., STOCKS
     """
     asset = Asset(
-        name="Banana Inc.",
+        name="Banana Incorporated",
         category=AssetCategory.STOCKS,
         ticker="BANANA",
+        description="Banana Incorporated makes bananas",
     )
     session.add(asset)
     session.commit()
@@ -331,6 +337,8 @@ def transactions(
         date=today - datetime.timedelta(days=3),
         amount=100,
         statement=rand_str_generator(),
+        payee="Monkey Bank",
+        cleared=True,
     )
     t_split = TransactionSplit(
         parent=txn,
@@ -346,6 +354,8 @@ def transactions(
         date=today - datetime.timedelta(days=2),
         amount=-10,
         statement=rand_str_generator(),
+        payee="Monkey Bank",
+        cleared=True,
     )
     t_split = TransactionSplit(
         parent=txn,
@@ -363,6 +373,8 @@ def transactions(
         date=today + datetime.timedelta(days=1),
         amount=50,
         statement=rand_str_generator(),
+        payee="Monkey Bank",
+        cleared=True,
     )
     t_split = TransactionSplit(
         parent=txn,
@@ -380,6 +392,8 @@ def transactions(
         date=today + datetime.timedelta(days=7),
         amount=50,
         statement=rand_str_generator(),
+        payee="Monkey Bank",
+        cleared=True,
     )
     t_split = TransactionSplit(
         parent=txn,

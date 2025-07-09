@@ -105,7 +105,6 @@ omit = [
   # TODO (WattsUp): Migrate tests
   "nummus/commands/*",
   "nummus/controllers/*",
-  "nummus/health_checks/*",
   "nummus/web/*",
   "nummus/exceptions.py",
   "nummus/portfolio.py",
@@ -178,7 +177,6 @@ addopts = [
   # TODO (WattsUp): Migrate tests
   "--ignore=tests/commands",
   "--ignore=tests/controllers",
-  "--ignore=tests/health_checks",
   "--ignore=tests/web",
   "--ignore=tests/test_exceptions.py",
   "--ignore=tests/test_portfolio.py",

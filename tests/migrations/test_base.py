@@ -7,12 +7,14 @@ from packaging.version import Version
 from typing_extensions import override
 
 from nummus import exceptions as exc
-from nummus import migrations, portfolio
+from nummus import migrations
 from nummus.migrations.base import SchemaMigrator
 from nummus.models import Asset, AssetCategory, AssetValuation, dump_table_configs
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+    from nummus.portfolio import Portfolio
 
 
 class MockMigrator(migrations.Migrator):
@@ -20,7 +22,7 @@ class MockMigrator(migrations.Migrator):
     _VERSION = "999.0.0"
 
     @override
-    def migrate(self, p: portfolio.Portfolio) -> list[str]:
+    def migrate(self, p: Portfolio) -> list[str]:
         _ = p
         return ["Comments"]
 
@@ -93,10 +95,7 @@ def test_rename_column(session: orm.Session) -> None:
     assert "class" in result
 
 
-def test_migrate_schemas_no_value_set(
-    empty_portfolio: portfolio.Portfolio,
-    asset: Asset,
-) -> None:
+def test_migrate_schemas_no_value_set(empty_portfolio: Portfolio, asset: Asset) -> None:
     _ = asset
     m = SchemaMigrator(set())
     with empty_portfolio.begin_session() as s:
@@ -108,10 +107,7 @@ def test_migrate_schemas_no_value_set(
         m.migrate(empty_portfolio)
 
 
-def test_migrate_schemas_value_set(
-    empty_portfolio: portfolio.Portfolio,
-    asset: Asset,
-) -> None:
+def test_migrate_schemas_value_set(empty_portfolio: Portfolio, asset: Asset) -> None:
     _ = asset
     m = SchemaMigrator(set())
     with empty_portfolio.begin_session() as s:

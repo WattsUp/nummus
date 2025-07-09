@@ -15,6 +15,8 @@ from nummus.models import Account, TransactionSplit, YIELD_PER
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from sqlalchemy import orm
+
 
 class UnclearedTransactions(Base):
     """Checks for unlinked transactions."""
@@ -27,39 +29,39 @@ class UnclearedTransactions(Base):
     _SEVERE = False
 
     @override
-    def test(self) -> None:
-        with self._p.begin_session() as s:
-            accounts = Account.map_name(s)
-            if len(accounts) == 0:
-                self._commit_issues()
-                return
-            acct_len = max(len(acct) for acct in accounts.values())
+    def test(self, s: orm.Session) -> None:
+        accounts = Account.map_name(s)
+        if len(accounts) == 0:
+            self._commit_issues(s, {})
+            return
+        acct_len = max(len(acct) for acct in accounts.values())
+        issues: dict[str, str] = {}
 
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.id_,
-                    TransactionSplit.date_ord,
-                    TransactionSplit.account_id,
-                    TransactionSplit.payee,
-                    TransactionSplit.amount,
-                )
-                .where(TransactionSplit.cleared.is_(False))
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.id_,
+                TransactionSplit.date_ord,
+                TransactionSplit.account_id,
+                TransactionSplit.payee,
+                TransactionSplit.amount,
             )
-            for t_id, date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
-                t_id: int
-                date_ord: int
-                acct_id: int
-                payee: str
-                amount: Decimal
-                uri = TransactionSplit.id_to_uri(t_id)
+            .where(TransactionSplit.cleared.is_(False))
+        )
+        for t_id, date_ord, acct_id, payee, amount in query.yield_per(YIELD_PER):
+            t_id: int
+            date_ord: int
+            acct_id: int
+            payee: str
+            amount: Decimal
+            uri = TransactionSplit.id_to_uri(t_id)
 
-                msg = (
-                    f"{datetime.date.fromordinal(date_ord)} -"
-                    f" {accounts[acct_id]:{acct_len}}:"
-                    f" {utils.format_financial(amount)} to {payee or '[blank]'} is"
-                    " uncleared"
-                )
-                self._issues_raw[uri] = msg
+            msg = (
+                f"{datetime.date.fromordinal(date_ord)} -"
+                f" {accounts[acct_id]:{acct_len}}:"
+                f" {utils.format_financial(amount)} to {payee or '[blank]'} is"
+                " uncleared"
+            )
+            issues[uri] = msg
 
-        self._commit_issues()
+        self._commit_issues(s, issues)

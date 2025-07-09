@@ -232,6 +232,11 @@ class TransactionSplit(Base):
         super().__setattr__("account_id", parent.account_id)
         self._update_text_fields()
 
+    @property
+    def date(self) -> datetime.date:
+        """Date on which Transaction occurred."""
+        return datetime.date.fromordinal(self.date_ord)
+
     @classmethod
     def search(
         cls,

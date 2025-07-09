@@ -3,9 +3,9 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
-from nummus import portfolio
 from nummus.migrations.v_0_2 import MigratorV0_2
 from nummus.models import dump_table_configs, Transaction, TransactionSplit
+from nummus.portfolio import Portfolio
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -16,7 +16,7 @@ def test_migrate(tmp_path: Path, data_path: Path) -> None:
     path_db = tmp_path / "portfolio.v0.2.db"
     shutil.copyfile(path_original, path_db)
 
-    p = portfolio.Portfolio(path_db, None, check_migration=False)
+    p = Portfolio(path_db, None, check_migration=False)
     m = MigratorV0_2()
     result = m.migrate(p)
     target = [

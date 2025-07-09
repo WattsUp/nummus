@@ -8,12 +8,15 @@ from nummus import exceptions as exc
 from nummus.models import Asset, AssetSplit
 
 if TYPE_CHECKING:
+    import datetime
+
     from sqlalchemy import orm
 
     from tests.conftest import RandomRealGenerator
 
 
 def test_init_properties(
+    today: datetime.date,
     today_ord: int,
     session: orm.Session,
     asset: Asset,
@@ -32,6 +35,7 @@ def test_init_properties(
     assert v.asset_id == d["asset_id"]
     assert v.multiplier == d["multiplier"]
     assert v.date_ord == d["date_ord"]
+    assert v.date == today
 
 
 def test_multiplier_negative(

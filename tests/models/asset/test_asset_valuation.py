@@ -8,6 +8,7 @@ from nummus import exceptions as exc
 from nummus.models import Asset, AssetValuation
 
 if TYPE_CHECKING:
+    import datetime
     from decimal import Decimal
 
     from sqlalchemy import orm
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
 
 
 def test_init_properties(
+    today: datetime.date,
     today_ord: int,
     session: orm.Session,
     asset: Asset,
@@ -34,6 +36,7 @@ def test_init_properties(
     assert v.asset_id == d["asset_id"]
     assert v.value == d["value"]
     assert v.date_ord == d["date_ord"]
+    assert v.date == today
 
 
 def test_multiplier_negative(

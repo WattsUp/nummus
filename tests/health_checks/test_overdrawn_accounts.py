@@ -1,122 +1,50 @@
 from __future__ import annotations
 
-import datetime
-import secrets
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from nummus import portfolio
+from nummus import utils
 from nummus.health_checks.overdrawn_accounts import OverdrawnAccounts
-from nummus.models import (
-    Account,
-    AccountCategory,
-    HealthCheckIssue,
-    query_count,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
-from tests.base import TestBase
+from nummus.models import Account, HealthCheckIssue, query_count, Transaction
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
-class TestOverdrawnAccounts(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    c = OverdrawnAccounts()
+    c.test(session)
+    assert c.issues == {}
 
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
 
-        c = OverdrawnAccounts(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_no_issues(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    session.commit()
+    c = OverdrawnAccounts()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
 
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
+def test_check(
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    t_split = transactions[0].splits[0]
+    t_split.amount = Decimal(-1)
+    c = OverdrawnAccounts()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            acct_checking = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            acct_credit = Account(
-                name="Monkey Bank Credit",
-                institution="Monkey Bank",
-                category=AccountCategory.CREDIT,
-                closed=False,
-                budgeted=True,
-            )
-            s.add_all((acct_checking, acct_credit))
-            s.flush()
-            acct_checking_id = acct_checking.id_
-            acct_credit_id = acct_credit.id_
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == f"{account.id_}.{t_split.date_ord}"
+    uri = i.uri
 
-            txn = Transaction(
-                account_id=acct_checking_id,
-                date=today,
-                amount=-10,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["uncategorized"],
-            )
-            s.add_all((txn, t_split))
-            s.flush()
-
-            # Negative balance on credit accounts is okay
-            txn = Transaction(
-                account_id=acct_credit_id,
-                date=today,
-                amount=-10,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["uncategorized"],
-            )
-            s.add_all((txn, t_split))
-
-        c = OverdrawnAccounts(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, f"{acct_checking_id}.{today_ord}")
-            uri = i.uri
-
-        target = {
-            uri: f"{today} - Monkey Bank Checking -$10.00",
-        }
-        self.assertEqual(c.issues, target)
-
-        # Add some cash a week ago
-        with p.begin_session() as s:
-            txn = Transaction(
-                account_id=acct_checking_id,
-                date=today - datetime.timedelta(days=7),
-                amount=20,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["other income"],
-            )
-            s.add_all((txn, t_split))
-
-        c = OverdrawnAccounts(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+    target = (
+        f"{t_split.date} - {account.name}: {utils.format_financial(t_split.amount)}"
+    )
+    assert c.issues == {uri: target}

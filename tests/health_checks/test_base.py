@@ -1,207 +1,112 @@
 from __future__ import annotations
 
-import secrets
+from typing import TYPE_CHECKING
 
+import pytest
 from typing_extensions import override
 
-from nummus import portfolio
 from nummus.health_checks import CHECKS
 from nummus.health_checks.base import Base
 from nummus.models import HealthCheckIssue, query_count
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomStringGenerator
 
 
-class TestCheckBase(TestBase):
-    def test_init_properties(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+class MockCheck(Base):
+    _DESC = "Mock testing health check"
+    _SEVERE = True
 
-        desc = self.random_string()
+    @override
+    def test(self, s: orm.Session) -> None:
+        self._commit_issues(s, {})
 
-        class MockCheck(Base):
-            _DESC = desc
-            _SEVERE = True
 
-            @override
-            def test(self) -> None:
-                self._issues_raw = {}
+@pytest.fixture
+def issues(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> list[tuple[str, int]]:
+    value_0 = rand_str_generator()
+    value_1 = rand_str_generator()
+    c = MockCheck()
+    d = {value_0: "msg 0", value_1: "msg 1"}
+    c._commit_issues(session, d)  # noqa: SLF001
 
-        c = MockCheck(p)
-        self.assertEqual(c.name, "Mock Check")
-        self.assertEqual(c.description, desc)
-        self.assertFalse(c.any_issues, "Check has an issue")
-        self.assertTrue(c.is_severe, "Check is not severe")
+    return [(i.value, i.id_) for i in session.query(HealthCheckIssue).all()]
 
-        d = {"0": self.random_string()}
-        c._issues = d  # noqa: SLF001
-        self.assertTrue(c.any_issues, "Check has no issues")
-        self.assertEqual(c.issues, d)
 
-    def test_ignore(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_init_properties() -> None:
+    c = MockCheck()
+    assert c.name == "Mock Check"
+    assert c.description == MockCheck._DESC  # noqa: SLF001
+    assert not c.any_issues
+    assert c.is_severe
 
-        desc = self.random_string()
 
-        class MockCheck(Base):
-            _DESC = desc
-            _SEVERE = True
+def test_any_issues(rand_str: str) -> None:
+    c = MockCheck()
+    d = {"0": rand_str}
+    c._issues = d  # noqa: SLF001
+    assert c.any_issues
+    assert c.issues == d
 
-            @override
-            def test(self) -> None:
-                self._issues_raw = {}
 
-        uri_0 = self.random_string()
-        uri_1 = self.random_string()
-        MockCheck.ignore(p, {uri_0})
-        with p.begin_session() as s:
-            # No issues to ignore
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
+def test_commit_issues(session: orm.Session, issues: list[tuple[str, int]]) -> None:
+    i = (
+        session.query(HealthCheckIssue)
+        .where(HealthCheckIssue.id_ == issues[0][1])
+        .one()
+    )
+    assert i.check == MockCheck.name
+    assert i.value is not None
+    assert i.msg == "msg 0"
+    assert not i.ignore
 
-            i = HealthCheckIssue(
-                check=MockCheck.name,
-                value=uri_0,
-                msg=self.random_string(),
-                ignore=False,
-            )
-            s.add(i)
+    i = (
+        session.query(HealthCheckIssue)
+        .where(HealthCheckIssue.id_ == issues[1][1])
+        .one()
+    )
+    assert i.check == MockCheck.name
+    assert i.value is not None
+    assert i.msg == "msg 1"
+    assert not i.ignore
 
-            i = HealthCheckIssue(
-                check=MockCheck.name,
-                value=uri_1,
-                msg=self.random_string(),
-                ignore=False,
-            )
-            s.add(i)
 
-        MockCheck.ignore(p, [uri_0, uri_1])
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 2)
+def test_ignore_empty(session: orm.Session, rand_str: str) -> None:
+    MockCheck.ignore(session, {rand_str})
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
-            self.assertEqual(i.check, MockCheck.name)
-            self.assertEqual(i.value, uri_1)
-            self.assertTrue(i.ignore, "Issue is not ignored")
 
-        MockCheck.ignore(p, [])
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 2)
+def test_ignore(
+    session: orm.Session,
+    issues: list[tuple[str, int]],
+) -> None:
+    MockCheck.ignore(session, [issues[0][0]])
+    i = (
+        session.query(HealthCheckIssue)
+        .where(HealthCheckIssue.id_ == issues[0][1])
+        .one()
+    )
+    assert i.check == MockCheck.name
+    assert i.value is not None
+    assert i.msg == "msg 0"
+    assert i.ignore
 
-            c = s.query(HealthCheckIssue).where(HealthCheckIssue.value == uri_1).one()
-            self.assertEqual(c.check, MockCheck.name)
-            self.assertEqual(c.value, uri_1)
-            self.assertTrue(c.ignore, "Issue is not ignored")
+    i = (
+        session.query(HealthCheckIssue)
+        .where(HealthCheckIssue.id_ == issues[1][1])
+        .one()
+    )
+    assert i.check == MockCheck.name
+    assert i.value is not None
+    assert i.msg == "msg 1"
+    assert not i.ignore
 
-    def test_test_and_commit_issues(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
 
-        desc = self.random_string()
-
-        d = {
-            "0": self.random_string(),
-            "1": self.random_string(),
-        }
-
-        class MockCheck(Base):
-            _DESC = desc
-            _SEVERE = True
-
-            @override
-            def test(self) -> None:
-                self._issues_raw = dict(d)
-                self._commit_issues()
-
-        c = MockCheck(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 2)
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
-            self.assertFalse(i.ignore, "Issue is ignored")
-            uri_0 = i.uri
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "1").one()
-            self.assertFalse(i.ignore, "Issue is ignored")
-            uri_1 = i.uri
-
-        result = c.issues
-        target = {
-            uri_0: d["0"],
-            uri_1: d["1"],
-        }
-        self.assertEqual(result, target)
-
-        MockCheck.ignore(p, {"1"})
-
-        c = MockCheck(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 2)
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
-            self.assertFalse(i.ignore, "Issue is ignored")
-            uri_0 = i.uri
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "1").one()
-            self.assertTrue(i.ignore, "Issue is not ignored")
-            uri_1 = i.uri
-
-        result = c.issues
-        target = {
-            uri_0: d["0"],
-        }
-        self.assertEqual(result, target)
-
-        c = MockCheck(p, no_ignores=True)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 2)
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
-            self.assertFalse(i.ignore, "Issue is ignored")
-            uri_0 = i.uri
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "1").one()
-            self.assertTrue(i.ignore, "Issue is not ignored")
-            uri_1 = i.uri
-
-        result = c.issues
-        target = {
-            uri_0: d["0"],
-            uri_1: d["1"],
-        }
-        self.assertEqual(result, target)
-
-        # Solved this issue
-        d.pop("1")
-        c = MockCheck(p, no_ignores=True)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).where(HealthCheckIssue.value == "0").one()
-            self.assertFalse(i.ignore, "Issue is ignored")
-            uri_0 = i.uri
-
-        result = c.issues
-        target = {
-            uri_0: d["0"],
-        }
-        self.assertEqual(result, target)
-
-    def test_descriptions(self) -> None:
-        # All descriptions are full sentences
-        for c in CHECKS:
-            self.assertEqual(c.description[-1], ".")
+@pytest.mark.parametrize("check", CHECKS)
+def test_descriptions(check: type[Base]) -> None:
+    assert check.description[-1] == "."

@@ -118,6 +118,11 @@ class AssetSplit(Base):
         """
         return self.clean_decimals(key, field)
 
+    @property
+    def date(self) -> datetime.date:
+        """Date on which Transaction occurred."""
+        return datetime.date.fromordinal(self.date_ord)
+
 
 class AssetValuation(Base):
     """Asset Valuation model for storing a value of an asset on a specific date.
@@ -154,6 +159,11 @@ class AssetValuation(Base):
             field
         """
         return self.clean_decimals(key, field)
+
+    @property
+    def date(self) -> datetime.date:
+        """Date on which Transaction occurred."""
+        return datetime.date.fromordinal(self.date_ord)
 
 
 class AssetCategory(BaseEnum):
