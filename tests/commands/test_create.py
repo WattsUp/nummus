@@ -21,8 +21,8 @@ class MockPortfolio(Portfolio):
 
     # Creating takes a long time so mock actual function
     @override
-    @staticmethod
-    def create(path: str | Path, key: str | None = None) -> Portfolio:
+    @classmethod
+    def create(cls, path: str | Path, key: str | None = None) -> Portfolio:
         print(f"Creating {path} with {key}", file=sys.stderr)  # noqa: T201
         return MockPortfolio()
 
