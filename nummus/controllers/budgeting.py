@@ -12,7 +12,7 @@ import flask
 from sqlalchemy import sql
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
@@ -26,7 +26,6 @@ from nummus.models import (
     TransactionCategoryGroup,
     YIELD_PER,
 )
-from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -108,9 +107,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     month_str = args.get("month")
     month = (
@@ -149,13 +146,13 @@ def validation() -> flask.Response | str:
 
     if "date" in args:
         return (
-            web_utils.validate_date(args["date"], is_required=True, max_future=None)
+            base.validate_date(args["date"], is_required=True, max_future=None)
             or update_target_desc()
         )
 
     if "amount" in args:
         return (
-            web_utils.validate_real(
+            base.validate_real(
                 args["amount"],
                 is_required=True,
                 is_positive=True,
@@ -165,7 +162,7 @@ def validation() -> flask.Response | str:
 
     if "repeat" in args:
         return (
-            web_utils.validate_int(
+            base.validate_int(
                 args["repeat"],
                 is_required=True,
                 is_positive=True,
@@ -185,9 +182,7 @@ def assign(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
 
     month_str = args["month"]
@@ -198,7 +193,7 @@ def assign(uri: str) -> str:
     amount = utils.evaluate_real_statement(form.get("amount")) or Decimal(0)
 
     with p.begin_session() as s:
-        cat = web_utils.find(s, TransactionCategory, uri)
+        cat = base.find(s, TransactionCategory, uri)
         group_uri = (
             None
             if cat.budget_group_id is None
@@ -252,9 +247,7 @@ def move(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
 
     month_str = args["month"]
@@ -268,7 +261,7 @@ def move(uri: str) -> str | flask.Response:
             src_cat_id = None
             src_available = assignable
         else:
-            src_cat = web_utils.find(s, TransactionCategory, uri)
+            src_cat = base.find(s, TransactionCategory, uri)
             src_cat_id = src_cat.id_
             _, _, src_available, _ = categories[src_cat_id]
 
@@ -353,9 +346,7 @@ def reorder() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     group_uris = form.getlist("group-uri")
     t_cat_uris = form.getlist("category-uri")
@@ -447,9 +438,7 @@ def group(uri: str) -> str:
     Raises:
         BadRequest: If ungrouped is renamed
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     name = form.get("name")
     if name is None:
@@ -463,7 +452,7 @@ def group(uri: str) -> str:
     elif uri != "ungrouped":
         try:
             with p.begin_session() as s:
-                g = web_utils.find(s, BudgetGroup, uri)
+                g = base.find(s, BudgetGroup, uri)
                 g.name = name
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -481,9 +470,7 @@ def new_group() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     name = "New Group"
     with p.begin_session() as s:
         # Ensure the name isn't a duplicate
@@ -536,15 +523,13 @@ def target(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
     today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
         try:
-            tar = web_utils.find(s, Target, uri)
+            tar = base.find(s, Target, uri)
             t_cat_id = tar.category_id
         except exc.http.BadRequest:
             t_cat_id = TransactionCategory.uri_to_id(uri)
@@ -771,7 +756,7 @@ def ctx_sidebar(
             "no_target": no_target_names,
             "target": None,
         }
-    t_cat = web_utils.find(s, TransactionCategory, uri)
+    t_cat = base.find(s, TransactionCategory, uri)
     t_cat_id = t_cat.id_
     assigned, activity, available, leftover = categories[t_cat_id]
 
@@ -815,9 +800,7 @@ def sidebar() -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     month_str = args.get("month")
     month = (

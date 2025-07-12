@@ -8,7 +8,7 @@ import flask
 import flask_login
 
 from nummus import exceptions as exc
-from nummus import portfolio
+from nummus import web
 from nummus.controllers import base
 from nummus.models import Config, ConfigKey
 
@@ -87,7 +87,7 @@ def page_login() -> str | werkzeug.Response:
     if flask_login.current_user.is_authenticated:
         # If already authenticated, skip login page
         if next_url is None:
-            return flask.redirect(flask.url_for("dashboard.page"))
+            return flask.redirect(flask.url_for("common.page_dashboard"))
         return flask.redirect(next_url)
     return flask.render_template(
         "auth/login.jinja",
@@ -105,9 +105,7 @@ def login() -> str | werkzeug.Response:
     Raises:
         ProtectedObjectNotFoundError: If WEB_KEY not found
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     password = form.get("password")
 
@@ -132,7 +130,7 @@ def login() -> str | werkzeug.Response:
 
         next_url = form.get("next")
         if next_url is None:
-            return flask.redirect(flask.url_for("dashboard.page"))
+            return flask.redirect(flask.url_for("common.page_dashboard"))
         return flask.redirect(next_url)
 
 

@@ -11,7 +11,7 @@ import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
@@ -25,7 +25,6 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
-from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
@@ -136,9 +135,7 @@ def table_options() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)
@@ -191,8 +188,7 @@ def new() -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
@@ -382,11 +378,9 @@ def transaction(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
-        txn = web_utils.find(s, Transaction, uri)
+        txn = base.find(s, Transaction, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -505,13 +499,11 @@ def split(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
 
     with p.begin_session() as s:
-        txn = web_utils.find(s, Transaction, uri)
+        txn = base.find(s, Transaction, uri)
 
         parent_amount = utils.parse_real(form["amount"]) or Decimal(0)
         account_id = Account.uri_to_id(form["account"])
@@ -603,13 +595,13 @@ def validation() -> str:
     for key, required in properties.items():
         if key not in args:
             continue
-        return web_utils.validate_string(
+        return base.validate_string(
             args[key],
             is_required=required,
         )
 
     if "date" in args:
-        return web_utils.validate_date(
+        return base.validate_date(
             args["date"],
             is_required=True,
         )
@@ -617,12 +609,12 @@ def validation() -> str:
     validate_splits = False
     if "split" in args:
         # Editing a split
-        if r := web_utils.validate_real(args["split-amount"]):
+        if r := base.validate_real(args["split-amount"]):
             return r
         validate_splits = True
     elif "amount" in args:
         # Editing a split
-        if r := web_utils.validate_real(
+        if r := base.validate_real(
             args["amount"],
             is_required=True,
         ):
@@ -984,9 +976,7 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
     Returns:
         tuple(Dictionary HTML context, page title)
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)

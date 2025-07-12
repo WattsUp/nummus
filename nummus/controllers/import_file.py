@@ -10,7 +10,7 @@ import flask
 import werkzeug.utils
 
 from nummus import exceptions as exc
-from nummus import portfolio
+from nummus import web
 from nummus.controllers import base
 
 
@@ -20,9 +20,7 @@ def import_file() -> str | flask.Response:
     Returns:
         HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     if flask.request.method == "GET":
         return flask.render_template("import/dialog.jinja")
 

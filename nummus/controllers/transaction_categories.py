@@ -7,7 +7,7 @@ from typing import TypedDict
 import flask
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     query_count,
@@ -16,7 +16,6 @@ from nummus.models import (
     TransactionSplit,
 )
 from nummus.models.base import YIELD_PER
-from nummus.web import utils as web_utils
 
 
 def page() -> flask.Response:
@@ -57,8 +56,7 @@ def new() -> str | flask.Response:
     essential = "essential" in form
 
     try:
-        with flask.current_app.app_context():
-            p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+        p = web.portfolio
         with p.begin_session() as s:
             cat = TransactionCategory(
                 emoji_name=name,
@@ -90,11 +88,9 @@ def category(uri: str) -> str | flask.Response:
     Raises:
         Forbidden: If locked category is edited
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
-        cat = web_utils.find(s, TransactionCategory, uri)
+        cat = base.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: dict[str, object] = {
@@ -166,9 +162,7 @@ def validation() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     uri = args.get("uri")
     category_id = uri and TransactionCategory.uri_to_id(uri)
@@ -209,8 +203,7 @@ def ctx_categories() -> dict[str, object]:
     Returns:
         List of HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
 
     class CategoryContext(TypedDict):
         """Type definition for category context."""

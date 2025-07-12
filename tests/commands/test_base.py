@@ -21,7 +21,6 @@ from nummus.commands.migrate import Migrate
 from nummus.commands.summarize import Summarize
 from nummus.commands.unlock import Unlock
 from nummus.commands.update_assets import UpdateAssets
-from nummus.commands.web import Web
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -206,7 +205,6 @@ def test_unlock_encrypted_failed(
     ("cmd_class", "extra_args"),
     [
         (Create, []),
-        (Web, []),
         (Unlock, []),
         (Migrate, []),
         (Backup, []),

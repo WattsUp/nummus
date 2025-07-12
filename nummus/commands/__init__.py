@@ -17,7 +17,6 @@ from nummus.commands.migrate import Migrate
 from nummus.commands.summarize import Summarize
 from nummus.commands.unlock import Unlock
 from nummus.commands.update_assets import UpdateAssets
-from nummus.commands.web import Web
 
 if TYPE_CHECKING:
     from nummus.commands.base import BaseCommand
@@ -30,7 +29,6 @@ COMMANDS: dict[str, type[BaseCommand]] = {
     cls.NAME: cls
     for cls in [
         Create,
-        Web,
         Unlock,
         Migrate,
         Backup,

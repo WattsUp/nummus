@@ -33,7 +33,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
     def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
         if pytailwindcss is None:
             raise NotImplementedError
-        path_root = Path(__file__).parent.parent.resolve()
+        path_root = Path(__file__).parent.resolve()
         path_in = path_root / "static" / "src" / "css" / "main.css"
 
         args = [
@@ -63,12 +63,11 @@ class JSMinFilter(webassets.filter.Filter):
         minifier.minify(_in, out)
 
 
-def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None:
+def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
     """Build asset bundles.
 
     Args:
         app: Flask app to build for
-        debug: True will not run jsmin filter
         force: True will force build bundles
 
     Raises:
@@ -88,7 +87,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         if not path_dist_css.exists() or not path_dist_js.exists():
             msg = "Static source folder does not exists and neither does dist"
             raise FileNotFoundError(msg)
-        if debug:
+        if app.debug:
             msg = "Static source folder does not exists but running in debug"
             raise FileNotFoundError(msg)
 
@@ -104,7 +103,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         filters=(
             None
             if pytailwindcss is None
-            else (TailwindCSSFilterDebug if debug else TailwindCSSFilter,)
+            else (TailwindCSSFilterDebug if app.debug else TailwindCSSFilter,)
         ),
     )
     env_assets.register("css", bundle_css)
@@ -122,7 +121,7 @@ def build_bundles(app: flask.Flask, *, debug: bool, force: bool = False) -> None
         "src/*.js",
         "src/**/*.js",
         output=stub_dist_js,
-        filters=(None if jsmin is None or debug else (JSMinFilter,)),
+        filters=(None if jsmin is None or app.debug else (JSMinFilter,)),
     )
     env_assets.register("js", bundle_js)
     bundle_js.build(force=force)
@@ -140,7 +139,8 @@ class BuildAssets(build_py.build_py):
 
     def run(self) -> None:
         """Build assets during build command."""
-        path_root = Path(__file__).parent.parent.resolve()
+        path_root = Path(__file__).parent.resolve()
         app = flask.Flask(__name__, root_path=str(path_root))
-        build_bundles(app, debug=False, force=True)
+        app.debug = False
+        build_bundles(app, force=True)
         return super().run()

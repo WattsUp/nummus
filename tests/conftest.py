@@ -13,7 +13,7 @@ import pytest
 import yfinance
 from sqlalchemy import orm, pool
 
-from nummus import global_config, sql
+from nummus import global_config, sql, web
 from nummus.models import (
     Account,
     AccountCategory,
@@ -31,6 +31,7 @@ from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
 
 if TYPE_CHECKING:
+    import flask
     import time_machine
 
 
@@ -39,6 +40,10 @@ def id_func(val: object) -> str | None:
         return val.isoformat()
     if isinstance(val, Iterable):
         return str(val)
+    if isinstance(val, Decimal):
+        return str(val)
+    if callable(val):
+        return val.__name__
     return None
 
 
@@ -593,3 +598,17 @@ def utc_frozen(
     """
     time_machine.move_to(utc, tick=False)
     return utc
+
+
+@pytest.fixture
+def flask_app(
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio: Portfolio,
+) -> flask.Flask:
+    """Create flask app for EmptyPortfolio.
+
+    Returns:
+        Flask
+    """
+    monkeypatch.setenv("NUMMUS_PORTFOLIO", str(empty_portfolio.path))
+    return web.create_app()

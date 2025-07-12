@@ -25,12 +25,11 @@ if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
 
-def add_routes(app: flask.Flask, *, debug: bool) -> None:
+def add_routes(app: flask.Flask) -> None:
     """Add routing table for flask app to appropriate controller.
 
     Args:
         app: Flask app to route under
-        debug: True will add debug specific routes as well
 
     Raises:
         DuplicateURLError: If multiple routes have same URL
@@ -56,7 +55,7 @@ def add_routes(app: flask.Flask, *, debug: bool) -> None:
             endpoint = f"{m.__name__[n_trim:]}.{controller.__name__}"
             if url in urls:  # pragma: no cover
                 raise exc.DuplicateURLError(url, endpoint)
-            if url.startswith("/d/") and not debug:
+            if url.startswith("/d/") and not app.debug:
                 continue
             urls.add(url)
             app.add_url_rule(url, endpoint, controller, methods=methods)
