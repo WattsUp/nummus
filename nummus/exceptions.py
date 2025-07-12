@@ -33,7 +33,6 @@ __all__ = [
     "InvalidAssetTransactionCategoryError",
     "InvalidBackupTarError",
     "InvalidORMValueError",
-    "InvalidTargetValueError",
     "InvalidURIError",
     "MigrationRequiredError",
     "MissingAssetError",
@@ -235,10 +234,6 @@ class MissingAssetError(Exception):
 
 class ComputedColumnError(Exception):
     """Error when attempting to set a computed column."""
-
-
-class InvalidTargetValueError(Exception):
-    """Error when a target value is invalid."""
 
 
 class EvaluationError(Exception):

@@ -105,7 +105,6 @@ omit = [
   # TODO (WattsUp): Migrate tests
   "nummus/controllers/*",
   "nummus/web/*",
-  "nummus/exceptions.py",
 ]
 
 [tool.coverage.report]
@@ -176,8 +175,6 @@ addopts = [
   # TODO (WattsUp): Migrate tests
   "--ignore=tests/controllers",
   "--ignore=tests/web",
-  "--ignore=tests/test_exceptions.py",
-  "--ignore=tests/test_portfolio.py",
 ]
 
 [tool.ruff]

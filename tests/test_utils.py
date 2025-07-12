@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import datetime
 import textwrap
 from decimal import Decimal
@@ -189,6 +190,11 @@ def test_confirm(
 )
 def test_evaluate_real_statement(s: str | None, target: Decimal | None) -> None:
     assert utils.evaluate_real_statement(s) == target
+
+
+def test_eval_node_unknown() -> None:
+    with pytest.raises(exc.EvaluationError):
+        utils._eval_node(ast.expr())  # noqa: SLF001
 
 
 @pytest.mark.parametrize(
