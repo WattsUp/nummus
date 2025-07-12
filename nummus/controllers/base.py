@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import flask
-from typing_extensions import TypeVar
+from typing_extensions import NamedTuple, TypeVar
 
 from nummus import exceptions as exc
 from nummus import models, utils, web
@@ -30,6 +30,13 @@ class LinkType(models.BaseEnum):
     PAGE = 1
     DIALOG = 2
     HX_POST = 3
+
+
+class DateLabels(NamedTuple):
+    """Date labels tuple."""
+
+    labels: list[str]
+    mode: str
 
 
 def ctx_base() -> dict[str, object]:
@@ -334,7 +341,7 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     return start, today
 
 
-def date_labels(start_ord: int, end_ord: int) -> tuple[list[str], str]:
+def date_labels(start_ord: int, end_ord: int) -> DateLabels:
     """Generate date labels and proper date mode.
 
     Args:
@@ -342,7 +349,7 @@ def date_labels(start_ord: int, end_ord: int) -> tuple[list[str], str]:
         end_ord: End date ordinal
 
     Returns:
-        tuple(list of labels, date mode)
+        DateLabels
     """
     dates = utils.range_date(start_ord, end_ord)
     n = len(dates)
@@ -354,7 +361,7 @@ def date_labels(start_ord: int, end_ord: int) -> tuple[list[str], str]:
         date_mode = "weeks"
     else:
         date_mode = "days"
-    return [d.isoformat() for d in dates], date_mode
+    return DateLabels([d.isoformat() for d in dates], date_mode)
 
 
 def ctx_to_json(d: dict[str, object]) -> str:
@@ -456,15 +463,12 @@ def validate_date(
         Error message or ""
     """
     value = value.strip()
-    if not value:
-        return "Required" if is_required else ""
     try:
         date = utils.parse_date(value)
     except ValueError:
         return "Unable to parse"
-    if date is None:  # pragma: no cover
-        # Type guard, should not be called
-        return "Unable to parse"
+    if date is None:
+        return "Required" if is_required else ""
 
     if max_future == 0:
         today = datetime.datetime.now().astimezone().date()
