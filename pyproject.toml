@@ -81,6 +81,7 @@ dev = [
   "djlint>=1.36.4",
   "pyright>=1.1.402",
   "taplo",
+  "gunicorn",
 ]
 
 [tool.black]
