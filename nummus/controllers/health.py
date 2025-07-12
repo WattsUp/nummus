@@ -9,7 +9,7 @@ from typing import TypedDict
 
 import flask
 
-from nummus import health_checks, portfolio
+from nummus import health_checks, web
 from nummus.controllers import base
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 from nummus.web import utils as web_utils
@@ -67,9 +67,7 @@ def ignore(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         c = web_utils.find(s, HealthCheckIssue, uri)
         c.ignore = True
@@ -93,9 +91,7 @@ def ctx_checks(*, run: bool) -> _HealthContext:
     Returns:
         Dictionary HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     utc_now = datetime.datetime.now(datetime.timezone.utc)
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)

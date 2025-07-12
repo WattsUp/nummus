@@ -8,8 +8,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
-import flask
-
+from nummus import web
 from nummus.controllers import base
 from nummus.models import (
     Account,
@@ -21,7 +20,7 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    from nummus import portfolio
+    import flask
 
 
 class _AssetContext(TypedDict):
@@ -63,9 +62,7 @@ def ctx_allocation() -> dict[str, object]:
     Returns:
         Dictionary HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 

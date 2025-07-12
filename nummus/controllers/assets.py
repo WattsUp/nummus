@@ -11,7 +11,7 @@ import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
@@ -97,9 +97,7 @@ def page_all() -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     include_unheld = "include-unheld" in flask.request.args
 
     with p.begin_session() as s:
@@ -162,9 +160,7 @@ def page(uri: str) -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
         title = f"Asset {a.name}"
@@ -194,9 +190,7 @@ def asset(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
 
@@ -235,9 +229,7 @@ def performance(uri: str) -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
         html = flask.render_template(
@@ -269,9 +261,7 @@ def table(uri: str) -> str | flask.Response:
     Returns:
         HTML response with url set
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         a = web_utils.find(s, Asset, uri)
         val_table = ctx_table(s, a)
@@ -305,9 +295,7 @@ def validation(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     # dict{key: (required, prop if unique required)}
     properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
         "name": (True, Asset.name),
@@ -387,8 +375,7 @@ def new_valuation(uri: str) -> str | flask.Response:
         return base.error("Value must not be negative")
 
     try:
-        with flask.current_app.app_context():
-            p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+        p = web.portfolio
         with p.begin_session() as s:
             a = web_utils.find(s, Asset, uri)
             v = AssetValuation(
@@ -419,8 +406,7 @@ def valuation(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
@@ -482,9 +468,7 @@ def update() -> str | flask.Response:
     Returns:
         HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         n = query_count(s.query(Asset).where(Asset.ticker.is_not(None)))
     if flask.request.method == "GET":

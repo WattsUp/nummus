@@ -11,7 +11,7 @@ import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
@@ -136,9 +136,7 @@ def table_options() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)
@@ -191,8 +189,7 @@ def new() -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
@@ -382,9 +379,7 @@ def transaction(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         txn = web_utils.find(s, Transaction, uri)
 
@@ -505,9 +500,7 @@ def split(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
 
     with p.begin_session() as s:
@@ -984,9 +977,7 @@ def ctx_table(acct_uri: str | None = None) -> tuple[dict[str, object], str]:
     Returns:
         tuple(Dictionary HTML context, page title)
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)

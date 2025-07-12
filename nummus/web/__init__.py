@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 ext = FlaskExtension()
+portfolio: Portfolio
 
 
 def create_app() -> flask.Flask:
@@ -31,7 +32,7 @@ def create_app() -> flask.Flask:
     return app
 
 
-def __getattr__(name: str) -> Portfolio:
+def __getattr__(name: str) -> object:
     if name == "portfolio":
         return ext.portfolio
     msg = f"module {__name__} has no attribute {name}"

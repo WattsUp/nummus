@@ -12,7 +12,7 @@ import flask
 from sqlalchemy import sql
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
@@ -108,9 +108,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     month_str = args.get("month")
     month = (
@@ -185,9 +183,7 @@ def assign(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
 
     month_str = args["month"]
@@ -252,9 +248,7 @@ def move(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
 
     month_str = args["month"]
@@ -353,9 +347,7 @@ def reorder() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     group_uris = form.getlist("group-uri")
     t_cat_uris = form.getlist("category-uri")
@@ -447,9 +439,7 @@ def group(uri: str) -> str:
     Raises:
         BadRequest: If ungrouped is renamed
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     name = form.get("name")
     if name is None:
@@ -481,9 +471,7 @@ def new_group() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     name = "New Group"
     with p.begin_session() as s:
         # Ensure the name isn't a duplicate
@@ -536,9 +524,7 @@ def target(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
     today = datetime.datetime.now().astimezone().date()
 
@@ -815,9 +801,7 @@ def sidebar() -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     month_str = args.get("month")
     month = (

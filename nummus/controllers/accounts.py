@@ -12,7 +12,7 @@ import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base, transactions
 from nummus.models import (
     Account,
@@ -109,9 +109,7 @@ def page(uri: str) -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
         txn_table, title = transactions.ctx_table(acct.uri)
@@ -150,8 +148,7 @@ def account(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
@@ -202,9 +199,7 @@ def performance(uri: str) -> flask.Response:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         acct = web_utils.find(s, Account, uri)
         html = flask.render_template(
@@ -233,8 +228,7 @@ def validation(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
 
     # dict{key: (required, prop if unique required)}
     properties: dict[str, tuple[bool, orm.QueryableAttribute | None]] = {
@@ -523,8 +517,7 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
         Dictionary HTML context
     """
     # Create sidebar context
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
@@ -652,9 +645,7 @@ def txns(uri: str) -> str | flask.Response:
     Returns:
         HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     args = flask.request.args
     first_page = "page" not in args
 
@@ -697,9 +688,7 @@ def txns_options(uri: str) -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
         categories_emoji = TransactionCategory.map_name_emoji(s)

@@ -8,7 +8,7 @@ import flask
 import flask_login
 
 from nummus import exceptions as exc
-from nummus import portfolio
+from nummus import web
 from nummus.controllers import base
 from nummus.models import Config, ConfigKey
 
@@ -105,9 +105,7 @@ def login() -> str | werkzeug.Response:
     Raises:
         ProtectedObjectNotFoundError: If WEB_KEY not found
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     form = flask.request.form
     password = form.get("password")
 
