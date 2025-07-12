@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import os
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import flask
 import flask_login
@@ -18,6 +19,9 @@ from nummus import utils, web_assets
 from nummus.controllers import auth, base
 from nummus.models import Config, ConfigKey
 from nummus.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    import jinja2
 
 
 class FlaskExtension:
@@ -103,7 +107,10 @@ class FlaskExtension:
             app.before_request(auth.default_login_required)
 
     @classmethod
-    def _init_jinja_env(cls, env: flask.Environment) -> None:
+    def _init_jinja_env(cls, env: jinja2.Environment) -> None:
+        env.trim_blocks = True
+        env.lstrip_blocks = True
+
         env.filters["money"] = utils.format_financial
         env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         env.filters["money6"] = lambda x: utils.format_financial(x, 6)
