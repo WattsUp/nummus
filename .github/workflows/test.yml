@@ -28,8 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .[test]
       - name: Test
-        run: |
-          python -m coverage run
+        run: pytest
       - name: Upload test configuration
         uses: actions/upload-artifact@v4
         if: always()
