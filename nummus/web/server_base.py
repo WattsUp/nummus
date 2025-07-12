@@ -17,7 +17,7 @@ from typing_extensions import override
 from nummus import __version__, controllers
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import auth, common
+from nummus.controllers import auth, base
 from nummus.models import Config, ConfigKey
 from nummus.web import assets
 from nummus.web import utils as web_utils
@@ -207,7 +207,7 @@ def create_flask_app(p: portfolio.Portfolio, *, debug: bool = False) -> flask.Fl
         REMEMBER_COOKIE_SAMESITE="Lax",
         REMEMBER_COOKIE_DURATION=datetime.timedelta(days=28),
     )
-    app.after_request(common.change_redirect_to_htmx)
+    app.after_request(base.change_redirect_to_htmx)
 
     login_manager = flask_login.LoginManager()
     login_manager.init_app(app)

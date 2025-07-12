@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import (
     Account,
     Asset,
@@ -22,7 +22,6 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from nummus import portfolio
-    from nummus.controllers.base import Routes
 
 
 class _AssetContext(TypedDict):
@@ -51,7 +50,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page(
+    return base.page(
         "allocation/page.jinja",
         title="Asset Allocation",
         allocation=ctx_allocation(),
@@ -171,6 +170,6 @@ def ctx_allocation() -> dict[str, object]:
     }
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/allocation": (page, ["GET"]),
 }

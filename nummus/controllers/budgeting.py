@@ -13,9 +13,10 @@ from sqlalchemy import sql
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
+    BudgetAvailable,
     BudgetGroup,
     query_count,
     Target,
@@ -30,7 +31,6 @@ from nummus.web import utils as web_utils
 if TYPE_CHECKING:
     from sqlalchemy import orm
 
-    from nummus.controllers.base import Routes
 
 PERIOD_OPTIONS = {
     TargetPeriod.ONCE: "Once",
@@ -126,7 +126,7 @@ def page() -> flask.Response:
         )
         budget, title = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
-    return common.page(
+    return base.page(
         "budgeting/page.jinja",
         title=title,
         ctx=budget,
@@ -285,14 +285,14 @@ def move(uri: str) -> str | flask.Response:
                     flask.request.form.get("amount"),
                 )
                 if to_move is None:
-                    return common.error("Amount to move must not be blank")
+                    return base.error("Amount to move must not be blank")
             else:
                 # Min of the positive number is max of negative
                 to_move = max(src_available, -dest_available)
 
             BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, to_move)
 
-            return common.dialog_swap(
+            return base.dialog_swap(
                 event="budget",
                 snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
@@ -466,7 +466,7 @@ def group(uri: str) -> str:
                 g = web_utils.find(s, BudgetGroup, uri)
                 g.name = name
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
     else:
         msg = "Cannot rename ungrouped"
         raise exc.http.BadRequest(msg)
@@ -569,10 +569,10 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            return common.dialog_swap(event="budget")
+            return base.dialog_swap(event="budget")
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
-            return common.error(error)
+            return base.error(error)
 
         # TODO (WattsUp): Move edit logic out
 
@@ -580,14 +580,14 @@ def target(uri: str) -> str | flask.Response:
         parse_target_form(tar)
 
         if flask.request.method == "PUT":
-            return common.dialog_swap(event="budget")
+            return base.dialog_swap(event="budget")
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
                     s.add(tar)
-                return common.dialog_swap(event="budget")
+                return base.dialog_swap(event="budget")
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
         # Create context
         due_date = (
@@ -688,7 +688,7 @@ def parse_target_form(target: Target) -> None:
 def ctx_sidebar(
     s: orm.Session,
     month: datetime.date,
-    categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
+    categories: dict[int, BudgetAvailable],
     future_assigned: Decimal,
     uri: str | None,
 ) -> dict[str, object]:
@@ -993,7 +993,7 @@ def ctx_target(
 def ctx_budget(
     s: orm.Session,
     month: datetime.date,
-    categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]],
+    categories: dict[int, BudgetAvailable],
     assignable: Decimal,
     future_assigned: Decimal,
 ) -> tuple[_BudgetContext, str]:
@@ -1165,7 +1165,7 @@ def ctx_progress_bars(
     return bars
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/budgeting": (page, ["GET"]),
     "/h/budgeting/validation": (validation, ["GET"]),
     "/h/budgeting/c/<path:uri>/assign": (assign, ["PUT"]),

@@ -9,15 +9,13 @@ import flask_login
 
 from nummus import exceptions as exc
 from nummus import portfolio
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     import werkzeug
-
-    from nummus.controllers.base import Routes
 
 
 def login_exempt(func: Callable) -> Callable:
@@ -114,7 +112,7 @@ def login() -> str | werkzeug.Response:
     password = form.get("password")
 
     if not password:
-        return common.error("Password must not be blank")
+        return base.error("Password must not be blank")
 
     with p.begin_session() as s:
         expected_encoded = (
@@ -127,7 +125,7 @@ def login() -> str | werkzeug.Response:
 
         expected = p.decrypt(expected_encoded)
         if password.encode() != expected:
-            return common.error("Bad password")
+            return base.error("Bad password")
 
         web_user = WebUser()
         flask_login.login_user(web_user, remember=True)
@@ -148,7 +146,7 @@ def logout() -> str | werkzeug.Response:
     return flask.redirect(flask.url_for("auth.page_login"))
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/login": (page_login, ["GET"]),
     "/h/login": (login, ["POST"]),
     "/h/logout": (logout, ["POST"]),

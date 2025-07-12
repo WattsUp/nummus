@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import (
     query_count,
     TransactionCategory,
@@ -18,9 +18,6 @@ from nummus.models import (
 from nummus.models.base import YIELD_PER
 from nummus.web import utils as web_utils
 
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
-
 
 def page() -> flask.Response:
     """GET /txn-categories.
@@ -28,7 +25,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page(
+    return base.page(
         "transaction-categories/page.jinja",
         "Transaction Categories",
         ctx=ctx_categories(),
@@ -73,9 +70,9 @@ def new() -> str | flask.Response:
             )
             s.add(cat)
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-        return common.error(e)
+        return base.error(e)
 
-    return common.dialog_swap(
+    return base.dialog_swap(
         event="category",
         snackbar=f"Created category {name}",
     )
@@ -127,7 +124,7 @@ def category(uri: str) -> str | flask.Response:
             ).update({"category_id": uncategorized_id})
             s.delete(cat)
 
-            return common.dialog_swap(
+            return base.dialog_swap(
                 event="category",
                 snackbar=f"Category {cat.emoji_name} deleted",
             )
@@ -145,7 +142,7 @@ def category(uri: str) -> str | flask.Response:
 
         name_clean = TransactionCategory.clean_emoji_name(name)
         if cat.locked and name_clean != cat.name:
-            return common.error("Can only add/remove emojis on locked category")
+            return base.error("Can only add/remove emojis on locked category")
 
         try:
             with s.begin_nested():
@@ -155,9 +152,9 @@ def category(uri: str) -> str | flask.Response:
                     cat.is_profit_loss = is_profit_loss
                     cat.essential = essential
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
-        return common.dialog_swap(
+        return base.dialog_swap(
             event="category",
             snackbar="All changes saved",
         )
@@ -245,7 +242,7 @@ def ctx_categories() -> dict[str, object]:
     }
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/txn-categories": (page, ["GET"]),
     "/h/txn-categories/new": (new, ["GET", "POST"]),
     "/h/txn-categories/c/<path:uri>": (category, ["GET", "PUT", "DELETE"]),
