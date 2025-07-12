@@ -55,7 +55,7 @@ def test_mispelled(
     no_description_typos: bool,
 ) -> None:
     # asset description is checked for dictionary spelling
-    asset.description = "Banana Inc. & 1234 bananas"
+    asset.description = "Banana mispel & 1234 bananas"
     session.commit()
     c = Typos(no_description_typos=no_description_typos)
     c.test(session)
@@ -63,10 +63,10 @@ def test_mispelled(
 
     i = session.query(HealthCheckIssue).one()
     assert i.check == c.name
-    assert i.value == "inc"
+    assert i.value == "mispel"
     uri = i.uri
 
-    target = f"Asset {asset.name} description: inc"
+    target = f"Asset {asset.name} description: mispel"
     if no_description_typos:
         assert c.issues == {}
     else:

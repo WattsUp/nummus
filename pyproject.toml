@@ -24,7 +24,7 @@ dependencies = [
   "typing-extensions",
   "pdfplumber",
   "yfinance>=0.2.54",
-  "pyspellchecker",
+  "pyspellchecker>=0.8.3",
   "tqdm",
   "argcomplete",
   "scipy",
