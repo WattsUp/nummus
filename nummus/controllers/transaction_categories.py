@@ -16,7 +16,6 @@ from nummus.models import (
     TransactionSplit,
 )
 from nummus.models.base import YIELD_PER
-from nummus.web import utils as web_utils
 
 
 def page() -> flask.Response:
@@ -91,7 +90,7 @@ def category(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        cat = web_utils.find(s, TransactionCategory, uri)
+        cat = base.find(s, TransactionCategory, uri)
 
         if flask.request.method == "GET":
             ctx: dict[str, object] = {

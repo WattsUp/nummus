@@ -33,7 +33,7 @@ class TailwindCSSFilter(webassets.filter.Filter):
     def output(self, _in: io.StringIO, out: io.StringIO, **_) -> None:
         if pytailwindcss is None:
             raise NotImplementedError
-        path_root = Path(__file__).parent.parent.resolve()
+        path_root = Path(__file__).parent.resolve()
         path_in = path_root / "static" / "src" / "css" / "main.css"
 
         args = [
@@ -139,7 +139,7 @@ class BuildAssets(build_py.build_py):
 
     def run(self) -> None:
         """Build assets during build command."""
-        path_root = Path(__file__).parent.parent.resolve()
+        path_root = Path(__file__).parent.resolve()
         app = flask.Flask(__name__, root_path=str(path_root))
         app.debug = False
         build_bundles(app, force=True)

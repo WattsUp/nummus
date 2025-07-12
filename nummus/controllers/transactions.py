@@ -25,7 +25,6 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
-from nummus.web import utils as web_utils
 
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
@@ -381,7 +380,7 @@ def transaction(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        txn = web_utils.find(s, Transaction, uri)
+        txn = base.find(s, Transaction, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -504,7 +503,7 @@ def split(uri: str) -> str:
     form = flask.request.form
 
     with p.begin_session() as s:
-        txn = web_utils.find(s, Transaction, uri)
+        txn = base.find(s, Transaction, uri)
 
         parent_amount = utils.parse_real(form["amount"]) or Decimal(0)
         account_id = Account.uri_to_id(form["account"])
@@ -596,13 +595,13 @@ def validation() -> str:
     for key, required in properties.items():
         if key not in args:
             continue
-        return web_utils.validate_string(
+        return base.validate_string(
             args[key],
             is_required=required,
         )
 
     if "date" in args:
-        return web_utils.validate_date(
+        return base.validate_date(
             args["date"],
             is_required=True,
         )
@@ -610,12 +609,12 @@ def validation() -> str:
     validate_splits = False
     if "split" in args:
         # Editing a split
-        if r := web_utils.validate_real(args["split-amount"]):
+        if r := base.validate_real(args["split-amount"]):
             return r
         validate_splits = True
     elif "amount" in args:
         # Editing a split
-        if r := web_utils.validate_real(
+        if r := base.validate_real(
             args["amount"],
             is_required=True,
         ):

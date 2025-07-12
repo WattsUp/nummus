@@ -24,7 +24,6 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
-from nummus.web import utils as web_utils
 
 
 class _AccountContext(TypedDict):
@@ -111,7 +110,7 @@ def page(uri: str) -> flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
+        acct = base.find(s, Account, uri)
         txn_table, title = transactions.ctx_table(acct.uri)
         title = title.removeprefix("Transactions").strip()
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
@@ -153,7 +152,7 @@ def account(uri: str) -> str | flask.Response:
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
+        acct = base.find(s, Account, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -201,7 +200,7 @@ def performance(uri: str) -> flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
+        acct = base.find(s, Account, uri)
         html = flask.render_template(
             "accounts/performance.jinja",
             acct={
@@ -242,7 +241,7 @@ def validation(uri: str) -> str:
         for key, (required, prop) in properties.items():
             if key not in args:
                 continue
-            return web_utils.validate_string(
+            return base.validate_string(
                 args[key],
                 is_required=required,
                 session=s,
@@ -343,10 +342,10 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         Dictionary HTML context
     """
     period = flask.request.args.get("chart-period", "1yr")
-    start, end = web_utils.parse_period(period)
+    start, end = base.parse_period(period)
     end_ord = end.toordinal()
     start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
-    labels, date_mode = web_utils.date_labels(start_ord, end_ord)
+    labels, date_mode = base.date_labels(start_ord, end_ord)
 
     query = s.query(TransactionCategory.id_, TransactionCategory.name).where(
         TransactionCategory.is_profit_loss.is_(True),
@@ -399,7 +398,7 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
         "values": values,
         "cost_bases": [v - p for v, p in zip(values, profits, strict=True)],
         "period": period,
-        "period_options": web_utils.PERIOD_OPTIONS,
+        "period_options": base.PERIOD_OPTIONS,
     }
 
 
@@ -652,7 +651,7 @@ def txns(uri: str) -> str | flask.Response:
     txn_table, title = transactions.ctx_table(uri)
     title = title.removeprefix("Transactions").strip()
     with p.begin_session() as s:
-        acct = web_utils.find(s, Account, uri)
+        acct = base.find(s, Account, uri)
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
     html_title = f"<title>{title} - nummus</title>\n"
     html = html_title + flask.render_template(

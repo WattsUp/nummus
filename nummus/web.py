@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-import types
+import os
 from pathlib import Path
 
 import flask
@@ -11,107 +11,13 @@ import flask_login
 import prometheus_client
 import prometheus_flask_exporter
 import prometheus_flask_exporter.multiprocess
-from colorama import Back, Fore
 
 from nummus import __version__, controllers
 from nummus import exceptions as exc
-from nummus import utils
+from nummus import utils, web_assets
 from nummus.controllers import auth, base
 from nummus.models import Config, ConfigKey
 from nummus.portfolio import Portfolio
-from nummus.web import assets
-from nummus.web import utils as web_utils
-
-RESPONSE_TOO_SLOW = 0.15
-RESPONSE_SLOW = 0.075
-RESPONSE_TOO_LARGE = 1e6
-RESPONSE_LARGE = 500e3
-
-METHOD_COLORS = types.MappingProxyType(
-    {
-        "GET": (Fore.CYAN, ""),
-        "POST": (Fore.GREEN, ""),
-        "PUT": (Fore.YELLOW, ""),
-        "DELETE": (Fore.RED, ""),
-        "OPTIONS": (Fore.BLUE, ""),
-        "HEAD": (Fore.MAGENTA, ""),
-        "PATCH": (Fore.BLACK, Back.GREEN),
-        "TRACE": (Fore.BLACK, Back.WHITE),
-    },
-)
-
-HTTP_CODE_COLORS = types.MappingProxyType(
-    {
-        2: Fore.GREEN,
-        3: Fore.CYAN,
-        4: Fore.YELLOW,
-        5: Fore.RED,
-    },
-)
-
-PATH_COLORS = types.MappingProxyType(
-    {
-        "/h/": Fore.CYAN,
-        "/static": Fore.MAGENTA,
-        "/": Fore.GREEN,
-    },
-)
-
-
-class Request(flask.Request):
-    """flask Request for nummus."""
-
-    @staticmethod
-    def format(
-        *,
-        client_address: str,
-        duration_s: float,
-        method: str,
-        path: str,
-        length_bytes: int,
-        status: int,
-    ) -> str:
-        """Format request for logger.
-
-        Args:
-            client_address: Address to client
-            duration_s: Duration between request and response
-            method: Request HTTP method
-            path: Request path
-            length_bytes: Size of response in bytes
-            status: Response status code
-
-        Returns:
-            logger string
-        """
-        now = datetime.datetime.now().astimezone().replace(microsecond=0)
-
-        if duration_s > RESPONSE_TOO_SLOW:
-            duration = f"{Fore.RED}{duration_s:.3f}s{Fore.RESET}"
-        elif duration_s > RESPONSE_SLOW:
-            duration = f"{Fore.YELLOW}{duration_s:.3f}s{Fore.RESET}"
-        else:
-            duration = f"{Fore.GREEN}{duration_s:.3f}s{Fore.RESET}"
-
-        c, b = METHOD_COLORS.get(method, ("", ""))
-        method = f"{c}{b}{method}{c and Fore.RESET}{b and Back.RESET}"
-
-        for partial, c in PATH_COLORS.items():
-            if path.startswith(partial):
-                path = f"{c}{path}{Fore.RESET}"
-                break
-
-        if length_bytes > RESPONSE_TOO_LARGE:
-            length = f"{Fore.RED}{length_bytes}B{Fore.RESET}"
-        elif length_bytes > RESPONSE_LARGE:
-            length = f"{Fore.YELLOW}{length_bytes}B{Fore.RESET}"
-        else:
-            length = f"{Fore.GREEN}{length_bytes}B{Fore.RESET}"
-
-        c = HTTP_CODE_COLORS.get(status // 100, Fore.MAGENTA)
-        code = f"{c}{status}{Fore.RESET}"
-
-        return f"{client_address} [{now}] {duration} {method} {path} {length} {code}"
 
 
 class FlaskExtension:
@@ -129,10 +35,9 @@ class FlaskExtension:
 
         self._original_url_for = app.url_for
         app.url_for = self.url_for
-        app.request_class = Request
 
         controllers.add_routes(app)
-        assets.build_bundles(app)
+        web_assets.build_bundles(app)
         self._init_auth(app, self._portfolio)
         self._init_jinja_env(app.jinja_env)
 
@@ -219,15 +124,16 @@ class FlaskExtension:
             else ("arrow_upward" if x > 0 else "arrow_downward")
         )
         env.filters["no_emojis"] = utils.strip_emojis
-        env.filters["tojson"] = web_utils.ctx_to_json
+        env.filters["tojson"] = base.ctx_to_json
         env.filters["input_value"] = lambda x: str(x or "").rstrip("0").rstrip(".")
 
     @classmethod
     def _init_metrics(cls, app: flask.Flask) -> None:
+        multiproc = "PROMETHEUS_MULTIPROC_DIR" in os.environ
         metrics_class = (
-            prometheus_flask_exporter.PrometheusMetrics
-            if app.debug
-            else prometheus_flask_exporter.multiprocess.GunicornPrometheusMetrics
+            prometheus_flask_exporter.multiprocess.GunicornPrometheusMetrics
+            if multiproc
+            else prometheus_flask_exporter.PrometheusMetrics
         )
         metrics = metrics_class(
             app,
@@ -235,9 +141,9 @@ class FlaskExtension:
             excluded_paths=["/static", "/metrics"],
             group_by="endpoint",
             registry=(
-                prometheus_client.CollectorRegistry(auto_describe=True)
-                if app.debug
-                else None
+                None
+                if multiproc
+                else prometheus_client.CollectorRegistry(auto_describe=True)
             ),
         )
         metrics.info("nummus_info", "nummus info", version=__version__)
@@ -278,3 +184,25 @@ class FlaskExtension:
     def portfolio(self) -> Portfolio:
         """Portfolio flask is serving."""
         return self._portfolio
+
+
+ext = FlaskExtension()
+portfolio: Portfolio
+
+
+def create_app() -> flask.Flask:
+    """Create flask app.
+
+    Returns:
+        NummusApp
+    """
+    app = flask.Flask(__name__)
+    ext.init_app(app)
+    return app
+
+
+def __getattr__(name: str) -> object:
+    if name == "portfolio":
+        return ext.portfolio
+    msg = f"module {__name__} has no attribute {name}"
+    raise AttributeError(msg)

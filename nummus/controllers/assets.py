@@ -21,7 +21,6 @@ from nummus.models import (
     query_count,
     YIELD_PER,
 )
-from nummus.web import utils as web_utils
 
 PAGE_LEN = 50
 
@@ -162,7 +161,7 @@ def page(uri: str) -> flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        a = web_utils.find(s, Asset, uri)
+        a = base.find(s, Asset, uri)
         title = f"Asset {a.name}"
         ctx = ctx_asset(s, a)
         return base.page(
@@ -192,7 +191,7 @@ def asset(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        a = web_utils.find(s, Asset, uri)
+        a = base.find(s, Asset, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
@@ -231,7 +230,7 @@ def performance(uri: str) -> flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        a = web_utils.find(s, Asset, uri)
+        a = base.find(s, Asset, uri)
         html = flask.render_template(
             "assets/performance.jinja",
             asset={
@@ -263,7 +262,7 @@ def table(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        a = web_utils.find(s, Asset, uri)
+        a = base.find(s, Asset, uri)
         val_table = ctx_table(s, a)
 
     args = flask.request.args
@@ -308,7 +307,7 @@ def validation(uri: str) -> str:
         for key, (required, prop) in properties.items():
             if key not in args:
                 continue
-            return web_utils.validate_string(
+            return base.validate_string(
                 args[key],
                 is_required=required,
                 check_length=key != "ticker",
@@ -320,7 +319,7 @@ def validation(uri: str) -> str:
             )
 
         if "date" in args:
-            return web_utils.validate_date(
+            return base.validate_date(
                 args["date"],
                 is_required=True,
                 session=s,
@@ -332,7 +331,7 @@ def validation(uri: str) -> str:
             )
 
         if "value" in args:
-            return web_utils.validate_real(
+            return base.validate_real(
                 args["value"],
                 is_required=True,
             )
@@ -377,7 +376,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     try:
         p = web.portfolio
         with p.begin_session() as s:
-            a = web_utils.find(s, Asset, uri)
+            a = base.find(s, Asset, uri)
             v = AssetValuation(
                 asset_id=a.id_,
                 date_ord=date.toordinal(),
@@ -410,7 +409,7 @@ def valuation(uri: str) -> str | flask.Response:
     today = datetime.datetime.now().astimezone().date()
 
     with p.begin_session() as s:
-        v = web_utils.find(s, AssetValuation, uri)
+        v = base.find(s, AssetValuation, uri)
 
         date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
         if flask.request.method == "GET":
@@ -552,7 +551,7 @@ def ctx_performance(s: orm.Session, a: Asset) -> _PerformanceContext:
         Dictionary HTML context
     """
     period = flask.request.args.get("chart-period", "1yr")
-    start, end = web_utils.parse_period(period)
+    start, end = base.parse_period(period)
     end_ord = end.toordinal()
     if start is None:
         start_ord = (
@@ -563,7 +562,7 @@ def ctx_performance(s: orm.Session, a: Asset) -> _PerformanceContext:
         )
     else:
         start_ord = start.toordinal()
-    labels, date_mode = web_utils.date_labels(start_ord, end_ord)
+    labels, date_mode = base.date_labels(start_ord, end_ord)
 
     values = a.get_value(start_ord, end_ord)
 
@@ -572,7 +571,7 @@ def ctx_performance(s: orm.Session, a: Asset) -> _PerformanceContext:
         "date_mode": date_mode,
         "values": values,
         "period": period,
-        "period_options": web_utils.PERIOD_OPTIONS,
+        "period_options": base.PERIOD_OPTIONS,
     }
 
 
