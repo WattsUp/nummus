@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
-from nummus import portfolio, utils
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models.budget import BudgetAssignment
 
@@ -46,8 +46,7 @@ def ctx_page() -> dict[str, object]:
     Returns:
         Dictionary HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
 
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()

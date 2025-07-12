@@ -5,19 +5,14 @@ from __future__ import annotations
 import re
 import textwrap
 from collections.abc import Callable
-from typing import TYPE_CHECKING
 
 import flask
 
 from nummus import exceptions as exc
-from nummus import models
+from nummus import models, web
 from nummus.web.utils import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 Routes = dict[str, tuple[Callable, list[str]]]
-
-
-if TYPE_CHECKING:
-    from nummus import portfolio
 
 
 class LinkType(models.BaseEnum):
@@ -34,15 +29,14 @@ def ctx_base() -> dict[str, object]:
     Returns:
         Dictionary HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    p = web.portfolio
 
     # list[(group label, subpages {label: (icon name, endpoint, link type)})]
     nav_items: list[tuple[str, dict[str, tuple[str, str, LinkType] | None]]] = [
         (
             "",
             {
-                "Home": ("home", "dashboard.page", LinkType.PAGE),
+                "Home": ("home", "common.page_dashboard", LinkType.PAGE),
                 "Budget": ("wallet", "budgeting.page", LinkType.PAGE),
                 # TODO (WattsUp): Change to receipt_long and add_receipt_long if
                 # request gets fulfilled
