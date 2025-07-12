@@ -5,17 +5,14 @@ from __future__ import annotations
 import datetime
 import operator
 from collections import defaultdict
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 
 from nummus import health_checks, portfolio
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 from nummus.web import utils as web_utils
-
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
 
 
 class _HealthContext(TypedDict):
@@ -41,7 +38,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page(
+    return base.page(
         "health/page.jinja",
         title="Health",
         ctx=ctx_checks(run=False),
@@ -138,8 +135,9 @@ def ctx_checks(*, run: bool) -> _HealthContext:
         name = check_type.name
 
         if run:
-            c = check_type(p)
-            c.test()
+            c = check_type()
+            with p.begin_session() as s:
+                c.test(s)
             c_issues = c.issues
         else:
             c_issues = issues[name]
@@ -161,7 +159,7 @@ def ctx_checks(*, run: bool) -> _HealthContext:
     }
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/health": (page, ["GET"]),
     "/h/health/refresh": (refresh, ["POST"]),
     "/h/health/i/<path:uri>/ignore": (ignore, ["PUT"]),

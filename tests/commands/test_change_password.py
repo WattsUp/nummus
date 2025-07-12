@@ -1,199 +1,130 @@
 from __future__ import annotations
 
-import argparse
-import io
-from unittest import mock
+import sys
+from typing import TYPE_CHECKING
 
+import pytest
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import encryption, portfolio
-from nummus.commands import change_password, create
-from nummus.models import Config, ConfigKey
-from tests.base import TestBase
+from nummus import encryption
+from nummus.commands.change_password import ChangePassword
+from nummus.portfolio import Portfolio
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
-class MockPortfolio(portfolio.Portfolio):
+class MockPortfolio(Portfolio):
 
     # Changing password takes a while so mock the actual function
     @override
     def change_key(self, key: str) -> None:
-        print(f"Changing key to {key}")  # noqa: T201
+        print(f"Changing key to {key}", file=sys.stderr)  # noqa: T201
+
+    @override
+    def change_web_key(self, key: str) -> None:
+        print(f"Changing web key to {key}", file=sys.stderr)  # noqa: T201
 
 
-class TestChangePassword(TestBase):
-    def test_change_password(self) -> None:
-        if not encryption.AVAILABLE:
-            self.skipTest("Encryption is not installed")
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        MockPortfolio.create(path_db, None)
-        p = MockPortfolio(path_db, None)
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+def test_no_change_unencrypted(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio: Portfolio,
+) -> None:
+    queue = [None]
 
-        with p.begin_session() as s:
-            expected_encrypted = (
-                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-            )
-            self.assertIsNone(expected_encrypted)
+    def mock_get_pass(_: str) -> str | None:
+        return queue.pop(0)
 
-        queue: list[str | None] = []
+    monkeypatch.setattr("builtins.input", mock_get_pass)
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
 
-        def mock_input(to_print: str) -> str | None:
-            print(to_print)  # noqa: T201
-            if len(queue) == 0:
-                return None
-            return queue.pop(0)
+    c = ChangePassword(empty_portfolio.path, None)
+    assert c.run() != 0
 
-        # Don't change either
-        queue = []
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = change_password.ChangePassword(path_db, None)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.GREEN}Portfolio is unlocked\n"
-            "Change portfolio password? [y/N]: \n"
-            f"{Fore.YELLOW}Neither password changing\n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, -1)
+    captured = capsys.readouterr()
+    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.err == f"{Fore.YELLOW}Neither password changing\n"
 
-        # Cancel on portfolio key
-        queue = ["y"]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = change_password.ChangePassword(path_db, None)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.GREEN}Portfolio is unlocked\n"
-            "Change portfolio password? [y/N]: \n"
-            "Please enter password: \n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, -1)
 
-        # Cancel on web key
-        key = self.random_string()
-        queue = ["y", key, key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = change_password.ChangePassword(path_db, None)
-            # Use MockPortfolio
-            c._p = p  # noqa: SLF001
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.GREEN}Portfolio is unlocked\n"
-            "Change portfolio password? [y/N]: \n"
-            "Please enter password: \n"
-            "Please confirm password: \n"
-            "Change web password? [y/N]: \n"
-            f"Changing key to {key}\n"
-            f"{Fore.GREEN}Changed password(s)\n"
-            f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, 0)
+@pytest.mark.parametrize(
+    ("queue", "target"),
+    [
+        ([None, None], f"{Fore.YELLOW}Neither password changing\n"),
+        (["Y", None], ""),
+        ([None, "Y", None], ""),
+    ],
+)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_no_change(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+    tmp_path: Path,
+    queue: list[str],
+    target: str,
+) -> None:
+    p, key = empty_portfolio_encrypted
+    path_password = tmp_path / "password.secret"
+    with path_password.open("w", encoding="utf-8") as file:
+        file.write(key)
 
-        # Cancel on web key
-        key = self.random_string()
-        queue = ["y", key, key, "y"]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = change_password.ChangePassword(path_db, None)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.GREEN}Portfolio is unlocked\n"
-            "Change portfolio password? [y/N]: \n"
-            "Please enter password: \n"
-            "Please confirm password: \n"
-            "Change web password? [y/N]: \n"
-            "Please enter password: \n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, -1)
+    def mock_get_pass(_: str) -> str | None:
+        return queue.pop(0)
 
-        # Change portfolio to encrypted
-        path_db.unlink()
-        MockPortfolio.create(path_db, key)
-        p = MockPortfolio(path_db, key)
-        with p.begin_session() as s:
-            expected_encrypted = (
-                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).scalar()
-            )
-            if expected_encrypted is None:
-                self.fail("WEB_KEY is missing")
-            expected = p.decrypt_s(expected_encrypted)
-            self.assertEqual(expected, key)
+    monkeypatch.setattr("builtins.input", mock_get_pass)
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
 
-        # Cancel on web key
-        web_key = self.random_string()
-        queue = [key, "n", "y", web_key, web_key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            c = change_password.ChangePassword(path_db, None)
-            rc = c.run()
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            "Please enter password: \n"
-            f"{Fore.GREEN}Portfolio is unlocked\n"
-            "Change portfolio password? [y/N]: \n"
-            "Change web password? [y/N]: \n"
-            "Please enter password: \n"
-            "Please confirm password: \n"
-            f"{Fore.GREEN}Changed password(s)\n"
-            f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
-        )
-        self.assertEqual(fake_stdout, target)
-        self.assertEqual(rc, 0)
+    c = ChangePassword(p.path, path_password)
+    assert c.run() != 0
 
-    def test_args(self) -> None:
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create.Create(path_db, None, force=False, no_encrypt=True).run()
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    captured = capsys.readouterr()
+    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.err == target
 
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers(
-            dest="cmd",
-            metavar="<command>",
-            required=True,
-        )
 
-        cmd_class = change_password.ChangePassword
-        sub = subparsers.add_parser(
-            cmd_class.NAME,
-            help=cmd_class.HELP,
-            description=cmd_class.DESCRIPTION,
-        )
-        cmd_class.setup_args(sub)
+@pytest.mark.parametrize(
+    ("queue", "target"),
+    [
+        (["Y", "12345678", "12345678", "N"], "Changing key to 12345678\n"),
+        (["N", "Y", "01010101", "01010101"], "Changing web key to 01010101\n"),
+        (
+            ["Y", "12345678", "12345678", "Y", "01010101", "01010101"],
+            "Changing key to 12345678\nChanging web key to 01010101\n",
+        ),
+    ],
+)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_change(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+    tmp_path: Path,
+    queue: list[str],
+    target: str,
+) -> None:
+    p, key = empty_portfolio_encrypted
+    path_password = tmp_path / "password.secret"
+    with path_password.open("w", encoding="utf-8") as file:
+        file.write(key)
 
-        command_line = [cmd_class.NAME]
-        args = parser.parse_args(args=command_line)
-        args_d = vars(args)
-        args_d["path_db"] = path_db
-        args_d["path_password"] = None
-        cmd: str = args_d.pop("cmd")
-        self.assertEqual(cmd, cmd_class.NAME)
+    def mock_get_pass(_: str) -> str | None:
+        return queue.pop(0)
 
-        # Make sure all args from parse_args are given to constructor
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            cmd_class(**args_d)
+    monkeypatch.setattr("builtins.input", mock_get_pass)
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
+    monkeypatch.setattr("nummus.portfolio.Portfolio", MockPortfolio)
+
+    c = ChangePassword(p.path, path_password)
+    assert c.run() == 0
+
+    captured = capsys.readouterr()
+    assert (
+        captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+        f"{Fore.GREEN}Changed password(s)\n"
+        f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
+    )
+    assert captured.err == target

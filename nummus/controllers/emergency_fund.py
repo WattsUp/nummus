@@ -8,13 +8,11 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 
 from nummus import portfolio, utils
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models.budget import BudgetAssignment
 
 if TYPE_CHECKING:
     from decimal import Decimal
-
-    from nummus.controllers.base import Routes
 
 
 def page() -> flask.Response:
@@ -23,7 +21,7 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page(
+    return base.page(
         "emergency-fund/page.jinja",
         "Emergency Fund",
         ctx=ctx_page(),
@@ -124,7 +122,7 @@ def ctx_page() -> dict[str, object]:
     }
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/emergency-fund": (page, ["GET"]),
     "/h/dashboard/emergency-fund": (dashboard, ["GET"]),
 }

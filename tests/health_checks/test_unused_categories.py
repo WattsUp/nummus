@@ -1,125 +1,49 @@
 from __future__ import annotations
 
-import datetime
-import secrets
-from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from nummus import portfolio, utils
 from nummus.health_checks.unused_categories import UnusedCategories
 from nummus.models import (
-    Account,
-    AccountCategory,
-    BudgetAssignment,
     HealthCheckIssue,
     query_count,
     Transaction,
     TransactionCategory,
-    TransactionSplit,
 )
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
-class TestUnusedCategories(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    # Mark all locked since those are excluded
+    session.query(TransactionCategory).update({"locked": True})
+    session.commit()
 
-        today = datetime.datetime.now().astimezone().date()
+    c = UnusedCategories()
+    c.test(session)
+    assert c.issues == {}
 
-        # Lock all categories
-        with p.begin_session() as s:
-            s.query(TransactionCategory).update({"locked": True})
 
-        c = UnusedCategories(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_one(
+    session: orm.Session,
+    transactions: list[Transaction],
+    categories: dict[str, int],
+) -> None:
+    _ = transactions
+    # Mark all but groceries and other income locked since those are excluded
+    session.query(TransactionCategory).where(
+        TransactionCategory.name.not_in({"groceries", "other income"}),
+    ).update({"locked": True})
+    session.commit()
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
+    c = UnusedCategories()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            s.query(TransactionCategory).where(
-                TransactionCategory.name != "other income",
-            ).delete()
-            t_cat = s.query(TransactionCategory).one()
-            t_cat.locked = False
-            s.flush()
-            t_cat_id = t_cat.id_
-            t_cat_uri = t_cat.uri
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == TransactionCategory.id_to_uri(categories["groceries"])
+    uri = i.uri
 
-        c = UnusedCategories(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, t_cat_uri)
-            uri = i.uri
-
-        target = {
-            uri: "Other Income has no transactions or no budget assignments",
-        }
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            acct = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            s.add(acct)
-            s.flush()
-            acct_id = acct.id_
-
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=10,
-                statement=self.random_string(),
-                cleared=True,
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-
-        c = UnusedCategories(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
-
-            # Only BudgetAssignments now
-            s.query(TransactionSplit).delete()
-            s.query(Transaction).delete()
-
-            today = datetime.datetime.now().astimezone().date()
-            month = utils.start_of_month(today)
-            month_ord = month.toordinal()
-
-            a = BudgetAssignment(
-                month_ord=month_ord,
-                amount=Decimal(100),
-                category_id=t_cat_id,
-            )
-            s.add(a)
-
-        c = UnusedCategories(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
+    target = "Groceries has no transactions nor budget assignments"
+    assert c.issues == {uri: target}

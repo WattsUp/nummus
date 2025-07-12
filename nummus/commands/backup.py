@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import sys
 from typing import TYPE_CHECKING
 
 from colorama import Fore
@@ -103,7 +104,10 @@ class Restore(BaseCommand):
             if self._list_ver:
                 backups = portfolio.Portfolio.backups(self._path_db)
                 if len(backups) == 0:
-                    print(f"{Fore.RED}No backups found, run nummus backup")
+                    print(
+                        f"{Fore.RED}No backups found, run 'nummus backup'",
+                        file=sys.stderr,
+                    )
                     return 0
                 now = datetime.datetime.now(datetime.timezone.utc)
                 for ver, ts in backups:
@@ -111,16 +115,15 @@ class Restore(BaseCommand):
                     ago = utils.format_seconds(ago_s)
 
                     # Convert ts utc to local timezone
-                    ts_local = ts.astimezone()
+                    ts_local = ts.astimezone().isoformat(timespec="seconds")
                     print(
-                        f"{Fore.CYAN}Backup #{ver:2} created at "
-                        f"{ts_local.isoformat(timespec='seconds')} ({ago} ago)",
+                        f"{Fore.CYAN}Backup #{ver:2} created at {ts_local} ({ago} ago)",
                     )
                 return 0
             portfolio.Portfolio.restore(self._path_db, tar_ver=self._tar_ver)
             print(f"{Fore.CYAN}Extracted backup tar")
         except FileNotFoundError as e:
-            print(f"{Fore.RED}{e}")
+            print(f"{Fore.RED}{e}", file=sys.stderr)
             return -1
         print(f"{Fore.GREEN}Portfolio restored for {self._path_db}")
         return 0

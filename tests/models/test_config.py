@@ -1,40 +1,51 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+import pytest
+
 from nummus import exceptions as exc
-from nummus import models
-from nummus.models import config
-from tests.base import TestBase
+from nummus.models.config import Config, ConfigKey
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomStringGenerator
 
 
-class TestConfig(TestBase):
-    def test_init_properties(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
+def test_init_properties(session: orm.Session, rand_str: str) -> None:
+    d = {
+        "key": ConfigKey.WEB_KEY,
+        "value": rand_str,
+    }
 
-        d = {
-            "key": config.ConfigKey.VERSION,
-            "value": self.random_string(),
-        }
+    c = Config(**d)
+    session.add(c)
+    session.commit()
 
-        c = config.Config(**d)
-        s.add(c)
-        s.commit()
+    assert c.key == d["key"]
+    assert c.value == d["value"]
 
-        self.assertEqual(c.key, d["key"])
-        self.assertEqual(c.value, d["value"])
 
-        # Duplicate keys are bad
-        c = config.Config(key=d["key"], value=self.random_string())
-        s.add(c)
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
+def test_duplicate_keys(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    c = Config(key=ConfigKey.WEB_KEY, value=rand_str_generator())
+    session.add(c)
+    c = Config(key=ConfigKey.WEB_KEY, value=rand_str_generator())
+    session.add(c)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
 
-        # Empty values are bad
-        c = config.Config(key=config.ConfigKey.SECRET_KEY, value="")
-        s.add(c)
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
 
-        # Short values are bad
-        d["value"] = "a"
-        self.assertRaises(exc.InvalidORMValueError, config.Config, **d)
+def test_empty(session: orm.Session) -> None:
+    c = Config(key=ConfigKey.WEB_KEY, value="")
+    session.add(c)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
+
+
+def test_short() -> None:
+    with pytest.raises(exc.InvalidORMValueError):
+        Config(key=ConfigKey.WEB_KEY, value="a")

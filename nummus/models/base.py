@@ -132,7 +132,7 @@ class Base(orm.DeclarativeBase):
             KeyError: if model does not have name property
         """
         if not hasattr(cls, "name"):
-            msg = f"{cls} does not have name column"
+            msg = f"{cls.__name__} does not have name column"
             raise KeyError(msg)
 
         query = s.query(cls).with_entities(cls.id_, cls.name)  # type: ignore[attr-defined]

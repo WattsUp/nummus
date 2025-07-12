@@ -1,173 +1,77 @@
 from __future__ import annotations
 
-import datetime
-import secrets
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from nummus import portfolio
+import pytest
+
+from nummus import utils
 from nummus.health_checks.outlier_asset_price import OutlierAssetPrice
 from nummus.models import (
-    Account,
-    AccountCategory,
     Asset,
-    AssetCategory,
-    AssetSplit,
     AssetValuation,
     HealthCheckIssue,
     query_count,
     Transaction,
-    TransactionCategory,
-    TransactionSplit,
 )
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
-class TestOutlierAssetPrice(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    c = OutlierAssetPrice()
+    c.test(session)
+    assert c.issues == {}
 
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-        yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
-        c = OutlierAssetPrice(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_zero_quantity(
+    session: orm.Session,
+    transactions: list[Transaction],
+    asset_valuation: AssetValuation,
+) -> None:
+    t_split = transactions[1].splits[0]
+    t_split.asset_quantity_unadjusted = Decimal(0)
+    asset_valuation.date_ord = t_split.date_ord
+    c = OutlierAssetPrice()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
 
-            # Add a single transaction
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
+@pytest.mark.parametrize(
+    ("amount", "target_word"),
+    [
+        (Decimal(-100), None),
+        (Decimal(-10), "below"),
+        (Decimal(-200), "above"),
+    ],
+)
+def test_check(
+    session: orm.Session,
+    asset: Asset,
+    transactions: list[Transaction],
+    asset_valuation: AssetValuation,
+    amount: Decimal,
+    target_word: str | None,
+) -> None:
+    t_split = transactions[1].splits[0]
+    asset_valuation.date_ord = t_split.date_ord
+    t_split.amount = amount
+    c = OutlierAssetPrice()
+    c.test(session)
+    if target_word is None:
+        assert query_count(session.query(HealthCheckIssue)) == 0
+        return
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            acct = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            s.add(acct)
-            s.flush()
-            acct_id = acct.id_
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == t_split.uri
+    uri = i.uri
 
-            a = Asset(
-                name="Banana Inc.",
-                category=AssetCategory.STOCKS,
-                interpolate=False,
-            )
-            s.add(a)
-            s.flush()
-            a_id = a.id_
-
-            # Transactions with zero quantity are exempt
-            txn = Transaction(
-                account_id=acct_id,
-                date=yesterday,
-                amount=10,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["dividends received"],
-                asset_id=a_id,
-                asset_quantity_unadjusted=0,
-            )
-            s.add_all((txn, t_split))
-            s.flush()
-
-            txn = Transaction(
-                account_id=acct_id,
-                date=yesterday,
-                amount=-10,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["securities traded"],
-                asset_id=a_id,
-                asset_quantity_unadjusted=1,
-            )
-            s.add_all((txn, t_split))
-            s.flush()
-            t_uri = t_split.uri
-
-        c = OutlierAssetPrice(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, t_uri)
-            uri = i.uri
-
-        target = {
-            uri: (
-                f"{yesterday}: Banana Inc. was traded at $10.00 which is above"
-                " valuation of $0.00"
-            ),
-        }
-        self.assertEqual(c.issues, target)
-
-        # Add a valuation but after the transaction
-        with p.begin_session() as s:
-            # Bought asset for 10/share but valuation is at 5/share
-            v = AssetValuation(
-                asset_id=a_id,
-                date_ord=yesterday_ord,
-                value=20,
-            )
-            s.add(v)
-
-        c = OutlierAssetPrice(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, t_uri)
-            uri = i.uri
-
-        target = {
-            uri: (
-                f"{yesterday}: Banana Inc. was traded at $10.00 which is below"
-                " valuation of $20.00"
-            ),
-        }
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            # Add the 2:1 split that was missing
-            a_split = AssetSplit(
-                asset_id=a_id,
-                date_ord=today_ord,
-                multiplier=Decimal("0.5"),
-            )
-            s.add(a_split)
-            s.flush()
-
-            a = s.query(Asset).where(Asset.id_ == a_id).one()
-            a.update_splits()
-
-        c = OutlierAssetPrice(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
-
-        target = {}
-        self.assertEqual(c.issues, target)
+    target = (
+        f"{t_split.date}: {asset.name} "
+        f"was traded at {utils.format_financial(amount / -10)} which is "
+        f"{target_word} valuation of {utils.format_financial(asset_valuation.value)}"
+    )
+    assert c.issues == {uri: target}

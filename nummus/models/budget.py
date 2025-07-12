@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 from collections import defaultdict
 from decimal import Decimal
+from typing import NamedTuple
 
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
 
@@ -27,6 +28,25 @@ from nummus.models.transaction_category import (
     TransactionCategory,
     TransactionCategoryGroup,
 )
+
+
+class BudgetAvailable(NamedTuple):
+    """Type returned from get_monthly_available."""
+
+    assigned: Decimal
+    activity: Decimal
+    available: Decimal
+    leftover: Decimal
+
+
+class EmergencyFundDetails(NamedTuple):
+    """Type returned from get_emergency_fund."""
+
+    spending_lower: list[Decimal]
+    spending_upper: list[Decimal]
+    balances: list[Decimal]
+    categories: dict[int, tuple[str, str]]
+    categories_total: dict[int, Decimal]
 
 
 class BudgetGroup(Base):
@@ -93,7 +113,7 @@ class BudgetAssignment(Base):
         cls,
         s: orm.Session,
         month: datetime.date,
-    ) -> tuple[dict[int, tuple[Decimal, Decimal, Decimal, Decimal]], Decimal, Decimal]:
+    ) -> tuple[dict[int, BudgetAvailable], Decimal, Decimal]:
         """Get available budget for a month.
 
         Args:
@@ -102,7 +122,7 @@ class BudgetAssignment(Base):
 
         Returns:
             (
-                dict{TransactionCategory: (assigned, activity, available, leftover)},
+                dict{TransactionCategory: BudgetAvailable},
                 assignable,
                 future_assigned,
             )
@@ -110,16 +130,8 @@ class BudgetAssignment(Base):
         month_ord = month.toordinal()
         query = s.query(Account).where(Account.budgeted)
 
-        # Include account if not closed
-        # Include account if most recent transaction is in period
-        def include_account(acct: Account) -> bool:
-            if not acct.closed:
-                return True
-            updated_on_ord = acct.updated_on_ord
-            return updated_on_ord is not None and updated_on_ord >= month_ord
-
         accounts = {
-            acct.id_: acct.name for acct in query.all() if include_account(acct)
+            acct.id_: acct.name for acct in query.all() if acct.do_include(month_ord)
         }
 
         # Starting balance
@@ -235,7 +247,7 @@ class BudgetAssignment(Base):
         )
         categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        categories: dict[int, tuple[Decimal, Decimal, Decimal, Decimal]] = {}
+        categories: dict[int, BudgetAvailable] = {}
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.group,
@@ -252,7 +264,12 @@ class BudgetAssignment(Base):
 
             ending_balance += activity
             total_available += available
-            categories[t_cat_id] = (assigned, activity, available, leftover)
+            categories[t_cat_id] = BudgetAvailable(
+                assigned,
+                activity,
+                available,
+                leftover,
+            )
 
         assignable = ending_balance - total_available
         if assignable < 0:
@@ -271,13 +288,7 @@ class BudgetAssignment(Base):
         end_ord: int,
         n_lower: int,
         n_upper: int,
-    ) -> tuple[
-        list[Decimal],
-        list[Decimal],
-        list[Decimal],
-        dict[int, tuple[str, str]],
-        dict[int, Decimal],
-    ]:
+    ) -> EmergencyFundDetails:
         """Get the emergency fund target range and assigned balance.
 
         Args:
@@ -288,13 +299,7 @@ class BudgetAssignment(Base):
             n_upper: Number of days in sliding upper period
 
         Returns:
-            tuple(
-                total spending in lower period,
-                total spending in upper period,
-                balances,
-                categories,
-                categories_total,
-            )
+            EmergencyFundDetails
         """
         n = end_ord - start_ord + 1
         n_smoothing = 15
@@ -400,7 +405,13 @@ class BudgetAssignment(Base):
         totals_lower = totals_lower[-n:]
         totals_upper = totals_upper[-n:]
 
-        return totals_lower, totals_upper, balances, categories, categories_total
+        return EmergencyFundDetails(
+            totals_lower,
+            totals_upper,
+            balances,
+            categories,
+            categories_total,
+        )
 
     @classmethod
     def move(

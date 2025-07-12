@@ -5,17 +5,13 @@ from __future__ import annotations
 import tempfile
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import flask
 import werkzeug.utils
 
 from nummus import exceptions as exc
 from nummus import portfolio
-from nummus.controllers import common
-
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
+from nummus.controllers import base
 
 
 def import_file() -> str | flask.Response:
@@ -32,7 +28,7 @@ def import_file() -> str | flask.Response:
 
     file = flask.request.files.get("file")
     if file is None or not file.filename:
-        return common.error("No file selected")
+        return base.error("No file selected")
 
     force = "force" in flask.request.form
 
@@ -52,7 +48,7 @@ def import_file() -> str | flask.Response:
             oob=True,
             force=True,
         )
-        html_error = common.error(f"File already imported on {e.date}")
+        html_error = base.error(f"File already imported on {e.date}")
         return html_button + "\n" + html_error
     except exc.UnknownImporterError:
         error = "Could not find an importer for file"
@@ -68,15 +64,15 @@ def import_file() -> str | flask.Response:
         path_file_local.unlink()
 
     if error:
-        return common.error(error)
+        return base.error(error)
 
     html = flask.render_template(
         "import/dialog.jinja",
         success=True,
     )
-    return common.dialog_swap(html, event="account")
+    return base.dialog_swap(html, event="account")
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/h/import": (import_file, ["GET", "POST"]),
 }

@@ -6,14 +6,14 @@ import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import common, transactions
+from nummus.controllers import base, transactions
 from nummus.models import (
     Account,
     AccountCategory,
@@ -25,9 +25,6 @@ from nummus.models import (
     YIELD_PER,
 )
 from nummus.web import utils as web_utils
-
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
 
 
 class _AccountContext(TypedDict):
@@ -96,7 +93,7 @@ def page_all() -> flask.Response:
         string HTML response
     """
     include_closed = "include-closed" in flask.request.args
-    return common.page(
+    return base.page(
         "accounts/page-all.jinja",
         "Accounts",
         ctx=ctx_accounts(include_closed=include_closed),
@@ -125,7 +122,7 @@ def page(uri: str) -> flask.Response:
         if acct.category == AccountCategory.INVESTMENT:
             ctx["performance"] = ctx_performance(s, acct)
         ctx["assets"] = ctx_assets(s, acct)
-        return common.page(
+        return base.page(
             "accounts/page.jinja",
             title=title,
             acct=ctx,
@@ -180,10 +177,10 @@ def account(uri: str) -> str | flask.Response:
         budgeted = "budgeted" in form
 
         if category is None:
-            return common.error("Account category must not be None")
+            return base.error("Account category must not be None")
         if closed and v != 0:
             msg = "Cannot close Account with non-zero balance"
-            return common.error(msg)
+            return base.error(msg)
 
         try:
             with s.begin_nested():
@@ -194,9 +191,9 @@ def account(uri: str) -> str | flask.Response:
                 acct.closed = closed
                 acct.budgeted = budgeted
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
-        return common.dialog_swap(event="account", snackbar="All changes saved")
+        return base.dialog_swap(event="account", snackbar="All changes saved")
 
 
 def performance(uri: str) -> flask.Response:
@@ -751,7 +748,7 @@ def txns_options(uri: str) -> str:
         )
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/accounts": (page_all, ["GET"]),
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/new": (new, ["GET", "POST"]),

@@ -8,6 +8,7 @@ import io
 
 from typing_extensions import override
 
+from nummus import exceptions as exc
 from nummus import utils
 from nummus.importers.base import TransactionImporter, TxnDict, TxnDicts
 
@@ -31,8 +32,7 @@ class CSVTransactionImporter(TransactionImporter):
         if suffix != ".csv":
             return False
         if buf is None or buf_pdf is not None:
-            msg = "buf not given with non-pdf suffix"
-            raise ValueError(msg)
+            raise exc.WrongImporterBufferError
 
         # Check if the columns start with the expected ones
         first_line = buf.split(b"\n", 1)[0].decode().lower().replace(" ", "_")
@@ -48,8 +48,7 @@ class CSVTransactionImporter(TransactionImporter):
     @override
     def run(self) -> TxnDicts:
         if self._buf is None:
-            msg = "Importer did not initialized with byte buffer"
-            raise ValueError(msg)
+            raise exc.WrongImporterBufferError
         first_line, remaining = self._buf.decode().split("\n", 1)
         first_line = first_line.lower().replace(" ", "_")
         reader = csv.DictReader(io.StringIO(first_line + "\n" + remaining))

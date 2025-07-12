@@ -26,10 +26,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .[test]
+          python -m pip install .[test]
       - name: Test
-        run: |
-          python -m coverage run
+        run: pytest
       - name: Upload test configuration
         uses: actions/upload-artifact@v4
         if: always()

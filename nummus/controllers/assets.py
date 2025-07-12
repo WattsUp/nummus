@@ -5,14 +5,14 @@ from __future__ import annotations
 import datetime
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import (
     Account,
     Asset,
@@ -22,9 +22,6 @@ from nummus.models import (
     YIELD_PER,
 )
 from nummus.web import utils as web_utils
-
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
 
 PAGE_LEN = 50
 
@@ -143,7 +140,7 @@ def page_all() -> flask.Response:
                 },
             )
 
-    return common.page(
+    return base.page(
         "assets/page-all.jinja",
         title="Assets",
         ctx={
@@ -172,7 +169,7 @@ def page(uri: str) -> flask.Response:
         a = web_utils.find(s, Asset, uri)
         title = f"Asset {a.name}"
         ctx = ctx_asset(s, a)
-        return common.page(
+        return base.page(
             "assets/page.jinja",
             title=title,
             asset=ctx,
@@ -217,7 +214,7 @@ def asset(uri: str) -> str | flask.Response:
         category = AssetCategory(category_s) if category_s else None
 
         if category is None:
-            return common.error("Asset category must not be None")
+            return base.error("Asset category must not be None")
 
         try:
             with s.begin_nested():
@@ -227,9 +224,9 @@ def asset(uri: str) -> str | flask.Response:
                 a.ticker = ticker
                 a.category = category
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
-        return common.dialog_swap(event="asset", snackbar="All changes saved")
+        return base.dialog_swap(event="asset", snackbar="All changes saved")
 
 
 def performance(uri: str) -> flask.Response:
@@ -380,14 +377,14 @@ def new_valuation(uri: str) -> str | flask.Response:
     form = flask.request.form
     date = utils.parse_date(form.get("date"))
     if date is None:
-        return common.error("Date must not be empty")
+        return base.error("Date must not be empty")
     if date > date_max:
-        return common.error("Date can only be up to a week in the future")
+        return base.error("Date can only be up to a week in the future")
     value = utils.evaluate_real_statement(form.get("value"), precision=6)
     if value is None:
-        return common.error("Value must not be empty")
+        return base.error("Value must not be empty")
     if value < 0:
-        return common.error("Value must not be negative")
+        return base.error("Value must not be negative")
 
     try:
         with flask.current_app.app_context():
@@ -408,9 +405,9 @@ def new_valuation(uri: str) -> str | flask.Response:
             if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig
             else e
         )
-        return common.error(msg)
+        return base.error(msg)
 
-    return common.dialog_swap(event="valuation", snackbar="All changes saved")
+    return base.dialog_swap(event="valuation", snackbar="All changes saved")
 
 
 def valuation(uri: str) -> str | flask.Response:
@@ -444,7 +441,7 @@ def valuation(uri: str) -> str | flask.Response:
         if flask.request.method == "DELETE":
             date = datetime.date.fromordinal(v.date_ord)
             s.delete(v)
-            return common.dialog_swap(
+            return base.dialog_swap(
                 event="valuation",
                 snackbar=f"{date} valuation deleted",
             )
@@ -452,14 +449,14 @@ def valuation(uri: str) -> str | flask.Response:
         form = flask.request.form
         date = utils.parse_date(form.get("date"))
         if date is None:
-            return common.error("Date must not be empty")
+            return base.error("Date must not be empty")
         if date > date_max:
-            return common.error("Date can only be up to a week in the future")
+            return base.error("Date can only be up to a week in the future")
         value = utils.evaluate_real_statement(form.get("value"), precision=6)
         if value is None:
-            return common.error("Value must not be empty")
+            return base.error("Value must not be empty")
         if value < 0:
-            return common.error("Value must not be negative")
+            return base.error("Value must not be negative")
 
         try:
             with s.begin_nested():
@@ -474,9 +471,9 @@ def valuation(uri: str) -> str | flask.Response:
                 if "UNIQUE" in orig and "asset_id" in orig and "date_ord" in orig
                 else e
             )
-            return common.error(msg)
+            return base.error(msg)
 
-        return common.dialog_swap(event="valuation", snackbar="All changes saved")
+        return base.dialog_swap(event="valuation", snackbar="All changes saved")
 
 
 def update() -> str | flask.Response:
@@ -502,7 +499,7 @@ def update() -> str | flask.Response:
         return flask.render_template(
             "assets/update.jinja",
             n_to_update=n,
-            error=common.error("No assets were updated"),
+            error=base.error("No assets were updated"),
         )
 
     updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
@@ -696,7 +693,7 @@ def ctx_table(s: orm.Session, a: Asset) -> _TableContext:
     }
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/assets": (page_all, ["GET"]),
     "/assets/<path:uri>": (page, ["GET"]),
     "/h/assets/new": (new, ["GET", "POST"]),

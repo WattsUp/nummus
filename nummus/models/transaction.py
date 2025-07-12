@@ -232,13 +232,18 @@ class TransactionSplit(Base):
         super().__setattr__("account_id", parent.account_id)
         self._update_text_fields()
 
+    @property
+    def date(self) -> datetime.date:
+        """Date on which Transaction occurred."""
+        return datetime.date.fromordinal(self.date_ord)
+
     @classmethod
     def search(
         cls,
         query: orm.Query[TransactionSplit],
         search_str: str,
         category_names: dict[int, str] | None = None,
-    ) -> list[int] | None:
+    ) -> list[int]:
         """Search TransactionSplit text fields.
 
         Args:
@@ -248,7 +253,6 @@ class TransactionSplit(Base):
 
         Returns:
             Ordered list of matches, from best to worst
-            or None if search_str is invalid
         """
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 

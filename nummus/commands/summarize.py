@@ -183,12 +183,11 @@ class Summarize(BaseCommand):
 
             total_asset_value = Decimal(0)
             summary_assets: list[_AssetSummary] = []
-            for a_id, values in value_assets.items():
-                v = values[-1]
+            for a_id, a in assets.items():
+                v = value_assets[a_id][-1]
                 if not self._include_all and v == 0:
                     continue
 
-                a = assets[a_id]
                 profit = profit_assets[a_id]
                 total_asset_value += v
                 summary_assets.append(

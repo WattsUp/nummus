@@ -1,124 +1,64 @@
 from __future__ import annotations
 
-import datetime
-import secrets
+from typing import TYPE_CHECKING
 
-from nummus import portfolio, utils
+from nummus import utils
 from nummus.health_checks.duplicate_transactions import DuplicateTransactions
-from nummus.models import (
-    Account,
-    AccountCategory,
-    HealthCheckIssue,
-    query_count,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
-)
-from tests.base import TestBase
+from nummus.models import HealthCheckIssue, query_count, Transaction, TransactionSplit
+
+if TYPE_CHECKING:
+
+    from sqlalchemy import orm
 
 
-class TestDuplicateTransactions(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    c = DuplicateTransactions()
+    c.test(session)
+    assert c.issues == {}
 
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
 
-        c = DuplicateTransactions(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_no_issues(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    c = DuplicateTransactions()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
 
-            # Add a single transaction
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
+def test_duplicate(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
 
-            acct = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            s.add(acct)
-            s.flush()
-            acct_id = acct.id_
+    txn_to_copy = transactions[0]
 
-            amount = self.random_decimal(-1, 1)
-            statement = self.random_string()
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=amount,
-                statement=statement,
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["uncategorized"],
-            )
-            s.add_all((txn, t_split))
-            s.flush()
+    # Fund account on 3 days before today
+    txn = Transaction(
+        account_id=txn_to_copy.account_id,
+        date=txn_to_copy.date,
+        amount=txn_to_copy.amount,
+        statement=txn_to_copy.statement,
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        category_id=txn_to_copy.splits[0].category_id,
+    )
+    session.add_all((txn, t_split))
+    session.commit()
 
-            txn_id = txn.id_
+    c = DuplicateTransactions()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-        c = DuplicateTransactions(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    amount_raw = Transaction.amount.type.process_bind_param(txn.amount, None)
+    assert i.value == f"{txn.account_id}.{txn.date_ord}.{amount_raw}"
+    uri = i.uri
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
-
-            # Add a duplicate transaction
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=amount,
-                statement=statement,
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["uncategorized"],
-            )
-            s.add_all((txn, t_split))
-
-        c = DuplicateTransactions(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-            amount_raw = Transaction.amount.type.process_bind_param(amount, None)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, f"{acct_id}.{today_ord}.{amount_raw}")
-            uri = i.uri
-
-        target = {
-            uri: f"{today} - Monkey Bank Checking {utils.format_financial(amount)}",
-        }
-        self.assertEqual(c.issues, target)
-
-        # If the date on one changes, the issue will be resolved
-        with p.begin_session() as s:
-            txn = s.query(Transaction).where(Transaction.id_ == txn_id).one()
-
-            txn.date_ord = today_ord - 1
-
-        c = DuplicateTransactions(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
+    target = f"{txn.date} - Monkey Bank Checking: {utils.format_financial(txn.amount)}"
+    assert c.issues == {uri: target}

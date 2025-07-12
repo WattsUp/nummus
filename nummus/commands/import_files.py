@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -74,7 +75,7 @@ class Import(BaseCommand):
         try:
             for path in self._paths:
                 if not path.exists():
-                    print(f"{Fore.RED}File does not exist: {path}")
+                    print(f"{Fore.RED}File does not exist: {path}", file=sys.stderr)
                     self._restore(tar_ver, path_debug)
                     return -1
                 if path.is_dir():
@@ -86,16 +87,20 @@ class Import(BaseCommand):
                     p.import_file(path, path_debug, force=self._force)
                     count += 1
         except exc.FileAlreadyImportedError as e:
-            print(f"{Fore.RED}{e}")
+            print(f"{Fore.RED}{e}", file=sys.stderr)
             print(
                 f"{Fore.YELLOW}Delete file or run import with --force flag which "
                 "may create duplicate transactions.",
+                file=sys.stderr,
             )
             self._restore(tar_ver, path_debug)
             return -2
         except exc.UnknownImporterError as e:
-            print(f"{Fore.RED}{e}")
-            print(f"{Fore.YELLOW}Create a custom importer in {p.importers_path}")
+            print(f"{Fore.RED}{e}", file=sys.stderr)
+            print(
+                f"{Fore.YELLOW}Create a custom importer in {p.importers_path}",
+                file=sys.stderr,
+            )
             self._restore(tar_ver, path_debug)
             return -3
         except Exception:  # pragma: no cover
@@ -115,6 +120,9 @@ class Import(BaseCommand):
         from nummus import portfolio  # noqa: PLC0415
 
         portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
-        print(f"{Fore.RED}Abandoned import, restored from backup")
+        print(f"{Fore.RED}Abandoned import, restored from backup", file=sys.stderr)
         if path_debug.exists():
-            print(f"{Fore.YELLOW}Raw imported file may help at {path_debug}")
+            print(
+                f"{Fore.YELLOW}Raw imported file may help at {path_debug}",
+                file=sys.stderr,
+            )

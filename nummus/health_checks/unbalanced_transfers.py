@@ -7,6 +7,7 @@ import operator
 import textwrap
 from collections import defaultdict
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from typing_extensions import override
 
@@ -14,6 +15,9 @@ from nummus import utils
 from nummus.health_checks.base import Base
 from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_PER
 from nummus.models.transaction_category import TransactionCategoryGroup
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
 class UnbalancedTransfers(Base):
@@ -27,63 +31,70 @@ class UnbalancedTransfers(Base):
     _SEVERE = True
 
     @override
-    def test(self) -> None:
-        with self._p.begin_session() as s:
-            query = s.query(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-            ).where(
-                TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
+    def test(self, s: orm.Session) -> None:
+        issues: dict[str, str] = {}
+        query = s.query(
+            TransactionCategory.id_,
+            TransactionCategory.emoji_name,
+        ).where(
+            TransactionCategory.group == TransactionCategoryGroup.TRANSFER,
+        )
+        cat_transfers_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+
+        accounts = Account.map_name(s)
+
+        query = (
+            s.query(TransactionSplit)
+            .with_entities(
+                TransactionSplit.account_id,
+                TransactionSplit.date_ord,
+                TransactionSplit.amount,
+                TransactionSplit.category_id,
             )
-            cat_transfers_ids: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
+            .where(TransactionSplit.category_id.in_(cat_transfers_ids))
+            .order_by(TransactionSplit.date_ord, TransactionSplit.amount)
+        )
+        current_date_ord: int | None = None
+        total = defaultdict(Decimal)
+        current_splits: dict[int, list[tuple[str, Decimal]]] = defaultdict(list)
+        for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
+            acct_id: int
+            date_ord: int
+            amount: Decimal
+            if current_date_ord is None:
+                current_date_ord = date_ord
+            if date_ord != current_date_ord:
+                if any(v != 0 for v in total.values()):
+                    uri, msg = self._create_issue(
+                        current_date_ord,
+                        current_splits,
+                        cat_transfers_ids,
+                    )
+                    issues[uri] = msg
+                current_date_ord = date_ord
+                total = defaultdict(Decimal)
+                current_splits = defaultdict(list)
 
-            accounts = Account.map_name(s)
+            total[t_cat_id] += amount
+            current_splits[t_cat_id].append((accounts[acct_id], amount))
 
-            query = (
-                s.query(TransactionSplit)
-                .with_entities(
-                    TransactionSplit.account_id,
-                    TransactionSplit.date_ord,
-                    TransactionSplit.amount,
-                    TransactionSplit.category_id,
-                )
-                .where(TransactionSplit.category_id.in_(cat_transfers_ids))
-                .order_by(TransactionSplit.date_ord)
+        if any(v != 0 for v in total.values()) and current_date_ord is not None:
+            uri, msg = self._create_issue(
+                current_date_ord,
+                current_splits,
+                cat_transfers_ids,
             )
-            current_date_ord: int | None = None
-            total = defaultdict(Decimal)
-            current_splits: dict[int, list[tuple[str, Decimal]]] = defaultdict(list)
-            for acct_id, date_ord, amount, t_cat_id in query.yield_per(YIELD_PER):
-                acct_id: int
-                date_ord: int
-                amount: Decimal
-                if current_date_ord is None:
-                    current_date_ord = date_ord
-                if date_ord != current_date_ord:
-                    if any(v != 0 for v in total.values()):
-                        self._add_issue(
-                            current_date_ord,
-                            current_splits,
-                            cat_transfers_ids,
-                        )
-                    current_date_ord = date_ord
-                    total = defaultdict(Decimal)
-                    current_splits = defaultdict(list)
+            issues[uri] = msg
 
-                total[t_cat_id] += amount
-                current_splits[t_cat_id].append((accounts[acct_id], amount))
+        self._commit_issues(s, issues)
 
-            if any(v != 0 for v in total.values()) and current_date_ord is not None:
-                self._add_issue(current_date_ord, current_splits, cat_transfers_ids)
-
-        self._commit_issues()
-
-    def _add_issue(
-        self,
+    @classmethod
+    def _create_issue(
+        cls,
         date_ord: int,
         categories: dict[int, list[tuple[str, Decimal]]],
         cat_transfers_ids: dict[int, str],
-    ) -> None:
+    ) -> tuple[str, str]:
         date = datetime.date.fromordinal(date_ord)
         date_str = date.isoformat()
         msg_l = [
@@ -122,4 +133,4 @@ class UnbalancedTransfers(Base):
             f"{cat_transfers_ids[t_cat_id]}"
             for acct, amount, t_cat_id in all_splits
         )
-        self._issues_raw[date_str] = "\n".join(msg_l)
+        return date_str, "\n".join(msg_l)

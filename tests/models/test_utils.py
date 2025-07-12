@@ -1,326 +1,279 @@
 from __future__ import annotations
 
-import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
+import pytest
+import sqlalchemy
 from sqlalchemy import CheckConstraint, ForeignKeyConstraint, UniqueConstraint
 
 from nummus import exceptions as exc
-from nummus import models
 from nummus.models import (
     Account,
-    AccountCategory,
     Asset,
     AssetCategory,
     AssetSplit,
+    AssetValuation,
     Transaction,
-    TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
     utils,
 )
-from nummus.models.asset import AssetValuation
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    import datetime
+
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomStringGenerator
 
 
-class TestUtils(TestBase):
-
-    def test_paginate(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-
-        n_transactions = 10
-        today = datetime.datetime.now().astimezone().date()
-
-        # Create accounts
-        acct = Account(
-            name="Monkey Bank Checking",
-            institution="Monkey Bank",
-            category=AccountCategory.CASH,
-            closed=False,
-            budgeted=False,
-        )
-        s.add(acct)
-        s.commit()
-
-        t_cat = TransactionCategory(
-            emoji_name="Uncategorized",
-            group=TransactionCategoryGroup.OTHER,
-            locked=False,
-            is_profit_loss=False,
-            asset_linked=False,
-            essential=False,
-        )
-        s.add(t_cat)
-        s.commit()
-
-        for _ in range(n_transactions):
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(amount=100, parent=txn, category_id=t_cat.id_)
-            s.add_all((txn, t_split))
-        s.commit()
-
-        query = s.query(Transaction)
-        transactions = query.all()
-        query = s.query(Transaction)
-
-        page, count, next_offset = utils.paginate(query, 50, 0)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions)
-        self.assertEqual(count, n_transactions)
-        self.assertIsNone(next_offset)
-
-        page, count, next_offset = utils.paginate(query, 3, 0)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions[0:3])
-        self.assertEqual(count, n_transactions)
-        self.assertEqual(next_offset, 3)
-
-        page, count, next_offset = utils.paginate(query, 3, 3)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions[3:6])
-        self.assertEqual(count, n_transactions)
-        self.assertEqual(next_offset, 6)
-
-        page, count, next_offset = utils.paginate(query, 3, 6)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions[6:9])
-        self.assertEqual(count, n_transactions)
-        self.assertEqual(next_offset, 9)
-
-        page, count, next_offset = utils.paginate(query, 3, 9)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions[9:])
-        self.assertEqual(count, n_transactions)
-        self.assertIsNone(next_offset)
-
-        page, count, next_offset = utils.paginate(query, 3, 1000)  # type: ignore[attr-defined]
-        self.assertEqual(page, [])
-        self.assertEqual(count, n_transactions)
-        self.assertIsNone(next_offset)
-
-        page, count, next_offset = utils.paginate(query, 3, -1000)  # type: ignore[attr-defined]
-        self.assertEqual(page, transactions[0:3])
-        self.assertEqual(count, n_transactions)
-        self.assertEqual(next_offset, 3)
-
-    def test_dump_table_configs(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-
-        result = utils.dump_table_configs(s, Account)
-        self.assertEqual("CREATE TABLE account (", result[0])
-        self.assertEqual(")", result[-1])
-        self.assertNotIn("\t", "\n".join(result))
-
-    def test_get_constraints(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-
-        target = [
-            (UniqueConstraint, "asset_id, date_ord"),
-            (CheckConstraint, "multiplier > 0"),
-            (ForeignKeyConstraint, "asset_id"),
-        ]
-        result = utils.get_constraints(s, AssetSplit)
-        self.assertEqual(result, target)
-
-    def test_obj_session(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-
-        # Create accounts
-        acct = Account(
-            name="Monkey Bank Checking",
-            institution="Monkey Bank",
-            category=AccountCategory.CASH,
-            closed=False,
-            budgeted=False,
-        )
-        self.assertRaises(exc.UnboundExecutionError, utils.obj_session, acct)
-
-        s.add(acct)
-        s.commit()
-
-        result = utils.obj_session(acct)
-        self.assertEqual(result, s)
-
-    def test_update_rows(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-
-        # Create asset
-        a = Asset(
-            name="Monkey Bank Checking",
-            category=AssetCategory.CASH,
-        )
-        s.add(a)
-        s.commit()
-        a_id = a.id_
-
-        updates: dict[object, dict[str, object]] = {
-            today_ord - 1: {"value": Decimal(10), "asset_id": a_id},
-            today_ord: {"value": Decimal(100), "asset_id": a_id},
-        }
-
-        query = s.query(AssetValuation)
-        utils.update_rows(s, AssetValuation, query, "date_ord", updates)
-
-        n = utils.query_count(query)
-        self.assertEqual(n, 2)
-
-        v = query.where(AssetValuation.date_ord == today_ord).one()
-        self.assertEqual(v.value, Decimal(100))
-
-        v = query.where(AssetValuation.date_ord == (today_ord - 1)).one()
-        self.assertEqual(v.value, Decimal(10))
-
-        updates: dict[object, dict[str, object]] = {
-            today_ord - 2: {"value": Decimal(5), "asset_id": a_id},
-            today_ord: {"value": Decimal(50), "asset_id": a_id},
-        }
-
-        utils.update_rows(s, AssetValuation, query, "date_ord", updates)
-
-        n = utils.query_count(query)
-        self.assertEqual(n, 2)
-
-        v = query.where(AssetValuation.date_ord == today_ord).one()
-        self.assertEqual(v.value, Decimal(50))
-
-        v = query.where(AssetValuation.date_ord == (today_ord - 2)).one()
-        self.assertEqual(v.value, Decimal(5))
-
-        utils.update_rows(s, AssetValuation, query, "date_ord", {})
-        n = utils.query_count(query)
-        self.assertEqual(n, 0)
-
-    def test_update_rows_list(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
-        today = datetime.datetime.now().astimezone().date()
-
-        # Create account
-        acct = Account(
-            name="Monkey Bank Checking",
-            institution="Monkey Bank",
-            category=AccountCategory.CASH,
-            closed=False,
-            budgeted=False,
-        )
-        s.add(acct)
-        s.commit()
-
-        t_cat = TransactionCategory(
-            emoji_name="Uncategorized",
-            group=TransactionCategoryGroup.OTHER,
-            locked=False,
-            is_profit_loss=False,
-            asset_linked=False,
-            essential=False,
-        )
-        s.add(t_cat)
-        s.commit()
-
+# TODO (WattsUp): Change scope?
+@pytest.fixture
+def transactions(
+    session: orm.Session,
+    today: datetime.date,
+    account: Account,
+    categories: dict[str, int],
+    rand_str_generator: RandomStringGenerator,
+) -> list[Transaction]:
+    for _ in range(10):
         txn = Transaction(
-            account_id=acct.id_,
+            account_id=account.id_,
             date=today,
             amount=100,
-            statement=self.random_string(),
+            statement=rand_str_generator(),
         )
-        t_split_0 = TransactionSplit(amount=100, parent=txn, category_id=t_cat.id_)
-        s.add_all((txn, t_split_0))
-        s.commit()
-
-        new_split_amount = Decimal(20)
-        memo_0 = self.random_string()
-        memo_1 = self.random_string()
-        tag_0 = self.random_string()
-        tag_1 = self.random_string()
-        updates: list[dict[str, object]] = [
-            {
-                "parent": txn,
-                "category_id": t_cat.id_,
-                "memo": memo_0,
-                "tag": tag_0,
-                "amount": txn.amount - new_split_amount,
-            },
-            {
-                "parent": txn,
-                "category_id": t_cat.id_,
-                "memo": memo_1,
-                "tag": tag_1,
-                "amount": new_split_amount,
-            },
-        ]
-        utils.update_rows_list(s, TransactionSplit, s.query(TransactionSplit), updates)
-        s.commit()
-        self.assertEqual(t_split_0.parent_id, txn.id_)
-        self.assertEqual(t_split_0.memo, memo_0)
-        self.assertEqual(t_split_0.tag, tag_0)
-        self.assertEqual(t_split_0.amount, txn.amount - new_split_amount)
-
-        t_split_1 = (
-            s.query(TransactionSplit).where(TransactionSplit.id_ != t_split_0.id_).one()
+        t_split = TransactionSplit(
+            amount=100,
+            parent=txn,
+            category_id=categories["uncategorized"],
         )
-        self.assertEqual(t_split_1.parent_id, txn.id_)
-        self.assertEqual(t_split_1.memo, memo_1)
-        self.assertEqual(t_split_1.tag, tag_1)
-        self.assertEqual(t_split_1.amount, new_split_amount)
+        session.add_all((txn, t_split))
+    session.commit()
+    return session.query(Transaction).all()
 
-        updates: list[dict[str, object]] = [
-            {
-                "parent": txn,
-                "category_id": t_cat.id_,
-                "memo": memo_0,
-                "tag": tag_0,
-                "amount": txn.amount,
-            },
-        ]
-        utils.update_rows_list(s, TransactionSplit, s.query(TransactionSplit), updates)
-        s.commit()
-        self.assertEqual(t_split_0.parent_id, txn.id_)
-        self.assertEqual(t_split_0.memo, memo_0)
-        self.assertEqual(t_split_0.tag, tag_0)
-        self.assertEqual(t_split_0.amount, txn.amount)
 
-        t_split_1 = (
-            s.query(TransactionSplit)
-            .where(TransactionSplit.id_ != t_split_0.id_)
-            .one_or_none()
+@pytest.fixture
+def valuations(
+    session: orm.Session,
+    today_ord: int,
+    asset: Asset,
+) -> list[AssetValuation]:
+    a_id = asset.id_
+    updates: dict[object, dict[str, object]] = {
+        today_ord - 1: {"value": Decimal(10), "asset_id": a_id},
+        today_ord: {"value": Decimal(100), "asset_id": a_id},
+    }
+
+    query = session.query(AssetValuation)
+    utils.update_rows(session, AssetValuation, query, "date_ord", updates)
+    session.commit()
+    return query.all()
+
+
+def test_paginate_all(session: orm.Session, transactions: list[Transaction]) -> None:
+    page, count, next_offset = utils.paginate(session.query(Transaction), 50, 0)
+    assert page == transactions
+    assert count == len(transactions)
+    assert next_offset is None
+
+
+@pytest.mark.parametrize("offset", range(10))
+def test_paginate_three(
+    session: orm.Session,
+    transactions: list[Transaction],
+    offset: int,
+) -> None:
+    page, count, next_offset = utils.paginate(session.query(Transaction), 3, offset)
+    assert page == transactions[offset : offset + 3]
+    assert count == len(transactions)
+    if offset >= (len(transactions) - 3):
+        assert next_offset is None
+    else:
+        assert next_offset == offset + 3
+
+
+def test_paginate_three_page_1000(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    page, count, next_offset = utils.paginate(session.query(Transaction), 3, 1000)
+    assert page == []
+    assert count == len(transactions)
+    assert next_offset is None
+
+
+def test_paginate_three_page_n1000(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    page, count, next_offset = utils.paginate(session.query(Transaction), 3, -1000)
+    assert page == transactions[0:3]
+    assert count == len(transactions)
+    assert next_offset == 3
+
+
+def test_dump_table_configs(session: orm.Session) -> None:
+    result = utils.dump_table_configs(session, Account)
+    assert result[0] == "CREATE TABLE account ("
+    assert result[-1] == ")"
+    assert "\t" not in "\n".join(result)
+
+
+def test_get_constraints(session: orm.Session) -> None:
+    target = [
+        (UniqueConstraint, "asset_id, date_ord"),
+        (CheckConstraint, "multiplier > 0"),
+        (ForeignKeyConstraint, "asset_id"),
+    ]
+    assert utils.get_constraints(session, AssetSplit) == target
+
+
+def test_obj_session(session: orm.Session, account: Account) -> None:
+    result = utils.obj_session(account)
+    assert result == session
+
+
+def test_obj_session_detached() -> None:
+    acct = Account()
+    with pytest.raises(exc.UnboundExecutionError):
+        utils.obj_session(acct)
+
+
+def test_update_rows_new(
+    session: orm.Session,
+    today_ord: int,
+    valuations: list[AssetValuation],
+) -> None:
+    query = session.query(AssetValuation)
+    assert utils.query_count(query) == len(valuations)
+
+    v = query.where(AssetValuation.date_ord == today_ord).one()
+    assert v.value == Decimal(100)
+
+    v = query.where(AssetValuation.date_ord == (today_ord - 1)).one()
+    assert v.value == Decimal(10)
+
+
+def test_update_rows_edit(
+    session: orm.Session,
+    today_ord: int,
+    asset: Asset,
+    valuations: list[AssetValuation],
+) -> None:
+    query = session.query(AssetValuation)
+    updates: dict[object, dict[str, object]] = {
+        today_ord - 2: {"value": Decimal(5), "asset_id": asset.id_},
+        today_ord: {"value": Decimal(50), "asset_id": asset.id_},
+    }
+    utils.update_rows(session, AssetValuation, query, "date_ord", updates)
+    session.commit()
+    assert utils.query_count(query) == len(valuations)
+
+    v = query.where(AssetValuation.date_ord == today_ord).one()
+    assert v.value == Decimal(50)
+
+    v = query.where(AssetValuation.date_ord == (today_ord - 2)).one()
+    assert v.value == Decimal(5)
+
+
+def test_update_rows_delete(
+    session: orm.Session,
+    valuations: list[AssetValuation],
+) -> None:
+    _ = valuations
+    query = session.query(AssetValuation)
+    utils.update_rows(session, AssetValuation, query, "date_ord", {})
+    assert utils.query_count(query) == 0
+
+
+def test_update_rows_list_edit(
+    session: orm.Session,
+    transactions: list[Transaction],
+    categories: dict[str, int],
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    txn = transactions[0]
+    t_split_0 = txn.splits[0]
+    new_split_amount = Decimal(20)
+    memo_0 = rand_str_generator()
+    memo_1 = rand_str_generator()
+    tag_0 = rand_str_generator()
+    tag_1 = rand_str_generator()
+    updates: list[dict[str, object]] = [
+        {
+            "parent": txn,
+            "category_id": categories["uncategorized"],
+            "memo": memo_0,
+            "tag": tag_0,
+            "amount": txn.amount - new_split_amount,
+        },
+        {
+            "parent": txn,
+            "category_id": categories["uncategorized"],
+            "memo": memo_1,
+            "tag": tag_1,
+            "amount": new_split_amount,
+        },
+    ]
+    utils.update_rows_list(
+        session,
+        TransactionSplit,
+        session.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_),
+        updates,
+    )
+    session.commit()
+    assert t_split_0.parent_id == txn.id_
+    assert t_split_0.memo == memo_0
+    assert t_split_0.tag == tag_0
+    assert t_split_0.amount == txn.amount - new_split_amount
+
+    t_split_1 = (
+        session.query(TransactionSplit)
+        .where(
+            TransactionSplit.parent_id == txn.id_,
+            TransactionSplit.id_ != t_split_0.id_,
         )
-        self.assertIsNone(t_split_1)
+        .one()
+    )
+    assert t_split_1.parent_id == txn.id_
+    assert t_split_1.memo == memo_1
+    assert t_split_1.tag == tag_1
+    assert t_split_1.amount == new_split_amount
 
-    def test_one_or_none(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
 
-        # Create asset
-        a_0 = Asset(
-            name="Monkey Bank Cash",
-            category=AssetCategory.CASH,
-        )
-        s.add(a_0)
-        a_1 = Asset(
-            name="Monkey Bank Crypto",
-            category=AssetCategory.CRYPTOCURRENCY,
-        )
-        s.add(a_1)
+def test_update_rows_list_delete(
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+    utils.update_rows_list(
+        session,
+        TransactionSplit,
+        session.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_),
+        [],
+    )
+    session.commit()
+    assert len(txn.splits) == 0
 
-        # Too many matches
-        result = utils.one_or_none(s.query(Asset))
-        self.assertIsNone(result)
 
-        # One matches
-        result = utils.one_or_none(
-            s.query(Asset).where(Asset.category == AssetCategory.CASH),
-        )
-        self.assertEqual(result, a_0)
-
-        # No matches
-        result = utils.one_or_none(
-            s.query(Asset).where(Asset.category == AssetCategory.BONDS),
-        )
-        self.assertIsNone(result)
+@pytest.mark.parametrize(
+    ("where", "expect_asset"),
+    [
+        ([], False),
+        ([Asset.category == AssetCategory.STOCKS], True),
+        ([Asset.category == AssetCategory.BONDS], False),
+    ],
+)
+def test_one_or_none(
+    session: orm.Session,
+    asset: Asset,
+    where: list[sqlalchemy.ColumnClause],
+    expect_asset: bool,
+) -> None:
+    _ = asset
+    query = session.query(Asset).where(*where)
+    if expect_asset:
+        assert utils.one_or_none(query) == asset
+    else:
+        assert utils.one_or_none(query) is None

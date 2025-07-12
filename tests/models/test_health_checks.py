@@ -1,48 +1,78 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
+import pytest
+
 from nummus import exceptions as exc
-from nummus import models
 from nummus.models.health_checks import HealthCheckIssue
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
+
+    from tests.conftest import RandomStringGenerator
 
 
-class TestHealthCheckIssue(TestBase):
-    def test_init_properties(self) -> None:
-        s = self.get_session()
-        models.metadata_create_all(s)
+def test_init_properties(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    d = {
+        "check": rand_str_generator(),
+        "value": rand_str_generator(),
+        "msg": rand_str_generator(),
+        "ignore": False,
+    }
 
-        d = {
-            "check": self.random_string(),
-            "value": self.random_string(),
-            "msg": self.random_string(),
-            "ignore": False,
-        }
+    i = HealthCheckIssue(**d)
+    session.add(i)
+    session.commit()
 
-        i = HealthCheckIssue(**d)
-        s.add(i)
-        s.commit()
+    assert i.check == d["check"]
+    assert i.value == d["value"]
+    assert i.msg == d["msg"]
+    assert i.ignore == d["ignore"]
 
-        self.assertEqual(i.check, d["check"])
-        self.assertEqual(i.value, d["value"])
-        self.assertEqual(i.msg, d["msg"])
-        self.assertEqual(i.ignore, d["ignore"])
 
-        # Duplicate values are bad
-        i_dup = HealthCheckIssue(**d)
-        s.add(i_dup)
-        self.assertRaises(exc.IntegrityError, s.commit)
-        s.rollback()
+def test_duplicate_keys(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    d = {
+        "check": rand_str_generator(),
+        "value": rand_str_generator(),
+        "msg": rand_str_generator(),
+        "ignore": False,
+    }
+    i = HealthCheckIssue(**d)
+    session.add(i)
+    i = HealthCheckIssue(**d)
+    session.add(i)
+    with pytest.raises(exc.IntegrityError):
+        session.commit()
 
-        # Short strings are bad
-        self.assertRaises(exc.InvalidORMValueError, setattr, i, "check", "a")
-        self.assertRaises(
-            exc.IntegrityError,
-            s.query(HealthCheckIssue).update,
-            {"check": "a"},
-        )
-        s.rollback()
 
-        # But not value
-        i.value = "a"
-        s.query(HealthCheckIssue).update({"value": "b"})
-        s.commit()
+def test_short_check(rand_str_generator: RandomStringGenerator) -> None:
+    d = {
+        "check": "a",
+        "value": rand_str_generator(),
+        "msg": rand_str_generator(),
+        "ignore": False,
+    }
+    with pytest.raises(exc.InvalidORMValueError):
+        HealthCheckIssue(**d)
+
+
+def test_short_value(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    d = {
+        "check": rand_str_generator(),
+        "value": "a",
+        "msg": rand_str_generator(),
+        "ignore": False,
+    }
+    i = HealthCheckIssue(**d)
+    session.add(i)
+    session.commit()

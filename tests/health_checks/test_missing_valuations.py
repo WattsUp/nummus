@@ -1,146 +1,76 @@
 from __future__ import annotations
 
-import datetime
-import secrets
+from typing import TYPE_CHECKING
 
-from nummus import portfolio
 from nummus.health_checks.missing_valuations import MissingAssetValuations
 from nummus.models import (
-    Account,
-    AccountCategory,
     Asset,
-    AssetCategory,
     AssetValuation,
     HealthCheckIssue,
     query_count,
     Transaction,
-    TransactionCategory,
-    TransactionSplit,
 )
-from tests.base import TestBase
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
-class TestMissingValuations(TestBase):
-    def test_check(self) -> None:
-        path_db = self._TEST_ROOT.joinpath(f"{secrets.token_hex()}.db")
-        p = portfolio.Portfolio.create(path_db)
+def test_empty(session: orm.Session) -> None:
+    c = MissingAssetValuations()
+    c.test(session)
+    assert c.issues == {}
 
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-        yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
 
-        c = MissingAssetValuations(p)
-        c.test()
-        target = {}
-        self.assertEqual(c.issues, target)
+def test_no_issues(
+    session: orm.Session,
+    transactions: list[Transaction],
+    asset_valuation: AssetValuation,
+) -> None:
+    txn = transactions[1]
+    asset_valuation.date_ord = txn.date_ord
+    session.commit()
+    c = MissingAssetValuations()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 0
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
 
-            # Add a single transaction
-            categories = TransactionCategory.map_name(s)
-            categories = {v: k for k, v in categories.items()}
+def test_no_valuations(
+    session: orm.Session,
+    asset: Asset,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    c = MissingAssetValuations()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-            acct = Account(
-                name="Monkey Bank Checking",
-                institution="Monkey Bank",
-                category=AccountCategory.CASH,
-                closed=False,
-                budgeted=True,
-            )
-            s.add(acct)
-            s.flush()
-            acct_id = acct.id_
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == asset.uri
+    uri = i.uri
 
-            a = Asset(
-                name="Banana Inc.",
-                category=AssetCategory.STOCKS,
-                interpolate=False,
-            )
-            s.add(a)
-            s.flush()
-            a_id = a.id_
-            a_uri = a.uri
+    target = f"{asset.name} has no valuations"
+    assert c.issues == {uri: target}
 
-            amount = self.random_decimal(-1, 1)
-            txn = Transaction(
-                account_id=acct_id,
-                date=yesterday,
-                amount=amount,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["securities traded"],
-                asset_id=a_id,
-                asset_quantity_unadjusted=self.random_decimal(1, 10),
-            )
-            s.add_all((txn, t_split))
 
-        c = MissingAssetValuations(p)
-        c.test()
+def test_no_valuations_before_txn(
+    session: orm.Session,
+    asset: Asset,
+    transactions: list[Transaction],
+    asset_valuation: AssetValuation,
+) -> None:
+    txn = transactions[1]
+    c = MissingAssetValuations()
+    c.test(session)
+    assert query_count(session.query(HealthCheckIssue)) == 1
 
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
+    i = session.query(HealthCheckIssue).one()
+    assert i.check == c.name
+    assert i.value == asset.uri
+    uri = i.uri
 
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, a_uri)
-            uri = i.uri
-
-        target = {
-            uri: "Banana Inc. has no valuations",
-        }
-        self.assertEqual(c.issues, target)
-
-        # Add a valuation but after the transaction
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=a_id,
-                date_ord=today_ord,
-                value=self.random_decimal(1, 10),
-            )
-            s.add(v)
-
-        c = MissingAssetValuations(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 1)
-
-            i = s.query(HealthCheckIssue).one()
-            self.assertEqual(i.check, c.name)
-            self.assertEqual(i.value, a_uri)
-            uri = i.uri
-
-        target = {
-            uri: (
-                f"Banana Inc. has first transaction on {yesterday} before first"
-                f" valuation on {today}"
-            ),
-        }
-        self.assertEqual(c.issues, target)
-
-        # Add a valuation on the transaction
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=a_id,
-                date_ord=yesterday_ord,
-                value=self.random_decimal(1, 10),
-            )
-            s.add(v)
-
-        c = MissingAssetValuations(p)
-        c.test()
-
-        with p.begin_session() as s:
-            n = query_count(s.query(HealthCheckIssue))
-            self.assertEqual(n, 0)
-
-        target = {}
-        self.assertEqual(c.issues, target)
+    target = (
+        f"{asset.name} has first transaction on {txn.date} "
+        f"before first valuation on {asset_valuation.date}"
+    )
+    assert c.issues == {uri: target}

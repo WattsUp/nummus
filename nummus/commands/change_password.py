@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 from colorama import Fore
@@ -52,7 +53,7 @@ class ChangePassword(BaseCommand):
                     return -1
 
         if not change_db_key and not change_web_key:
-            print(f"{Fore.YELLOW}Neither password changing")
+            print(f"{Fore.YELLOW}Neither password changing", file=sys.stderr)
             return -1
 
         # Back up Portfolio

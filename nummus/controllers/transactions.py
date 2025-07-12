@@ -12,7 +12,7 @@ from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
 from nummus import portfolio, utils
-from nummus.controllers import common
+from nummus.controllers import base
 from nummus.models import (
     Account,
     Asset,
@@ -30,7 +30,6 @@ from nummus.web import utils as web_utils
 if TYPE_CHECKING:
     from typing_extensions import NotRequired
 
-    from nummus.controllers.base import Routes
 
 PAGE_LEN = 25
 
@@ -92,7 +91,7 @@ def page_all() -> flask.Response:
         string HTML response
     """
     txn_table, title = ctx_table()
-    return common.page(
+    return base.page(
         "transactions/page-all.jinja",
         title=title,
         ctx=txn_table,
@@ -338,13 +337,13 @@ def new() -> str | flask.Response:
             )
 
         if date is None:
-            return common.error("Transaction date must not be empty")
+            return base.error("Transaction date must not be empty")
         if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-            return common.error("Date can only be up to 7 days in advance")
+            return base.error("Date can only be up to 7 days in advance")
         if amount is None:
-            return common.error("Transaction amount must not be empty")
+            return base.error("Transaction amount must not be empty")
         if account is None:
-            return common.error("Transaction account must not be empty")
+            return base.error("Transaction account must not be empty")
 
         try:
             with s.begin_nested():
@@ -365,9 +364,9 @@ def new() -> str | flask.Response:
                 )
                 s.add_all((txn, t_split))
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
-        return common.dialog_swap(
+        return base.dialog_swap(
             # account since transaction was created
             event="account",
             snackbar="Transaction created",
@@ -396,13 +395,13 @@ def transaction(uri: str) -> str | flask.Response:
             )
         if flask.request.method == "DELETE":
             if txn.cleared:
-                return common.error("Cannot delete cleared transaction")
+                return base.error("Cannot delete cleared transaction")
             date = datetime.date.fromordinal(txn.date_ord)
             s.query(TransactionSplit).where(
                 TransactionSplit.parent_id == txn.id_,
             ).delete()
             s.delete(txn)
-            return common.dialog_swap(
+            return base.dialog_swap(
                 # update-account since transaction was deleted
                 event="account",
                 snackbar=f"Transaction on {date} deleted",
@@ -414,9 +413,9 @@ def transaction(uri: str) -> str | flask.Response:
                 if err := _transaction_edit(s, txn):
                     return err
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
-            return common.error(e)
+            return base.error(e)
 
-        return common.dialog_swap(
+        return base.dialog_swap(
             event="account" if txn.amount != amount_before else "transaction",
             snackbar="All changes saved",
         )
@@ -437,16 +436,16 @@ def _transaction_edit(s: orm.Session, txn: Transaction) -> str:
 
     date = utils.parse_date(form.get("date"))
     if date is None:
-        return common.error("Transaction date must not be empty")
+        return base.error("Transaction date must not be empty")
     if date > (today + datetime.timedelta(days=utils.DAYS_IN_WEEK)):
-        return common.error("Date can only be up to a week in the future")
+        return base.error("Date can only be up to a week in the future")
     txn.date = date
     txn.payee = form.get("payee")
 
     if not txn.cleared:
         amount = utils.evaluate_real_statement(form.get("amount"))
         if amount is None:
-            return common.error("Transaction amount must not be empty")
+            return base.error("Transaction amount must not be empty")
         txn.amount = amount
         acct_id = Account.uri_to_id(form["account"])
         txn.account_id = acct_id
@@ -462,12 +461,12 @@ def _transaction_edit(s: orm.Session, txn: Transaction) -> str:
 
     if len(split_categories) < 1:
         msg = "Transaction must have at least one split"
-        return common.error(msg)
+        return base.error(msg)
     if len(split_categories) == 1:
         split_amounts = [txn.amount]
     elif sum(filter(None, split_amounts)) != txn.amount:
         msg = "Non-zero remaining amount to be assigned"
-        return common.error(msg)
+        return base.error(msg)
 
     splits = [
         {
@@ -1251,7 +1250,7 @@ def _table_title(
     return title
 
 
-ROUTES: Routes = {
+ROUTES: base.Routes = {
     "/transactions": (page_all, ["GET"]),
     "/h/transactions/table": (table, ["GET"]),
     "/h/transactions/table-options": (table_options, ["GET"]),
