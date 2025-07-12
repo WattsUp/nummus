@@ -1,129 +1,87 @@
 from __future__ import annotations
 
-import argparse
-import io
-from unittest import mock
+from typing import TYPE_CHECKING
 
 from colorama import Fore
 
-from nummus.commands import backup, create
-from tests.base import TestBase
+from nummus.commands.backup import Backup, Restore
+
+if TYPE_CHECKING:
+    import datetime
+
+    import pytest
+
+    from nummus.portfolio import Portfolio
 
 
-class TestBackUp(TestBase):
-    def test_backup_restore(self) -> None:
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        path_backup = path_db.with_suffix(".backup1.tar")
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create.Create(path_db, None, force=False, no_encrypt=True).run()
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+def test_backup(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+    c = Backup(empty_portfolio.path, None)
+    assert c.run() == 0
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=True, tar_ver=None)
-            rc = c.run()
-        self.assertEqual(rc, 0)
+    path_backup = empty_portfolio.path.with_suffix(".backup1.tar")
+    assert path_backup.exists()
 
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.RED}No backups found, run nummus backup"
-        self.assertEqual(fake_stdout[: len(target)], target)
+    captured = capsys.readouterr()
+    target = (
+        f"{Fore.GREEN}Portfolio is unlocked\n"
+        f"{Fore.GREEN}Portfolio backed up to {path_backup}\n"
+    )
+    assert captured.out == target
+    assert not captured.err
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            c = backup.Backup(path_db, None)
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            rc = c.run()
-        self.assertEqual(rc, 0)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio backed up to {path_backup}\n"
-        self.assertEqual(fake_stdout, target)
+def test_restore(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+    empty_portfolio.backup()
+    c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=False)
+    assert c.run() == 0
 
-        self.assertTrue(path_backup.exists(), "Backup does not exist")
+    captured = capsys.readouterr()
+    target = (
+        f"{Fore.CYAN}Extracted backup tar\n"
+        f"{Fore.GREEN}Portfolio restored for {empty_portfolio.path}\n"
+    )
+    assert captured.out == target
+    assert not captured.err
 
-        path_db.unlink()
-        self.assertFalse(path_db.exists(), "Portfolio does exist")
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=True, tar_ver=None)
-            rc = c.run()
-        self.assertEqual(rc, 0)
+def test_restore_missing(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio: Portfolio,
+) -> None:
+    c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=False)
+    assert c.run() != 0
 
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.CYAN}Backup # 1 created at"
-        self.assertEqual(fake_stdout[: len(target)], target)
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = f"{Fore.RED}No backup exists for {empty_portfolio.path}\n"
+    assert captured.err == target
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=False, tar_ver=None)
-            rc = c.run()
-        self.assertEqual(rc, 0)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.CYAN}Extracted backup tar\n"
-            f"{Fore.GREEN}Portfolio restored for {path_db}\n"
-        )
-        self.assertEqual(fake_stdout, target)
+def test_restore_list_empty(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio: Portfolio,
+) -> None:
+    c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=True)
+    assert c.run() == 0
 
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = f"{Fore.RED}No backups found, run 'nummus backup'\n"
+    assert captured.err == target
 
-        path_backup.unlink()
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            c = backup.Restore(path_db, None, list_ver=False, tar_ver=1)
-            rc = c.run()
-        self.assertNotEqual(rc, 0)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.RED}Backup does not exist {path_backup}\n"
-        self.assertEqual(fake_stdout, target)
+def test_restore_list(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio: Portfolio,
+    utc_frozen: datetime.datetime,
+) -> None:
+    empty_portfolio.backup()
+    c = Restore(empty_portfolio.path, None, tar_ver=None, list_ver=True)
+    assert c.run() == 0
 
-    def test_args(self) -> None:
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            create.Create(path_db, None, force=False, no_encrypt=True).run()
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
+    ts_local = utc_frozen.astimezone().isoformat(timespec="seconds")
 
-        parser = argparse.ArgumentParser()
-        subparsers = parser.add_subparsers(
-            dest="cmd",
-            metavar="<command>",
-            required=True,
-        )
-
-        cmd_class = backup.Backup
-        sub = subparsers.add_parser(
-            cmd_class.NAME,
-            help=cmd_class.HELP,
-            description=cmd_class.DESCRIPTION,
-        )
-        cmd_class.setup_args(sub)
-
-        command_line = [cmd_class.NAME]
-        args = parser.parse_args(args=command_line)
-        args_d = vars(args)
-        args_d["path_db"] = path_db
-        args_d["path_password"] = None
-        cmd: str = args_d.pop("cmd")
-        self.assertEqual(cmd, cmd_class.NAME)
-
-        # Make sure all args from parse_args are given to constructor
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            cmd_class(**args_d)
-
-        cmd_class = backup.Restore
-        sub = subparsers.add_parser(
-            cmd_class.NAME,
-            help=cmd_class.HELP,
-            description=cmd_class.DESCRIPTION,
-        )
-        cmd_class.setup_args(sub)
-
-        command_line = [cmd_class.NAME]
-        args = parser.parse_args(args=command_line)
-        args_d = vars(args)
-        args_d["path_db"] = path_db
-        args_d["path_password"] = None
-        cmd: str = args_d.pop("cmd")
-        self.assertEqual(cmd, cmd_class.NAME)
-
-        # Make sure all args from parse_args are given to constructor
-        with mock.patch("sys.stdout", new=io.StringIO()) as _:
-            cmd_class(**args_d)
+    captured = capsys.readouterr()
+    target = f"{Fore.CYAN}Backup # 1 created at {ts_local} (0.0 seconds ago)\n"
+    assert captured.out == target
+    assert not captured.err

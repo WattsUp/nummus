@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from typing import TYPE_CHECKING
 
 from colorama import Fore
@@ -70,6 +71,7 @@ class Create(BaseCommand):
                 print(
                     f"{Fore.RED}Cannot overwrite portfolio at {self._path_db}. "
                     "Try with --force",
+                    file=sys.stderr,
                 )
                 return -1
 

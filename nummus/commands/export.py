@@ -7,6 +7,7 @@ import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from colorama import Fore
 from typing_extensions import override
 
 from nummus.commands.base import BaseCommand
@@ -34,6 +35,8 @@ class Export(BaseCommand):
         csv_path: Path,
         start: datetime.date | None,
         end: datetime.date | None,
+        *,
+        no_bars: bool,
     ) -> None:
         """Initize export command.
 
@@ -43,11 +46,13 @@ class Export(BaseCommand):
             csv_path: Path to CSV output
             start: Start date to filter transactions
             end: End date to filter transactions
+            no_bars: True will disable progress bars
         """
         super().__init__(path_db, path_password)
         self._csv_path = csv_path
         self._start = start
         self._end = end
+        self._no_bars = no_bars
 
     @override
     @classmethod
@@ -69,6 +74,12 @@ class Export(BaseCommand):
             metavar="CSV_PATH",
             type=Path,
             help="path to CSV file to export",
+        )
+        parser.add_argument(
+            "--no-bars",
+            default=False,
+            action="store_true",
+            help="disable progress bars",
         )
 
     @override
@@ -94,19 +105,26 @@ class Export(BaseCommand):
                 )
 
             with self._csv_path.open("w", encoding="utf-8") as file:
-                write_csv(file, query)
+                n = write_csv(file, query, no_bars=self._no_bars)
+        print(f"{Fore.GREEN}{n} transactions exported to {self._csv_path}")
         return 0
 
 
 def write_csv(
     file: io.TextIOBase,
     transactions_query: orm.Query[TransactionSplit],
-) -> None:
+    *,
+    no_bars: bool,
+) -> int:
     """Write transactions to CSV file.
 
     Args:
         file: Destination file to write to
         transactions_query: ORM query to obtain TransactionSplits
+        no_bars: True will disable progress bars
+
+    Returns:
+        Number of transactions exported
     """
     # Defer for faster time to main
     import tqdm  # noqa: PLC0415
@@ -153,7 +171,12 @@ def write_csv(
         t_cat_id,
         tag,
         amount,
-    ) in tqdm.tqdm(query.yield_per(YIELD_PER), total=n, desc="Exporting"):
+    ) in tqdm.tqdm(
+        query.yield_per(YIELD_PER),
+        total=n,
+        desc="Exporting",
+        disable=no_bars,
+    ):
         lines.append(
             [
                 datetime.date.fromordinal(date).isoformat(),
@@ -169,3 +192,4 @@ def write_csv(
     writer = csv.writer(file)
     writer.writerow(header)
     writer.writerows(lines)
+    return n

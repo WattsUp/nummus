@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 from colorama import Fore
@@ -25,20 +26,28 @@ class UpdateAssets(BaseCommand):
         self,
         path_db: Path,
         path_password: Path | None,
+        *,
+        no_bars: bool,
     ) -> None:
         """Initize update-assets command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
+            no_bars: True will disable progress bars
         """
         super().__init__(path_db, path_password)
+        self._no_bars = no_bars
 
     @override
     @classmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
-        # No arguments
-        _ = parser
+        parser.add_argument(
+            "--no-bars",
+            default=False,
+            action="store_true",
+            help="disable progress bars",
+        )
 
     @override
     def run(self) -> int:
@@ -50,19 +59,23 @@ class UpdateAssets(BaseCommand):
         _, tar_ver = p.backup()
 
         try:
-            updated = p.update_assets()
+            updated = p.update_assets(no_bars=self._no_bars)
         except Exception:  # pragma: no cover
             # No immediate exception thrown, can't easily test
             portfolio.Portfolio.restore(p, tar_ver=tar_ver)
-            print(f"{Fore.RED}Abandoned update assets, restored from backup")
+            print(
+                f"{Fore.RED}Abandoned update assets, restored from backup",
+                file=sys.stderr,
+            )
             raise
 
         if len(updated) == 0:
             print(
                 f"{Fore.YELLOW}No assets were updated, "
                 "add a ticker to an Asset to download market data",
+                file=sys.stderr,
             )
-            return -2
+            return 0
 
         updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
         name_len = max(len(item[0]) for item in updated)
@@ -73,6 +86,7 @@ class UpdateAssets(BaseCommand):
                 print(
                     f"{Fore.RED}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
                     f"failed to update. Error: {error}",
+                    file=sys.stderr,
                 )
                 failed = True
             else:
@@ -80,4 +94,4 @@ class UpdateAssets(BaseCommand):
                     f"{Fore.GREEN}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
                     f"updated from {start} to {end}",
                 )
-        return 1 if failed else 0
+        return -1 if failed else 0

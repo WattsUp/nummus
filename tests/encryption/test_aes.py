@@ -62,12 +62,14 @@ def secret_encrypted(encryption: tuple[EncryptionInterface, bytes], secret: str)
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_encrypt(secret: str, secret_encrypted: str) -> None:
     assert secret_encrypted != secret
     assert base64.b64decode(secret_encrypted) != secret
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_decrypt(
     encryption: tuple[EncryptionInterface, bytes],
     secret: str,
@@ -78,6 +80,7 @@ def test_decrypt(
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_key_hash(encryption: tuple[EncryptionInterface, bytes], key: str) -> None:
     enc, enc_config = encryption
     assert key != enc.hashed_key
@@ -87,6 +90,7 @@ def test_key_hash(encryption: tuple[EncryptionInterface, bytes], key: str) -> No
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_load_config(
     encryption: tuple[EncryptionInterface, bytes],
     key: str,
@@ -100,12 +104,14 @@ def test_load_config(
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_load_config_bad_version() -> None:
     with pytest.raises(exc.UnknownEncryptionVersionError):
         Encryption("", b"a:bc")
 
 
 @pytest.mark.skipif(NO_ENCRYPTION, reason="No encryption available")
+@pytest.mark.encryption
 def test_bad_key(
     rand_str_generator: RandomStringGenerator,
     encryption: tuple[EncryptionInterface, bytes],

@@ -36,7 +36,7 @@ TRANSACTIONS_REQUIRED = [
         "statement": "Account Transfer",
     },
     {
-        "account": "Monkey Investments",
+        "account": "Monkey Bank Investments",
         "date": datetime.date(2023, 1, 2),
         "amount": Decimal("900.0"),
         "statement": "Account Transfer",
@@ -81,7 +81,7 @@ TRANSACTIONS_EXTRAS: TxnDicts = [
         "asset_quantity": None,
     },
     {
-        "account": "Monkey Investments",
+        "account": "Monkey Bank Investments",
         "date": datetime.date(2023, 1, 2),
         "amount": Decimal("900.0"),
         "statement": "Account Transfer",
@@ -93,7 +93,7 @@ TRANSACTIONS_EXTRAS: TxnDicts = [
         "asset_quantity": None,
     },
     {
-        "account": "Monkey Investments",
+        "account": "Monkey Bank Investments",
         "date": datetime.date(2023, 1, 3),
         "amount": Decimal("-900.0"),
         "statement": "",
@@ -105,7 +105,7 @@ TRANSACTIONS_EXTRAS: TxnDicts = [
         "asset_quantity": Decimal("32.1234"),
     },
     {
-        "account": "Monkey Investments",
+        "account": "Monkey Bank Investments",
         "date": datetime.date(2023, 2, 1),
         "amount": Decimal("1234.56"),
         "statement": "Profit Maker",

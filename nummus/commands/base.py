@@ -73,7 +73,7 @@ class BaseCommand(ABC):
             )
         except exc.MigrationRequiredError as e:
             print(f"{Fore.RED}{e}", file=sys.stderr)
-            print(f"{Fore.YELLOW}Run nummus migrate to resolve", file=sys.stderr)
+            print(f"{Fore.YELLOW}Run 'nummus migrate' to resolve", file=sys.stderr)
             sys.exit(1)
         else:
             print(f"{Fore.GREEN}Portfolio is unlocked")

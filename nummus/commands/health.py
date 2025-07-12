@@ -171,11 +171,11 @@ class Health(BaseCommand):
         """
         limit = max(1, self._limit)
         c = check_type(
-            self._p,
             no_ignores=self._no_ignores,
             no_description_typos=self._no_description_typos,
         )
-        c.test()
+        with self._p.begin_session() as s:
+            c.test(s)
         n_issues = len(c.issues)
         if n_issues == 0:
             print(f"{Fore.GREEN}Check '{c.name}' has no issues")
@@ -188,7 +188,8 @@ class Health(BaseCommand):
         print(f"{Fore.CYAN}{textwrap.indent(c.description, '    ')}")
         print(f"{color}  Has the following issues:")
         first_uri = ""
-        for i, (uri, issue) in enumerate(c.issues.items()):
+        # coverage wants to see c.issues be empty but that is checked above
+        for i, (uri, issue) in enumerate(c.issues.items()):  # pragma: no cover
             first_uri = first_uri or uri
             if i >= limit:
                 break

@@ -1,22 +1,35 @@
 from __future__ import annotations
 
-import io
+import argparse
+import sys
 from typing import TYPE_CHECKING
-from unittest import mock
 
+import pytest
 from colorama import Fore
 from typing_extensions import override
 
-from nummus import encryption, portfolio
-from nummus.commands import base
-from nummus.models import Config, ConfigKey
-from tests.base import TestBase
+from nummus import encryption
+from nummus.commands.backup import Backup, Restore
+from nummus.commands.base import BaseCommand
+from nummus.commands.change_password import ChangePassword
+from nummus.commands.clean import Clean
+from nummus.commands.create import Create
+from nummus.commands.export import Export
+from nummus.commands.health import Health
+from nummus.commands.import_files import Import
+from nummus.commands.migrate import Migrate
+from nummus.commands.summarize import Summarize
+from nummus.commands.unlock import Unlock
+from nummus.commands.update_assets import UpdateAssets
+from nummus.commands.web import Web
 
 if TYPE_CHECKING:
-    import argparse
+    from pathlib import Path
+
+    from nummus.portfolio import Portfolio
 
 
-class MockCommand(base.BaseCommand):
+class MockCommand(BaseCommand):
 
     @classmethod
     def setup_args(cls, parser: argparse.ArgumentParser) -> None:
@@ -27,180 +40,212 @@ class MockCommand(base.BaseCommand):
         return 0
 
 
-class Testbase(TestBase):
-    def test_unlock_unencrypted(self) -> None:
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
+def test_no_unlock(tmp_path: Path) -> None:
+    MockCommand(tmp_path / "fake.db", None, do_unlock=False)
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            self.assertRaises(
-                SystemExit,
-                MockCommand,
-                path_db,
-                None,
-            )
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.RED}Portfolio does not exist at {path_db}. Run nummus create\n"
-        self.assertEqual(fake_stdout, target)
 
-        # No issues if not unlocking
-        MockCommand(path_db, None, do_unlock=False)
+def test_no_file(capsys: pytest.CaptureFixture, tmp_path: Path) -> None:
+    path = tmp_path / "fake.db"
+    with pytest.raises(SystemExit):
+        MockCommand(path, None)
 
-        # Create and unlock unencrypted Portfolio
-        portfolio.Portfolio.create(path_db, None)
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
-        if p is None:
-            self.fail("portfolio is None")
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = f"{Fore.RED}Portfolio does not exist at {path}. Run nummus create\n"
+    assert captured.err == target
 
-        fake_stdout = fake_stdout.getvalue()
-        target = ""
-        self.assertEqual(fake_stdout, target)
 
-        # Force migration required
-        with p.begin_session() as s:
-            # Good, now reset version
-            s.query(Config).where(Config.key == ConfigKey.VERSION).update(
-                {"value": "0.0.0"},
-            )
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            self.assertRaises(SystemExit, MockCommand, path_db, None)
+def test_unlock(capsys: pytest.CaptureFixture, empty_portfolio: Portfolio) -> None:
+    MockCommand(empty_portfolio.path, None)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            f"{Fore.RED}Portfolio requires migration to v0.2.0\n"
-            f"{Fore.YELLOW}Run nummus migrate to resolve\n"
-        )
-        self.assertEqual(fake_stdout, target)
+    captured = capsys.readouterr()
+    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.out == target
+    assert not captured.err
 
-    def test_unlock_encrypted(self) -> None:
-        if not encryption.AVAILABLE:
-            self.skipTest("Encryption is not installed")
 
-        queue: list[str | None] = []
+def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> None:
+    with pytest.raises(SystemExit):
+        MockCommand(data_path / "old_versions" / "v0.1.16.db", None)
 
-        def mock_input(to_print: str) -> str | None:
-            print(to_print)  # noqa: T201
-            if len(queue) == 1:
-                return queue[0]
-            return queue.pop(0)
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = (
+        f"{Fore.RED}Portfolio requires migration to v0.2.0\n"
+        f"{Fore.YELLOW}Run 'nummus migrate' to resolve\n"
+    )
+    assert captured.err == target
 
-        path_db = self._TEST_ROOT.joinpath("portfolio.db")
 
-        # Create and unlock encrypted Portfolio
-        key = self.random_string()
-        portfolio.Portfolio.create(path_db, key)
-        self.assertTrue(path_db.exists(), "Portfolio does not exist")
-        self.assertTrue(
-            portfolio.Portfolio.is_encrypted_path(path_db),
-            "Portfolio is not encrypted",
-        )
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_unlock_encrypted_path(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+    tmp_path: Path,
+) -> None:
+    p, key = empty_portfolio_encrypted
+    path_password = tmp_path / "password.secret"
+    with path_password.open("w", encoding="utf-8") as file:
+        file.write(key)
 
-        queue = [key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
-        self.assertIsNotNone(p)
+    MockCommand(p.path, path_password)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = "Please enter password: \n"
-        self.assertEqual(fake_stdout, target)
+    captured = capsys.readouterr()
+    target = f"{Fore.GREEN}Portfolio is unlocked\n"
+    assert captured.out == target
+    assert not captured.err
 
-        queue = []
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            p = base.BaseCommand._unlock(path_db, key)  # noqa: SLF001
-        self.assertIsNotNone(p)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = ""
-        self.assertEqual(fake_stdout, target)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_unlock_encrypted_path_bad_key(
+    capsys: pytest.CaptureFixture,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+    tmp_path: Path,
+) -> None:
+    p, _ = empty_portfolio_encrypted
+    path_password = tmp_path / "password.secret"
+    with path_password.open("w", encoding="utf-8") as file:
+        file.write("not key")
 
-        queue = []
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            self.assertRaises(
-                SystemExit,
-                base.BaseCommand._unlock,  # noqa: SLF001
-                path_db,
-                "not the " + key,
-            )
+    with pytest.raises(SystemExit):
+        MockCommand(p.path, path_password)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.RED}Could not decrypt with password file\n"
-        self.assertEqual(fake_stdout, target)
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = f"{Fore.RED}Could not decrypt with password file\n"
+    assert captured.err == target
 
-        queue = [key]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            p = base.BaseCommand._unlock(path_db, None)  # noqa: SLF001
-        self.assertIsNotNone(p)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = "Please enter password: \n"
-        self.assertEqual(fake_stdout, target)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_unlock_encrypted(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+) -> None:
+    p, key = empty_portfolio_encrypted
+    queue = ["not key", key]
 
-        # Cancel entry
-        queue = [None]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            self.assertRaises(
-                SystemExit,
-                base.BaseCommand._unlock,  # noqa: SLF001
-                path_db,
-                None,
-            )
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print, file=sys.stderr)  # noqa: T201
+        return queue.pop(0)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = "Please enter password: \n"
-        self.assertEqual(fake_stdout, target)
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
 
-        # 3 failed attempts
-        queue = ["bad", "still wrong", "not going to work"]
-        with (
-            mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout,
-            mock.patch("builtins.input", new=mock_input) as _,
-            mock.patch("getpass.getpass", new=mock_input) as _,
-        ):
-            self.assertRaises(
-                SystemExit,
-                base.BaseCommand._unlock,  # noqa: SLF001
-                path_db,
-                None,
-            )
+    MockCommand(p.path, None)
 
-        fake_stdout = fake_stdout.getvalue()
-        target = (
-            "Please enter password: \n"
-            f"{Fore.RED}Incorrect password\n"
-            "Please enter password: \n"
-            f"{Fore.RED}Incorrect password\n"
-            "Please enter password: \n"
-            f"{Fore.RED}Incorrect password\n"
-            f"{Fore.RED}Too many incorrect attempts\n"
-        )
-        self.assertEqual(fake_stdout, target)
+    captured = capsys.readouterr()
+    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    target = (
+        "\u26bf  Please enter password: \n"
+        f"{Fore.RED}Incorrect password\n"
+        "\u26bf  Please enter password: \n"
+    )
+    assert captured.err == target
 
-        path_password = path_db.with_suffix(".password")
-        with path_password.open("w", encoding="utf-8") as file:
-            file.write(key)
 
-        with mock.patch("sys.stdout", new=io.StringIO()) as fake_stdout:
-            MockCommand(path_db, path_password)
-        fake_stdout = fake_stdout.getvalue()
-        target = f"{Fore.GREEN}Portfolio is unlocked\n"
-        self.assertEqual(fake_stdout, target)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_unlock_encrypted_cancel(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+) -> None:
+    p, _ = empty_portfolio_encrypted
+
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print, file=sys.stderr)  # noqa: T201
+        return None
+
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
+
+    with pytest.raises(SystemExit):
+        MockCommand(p.path, None)
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = "\u26bf  Please enter password: \n"
+    assert captured.err == target
+
+
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
+@pytest.mark.encryption
+def test_unlock_encrypted_failed(
+    capsys: pytest.CaptureFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+) -> None:
+    p, _ = empty_portfolio_encrypted
+
+    def mock_get_pass(to_print: str) -> str | None:
+        print(to_print, file=sys.stderr)  # noqa: T201
+        return "not key"
+
+    monkeypatch.setattr("getpass.getpass", mock_get_pass)
+
+    with pytest.raises(SystemExit):
+        MockCommand(p.path, None)
+
+    captured = capsys.readouterr()
+    assert not captured.out
+    target = (
+        "\u26bf  Please enter password: \n"
+        f"{Fore.RED}Incorrect password\n"
+        "\u26bf  Please enter password: \n"
+        f"{Fore.RED}Incorrect password\n"
+        "\u26bf  Please enter password: \n"
+        f"{Fore.RED}Incorrect password\n"
+        f"{Fore.RED}Too many incorrect attempts\n"
+    )
+    assert captured.err == target
+
+
+@pytest.mark.parametrize(
+    ("cmd_class", "extra_args"),
+    [
+        (Create, []),
+        (Web, []),
+        (Unlock, []),
+        (Migrate, []),
+        (Backup, []),
+        (Restore, []),
+        (Clean, []),
+        (Import, ["/dev/null"]),
+        (Export, ["/dev/null"]),
+        (UpdateAssets, []),
+        (Health, []),
+        (Summarize, []),
+        (ChangePassword, []),
+    ],
+)
+def test_args(
+    empty_portfolio: Portfolio,
+    cmd_class: type[BaseCommand],
+    extra_args: list[str],
+) -> None:
+    parser = argparse.ArgumentParser()
+    subparsers = parser.add_subparsers(
+        dest="cmd",
+        metavar="<command>",
+        required=True,
+    )
+
+    sub = subparsers.add_parser(
+        cmd_class.NAME,
+        help=cmd_class.HELP,
+        description=cmd_class.DESCRIPTION,
+    )
+    cmd_class.setup_args(sub)
+
+    command_line = [cmd_class.NAME, *extra_args]
+    args = parser.parse_args(args=command_line)
+    args_d = vars(args)
+    args_d["path_db"] = empty_portfolio.path
+    args_d["path_password"] = None
+    cmd: str = args_d.pop("cmd")
+    assert cmd == cmd_class.NAME
+
+    # Make sure all args from parse_args are given to constructor
+    cmd_class(**args_d)

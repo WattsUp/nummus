@@ -291,8 +291,13 @@ def test_update_valuations(
     assert end == today
     n_weekdays = {
         0: 6,
+        1: 7,
+        2: 8,
+        3: 8,
+        4: 8,
+        5: 7,
         6: 6,
-    }.get(today.weekday(), 7)
+    }[today.weekday()]
     assert query_count(session.query(AssetValuation)) == n_weekdays
 
 

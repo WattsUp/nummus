@@ -44,6 +44,7 @@ def test_get_engine_unencrypted(tmp_path: Path) -> None:
 
 
 @pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
 def test_get_engine_encrypted(tmp_path: Path, rand_str: str) -> None:
     key = rand_str.encode()
     enc, _ = encryption.Encryption.create(key)

@@ -7,6 +7,7 @@ import string
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 import yfinance
@@ -28,6 +29,9 @@ from nummus.models import (
 )
 from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
+
+if TYPE_CHECKING:
+    import time_machine
 
 
 def id_func(val: object) -> str | None:
@@ -109,27 +113,58 @@ def sql_engine_args() -> None:
 
 class EmptyPortfolioGenerator:
 
-    def __init__(self, tmp_path_factory: pytest.TempPathFactory) -> None:
+    def __init__(
+        self,
+        tmp_path_factory: pytest.TempPathFactory,
+        rand_str_generator: RandomStringGenerator,
+        key: str | None,
+    ) -> None:
         # Create the portfolio once, then copy the file each time called
         self._path = tmp_path_factory.mktemp("data") / "portfolio.db"
-        Portfolio.create(self._path)
+        self._rand_str_generator = rand_str_generator
+        self._key = key
+        Portfolio.create(self._path, key)
 
-    def __call__(self) -> Portfolio:
-        tmp_path = self._path.with_name(f"{RandomStringGenerator()}.db")
+    def __call__(self) -> tuple[Portfolio, str | None]:
+        tmp_path = self._path.with_name(f"{self._rand_str_generator()}.db")
         shutil.copyfile(self._path, tmp_path)
-        return Portfolio(tmp_path, None)
+        if self._key is not None:
+            # copy salt too
+            shutil.copyfile(
+                self._path.with_suffix(".nacl"),
+                tmp_path.with_suffix(".nacl"),
+            )
+        return Portfolio(tmp_path, self._key), self._key
 
 
 @pytest.fixture(scope="session")
 def empty_portfolio_generator(
     tmp_path_factory: pytest.TempPathFactory,
+    rand_str_generator: RandomStringGenerator,
 ) -> EmptyPortfolioGenerator:
     """Returns an empty portfolio generator.
 
     Returns:
         EmptyPortfolio generator
     """
-    return EmptyPortfolioGenerator(tmp_path_factory)
+    return EmptyPortfolioGenerator(tmp_path_factory, rand_str_generator, None)
+
+
+@pytest.fixture(scope="session")
+def empty_portfolio_encrypted_generator(
+    tmp_path_factory: pytest.TempPathFactory,
+    rand_str_generator: RandomStringGenerator,
+) -> EmptyPortfolioGenerator:
+    """Returns an empty portfolio generator.
+
+    Returns:
+        EmptyPortfolio generator
+    """
+    return EmptyPortfolioGenerator(
+        tmp_path_factory,
+        rand_str_generator,
+        rand_str_generator(),
+    )
 
 
 @pytest.fixture
@@ -139,17 +174,31 @@ def empty_portfolio(empty_portfolio_generator: EmptyPortfolioGenerator) -> Portf
     Returns:
         Portfolio
     """
-    return empty_portfolio_generator()
+    return empty_portfolio_generator()[0]
 
 
 @pytest.fixture
-def session(empty_portfolio_generator: EmptyPortfolioGenerator) -> orm.Session:
+def empty_portfolio_encrypted(
+    empty_portfolio_encrypted_generator: EmptyPortfolioGenerator,
+) -> tuple[Portfolio, str]:
+    """Returns an empty encrypted portfolio.
+
+    Returns:
+        tuple(Portfolio, key)
+    """
+    p, key = empty_portfolio_encrypted_generator()
+    assert key is not None
+    return p, key
+
+
+@pytest.fixture
+def session(empty_portfolio: Portfolio) -> orm.Session:
     """Create SQL session.
 
     Returns:
         Session generator
     """
-    return orm.Session(sql.get_engine(empty_portfolio_generator().path, None))
+    return orm.Session(sql.get_engine(empty_portfolio.path, None))
 
 
 @pytest.fixture(autouse=True)
@@ -238,6 +287,29 @@ def account_savings(
         name="Monkey Bank Savings",
         institution="Monkey Bank",
         category=AccountCategory.CASH,
+        closed=False,
+        budgeted=False,
+        number=rand_str_generator(),
+    )
+    session.add(acct)
+    session.commit()
+    return acct
+
+
+@pytest.fixture
+def account_investments(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> Account:
+    """Create an Account.
+
+    Returns:
+        Investments Account, not closed, not budgeted
+    """
+    acct = Account(
+        name="Monkey Bank Investments",
+        institution="Monkey Bank",
+        category=AccountCategory.INVESTMENT,
         closed=False,
         budgeted=False,
         number=rand_str_generator(),
@@ -479,3 +551,27 @@ def data_path() -> Path:
         Path to test data
     """
     return Path(__file__).with_name("data")
+
+
+@pytest.fixture
+def utc() -> datetime.datetime:
+    """Get current time in UTC.
+
+    Returns:
+        datetime
+    """
+    return datetime.datetime.now(datetime.timezone.utc)
+
+
+@pytest.fixture
+def utc_frozen(
+    utc: datetime.datetime,
+    time_machine: time_machine.TimeMachineFixture,
+) -> datetime.datetime:
+    """Get current time in UTC and freeze it.
+
+    Returns:
+        datetime
+    """
+    time_machine.move_to(utc, tick=False)
+    return utc

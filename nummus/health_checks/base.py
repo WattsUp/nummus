@@ -104,7 +104,8 @@ class Base(ABC):
             value: {"check": self.name, "ignore": value in ignored, "msg": msg}
             for value, msg in issues.items()
         }
-        query = s.query(HealthCheckIssue.value).where(
+        # TODO (WattsUp): add test
+        query = s.query(HealthCheckIssue).where(
             HealthCheckIssue.check == self.name,
         )
         update_rows(s, HealthCheckIssue, query, "value", updates)

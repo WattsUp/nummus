@@ -618,7 +618,7 @@ class Portfolio:
             tuple(id_, name)
 
         Raises:
-            LookupError: if object not found
+            NoResultFound: if object not found
         """
         id_, name = cache.get(search, (None, None))
         if id_ is not None:
@@ -654,8 +654,8 @@ class Portfolio:
             if prop == Account.number and (m := one_or_none(query)):
                 return cache_and_return(m)
 
-        msg = f"{model} matching '{search}' could not be found"
-        raise LookupError(msg)
+        msg = f"{model.__name__} matching '{search}' could not be found"
+        raise exc.NoResultFound(msg)
 
     def backup(self) -> tuple[Path, int]:
         """Back up database, duplicates files.

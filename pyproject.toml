@@ -103,7 +103,6 @@ omit = [
   "nummus/controllers/base.py", # Currently just a type definition
   "nummus/commands/web.py",     # Just a wrapper on web.Server.run() and difficult to mock
   # TODO (WattsUp): Migrate tests
-  "nummus/commands/*",
   "nummus/controllers/*",
   "nummus/web/*",
   "nummus/exceptions.py",
@@ -171,11 +170,11 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
+markers = ["encryption: tests that require encryption"]
 addopts = [
   "--durations=10",
   "--import-mode=importlib",
   # TODO (WattsUp): Migrate tests
-  "--ignore=tests/commands",
   "--ignore=tests/controllers",
   "--ignore=tests/web",
   "--ignore=tests/test_exceptions.py",
