@@ -334,13 +334,31 @@ def asset(session: orm.Session) -> Asset:
     """Create an stock Asset.
 
     Returns:
-        Banana Inc., STOCKS
+        Banana Incorporated, STOCKS
     """
     asset = Asset(
         name="Banana Incorporated",
         category=AssetCategory.STOCKS,
         ticker="BANANA",
         description="Banana Incorporated makes bananas",
+    )
+    session.add(asset)
+    session.commit()
+    return asset
+
+
+@pytest.fixture
+def asset_etf(session: orm.Session) -> Asset:
+    """Create an ETF stock Asset.
+
+    Returns:
+        Banana ETF, STOCKS
+    """
+    asset = Asset(
+        name="Banana ETF",
+        category=AssetCategory.STOCKS,
+        ticker="BANANA_ETF",
+        description="Banana ETF",
     )
     session.add(asset)
     session.commit()

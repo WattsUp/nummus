@@ -19,6 +19,7 @@ import sqlalchemy
 import tqdm
 from packaging.version import Version
 from sqlalchemy import func, orm
+from typing_extensions import NamedTuple
 
 from nummus import __version__, encryption
 from nummus import exceptions as exc
@@ -41,6 +42,16 @@ if TYPE_CHECKING:
     import contextlib
 
     from nummus.importers.base import TxnDict
+
+
+class AssetUpdate(NamedTuple):
+    """Information about an asset update event."""
+
+    name: str
+    ticker: str
+    start: datetime.date | None
+    end: datetime.date | None
+    error: str | None
 
 
 class Portfolio:
@@ -105,8 +116,8 @@ class Portfolio:
         """Path to Portfolio importers."""
         return self._path_importers
 
-    @staticmethod
-    def is_encrypted_path(path: str | Path) -> bool:
+    @classmethod
+    def is_encrypted_path(cls, path: str | Path) -> bool:
         """Check Portfolio's config for encryption status.
 
         Args:
@@ -130,8 +141,8 @@ class Portfolio:
         """Check if portfolio is encrypted."""
         return self._enc is not None
 
-    @staticmethod
-    def create(path: str | Path, key: str | None = None) -> Portfolio:
+    @classmethod
+    def create(cls, path: str | Path, key: str | None = None) -> Portfolio:
         """Create a new Portfolio.
 
         Saves database and configuration file
@@ -150,9 +161,8 @@ class Portfolio:
         if path_db.exists():
             msg = f"Database already exists at {path_db}"
             raise FileExistsError(msg)
-        name = path_db.with_suffix("").name
         path_salt = path_db.with_suffix(".nacl")
-        path_importers = path_db.parent.joinpath(f"{name}.importers")
+        path_importers = path_db.with_suffix(".importers")
 
         path_db.parent.mkdir(parents=True, exist_ok=True)
         path_importers.mkdir(exist_ok=True)
@@ -231,18 +241,18 @@ class Portfolio:
         """
         try:
             with self.begin_session() as s:
-                try:
-                    value: str = (
-                        s.query(Config.value)
-                        .where(Config.key == ConfigKey.ENCRYPTION_TEST)
-                        .one()
-                    )[0]
-                except exc.NoResultFound as e:
-                    msg = "Config.ENCRYPTION_TEST not found"
-                    raise exc.UnlockingError(msg) from e
+                value: str | None = (
+                    s.query(Config.value)
+                    .where(Config.key == ConfigKey.ENCRYPTION_TEST)
+                    .scalar()
+                )
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e
+
+        if value is None:
+            msg = "Config.ENCRYPTION_TEST not found"
+            raise exc.ProtectedObjectNotFoundError(msg)
 
         if self._enc is not None:
             try:
@@ -596,7 +606,7 @@ class Portfolio:
             return
 
         msg = f"'{category_name}' is not a valid category for asset transaction"
-        raise ValueError(msg)
+        raise exc.InvalidAssetTransactionCategoryError(msg)
 
     @classmethod
     def find(
@@ -693,8 +703,8 @@ class Portfolio:
         path_backup.chmod(0o600)  # Only owner can read/write
         return path_backup, tar_ver
 
-    @staticmethod
-    def backups(p: str | Path | Portfolio) -> list[tuple[int, datetime.datetime]]:
+    @classmethod
+    def backups(cls, p: str | Path | Portfolio) -> list[tuple[int, datetime.datetime]]:
         """Get a list of all backups for this portfolio.
 
         Args:
@@ -805,7 +815,7 @@ class Portfolio:
             InvalidBackupTarError: If backup is missing required files
         """
         path_db = Path(p._path_db if isinstance(p, Portfolio) else p)  # noqa: SLF001
-        path_db = path_db.resolve().with_suffix(".db")
+        path_db = path_db.resolve()
         parent = path_db.parent
         stem = path_db.stem
 
@@ -894,15 +904,7 @@ class Portfolio:
         if path.exists() and not path.is_symlink():
             shutil.rmtree(path)
 
-    def update_assets(self, *, no_bars: bool = False) -> list[
-        tuple[
-            str,
-            str,
-            datetime.date | None,
-            datetime.date | None,
-            str | None,
-        ]
-    ]:
+    def update_assets(self, *, no_bars: bool = False) -> list[AssetUpdate]:
         """Update asset valuations using web sources.
 
         Args:
@@ -910,28 +912,11 @@ class Portfolio:
 
         Returns:
             Assets that were updated
-            [
-                (
-                    name,
-                    ticker,
-                    start date,
-                    end date,
-                    error,
-                ),
-                ...
-            ]
+            [AssetUpdate for each]
         """
         today = datetime.datetime.now().astimezone().date()
         today_ord = today.toordinal()
-        updated: list[
-            tuple[
-                str,
-                str,
-                datetime.date | None,
-                datetime.date | None,
-                str | None,
-            ]
-        ] = []
+        updated: list[AssetUpdate] = []
 
         with self.begin_session() as s:
             assets = s.query(Asset).where(Asset.ticker.isnot(None)).all()
@@ -941,8 +926,8 @@ class Portfolio:
             asset_qty = Account.get_asset_qty_all(s, today_ord, today_ord)
             currently_held_assets: set[int] = set()
             for acct_assets in asset_qty.values():
-                for a_id, qty in acct_assets.items():
-                    if a_id in ids and qty[0] != 0:
+                for a_id in ids:
+                    if acct_assets[a_id][0] != 0:
                         currently_held_assets.add(a_id)
 
             bar = tqdm.tqdm(assets, desc="Updating Assets", disable=no_bars)
@@ -955,10 +940,10 @@ class Portfolio:
                         through_today=asset.id_ in currently_held_assets,
                     )
                 except exc.AssetWebError as e:
-                    updated.append((name, ticker, None, None, str(e)))
+                    updated.append(AssetUpdate(name, ticker, None, None, str(e)))
                 else:
                     if start is not None:
-                        updated.append((name, ticker, start, end, None))
+                        updated.append(AssetUpdate(name, ticker, start, end, None))
                     # start & end are None if there are no transactions for the Asset
 
             # Auto update if asset needs interpolation

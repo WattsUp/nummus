@@ -78,20 +78,22 @@ class UpdateAssets(BaseCommand):
             return 0
 
         updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
-        name_len = max(len(item[0]) for item in updated)
-        ticker_len = max(len(item[1]) for item in updated)
+        name_len = max(len(asset.name) for asset in updated)
+        ticker_len = max(len(asset.ticker) for asset in updated)
         failed = False
-        for name, ticker, start, end, error in updated:
-            if start is None:
+        for asset in updated:
+            if asset.start is None:
                 print(
-                    f"{Fore.RED}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
-                    f"failed to update. Error: {error}",
+                    f"{Fore.RED}Asset {asset.name:{name_len}} "
+                    f"({asset.ticker:{ticker_len}}) "
+                    f"failed to update. Error: {asset.error}",
                     file=sys.stderr,
                 )
                 failed = True
             else:
                 print(
-                    f"{Fore.GREEN}Asset {name:{name_len}} ({ticker:{ticker_len}}) "
-                    f"updated from {start} to {end}",
+                    f"{Fore.GREEN}Asset {asset.name:{name_len}} "
+                    f"({asset.ticker:{ticker_len}}) "
+                    f"updated from {asset.start} to {asset.end}",
                 )
         return -1 if failed else 0

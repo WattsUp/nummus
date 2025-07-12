@@ -106,7 +106,6 @@ omit = [
   "nummus/controllers/*",
   "nummus/web/*",
   "nummus/exceptions.py",
-  "nummus/portfolio.py",
 ]
 
 [tool.coverage.report]

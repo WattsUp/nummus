@@ -30,6 +30,7 @@ __all__ = [
     "FileAlreadyImportedError",
     "FutureTransactionError",
     "IntegrityError",
+    "InvalidAssetTransactionCategoryError",
     "InvalidBackupTarError",
     "InvalidORMValueError",
     "InvalidTargetValueError",
@@ -250,3 +251,7 @@ class MigrationRequiredError(Exception):
 
 class EmptySearchError(Exception):
     """Error when search query has no tokens."""
+
+
+class InvalidAssetTransactionCategoryError(Exception):
+    """Error when a category for an asset transaction is invalid."""
