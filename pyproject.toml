@@ -214,6 +214,14 @@ exclude = [
 convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
+"tests/web/*.py" = [
+  "PT009", # web tests not updated yet
+  "PT027", # web tests not updated yet
+]
+"tests/controllers/*.py" = [
+  "PT009", # controller tests not updated yet
+  "PT027", # controller tests not updated yet
+]
 "nummus/commands/*.py" = [
   "T201", # Allow printing for commands
 ]
