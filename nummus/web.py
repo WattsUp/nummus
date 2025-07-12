@@ -40,6 +40,7 @@ class FlaskExtension:
         web_assets.build_bundles(app)
         self._init_auth(app, self._portfolio)
         self._init_jinja_env(app.jinja_env)
+        self._init_metrics(app)
 
         # Inject common variables into templates
         app.context_processor(
