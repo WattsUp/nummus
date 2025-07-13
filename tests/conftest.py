@@ -613,3 +613,20 @@ def flask_app(
     monkeypatch.setenv("NUMMUS_PORTFOLIO", str(empty_portfolio.path))
     monkeypatch.setenv("FLASK_DEBUG", "1")
     return web.create_app()
+
+
+@pytest.fixture
+def flask_app_encrypted(
+    monkeypatch: pytest.MonkeyPatch,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+) -> flask.Flask:
+    """Create flask app for EmptyPortfolio.
+
+    Returns:
+        Flask
+    """
+    p, key = empty_portfolio_encrypted
+    monkeypatch.setenv("NUMMUS_PORTFOLIO", str(p.path))
+    monkeypatch.setenv("NUMMUS_KEY", key)
+    monkeypatch.setenv("FLASK_DEBUG", "1")
+    return web.create_app()

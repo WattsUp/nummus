@@ -8,9 +8,12 @@ import flask
 import pytest
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
+from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
     import werkzeug.datastructures
+
+    from nummus.portfolio import Portfolio
 
 
 ResultType = dict[str, object] | str | bytes
@@ -82,6 +85,17 @@ class WebClient:
 
         self.raw_open = self._client.open
 
+    def url_for(self, endpoint: str, **url_args: object) -> str:
+        with self._flask_app.app_context(), self._flask_app.test_request_context():
+            return flask.url_for(
+                endpoint,
+                _anchor=None,
+                _method=None,
+                _scheme=None,
+                _external=False,
+                **url_args,
+            )
+
     def open_(
         self,
         method: str,
@@ -107,15 +121,7 @@ class WebClient:
             url_args = {}
         else:
             endpoint, url_args = endpoint
-        with self._flask_app.app_context(), self._flask_app.test_request_context():
-            url = flask.url_for(
-                endpoint,
-                _anchor=None,
-                _method=None,
-                _scheme=None,
-                _external=False,
-                **url_args,
-            )
+        url = self.url_for(endpoint, **url_args)
 
         kwargs["method"] = method
         kwargs["headers"] = kwargs.get("headers", {"HX-Request": "true"})
@@ -245,3 +251,40 @@ def web_client(flask_app: flask.Flask, valid_html: HTMLValidator) -> WebClient:
         WebClient
     """
     return WebClient(flask_app, valid_html)
+
+
+class WebClientEncrypted(WebClient):
+
+    def __init__(
+        self,
+        app: flask.Flask,
+        valid_html: HTMLValidator,
+        portfolio: Portfolio,
+    ) -> None:
+        super().__init__(app, valid_html)
+
+        with portfolio.begin_session() as s:
+            key_encoded = (
+                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).one()[0]
+            )
+
+        self._web_key = portfolio.decrypt(key_encoded)
+
+    def login(self) -> None:
+        """Login user."""
+        self.POST("auth.login", data={"password": self._web_key})
+
+
+@pytest.fixture
+def web_client_encrypted(
+    flask_app_encrypted: flask.Flask,
+    valid_html: HTMLValidator,
+    empty_portfolio_encrypted: tuple[Portfolio, str],
+) -> WebClientEncrypted:
+    """Returns a WebClient.
+
+    Returns:
+        WebClient
+    """
+    p, _ = empty_portfolio_encrypted
+    return WebClientEncrypted(flask_app_encrypted, valid_html, p)

@@ -260,10 +260,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     return response
 
 
-# Difficult to mock, just moves Location to HX-Redirect
-def change_redirect_to_htmx(
-    response: flask.Response,
-) -> flask.Response:  # pragma: no cover
+def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     """Change redirect responses to HX-Redirect.
 
     Args:
