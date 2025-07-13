@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
-import flask
+import pytest
 
 from nummus import utils
 from nummus.controllers import emergency_fund
@@ -15,224 +16,183 @@ from nummus.models import (
     TransactionSplit,
 )
 
+if TYPE_CHECKING:
+    import flask
+    from sqlalchemy import orm
 
-def test_ctx(flask_app: flask.Flask) -> None:
+    from tests.controllers.conftest import WebClient
+
+
+def test_empty(today: datetime.date, flask_app: flask.Flask) -> None:
+    start = utils.date_add_months(today, -6)
+    dates = utils.range_date(start.toordinal(), today.toordinal())
+    n = len(dates)
+
     with flask_app.app_context():
         ctx = emergency_fund.ctx_page()
 
-    assert ctx["current"] == Decimal()
+    target: emergency_fund.EFundContext = {
+        "chart": {
+            "labels": [d.isoformat() for d in dates],
+            "date_mode": "months",
+            "balances": [Decimal(0)] * n,
+            "spending_lower": [Decimal(0)] * n,
+            "spending_upper": [Decimal(0)] * n,
+        },
+        "current": Decimal(),
+        "target_lower": Decimal(),
+        "target_upper": Decimal(),
+        "days": None,
+        "delta_lower": Decimal(),
+        "delta_upper": Decimal(),
+        "categories": [],
+    }
+    assert ctx == target
 
 
-if False:
+def test_ctx_underfunded(
+    today: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    account: Account,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+    rand_str: str,
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    session.query(TransactionCategory).where(
+        TransactionCategory.name == "groceries",
+    ).update({"essential": True})
+    txn = Transaction(
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=100),
+        amount=-1000,
+        statement=rand_str,
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        category_id=categories["groceries"],
+    )
+    session.add_all((txn, t_split))
+    session.commit()
 
-    def test_page(self) -> None:
-        p = self._portfolio
-        _ = self._setup_portfolio()
+    with flask_app.app_context():
+        ctx = emergency_fund.ctx_page()
 
-        today = datetime.datetime.now().astimezone().date()
-        month = utils.start_of_month(today)
-        month_ord = month.toordinal()
+    assert ctx["current"] == Decimal(100)
+    assert ctx["days"] == pytest.approx(Decimal(34), abs=Decimal(1))
+    assert ctx["target_upper"] > ctx["target_lower"]
+    assert ctx["delta_upper"] < 0
+    assert ctx["delta_lower"] > 0
+    ctx_categories = ctx["categories"]
+    assert len(ctx_categories) == 1
+    assert ctx_categories[0]["emoji_name"] == "Groceries"
+    assert ctx_categories[0]["name"] == "groceries"
+    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(170), abs=Decimal(1))
 
-        # No emergency fund should not error out
-        endpoint = "emergency_fund.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("No spending", result)
-        self.assertRegex(
-            result,
-            r'emergencyFund\.update\(.*"balances":\[.+\].*\)',
-        )
 
-        # Add an emergency fund
-        with p.begin_session() as s:
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
+def test_ctx_overfunded(
+    today: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    account: Account,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+    rand_str: str,
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    session.query(TransactionCategory).where(
+        TransactionCategory.name == "groceries",
+    ).update({"essential": True})
+    txn = Transaction(
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=100),
+        amount=-50,
+        statement=rand_str,
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        category_id=categories["groceries"],
+    )
+    session.add_all((txn, t_split))
+    session.commit()
 
-            b = BudgetAssignment(
-                category_id=TransactionCategory.emergency_fund(s)[0],
-                month_ord=month_ord,
-                amount=10,
-            )
-            s.add(b)
+    with flask_app.app_context():
+        ctx = emergency_fund.ctx_page()
 
-            # Mark account as budgeted
-            acct = s.query(Account).first()
-            if acct is None:
-                self.fail("Account is missing")
-            acct.budgeted = True
+    assert ctx["current"] == Decimal(100)
+    assert ctx["days"] == pytest.approx(Decimal(347), abs=Decimal(1))
+    assert ctx["target_upper"] > ctx["target_lower"]
+    assert ctx["delta_upper"] > 0
+    assert ctx["delta_lower"] < 0
+    ctx_categories = ctx["categories"]
+    assert len(ctx_categories) == 1
+    assert ctx_categories[0]["emoji_name"] == "Groceries"
+    assert ctx_categories[0]["name"] == "groceries"
+    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(11), abs=Decimal(1))
 
-            # Mark groceries as essential
-            s.query(TransactionCategory).where(
-                TransactionCategory.name == "groceries",
-            ).update({"essential": True})
 
-            # Add spending
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
+def test_ctx(
+    today: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    account: Account,
+    categories: dict[str, int],
+    transactions_spending: list[Transaction],
+    budget_assignments: list[BudgetAssignment],
+    rand_str: str,
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    session.query(TransactionCategory).where(
+        TransactionCategory.name == "groceries",
+    ).update({"essential": True})
+    txn = Transaction(
+        account_id=account.id_,
+        date=today - datetime.timedelta(days=100),
+        amount=-200,
+        statement=rand_str,
+    )
+    t_split = TransactionSplit(
+        parent=txn,
+        amount=txn.amount,
+        category_id=categories["groceries"],
+    )
+    session.add_all((txn, t_split))
+    session.commit()
 
-            # Add spending >3 months ago
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today - datetime.timedelta(days=100),
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
+    with flask_app.app_context():
+        ctx = emergency_fund.ctx_page()
 
-            # Add spending >3 months ago
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today - datetime.timedelta(days=300),
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
+    assert ctx["current"] == Decimal(100)
+    assert ctx["days"] == pytest.approx(Decimal(119), abs=Decimal(1))
+    assert ctx["target_upper"] > ctx["target_lower"]
+    assert ctx["delta_upper"] < 0
+    assert ctx["delta_lower"] < 0
+    ctx_categories = ctx["categories"]
+    assert len(ctx_categories) == 1
+    assert ctx_categories[0]["emoji_name"] == "Groceries"
+    assert ctx_categories[0]["name"] == "groceries"
+    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(37), abs=Decimal(1))
 
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("You have $10 in your emergency fund", result)
-        self.assertIn("You need $39 for emergencies", result)
-        self.assertIn("increasing your emergency fund by $29", result)
-        self.assertRegex(
-            result,
-            r'emergencyFund\.update\(.*"balances":\[.+\].*\)',
-        )
-        self.assertIn("Groceries", result)
 
-        # Increase fund to $100
-        with p.begin_session() as s:
-            s.query(BudgetAssignment).update({"amount": 100})
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("You have $100 in your emergency fund", result)
-        self.assertIn("will cover 5 months", result)
-        self.assertIn("good shape", result)
+def test_page(web_client: WebClient) -> None:
+    result, _ = web_client.GET("emergency_fund.page")
+    assert "Emergency Fund" in result
+    assert "Current Balance" in result
+    assert "Recommended Balance" in result
+    assert "Essential Spending" in result
 
-        # Increase fund to $200
-        with p.begin_session() as s:
-            s.query(BudgetAssignment).update({"amount": 200})
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("You have $200 in your emergency fund", result)
-        self.assertIn("will cover 11 months", result)
-        self.assertIn("extra $88 could be invested", result)
 
-    def test_dashboard(self) -> None:
-        p = self._portfolio
-        _ = self._setup_portfolio()
-
-        today = datetime.datetime.now().astimezone().date()
-        month = utils.start_of_month(today)
-        month_ord = month.toordinal()
-
-        # No budget should not error out
-        endpoint = "emergency_fund.dashboard"
-        result, _ = self.web_get(endpoint)
-        self.assertIn("No spending", result)
-        self.assertRegex(
-            result,
-            r'emergencyFund\.updateDashboard\(.*"balances":\[.+\].*\)',
-        )
-
-        # Add an emergency fund
-        with p.begin_session() as s:
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-
-            b = BudgetAssignment(
-                category_id=TransactionCategory.emergency_fund(s)[0],
-                month_ord=month_ord,
-                amount=10,
-            )
-            s.add(b)
-
-            # Mark account as budgeted
-            acct = s.query(Account).first()
-            if acct is None:
-                self.fail("Account is missing")
-            acct.budgeted = True
-
-            # Mark groceries as essential
-            s.query(TransactionCategory).where(
-                TransactionCategory.name == "groceries",
-            ).update({"essential": True})
-
-            # Add spending
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today,
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
-
-            # Add spending >3 months ago
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today - datetime.timedelta(days=100),
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
-
-            # Add spending >3 months ago
-            txn = Transaction(
-                account_id=acct.id_,
-                date=today - datetime.timedelta(days=300),
-                amount=-100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                category_id=categories["groceries"],
-            )
-            s.add_all((txn, t_split))
-
-        result, _ = self.web_get(endpoint)
-        self.assertIn("increase your fund to at least $39", result)
-        self.assertRegex(
-            result,
-            r'emergencyFund\.updateDashboard\(.*"balances":\[.+\].*\)',
-        )
-
-        # Increase fund to $100
-        with p.begin_session() as s:
-            s.query(BudgetAssignment).update({"amount": 100})
-        result, _ = self.web_get(endpoint)
-        self.assertIn("cover 5 months", result)
-
-        # Increase fund to $200
-        with p.begin_session() as s:
-            s.query(BudgetAssignment).update({"amount": 200})
-        result, _ = self.web_get(endpoint)
-        self.assertIn("$88 could be invested", result)
+def test_dashboard(web_client: WebClient) -> None:
+    result, _ = web_client.GET("emergency_fund.dashboard")
+    assert "Emergency Fund" in result
+    assert "Current Balance" not in result
+    assert "Recommended Balance" not in result
+    assert "Essential Spending" not in result

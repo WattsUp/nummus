@@ -13,7 +13,7 @@ import pytest
 import yfinance
 from sqlalchemy import orm, pool
 
-from nummus import global_config, sql, web
+from nummus import global_config, sql, utils, web
 from nummus.models import (
     Account,
     AccountCategory,
@@ -22,6 +22,7 @@ from nummus.models import (
     AssetSplit,
     AssetValuation,
     base_uri,
+    BudgetAssignment,
     BudgetGroup,
     Transaction,
     TransactionCategory,
@@ -630,3 +631,32 @@ def flask_app_encrypted(
     monkeypatch.setenv("NUMMUS_KEY", key)
     monkeypatch.setenv("FLASK_DEBUG", "1")
     return web.create_app()
+
+
+@pytest.fixture
+def budget_assignments(
+    month: datetime.date,
+    month_ord: int,
+    session: orm.Session,
+    categories: dict[str, int],
+) -> list[BudgetAssignment]:
+    b = BudgetAssignment(
+        month_ord=month_ord,
+        amount=Decimal(50),
+        category_id=categories["groceries"],
+    )
+    session.add(b)
+    b = BudgetAssignment(
+        month_ord=month_ord,
+        amount=Decimal(100),
+        category_id=categories["emergency fund"],
+    )
+    session.add(b)
+    b = BudgetAssignment(
+        month_ord=utils.date_add_months(month, 1).toordinal(),
+        amount=Decimal(2000),
+        category_id=categories["rent"],
+    )
+    session.add(b)
+    session.commit()
+    return list(session.query(BudgetAssignment).all())

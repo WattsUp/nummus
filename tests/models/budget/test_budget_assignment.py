@@ -21,35 +21,6 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-@pytest.fixture
-def budget_assignments(
-    month: datetime.date,
-    month_ord: int,
-    session: orm.Session,
-    categories: dict[str, int],
-) -> list[BudgetAssignment]:
-    b = BudgetAssignment(
-        month_ord=month_ord,
-        amount=Decimal(50),
-        category_id=categories["groceries"],
-    )
-    session.add(b)
-    b = BudgetAssignment(
-        month_ord=month_ord,
-        amount=Decimal(100),
-        category_id=categories["emergency fund"],
-    )
-    session.add(b)
-    b = BudgetAssignment(
-        month_ord=utils.date_add_months(month, 1).toordinal(),
-        amount=Decimal(2000),
-        category_id=categories["rent"],
-    )
-    session.add(b)
-    session.commit()
-    return list(session.query(BudgetAssignment).all())
-
-
 def test_init_properties(
     month_ord: int,
     session: orm.Session,

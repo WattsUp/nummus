@@ -323,16 +323,14 @@ def test_error_check(
 
 
 def test_page(web_client: WebClient) -> None:
-    endpoint = "common.page_dashboard"
-    result, headers = web_client.GET(endpoint, headers={})
+    result, headers = web_client.GET("common.page_dashboard", headers={})
     assert "<title>" in result
     assert "<html" in result
     assert "HX-Request" in headers["Vary"]
 
 
 def test_page_hx(web_client: WebClient) -> None:
-    endpoint = "common.page_dashboard"
-    result, headers = web_client.GET(endpoint)
+    result, headers = web_client.GET("common.page_dashboard")
     assert "<title>" in result
     assert "<html" not in result
     assert "HX-Request" in headers["Vary"]
@@ -354,15 +352,11 @@ def test_add_routes() -> None:
 
 def test_metrics(web_client: WebClient, account: Account) -> None:
     # Visit account page
-    endpoint = "accounts.page"
-    web_client.GET((endpoint, {"uri": account.uri}))
+    web_client.GET(("accounts.page", {"uri": account.uri}))
+    web_client.GET(("accounts.txns", {"uri": account.uri}))
 
-    endpoint = "accounts.txns"
-    web_client.GET((endpoint, {"uri": account.uri}))
-
-    endpoint = "prometheus_metrics"
     result, _ = web_client.GET(
-        endpoint,
+        "prometheus_metrics",
         content_type="text/plain; version=0.0.4; charset=utf-8",
     )
     if isinstance(result, bytes):
