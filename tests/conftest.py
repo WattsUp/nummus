@@ -19,6 +19,7 @@ from nummus.models import (
     AccountCategory,
     Asset,
     AssetCategory,
+    AssetSector,
     AssetSplit,
     AssetValuation,
     base_uri,
@@ -27,6 +28,7 @@ from nummus.models import (
     Transaction,
     TransactionCategory,
     TransactionSplit,
+    USSector,
 )
 from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
@@ -403,6 +405,31 @@ def asset_split(
     session.add(v)
     session.commit()
     return v
+
+
+@pytest.fixture
+def asset_sectors(
+    session: orm.Session,
+    asset: Asset,
+) -> tuple[AssetSector, AssetSector]:
+    """Create two AssetSectors.
+
+    Returns:
+        20% BASIC_MATERIALS, 80% TECHNOLOGY
+    """
+    s0 = AssetSector(
+        asset_id=asset.id_,
+        sector=USSector.BASIC_MATERIALS,
+        weight=Decimal("0.2"),
+    )
+    s1 = AssetSector(
+        asset_id=asset.id_,
+        sector=USSector.TECHNOLOGY,
+        weight=Decimal("0.8"),
+    )
+    session.add_all((s0, s1))
+    session.commit()
+    return s0, s1
 
 
 @pytest.fixture
