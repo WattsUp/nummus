@@ -611,4 +611,5 @@ def flask_app(
         Flask
     """
     monkeypatch.setenv("NUMMUS_PORTFOLIO", str(empty_portfolio.path))
+    monkeypatch.setenv("FLASK_DEBUG", "1")
     return web.create_app()

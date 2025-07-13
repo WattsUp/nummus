@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import datetime
+import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+import flask
 import pytest
 
+from nummus import controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
@@ -15,7 +18,11 @@ from tests import conftest
 if TYPE_CHECKING:
     from collections.abc import Callable
 
+    import werkzeug.test
     from sqlalchemy import orm
+
+    from tests.conftest import RandomStringGenerator
+    from tests.controllers.conftest import HTMLValidator, WebClient
 
 
 def test_find(session: orm.Session, account: Account) -> None:
@@ -202,3 +209,227 @@ def test_validate_int(is_positive: bool) -> None:
 @pytest.mark.parametrize("s", ["0", "-1"])
 def test_validate_int_not_positive(s: str) -> None:
     assert base.validate_int(s, is_positive=True) == "Must be positive"
+
+
+def test_ctx_base(flask_app: flask.Flask) -> None:
+    with flask_app.app_context():
+        ctx = base.ctx_base()
+
+    assert isinstance(ctx["nav_items"], list)
+    for group in ctx["nav_items"]:
+        assert isinstance(group, base.PageGroup)
+        assert group.pages
+        for p in group.pages.values():
+            assert isinstance(p, base.Page)
+            assert p
+
+
+def test_dialog_swap_empty(
+    flask_app: flask.Flask,
+    valid_html: HTMLValidator,
+) -> None:
+    with flask_app.app_context():
+        response = base.dialog_swap()
+
+    data: bytes = response.data
+    html = data.decode()
+    assert valid_html(html)
+    assert "snackbar" not in html
+    assert "HX-Trigger" not in response.headers
+
+
+def test_dialog_swap(
+    flask_app: flask.Flask,
+    valid_html: HTMLValidator,
+    rand_str_generator: RandomStringGenerator,
+) -> None:
+    content = rand_str_generator()
+    event = rand_str_generator()
+    snackbar = rand_str_generator()
+
+    with flask_app.app_context():
+        response = base.dialog_swap(content, event, snackbar)
+
+    data: bytes = response.data
+    html = data.decode()
+    assert valid_html(html)
+    assert content in html
+    assert "snackbar" in html
+    assert snackbar in html
+    assert response.headers["HX-Trigger"] == event
+
+
+def test_error_str(
+    valid_html: HTMLValidator,
+    rand_str: str,
+) -> None:
+    html = base.error(rand_str)
+    assert valid_html(html)
+    assert rand_str in html
+
+
+def test_error_empty_field(
+    session: orm.Session,
+    valid_html: HTMLValidator,
+) -> None:
+    session.add(Account())
+    try:
+        session.commit()
+    except exc.IntegrityError as e:
+        html = base.error(e)
+        assert valid_html(html)
+        assert "Account name must not be empty" in html
+    else:
+        pytest.fail("did not create exception to test with")
+
+
+def test_error_unique(
+    session: orm.Session,
+    account: Account,
+    valid_html: HTMLValidator,
+) -> None:
+    new_account = Account(
+        name=account.name,
+        institution=account.institution,
+        category=account.category,
+        closed=False,
+        budgeted=False,
+    )
+    session.add(new_account)
+    try:
+        session.commit()
+    except exc.IntegrityError as e:
+        html = base.error(e)
+        assert valid_html(html)
+        assert "Account name must be unique" in html
+    else:
+        pytest.fail("did not create exception to test with")
+
+
+def test_error_check(
+    session: orm.Session,
+    account: Account,
+    valid_html: HTMLValidator,
+) -> None:
+    _ = account
+    try:
+        session.query(Account).update({"name": "a"})
+    except exc.IntegrityError as e:
+        html = base.error(e)
+        assert valid_html(html)
+        assert "Name must be at least 2 characters long" in html
+    else:
+        pytest.fail("did not create exception to test with")
+
+
+def test_page(web_client: WebClient) -> None:
+    endpoint = "common.page_dashboard"
+    result, headers = web_client.GET(endpoint, headers={})
+    assert "<title>" in result
+    assert "<html" in result
+    assert "HX-Request" in headers["Vary"]
+
+
+def test_page_hx(web_client: WebClient) -> None:
+    endpoint = "common.page_dashboard"
+    result, headers = web_client.GET(endpoint)
+    assert "<title>" in result
+    assert "<html" not in result
+    assert "HX-Request" in headers["Vary"]
+
+
+def test_add_routes() -> None:
+    app = flask.Flask(__file__)
+    app.debug = False
+    controllers.add_routes(app)
+
+    routes = app.url_map
+    for rule in routes.iter_rules():
+        assert not rule.endpoint.startswith("nummus.controllers.")
+        assert not rule.endpoint.startswith(".")
+        assert rule.rule.startswith("/")
+        assert not rule.rule.startswith("/d/")
+        assert not (rule.rule != "/" and rule.rule.endswith("/"))
+
+
+def test_metrics(web_client: WebClient, account: Account) -> None:
+    # Visit account page
+    endpoint = "accounts.page"
+    web_client.GET((endpoint, {"uri": account.uri}))
+
+    endpoint = "accounts.txns"
+    web_client.GET((endpoint, {"uri": account.uri}))
+
+    endpoint = "prometheus_metrics"
+    result, _ = web_client.GET(
+        endpoint,
+        content_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+    if isinstance(result, bytes):
+        result = result.decode()
+    assert "flask_exporter_info" in result
+    assert "nummus_info" in result
+    assert "flask_http_request_duration_seconds_count" in result
+    assert 'endpoint="accounts.page"' in result
+    assert 'endpoint="accounts.txns"' in result
+
+
+@pytest.mark.xfail
+def test_follow_links(web_client: WebClient) -> None:
+    # Recursively click on every link checking that it is a valid link and valid
+    # method
+    visited: set[str] = set()
+
+    # Save hx-delete for the end in case it does successfully delete something
+    deletes: set[str] = set()
+
+    def visit_all_links(url: str, method: str, *, hx: bool = False) -> None:
+        request = f"{method} {url}"
+        if request in visited:
+            return
+        visited.add(request)
+        response: werkzeug.test.TestResponse | None = None
+        try:
+            data: dict[str, str] | None = None
+            if method in {"POST", "PUT", "DELETE"}:
+                data = {
+                    "name": "",
+                    "institution": "",
+                    "number": "",
+                }
+            response = web_client.raw_open(
+                url,
+                method=method,
+                buffered=False,
+                follow_redirects=False,
+                headers={"HX-Request": "true"} if hx else None,
+                data=data,
+            )
+            page = response.text
+            assert response.status_code == base.HTTP_CODE_OK
+            assert response.content_type == "text/html; charset=utf-8"
+
+        finally:
+            if response is not None:
+                response.close()
+        hrefs = list(re.findall(r'href="([\w\d/\-]+)"', page))
+        hx_gets = list(re.findall(r'hx-get="([\w\d/\-]+)"', page))
+        hx_puts = list(re.findall(r'hx-put="([\w\d/\-]+)"', page))
+        hx_posts = list(re.findall(r'hx-post="([\w\d/\-]+)"', page))
+        hx_deletes = list(re.findall(r'hx-delete="([\w\d/\-]+)"', page))
+        page = ""  # Clear page so --locals isn't too noisy
+
+        for link in hrefs:
+            visit_all_links(link, "GET")
+        # With hx requests, add HX-Request header
+        for link in hx_gets:
+            visit_all_links(link, "GET", hx=True)
+        for link in hx_puts:
+            visit_all_links(link, "PUT", hx=True)
+        for link in hx_posts:
+            visit_all_links(link, "POST", hx=True)
+        deletes.update(hx_deletes)
+
+    visit_all_links("/", "GET")
+    for link in deletes:
+        visit_all_links(link, "DELETE", hx=True)

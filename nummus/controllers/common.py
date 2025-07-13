@@ -19,8 +19,7 @@ def page_dashboard() -> flask.Response:
     return base.page("page.jinja", title="Dashboard | nummus")
 
 
-# Don't need to test debug-only page
-def page_style_test() -> flask.Response:  # pragma: no cover
+def page_style_test() -> flask.Response:
     """GET /style-test.
 
     Returns:

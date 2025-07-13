@@ -294,6 +294,7 @@ def ctx_account(
             )
         )
         n_today, change_today = query.one()
+        change_today: Decimal = change_today or Decimal()
 
         query = (
             s.query(Transaction)
@@ -568,9 +569,9 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
         for acct_id, n_today, change_today in query.all():
             acct_id: int
             n_today: int
-            change_today: Decimal
+            change_today: Decimal | None
             accounts[acct_id]["n_today"] = n_today
-            accounts[acct_id]["change_today"] = change_today
+            accounts[acct_id]["change_today"] = change_today or Decimal()
 
         # Get n_future
         query = (

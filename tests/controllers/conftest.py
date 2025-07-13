@@ -1,0 +1,247 @@
+from __future__ import annotations
+
+import re
+from collections import defaultdict
+from typing import TYPE_CHECKING
+
+import flask
+import pytest
+
+from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
+
+if TYPE_CHECKING:
+    import werkzeug.datastructures
+
+
+ResultType = dict[str, object] | str | bytes
+Tree = dict[str, "TreeNode"]
+TreeNode = Tree | tuple[str, Tree] | object
+Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
+
+
+class HTMLValidator:
+
+    @classmethod
+    def __call__(cls, s: str) -> bool:
+        tags: list[str] = re.findall(r"<(/?\w+)(?:[ \n][^<>]+)?>", s)
+
+        tree: Tree = {"__parent__": (None, None)}
+        current_node = tree
+        for tag in tags:
+            assert isinstance(current_node, dict)
+            if tag[0] == "/":
+                # Close tag
+                item = current_node.pop("__parent__")
+                assert isinstance(item, tuple)
+                current_tag, parent = item
+                current_node = parent
+                assert current_tag == tag[1:]
+            elif tag in {"link", "meta", "path", "input", "hr", "rect"}:
+                # Tags without close tags
+                current_node[tag] = {}
+            else:
+                current_node[tag] = {"__parent__": (tag, current_node)}
+                current_node = current_node[tag]
+
+        # Got back up to the root element
+        assert isinstance(current_node, dict)
+        item = current_node.pop("__parent__")
+        assert isinstance(item, tuple)
+        tag, parent = item
+        assert tag in {None, "html"}  # <html> might not be closed
+        if parent is not None:
+            parent: dict[str, object]
+            assert parent.keys() == {"__parent__", "html"}
+
+        # Find all DOM ids and validate no duplicates
+        ids: list[str] = re.findall(r'id="([^"]+)"', s)
+        id_counts: dict[str, int] = defaultdict(int)
+        for e_id in ids:
+            id_counts[e_id] += 1
+        duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
+        assert not duplicates
+        return True
+
+
+@pytest.fixture(scope="session")
+def valid_html() -> HTMLValidator:
+    """Returns a HTMLValidator.
+
+    Returns:
+        HTMLValidator
+    """
+    return HTMLValidator()
+
+
+class WebClient:
+
+    def __init__(self, app: flask.Flask, valid_html: HTMLValidator) -> None:
+        self._flask_app = app
+        self._client = self._flask_app.test_client()
+        self.valid_html = valid_html
+
+        self.raw_open = self._client.open
+
+    def open_(
+        self,
+        method: str,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """Run a test HTTP request.
+
+        Args:
+            method: HTTP method to use
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+        """
+        if isinstance(endpoint, str):
+            url_args = {}
+        else:
+            endpoint, url_args = endpoint
+        with self._flask_app.app_context(), self._flask_app.test_request_context():
+            url = flask.url_for(
+                endpoint,
+                _anchor=None,
+                _method=None,
+                _scheme=None,
+                _external=False,
+                **url_args,
+            )
+
+        kwargs["method"] = method
+        kwargs["headers"] = kwargs.get("headers", {"HX-Request": "true"})
+        response: werkzeug.test.TestResponse | None = None
+        try:
+            response = self._client.open(
+                url,
+                buffered=False,
+                follow_redirects=False,
+                **kwargs,
+            )
+            assert response.status_code == rc
+            assert response.content_type == content_type
+
+            if content_type == "text/html; charset=utf-8":
+                html = response.text
+                if response.status_code != HTTP_CODE_REDIRECT:
+                    # werkzeug redirect doesn't have close tags
+                    assert self.valid_html(html)
+                # Remove whitespace
+                html = "".join(html.split("\n"))
+                html = re.sub(r" +", " ", html)
+                html = re.sub(r" ?> ?", ">", html)
+                html = re.sub(r" ?< ?", "<", html)
+                return html, response.headers
+            return response.data, response.headers
+        finally:
+            if response is not None:
+                response.close()
+
+    def GET(  # noqa: N802
+        self,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """GET an HTTP response.
+
+        Args:
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+        """
+        return self.open_("GET", endpoint, rc=rc, content_type=content_type, **kwargs)
+
+    def PUT(  # noqa: N802
+        self,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """PUT an HTTP response.
+
+        Args:
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+        """
+        return self.open_("PUT", endpoint, rc=rc, content_type=content_type, **kwargs)
+
+    def POST(  # noqa: N802
+        self,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """POST an HTTP response.
+
+        Args:
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+        """
+        return self.open_("POST", endpoint, rc=rc, content_type=content_type, **kwargs)
+
+    def DELETE(  # noqa: N802
+        self,
+        endpoint: str | tuple[str, Queries],
+        *,
+        rc: int = HTTP_CODE_OK,
+        content_type: str = "text/html; charset=utf-8",
+        **kwargs: object,
+    ) -> tuple[str, werkzeug.datastructures.Headers]:
+        """DELETE an HTTP response.
+
+        Args:
+            endpoint: Route endpoint to test or (endpoint, url_for kwargs)
+            rc: Expected HTTP return code
+            content_type: Content type to check for
+            kwargs: Passed to client.get
+
+        Returns:
+            (response.text, headers)
+        """
+        return self.open_(
+            "DELETE",
+            endpoint,
+            rc=rc,
+            content_type=content_type,
+            **kwargs,
+        )
+
+
+@pytest.fixture
+def web_client(flask_app: flask.Flask, valid_html: HTMLValidator) -> WebClient:
+    """Returns a WebClient.
+
+    Returns:
+        WebClient
+    """
+    return WebClient(flask_app, valid_html)

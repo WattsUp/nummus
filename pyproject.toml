@@ -166,7 +166,19 @@ addopts = [
   "--durations=10",
   "--import-mode=importlib",
   # TODO (WattsUp): Migrate tests
-  "--ignore=tests/controllers",
+  "--ignore=tests/controllers/test_accounts.py",
+  "--ignore=tests/controllers/test_allocation.py",
+  "--ignore=tests/controllers/test_assets.py",
+  "--ignore=tests/controllers/test_auth.py",
+  "--ignore=tests/controllers/test_budgeting.py",
+  "--ignore=tests/controllers/test_cash_flow.py",
+  "--ignore=tests/controllers/test_emergency_fund.py",
+  "--ignore=tests/controllers/test_health.py",
+  "--ignore=tests/controllers/test_import_file.py",
+  "--ignore=tests/controllers/test_net_worth.py",
+  "--ignore=tests/controllers/test_performance.py",
+  "--ignore=tests/controllers/test_transaction_categories.py",
+  "--ignore=tests/controllers/test_transactions.py",
 ]
 
 [tool.ruff]

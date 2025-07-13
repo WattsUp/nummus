@@ -11,7 +11,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING
 
 import flask
-from typing_extensions import NamedTuple, TypeVar
+from typing_extensions import NamedTuple, TypedDict, TypeVar
 
 from nummus import exceptions as exc
 from nummus import models, utils, web
@@ -32,6 +32,27 @@ class LinkType(models.BaseEnum):
     HX_POST = 3
 
 
+class Page(NamedTuple):
+    """Page specification."""
+
+    icon: str | None
+    endpoint: str
+    type_: LinkType
+
+
+class PageGroup(NamedTuple):
+    """Group of pages specification."""
+
+    name: str
+    pages: dict[str, Page | None]
+
+
+class BaseContext(TypedDict):
+    """Base context type."""
+
+    nav_items: list[PageGroup]
+
+
 class DateLabels(NamedTuple):
     """Date labels tuple."""
 
@@ -39,66 +60,78 @@ class DateLabels(NamedTuple):
     mode: str
 
 
-def ctx_base() -> dict[str, object]:
+def ctx_base() -> BaseContext:
     """Get the context to build the base page.
 
     Returns:
-        Dictionary HTML context
+        BaseContext
     """
     p = web.portfolio
 
     # list[(group label, subpages {label: (icon name, endpoint, link type)})]
-    nav_items: list[tuple[str, dict[str, tuple[str, str, LinkType] | None]]] = [
-        (
+    nav_items: list[PageGroup] = [
+        PageGroup(
             "",
             {
-                "Home": ("home", "common.page_dashboard", LinkType.PAGE),
-                "Budget": ("wallet", "budgeting.page", LinkType.PAGE),
+                "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
+                "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
                 # TODO (WattsUp): Change to receipt_long and add_receipt_long if
                 # request gets fulfilled
-                "Transactions": ("note_stack", "transactions.page_all", LinkType.PAGE),
-                "Accounts": ("account_balance", "accounts.page_all", LinkType.PAGE),
+                "Transactions": Page(
+                    "note_stack",
+                    "transactions.page_all",
+                    LinkType.PAGE,
+                ),
+                "Accounts": Page("account_balance", "accounts.page_all", LinkType.PAGE),
                 "Insights": None,  # search_insights
             },
         ),
         # TODO (WattsUp): Banking section? Where to put spending by tag info?
-        (
+        PageGroup(
             "Investing",
             {
-                "Assets": ("box", "assets.page_all", LinkType.PAGE),
+                "Assets": Page("box", "assets.page_all", LinkType.PAGE),
                 "Performance": None,  # ssid_chart
-                "Allocation": (
+                "Allocation": Page(
                     "full_stacked_bar_chart",
                     "allocation.page",
                     LinkType.PAGE,
                 ),
             },
         ),
-        (
+        PageGroup(
             "Planning",
             {
                 "Retirement": None,  # person_play
-                "Emergency Fund": ("emergency", "emergency_fund.page", LinkType.PAGE),
+                "Emergency Fund": Page(
+                    "emergency",
+                    "emergency_fund.page",
+                    LinkType.PAGE,
+                ),
             },
         ),
-        (
+        PageGroup(
             "Utilities",
             {
                 "Logout": (
-                    ("logout", "auth.logout", LinkType.HX_POST)
+                    Page("logout", "auth.logout", LinkType.HX_POST)
                     if p.is_encrypted
                     else None
                 ),
-                "Categories": (
+                "Categories": Page(
                     "category",
                     "transaction_categories.page",
                     LinkType.PAGE,
                 ),
-                "Import File": ("upload", "import_file.import_file", LinkType.DIALOG),
-                "Update Assets": ("update", "assets.update", LinkType.DIALOG),
-                "Health Checks": ("health_metrics", "health.page", LinkType.PAGE),
+                "Import File": Page(
+                    "upload",
+                    "import_file.import_file",
+                    LinkType.DIALOG,
+                ),
+                "Update Assets": Page("update", "assets.update", LinkType.DIALOG),
+                "Health Checks": Page("health_metrics", "health.page", LinkType.PAGE),
                 "Style Test": (
-                    ("style", "common.page_style_test", LinkType.PAGE)
+                    Page("style", "common.page_style_test", LinkType.PAGE)
                     if flask.current_app.debug
                     else None
                 ),
@@ -106,21 +139,19 @@ def ctx_base() -> dict[str, object]:
         ),
     ]
 
-    nav_items_filtered: list[tuple[str, dict[str, tuple[str, str, LinkType]]]] = []
-    for label, subpages in nav_items:
-        subpages_filtered = {}
-        for sub_label, item in subpages.items():
-            if item is None:
-                continue
-            subpages_filtered[sub_label] = item
-        if subpages_filtered:
-            nav_items_filtered.append((label, subpages_filtered))
-        else:  # pragma: no cover
-            # There shouldn't be an empty group
-            pass
+    # Filter out empty subpages
+    nav_items = [
+        PageGroup(
+            group.name,
+            {page_name: page for page_name, page in group.pages.items() if page},
+        )
+        for group in nav_items
+    ]
+    # Filter out empty groups
+    nav_items = [group for group in nav_items if group.pages]
 
     return {
-        "nav_items": nav_items_filtered,
+        "nav_items": nav_items,
     }
 
 
