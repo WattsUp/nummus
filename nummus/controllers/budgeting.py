@@ -190,7 +190,7 @@ def assign(uri: str) -> str:
     month_ord = month.toordinal()
 
     form = flask.request.form
-    amount = utils.evaluate_real_statement(form.get("amount")) or Decimal(0)
+    amount = utils.evaluate_real_statement(form.get("amount")) or Decimal()
 
     with p.begin_session() as s:
         cat = base.find(s, TransactionCategory, uri)
@@ -498,9 +498,9 @@ def new_group() -> str:
         "name": name,
         "uri": g_uri,
         "is_open": False,
-        "assigned": Decimal(0),
-        "activity": Decimal(0),
-        "available": Decimal(0),
+        "assigned": Decimal(),
+        "activity": Decimal(),
+        "available": Decimal(),
         "categories": [],
         "has_error": False,
     }
@@ -691,11 +691,11 @@ def ctx_sidebar(
     """
     month_str = month.isoformat()[:7]
     if uri is None:
-        total_available = Decimal(0)
-        total_to_go = Decimal(0)
-        total_leftover = Decimal(0)
-        total_assigned = Decimal(0)
-        total_activity = Decimal(0)
+        total_available = Decimal()
+        total_to_go = Decimal()
+        total_leftover = Decimal()
+        total_assigned = Decimal()
+        total_activity = Decimal()
 
         query = s.query(TransactionCategory.id_).where(
             TransactionCategory.group == TransactionCategoryGroup.INCOME,
@@ -769,7 +769,7 @@ def ctx_sidebar(
             "available": available,
             "leftover": leftover,
             "assigned": assigned,
-            "future_assigned": Decimal(0),
+            "future_assigned": Decimal(),
             "activity": activity,
             "target": None,
         }
@@ -788,7 +788,7 @@ def ctx_sidebar(
         "available": available,
         "leftover": leftover,
         "assigned": assigned,
-        "future_assigned": Decimal(0),
+        "future_assigned": Decimal(),
         "activity": activity,
         "target": target_ctx,
     }
@@ -867,7 +867,7 @@ def ctx_target(
             "progress_bars": [tar.amount],
             "target": tar.amount,
             "total_target": tar.amount,
-            "total_to_go": max(Decimal(0), to_go),
+            "total_to_go": max(Decimal(), to_go),
             "period": tar.period,
             "type": tar.type_,
         }
@@ -909,7 +909,7 @@ def ctx_target(
             "progress_bars": progress_bars,
             "target": tar.amount,
             "total_target": total_target,
-            "total_to_go": max(Decimal(0), total_to_go),
+            "total_to_go": max(Decimal(), total_to_go),
             "period": tar.period,
             "type": tar.type_,
         }
@@ -929,7 +929,7 @@ def ctx_target(
             "progress_bars": [tar.amount],
             "target": tar.amount,
             "total_target": tar.amount,
-            "total_to_go": max(Decimal(0), total_to_go),
+            "total_to_go": max(Decimal(), total_to_go),
             "period": tar.period,
             "type": tar.type_,
         }
@@ -967,7 +967,7 @@ def ctx_target(
         "progress_bars": progress_bars,
         "target": tar.amount,
         "total_target": tar.amount,
-        "total_to_go": max(Decimal(0), total_to_go),
+        "total_to_go": max(Decimal(), total_to_go),
         "period": tar.period,
         "type": tar.type_,
     }
@@ -1008,9 +1008,9 @@ def ctx_budget(
             "name": g.name,
             "uri": g.uri,
             "is_open": g.uri in groups_open,
-            "assigned": Decimal(0),
-            "activity": Decimal(0),
-            "available": Decimal(0),
+            "assigned": Decimal(),
+            "activity": Decimal(),
+            "available": Decimal(),
             "categories": [],
             "has_error": False,
         }
@@ -1019,9 +1019,9 @@ def ctx_budget(
         "name": None,
         "uri": None,
         "is_open": "ungrouped" in groups_open,
-        "assigned": Decimal(0),
-        "activity": Decimal(0),
-        "available": Decimal(0),
+        "assigned": Decimal(),
+        "activity": Decimal(),
+        "available": Decimal(),
         "categories": [],
         "has_error": False,
     }
@@ -1045,7 +1045,7 @@ def ctx_budget(
             n_overspent += 1
 
         if tar is None:
-            bar_dollars = [max(available, Decimal(0)) - activity]
+            bar_dollars = [max(available, Decimal()) - activity]
             target_ctx = None
         else:
             target_ctx = ctx_target(
@@ -1124,7 +1124,7 @@ def ctx_progress_bars(
     """
     bar_dollars_sum = sum(bar_dollars)
     bars: list[tuple[Decimal, Decimal, Decimal]] = []
-    bar_start = Decimal(0)
+    bar_start = Decimal()
     total_assigned = available - activity
     max_bar_dollars = max(total_assigned, -activity)
     if max_bar_dollars > bar_dollars_sum:
@@ -1134,8 +1134,8 @@ def ctx_progress_bars(
         bar_w = Decimal(1) if bar_dollars_sum == 0 else v / bar_dollars_sum
 
         if v == 0:
-            bg_fill_w = Decimal(0)
-            fg_fill_w = Decimal(0)
+            bg_fill_w = Decimal()
+            fg_fill_w = Decimal()
         elif available < 0:
             bg_fill_w = utils.clamp((-activity - bar_start) / v)
             fg_fill_w = utils.clamp((total_assigned - bar_start) / v)

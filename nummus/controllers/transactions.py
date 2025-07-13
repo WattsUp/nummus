@@ -246,7 +246,7 @@ def new() -> str | flask.Response:
             "cleared": False,
             "date": today,
             "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
-            "amount": Decimal(0),
+            "amount": Decimal(),
             "statement": "Manually created",
             "payee": None,
             "splits": [empty_split],
@@ -284,7 +284,7 @@ def new() -> str | flask.Response:
             split_amounts = [amount]
 
         if flask.request.method == "PUT":
-            amount = amount or Decimal(0)
+            amount = amount or Decimal()
             ctx["account_uri"] = account or ""
             ctx["amount"] = amount
             ctx["payee"] = payee
@@ -309,7 +309,7 @@ def new() -> str | flask.Response:
                 if amount
             ]
 
-            split_sum = sum(filter(None, split_amounts)) or Decimal(0)
+            split_sum = sum(filter(None, split_amounts)) or Decimal()
 
             remaining = amount - split_sum
             headline_error = (
@@ -505,7 +505,7 @@ def split(uri: str) -> str:
     with p.begin_session() as s:
         txn = base.find(s, Transaction, uri)
 
-        parent_amount = utils.parse_real(form["amount"]) or Decimal(0)
+        parent_amount = utils.parse_real(form["amount"]) or Decimal()
         account_id = Account.uri_to_id(form["account"])
         payee = form["payee"]
         date = utils.parse_date(form.get("date"))
@@ -549,7 +549,7 @@ def split(uri: str) -> str:
             }
             ctx_splits.append(item)
 
-        split_sum = sum(filter(None, split_amounts)) or Decimal(0)
+        split_sum = sum(filter(None, split_amounts)) or Decimal()
 
         remaining = parent_amount - split_sum
         headline_error = (
@@ -624,12 +624,12 @@ def validation() -> str:
         raise NotImplementedError
 
     if validate_splits:
-        parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal(0)
+        parent_amount = utils.evaluate_real_statement(args["amount"]) or Decimal()
         split_amounts = [
             utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
         ]
 
-        split_sum = sum(filter(None, split_amounts)) or Decimal(0)
+        split_sum = sum(filter(None, split_amounts)) or Decimal()
 
         remaining = parent_amount - split_sum
         msg = (
@@ -849,7 +849,7 @@ def ctx_split(
     Returns:
         Dictionary HTML context
     """
-    qty = t_split.asset_quantity or Decimal(0)
+    qty = t_split.asset_quantity or Decimal()
     if t_split.asset_id:
         asset_name, asset_ticker = assets[t_split.asset_id]
     else:

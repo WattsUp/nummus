@@ -273,9 +273,9 @@ def ctx_account(
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     if skip_today:
-        current_value = Decimal(0)
-        change_today = Decimal(0)
-        change_future = Decimal(0)
+        current_value = Decimal()
+        change_today = Decimal()
+        change_future = Decimal()
         n_today = 0
         n_future = 0
         updated_on_ord = today_ord
@@ -354,9 +354,9 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
     pnl_categories: dict[int, str] = dict(query.all())  # type: ignore[attr-defined]
 
     # Calculate total cost basis
-    total_cost_basis = Decimal(0)
-    dividends = Decimal(0)
-    fees = Decimal(0)
+    total_cost_basis = Decimal()
+    dividends = Decimal()
+    fees = Decimal()
     query = (
         s.query(TransactionSplit)
         .with_entities(TransactionSplit.category_id, func.sum(TransactionSplit.amount))
@@ -447,8 +447,8 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     )
 
     assets: list[_AssetContext] = []
-    total_value = Decimal(0)
-    total_profit = Decimal(0)
+    total_value = Decimal()
+    total_profit = Decimal()
     for a_id, name, ticker, category in query.yield_per(YIELD_PER):
         end_qty = asset_qtys[a_id]
         end_price = end_prices[a_id][0]
@@ -466,7 +466,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
             "qty": end_qty,
             "price": end_price,
             "value": end_value,
-            "value_ratio": Decimal(0),
+            "value_ratio": Decimal(),
             "profit": profit,
         }
         assets.append(ctx_asset)
@@ -486,14 +486,14 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
         "qty": None,
         "price": Decimal(1),
         "value": cash,
-        "value_ratio": Decimal(0),
+        "value_ratio": Decimal(),
         "profit": None,
     }
     assets.append(ctx_asset)
 
     for item in assets:
         item["value_ratio"] = (
-            Decimal(0) if total_value == 0 else item["value"] / total_value
+            Decimal() if total_value == 0 else item["value"] / total_value
         )
 
     return sorted(
@@ -521,8 +521,8 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
-    assets = Decimal(0)
-    liabilities = Decimal(0)
+    assets = Decimal()
+    liabilities = Decimal()
 
     categories_total: dict[AccountCategory, Decimal] = defaultdict(Decimal)
     categories: dict[AccountCategory, list[_AccountContext]] = defaultdict(list)

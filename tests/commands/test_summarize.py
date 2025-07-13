@@ -24,9 +24,9 @@ def test_empty_summary(
         "n_assets": 0,
         "n_transactions": 0,
         "n_valuations": 0,
-        "net_worth": Decimal(0),
+        "net_worth": Decimal(),
         "accounts": [],
-        "total_asset_value": Decimal(0),
+        "total_asset_value": Decimal(),
         "assets": [],
         "db_size": empty_portfolio.path.stat().st_size,
     }
@@ -93,9 +93,9 @@ def test_exclude_empty(
         "n_assets": 1,
         "n_transactions": 0,
         "n_valuations": 0,
-        "net_worth": Decimal(0),
+        "net_worth": Decimal(),
         "accounts": [],
-        "total_asset_value": Decimal(0),
+        "total_asset_value": Decimal(),
         "assets": [],
         "db_size": empty_portfolio.path.stat().st_size,
     }

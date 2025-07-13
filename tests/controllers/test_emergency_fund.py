@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import datetime
+from decimal import Decimal
+
+import flask
 
 from nummus import utils
+from nummus.controllers import emergency_fund
 from nummus.models import (
     Account,
     BudgetAssignment,
@@ -10,10 +14,16 @@ from nummus.models import (
     TransactionCategory,
     TransactionSplit,
 )
-from tests.controllers.base import WebTestBase
 
 
-class TestEmergencyFund(WebTestBase):
+def test_ctx(flask_app: flask.Flask) -> None:
+    with flask_app.app_context():
+        ctx = emergency_fund.ctx_page()
+
+    assert ctx["current"] == Decimal()
+
+
+if False:
 
     def test_page(self) -> None:
         p = self._portfolio

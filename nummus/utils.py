@@ -559,7 +559,7 @@ def round_list(list_: list[Decimal], precision: int = 6) -> list[Decimal]:
     Returns:
         List with rounded elements
     """
-    residual = Decimal(0)
+    residual = Decimal()
     l_rounded: list[Decimal] = []
     for item in list_:
         v = item + residual
@@ -584,8 +584,8 @@ def integrate(deltas: list[Decimal | None] | list[Decimal]) -> list[Decimal]:
         values[n] = sum(deltas[:])
     """
     n = len(deltas)
-    current = Decimal(0)
-    result = [Decimal(0)] * n
+    current = Decimal()
+    result = [Decimal()] * n
 
     for i, v in enumerate(deltas):
         if v is not None:
@@ -607,11 +607,11 @@ def interpolate_step(values: list[tuple[int, Decimal]], n: int) -> list[Decimal]
     Returns:
         list of interpolated values where result[i] = most recent values <= i
     """
-    result = [Decimal(0)] * n
+    result = [Decimal()] * n
     if len(values) == 0:
         return result
 
-    v_current = Decimal(0)
+    v_current = Decimal()
     values_i = 0
     i_next, v_next = values[values_i]
     for i in range(n):
@@ -641,13 +641,13 @@ def interpolate_linear(values: list[tuple[int, Decimal]], n: int) -> list[Decima
     Returns:
         list of interpolated values
     """
-    result = [Decimal(0)] * n
+    result = [Decimal()] * n
     if len(values) == 0:
         return result
 
     # Starting value
     i_current = 0
-    v_current = Decimal(0)
+    v_current = Decimal()
     values_i = 0
     i_next, v_next = values[values_i]
 
@@ -707,9 +707,9 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
     current_ratio = Decimal(1)
     current_return = current_ratio - 1
 
-    daily_returns: list[Decimal] = [Decimal(0)] * n
-    prev_value = Decimal(0)
-    prev_profit = Decimal(0)
+    daily_returns: list[Decimal] = [Decimal()] * n
+    prev_value = Decimal()
+    prev_profit = Decimal()
     for i, (v, p) in enumerate(zip(values, profit, strict=True)):
         daily_profit = p - prev_profit
         cost_basis = v - daily_profit if prev_value == 0 else prev_value
@@ -740,11 +740,11 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
         TypeError: If optimize result is not float
     """
     if not any(values):
-        return Decimal(0)
+        return Decimal()
     n = len(values)
 
     cash_flows: dict[int, float] = {}
-    prev_cost_basis = Decimal(0)
+    prev_cost_basis = Decimal()
     for i, (v, p) in enumerate(zip(values, profit, strict=True)):
         cost_basis = v - p
         cash_flow = prev_cost_basis - cost_basis
@@ -912,7 +912,7 @@ def dedupe(strings: Iterable[str]) -> set[str]:
 
 def clamp(
     value: Decimal,
-    c_min: Decimal = Decimal(0),
+    c_min: Decimal = Decimal(),
     c_max: Decimal = Decimal(1),
 ) -> Decimal:
     """Clamp value to range.

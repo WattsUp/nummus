@@ -61,7 +61,7 @@ def test_extra_link(
 ) -> None:
     t_split = transactions[0].splits[0]
     t_split.asset_id = asset.id_
-    t_split.asset_quantity_unadjusted = Decimal(0)
+    t_split.asset_quantity_unadjusted = Decimal()
     session.commit()
     _ = transactions
     c = MissingAssetLink()

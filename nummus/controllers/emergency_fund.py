@@ -15,6 +15,37 @@ if TYPE_CHECKING:
     from decimal import Decimal
 
 
+class ChartContext(TypedDict):
+    """Emergency fund chart context."""
+
+    labels: list[str]
+    date_mode: str
+    balances: list[Decimal]
+    spending_lower: list[Decimal]
+    spending_upper: list[Decimal]
+
+
+class CategoryInfo(TypedDict):
+    """Category context."""
+
+    emoji_name: str
+    name: str
+    monthly: Decimal
+
+
+class EFundContext(TypedDict):
+    """Emergency fund context."""
+
+    chart: ChartContext
+    current: Decimal
+    target_lower: Decimal
+    target_upper: Decimal
+    days: Decimal | None
+    delta_lower: Decimal
+    delta_upper: Decimal
+    categories: list[CategoryInfo]
+
+
 def page() -> flask.Response:
     """GET /emergency-fund.
 
@@ -40,11 +71,11 @@ def dashboard() -> str:
     )
 
 
-def ctx_page() -> dict[str, object]:
+def ctx_page() -> EFundContext:
     """Get the context to build the emergency fund page.
 
     Returns:
-        Dictionary HTML context
+        EFundContext
     """
     p = web.portfolio
 
@@ -81,11 +112,6 @@ def ctx_page() -> dict[str, object]:
     else:
         dx = target_upper - target_lower
         months = None if dx == 0 else 3 + (current - target_lower) / dx * 3
-
-    class CategoryInfo(TypedDict):
-        emoji_name: str
-        name: str
-        monthly: Decimal
 
     category_infos: list[CategoryInfo] = []
     for t_cat_id, (name, emoji_name) in categories.items():

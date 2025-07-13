@@ -434,7 +434,7 @@ class TestBudgeting(WebTestBase):
                 .one()
             )
             self.assertEqual(a.amount, Decimal(100))
-            a.amount = Decimal(0)
+            a.amount = Decimal()
 
             a = (
                 s.query(BudgetAssignment)
@@ -801,7 +801,7 @@ class TestBudgeting(WebTestBase):
                 "progress_bars": [Decimal(100)],
                 "target": Decimal(100),
                 "total_target": Decimal(100),
-                "total_to_go": Decimal(0),
+                "total_to_go": Decimal(),
                 "period": tar.period,
                 "type": tar.type_,
             }
@@ -839,7 +839,7 @@ class TestBudgeting(WebTestBase):
             ctx = budgeting.ctx_target(
                 tar,
                 month,
-                assigned=Decimal(0),
+                assigned=Decimal(),
                 available=Decimal(9),
                 leftover=Decimal(9),
             )
@@ -901,7 +901,7 @@ class TestBudgeting(WebTestBase):
                 "progress_bars": [Decimal(100)],
                 "target": Decimal(100),
                 "total_target": Decimal(100),
-                "total_to_go": Decimal(0),
+                "total_to_go": Decimal(),
                 "period": tar.period,
                 "type": tar.type_,
             }
@@ -920,7 +920,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 month,
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -945,7 +945,7 @@ class TestBudgeting(WebTestBase):
                     tar,
                     month,
                     assigned=Decimal(100 * 2),
-                    available=Decimal(0),  # Spent it all
+                    available=Decimal(),  # Spent it all
                     leftover=Decimal(10),
                 )
             target: budgeting._TargetContext = {
@@ -971,7 +971,7 @@ class TestBudgeting(WebTestBase):
                     tar,
                     month,
                     assigned=Decimal(100 * 2),
-                    available=Decimal(0),  # Spent it all
+                    available=Decimal(),  # Spent it all
                     leftover=Decimal(10),
                 )
             target: budgeting._TargetContext = {
@@ -994,7 +994,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 month,
                 assigned=Decimal(100 * n_weeks),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1006,7 +1006,7 @@ class TestBudgeting(WebTestBase):
                 "progress_bars": [Decimal(100)] * n_weeks,
                 "target": Decimal(100),
                 "total_target": Decimal(100 * n_weeks),
-                "total_to_go": Decimal(0),
+                "total_to_go": Decimal(),
                 "period": tar.period,
                 "type": tar.type_,
             }
@@ -1025,7 +1025,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 utils.date_add_months(month, 1),
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             n_weeks = utils.weekdays_in_month(
@@ -1059,7 +1059,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 month,
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1082,7 +1082,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 utils.date_add_months(month, 1),
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1105,7 +1105,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 utils.date_add_months(month, 1),
                 assigned=Decimal(60),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1135,7 +1135,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 month,
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1157,7 +1157,7 @@ class TestBudgeting(WebTestBase):
             ctx = budgeting.ctx_target(
                 tar,
                 utils.date_add_months(month, 3),
-                assigned=Decimal(0),
+                assigned=Decimal(),
                 available=Decimal(20),
                 leftover=Decimal(20),
             )
@@ -1188,7 +1188,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 month,
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(10),
             )
             target: budgeting._TargetContext = {
@@ -1211,7 +1211,7 @@ class TestBudgeting(WebTestBase):
                 tar,
                 utils.date_add_months(month, 1),
                 assigned=Decimal(20),
-                available=Decimal(0),  # Spent it all
+                available=Decimal(),  # Spent it all
                 leftover=Decimal(4),
             )
             target: budgeting._TargetContext = {

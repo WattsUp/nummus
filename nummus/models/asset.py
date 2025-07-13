@@ -319,7 +319,7 @@ class Asset(Base):
             i = date_ord - start_ord
             valuations_assets[a_id].append((i, v))
 
-        assets_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
+        assets_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         for a_id, valuations in valuations_assets.items():
             valuations_sorted = sorted(valuations, key=operator.itemgetter(0))
             if a_id in interpolated_assets:
@@ -387,8 +387,8 @@ class Asset(Base):
             .order_by(TransactionSplit.date_ord)
         )
 
-        sum_unadjusted = Decimal(0)
-        sum_adjusted = Decimal(0)
+        sum_unadjusted = Decimal()
+        sum_adjusted = Decimal()
         for t_split in query.yield_per(YIELD_PER):
             # Query whole object okay, need to set things
             t_split: TransactionSplit
@@ -400,8 +400,8 @@ class Asset(Base):
                 except IndexError:
                     multiplier = Decimal(1)
             t_split.adjust_asset_quantity(multiplier)
-            sum_unadjusted += t_split.asset_quantity_unadjusted or Decimal(0)
-            sum_adjusted += t_split.asset_quantity or Decimal(0)
+            sum_unadjusted += t_split.asset_quantity_unadjusted or Decimal()
+            sum_adjusted += t_split.asset_quantity or Decimal()
             if sum_unadjusted == 0:
                 # sum_adjusted is an error term, use to make sum of adjusted zero out
                 t_split.adjust_asset_quantity_residual(sum_adjusted)
@@ -424,7 +424,7 @@ class Asset(Base):
         # Date when quantity is zero
         date_ord_zero: int | None = None
         date_ord_non_zero: int | None = None
-        current_qty = Decimal(0)
+        current_qty = Decimal()
 
         periods_zero: list[tuple[int | None, int | None]] = []
 

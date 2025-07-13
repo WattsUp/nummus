@@ -130,7 +130,7 @@ def ctx_allocation() -> dict[str, object]:
     categories: list[_GroupContext] = [
         {
             "name": cat.pretty,
-            "value": sum(a["value"] for a in assets) or Decimal(0),
+            "value": sum(a["value"] for a in assets) or Decimal(),
             "assets": sorted(assets, key=operator.itemgetter("name")),
         }
         for cat, assets in assets_by_category.items()
@@ -138,7 +138,7 @@ def ctx_allocation() -> dict[str, object]:
     sectors: list[_GroupContext] = [
         {
             "name": sector.pretty,
-            "value": sum(a["value"] for a in assets) or Decimal(0),
+            "value": sum(a["value"] for a in assets) or Decimal(),
             "assets": sorted(assets, key=operator.itemgetter("name")),
         }
         for sector, assets in assets_by_sector.items()

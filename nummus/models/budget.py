@@ -145,9 +145,9 @@ class BudgetAssignment(Base):
                 TransactionSplit.date_ord < month_ord,
             )
         )
-        starting_balance = query.scalar() or Decimal(0)
+        starting_balance = query.scalar() or Decimal()
         ending_balance = starting_balance
-        total_available = Decimal(0)
+        total_available = Decimal()
 
         # Check all categories not INCOME
         budget_categories = {
@@ -217,11 +217,11 @@ class BudgetAssignment(Base):
             for t_cat_id in budget_categories:
                 assigned = categories_leftover[t_cat_id] + prior_assigned[t_cat_id].get(
                     date_ord,
-                    Decimal(0),
+                    Decimal(),
                 )
-                activity = prior_activity[t_cat_id].get(date_ord, Decimal(0))
+                activity = prior_activity[t_cat_id].get(date_ord, Decimal())
                 leftover = assigned + activity
-                categories_leftover[t_cat_id] = max(Decimal(0), leftover)
+                categories_leftover[t_cat_id] = max(Decimal(), leftover)
             date = utils.date_add_months(date, 1)
 
         # Future months' assignment
@@ -230,7 +230,7 @@ class BudgetAssignment(Base):
             .with_entities(func.sum(BudgetAssignment.amount))
             .where(BudgetAssignment.month_ord > month_ord)
         )
-        future_assigned = query.scalar() or Decimal(0)
+        future_assigned = query.scalar() or Decimal()
 
         # Current month's activity
         query = (
@@ -253,11 +253,11 @@ class BudgetAssignment(Base):
             TransactionCategory.group,
         )
         for t_cat_id, group in query.yield_per(YIELD_PER):
-            activity = categories_activity.get(t_cat_id, Decimal(0))
-            assigned = categories_assigned.get(t_cat_id, Decimal(0))
-            leftover = categories_leftover.get(t_cat_id, Decimal(0))
+            activity = categories_activity.get(t_cat_id, Decimal())
+            assigned = categories_assigned.get(t_cat_id, Decimal())
+            leftover = categories_leftover.get(t_cat_id, Decimal())
             available = (
-                Decimal(0)
+                Decimal()
                 if group == TransactionCategoryGroup.INCOME
                 else assigned + activity + leftover
             )
@@ -273,7 +273,7 @@ class BudgetAssignment(Base):
 
         assignable = ending_balance - total_available
         if assignable < 0:
-            future_assigned = Decimal(0)
+            future_assigned = Decimal()
         else:
             future_assigned = min(future_assigned, assignable)
             assignable -= future_assigned
@@ -313,10 +313,15 @@ class BudgetAssignment(Base):
 
         t_cat_id, _ = TransactionCategory.emergency_fund(s)
 
-        balance = s.query(func.sum(BudgetAssignment.amount)).where(
-            BudgetAssignment.category_id == t_cat_id,
-            BudgetAssignment.month_ord <= start_ord,
-        ).scalar() or Decimal(0)
+        balance = (
+            s.query(func.sum(BudgetAssignment.amount))
+            .where(
+                BudgetAssignment.category_id == t_cat_id,
+                BudgetAssignment.month_ord <= start_ord,
+            )
+            .scalar()
+            or Decimal()
+        )
 
         balances: list[Decimal] = []
 
@@ -343,7 +348,7 @@ class BudgetAssignment(Base):
         categories: dict[int, tuple[str, str]] = {}
         categories_total: dict[int, Decimal] = {}
 
-        daily = Decimal(0)
+        daily = Decimal()
         dailys: list[Decimal] = []
 
         query = (
@@ -357,7 +362,7 @@ class BudgetAssignment(Base):
         )
         for t_cat_id, name, emoji_name in query.all():
             categories[t_cat_id] = name, emoji_name
-            categories_total[t_cat_id] = Decimal(0)
+            categories_total[t_cat_id] = Decimal()
 
         start_ord_dailys = start_ord - n_upper - n_smoothing
         query = (
@@ -379,7 +384,7 @@ class BudgetAssignment(Base):
             while date_ord < t_ord:
                 dailys.append(daily)
                 date_ord += 1
-                daily = Decimal(0)
+                daily = Decimal()
 
             daily += amount
 
@@ -389,7 +394,7 @@ class BudgetAssignment(Base):
         while date_ord <= end_ord:
             dailys.append(daily)
             date_ord += 1
-            daily = Decimal(0)
+            daily = Decimal()
 
         totals_lower: list[Decimal] = [
             Decimal(-sum(dailys[i : i + n_lower]))

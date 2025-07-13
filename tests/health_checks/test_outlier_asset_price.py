@@ -31,7 +31,7 @@ def test_zero_quantity(
     asset_valuation: AssetValuation,
 ) -> None:
     t_split = transactions[1].splits[0]
-    t_split.asset_quantity_unadjusted = Decimal(0)
+    t_split.asset_quantity_unadjusted = Decimal()
     asset_valuation.date_ord = t_split.date_ord
     c = OutlierAssetPrice()
     c.test(session)

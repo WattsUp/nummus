@@ -520,7 +520,7 @@ def ctx_asset(s: orm.Session, a: Asset) -> _AssetContext:
         .first()
     )
     if valuation is None:
-        current_value = Decimal(0)
+        current_value = Decimal()
         current_date = None
     else:
         current_value = valuation.value
