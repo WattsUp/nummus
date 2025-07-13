@@ -36,7 +36,6 @@ def import_file() -> str | flask.Response:
     with path_file_local.open("wb") as file_local:
         file_local.write(file.stream.read())
 
-    error: str | None = None
     path_debug = p.path.with_suffix(".importer_debug")
     try:
         p.import_file(path_file_local, path_debug, force=force)
@@ -49,20 +48,17 @@ def import_file() -> str | flask.Response:
         html_error = base.error(f"File already imported on {e.date}")
         return html_button + "\n" + html_error
     except exc.UnknownImporterError:
-        error = "Could not find an importer for file"
+        return base.error("Could not find an importer for file")
     except exc.FailedImportError as e:
         traceback.print_exception(e)  # For logs
-        error = f"{e.importer} failed to import file"
+        return base.error(f"{e.importer} failed to import file")
     except exc.EmptyImportError as e:
         traceback.print_exception(e)  # For logs
-        error = f"{e.importer} did not import any transactions for file"
+        return base.error(f"{e.importer} did not import any transactions for file")
     except exc.FutureTransactionError:
-        error = "Cannot create transaction in the future"
+        return base.error("Cannot create transaction in the future")
     finally:
         path_file_local.unlink()
-
-    if error:
-        return base.error(error)
 
     html = flask.render_template(
         "import/dialog.jinja",
