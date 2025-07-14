@@ -219,9 +219,10 @@ def test_ctx_base(flask_app: flask.Flask) -> None:
     for group in ctx["nav_items"]:
         assert isinstance(group, base.PageGroup)
         assert group.pages
-        for p in group.pages.values():
+        for name, p in group.pages.items():
             assert isinstance(p, base.Page)
             assert p
+            assert name == name.capitalize()
 
 
 def test_dialog_swap_empty(

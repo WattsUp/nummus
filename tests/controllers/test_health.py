@@ -1,104 +1,78 @@
 from __future__ import annotations
 
-import datetime
+from typing import TYPE_CHECKING
 
-import time_machine
+import pytest
 
-from nummus.health_checks import UnclearedTransactions
-from nummus.models import (
-    Config,
-    ConfigKey,
-    HealthCheckIssue,
-    Transaction,
-    TransactionSplit,
-)
-from tests.controllers.base import WebTestBase
+from nummus import health_checks
+from nummus.controllers import health
+from nummus.models import query_count, TransactionCategory
+
+if TYPE_CHECKING:
+    import flask
+    from sqlalchemy import orm
+
+    from tests.controllers.conftest import WebClient
 
 
-class TestHealth(WebTestBase):
-    def test_page(self) -> None:
-        self._setup_portfolio()
-        endpoint = "health.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("Health checks never ran", result)
+def test_empty(flask_app: flask.Flask) -> None:
+    with flask_app.app_context():
+        ctx = health.ctx_checks(run=False)
 
-    def test_refresh(self) -> None:
-        p = self._portfolio
-        self._setup_portfolio()
+    assert ctx["last_update_ago"] is None
+    checks = ctx["checks"]
+    assert len(checks) == len(health_checks.CHECKS)
+    has_issues = [c for c in checks if c["issues"]]
+    assert not has_issues
 
-        with p.begin_session() as s:
-            c = (
-                s.query(Config)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .one_or_none()
-            )
-            self.assertIsNone(c)
 
-        utc_now = datetime.datetime.now(datetime.timezone.utc)
+def test_empty_run(flask_app: flask.Flask, session: orm.Session) -> None:
+    with flask_app.app_context():
+        ctx = health.ctx_checks(run=True)
 
-        endpoint = "health.refresh"
-        with time_machine.travel(utc_now, tick=False):
-            result, _ = self.web_post(endpoint)
-        self.assertIn("Last checks ran 0.0 seconds ago", result)
-        self.assertIn("Monkey Bank Checking: $100.00 to Apple is uncleared", result)
+    assert ctx["last_update_ago"] == 0
+    checks = ctx["checks"]
+    assert len(checks) == len(health_checks.CHECKS)
+    has_issues = [c for c in checks if c["issues"]]
+    assert len(has_issues) == 1
+    c = has_issues[0]
+    assert c["name"] == "Unused Categories"
 
-        with p.begin_session() as s:
-            c = (
-                s.query(Config)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .one()
-            )
-            self.assertEqual(c.value, utc_now.isoformat())
+    # All unused
+    query = session.query(TransactionCategory).where(
+        TransactionCategory.locked.is_(False),
+    )
+    assert len(c["issues"]) == query_count(query)
 
-            # Fix issues
-            s.query(Transaction).update({"cleared": True})
-            s.query(TransactionSplit).update({"cleared": True})
 
-        # Run again and it'll update the Config
-        utc_now += datetime.timedelta(seconds=10)
-        with time_machine.travel(utc_now, tick=False):
-            result, _ = self.web_post(endpoint)
-        self.assertIn("Last checks ran 0.0 seconds ago", result)
-        self.assertNotIn("Monkey Bank Checking: $100.00 to Apple is uncleared", result)
+def test_page(web_client: WebClient) -> None:
+    result, _ = web_client.GET("health.page")
+    assert "Health checks" in result
+    assert "Refresh" in result
+    assert "Database Integrity" in result
+    assert "warnings" not in result
+    assert "Health checks never ran" in result
 
-        with p.begin_session() as s:
-            c = (
-                s.query(Config)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .one()
-            )
-            self.assertEqual(c.value, utc_now.isoformat())
 
-    def test_ignore(self) -> None:
-        p = self._portfolio
-        self._setup_portfolio()
+# For creating new LAST_HEALTH_CHECK_TS or modifying it
+@pytest.mark.parametrize("n_runs", [1, 2])
+def test_refresh(web_client: WebClient, n_runs: int) -> None:
+    for _ in range(n_runs - 1):
+        web_client.POST("health.refresh")
+    result, _ = web_client.POST("health.refresh")
+    assert "Health checks" not in result
+    assert "Refresh" not in result
+    assert "Database Integrity" in result
+    assert "warnings" in result
+    assert "Last checks ran 0.0 seconds ago" in result
 
-        utc_now = datetime.datetime.now(datetime.timezone.utc)
 
-        endpoint = "health.refresh"
-        with time_machine.travel(utc_now, tick=False):
-            result, _ = self.web_post(endpoint)
-        self.assertIn("Last checks ran 0.0 seconds ago", result)
-        self.assertIn("Monkey Bank Checking: $100.00 to Apple is uncleared", result)
+def test_ignore(web_client: WebClient, session: orm.Session) -> None:
+    c = health_checks.UnusedCategories()
+    c.test(session)
+    session.commit()
 
-        with p.begin_session() as s:
-            i = (
-                s.query(HealthCheckIssue)
-                .where(HealthCheckIssue.check == UnclearedTransactions.name)
-                .one()
-            )
-            self.assertFalse(i.ignore)
-            i_uri = i.uri
+    uri = next(iter(c.issues.keys()))
 
-        endpoint = "health.ignore"
-        with time_machine.travel(utc_now + datetime.timedelta(seconds=10), tick=False):
-            result, _ = self.web_put((endpoint, {"uri": i_uri}))
-        self.assertNotIn("Monkey Bank Checking: $100.00 to Apple is uncleared", result)
-
-        with time_machine.travel(utc_now + datetime.timedelta(seconds=10), tick=False):
-            endpoint = "health.page"
-            headers = {"HX-Request": "true"}  # Fetch main content only
-            result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("Last checks ran 10.0 seconds ago", result)
-        self.assertNotIn("Monkey Bank Checking: $100.00 to Apple is uncleared", result)
+    result, _ = web_client.PUT(("health.ignore", {"uri": uri}))
+    assert uri not in result

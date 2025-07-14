@@ -103,7 +103,7 @@ def ctx_base() -> BaseContext:
             "Planning",
             {
                 "Retirement": None,  # person_play
-                "Emergency Fund": Page(
+                "Emergency fund": Page(
                     "emergency",
                     "emergency_fund.page",
                     LinkType.PAGE,
@@ -123,14 +123,14 @@ def ctx_base() -> BaseContext:
                     "transaction_categories.page",
                     LinkType.PAGE,
                 ),
-                "Import File": Page(
+                "Import file": Page(
                     "upload",
                     "import_file.import_file",
                     LinkType.DIALOG,
                 ),
-                "Update Assets": Page("update", "assets.update", LinkType.DIALOG),
-                "Health Checks": Page("health_metrics", "health.page", LinkType.PAGE),
-                "Style Test": (
+                "Update assets": Page("update", "assets.update", LinkType.DIALOG),
+                "Health checks": Page("health_metrics", "health.page", LinkType.PAGE),
+                "Style test": (
                     Page("style", "common.page_style_test", LinkType.PAGE)
                     if flask.current_app.debug
                     else None
