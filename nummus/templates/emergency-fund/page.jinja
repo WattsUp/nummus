@@ -1,15 +1,15 @@
-<h1 class="text-primary font-serif text-3xl">Emergency Fund</h1>
+<h1 class="text-primary font-serif text-3xl">Emergency fund</h1>
 <div
   class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2 text-center font-bold"
 >
   <div class="max-lg:col-span-full">
-    <h2 class="text-xl">Current Balance</h2>
+    <h2 class="text-xl">Current balance</h2>
     <h1 class="text-tertiary font-serif text-6xl">
       {{ ctx.current | money0 }}
     </h1>
   </div>
   <div class="md:col-span-2">
-    <h2 class="text-xl">Recommended Balance</h2>
+    <h2 class="text-xl">Recommended balance</h2>
     <h1 class="text-tertiary font-serif text-6xl">
       {{ ctx.target_lower | money0 }} - {{ ctx.target_upper | money0 }}
     </h1>
@@ -44,7 +44,7 @@
     </p>
   </div>
 </details>
-<h1 class="text-primary font-serif text-2xl">Historical Balance</h1>
+<h1 class="text-primary font-serif text-2xl">Historical balance</h1>
 <div class="relative h-60 w-full md:h-96">
   <canvas id="e-fund-chart-canvas" hx-preserve></canvas>
 </div>
@@ -79,7 +79,7 @@
     >.
   </p>
 </div>
-<h1 class="text-primary font-serif text-2xl">Essential Spending</h1>
+<h1 class="text-primary font-serif text-2xl">Essential spending</h1>
 <div class="prose mx-auto">
   Categories marked essential form the estimated monthly emergency budget. Edit
   transaction categories

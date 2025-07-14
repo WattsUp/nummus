@@ -124,6 +124,6 @@ def test_ctx(
 
 def test_page(web_client: WebClient) -> None:
     result, _ = web_client.GET("allocation.page")
-    assert "Asset Allocation" in result
-    assert "By Category" in result
-    assert "By U.S. Sector" in result
+    assert "Asset allocation" in result
+    assert "By category" in result
+    assert "By U.S. sector" in result

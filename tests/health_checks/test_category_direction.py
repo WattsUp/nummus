@@ -71,12 +71,12 @@ def test_check(
 
     if amount < 0:
         target = (
-            f"{today} - Monkey Bank Checking: {utils.format_financial(amount)} "
+            f"{today} - Monkey bank checking: {utils.format_financial(amount)} "
             f"to [blank] has negative amount with income category {category_name}"
         )
     else:
         target = (
-            f"{today} - Monkey Bank Checking: {utils.format_financial(amount)} "
+            f"{today} - Monkey bank checking: {utils.format_financial(amount)} "
             f"to [blank] has positive amount with expense category {category_name}"
         )
     assert c.issues == {uri: target}

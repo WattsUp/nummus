@@ -169,7 +169,6 @@ addopts = [
   "--ignore=tests/controllers/test_health.py",
   "--ignore=tests/controllers/test_net_worth.py",
   "--ignore=tests/controllers/test_performance.py",
-  "--ignore=tests/controllers/test_transaction_categories.py",
   "--ignore=tests/controllers/test_transactions.py",
 ]
 

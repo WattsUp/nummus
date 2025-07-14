@@ -1,231 +1,268 @@
 from __future__ import annotations
 
-import datetime
+from typing import TYPE_CHECKING
 
+import pytest
+
+from nummus.controllers import base, transaction_categories
 from nummus.models import (
-    Account,
-    query_count,
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
+    YIELD_PER,
 )
-from nummus.web.utils import HTTP_CODE_FORBIDDEN
-from tests.controllers.base import WebTestBase
+
+if TYPE_CHECKING:
+    import flask
+    from sqlalchemy import orm
+
+    from tests.controllers.conftest import WebClient
 
 
-class TestTransactionCategory(WebTestBase):
+@pytest.mark.parametrize(
+    ("category", "s", "target"),
+    [
+        ("uncategorized", " ", "Required"),
+        ("uncategorized", "i", "2 characters required"),
+        ("uncategorized", "idk", "May only add/remove emojis"),
+        ("uncategorized", "Uncategorized 🤷", ""),
+        ("groceries", "Food", ""),
+        ("groceries", "Restaurants", "Must be unique"),
+    ],
+)
+def test_validation(
+    web_client: WebClient,
+    categories: dict[str, int],
+    category: str,
+    s: str,
+    target: str,
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories[category])
+    result, _ = web_client.GET(
+        ("transaction_categories.validation", {"uri": uri, "name": s}),
+    )
+    assert result == target
 
-    def test_page(self) -> None:
-        p = self._portfolio
-        _ = self._setup_portfolio()
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "other income")
-                .one()
+def test_ctx(
+    flask_app: flask.Flask,
+    session: orm.Session,
+) -> None:
+    with flask_app.app_context():
+        groups = transaction_categories.ctx_categories()
+
+    exclude = {"securities traded"}
+
+    for g in TransactionCategoryGroup:
+        query = (
+            session.query(TransactionCategory)
+            .where(
+                TransactionCategory.group == g,
+                TransactionCategory.name.not_in(exclude),
             )
-            t_cat_uri = t_cat.uri
+            .order_by(TransactionCategory.name)
+        )
+        target: list[transaction_categories.CategoryContext] = [
+            {"name": t_cat.emoji_name, "uri": t_cat.uri}
+            for t_cat in query.yield_per(YIELD_PER)
+        ]
+        assert groups[g] == target
 
-        endpoint = "transaction_categories.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertRegex(result, rf'hx-get="/h/txn-categories/c/{t_cat_uri}"')
 
-    def test_new(self) -> None:
-        p = self._portfolio
-        self._setup_portfolio()
+def test_page(web_client: WebClient) -> None:
+    result, _ = web_client.GET("transaction_categories.page")
+    assert "Transaction categories" in result
+    assert "Income" in result
+    assert "Expense" in result
+    assert "Transfer" in result
+    assert "Other" in result
 
-        with p.begin_session() as s:
-            n_before = query_count(s.query(TransactionCategory))
 
-        endpoint = "transaction_categories.new"
-        result, _ = self.web_get(endpoint)
-        self.assertNotIn("Delete", result)
+def test_new_get(web_client: WebClient) -> None:
+    result, _ = web_client.GET("transaction_categories.new")
+    assert "New category" in result
+    assert "Save" in result
+    assert "Delete" not in result
 
-        name = self.random_string()
-        form = {"name": name, "group": "expense", "essential": True}
-        result, headers = self.web_post(endpoint, data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "category")
 
-        with p.begin_session() as s:
-            n_after = query_count(s.query(TransactionCategory))
-            self.assertEqual(n_after, n_before + 1)
+def test_new(
+    web_client: WebClient,
+    rand_str: str,
+    session: orm.Session,
+) -> None:
+    form = {
+        "name": rand_str,
+        "group": "expense",
+        "is-pnl": "on",
+        "essential": "on",
+    }
+    result, headers = web_client.POST("transaction_categories.new", data=form)
+    assert "snackbar.show" in result
+    assert f"Created category {rand_str}" in result
+    assert headers["HX-Trigger"] == "category"
 
-        e_str = "Transaction category name must be unique"
-        result, _ = self.web_post(endpoint, data=form)
-        self.assertIn(e_str, result)
+    t_cat = (
+        session.query(TransactionCategory)
+        .where(TransactionCategory.emoji_name == rand_str)
+        .one()
+    )
+    assert t_cat.group == TransactionCategoryGroup.EXPENSE
+    assert t_cat.is_profit_loss
+    assert t_cat.essential
 
-        with p.begin_session() as s:
-            n_after = query_count(s.query(TransactionCategory))
-            self.assertEqual(n_after, n_before + 1)
 
-    def test_category(self) -> None:
-        p = self._portfolio
-        d = self._setup_portfolio()
-        acct_uri = d["acct_uri"]
-        acct_id = Account.uri_to_id(acct_uri)
+def test_new_error(web_client: WebClient, rand_str: str) -> None:
+    form = {
+        "name": rand_str,
+        "group": "income",
+        "is-pnl": "on",
+        "essential": "on",
+    }
+    result, _ = web_client.POST("transaction_categories.new", data=form)
+    assert result == base.error("Income cannot be essential")
 
-        today = datetime.datetime.now().astimezone().date()
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "other income")
-                .one()
-            )
-            t_cat.emoji_name = 'Other Income"'
-            t_cat_id = t_cat.id_
-            t_cat_uri = t_cat.uri
+def test_category_get_locked(web_client: WebClient, categories: dict[str, int]) -> None:
+    uri = TransactionCategory.id_to_uri(categories["uncategorized"])
+    result, _ = web_client.GET(("transaction_categories.category", {"uri": uri}))
+    assert "Edit category" in result
+    assert "Uncategorized" in result
+    assert "Save" in result
+    assert "Delete" not in result
+    assert "May only add/remove emojis" in result
 
-        endpoint = "transaction_categories.category"
-        url = endpoint, {"uri": t_cat_uri}
-        result, _ = self.web_get(url)
-        self.assertIn("Delete", result)
-        self.assertIn(f"/c/{t_cat_uri}", result)
 
-        name = self.random_string()
-        form = {"name": name + " 😀", "group": "transfer", "essential": True}
-        result, headers = self.web_put(url, data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "category")
+def test_category_get_unlocked(
+    web_client: WebClient,
+    categories: dict[str, int],
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["groceries"])
+    result, _ = web_client.GET(("transaction_categories.category", {"uri": uri}))
+    assert "Edit category" in result
+    assert "Groceries" in result
+    assert "Save" in result
+    assert "Delete" in result
+    assert "May only add/remove emojis" not in result
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.id_ == t_cat_id)
-                .one()
-            )
-            self.assertEqual(t_cat.name, name.lower())
-            self.assertEqual(t_cat.emoji_name, name + " 😀")
-            self.assertEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
-            self.assertTrue(t_cat.essential)
 
-        e_str = "Transaction category name must be at least 2 characters long"
-        form = {"name": "a", "group": "other"}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn(e_str, result)
+def test_category_delete_locked(
+    web_client: WebClient,
+    categories: dict[str, int],
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["uncategorized"])
+    web_client.DELETE(
+        ("transaction_categories.category", {"uri": uri}),
+        rc=base.HTTP_CODE_FORBIDDEN,
+    )
 
-        # Add transaction that needs to move
-        with p.begin_session() as s:
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=100,
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                parent=txn,
-                amount=txn.amount,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-            s.flush()
 
-            t_split_id = t_split.id_
+def test_category_delete_unlocked(
+    web_client: WebClient,
+    categories: dict[str, int],
+    session: orm.Session,
+    transactions_spending: list[Transaction],
+) -> None:
+    _ = transactions_spending
+    t_split = (
+        session.query(TransactionSplit)
+        .where(TransactionSplit.category_id == categories["groceries"])
+        .first()
+    )
+    assert t_split is not None
+    uri = TransactionCategory.id_to_uri(categories["groceries"])
 
-        result, headers = self.web_delete(url)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "category")
+    result, headers = web_client.DELETE(
+        ("transaction_categories.category", {"uri": uri}),
+    )
+    assert "snackbar.show" in result
+    assert "Deleted category Groceries" in result
+    assert headers["HX-Trigger"] == "category"
 
-        with p.begin_session() as s:
-            t_split = (
-                s.query(TransactionSplit)
-                .where(TransactionSplit.id_ == t_split_id)
-                .one()
-            )
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.id_ == t_split.category_id)
-                .one()
-            )
-            self.assertEqual(t_cat.name, "uncategorized")
+    t_cat = (
+        session.query(TransactionCategory)
+        .where(TransactionCategory.name == "groceries")
+        .one_or_none()
+    )
+    assert t_cat is None
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.locked.is_(True))
-                .first()
-            )
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
-            t_cat_uri = t_cat.uri
+    session.refresh(t_split)
+    assert t_split.category_id == categories["uncategorized"]
 
-        url = endpoint, {"uri": t_cat_uri}
-        self.web_delete(url, rc=HTTP_CODE_FORBIDDEN)
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.locked.is_(True))
-                .first()
-            )
-            if t_cat is None:
-                self.fail("TransactionCategory is missing")
-            t_cat_id = t_cat.id_
-            t_cat_uri = t_cat.uri
+def test_category_edit_unlocked(
+    web_client: WebClient,
+    categories: dict[str, int],
+    session: orm.Session,
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["groceries"])
 
-        url = endpoint, {"uri": t_cat_uri}
-        form = {"name": "😀", "group": "other"}
-        result, _ = self.web_put(url, data=form)
-        self.assertIn("Can only add/remove emojis on locked category", result)
+    result, headers = web_client.PUT(
+        ("transaction_categories.category", {"uri": uri}),
+        data={"name": "Food", "group": "expense", "essential": "on"},
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "category"
 
-        url = endpoint, {"uri": t_cat_uri}
-        form = {"name": "😀 Dividends Received 😀", "group": "other"}
-        result, headers = self.web_put(url, data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "category")
+    t_cat = (
+        session.query(TransactionCategory)
+        .where(TransactionCategory.name == "food")
+        .one()
+    )
+    assert t_cat.emoji_name == "Food"
+    assert t_cat.group == TransactionCategoryGroup.EXPENSE
+    assert not t_cat.is_profit_loss
+    assert t_cat.essential
 
-        # Only can edit emoji for a locked category
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.id_ == t_cat_id)
-                .one()
-            )
-            self.assertEqual(t_cat.name, "dividends received")
-            self.assertEqual(t_cat.emoji_name, "😀 Dividends Received 😀")
-            self.assertNotEqual(t_cat.group, TransactionCategoryGroup.TRANSFER)
 
-    def test_validation(self) -> None:
-        p = self._portfolio
-        _ = self._setup_portfolio()
+def test_category_edit_locked(
+    web_client: WebClient,
+    categories: dict[str, int],
+    session: orm.Session,
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["uncategorized"])
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "other income")
-                .one()
-            )
-            t_cat_uri = t_cat.uri
+    result, headers = web_client.PUT(
+        ("transaction_categories.category", {"uri": uri}),
+        data={"name": "Uncategorized 🤷", "group": "other"},
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "category"
 
-        endpoint = "transaction_categories.validation"
-        url = endpoint, {"uri": t_cat_uri, "name": "😀"}
-        result, _ = self.web_get(url)
-        self.assertEqual(result, "Required")
+    t_cat = (
+        session.query(TransactionCategory)
+        .where(TransactionCategory.name == "uncategorized")
+        .one()
+    )
+    assert t_cat.emoji_name == "Uncategorized 🤷"
+    assert t_cat.group == TransactionCategoryGroup.OTHER
+    assert not t_cat.is_profit_loss
+    assert not t_cat.essential
 
-        url = endpoint, {"uri": t_cat_uri, "name": "😀 A"}
-        result, _ = self.web_get(url)
-        self.assertEqual(result, "2 characters required")
 
-        url = endpoint, {"uri": t_cat_uri, "name": "Groceries"}
-        result, _ = self.web_get(url)
-        self.assertEqual(result, "Must be unique")
+def test_category_edit_locked_error(
+    web_client: WebClient,
+    categories: dict[str, int],
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["uncategorized"])
 
-        with p.begin_session() as s:
-            t_cat = (
-                s.query(TransactionCategory)
-                .where(TransactionCategory.name == "transfers")
-                .one()
-            )
-            t_cat_uri = t_cat.uri
+    result, _ = web_client.PUT(
+        ("transaction_categories.category", {"uri": uri}),
+        data={"name": "Food", "group": "expense", "essential": "on"},
+    )
+    assert result == base.error("May only add/remove emojis on locked category")
 
-        url = endpoint, {"uri": t_cat_uri, "name": "Transfer"}
-        result, _ = self.web_get(url)
-        self.assertEqual(result, "May only add/remove emojis")
 
-        url = endpoint, {"uri": t_cat_uri, "name": "Transfers 😀"}
-        result, _ = self.web_get(url)
-        self.assertEqual(result, "")
+def test_category_edit_error(
+    web_client: WebClient,
+    categories: dict[str, int],
+) -> None:
+    uri = TransactionCategory.id_to_uri(categories["groceries"])
+
+    result, _ = web_client.PUT(
+        ("transaction_categories.category", {"uri": uri}),
+        data={"name": "Food", "group": "income", "essential": "on"},
+    )
+    assert result == base.error("Income cannot be essential")

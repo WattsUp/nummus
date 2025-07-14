@@ -269,8 +269,8 @@ def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> 
         Checking Account, not closed, budgeted
     """
     acct = Account(
-        name="Monkey Bank Checking",
-        institution="Monkey Bank",
+        name="Monkey bank checking",
+        institution="Monkey bank",
         category=AccountCategory.CASH,
         closed=False,
         budgeted=True,
@@ -292,8 +292,9 @@ def account_savings(
         Savings Account, not closed, not budgeted
     """
     acct = Account(
-        name="Monkey Bank Savings",
-        institution="Monkey Bank",
+        # capital case for HTML header check
+        name="Monkey bank savings",
+        institution="Monkey bank",
         category=AccountCategory.CASH,
         closed=False,
         budgeted=False,
@@ -315,8 +316,8 @@ def account_investments(
         Investments Account, not closed, not budgeted
     """
     acct = Account(
-        name="Monkey Bank Investments",
-        institution="Monkey Bank",
+        name="Monkey bank investments",
+        institution="Monkey bank",
         category=AccountCategory.INVESTMENT,
         closed=False,
         budgeted=False,
@@ -345,7 +346,7 @@ def asset(session: orm.Session) -> Asset:
         Banana Incorporated, STOCKS
     """
     asset = Asset(
-        name="Banana Incorporated",
+        name="Banana incorporated",
         category=AssetCategory.STOCKS,
         ticker="BANANA",
         description="Banana Incorporated makes bananas",

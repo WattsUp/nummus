@@ -51,8 +51,8 @@ def test_non_empty_summary(
         "net_worth": Decimal(190),
         "accounts": [
             {
-                "name": "Monkey Bank Checking",
-                "institution": "Monkey Bank",
+                "name": "Monkey bank checking",
+                "institution": "Monkey bank",
                 "category": "Cash",
                 "age": "3 days",
                 "profit": Decimal(90),
@@ -62,7 +62,7 @@ def test_non_empty_summary(
         "total_asset_value": Decimal(100),
         "assets": [
             {
-                "name": "Banana Incorporated",
+                "name": "Banana incorporated",
                 "description": "Banana Incorporated makes bananas",
                 "category": "Stocks",
                 "profit": Decimal(90),

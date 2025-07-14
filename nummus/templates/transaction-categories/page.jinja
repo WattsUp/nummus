@@ -40,7 +40,7 @@
   hx-target="#dialog"
   hx-swap="innerHTML show:#dialog:top"
 >
-  {% for group, items in ctx.groups.items() %}
+  {% for group, items in groups.items() %}
     {# Set row span such that on md screen the third category will fit in dense #}
     <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">
       <h1

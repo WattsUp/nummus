@@ -650,18 +650,24 @@ class Portfolio:
             if m := one_or_none(query):
                 return cache_and_return(m)
 
-        properties = {
+        properties: list[orm.QueryableAttribute] = {
             Account: [Account.number, Account.institution, Account.name],
             Asset: [Asset.ticker, Asset.name],
         }[model]
         for prop in properties:
+            # Exact?
             query = s.query(model).where(prop == search)
             if m := one_or_none(query):
                 return cache_and_return(m)
 
+            # Exact lower case?
+            query = s.query(model).where(prop.ilike(search))
+            if m := one_or_none(query):
+                return cache_and_return(m)
+
             # For account number, see if there is one ending in the search
-            query = s.query(model).where(prop.like(f"%{search}"))
-            if prop == Account.number and (m := one_or_none(query)):
+            query = s.query(model).where(prop.ilike(f"%{search}"))
+            if prop is Account.number and (m := one_or_none(query)):
                 return cache_and_return(m)
 
         msg = f"{model.__name__} matching '{search}' could not be found"

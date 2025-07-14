@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 ResultType = dict[str, object] | str | bytes
 Tree = dict[str, "TreeNode"]
-TreeNode = Tree | tuple[str, Tree] | object
+TreeNode = Tree | tuple[str, Tree, int] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 
@@ -26,31 +26,50 @@ class HTMLValidator:
 
     @classmethod
     def __call__(cls, s: str) -> bool:
-        tags: list[str] = re.findall(r"<(/?\w+)(?:[ \n][^<>]+)?>", s)
+        tags: list[tuple[str, int, int]] = [
+            (m.group(1), m.start(0), m.end(0))
+            for m in re.finditer(r"<(/?\w+)(?:[^<>]+)?>", s)
+        ]
 
-        tree: Tree = {"__parent__": (None, None)}
+        tree: Tree = {"__parent__": (None, None, None)}
         current_node = tree
-        for tag in tags:
+        for tag, i_start, i_end in tags:
             assert isinstance(current_node, dict)
             if tag[0] == "/":
                 # Close tag
                 item = current_node.pop("__parent__")
                 assert isinstance(item, tuple)
-                current_tag, parent = item
+                current_tag, parent, open_i_end = item
                 current_node = parent
                 assert current_tag == tag[1:]
+
+                inner_html = s[open_i_end:i_start]
+                if current_tag in {"h1", "h2", "h3", "h4"} and inner_html != "nummus":
+                    # Headers should use capital case
+                    # strip any inner element
+                    inner_html = inner_html.replace(".", "")
+                    words = inner_html.split(" ")
+                    target = " ".join(
+                        (
+                            w
+                            if w.upper() == w
+                            else (w.capitalize() if i == 0 else w.lower())
+                        )
+                        for i, w in enumerate(words)
+                    )
+                    assert inner_html == target
             elif tag in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags
                 current_node[tag] = {}
             else:
-                current_node[tag] = {"__parent__": (tag, current_node)}
+                current_node[tag] = {"__parent__": (tag, current_node, i_end)}
                 current_node = current_node[tag]
 
         # Got back up to the root element
         assert isinstance(current_node, dict)
         item = current_node.pop("__parent__")
         assert isinstance(item, tuple)
-        tag, parent = item
+        tag, parent, _ = item
         assert tag in {None, "html"}  # <html> might not be closed
         if parent is not None:
             parent: dict[str, object]
@@ -138,14 +157,14 @@ class WebClient:
 
             if content_type == "text/html; charset=utf-8":
                 html = response.text
-                if response.status_code != HTTP_CODE_REDIRECT:
-                    # werkzeug redirect doesn't have close tags
-                    assert self.valid_html(html)
                 # Remove whitespace
                 html = "".join(html.split("\n"))
                 html = re.sub(r" +", " ", html)
                 html = re.sub(r" ?> ?", ">", html)
                 html = re.sub(r" ?< ?", "<", html)
+                if response.status_code != HTTP_CODE_REDIRECT:
+                    # werkzeug redirect doesn't have close tags
+                    assert self.valid_html(html)
                 return html, response.headers
             return response.data, response.headers
         finally:

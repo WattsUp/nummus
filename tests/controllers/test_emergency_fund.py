@@ -184,15 +184,15 @@ def test_ctx(
 
 def test_page(web_client: WebClient) -> None:
     result, _ = web_client.GET("emergency_fund.page")
-    assert "Emergency Fund" in result
-    assert "Current Balance" in result
-    assert "Recommended Balance" in result
-    assert "Essential Spending" in result
+    assert "Emergency fund" in result
+    assert "Current balance" in result
+    assert "Recommended balance" in result
+    assert "Essential spending" in result
 
 
 def test_dashboard(web_client: WebClient) -> None:
     result, _ = web_client.GET("emergency_fund.dashboard")
-    assert "Emergency Fund" in result
-    assert "Current Balance" not in result
-    assert "Recommended Balance" not in result
-    assert "Essential Spending" not in result
+    assert "Emergency fund" in result
+    assert "Current balance" not in result
+    assert "Recommended balance" not in result
+    assert "Essential spending" not in result

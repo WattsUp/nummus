@@ -22,7 +22,7 @@
   type="hidden"
   value="{{ acct.uri }}"
 />
-<h2 class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
+<div class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
   <span>@{{ acct.institution }}</span>
   {% if acct.number %}
     <label class="checkbox">
@@ -55,7 +55,7 @@
       Updated {{ acct.updated_days_ago | days }} ago
     {% endif %}
   </span>
-</h2>
+</div>
 {% if acct.performance %}
   {% with perf = acct.performance %}
     <div class="grid gap-x-2 text-center font-bold max-lg:grid-cols-2">

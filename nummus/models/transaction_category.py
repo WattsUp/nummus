@@ -53,6 +53,7 @@ class TransactionCategory(Base):
     locked: ORMBool
     is_profit_loss: ORMBool
     asset_linked: ORMBool
+    # TODO (WattsUp): Rename to essential_spending
     essential: ORMBool
 
     budget_group_id: ORMIntOpt = orm.mapped_column(ForeignKey("budget_group.id_"))
