@@ -242,6 +242,26 @@ def today_ord(today: datetime.date) -> int:
 
 
 @pytest.fixture(scope="session")
+def tomorrow(today: datetime.date) -> datetime.date:
+    """Get tomorrow's date.
+
+    Returns:
+        tomorrow datetime.date
+    """
+    return today + datetime.timedelta(days=1)
+
+
+@pytest.fixture(scope="session")
+def tomorrow_ord(tomorrow: datetime.date) -> int:
+    """Get tomorrow's date ordinal.
+
+    Returns:
+        tomorrow as ordinal
+    """
+    return tomorrow.toordinal()
+
+
+@pytest.fixture(scope="session")
 def month(today: datetime.date) -> datetime.date:
     """Get today's month.
 

@@ -1,633 +1,595 @@
 from __future__ import annotations
 
-import datetime
+from decimal import Decimal
+from typing import TYPE_CHECKING
 
-from nummus.models import (
-    Asset,
-    AssetCategory,
-    AssetValuation,
-    query_count,
-    Transaction,
-    TransactionCategory,
-    TransactionSplit,
+import pytest
+
+from nummus import utils
+from nummus.controllers import assets, base
+from nummus.models import Asset, AssetCategory, AssetValuation, query_count, Transaction
+
+if TYPE_CHECKING:
+    import datetime
+
+    import flask
+    from sqlalchemy import orm
+
+    from tests.controllers.conftest import WebClient
+
+
+def test_ctx_performance_empty(
+    today: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    start = utils.date_add_months(today, -12)
+    with flask_app.app_context():
+        ctx = assets.ctx_performance(session, asset, "1yr")
+    labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
+    target: assets.PerformanceContext = {
+        "date_mode": date_mode,
+        "labels": labels,
+        "period": "1yr",
+        "period_options": base.PERIOD_OPTIONS,
+        "values": [Decimal()] * len(labels),
+    }
+    assert ctx == target
+
+
+def test_ctx_performance(
+    today: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_performance(session, asset, "max")
+    labels, date_mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
+    target: assets.PerformanceContext = {
+        "date_mode": date_mode,
+        "labels": labels,
+        "period": "max",
+        "period_options": base.PERIOD_OPTIONS,
+        "values": [Decimal(asset_valuation.value)] * len(labels),
+    }
+    assert ctx == target
+
+
+def test_ctx_table_empty(
+    month: datetime.date,
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_table(session, asset, None, None, None, None)
+
+    last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
+    options_period = [
+        ("All time", "all"),
+        *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+        (str(month.year), str(month.year)),
+        (str(month.year - 1), str(month.year - 1)),
+        ("Custom date range", "custom"),
+    ]
+    target: assets.TableContext = {
+        "uri": asset.uri,
+        "first_page": True,
+        "editable": asset.ticker is None,
+        "valuations": [],
+        "no_matches": True,
+        "next_page": None,
+        "any_filters": False,
+        "period": None,
+        "options_period": options_period,
+        "start": None,
+        "end": None,
+    }
+    assert ctx == target
+
+
+@pytest.mark.parametrize(
+    ("period", "start", "end", "page", "any_filters", "has_valuation"),
+    [
+        (None, None, None, None, False, True),
+        ("all", None, None, None, False, True),
+        (None, None, None, "2000-01-01", False, False),
+        ("custom", "2000-01-01", None, None, True, True),
+        ("custom", None, "2000-01-01", None, True, False),
+        ("2000-01", None, None, None, True, False),
+        ("2000", None, None, None, True, False),
+    ],
 )
-from tests.controllers.base import WebTestBase
+def test_ctx_table(
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+    period: str | None,
+    start: str | None,
+    end: str | None,
+    page: str | None,
+    any_filters: bool,
+    has_valuation: bool,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_table(session, asset, period, start, end, page)
 
-
-class TestAsset(WebTestBase):
-
-    def test_page_all(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-
-        today = datetime.datetime.now().astimezone().date()
-
-        acct_id = d["acct_id"]
-        asset_0_name = d["asset_0_name"]
-        asset_1_name = d["asset_1_name"]
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-        asset_1_uri = d["asset_1_uri"]
-
-        with p.begin_session() as s:
-            s.query(Asset).where(Asset.id_ == asset_0_id).update({"ticker": "BANANA"})
-
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-            t_cat_id = categories["securities traded"]
-
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=self.random_decimal(-1, 1),
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                asset_id=asset_0_id,
-                asset_quantity_unadjusted=1,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-
-        endpoint = "assets.page_all"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertIn("BANANA", result)
-        self.assertIn("Item", result)
-        self.assertIn(asset_0_name, result)
-        self.assertIn(asset_0_uri, result)
-        self.assertNotIn("Real Estate", result)
-        self.assertNotIn(asset_1_name, result)
-        self.assertNotIn(asset_1_uri, result)
-        self.assertIn("Show unheld assets", result)
-
-        result, _ = self.web_get(
-            (endpoint, {"include-unheld": True}),
-            headers=headers,
-        )
-        self.assertIn("Item", result)
-        self.assertIn("BANANA", result)
-        self.assertIn(asset_0_name, result)
-        self.assertIn(asset_0_uri, result)
-        self.assertIn("Real Estate", result)
-        self.assertIn(asset_1_name, result)
-        self.assertIn(asset_1_uri, result)
-        self.assertIn("Hide unheld assets", result)
-
-        with p.begin_session() as s:
-            # Sell asset
-            txn = Transaction(
-                account_id=acct_id,
-                date=today,
-                amount=self.random_decimal(-1, 1),
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                asset_id=asset_0_id,
-                asset_quantity_unadjusted=-1,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-
-        result, _ = self.web_get(endpoint, headers=headers)
-        self.assertNotIn("BANANA", result)
-        self.assertNotIn("Item", result)
-        self.assertNotIn(asset_0_name, result)
-        self.assertNotIn(asset_0_uri, result)
-        self.assertNotIn("Real Estate", result)
-        self.assertNotIn(asset_1_name, result)
-        self.assertNotIn(asset_1_uri, result)
-        self.assertIn("Show unheld assets", result)
-
-    def test_page(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-
-        asset_0_name = d["asset_0_name"]
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-
-        endpoint = "assets.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(
-            (endpoint, {"uri": asset_0_uri}),
-            headers=headers,
-        )
-        self.assertIn(asset_0_name, result)
-        self.assertIn("Asset has no valuations", result)
-
-        # Add valuation
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=100,
-                date_ord=today_ord,
-            )
-            s.add(v)
-            s.flush()
-            v_uri = v.uri
-
-        endpoint = "assets.page"
-        headers = {"HX-Request": "true"}  # Fetch main content only
-        result, _ = self.web_get(
-            (endpoint, {"uri": asset_0_uri}),
-            headers=headers,
-        )
-        self.assertNotIn("Asset has no valuations", result)
-        self.assertIn(f"$100.00 as of {today}", result)
-        self.assertIn(v_uri, result)
-
-    def test_asset(self) -> None:
-        p = self._portfolio
-        name = self.random_string()
-
-        with p.begin_session() as s:
-            # Delete index assets
-            s.query(Asset).delete()
-            s.flush()
-
-            a = Asset(
-                name=name,
-                category=AssetCategory.STOCKS,
-                interpolate=False,
-            )
-            s.add(a)
-            s.flush()
-
-            a_id = a.id_
-            a_uri = a.uri
-
-        endpoint = "assets.asset"
-        url = endpoint, {"uri": a_uri}
-        result, _ = self.web_get(url)
-        self.assertNotIn("<html", result)
-        self.assertIn("Edit asset", result)
-
-        name = self.random_string()
-        description = self.random_string()
-        ticker = self.random_string().upper()
-        form = {
-            "name": name,
-            "description": description,
-            "category": "real estate",
-            "ticker": ticker,
+    if page is None:
+        assert ctx["first_page"]
+    else:
+        assert not ctx["first_page"]
+    assert not ctx["editable"]
+    if has_valuation:
+        target: assets.ValuationContext = {
+            "uri": asset_valuation.uri,
+            "asset_uri": asset.uri,
+            "date": asset_valuation.date,
+            "date_max": None,
+            "value": asset_valuation.value,
         }
-        result, headers = self.web_put(url, data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "asset")
-        with p.begin_session() as s:
-            a = s.query(Asset).where(Asset.id_ == a_id).one()
-            self.assertEqual(a.name, name)
-            self.assertEqual(a.description, description)
-            self.assertEqual(a.category, AssetCategory.REAL_ESTATE)
+        assert ctx["valuations"] == [target]
+        if page is None:
+            # Only first page is valid
+            assert not ctx["no_matches"]
+    else:
+        assert ctx["valuations"] == []
+        if page is None:
+            # Only first page is valid
+            assert ctx["no_matches"]
+    assert ctx["next_page"] is None
+    assert ctx["any_filters"] == any_filters
 
-        form = {
+
+def test_ctx_asset_empty(
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    assert ctx["uri"] == asset.uri
+    assert ctx["name"] == asset.name
+    assert ctx["category"] == asset.category
+    assert ctx["description"] == asset.description
+    assert ctx["value"] == Decimal()
+    assert ctx["value_date"] is None
+
+
+def test_ctx_asset(
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    assert ctx["uri"] == asset.uri
+    assert ctx["name"] == asset.name
+    assert ctx["category"] == asset.category
+    assert ctx["description"] == asset.description
+    assert ctx["value"] == asset_valuation.value
+    assert ctx["value_date"] == asset_valuation.date
+
+
+def test_ctx_rows_empty(flask_app: flask.Flask, session: orm.Session) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_rows(session, include_unheld=True)
+    assert ctx == {}
+
+
+def test_ctx_rows_unheld(
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+) -> None:
+    with flask_app.app_context():
+        ctx = assets.ctx_rows(session, include_unheld=True)
+    target: dict[AssetCategory, list[assets.RowContext]] = {
+        asset.category: [
+            {
+                "uri": asset.uri,
+                "name": asset.name,
+                "ticker": asset.ticker,
+                "qty": Decimal(),
+                "price": Decimal(),
+                "value": Decimal(),
+            },
+        ],
+    }
+    assert ctx == target
+
+
+def test_ctx_rows(
+    flask_app: flask.Flask,
+    session: orm.Session,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    with flask_app.app_context():
+        ctx = assets.ctx_rows(session, include_unheld=False)
+    target: dict[AssetCategory, list[assets.RowContext]] = {
+        asset.category: [
+            {
+                "uri": asset.uri,
+                "name": asset.name,
+                "ticker": asset.ticker,
+                "qty": Decimal(10),
+                "price": asset_valuation.value,
+                "value": Decimal(10) * asset_valuation.value,
+            },
+        ],
+    }
+    assert ctx == target
+
+
+def test_page_all(web_client: WebClient, asset: Asset) -> None:
+    _ = asset
+    result, _ = web_client.GET(("assets.page_all", {"include-unheld": True}))
+    assert "Assets" in result
+    assert "Stocks" in result
+    assert "Asset is not currently held" in result
+
+
+def test_page(
+    web_client: WebClient,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    result, _ = web_client.GET(("assets.page", {"uri": asset.uri}))
+    assert asset.name in result
+    target = (
+        f"{utils.format_financial(asset_valuation.value)} as of {asset_valuation.date}"
+    )
+    assert target in result
+    assert "no more valuations match query" in result
+    assert "new" not in result
+
+
+def test_asset_get(web_client: WebClient, asset: Asset) -> None:
+    result, _ = web_client.GET(("assets.asset", {"uri": asset.uri}))
+    assert asset.name in result
+    assert asset.ticker is not None
+    assert asset.ticker in result
+    assert asset.description is not None
+    assert asset.description in result
+    assert "Edit asset" in result
+    assert "Save" in result
+    assert "Delete" not in result
+
+
+def test_asset_edit(web_client: WebClient, session: orm.Session, asset: Asset) -> None:
+    result, headers = web_client.PUT(
+        ("assets.asset", {"uri": asset.uri}),
+        data={
+            "name": "New name",
+            "category": "BONDS",
+            "ticker": "",
+            "description": "Nothing to see",
+        },
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "asset"
+
+    session.refresh(asset)
+    assert asset.name == "New name"
+    assert asset.category == AssetCategory.BONDS
+    assert asset.ticker is None
+    assert asset.description == "Nothing to see"
+
+
+def test_asset_edit_error(web_client: WebClient, asset: Asset) -> None:
+    result, _ = web_client.PUT(
+        ("assets.asset", {"uri": asset.uri}),
+        data={
             "name": "a",
-            "description": description,
-            "category": "real estate",
-            "ticker": ticker,
-        }
-        result, _ = self.web_put(url, data=form)
-        e_str = "Asset name must be at least 2 characters long"
-        self.assertIn(e_str, result)
-
-        form = {
-            "name": name,
-            "description": description,
-            "category": "",
-            "ticker": ticker,
-        }
-        result, _ = self.web_put(url, data=form)
-        e_str = "Asset category must not be None"
-        self.assertIn(e_str, result)
-
-    def test_performance(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=10,
-                date_ord=today.toordinal(),
-            )
-            s.add(v)
-
-        endpoint = "assets.performance"
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri}))
-        self.assertIn("0.0,10.0]", result)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": asset_0_uri, "chart-period": "max"}),
-        )
-        self.assertIn("[10.0]", result)
-
-    def test_table(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=10,
-                date_ord=today.toordinal(),
-            )
-            s.add(v)
-            s.flush()
-            v_uri = v.uri
-
-        endpoint = "assets.table"
-        result, headers = self.web_get((endpoint, {"uri": asset_0_uri}))
-        self.assertIn(v_uri, result)
-        self.assertEqual(headers.get("HX-Push-Url"), f"/assets/{asset_0_uri}")
-
-        result, headers = self.web_get(
-            (endpoint, {"uri": asset_0_uri, "page": today.isoformat()}),
-        )
-        self.assertIn(v_uri, result)
-        self.assertNotIn("HX-Push-Url", headers)
-        self.assertIn(v_uri, result)
-
-        result, headers = self.web_get(
-            (endpoint, {"uri": asset_0_uri, "period": "2000"}),
-        )
-        self.assertIn("no valuations match query", result)
-        self.assertNotIn(v_uri, result)
-        self.assertEqual(
-            headers.get("HX-Push-Url"),
-            f"/assets/{asset_0_uri}?period=2000",
-        )
-
-        long_ago = today - datetime.timedelta(days=400)
-        queries = {
-            "uri": asset_0_uri,
-            "period": "custom",
-            "start": long_ago.isoformat(),
-            "end": long_ago.isoformat(),
-        }
-        result, _ = self.web_get((endpoint, queries))
-        self.assertIn("no valuations match query", result)
-        self.assertNotIn(v_uri, result)
-
-        queries = {
-            "uri": asset_0_uri,
-            "period": "custom",
-            "end": long_ago.isoformat(),
-        }
-        result, _ = self.web_get((endpoint, queries))
-        self.assertIn("no valuations match query", result)
-
-        queries = {
-            "uri": asset_0_uri,
-            "period": "custom",
-            "start": long_ago.isoformat(),
-        }
-        result, _ = self.web_get((endpoint, queries))
-        self.assertNotIn("no valuations match query", result)
-
-        result, _ = self.web_get(
-            (endpoint, {"uri": asset_0_uri, "period": "2000-01"}),
-        )
-        self.assertIn("no valuations match query", result)
-        self.assertNotIn(v_uri, result)
-
-    def test_validation(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-        asset_1_uri = d["asset_1_uri"]
-        asset_0_name = d["asset_0_name"]
-
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=10,
-                date_ord=today.toordinal(),
-            )
-            s.add(v)
-            s.flush()
-            v_id = v.id_
-            v_uri = v.uri
-
-        endpoint = "assets.validation"
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "name": " "}))
-        self.assertEqual("Required", result)
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "name": "a"}))
-        self.assertEqual("2 characters required", result)
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "name": "ab"}))
-        self.assertEqual("", result)
-
-        # Ticker not required
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "ticker": " "}))
-        self.assertEqual("", result)
-
-        # Ticker can be short
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "ticker": "a"}))
-        self.assertEqual("", result)
-
-        # Name cannot be duplicated
-        result, _ = self.web_get((endpoint, {"uri": asset_1_uri, "name": asset_0_name}))
-        self.assertEqual("Must be unique", result)
-
-        with p.begin_session() as s:
-            s.query(Asset).where(Asset.id_ == asset_0_id).update(
-                {Asset.description: "stuff"},
-            )
-
-        # Description not checked for duplication
-        result, _ = self.web_get(
-            (endpoint, {"uri": asset_1_uri, "description": "stuff"}),
-        )
-        self.assertEqual("", result)
-
-        args = {
-            "uri": asset_0_uri,
-            "date": " ",
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Required", result)
-
-        args = {
-            "uri": asset_0_uri,
-            "date": "a",
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Unable to parse", result)
-
-        args = {
-            "uri": asset_0_uri,
-            "date": (today + datetime.timedelta(days=10)).isoformat(),
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Only up to 7 days in advance", result)
-
-        args = {
-            "uri": asset_0_uri,
-            "date": today.isoformat(),
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("", result)
-
-        v_uri = AssetValuation.id_to_uri(v_id + 1)
-        args = {
-            "uri": asset_0_uri,
-            "date": today.isoformat(),
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("Must be unique", result)
-
-        args = {
-            "uri": asset_1_uri,
-            "date": today.isoformat(),
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("", result)
-
-        args = {
-            "uri": asset_0_uri,
-            "date": (today + datetime.timedelta(days=1)).isoformat(),
-            "v": v_uri,
-        }
-        result, _ = self.web_get((endpoint, args))
-        self.assertEqual("", result)
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "value": "a"}))
-        self.assertEqual("Unable to parse", result)
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "value": " "}))
-        self.assertEqual("Required", result)
-
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri, "value": "10"}))
-        self.assertEqual("", result)
-
-    def test_new_valuation(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-
-        asset_0_id = d["asset_0_id"]
-        asset_0_uri = d["asset_0_uri"]
-
-        endpoint = "assets.new_valuation"
-        result, _ = self.web_get((endpoint, {"uri": asset_0_uri}))
-        self.assertNotIn("Delete", result)
-
-        form = {}
-        result, _ = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        e_str = "Date must not be empty"
-        self.assertIn(e_str, result)
-
-        form = {"date": today + datetime.timedelta(days=10)}
-        result, _ = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        e_str = "Date can only be up to a week in the future"
-        self.assertIn(e_str, result)
-
-        form = {"date": today}
-        result, _ = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        e_str = "Value must not be empty"
-        self.assertIn(e_str, result)
-
-        form = {"date": today, "value": "-100"}
-        result, _ = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        e_str = "Value must not be negative"
-        self.assertIn(e_str, result)
-
-        form = {"date": today, "value": "100"}
-        result, headers = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "valuation")
-
-        with p.begin_session() as s:
-            v = (
-                s.query(AssetValuation)
-                .where(AssetValuation.asset_id == asset_0_id)
-                .one()
-            )
-            self.assertEqual(v.asset_id, asset_0_id)
-            self.assertEqual(v.date_ord, today_ord)
-            self.assertEqual(v.value, 100)
-
-        form = {"date": today, "value": "100"}
-        result, _ = self.web_post((endpoint, {"uri": asset_0_uri}), data=form)
-        e_str = "Date must be unique for each asset"
-        self.assertIn(e_str, result)
-
-    def test_valuation(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-        today = datetime.datetime.now().astimezone().date()
-        today_ord = today.toordinal()
-        yesterday = today - datetime.timedelta(days=1)
-        yesterday_ord = yesterday.toordinal()
-
-        asset_0_id = d["asset_0_id"]
-
-        # Add valuations
-        with p.begin_session() as s:
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=10,
-                date_ord=yesterday_ord,
-            )
-            s.add(v)
-
-            v = AssetValuation(
-                asset_id=asset_0_id,
-                value=100,
-                date_ord=today_ord,
-            )
-            s.add(v)
-            s.flush()
-            v_id = v.id_
-            v_uri = v.uri
-
-        endpoint = "assets.valuation"
-        result, _ = self.web_get((endpoint, {"uri": v_uri}))
-        self.assertIn("Delete", result)
-
-        form = {}
-        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        e_str = "Date must not be empty"
-        self.assertIn(e_str, result)
-
-        form = {"date": today + datetime.timedelta(days=10)}
-        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        e_str = "Date can only be up to a week in the future"
-        self.assertIn(e_str, result)
-
-        form = {"date": today}
-        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        e_str = "Value must not be empty"
-        self.assertIn(e_str, result)
-
-        form = {"date": today, "value": "-100"}
-        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        e_str = "Value must not be negative"
-        self.assertIn(e_str, result)
-
-        form = {"date": today, "value": "100*2"}
-        result, headers = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "valuation")
-
-        with p.begin_session() as s:
-            v = s.query(AssetValuation).where(AssetValuation.id_ == v_id).first()
-            if v is None:
-                self.fail("AssetValuation is missing")
-            self.assertEqual(v.asset_id, asset_0_id)
-            self.assertEqual(v.date_ord, today_ord)
-            self.assertEqual(v.value, 200)
-
-        form = {"date": yesterday, "value": "100"}
-        result, _ = self.web_put((endpoint, {"uri": v_uri}), data=form)
-        e_str = "Date must be unique for each asset"
-        self.assertIn(e_str, result)
-
-        result, headers = self.web_delete((endpoint, {"uri": v_uri}))
-        self.assertIn("snackbar-script", result)
-        self.assertEqual(headers.get("HX-Trigger"), "valuation")
-
-        with p.begin_session() as s:
-            n = query_count(s.query(AssetValuation).where(AssetValuation.id_ == v_id))
-            self.assertEqual(n, 0)
-
-    def test_update(self) -> None:
-        d = self._setup_portfolio()
-        p = self._portfolio
-
-        acct_id = d["acct_id"]
-        asset_0_id = d["asset_0_id"]
-        asset_1_id = d["asset_1_id"]
-
-        endpoint = "assets.update"
-        result, _ = self.web_get(endpoint)
-        self.assertIn("Update assets", result)
-        self.assertIn("There are no assets to update", result)
-
-        result, _ = self.web_post(endpoint)
-        self.assertIn("No assets were updated", result)
-
-        with p.begin_session() as s:
-            s.query(Asset).where(Asset.id_ == asset_0_id).update({"ticker": "BANANA"})
-
-            categories = TransactionCategory.map_name(s)
-            # Reverse categories for LUT
-            categories = {v: k for k, v in categories.items()}
-            t_cat_id = categories["securities traded"]
-
-            date = datetime.date(2023, 5, 1)
-            txn = Transaction(
-                account_id=acct_id,
-                date=date,
-                amount=self.random_decimal(-1, 1),
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                asset_id=asset_0_id,
-                asset_quantity_unadjusted=-1,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-            txn = Transaction(
-                account_id=acct_id,
-                date=date,
-                amount=self.random_decimal(-1, 1),
-                statement=self.random_string(),
-            )
-            t_split = TransactionSplit(
-                amount=txn.amount,
-                parent=txn,
-                asset_id=asset_1_id,
-                asset_quantity_unadjusted=-1,
-                category_id=t_cat_id,
-            )
-            s.add_all((txn, t_split))
-
-        result, _ = self.web_get(endpoint)
-        self.assertIn("There is one asset", result)
-
-        result, _ = self.web_post(endpoint)
-        self.assertIn("The assets with the following tickers were updated", result)
-        self.assertIn("BANANA", result)
-
-        with p.begin_session() as s:
-            s.query(Asset).where(Asset.id_ == asset_1_id).update({"ticker": "ORANGE"})
-
-        result, _ = self.web_get(endpoint)
-        self.assertIn("There are 2 assets", result)
-
-        result, _ = self.web_post(endpoint)
-        self.assertIn(
-            "ORANGE failed: ORANGE: No timezone found, symbol may be delisted",
-            result,
-        )
+            "category": "BONDS",
+            "ticker": "",
+            "description": "Nothing to see",
+        },
+    )
+    assert result == base.error("Asset name must be at least 2 characters long")
+
+
+def test_performance(web_client: WebClient, asset: Asset) -> None:
+    result, headers = web_client.GET(("assets.performance", {"uri": asset.uri}))
+    assert "<script>" in result
+    assert headers["HX-Push-URL"] == web_client.url_for("assets.page", uri=asset.uri)
+
+
+def test_table(web_client: WebClient, asset: Asset) -> None:
+    result, headers = web_client.GET(("assets.table", {"uri": asset.uri}))
+    assert "no valuations match query" in result
+    assert headers["HX-Push-URL"] == web_client.url_for("assets.page", uri=asset.uri)
+
+
+def test_table_second_page(web_client: WebClient, asset: Asset) -> None:
+    result, headers = web_client.GET(
+        ("assets.table", {"uri": asset.uri, "page": "2000-01-01"}),
+    )
+    assert "no more valuations match query" in result
+    assert "HX-Push-URL" not in headers
+
+
+@pytest.mark.parametrize(
+    ("prop", "value", "target"),
+    [
+        ("name", "New Name", ""),
+        ("name", " ", "Required"),
+        ("name", "a", "2 characters required"),
+        ("name", "Banana ETF", "Must be unique"),
+        ("description", "BANANA ETF", ""),
+        ("ticker", "TICKER", ""),
+        ("ticker", " ", ""),
+        ("ticker", "A", ""),
+        ("ticker", "BANANA_ETF", "Must be unique"),
+        ("date", "2000-01-01", ""),
+        ("date", " ", "Required"),
+        ("value", "0", ""),
+        ("value", " ", "Required"),
+    ],
+)
+def test_validation(
+    web_client: WebClient,
+    asset: Asset,
+    asset_etf: Asset,
+    asset_valuation: AssetValuation,
+    prop: str,
+    value: str,
+    target: str,
+) -> None:
+    _ = asset_etf
+    result, _ = web_client.GET(
+        (
+            "assets.validation",
+            {"uri": asset.uri, prop: value, "v": asset_valuation.uri},
+        ),
+    )
+    assert result == target
+
+
+def test_new_valuation_get(
+    today: datetime.date,
+    web_client: WebClient,
+    asset: Asset,
+) -> None:
+    result, _ = web_client.GET(("assets.new_valuation", {"uri": asset.uri}))
+    assert "New valuation" in result
+    assert today.isoformat() in result
+
+
+def test_new_valuation(
+    today: datetime.date,
+    session: orm.Session,
+    web_client: WebClient,
+    asset: Asset,
+    rand_real: Decimal,
+) -> None:
+    result, headers = web_client.POST(
+        ("assets.new_valuation", {"uri": asset.uri}),
+        data={
+            "date": today,
+            "value": rand_real,
+        },
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "valuation"
+
+    v = session.query(AssetValuation).one()
+    assert v.asset_id == asset.id_
+    assert v.date == today
+    assert v.value == rand_real
+
+
+@pytest.mark.parametrize(
+    ("date", "value", "target"),
+    [
+        ("", "", "Date must not be empty"),
+        ("a", "", "Could not parse date"),
+        ("2100-01-01", "", "Date can only be up to a week in the future"),
+        ("2000-01-01", "", "Value must not be empty"),
+        ("2000-01-01", "a", "Value must not be empty"),
+        ("2000-01-01", "-1", "Value must not be negative"),
+    ],
+)
+def test_new_valuation_error(
+    web_client: WebClient,
+    asset: Asset,
+    date: str,
+    value: str,
+    target: str,
+) -> None:
+    result, _ = web_client.POST(
+        ("assets.new_valuation", {"uri": asset.uri}),
+        data={
+            "date": date,
+            "value": value,
+        },
+    )
+    assert result == base.error(target)
+
+
+def test_new_valuation_duplicate(
+    web_client: WebClient,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    result, _ = web_client.POST(
+        ("assets.new_valuation", {"uri": asset.uri}),
+        data={
+            "date": asset_valuation.date,
+            "value": asset_valuation.value,
+        },
+    )
+    assert result == base.error("Date must be unique for each asset")
+
+
+def test_valuation_get(
+    web_client: WebClient,
+    asset_valuation: AssetValuation,
+) -> None:
+    result, _ = web_client.GET(("assets.valuation", {"uri": asset_valuation.uri}))
+    assert "Edit valuation" in result
+    assert asset_valuation.date.isoformat() in result
+    assert str(asset_valuation.value).strip("0").strip(".") in result
+
+
+def test_valuation_delete(
+    session: orm.Session,
+    web_client: WebClient,
+    asset_valuation: AssetValuation,
+) -> None:
+    result, headers = web_client.DELETE(
+        ("assets.valuation", {"uri": asset_valuation.uri}),
+    )
+    assert "snackbar.show" in result
+    assert f"{asset_valuation.date} valuation deleted" in result
+    assert headers["HX-Trigger"] == "valuation"
+
+    v = session.query(AssetValuation).one_or_none()
+    assert v is None
+
+
+def test_valuation_edit(
+    tomorrow: datetime.date,
+    session: orm.Session,
+    web_client: WebClient,
+    asset_valuation: AssetValuation,
+    rand_real: Decimal,
+) -> None:
+    result, headers = web_client.PUT(
+        ("assets.valuation", {"uri": asset_valuation.uri}),
+        data={
+            "date": tomorrow,
+            "value": rand_real,
+        },
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "valuation"
+
+    session.refresh(asset_valuation)
+    assert asset_valuation.date == tomorrow
+    assert asset_valuation.value == rand_real
+
+
+@pytest.mark.parametrize(
+    ("date", "value", "target"),
+    [
+        ("", "", "Date must not be empty"),
+        ("a", "", "Could not parse date"),
+        ("2100-01-01", "", "Date can only be up to a week in the future"),
+        ("2000-01-01", "", "Value must not be empty"),
+        ("2000-01-01", "a", "Value must not be empty"),
+        ("2000-01-01", "-1", "Value must not be negative"),
+    ],
+)
+def test_valuation_error(
+    web_client: WebClient,
+    asset_valuation: AssetValuation,
+    date: str,
+    value: str,
+    target: str,
+) -> None:
+    result, _ = web_client.PUT(
+        ("assets.valuation", {"uri": asset_valuation.uri}),
+        data={
+            "date": date,
+            "value": value,
+        },
+    )
+    assert result == base.error(target)
+
+
+def test_valuation_duplicate(
+    tomorrow: datetime.date,
+    session: orm.Session,
+    web_client: WebClient,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    v = AssetValuation(
+        asset_id=asset.id_,
+        date_ord=tomorrow.toordinal(),
+        value=asset_valuation.value,
+    )
+    session.add(v)
+    session.commit()
+
+    result, _ = web_client.PUT(
+        ("assets.valuation", {"uri": asset_valuation.uri}),
+        data={
+            "date": tomorrow,
+            "value": asset_valuation.value,
+        },
+    )
+    assert result == base.error("Date must be unique for each asset")
+
+
+def test_update_get_empty(session: orm.Session, web_client: WebClient) -> None:
+    session.query(Asset).delete()
+    session.commit()
+
+    result, _ = web_client.GET("assets.update")
+    assert "Update assets" in result
+    assert "There are no assets to update, set ticker on edit asset page" in result
+
+
+def test_update_get_one(
+    session: orm.Session,
+    web_client: WebClient,
+    asset: Asset,
+) -> None:
+    _ = asset
+    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
+    session.commit()
+
+    result, _ = web_client.GET("assets.update")
+    assert "Update assets" in result
+    assert "There is one asset with ticker to update" in result
+
+
+def test_update_get(session: orm.Session, web_client: WebClient) -> None:
+    n = query_count(session.query(Asset))
+
+    result, _ = web_client.GET("assets.update")
+    assert "Update assets" in result
+    assert f"There are {n} assets with tickers to update" in result
+
+
+def test_update_empty(web_client: WebClient) -> None:
+    result, _ = web_client.POST("assets.update")
+    assert "No assets were updated" in result
+
+
+def test_update(
+    session: orm.Session,
+    web_client: WebClient,
+    asset: Asset,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
+    session.commit()
+
+    result, headers = web_client.POST("assets.update")
+    assert "The assets with the following tickers were updated" in result
+    assert asset.ticker is not None
+    assert asset.ticker in result
+    assert headers["HX-Trigger"] == "valuation"
+
+
+def test_update_error(
+    web_client: WebClient,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
+    result, _ = web_client.POST("assets.update")
+    assert "No timezone found, symbol may be delisted" in result
