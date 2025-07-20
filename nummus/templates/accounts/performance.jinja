@@ -28,7 +28,7 @@
   <div
     class="bg-surface-container-high mx-auto mb-2 grid max-w-md grid-cols-2 rounded-xl p-2 font-bold"
   >
-    <div class="text-on-surface-variant">Total Return</div>
+    <div class="text-on-surface-variant">Total return</div>
     <div class="{{ perf.pnl_total | pnl_color }} flex items-center justify-end">
       <icon class="sm">{{ perf.pnl_total | pnl_arrow }}</icon>
       {{ perf.pnl_total | abs | money }}

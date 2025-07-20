@@ -302,10 +302,7 @@ def account(session: orm.Session, rand_str_generator: RandomStringGenerator) -> 
 
 
 @pytest.fixture
-def account_savings(
-    session: orm.Session,
-    rand_str_generator: RandomStringGenerator,
-) -> Account:
+def account_savings(session: orm.Session) -> Account:
     """Create an Account.
 
     Returns:
@@ -318,7 +315,7 @@ def account_savings(
         category=AccountCategory.CASH,
         closed=False,
         budgeted=False,
-        number=rand_str_generator(),
+        number="1234",
     )
     session.add(acct)
     session.commit()
@@ -326,10 +323,7 @@ def account_savings(
 
 
 @pytest.fixture
-def account_investments(
-    session: orm.Session,
-    rand_str_generator: RandomStringGenerator,
-) -> Account:
+def account_investments(session: orm.Session) -> Account:
     """Create an Account.
 
     Returns:
@@ -341,7 +335,7 @@ def account_investments(
         category=AccountCategory.INVESTMENT,
         closed=False,
         budgeted=False,
-        number=rand_str_generator(),
+        number="1235",
     )
     session.add(acct)
     session.commit()
@@ -405,7 +399,7 @@ def asset_valuation(
     Returns:
         AssetValuation on today of $10
     """
-    v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=10)
+    v = AssetValuation(asset_id=asset.id_, date_ord=today_ord, value=2)
     session.add(v)
     session.commit()
     return v

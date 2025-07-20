@@ -726,7 +726,7 @@ def twrr(values: list[Decimal], profit: list[Decimal]) -> list[Decimal]:
     return daily_returns
 
 
-def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
+def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal | None:
     """Compute the Money-Weighted Rate of Return.
 
     Args:
@@ -762,7 +762,10 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal:
             return float("inf")
         return sum((cf / r ** (i / float(DAYS_IN_YEAR)) for i, cf in cfs.items()))
 
-    result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
+    try:
+        result = optimize.brentq(lambda r: xnpv(r, cash_flows), 0.0, 1e10)
+    except ValueError:
+        return None
     if not isinstance(result, float):  # pragma: no cover
         # Don't need to test type protection
         msg = f"Optimize result was {type(result)} not float"

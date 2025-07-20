@@ -26,7 +26,7 @@ from nummus.models import (
 )
 
 
-class _AccountContext(TypedDict):
+class AccountContext(TypedDict):
     """Type definition for Account context."""
 
     uri: str | None
@@ -44,11 +44,11 @@ class _AccountContext(TypedDict):
     change_future: Decimal
     value: Decimal
 
-    performance: _PerformanceContext | None
-    assets: list[_AssetContext] | None
+    performance: PerformanceContext | None
+    assets: list[AssetContext] | None
 
 
-class _PerformanceContext(TypedDict):
+class PerformanceContext(TypedDict):
     """Context for performance metrics."""
 
     pnl_past_year: Decimal
@@ -60,7 +60,7 @@ class _PerformanceContext(TypedDict):
     cash: Decimal
 
     twrr: Decimal
-    mwrr: Decimal
+    mwrr: Decimal | None
 
     labels: list[str]
     date_mode: str
@@ -71,7 +71,7 @@ class _PerformanceContext(TypedDict):
     period_options: dict[str, str]
 
 
-class _AssetContext(TypedDict):
+class AssetContext(TypedDict):
     """Context for assets held."""
 
     uri: str | None
@@ -85,18 +85,33 @@ class _AssetContext(TypedDict):
     profit: Decimal | None
 
 
+class AllAccountsContext(TypedDict):
+    """Context for page_all Accounts."""
+
+    net_worth: Decimal
+    assets: Decimal
+    liabilities: Decimal
+    assets_w: Decimal
+    liabilities_w: Decimal
+    categories: dict[AccountCategory, tuple[Decimal, list[AccountContext]]]
+    include_closed: bool
+    n_closed: int
+
+
 def page_all() -> flask.Response:
     """GET /accounts.
 
     Returns:
         string HTML response
     """
-    include_closed = "include-closed" in flask.request.args
-    return base.page(
-        "accounts/page-all.jinja",
-        "Accounts",
-        ctx=ctx_accounts(include_closed=include_closed),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        include_closed = "include-closed" in flask.request.args
+        return base.page(
+            "accounts/page-all.jinja",
+            "Accounts",
+            ctx=ctx_accounts(s, include_closed=include_closed),
+        )
 
 
 def page(uri: str) -> flask.Response:
@@ -111,13 +126,24 @@ def page(uri: str) -> flask.Response:
     p = web.portfolio
     with p.begin_session() as s:
         acct = base.find(s, Account, uri)
-        txn_table, title = transactions.ctx_table(acct.uri)
+        args = flask.request.args
+        txn_table, title = transactions.ctx_table(
+            args.get("search"),
+            args.get("account"),
+            args.get("category"),
+            args.get("period"),
+            args.get("start"),
+            args.get("end"),
+            args.get("page"),
+            uncleared="uncleared" in args,
+            acct_uri=acct.uri,
+        )
         title = title.removeprefix("Transactions").strip()
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
 
         ctx = ctx_account(s, acct)
         if acct.category == AccountCategory.INVESTMENT:
-            ctx["performance"] = ctx_performance(s, acct)
+            ctx["performance"] = ctx_performance(s, acct, args.get("chart-period"))
         ctx["assets"] = ctx_assets(s, acct)
         return base.page(
             "accounts/page.jinja",
@@ -167,13 +193,10 @@ def account(uri: str) -> str | flask.Response:
         institution = form["institution"].strip()
         name = form["name"].strip()
         number = form["number"].strip()
-        category_s = form.get("category")
-        category = AccountCategory(category_s) if category_s else None
+        category = AccountCategory(form["category"])
         closed = "closed" in form
         budgeted = "budgeted" in form
 
-        if category is None:
-            return base.error("Account category must not be None")
         if closed and v != 0:
             msg = "Cannot close Account with non-zero balance"
             return base.error(msg)
@@ -199,13 +222,14 @@ def performance(uri: str) -> flask.Response:
         string HTML response
     """
     p = web.portfolio
+    args = flask.request.args
     with p.begin_session() as s:
         acct = base.find(s, Account, uri)
         html = flask.render_template(
             "accounts/performance.jinja",
             acct={
                 "uri": uri,
-                "performance": ctx_performance(s, acct),
+                "performance": ctx_performance(s, acct, args.get("chart-period")),
             },
         )
     response = flask.make_response(html)
@@ -216,7 +240,7 @@ def performance(uri: str) -> flask.Response:
         _method=None,
         _scheme=None,
         _external=False,
-        **flask.request.args,
+        **args,
     )
     return response
 
@@ -259,7 +283,7 @@ def ctx_account(
     acct: Account,
     *,
     skip_today: bool = False,
-) -> _AccountContext:
+) -> AccountContext:
     """Get the context to build the account details.
 
     Args:
@@ -324,7 +348,7 @@ def ctx_account(
         "budgeted": acct.budgeted,
         "updated_days_ago": today_ord - updated_on_ord,
         "change_today": change_today,
-        "change_future": change_future,
+        "change_future": change_future or Decimal(),
         "n_today": n_today,
         "n_future": n_future,
         "performance": None,
@@ -332,17 +356,22 @@ def ctx_account(
     }
 
 
-def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
+def ctx_performance(
+    s: orm.Session,
+    acct: Account,
+    period: str | None,
+) -> PerformanceContext:
     """Get the context to build the account performance details.
 
     Args:
         s: SQL session to use
         acct: Account to generate context for
+        period: Period string to get data for
 
     Returns:
         Dictionary HTML context
     """
-    period = flask.request.args.get("chart-period", "1yr")
+    period = period or "1yr"
     start, end = base.parse_period(period)
     end_ord = end.toordinal()
     start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
@@ -403,7 +432,7 @@ def ctx_performance(s: orm.Session, acct: Account) -> _PerformanceContext:
     }
 
 
-def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
+def ctx_assets(s: orm.Session, acct: Account) -> list[AssetContext] | None:
     """Get the context to build the account assets.
 
     Args:
@@ -446,7 +475,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
         .where(Asset.id_.in_(a_ids))
     )
 
-    assets: list[_AssetContext] = []
+    assets: list[AssetContext] = []
     total_value = Decimal()
     total_profit = Decimal()
     for a_id, name, ticker, category in query.yield_per(YIELD_PER):
@@ -458,7 +487,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
         total_value += end_value
         total_profit += profit
 
-        ctx_asset: _AssetContext = {
+        ctx_asset: AssetContext = {
             "uri": Asset.id_to_uri(a_id),
             "category": category,
             "name": name,
@@ -475,6 +504,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     cash: Decimal = (
         s.query(func.sum(TransactionSplit.amount))
         .where(TransactionSplit.account_id == acct.id_)
+        .where(TransactionSplit.date_ord <= today_ord)
         .one()[0]
     )
     total_value += cash
@@ -507,17 +537,17 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[_AssetContext] | None:
     )
 
 
-def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
+def ctx_accounts(s: orm.Session, *, include_closed: bool = False) -> AllAccountsContext:
     """Get the context to build the accounts table.
 
     Args:
+        s: SQL session to use
         include_closed: True will include Accounts marked closed, False will exclude
 
     Returns:
-        Dictionary HTML context
+        AllAccountsContext
     """
     # Create sidebar context
-    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
@@ -525,91 +555,90 @@ def ctx_accounts(*, include_closed: bool = False) -> dict[str, object]:
     liabilities = Decimal()
 
     categories_total: dict[AccountCategory, Decimal] = defaultdict(Decimal)
-    categories: dict[AccountCategory, list[_AccountContext]] = defaultdict(list)
+    categories: dict[AccountCategory, list[AccountContext]] = defaultdict(list)
 
     n_closed = 0
-    with p.begin_session() as s:
-        # Get basic info
-        accounts: dict[int, _AccountContext] = {}
-        query = s.query(Account).order_by(Account.category)
-        if not include_closed:
-            query = query.where(Account.closed.is_(False))
-        for acct in query.all():
-            accounts[acct.id_] = ctx_account(s, acct, skip_today=True)
-            if acct.closed:
-                n_closed += 1
+    # Get basic info
+    accounts: dict[int, AccountContext] = {}
+    query = s.query(Account).order_by(Account.category)
+    if not include_closed:
+        query = query.where(Account.closed.is_(False))
+    for acct in query.all():
+        accounts[acct.id_] = ctx_account(s, acct, skip_today=True)
+        if acct.closed:
+            n_closed += 1
 
-        # Get updated_on
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.account_id,
-                func.max(Transaction.date_ord),
-            )
-            .group_by(Transaction.account_id)
-            .where(Transaction.account_id.in_(accounts))
+    # Get updated_on
+    query = (
+        s.query(Transaction)
+        .with_entities(
+            Transaction.account_id,
+            func.max(Transaction.date_ord),
         )
-        for acct_id, updated_on_ord in query.all():
-            acct_id: int
-            updated_on_ord: int
-            accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
+        .group_by(Transaction.account_id)
+        .where(Transaction.account_id.in_(accounts))
+    )
+    for acct_id, updated_on_ord in query.all():
+        acct_id: int
+        updated_on_ord: int
+        accounts[acct_id]["updated_days_ago"] = today_ord - updated_on_ord
 
-        # Get n_today
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.account_id,
-                func.count(Transaction.id_),
-                func.sum(Transaction.amount),
-            )
-            .where(Transaction.date_ord == today_ord)
-            .group_by(Transaction.account_id)
-            .where(Transaction.account_id.in_(accounts))
+    # Get n_today
+    query = (
+        s.query(Transaction)
+        .with_entities(
+            Transaction.account_id,
+            func.count(Transaction.id_),
+            func.sum(Transaction.amount),
         )
-        for acct_id, n_today, change_today in query.all():
-            acct_id: int
-            n_today: int
-            change_today: Decimal | None
-            accounts[acct_id]["n_today"] = n_today
-            accounts[acct_id]["change_today"] = change_today or Decimal()
+        .where(Transaction.date_ord == today_ord)
+        .group_by(Transaction.account_id)
+        .where(Transaction.account_id.in_(accounts))
+    )
+    for acct_id, n_today, change_today in query.all():
+        acct_id: int
+        n_today: int
+        change_today: Decimal | None
+        accounts[acct_id]["n_today"] = n_today
+        accounts[acct_id]["change_today"] = change_today or Decimal()
 
-        # Get n_future
-        query = (
-            s.query(Transaction)
-            .with_entities(
-                Transaction.account_id,
-                func.count(Transaction.id_),
-                func.sum(Transaction.amount),
-            )
-            .where(Transaction.date_ord > today_ord)
-            .group_by(Transaction.account_id)
-            .where(Transaction.account_id.in_(accounts))
+    # Get n_future
+    query = (
+        s.query(Transaction)
+        .with_entities(
+            Transaction.account_id,
+            func.count(Transaction.id_),
+            func.sum(Transaction.amount),
         )
-        for acct_id, n_future, change_future in query.all():
-            acct_id: int
-            n_future: int
-            change_future: Decimal
-            accounts[acct_id]["n_future"] = n_future
-            accounts[acct_id]["change_future"] = change_future
+        .where(Transaction.date_ord > today_ord)
+        .group_by(Transaction.account_id)
+        .where(Transaction.account_id.in_(accounts))
+    )
+    for acct_id, n_future, change_future in query.all():
+        acct_id: int
+        n_future: int
+        change_future: Decimal
+        accounts[acct_id]["n_future"] = n_future
+        accounts[acct_id]["change_future"] = change_future
 
-        # Get all Account values
-        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
-        for acct_id, ctx in accounts.items():
-            v = acct_values[acct_id][0]
-            if v > 0:
-                assets += v
-            else:
-                liabilities += v
-            ctx["value"] = v
-            category = ctx["category"]
+    # Get all Account values
+    acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord, ids=accounts)
+    for acct_id, ctx in accounts.items():
+        v = acct_values[acct_id][0]
+        if v > 0:
+            assets += v
+        else:
+            liabilities += v
+        ctx["value"] = v
+        category = ctx["category"]
 
-            categories_total[category] += v
-            categories[category].append(ctx)
+        categories_total[category] += v
+        categories[category].append(ctx)
 
     bar_total = assets - liabilities
     if bar_total == 0:
-        asset_width = 0
-        liabilities_width = 0
+        asset_width = Decimal()
+        liabilities_width = Decimal()
     else:
         asset_width = round(assets / (assets - liabilities) * 100, 2)
         liabilities_width = 100 - asset_width
@@ -649,7 +678,17 @@ def txns(uri: str) -> str | flask.Response:
     args = flask.request.args
     first_page = "page" not in args
 
-    txn_table, title = transactions.ctx_table(uri)
+    txn_table, title = transactions.ctx_table(
+        args.get("search"),
+        args.get("account"),
+        args.get("category"),
+        args.get("period"),
+        args.get("start"),
+        args.get("end"),
+        args.get("page"),
+        uncleared="uncleared" in args,
+        acct_uri=uri,
+    )
     title = title.removeprefix("Transactions").strip()
     with p.begin_session() as s:
         acct = base.find(s, Account, uri)

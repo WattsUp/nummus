@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from tests.controllers.conftest import WebClient
 
 
+# TODO (WattsUp): Remove flask references from ctx functions
 def test_ctx_performance_empty(
     today: datetime.date,
     flask_app: flask.Flask,
@@ -229,10 +230,10 @@ def test_ctx_rows(
 
 
 def test_page_all(web_client: WebClient, asset: Asset) -> None:
-    _ = asset
     result, _ = web_client.GET(("assets.page_all", {"include-unheld": True}))
     assert "Assets" in result
     assert "Stocks" in result
+    assert asset.name in result
     assert "Asset is not currently held" in result
 
 
@@ -249,6 +250,11 @@ def test_page(
     assert target in result
     assert "no more valuations match query" in result
     assert "new" not in result
+
+
+@pytest.mark.xfail
+def test_new(web_client: WebClient) -> None:
+    web_client.GET("assets.new")
 
 
 def test_asset_get(web_client: WebClient, asset: Asset) -> None:
