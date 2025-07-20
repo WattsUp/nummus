@@ -350,14 +350,10 @@ def new_valuation(uri: str) -> str | flask.Response:
 
     form = flask.request.form
     try:
-        date = utils.parse_date(form.get("date"))
-    except ValueError:
-        return base.error("Could not parse date")
-    if date is None:
-        return base.error("Date must not be empty")
-    if date > date_max:
-        return base.error("Date can only be up to a week in the future")
-    value = utils.evaluate_real_statement(form.get("value"), precision=6)
+        date = base.parse_date(form["date"])
+    except ValueError as e:
+        return base.error(str(e))
+    value = utils.evaluate_real_statement(form["value"], precision=6)
     if value is None:
         return base.error("Value must not be empty")
     if value < 0:
@@ -423,14 +419,10 @@ def valuation(uri: str) -> str | flask.Response:
 
         form = flask.request.form
         try:
-            date = utils.parse_date(form.get("date"))
-        except ValueError:
-            return base.error("Could not parse date")
-        if date is None:
-            return base.error("Date must not be empty")
-        if date > date_max:
-            return base.error("Date can only be up to a week in the future")
-        value = utils.evaluate_real_statement(form.get("value"), precision=6)
+            date = base.parse_date(form["date"])
+        except ValueError as e:
+            return base.error(str(e))
+        value = utils.evaluate_real_statement(form["value"], precision=6)
         if value is None:
             return base.error("Value must not be empty")
         if value < 0:

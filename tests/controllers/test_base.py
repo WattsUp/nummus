@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -12,7 +13,7 @@ from nummus import controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
-from nummus.models import Account, AssetValuation
+from nummus.models import Account, Asset, AssetValuation
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -170,12 +171,33 @@ def test_validate_unable_to_parse(func: Callable) -> None:
     ("max_future", "target"),
     [
         (7, "Only up to 7 days in advance"),
-        (0, "Cannot be in the future"),
+        (0, "Cannot be in advance"),
         (None, ""),
     ],
 )
 def test_validate_date_future(max_future: int | None, target: str) -> None:
     assert base.validate_date("2190-01-01", max_future=max_future) == target
+
+
+@pytest.mark.parametrize(
+    ("s", "max_future", "target"),
+    [
+        ("a", 7, "Unable to parse"),
+        ("", 7, "Date must not be empty"),
+        ("2190-01-01", 7, "Only up to 7 days in advance"),
+        ("2190-01-01", 0, "Cannot be in advance"),
+        ("2190-01-01", None, None),
+        ("2000-01-01", 7, None),
+        ("2000-01-01", 0, None),
+    ],
+)
+def test_parse_date(s: str, max_future: int | None, target: str | None) -> None:
+    if target:
+        with pytest.raises(ValueError, match=target):
+            base.parse_date(s, max_future=max_future)
+    else:
+        date = base.parse_date(s, max_future=max_future)
+        assert isinstance(date, datetime.date)
 
 
 def test_validate_date_duplicate(
@@ -351,10 +373,10 @@ def test_add_routes() -> None:
         assert not (rule.rule != "/" and rule.rule.endswith("/"))
 
 
-def test_metrics(web_client: WebClient, account: Account) -> None:
+def test_metrics(web_client: WebClient, asset: Asset) -> None:
     # Visit account page
-    web_client.GET(("accounts.page", {"uri": account.uri}))
-    web_client.GET(("accounts.txns", {"uri": account.uri}))
+    web_client.GET(("assets.page", {"uri": asset.uri}))
+    web_client.GET("assets.page_all")
 
     result, _ = web_client.GET(
         "prometheus_metrics",
@@ -365,8 +387,8 @@ def test_metrics(web_client: WebClient, account: Account) -> None:
     assert "flask_exporter_info" in result
     assert "nummus_info" in result
     assert "flask_http_request_duration_seconds_count" in result
-    assert 'endpoint="accounts.page"' in result
-    assert 'endpoint="accounts.txns"' in result
+    assert 'endpoint="assets.page"' in result
+    assert 'endpoint="assets.page_all"' in result
 
 
 @pytest.mark.xfail
@@ -428,3 +450,31 @@ def test_follow_links(web_client: WebClient) -> None:
     visit_all_links("/", "GET")
     for link in deletes:
         visit_all_links(link, "DELETE", hx=True)
+
+
+def test_change_redirect_no_changes() -> None:
+    resp = flask.Response()
+    result = base.change_redirect_to_htmx(resp)
+    assert "HX-Redirect" not in result.headers
+
+
+def test_change_redirect(flask_app: flask.Flask, web_client: WebClient) -> None:
+    url = web_client.url_for("common.page_dashboard")
+    flask_app.add_url_rule(
+        "/redirect",
+        "redirect",
+        functools.partial(flask.redirect, url),
+    )
+    _, headers = web_client.GET("redirect")
+    assert headers["HX-Redirect"] == url
+
+
+def test_change_redirect_no_htmx(flask_app: flask.Flask, web_client: WebClient) -> None:
+    url = web_client.url_for("common.page_dashboard")
+    flask_app.add_url_rule(
+        "/redirect",
+        "redirect",
+        functools.partial(flask.redirect, url),
+    )
+    _, headers = web_client.GET("redirect", headers={}, rc=base.HTTP_CODE_REDIRECT)
+    assert "HX-Redirect" not in headers

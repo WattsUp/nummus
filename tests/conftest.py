@@ -550,7 +550,7 @@ def transactions(
     session.add_all((txn, t_split))
 
     session.commit()
-    return session.query(Transaction).all()
+    return session.query(Transaction).order_by(Transaction.date_ord).all()
 
 
 @pytest.fixture
@@ -606,7 +606,7 @@ def transactions_spending(
     session.add_all((txn, t_split))
 
     session.commit()
-    return session.query(Transaction).all()
+    return session.query(Transaction).order_by(Transaction.date_ord).all()
 
 
 @pytest.fixture(autouse=True)

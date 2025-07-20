@@ -103,7 +103,7 @@
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
         >
           <option value=""></option>
-          {% for label, value, _ in ctx.options_category %}
+          {% for label, value in ctx.options_category %}
             <option
               value="{{ value }}"
               {% if value == ctx.selected_category %}selected{% endif %}

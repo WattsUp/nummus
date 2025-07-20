@@ -501,7 +501,7 @@ def validate_date(
     if max_future == 0:
         today = datetime.datetime.now().astimezone().date()
         if date > today:
-            return "Cannot be in the future"
+            return "Cannot be in advance"
     elif max_future is not None:
         today = datetime.datetime.now().astimezone().date()
         if date > (today + datetime.timedelta(days=max_future)):
@@ -570,3 +570,42 @@ def validate_int(
     if is_positive and n <= 0:
         return "Must be positive"
     return ""
+
+
+def parse_date(
+    value: str,
+    *,
+    max_future: int | None = utils.DAYS_IN_WEEK,
+) -> datetime.date:
+    """Parse a date string.
+
+    Args:
+        value: Raw string to parse
+        max_future: Maximum number of days date is allowed in the future
+
+    Returns:
+        date object
+
+    Raises:
+        ValueError: if failed to parse, empty, or in advance
+    """
+    try:
+        date = utils.parse_date(value)
+    except ValueError as e:
+        msg = "Unable to parse date"
+        raise ValueError(msg) from e
+    if date is None:
+        msg = "Date must not be empty"
+        raise ValueError(msg)
+    if max_future == 0:
+        today = datetime.datetime.now().astimezone().date()
+        if date > today:
+            msg = "Cannot be in advance"
+            raise ValueError(msg)
+    elif max_future is not None:
+        today = datetime.datetime.now().astimezone().date()
+        if date > (today + datetime.timedelta(days=max_future)):
+            msg = f"Only up to {utils.format_days(max_future)} in advance"
+            raise ValueError(msg)
+
+    return date

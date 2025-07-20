@@ -392,8 +392,8 @@ def test_new_valuation(
     ("date", "value", "target"),
     [
         ("", "", "Date must not be empty"),
-        ("a", "", "Could not parse date"),
-        ("2100-01-01", "", "Date can only be up to a week in the future"),
+        ("a", "", "Unable to parse date"),
+        ("2100-01-01", "", "Only up to 7 days in advance"),
         ("2000-01-01", "", "Value must not be empty"),
         ("2000-01-01", "a", "Value must not be empty"),
         ("2000-01-01", "-1", "Value must not be negative"),
@@ -484,8 +484,8 @@ def test_valuation_edit(
     ("date", "value", "target"),
     [
         ("", "", "Date must not be empty"),
-        ("a", "", "Could not parse date"),
-        ("2100-01-01", "", "Date can only be up to a week in the future"),
+        ("a", "", "Unable to parse date"),
+        ("2100-01-01", "", "Only up to 7 days in advance"),
         ("2000-01-01", "", "Value must not be empty"),
         ("2000-01-01", "a", "Value must not be empty"),
         ("2000-01-01", "-1", "Value must not be negative"),
