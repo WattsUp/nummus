@@ -25,6 +25,9 @@ from nummus.models import (
     base_uri,
     BudgetAssignment,
     BudgetGroup,
+    Target,
+    TargetPeriod,
+    TargetType,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -448,13 +451,16 @@ def asset_sectors(
 
 
 @pytest.fixture
-def budget_group(session: orm.Session, rand_str: str) -> BudgetGroup:
+def budget_group(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+) -> BudgetGroup:
     """Create a BudgetGroup.
 
     Returns:
         BudgetGroup with position 0
     """
-    g = BudgetGroup(name=rand_str, position=0)
+    g = BudgetGroup(name=rand_str_generator(), position=0)
     session.add(g)
     session.commit()
     return g
@@ -682,6 +688,15 @@ def budget_assignments(
     session: orm.Session,
     categories: dict[str, int],
 ) -> list[BudgetAssignment]:
+    """Creates BudgetAssignments.
+
+    Returns:
+        [
+            BudgetAssignment this month for $50 of groceries,
+            BudgetAssignment this month for $100 of emergency fund,
+            BudgetAssignment next month for $2000 of rent,
+        ]
+    """
     b = BudgetAssignment(
         month_ord=month_ord,
         amount=Decimal(50),
@@ -702,3 +717,25 @@ def budget_assignments(
     session.add(b)
     session.commit()
     return list(session.query(BudgetAssignment).all())
+
+
+@pytest.fixture
+def budget_target(
+    session: orm.Session,
+    categories: dict[str, int],
+) -> Target:
+    """Create a budget target.
+
+    Returns:
+        Target for Emergency Fund, $1000, no due date
+    """
+    target = Target(
+        category_id=categories["emergency fund"],
+        amount=Decimal(1000),
+        type_=TargetType.BALANCE,
+        period=TargetPeriod.ONCE,
+        repeat_every=0,
+    )
+    session.add(target)
+    session.commit()
+    return target

@@ -6,7 +6,7 @@ import datetime
 import math
 import operator
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import sql
@@ -16,7 +16,7 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     BudgetAssignment,
-    BudgetAvailable,
+    BudgetAvailableCategory,
     BudgetGroup,
     query_count,
     Target,
@@ -28,7 +28,9 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    import werkzeug.datastructures
     from sqlalchemy import orm
+    from typing_extensions import NotRequired
 
 
 PERIOD_OPTIONS = {
@@ -40,7 +42,7 @@ PERIOD_OPTIONS = {
 PERIOD_OPTIONS_REV = {v: k for k, v in PERIOD_OPTIONS.items()}
 
 
-class _TargetContext(TypedDict):
+class TargetContext(TypedDict):
     """Type definition for target context."""
 
     target_assigned: Decimal
@@ -58,7 +60,7 @@ class _TargetContext(TypedDict):
     type: TargetType
 
 
-class _CategoryContext(TypedDict):
+class CategoryContext(TypedDict):
     """Type definition for budget category context."""
 
     position: int | None
@@ -68,28 +70,27 @@ class _CategoryContext(TypedDict):
     assigned: Decimal
     activity: Decimal
     available: Decimal
-    # List of bars (width ratio, bg fill ratio, fg fill ratio)
-    bars: list[tuple[Decimal, Decimal, Decimal]]
+    bars: list[ProgressBar]
     hidden: bool
 
-    target: _TargetContext | None
+    target: TargetContext | None
 
 
-class _GroupContext(TypedDict):
+class GroupContext(TypedDict):
     """Type definition for budget group context."""
 
     position: int
     name: str | None
     uri: str | None
     is_open: bool
-    categories: list[_CategoryContext]
+    categories: list[CategoryContext]
     assigned: Decimal
     activity: Decimal
     available: Decimal
     has_error: bool
 
 
-class _BudgetContext(TypedDict):
+class BudgetContext(TypedDict):
     """Type definition for budget context."""
 
     month: str
@@ -97,8 +98,32 @@ class _BudgetContext(TypedDict):
     month_prev: str
     assignable: Decimal
     future_assigned: Decimal
-    groups: list[_GroupContext]
+    groups: list[GroupContext]
     n_overspent: int
+
+
+class SidebarContext(TypedDict):
+    """Type definition for sidebar context."""
+
+    uri: str | None
+    name: str | None
+    month: str
+    available: Decimal
+    leftover: Decimal
+    assigned: Decimal
+    future_assigned: Decimal
+    activity: Decimal
+    target: TargetContext | None
+    to_go: NotRequired[Decimal]
+    no_target: NotRequired[dict[str, str]]
+
+
+class ProgressBar(NamedTuple):
+    """ProgressBar bar."""
+
+    width: Decimal
+    bg_fill_w: Decimal
+    fg_fill_w: Decimal
 
 
 def page() -> flask.Response:
@@ -118,11 +143,21 @@ def page() -> flask.Response:
     sidebar_uri = args.get("sidebar") or None
 
     with p.begin_session() as s:
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
+        data = BudgetAssignment.get_monthly_available(s, month)
+        budget, title = ctx_budget(
+            s,
+            month,
+            data.categories,
+            data.assignable,
+            data.future_assigned,
         )
-        budget, title = ctx_budget(s, month, categories, assignable, future_assigned)
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
+        sidebar = ctx_sidebar(
+            s,
+            month,
+            data.categories,
+            data.future_assigned,
+            sidebar_uri,
+        )
     return base.page(
         "budgeting/page.jinja",
         title=title,
@@ -190,7 +225,7 @@ def assign(uri: str) -> str:
     month_ord = month.toordinal()
 
     form = flask.request.form
-    amount = utils.evaluate_real_statement(form.get("amount")) or Decimal()
+    amount = utils.evaluate_real_statement(form["amount"]) or Decimal()
 
     with p.begin_session() as s:
         cat = base.find(s, TransactionCategory, uri)
@@ -223,12 +258,22 @@ def assign(uri: str) -> str:
             else:
                 a.amount = amount
 
-        categories, assignable, future_assigned = (
-            BudgetAssignment.get_monthly_available(s, month)
+        data = BudgetAssignment.get_monthly_available(s, month)
+        budget, _ = ctx_budget(
+            s,
+            month,
+            data.categories,
+            data.assignable,
+            data.future_assigned,
         )
-        budget, _ = ctx_budget(s, month, categories, assignable, future_assigned)
         sidebar_uri = form.get("sidebar") or None
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, sidebar_uri)
+        sidebar = ctx_sidebar(
+            s,
+            month,
+            data.categories,
+            data.future_assigned,
+            sidebar_uri,
+        )
     return flask.render_template(
         "budgeting/group.jinja",
         ctx=budget,
@@ -255,33 +300,32 @@ def move(uri: str) -> str | flask.Response:
     month_ord = month.toordinal()
 
     with p.begin_session() as s:
-        categories, assignable, _ = BudgetAssignment.get_monthly_available(s, month)
+        data = BudgetAssignment.get_monthly_available(s, month)
         if uri == "income":
             src_cat = None
             src_cat_id = None
-            src_available = assignable
+            src_available = data.assignable
         else:
             src_cat = base.find(s, TransactionCategory, uri)
             src_cat_id = src_cat.id_
-            _, _, src_available, _ = categories[src_cat_id]
+            src_available = data.categories[src_cat_id].available
 
         if flask.request.method == "PUT":
-            dest = flask.request.form["destination"]
+            form = flask.request.form
+            dest = form["destination"]
             if dest == "income":
                 dest_cat_id = None
-                dest_available = assignable
+                dest_available = data.assignable
             else:
                 dest_cat_id = TransactionCategory.uri_to_id(dest)
-                _, _, dest_available, _ = categories[dest_cat_id]
+                dest_available = data.categories[dest_cat_id].available
             if src_available > 0:
-                to_move = utils.evaluate_real_statement(
-                    flask.request.form.get("amount"),
-                )
+                to_move = utils.evaluate_real_statement(form["amount"])
                 if to_move is None:
                     return base.error("Amount to move must not be blank")
             else:
                 # Min of the positive number is max of negative
-                to_move = max(src_available, -dest_available)
+                to_move = min(src_available, -dest_available)
 
             BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, to_move)
 
@@ -311,17 +355,17 @@ def move(uri: str) -> str | flask.Response:
             group: TransactionCategoryGroup
 
             t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
-            available = categories[t_cat_id][2]
+            available = data.categories[t_cat_id].available
             if src_available > 0 or available > 0:
                 options.append((t_cat_uri, name, available, group))
 
-        if src_cat_id is not None and (src_available > 0 or assignable > 0):
+        if src_cat_id is not None and (src_available > 0 or data.assignable > 0):
             options.insert(
                 0,
                 (
                     "income",
                     "Assignable income",
-                    assignable,
+                    data.assignable,
                     TransactionCategoryGroup.INCOME,
                 ),
             )
@@ -471,14 +515,14 @@ def new_group() -> str:
         string HTML response
     """
     p = web.portfolio
-    name = "New Group"
+    name = "New group"
     with p.begin_session() as s:
         # Ensure the name isn't a duplicate
         i = 1
         n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
         while n != 0:
             i += 1
-            name = f"New Group {i}"
+            name = f"New group {i}"
             n = query_count(s.query(BudgetGroup).where(BudgetGroup.name == name))
 
         # Move existing groups down one
@@ -493,7 +537,7 @@ def new_group() -> str:
         s.add(g)
         s.flush()
         g_uri = g.uri
-    ctx: _GroupContext = {
+    ctx: GroupContext = {
         "position": 0,
         "name": name,
         "uri": g_uri,
@@ -554,23 +598,30 @@ def target(uri: str) -> str | flask.Response:
             )
         elif flask.request.method == "DELETE":
             s.delete(tar)
-            return base.dialog_swap(event="budget")
+            return base.dialog_swap(
+                event="budget",
+                snackbar=f"{emoji_name} target deleted",
+            )
         elif flask.request.method == "POST":
             error = "Cannot have multiple targets per category"
             return base.error(error)
 
-        # TODO (WattsUp): Move edit logic out
-
         # Parse form
-        parse_target_form(tar)
+        parse_target_form(
+            tar,
+            flask.request.args if flask.request.method == "GET" else flask.request.form,
+        )
 
         if flask.request.method == "PUT":
-            return base.dialog_swap(event="budget")
+            return base.dialog_swap(event="budget", snackbar="All changes saved")
         try:
             if flask.request.method == "POST":
                 with s.begin_nested():
                     s.add(tar)
-                return base.dialog_swap(event="budget")
+                return base.dialog_swap(
+                    event="budget",
+                    snackbar=f"{emoji_name} target created",
+                )
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -612,13 +663,16 @@ def target(uri: str) -> str | flask.Response:
         )
 
 
-def parse_target_form(target: Target) -> None:
+def parse_target_form(
+    target: Target,
+    args: werkzeug.datastructures.MultiDict[str, str],
+) -> None:
     """Parse edit target form and modify target.
 
     Args:
         target: Target to modify
+        args: Arguments to use, from args or form
     """
-    args = flask.request.args if flask.request.method == "GET" else flask.request.form
     today = datetime.datetime.now().astimezone().date()
 
     period = args.get("period")
@@ -670,13 +724,53 @@ def parse_target_form(target: Target) -> None:
         target.repeat_every = 1
 
 
+def sidebar() -> flask.Response:
+    """GET /h/budgeting/sidebar.
+
+    Returns:
+        string HTML response
+    """
+    p = web.portfolio
+    args = flask.request.args
+    month_str = args.get("month")
+    month = (
+        utils.start_of_month(datetime.datetime.now().astimezone().date())
+        if month_str is None
+        else datetime.date.fromisoformat(month_str + "-01")
+    )
+    uri = args.get("uri")
+
+    with p.begin_session() as s:
+        data = BudgetAssignment.get_monthly_available(
+            s,
+            month,
+        )
+        sidebar = ctx_sidebar(s, month, data.categories, data.future_assigned, uri)
+        html = flask.render_template(
+            "budgeting/sidebar.jinja",
+            ctx={"month": month_str},
+            budget_sidebar=sidebar,
+        )
+    response = flask.make_response(html)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "budgeting.page",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        month=month.isoformat()[:7],
+        sidebar=uri,
+    )
+    return response
+
+
 def ctx_sidebar(
     s: orm.Session,
     month: datetime.date,
-    categories: dict[int, BudgetAvailable],
+    categories: dict[int, BudgetAvailableCategory],
     future_assigned: Decimal,
     uri: str | None,
-) -> dict[str, object]:
+) -> SidebarContext:
     """Get the context to build the budgeting sidebar.
 
     Args:
@@ -687,7 +781,7 @@ def ctx_sidebar(
         uri: Category URI to build context for, None for totals
 
     Returns:
-        Dictionary HTML context
+        SidebarContext
     """
     month_str = month.isoformat()[:7]
     if uri is None:
@@ -738,7 +832,7 @@ def ctx_sidebar(
             .where(TransactionCategory.id_.in_(no_target))
             .order_by(TransactionCategory.name)
         )
-        no_target_names = {
+        no_target_names: dict[str, str] = {
             TransactionCategory.id_to_uri(t_cat_id): name
             for t_cat_id, name in query.all()
         }
@@ -794,53 +888,13 @@ def ctx_sidebar(
     }
 
 
-def sidebar() -> flask.Response:
-    """GET /h/budgeting/sidebar.
-
-    Returns:
-        string HTML response
-    """
-    p = web.portfolio
-    args = flask.request.args
-    month_str = args.get("month")
-    month = (
-        utils.start_of_month(datetime.datetime.now().astimezone().date())
-        if month_str is None
-        else datetime.date.fromisoformat(month_str + "-01")
-    )
-    uri = args.get("uri")
-
-    with p.begin_session() as s:
-        categories, _, future_assigned = BudgetAssignment.get_monthly_available(
-            s,
-            month,
-        )
-        sidebar = ctx_sidebar(s, month, categories, future_assigned, uri)
-        html = flask.render_template(
-            "budgeting/sidebar.jinja",
-            ctx={"month": month_str},
-            budget_sidebar=sidebar,
-        )
-    response = flask.make_response(html)
-    response.headers["HX-Push-Url"] = flask.url_for(
-        "budgeting.page",
-        _anchor=None,
-        _method=None,
-        _scheme=None,
-        _external=False,
-        month=month.isoformat()[:7],
-        sidebar=uri,
-    )
-    return response
-
-
 def ctx_target(
     tar: Target,
     month: datetime.date,
     assigned: Decimal,
     available: Decimal,
     leftover: Decimal,
-) -> _TargetContext:
+) -> TargetContext:
     """Get monthly context for target.
 
     Args:
@@ -889,12 +943,12 @@ def ctx_target(
         total_to_go = total_target - total_assigned
 
         on_track = assigned >= target_assigned
-        next_due_date = datetime.datetime.now().astimezone().date()
-        if month.year == next_due_date.year and month.month == next_due_date.month:
+        today = datetime.datetime.now().astimezone().date()
+        if month.year == today.year and month.month == today.month:
             # Move next_due_date to next weekday
-            n_days = weekday - next_due_date.weekday()
+            n_days = weekday - today.weekday()
             # Keep positive
-            next_due_date += datetime.timedelta(
+            next_due_date = today + datetime.timedelta(
                 days=n_days + (utils.DAYS_IN_WEEK if n_days < 0 else 0),
             )
             n_weeks_elapsed = math.ceil(next_due_date.day / utils.DAYS_IN_WEEK)
@@ -976,10 +1030,10 @@ def ctx_target(
 def ctx_budget(
     s: orm.Session,
     month: datetime.date,
-    categories: dict[int, BudgetAvailable],
+    categories: dict[int, BudgetAvailableCategory],
     assignable: Decimal,
     future_assigned: Decimal,
-) -> tuple[_BudgetContext, str]:
+) -> tuple[BudgetContext, str]:
     """Get the context to build the budgeting table.
 
     Args:
@@ -1000,7 +1054,7 @@ def ctx_budget(
 
     groups_open: list[str] = flask.session.get("groups_open", [])
 
-    groups: dict[int | None, _GroupContext] = {}
+    groups: dict[int | None, GroupContext] = {}
     query = s.query(BudgetGroup)
     for g in query.all():
         groups[g.id_] = {
@@ -1014,7 +1068,7 @@ def ctx_budget(
             "categories": [],
             "has_error": False,
         }
-    ungrouped: _GroupContext = {
+    ungrouped: GroupContext = {
         "position": -1,
         "name": None,
         "uri": None,
@@ -1057,7 +1111,7 @@ def ctx_budget(
             )
             bar_dollars = target_ctx["progress_bars"]
 
-        cat_ctx: _CategoryContext = {
+        cat_ctx: CategoryContext = {
             "position": t_cat.budget_position,
             "uri": t_cat.uri,
             "name": t_cat.name,
@@ -1087,7 +1141,7 @@ def ctx_budget(
         )
 
     month_str = month.isoformat()[:7]
-    title = f"Budgeting { month_str}"
+    title = f"Budgeting {month_str}"
     today = datetime.datetime.now().astimezone().date()
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
@@ -1107,7 +1161,7 @@ def ctx_progress_bars(
     available: Decimal,
     activity: Decimal,
     bar_dollars: list[Decimal],
-) -> list[tuple[Decimal, Decimal, Decimal]]:
+) -> list[ProgressBar]:
     """Create the budget progress bars.
 
     Args:
@@ -1123,7 +1177,7 @@ def ctx_progress_bars(
         )
     """
     bar_dollars_sum = sum(bar_dollars)
-    bars: list[tuple[Decimal, Decimal, Decimal]] = []
+    bars: list[ProgressBar] = []
     bar_start = Decimal()
     total_assigned = available - activity
     max_bar_dollars = max(total_assigned, -activity)
@@ -1143,7 +1197,7 @@ def ctx_progress_bars(
             bg_fill_w = utils.clamp((total_assigned - bar_start) / v)
             fg_fill_w = utils.clamp((-activity - bar_start) / v)
 
-        bars.append((bar_w, bg_fill_w, fg_fill_w))
+        bars.append(ProgressBar(bar_w, bg_fill_w, fg_fill_w))
         bar_start += v
     return bars
 

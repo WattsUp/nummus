@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 
 # TODO (WattsUp): Remove flask references from ctx functions
+# TODO (WattsUp): Separate testing contexts and endpoints
 def test_ctx_performance_empty(
     today: datetime.date,
     flask_app: flask.Flask,

@@ -5,12 +5,15 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 import flask
+import flask.sessions
 import pytest
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
+    import contextlib
+
     import werkzeug.datastructures
 
     from nummus.portfolio import Portfolio
@@ -44,7 +47,10 @@ class HTMLValidator:
                 assert current_tag == tag[1:]
 
                 inner_html = s[open_i_end:i_start]
-                if current_tag in {"h1", "h2", "h3", "h4"} and inner_html != "nummus":
+                if current_tag in {"h1", "h2", "h3", "h4"} and inner_html not in {
+                    "nummus",
+                    "Bad Request",
+                }:
                     # Headers should use capital case
                     # strip any inner element
                     inner_html = inner_html.replace(".", "")
@@ -105,6 +111,11 @@ class WebClient:
         self.raw_open = self._client.open
 
     def url_for(self, endpoint: str, **url_args: object) -> str:
+        """Get the URL for an endpoint.
+
+        Returns:
+            URL
+        """
         with self._flask_app.app_context(), self._flask_app.test_request_context():
             return flask.url_for(
                 endpoint,
@@ -114,6 +125,14 @@ class WebClient:
                 _external=False,
                 **url_args,
             )
+
+    def session(self) -> contextlib.AbstractContextManager[flask.sessions.SessionMixin]:
+        """Get the client session.
+
+        Returns:
+            Client session
+        """
+        return self._client.session_transaction()
 
     def open_(
         self,

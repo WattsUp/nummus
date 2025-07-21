@@ -30,13 +30,21 @@ from nummus.models.transaction_category import (
 )
 
 
-class BudgetAvailable(NamedTuple):
+class BudgetAvailableCategory(NamedTuple):
     """Type returned from get_monthly_available."""
 
     assigned: Decimal
     activity: Decimal
     available: Decimal
     leftover: Decimal
+
+
+class BudgetAvailable(NamedTuple):
+    """Type returned from get_monthly_available."""
+
+    categories: dict[int, BudgetAvailableCategory]
+    assignable: Decimal
+    future_assigned: Decimal
 
 
 class EmergencyFundDetails(NamedTuple):
@@ -113,7 +121,7 @@ class BudgetAssignment(Base):
         cls,
         s: orm.Session,
         month: datetime.date,
-    ) -> tuple[dict[int, BudgetAvailable], Decimal, Decimal]:
+    ) -> BudgetAvailable:
         """Get available budget for a month.
 
         Args:
@@ -247,7 +255,7 @@ class BudgetAssignment(Base):
         )
         categories_activity: dict[int, Decimal] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        categories: dict[int, BudgetAvailable] = {}
+        categories: dict[int, BudgetAvailableCategory] = {}
         query = s.query(TransactionCategory).with_entities(
             TransactionCategory.id_,
             TransactionCategory.group,
@@ -264,7 +272,7 @@ class BudgetAssignment(Base):
 
             ending_balance += activity
             total_available += available
-            categories[t_cat_id] = BudgetAvailable(
+            categories[t_cat_id] = BudgetAvailableCategory(
                 assigned,
                 activity,
                 available,
@@ -278,7 +286,7 @@ class BudgetAssignment(Base):
             future_assigned = min(future_assigned, assignable)
             assignable -= future_assigned
 
-        return categories, assignable, future_assigned
+        return BudgetAvailable(categories, assignable, future_assigned)
 
     @classmethod
     def get_emergency_fund(

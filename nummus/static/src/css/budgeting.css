@@ -21,12 +21,13 @@
       @apply h-0 w-0 opacity-0;
     }
 
-    & > h1 {
-      @apply mr-auto;
-    }
-
     & > div {
-      @apply w-28 shrink-0 text-right;
+      @variant first-of-type {
+        @apply mr-auto;
+      }
+      @variant not-first-of-type {
+        @apply w-28 shrink-0 text-right;
+      }
     }
   }
 
@@ -56,39 +57,39 @@
 @utility budget-category {
   @apply edit:pl-8 relative px-2 py-1;
 
-  & > div:first-of-type > div {
+  & > div:first-of-type > div:not(:first-of-type) {
     @apply w-28 shrink-0;
     @apply text-right;
     @apply relative;
+  }
+}
 
-    @variant first-of-type {
-      & > input {
-        @apply absolute inset-0;
-        @apply opacity-0;
-        @apply text-right;
+@utility budget-assigned {
+  & > input {
+    @apply absolute inset-0;
+    @apply opacity-0;
+    @apply text-right;
 
-        @variant not-edit {
-          @variant [:active, :focus-visible, :focus-within] {
-            @apply opacity-100;
+    @variant not-edit {
+      @variant [:active, :focus-visible, :focus-within] {
+        @apply opacity-100;
 
-            & ~ span {
-              @apply opacity-0;
-            }
-          }
+        & ~ span {
+          @apply opacity-0;
         }
       }
+    }
+  }
 
-      @variant not-edit {
-        @variant hover {
-          & > span {
-            @apply opacity-0;
-            @apply pointer-events-none;
-          }
+  @variant not-edit {
+    @variant hover {
+      & > span {
+        @apply opacity-0;
+        @apply pointer-events-none;
+      }
 
-          & > input {
-            @apply opacity-100;
-          }
-        }
+      & > input {
+        @apply opacity-100;
       }
     }
   }

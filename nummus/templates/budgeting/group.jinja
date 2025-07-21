@@ -24,7 +24,7 @@
   {% endif %}
   <icon class="not-open:hidden edit:hidden">keyboard_arrow_up</icon>
   <icon class="edit:hidden open:hidden">keyboard_arrow_down</icon>
-  <h1>
+  <div>
     {% if group.name %}
       <input
         name="name"
@@ -36,11 +36,11 @@
         autocomplete="off"
         spellcheck="true"
       />
-      <span class="edit:hidden">{{ group.name }}</span>
+      <h1 class="edit:hidden">{{ group.name }}</h1>
     {% else %}
-      Ungrouped
+      <h1>Ungrouped</h1>
     {% endif %}
-  </h1>
+  </div>
   {# TODO (WattsUp): Add new & delete group button #}
   <div class="edit:hidden max-md:open:hidden">
     <div class="not-error:text-on-surface-variant text-sm">Assigned</div>
