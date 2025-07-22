@@ -4,17 +4,15 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from nummus.controllers import base, transaction_categories
+from nummus.controllers import base
 from nummus.models import (
     Transaction,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
-    YIELD_PER,
 )
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
     from tests.controllers.conftest import WebClient
@@ -43,31 +41,6 @@ def test_validation(
         ("transaction_categories.validation", {"uri": uri, "name": s}),
     )
     assert result == target
-
-
-def test_ctx(
-    flask_app: flask.Flask,
-    session: orm.Session,
-) -> None:
-    with flask_app.app_context():
-        groups = transaction_categories.ctx_categories()
-
-    exclude = {"securities traded"}
-
-    for g in TransactionCategoryGroup:
-        query = (
-            session.query(TransactionCategory)
-            .where(
-                TransactionCategory.group == g,
-                TransactionCategory.name.not_in(exclude),
-            )
-            .order_by(TransactionCategory.name)
-        )
-        target: list[transaction_categories.CategoryContext] = [
-            {"name": t_cat.emoji_name, "uri": t_cat.uri}
-            for t_cat in query.yield_per(YIELD_PER)
-        ]
-        assert groups[g] == target
 
 
 def test_page(web_client: WebClient) -> None:

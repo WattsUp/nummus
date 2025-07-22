@@ -20,8 +20,6 @@ if TYPE_CHECKING:
     import flask
     from sqlalchemy import orm
 
-    from tests.controllers.conftest import WebClient
-
 
 def test_empty(today: datetime.date, flask_app: flask.Flask) -> None:
     start = utils.date_add_months(today, -6)
@@ -180,19 +178,3 @@ def test_ctx(
     assert ctx_categories[0]["emoji_name"] == "Groceries"
     assert ctx_categories[0]["name"] == "groceries"
     assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(37), abs=Decimal(1))
-
-
-def test_page(web_client: WebClient) -> None:
-    result, _ = web_client.GET("emergency_fund.page")
-    assert "Emergency fund" in result
-    assert "Current balance" in result
-    assert "Recommended balance" in result
-    assert "Essential spending" in result
-
-
-def test_dashboard(web_client: WebClient) -> None:
-    result, _ = web_client.GET("emergency_fund.dashboard")
-    assert "Emergency fund" in result
-    assert "Current balance" not in result
-    assert "Recommended balance" not in result
-    assert "Essential spending" not in result

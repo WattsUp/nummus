@@ -9,10 +9,9 @@ if TYPE_CHECKING:
     import flask
 
     from nummus.models import Asset, AssetSector, AssetValuation, Transaction
-    from tests.controllers.conftest import WebClient
 
 
-def test_empty(flask_app: flask.Flask) -> None:
+def test_ctx_empty(flask_app: flask.Flask) -> None:
     with flask_app.app_context():
         ctx = allocation.ctx_allocation()
 
@@ -120,10 +119,3 @@ def test_ctx(
         ],
     }
     assert ctx == target
-
-
-def test_page(web_client: WebClient) -> None:
-    result, _ = web_client.GET("allocation.page")
-    assert "Asset allocation" in result
-    assert "By category" in result
-    assert "By U.S. sector" in result
