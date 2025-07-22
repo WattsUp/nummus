@@ -31,10 +31,3 @@ jobs:
           python -m pip install -e .[test]
       - name: Test
         run: pytest
-      - name: Upload test configuration
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: testing.${{ matrix.python-version }}
-          path: |
-            test_log.json

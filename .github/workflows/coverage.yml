@@ -47,7 +47,6 @@ jobs:
         with:
           name: testing.${{ matrix.python-version }}
           path: |
-            test_log.json
             coverage.json
             .coverage
       - name: Create badge
