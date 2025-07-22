@@ -16,7 +16,7 @@
   <span class="ml-auto">
     {% if check.issues %}
       {{ check.issues | length }}
-      {{ 'Error' if check.is_severe else 'Warning' }}{{ 's' if (check.issues | length) > 1 }}
+      {{ 'error' if check.is_severe else 'warning' }}{{ 's' if (check.issues | length) > 1 }}
     {% endif %}
   </span>
   <icon class="details-icon-open">keyboard_arrow_up</icon>

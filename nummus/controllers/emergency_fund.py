@@ -14,6 +14,39 @@ from nummus.models.budget import BudgetAssignment
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from sqlalchemy import orm
+
+
+class ChartContext(TypedDict):
+    """Emergency fund chart context."""
+
+    labels: list[str]
+    date_mode: str
+    balances: list[Decimal]
+    spending_lower: list[Decimal]
+    spending_upper: list[Decimal]
+
+
+class CategoryInfo(TypedDict):
+    """Category context."""
+
+    emoji_name: str
+    name: str
+    monthly: Decimal
+
+
+class EFundContext(TypedDict):
+    """Emergency fund context."""
+
+    chart: ChartContext
+    current: Decimal
+    target_lower: Decimal
+    target_upper: Decimal
+    days: Decimal | None
+    delta_lower: Decimal
+    delta_upper: Decimal
+    categories: list[CategoryInfo]
+
 
 def page() -> flask.Response:
     """GET /emergency-fund.
@@ -21,11 +54,13 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return base.page(
-        "emergency-fund/page.jinja",
-        "Emergency Fund",
-        ctx=ctx_page(),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return base.page(
+            "emergency-fund/page.jinja",
+            "Emergency Fund",
+            ctx=ctx_page(s),
+        )
 
 
 def dashboard() -> str:
@@ -34,36 +69,38 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "emergency-fund/dashboard.jinja",
-        ctx=ctx_page(),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return flask.render_template(
+            "emergency-fund/dashboard.jinja",
+            ctx=ctx_page(s),
+        )
 
 
-def ctx_page() -> dict[str, object]:
+def ctx_page(s: orm.Session) -> EFundContext:
     """Get the context to build the emergency fund page.
 
-    Returns:
-        Dictionary HTML context
-    """
-    p = web.portfolio
+    Args:
+        s: SQL session to use
 
+    Returns:
+        EFundContext
+    """
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()
     n = today_ord - start_ord + 1
 
-    with p.begin_session() as s:
-        t_lowers, t_uppers, balances, categories, categories_total = (
-            BudgetAssignment.get_emergency_fund(
-                s,
-                start_ord,
-                today_ord,
-                utils.DAYS_IN_QUARTER,
-                utils.DAYS_IN_QUARTER * 2,
-            )
+    t_lowers, t_uppers, balances, categories, categories_total = (
+        BudgetAssignment.get_emergency_fund(
+            s,
+            start_ord,
+            today_ord,
+            utils.DAYS_IN_QUARTER,
+            utils.DAYS_IN_QUARTER * 2,
         )
+    )
     dates = utils.range_date(start_ord, today_ord)
 
     current = balances[-1]
@@ -81,11 +118,6 @@ def ctx_page() -> dict[str, object]:
     else:
         dx = target_upper - target_lower
         months = None if dx == 0 else 3 + (current - target_lower) / dx * 3
-
-    class CategoryInfo(TypedDict):
-        emoji_name: str
-        name: str
-        monthly: Decimal
 
     category_infos: list[CategoryInfo] = []
     for t_cat_id, (name, emoji_name) in categories.items():

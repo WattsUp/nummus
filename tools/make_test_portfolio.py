@@ -1054,12 +1054,12 @@ def generate_housing(
         bought_2 = False
         bought_3 = False
 
-        balance = Decimal(0)
-        rate = Decimal(0)
-        payment = Decimal(0)
-        escrow = Decimal(0)
-        pmi = Decimal(0)
-        pmi_th = Decimal(0)
+        balance = Decimal()
+        rate = Decimal()
+        payment = Decimal()
+        escrow = Decimal()
+        pmi = Decimal()
+        pmi_th = Decimal()
 
         for age in range(18, FINAL_AGE + 1):
             dates: list[datetime.date] = []
@@ -1501,7 +1501,7 @@ def add_interest(p: Portfolio, acct_id: int) -> None:
         a_values_end_ord = a_values_end.toordinal()
         values, _, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
-        total_interest = Decimal(0)
+        total_interest = Decimal()
 
         while date < end:
             next_date = next_month(date)
@@ -1572,7 +1572,7 @@ def add_cc_payments(p: Portfolio, acct_id: int, acct_id_fund: int) -> None:
         a_values_end_ord = a_values_end.toordinal()
         values, _, _ = acct.get_value(a_values_start_ord, a_values_end_ord)
 
-        total_payment = Decimal(0)
+        total_payment = Decimal()
 
         while date < end:
             next_date = next_month(date)

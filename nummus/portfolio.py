@@ -98,11 +98,12 @@ class Portfolio:
             msg = f"Portfolio at {self._path_db} does not have salt file"
             raise FileNotFoundError(msg)
         self._session_maker = orm.sessionmaker(sql.get_engine(self._path_db, self._enc))
-        self._unlock()
+        configs = self._unlock()
 
         self._importers = importers.get_importers(self._path_importers)
 
-        if check_migration and (v := self.migration_required()):
+        version_str = configs.get(ConfigKey.VERSION)
+        if check_migration and (v := self.migration_required(version_str)):
             msg = f"Portfolio requires migration to v{v}"
             raise exc.MigrationRequiredError(msg)
 
@@ -232,8 +233,11 @@ class Portfolio:
             Asset.add_indices(s)
         return p
 
-    def _unlock(self) -> None:
+    def _unlock(self) -> dict[ConfigKey, str]:
         """Unlock the database.
+
+        Returns:
+            Configuration properties
 
         Raises:
             UnlockingError: If database file fails to open
@@ -241,15 +245,13 @@ class Portfolio:
         """
         try:
             with self.begin_session() as s:
-                value: str | None = (
-                    s.query(Config.value)
-                    .where(Config.key == ConfigKey.ENCRYPTION_TEST)
-                    .scalar()
-                )
+                query = s.query(Config).with_entities(Config.key, Config.value)
+                configs: dict[ConfigKey, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
         except exc.DatabaseError as e:
             msg = f"Failed to open database {self._path_db}"
             raise exc.UnlockingError(msg) from e
 
+        value = configs.get(ConfigKey.ENCRYPTION_TEST)
         if value is None:
             msg = "Config.ENCRYPTION_TEST not found"
             raise exc.ProtectedObjectNotFoundError(msg)
@@ -265,16 +267,13 @@ class Portfolio:
             msg = "Test value did not match"
             raise exc.UnlockingError(msg)
         # Load Cipher
-        with self.begin_session() as s:
-            try:
-                cipher_b64: str = (
-                    s.query(Config.value).where(Config.key == ConfigKey.CIPHER).one()
-                )[0]
-            except exc.NoResultFound as e:
-                msg = "Config.CIPHER not found"
-                raise exc.ProtectedObjectNotFoundError(msg) from e
-            models.load_cipher(base64.b64decode(cipher_b64))
+        cipher_b64 = configs.get(ConfigKey.CIPHER)
+        if cipher_b64 is None:
+            msg = "Config.CIPHER not found"
+            raise exc.ProtectedObjectNotFoundError(msg)
+        models.load_cipher(base64.b64decode(cipher_b64))
         # All good :)
+        return configs
 
     def begin_session(self) -> contextlib.AbstractContextManager[orm.Session]:
         """Get SQL Session to the database.
@@ -350,13 +349,16 @@ class Portfolio:
 
             return Version(v)
 
-    def migration_required(self) -> Version | None:
+    def migration_required(self, version_str: str | None) -> Version | None:
         """Check if migration is required.
+
+        Args:
+            version_str: Config VERSION value, will skip extra query
 
         Returns:
             Version to migrate to or None if migration not required
         """
-        v_db = self.db_version
+        v_db = self.db_version if version_str is None else Version(version_str)
         for m in migrations.MIGRATORS[::-1]:
             if v_db < m.min_version:
                 return m.min_version
@@ -650,18 +652,24 @@ class Portfolio:
             if m := one_or_none(query):
                 return cache_and_return(m)
 
-        properties = {
+        properties: list[orm.QueryableAttribute] = {
             Account: [Account.number, Account.institution, Account.name],
             Asset: [Asset.ticker, Asset.name],
         }[model]
         for prop in properties:
+            # Exact?
             query = s.query(model).where(prop == search)
             if m := one_or_none(query):
                 return cache_and_return(m)
 
+            # Exact lower case?
+            query = s.query(model).where(prop.ilike(search))
+            if m := one_or_none(query):
+                return cache_and_return(m)
+
             # For account number, see if there is one ending in the search
-            query = s.query(model).where(prop.like(f"%{search}"))
-            if prop == Account.number and (m := one_or_none(query)):
+            query = s.query(model).where(prop.ilike(f"%{search}"))
+            if prop is Account.number and (m := one_or_none(query)):
                 return cache_and_return(m)
 
         msg = f"{model.__name__} matching '{search}' could not be found"

@@ -4,9 +4,9 @@
   hx-trigger="account from:body, asset from:body, valuation from:body"
   hx-get="{{ url_for('allocation.page') }}"
 >
-  <h1 class="text-primary font-serif text-3xl">Asset Allocation</h1>
+  <h1 class="text-primary font-serif text-3xl">Asset allocation</h1>
 </div>
-<h2 class="text-primary font-serif text-2xl">By Category</h2>
+<h2 class="text-primary font-serif text-2xl">By category</h2>
 <div class="relative mb-2 h-60 w-full md:h-96">
   <canvas id="category-chart-canvas" hx-preserve></canvas>
 </div>
@@ -30,7 +30,7 @@
     </details>
   {% endfor %}
 </div>
-<h2 class="text-primary font-serif text-2xl">By U.S. Sector</h2>
+<h2 class="text-primary font-serif text-2xl">By U.S. sector</h2>
 <div class="relative mb-2 h-60 w-full md:h-96">
   <canvas id="sector-chart-canvas" hx-preserve></canvas>
 </div>

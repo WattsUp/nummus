@@ -15,7 +15,7 @@
     <icon>edit</icon>Edit
   </button>
 </div>
-<h2 class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
+<div class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
   <span>
     {{ asset.category.pretty }}
     {% if asset.ticker %}@{{ asset.ticker }}{% endif %}
@@ -28,7 +28,7 @@
       <span class="text-error">Asset has no valuations</span>
     {% endif %}
   </span>
-</h2>
+</div>
 <div id="asset-performance" class="mb-2">
   {% include "assets/performance.jinja" %}
 </div>

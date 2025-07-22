@@ -1,6 +1,6 @@
 <div class="budget-sidebar-summary">
   <div class="font-bold">
-    <div>Available Balance</div>
+    <h1>Available balance</h1>
     <div>{{ budget_sidebar.available | money }}</div>
   </div>
   <div>
@@ -34,9 +34,9 @@
   hx-swap="innerHTML show:#dialog:top"
 >
   {% if budget_sidebar.uri is none %}
-    <div class="font-bold">Targets</div>
+    <h1 class="font-bold">Targets</h1>
     <div>
-      <div>Total to go</div>
+      <h2>Total to go</h2>
       <div>{{ budget_sidebar.to_go | money }}</div>
     </div>
     <label class="input-outlined">
@@ -59,7 +59,7 @@
     {% if budget_sidebar.target %}
       {% set target = budget_sidebar.target %}
       <div class="font-bold">
-        <div>Target</div>
+        <h1>Target</h1>
         <button
           class="btn-text btn-sq"
           hx-get="{{ url_for("budgeting.sidebar", month=ctx.month) }}"
@@ -79,23 +79,27 @@
       {% else %}
         {% set money_prefix = "Assign" %}
       {% endif %}
-      <div class="font-bold">
+      <h2 class="font-bold">
         {{ money_prefix }} {{ target.target | money }}{{ money_suffix }}
-      </div>
+      </h2>
       <div>By {{ target.next_due_date }}</div>
       <hr />
       <div class="relative my-1 w-full">
         <canvas id="budget-sidebar-canvas" hx-preserve></canvas>
       </div>
       {% if target.total_to_go == 0 %}
-        <div class="status-success w-full text-center">Target is achieved</div>
+        <div class="status-success w-full">
+          <span class="grow text-center">Target is achieved</span>
+        </div>
       {% elif target.on_track %}
-        <div class="status-success w-full text-center">
-          On track to achieve target
+        <div class="status-success w-full">
+          <span class="grow text-center">On track to achieve target</span>
         </div>
       {% else %}
-        <div class="status-tertiary w-full text-center">
-          Assign {{ target.to_go | money }} more to meet target
+        <div class="status-tertiary w-full">
+          <span class="grow text-center">
+            Assign {{ target.to_go | money }} more to meet target
+          </span>
         </div>
       {% endif %}
       {% if target.type == "BALANCE" %}

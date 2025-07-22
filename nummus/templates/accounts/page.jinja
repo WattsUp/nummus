@@ -22,7 +22,7 @@
   type="hidden"
   value="{{ acct.uri }}"
 />
-<h2 class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
+<div class="text-on-surface-variant flex flex-wrap items-center gap-2 text-sm">
   <span>@{{ acct.institution }}</span>
   {% if acct.number %}
     <label class="checkbox">
@@ -55,7 +55,7 @@
       Updated {{ acct.updated_days_ago | days }} ago
     {% endif %}
   </span>
-</h2>
+</div>
 {% if acct.performance %}
   {% with perf = acct.performance %}
     <div class="grid gap-x-2 text-center font-bold max-lg:grid-cols-2">
@@ -66,7 +66,7 @@
         </h1>
       </div>
       <div class="lg:col-start-3">
-        <h2 class="text-2xl">Year Return</h2>
+        <h2 class="text-2xl">Year return</h2>
         <h1
           class="text-tertiary flex items-center justify-center font-serif text-3xl md:text-4xl"
         >
@@ -75,7 +75,7 @@
         </h1>
       </div>
       <div class="lg:col-start-4">
-        <h2 class="text-2xl">Total Return</h2>
+        <h2 class="text-2xl">Total return</h2>
         <h1
           class="text-tertiary flex items-center justify-center font-serif text-3xl md:text-4xl"
         >
@@ -103,7 +103,7 @@
         Assets
       {% endif %}
     </h1>
-    <h2 class="text-on-surface-variant pr-6">Total Return</h2>
+    <h2 class="text-on-surface-variant pr-6">Total return</h2>
   </div>
   <div hx-push-url="true" hx-swap="innerHTML show:window:top">
     {% for asset in acct.assets[:3] %}

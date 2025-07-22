@@ -144,7 +144,7 @@ class Summarize(BaseCommand):
                 today_ord,
             )
 
-            net_worth = Decimal(0)
+            net_worth = Decimal()
             summary_accts: list[_AccountSummary] = []
             for acct_id, acct in accts.items():
                 if not self._include_all and acct.closed:
@@ -181,7 +181,7 @@ class Summarize(BaseCommand):
                 today_ord,
             )
 
-            total_asset_value = Decimal(0)
+            total_asset_value = Decimal()
             summary_assets: list[_AssetSummary] = []
             for a_id, a in assets.items():
                 v = value_assets[a_id][-1]

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import func
@@ -60,10 +59,9 @@ class MigratorV0_2(Migrator):  # noqa: N801
                 .order_by(TransactionSplit.date_ord)
             )
             for t_split in query.yield_per(YIELD_PER):
-                date = datetime.date.fromordinal(t_split.date_ord)
                 msg = (
                     "This transaction had multiple payees, only one allowed: "
-                    f"{date} {accounts[t_split.account_id]}, please validate"
+                    f"{t_split.date} {accounts[t_split.account_id]}, please validate"
                 )
                 comments.append(msg)
 

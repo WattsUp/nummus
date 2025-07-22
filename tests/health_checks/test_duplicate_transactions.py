@@ -60,5 +60,5 @@ def test_duplicate(
     assert i.value == f"{txn.account_id}.{txn.date_ord}.{amount_raw}"
     uri = i.uri
 
-    target = f"{txn.date} - Monkey Bank Checking: {utils.format_financial(txn.amount)}"
+    target = f"{txn.date} - Monkey bank checking: {utils.format_financial(txn.amount)}"
     assert c.issues == {uri: target}

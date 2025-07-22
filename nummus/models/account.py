@@ -304,8 +304,8 @@ class Account(Base):
         assets_day_zero: dict[int, dict[int, Decimal]],
         asset_prices: dict[int, list[Decimal]],
     ) -> ValueResultAll:
-        acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
-        asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
+        acct_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
+        asset_values: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         for acct_id, cash_flow in cash_flow_accounts.items():
             assets = assets_accounts.get(acct_id, {})
             cash = utils.integrate(cash_flow)
@@ -326,7 +326,7 @@ class Account(Base):
 
             acct_values[acct_id] = summed
 
-        acct_profit: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
+        acct_profit: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
         for acct_id, values in acct_values.items():
             cost_basis_flow = cost_basis_accounts[acct_id]
             v = cost_basis_flow[0]
@@ -394,7 +394,7 @@ class Account(Base):
         """
         n = end_ord - start_ord + 1
 
-        categories: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal(0)] * n)
+        categories: dict[int, list[Decimal]] = defaultdict(lambda: [Decimal()] * n)
 
         # Transactions between start and end
         query = (
@@ -539,7 +539,7 @@ class Account(Base):
 
         # Integrate deltas
         qty_accounts: dict[int, dict[int, list[Decimal]]] = defaultdict(
-            lambda: defaultdict(lambda: [Decimal(0)] * n),
+            lambda: defaultdict(lambda: [Decimal()] * n),
         )
         for acct_id, deltas in deltas_accounts.items():
             qty_assets = qty_accounts[acct_id]

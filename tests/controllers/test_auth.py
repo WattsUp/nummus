@@ -1,116 +1,85 @@
 from __future__ import annotations
 
 import urllib.parse
-import warnings
+from typing import TYPE_CHECKING
 
-import flask
+import pytest
 
-from nummus import encryption, portfolio
-from nummus.web import server_base
-from tests.controllers.base import HTTP_CODE_REDIRECT, WebTestBase
+from nummus import encryption
+
+if TYPE_CHECKING:
+    from tests.controllers.conftest import WebClient, WebClientEncrypted
 
 
-class TestAuth(WebTestBase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-        if not encryption.AVAILABLE:
-            return
-        cls._clean_test_root()
+def test_page_login(web_client: WebClient) -> None:
+    result, headers = web_client.GET("auth.page_login")
+    assert "Login" in result
+    assert "Location" not in headers
 
-        # Create a portfolio for the test class
-        # Need an encrypted portfolio
-        cls._key = cls.random_string()
-        path_db = cls._TEST_ROOT.joinpath("portfolio.db")
-        cls._portfolio = portfolio.Portfolio.create(path_db, cls._key)
 
-        cls._flask_app = server_base.create_flask_app(cls._portfolio, debug=True)
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            cls._client = cls._flask_app.test_client()
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_unauth_redirect(web_client_encrypted: WebClientEncrypted) -> None:
+    endpoint = "common.page_dashboard"
+    result, headers = web_client_encrypted.GET(endpoint)
+    assert not result
 
-    def test_login(self) -> None:
-        if not encryption.AVAILABLE:
-            self.skipTest("Encryption is not installed")
-        key = self._key
+    url = web_client_encrypted.url_for(endpoint)
+    login = web_client_encrypted.url_for("auth.page_login")
+    # There's double quoting if given to url_for directly
+    assert headers["HX-Redirect"] == f"{login}?next={urllib.parse.quote_plus(url)}"
 
-        # Not logged in should redirect any page to page_login
-        endpoint = "accounts.page_all"
-        with self._flask_app.app_context(), self._flask_app.test_request_context():
-            url_next = flask.url_for(endpoint)
-            url_dashboard = flask.url_for("dashboard.page")
-            url_login = flask.url_for("auth.page_login")
-            url_login_next = url_login + f"?next={urllib.parse.quote_plus(url_next)}"
-        response, headers = self.web_get(endpoint, rc=HTTP_CODE_REDIRECT)
-        self.assertIn(url_login_next, response)
-        self.assertEqual(headers.get("Location"), url_login_next)
 
-        # With HX-Request, return OK with HX-Redirect
-        send_headers = {"HX-Request": "true"}
-        response, headers = self.web_get(endpoint, headers=send_headers)
-        self.assertEqual(response, "")
-        self.assertEqual(headers.get("HX-Redirect"), url_login_next)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_unauth_static(web_client_encrypted: WebClientEncrypted) -> None:
+    result, _ = web_client_encrypted.GET(
+        ("static", {"filename": "dist/main.css"}),
+        content_type="text/css; charset=utf-8",
+    )
+    if isinstance(result, bytes):
+        result = result.decode()
+    assert "/*! tailwindcss" in result
 
-        # Static pages aren't protected
-        self.web_get(
-            ("static", {"filename": "img/favicon.ico"}),
-            content_type="image/vnd.microsoft.icon",
-        )
 
-        # Login page isn't protected
-        response, _ = self.web_get(("auth.page_login", {"next": url_next}))
-        self.assertIn(f'value="{url_next}"', response)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_login(web_client_encrypted: WebClientEncrypted) -> None:
+    web_client_encrypted.login()
+    result, _ = web_client_encrypted.GET("common.page_dashboard")
+    assert "Dashboard" in result
 
-        # Do login
-        form = {}
-        response, _ = self.web_post("auth.login", headers=send_headers, data=form)
-        self.assertIn("Password must not be blank", response)
 
-        # Wrong password
-        form = {"password": self.random_string()}
-        response, _ = self.web_post("auth.login", headers=send_headers, data=form)
-        self.assertIn("Bad password", response)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_page_login_already_logged_in(web_client_encrypted: WebClientEncrypted) -> None:
+    web_client_encrypted.login()
+    result, headers = web_client_encrypted.GET("auth.page_login")
+    assert not result
+    url = web_client_encrypted.url_for("common.page_dashboard")
+    assert headers["HX-Redirect"] == url
 
-        # Good password no next, goes to dashboard
-        form = {"password": key}
-        response, headers = self.web_post("auth.login", headers=send_headers, data=form)
-        self.assertEqual("", response)
-        self.assertEqual(headers.get("HX-Redirect"), url_dashboard)
 
-        # Good password with next
-        form = {"password": key, "next": url_next}
-        response, headers = self.web_post("auth.login", headers=send_headers, data=form)
-        self.assertEqual("", response)
-        self.assertEqual(headers.get("HX-Redirect"), url_next)
+def test_login_empty(web_client: WebClient) -> None:
+    result, _ = web_client.POST("auth.login")
+    assert "Password must not be blank" in result
 
-        # Now can visit protected pages
-        response, _ = self.web_get("dashboard.page")
-        self.assertIn("Dashboard", response)
 
-        # Login page while authenticated redirects to next
-        response, headers = self.web_get(
-            ("auth.page_login", {"next": url_next}),
-            rc=HTTP_CODE_REDIRECT,
-        )
-        self.assertIn(url_next, response)
-        self.assertEqual(headers.get("Location"), url_next)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_login_bad_password(web_client_encrypted: WebClientEncrypted) -> None:
+    result, _ = web_client_encrypted.POST("auth.login", data={"password": "fake"})
+    assert "Bad password" in result
 
-        # No next goes to dashboard
-        response, headers = self.web_get(
-            "auth.page_login",
-            rc=HTTP_CODE_REDIRECT,
-        )
-        self.assertIn(url_dashboard, response)
-        self.assertEqual(headers.get("Location"), url_dashboard)
 
-        # Logging out should redirect to login page
-        response, headers = self.web_post(
-            "auth.logout",
-            headers=send_headers,
-            data=form,
-        )
-        self.assertEqual("", response)
-        self.assertEqual(headers.get("HX-Redirect"), url_login)
+@pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
+@pytest.mark.encryption
+def test_logout(web_client_encrypted: WebClientEncrypted) -> None:
+    web_client_encrypted.login()
+    result, headers = web_client_encrypted.POST("auth.logout")
+    assert not result
+    url = web_client_encrypted.url_for("auth.page_login")
+    assert headers["HX-Redirect"] == url
 
-        # Can't visit protected pages anymore
-        self.web_get("dashboard.page", rc=HTTP_CODE_REDIRECT)
+    # Can't reach dashboard anymore
+    test_unauth_redirect(web_client_encrypted)

@@ -108,9 +108,6 @@ class FlaskExtension:
 
     @classmethod
     def _init_jinja_env(cls, env: jinja2.Environment) -> None:
-        env.trim_blocks = True
-        env.lstrip_blocks = True
-
         env.filters["money"] = utils.format_financial
         env.filters["money0"] = lambda x: utils.format_financial(x, 0)
         env.filters["money6"] = lambda x: utils.format_financial(x, 6)

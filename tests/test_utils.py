@@ -225,7 +225,7 @@ def test_parse_real(s: str | None, precision: int, target: Decimal | None) -> No
         (Decimal("1000.1"), False, "$1,000.10"),
         (Decimal("1000.1"), True, "+$1,000.10"),
         (Decimal("-1000.1"), False, "-$1,000.10"),
-        (Decimal(0), False, "$0.00"),
+        (Decimal(), False, "$0.00"),
     ],
 )
 def test_format_financial(x: Decimal, plus: bool, target: str) -> None:
@@ -437,7 +437,7 @@ def test_downsample_range() -> None:
 
     labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
     assert labels == ["2023-01"]
-    assert r_min == [Decimal(0)]
+    assert r_min == [Decimal()]
     assert r_avg == [Decimal(n - 1) / 2]
     assert r_max == [Decimal(n - 1)]
 
@@ -477,11 +477,11 @@ def test_round_list() -> None:
     ("deltas", "target"),
     [
         pytest.param([], [], id="empty"),
-        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, id="zeros"),
-        pytest.param([None] * 5, [Decimal(0)] * 5, id="nones"),
+        pytest.param([Decimal()] * 5, [Decimal()] * 5, id="zeros"),
+        pytest.param([None] * 5, [Decimal()] * 5, id="nones"),
         pytest.param(
             [None, None, Decimal(20), None, None],
-            [Decimal(0), Decimal(0), Decimal(20), Decimal(20), Decimal(20)],
+            [Decimal(), Decimal(), Decimal(20), Decimal(20), Decimal(20)],
             id="one sample",
         ),
         pytest.param(
@@ -498,7 +498,7 @@ def test_integrate(deltas: list[Decimal | None], target: list[Decimal]) -> None:
 @pytest.mark.parametrize(
     ("values", "target"),
     [
-        pytest.param([], [Decimal(0)] * 5, id="empty"),
+        pytest.param([], [Decimal()] * 5, id="empty"),
         pytest.param([(-3, Decimal(-1))], [Decimal(-1)] * 5, id="past"),
         pytest.param(
             [(-3, Decimal(-1)), (1, Decimal(1))],
@@ -522,7 +522,7 @@ def test_interpolate_step(
 @pytest.mark.parametrize(
     ("values", "target"),
     [
-        pytest.param([], [Decimal(0)] * 5, id="empty"),
+        pytest.param([], [Decimal()] * 5, id="empty"),
         pytest.param([(-3, Decimal(-1))], [Decimal(-1)] * 5, id="past"),
         pytest.param(
             [(-3, Decimal(-1)), (1, Decimal(1))],
@@ -546,18 +546,18 @@ def test_interpolate_linear(
 @pytest.mark.parametrize(
     ("values", "profit", "target"),
     [
-        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, [Decimal(0)] * 5, id="empty"),
+        pytest.param([Decimal()] * 5, [Decimal()] * 5, [Decimal()] * 5, id="empty"),
         pytest.param(
-            [Decimal(0), Decimal(10), Decimal(10), Decimal(10), Decimal(0)],
-            [Decimal(0)] * 5,
-            [Decimal(0)] * 5,
+            [Decimal(), Decimal(10), Decimal(10), Decimal(10), Decimal()],
+            [Decimal()] * 5,
+            [Decimal()] * 5,
             id="no profit",
         ),
         pytest.param(
-            [Decimal(0), Decimal(11), Decimal(11), Decimal(11), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
+            [Decimal(), Decimal(11), Decimal(11), Decimal(11), Decimal()],
+            [Decimal(), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
             [
-                Decimal(0),
+                Decimal(),
                 Decimal("0.1"),
                 Decimal("0.1"),
                 Decimal("0.1"),
@@ -566,10 +566,10 @@ def test_interpolate_linear(
             id="profit on buy day",
         ),
         pytest.param(
-            [Decimal(0), Decimal(11), Decimal(11), Decimal(11), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(12)],
+            [Decimal(), Decimal(11), Decimal(11), Decimal(11), Decimal()],
+            [Decimal(), Decimal(1), Decimal(1), Decimal(1), Decimal(12)],
             [
-                Decimal(0),
+                Decimal(),
                 Decimal("0.1"),
                 Decimal("0.1"),
                 Decimal("0.1"),
@@ -578,10 +578,10 @@ def test_interpolate_linear(
             id="profit on buy and sell day",
         ),
         pytest.param(
-            [Decimal(10), Decimal(21), Decimal(42), Decimal(42), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(22), Decimal(22), Decimal(22)],
+            [Decimal(10), Decimal(21), Decimal(42), Decimal(42), Decimal()],
+            [Decimal(), Decimal(1), Decimal(22), Decimal(22), Decimal(22)],
             [
-                Decimal(0),
+                Decimal(),
                 Decimal("0.1"),
                 Decimal("1.2"),
                 Decimal("1.2"),
@@ -600,8 +600,8 @@ def test_interpolate_linear(
                 # Returns to $100
                 Decimal(10000),
             ],
-            [Decimal(0), Decimal(40000), Decimal(-50000), Decimal(-45000)],
-            [Decimal(0), Decimal(4), Decimal("-0.5"), Decimal(0)],
+            [Decimal(), Decimal(40000), Decimal(-50000), Decimal(-45000)],
+            [Decimal(), Decimal(4), Decimal("-0.5"), Decimal()],
             id="profit and loss",
         ),
     ],
@@ -617,11 +617,11 @@ def test_twrr(
 @pytest.mark.parametrize(
     ("values", "profit", "target"),
     [
-        pytest.param([Decimal(0)] * 5, [Decimal(0)] * 5, Decimal(0), id="empty"),
+        pytest.param([Decimal()] * 5, [Decimal()] * 5, Decimal(), id="empty"),
         pytest.param(
-            [Decimal(0), Decimal(10), Decimal(10), Decimal(10), Decimal(0)],
-            [Decimal(0)] * 5,
-            Decimal(0),
+            [Decimal(), Decimal(10), Decimal(10), Decimal(10), Decimal()],
+            [Decimal()] * 5,
+            Decimal(),
             id="no profit",
         ),
         pytest.param(
@@ -637,27 +637,27 @@ def test_twrr(
             id="one day loss",
         ),
         pytest.param(
-            [Decimal(0), Decimal(101), Decimal(101), Decimal(101), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
-            [Decimal(0), Decimal(-100), Decimal(0), Decimal(0), Decimal(101)],
+            [Decimal(), Decimal(101), Decimal(101), Decimal(101), Decimal()],
+            [Decimal(), Decimal(1), Decimal(1), Decimal(1), Decimal(1)],
+            [Decimal(), Decimal(-100), Decimal(), Decimal(), Decimal(101)],
             id="profit on buy",
         ),
         pytest.param(
-            [Decimal(0), Decimal(101), Decimal(101), Decimal(101), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(1), Decimal(1), Decimal(2)],
-            [Decimal(0), Decimal(-100), Decimal(0), Decimal(0), Decimal(102)],
+            [Decimal(), Decimal(101), Decimal(101), Decimal(101), Decimal()],
+            [Decimal(), Decimal(1), Decimal(1), Decimal(1), Decimal(2)],
+            [Decimal(), Decimal(-100), Decimal(), Decimal(), Decimal(102)],
             id="profit on buy and sell day",
         ),
         pytest.param(
-            [Decimal(100), Decimal(201), Decimal(202), Decimal(202), Decimal(0)],
-            [Decimal(0), Decimal(1), Decimal(2), Decimal(2), Decimal(2)],
-            [Decimal(-100), Decimal(-100), Decimal(0), Decimal(0), Decimal(202)],
+            [Decimal(100), Decimal(201), Decimal(202), Decimal(202), Decimal()],
+            [Decimal(), Decimal(1), Decimal(2), Decimal(2), Decimal(2)],
+            [Decimal(-100), Decimal(-100), Decimal(), Decimal(), Decimal(202)],
             id="profit on buy and mid day",
         ),
         pytest.param(
             [Decimal(100), Decimal(101), Decimal(102), Decimal(103), Decimal(104)],
-            [Decimal(0), Decimal(1), Decimal(2), Decimal(3), Decimal(4)],
-            [Decimal(-100), Decimal(0), Decimal(0), Decimal(0), Decimal(104)],
+            [Decimal(), Decimal(1), Decimal(2), Decimal(3), Decimal(4)],
+            [Decimal(-100), Decimal(), Decimal(), Decimal(), Decimal(104)],
             id="profit on every day",
         ),
         pytest.param(
@@ -671,16 +671,18 @@ def test_twrr(
                 # Returns to $100
                 Decimal(10000),
             ],
-            [Decimal(0), Decimal(40000), Decimal(-50000), Decimal(-45000)],
+            [Decimal(), Decimal(40000), Decimal(-50000), Decimal(-45000)],
             [Decimal(-10000), Decimal(-50000), Decimal(5000), Decimal(10000)],
             id="profit and loss",
         ),
+        # 5x in one day!! is too high
+        ([Decimal(1), Decimal(5)], [Decimal(0), Decimal(5)], None),
     ],
 )
 def test_mwrr(
     values: list[Decimal],
     profit: list[Decimal],
-    target: Decimal | list[Decimal],
+    target: Decimal | list[Decimal] | None,
 ) -> None:
     if isinstance(target, list):
         # target is cash_flows
@@ -934,7 +936,7 @@ def test_end_of_month() -> None:
     ("x", "target"),
     [
         (Decimal("0.5"), Decimal("0.5")),
-        (Decimal("-0.5"), Decimal(0)),
+        (Decimal("-0.5"), Decimal()),
         (Decimal("1.5"), Decimal(1)),
     ],
 )
@@ -993,11 +995,11 @@ def test_tokenize_search_str_everything() -> None:
 
 
 def test_low_pass_n1() -> None:
-    data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
+    data = [Decimal(1), Decimal(), Decimal(), Decimal()]
     assert utils.low_pass(data, 1) == data
 
 
 def test_low_pass_n3() -> None:
-    data = [Decimal(1), Decimal(0), Decimal(0), Decimal(0)]
+    data = [Decimal(1), Decimal(), Decimal(), Decimal()]
     target = [Decimal(1), Decimal("0.5"), Decimal("0.25"), Decimal("0.125")]
     assert utils.low_pass(data, 3) == target

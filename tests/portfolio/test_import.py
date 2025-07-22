@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from typing import TYPE_CHECKING
 
 import pytest
@@ -12,6 +13,7 @@ from nummus.portfolio import Portfolio
 from tests.importers.test_raw_csv import TRANSACTIONS_REQUIRED
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from pathlib import Path
 
 
@@ -187,16 +189,18 @@ def test_import_file_bad_category(
 
 
 @pytest.mark.parametrize(
-    ("type_", "prop"),
+    ("type_", "prop", "value_adjuster"),
     [
-        (Account, "uri"),
-        (Account, "number"),
-        (Account, "number_end"),
-        (Account, "institution"),
-        (Account, "name"),
-        (Asset, "uri"),
-        (Asset, "ticker"),
-        (Asset, "name"),
+        (Account, "uri", lambda s: s),
+        (Account, "number", lambda s: s),
+        (Account, "number", operator.itemgetter(slice(-4, None))),
+        (Account, "institution", lambda s: s),
+        (Account, "name", lambda s: s),
+        (Account, "name", lambda s: s.lower()),
+        (Account, "name", lambda s: s.upper()),
+        (Asset, "uri", lambda s: s),
+        (Asset, "ticker", lambda s: s),
+        (Asset, "name", lambda s: s),
     ],
 )
 def test_find(
@@ -205,12 +209,13 @@ def test_find(
     asset: Asset,
     type_: type[Base],
     prop: str,
+    value_adjuster: Callable[[str], str],
 ) -> None:
     obj = {
         Account: account,
         Asset: asset,
     }[type_]
-    query = obj.number[-4:] if prop == "number_end" else getattr(obj, prop)
+    query = value_adjuster(getattr(obj, prop))
 
     cache: dict[str, tuple[int, str | None]] = {}
     with empty_portfolio.begin_session() as s:

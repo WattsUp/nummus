@@ -42,7 +42,7 @@ def test_build_bundles_debug() -> None:
     path_dist_css.unlink(missing_ok=True)
     path_dist_js.unlink(missing_ok=True)
 
-    web_assets.build_bundles(app)
+    web_assets.build_bundles(app, force=True)
 
     assert path_dist_css.exists()
     assert path_dist_js.exists()
@@ -50,7 +50,8 @@ def test_build_bundles_debug() -> None:
     with path_dist_css.open("r", encoding="utf-8") as file:
         buf = file.read()
     assert "/*! tailwindcss" in buf
-    assert "*,:after,:before" in buf
+    # With debug, there should be spaces
+    assert "*, :after, :before" in buf
 
     with path_dist_js.open("r", encoding="utf-8") as file:
         buf = file.read()
@@ -69,7 +70,7 @@ def test_build_bundles_release() -> None:
     path_dist_css.unlink(missing_ok=True)
     path_dist_js.unlink(missing_ok=True)
 
-    web_assets.build_bundles(app)
+    web_assets.build_bundles(app, force=True)
 
     assert path_dist_css.exists()
     assert path_dist_js.exists()

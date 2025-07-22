@@ -107,7 +107,7 @@ def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
         ),
     )
     env_assets.register("css", bundle_css)
-    bundle_css.build(force=force)
+    bundle_css.build(force=force, disable_cache=force)
 
     bundle_js = flask_assets.Bundle(
         # top first
@@ -124,7 +124,7 @@ def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
         filters=(None if jsmin is None or app.debug else (JSMinFilter,)),
     )
     env_assets.register("js", bundle_js)
-    bundle_js.build(force=force)
+    bundle_js.build(force=force, disable_cache=force)
 
 
 class BuildAssets(build_py.build_py):

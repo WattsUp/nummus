@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from tests.conftest import RandomStringGenerator
 
 
-# TODO (WattsUp): Change scope?
 @pytest.fixture
 def transactions(
     session: orm.Session,

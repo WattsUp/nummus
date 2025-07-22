@@ -79,7 +79,7 @@ class OverdrawnAccounts(Base):
                 v = cash_flow[i]
                 cash_flow[i] = amount if v is None else v + amount
 
-            cash = Decimal(0)
+            cash = Decimal()
             signalled = False
             for i, c in enumerate(cash_flow):
                 date_ord = start_ord + i

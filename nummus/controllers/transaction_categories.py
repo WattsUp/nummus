@@ -18,6 +18,13 @@ from nummus.models import (
 from nummus.models.base import YIELD_PER
 
 
+class CategoryContext(TypedDict):
+    """Type definition for category context."""
+
+    uri: str | None
+    name: str
+
+
 def page() -> flask.Response:
     """GET /txn-categories.
 
@@ -27,7 +34,7 @@ def page() -> flask.Response:
     return base.page(
         "transaction-categories/page.jinja",
         "Transaction Categories",
-        ctx=ctx_categories(),
+        groups=ctx_categories(),
     )
 
 
@@ -122,23 +129,18 @@ def category(uri: str) -> str | flask.Response:
 
             return base.dialog_swap(
                 event="category",
-                snackbar=f"Category {cat.emoji_name} deleted",
+                snackbar=f"Deleted category {cat.emoji_name}",
             )
 
         form = flask.request.form
         name = form["name"]
-        group_s = form.get("group")
-        group = (
-            TransactionCategoryGroup(group_s)
-            if group_s
-            else TransactionCategoryGroup.TRANSFER
-        )
+        group = TransactionCategoryGroup(form["group"])
         is_profit_loss = "is-pnl" in form
         essential = "essential" in form
 
         name_clean = TransactionCategory.clean_emoji_name(name)
         if cat.locked and name_clean != cat.name:
-            return base.error("Can only add/remove emojis on locked category")
+            return base.error("May only add/remove emojis on locked category")
 
         try:
             with s.begin_nested():
@@ -197,19 +199,13 @@ def validation() -> str:
     raise NotImplementedError
 
 
-def ctx_categories() -> dict[str, object]:
+def ctx_categories() -> dict[TransactionCategoryGroup, list[CategoryContext]]:
     """Get the context required to build the categories table.
 
     Returns:
         List of HTML context
     """
     p = web.portfolio
-
-    class CategoryContext(TypedDict):
-        """Type definition for category context."""
-
-        uri: str | None
-        name: str
 
     with p.begin_session() as s:
         groups: dict[TransactionCategoryGroup, list[CategoryContext]] = {
@@ -230,9 +226,7 @@ def ctx_categories() -> dict[str, object]:
             ):
                 groups[cat.group].append(cat_d)
 
-    return {
-        "groups": groups,
-    }
+    return groups
 
 
 ROUTES: base.Routes = {

@@ -74,7 +74,7 @@ def test_get_asset_qty_empty(
     result = account.get_asset_qty(start_ord, end_ord)
     assert result == {}
     # defaultdict is correct length
-    assert result[0] == [Decimal(0)] * 7
+    assert result[0] == [Decimal()] * 7
 
     result = Account.get_asset_qty_all(session, start_ord, end_ord)
     assert result == {}
@@ -92,7 +92,7 @@ def test_get_asset_qty(
     result_qty = account.get_asset_qty(start_ord, end_ord)
     target = {
         asset.id_: [
-            Decimal(0),
+            Decimal(),
             Decimal(10),
             Decimal(10),
             Decimal(10),
@@ -123,11 +123,11 @@ def test_get_value_empty(
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     values, profits, assets = account.get_value(start_ord, end_ord)
-    assert values == [Decimal(0)] * 7
-    assert profits == [Decimal(0)] * 7
+    assert values == [Decimal()] * 7
+    assert profits == [Decimal()] * 7
     assert assets == {}
     # defaultdict is correct length
-    assert assets[0] == [Decimal(0)] * 7
+    assert assets[0] == [Decimal()] * 7
 
     values, profits, assets = Account.get_value_all(session, start_ord, end_ord)
     assert values == {}
@@ -148,37 +148,37 @@ def test_get_value(
     end_ord = today_ord + 3
     values, profits, assets = account.get_value(start_ord, end_ord)
     target = [
-        Decimal(0),
+        Decimal(),
         Decimal(100),
         Decimal(90),
         Decimal(90),
-        Decimal(190),
-        Decimal(190),
-        Decimal(190),
-        Decimal(190),
+        Decimal(110),
+        Decimal(150),
+        Decimal(150),
+        Decimal(150),
     ]
     assert values == target
     target = [
-        Decimal(0),
-        Decimal(0),
+        Decimal(),
+        Decimal(),
         Decimal(-10),
         Decimal(-10),
-        Decimal(90),
-        Decimal(90),
-        Decimal(90),
-        Decimal(90),
+        Decimal(10),
+        Decimal(50),
+        Decimal(50),
+        Decimal(50),
     ]
     assert profits == target
     target = {
         asset.id_: [
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
-            Decimal(100),
-            Decimal(50),
-            Decimal(50),
-            Decimal(50),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(20),
+            Decimal(10),
+            Decimal(10),
+            Decimal(10),
         ],
     }
     assert assets == target
@@ -194,9 +194,9 @@ def test_get_value_today(
     _ = transactions
     _ = asset_valuation
     values, profits, assets = account.get_value(today_ord, today_ord)
-    assert values == [Decimal(190)]
-    assert profits == [Decimal(0)]
-    assert assets == {asset.id_: [Decimal(100)]}
+    assert values == [Decimal(110)]
+    assert profits == [Decimal()]
+    assert assets == {asset.id_: [Decimal(20)]}
 
 
 def test_get_value_buy_day(
@@ -209,7 +209,7 @@ def test_get_value_buy_day(
     values, profits, assets = account.get_value(today_ord - 2, today_ord - 2)
     assert values == [Decimal(90)]
     assert profits == [Decimal(-10)]
-    assert assets == {asset.id_: [Decimal(0)]}
+    assert assets == {asset.id_: [Decimal()]}
 
 
 def test_get_value_fund_day(
@@ -220,7 +220,7 @@ def test_get_value_fund_day(
     _ = transactions
     values, profits, assets = account.get_value(today_ord - 3, today_ord - 3)
     assert values == [Decimal(100)]
-    assert profits == [Decimal(0)]
+    assert profits == [Decimal()]
     assert assets == {}
 
 
@@ -234,7 +234,7 @@ def test_get_cash_flow_empty(
     result = account.get_cash_flow(start_ord, end_ord)
     assert result == {}
     # defaultdict is correct length
-    assert result[0] == [Decimal(0)] * 7
+    assert result[0] == [Decimal()] * 7
 
     result = Account.get_cash_flow_all(session, start_ord, end_ord)
     assert result == {}
@@ -253,21 +253,21 @@ def test_get_cash_flow(
     target = {
         categories["other income"]: [
             Decimal(100),
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
-            Decimal(0),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(),
+            Decimal(),
         ],
         categories["securities traded"]: [
-            Decimal(0),
+            Decimal(),
             Decimal(-10),
-            Decimal(0),
-            Decimal(0),
+            Decimal(),
+            Decimal(),
             Decimal(50),
-            Decimal(0),
-            Decimal(0),
+            Decimal(),
+            Decimal(),
         ],
     }
     assert result == target
@@ -292,7 +292,7 @@ def test_get_profit_by_asset_empty(
     end_ord = today_ord + 3
     result = account.get_profit_by_asset(start_ord, end_ord)
     assert result == {}
-    assert result[0] == Decimal(0)
+    assert result[0] == Decimal()
 
     result = Account.get_profit_by_asset_all(session, start_ord, end_ord)
     assert result == {}
@@ -311,7 +311,7 @@ def test_get_profit_by_asset(
     end_ord = today_ord + 3
     result = account.get_profit_by_asset(start_ord, end_ord)
     target = {
-        asset.id_: Decimal(90),
+        asset.id_: Decimal(50),
     }
     assert result == target
 
@@ -324,7 +324,7 @@ def test_get_profit_by_asset_today(
 ) -> None:
     _ = transactions
     result = account.get_profit_by_asset(today_ord, today_ord)
-    assert result == {asset.id_: Decimal(0)}
+    assert result == {asset.id_: Decimal()}
 
 
 def test_do_include(

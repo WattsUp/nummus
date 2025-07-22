@@ -14,14 +14,14 @@ from nummus.controllers import base
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
 
 
-class _HealthContext(TypedDict):
+class HealthContext(TypedDict):
     """Type definition for health page context."""
 
     last_update_ago: float | None
-    checks: list[_HealthCheckContext]
+    checks: list[HealthCheckContext]
 
 
-class _HealthCheckContext(TypedDict):
+class HealthCheckContext(TypedDict):
     """Type definition for health check context."""
 
     name: str
@@ -58,7 +58,7 @@ def refresh() -> str:
 
 
 def ignore(uri: str) -> str:
-    """POST /h/health/i/<uri>/ignore.
+    """PUT /h/health/i/<uri>/ignore.
 
     Args:
         uri: HealthCheckIssue uri to ignore
@@ -81,7 +81,7 @@ def ignore(uri: str) -> str:
     )
 
 
-def ctx_checks(*, run: bool) -> _HealthContext:
+def ctx_checks(*, run: bool) -> HealthContext:
     """Get the context to build the health checks.
 
     Args:
@@ -125,7 +125,7 @@ def ctx_checks(*, run: bool) -> _HealthContext:
             for i in query.yield_per(YIELD_PER):
                 issues[i.check][i.uri] = i.msg
 
-    checks: list[_HealthCheckContext] = []
+    checks: list[HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
         name = check_type.name
 

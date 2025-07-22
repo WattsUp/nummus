@@ -8,9 +8,9 @@
   {% endwith %}
 {% endif %}
 <form class="grid w-96 grid-cols-2 gap-2" onsubmit="return false">
-  <h1 class="col-span-full text-center">
+  <p class="col-span-full text-center">
     How do you want to plan for {{ target.category }} spending?
-  </h1>
+  </p>
   <div class="col-span-full flex flex-wrap justify-center gap-1">
     {% for period, period_str in target["period_options"].items() %}
       {% if period == target["period"] %}

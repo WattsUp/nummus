@@ -86,9 +86,7 @@ def page_login() -> str | werkzeug.Response:
     next_url = flask.request.args.get("next")
     if flask_login.current_user.is_authenticated:
         # If already authenticated, skip login page
-        if next_url is None:
-            return flask.redirect(flask.url_for("common.page_dashboard"))
-        return flask.redirect(next_url)
+        return flask.redirect(next_url or flask.url_for("common.page_dashboard"))
     return flask.render_template(
         "auth/login.jinja",
         next_url=next_url,
@@ -129,9 +127,7 @@ def login() -> str | werkzeug.Response:
         flask_login.login_user(web_user, remember=True)
 
         next_url = form.get("next")
-        if next_url is None:
-            return flask.redirect(flask.url_for("common.page_dashboard"))
-        return flask.redirect(next_url)
+        return flask.redirect(next_url or flask.url_for("common.page_dashboard"))
 
 
 def logout() -> str | werkzeug.Response:

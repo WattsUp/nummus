@@ -11,7 +11,7 @@ from nummus import utils
 from nummus.models import (
     Account,
     BudgetAssignment,
-    BudgetAvailable,
+    BudgetAvailableCategory,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -19,35 +19,6 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
-
-
-@pytest.fixture
-def budget_assignments(
-    month: datetime.date,
-    month_ord: int,
-    session: orm.Session,
-    categories: dict[str, int],
-) -> list[BudgetAssignment]:
-    b = BudgetAssignment(
-        month_ord=month_ord,
-        amount=Decimal(50),
-        category_id=categories["groceries"],
-    )
-    session.add(b)
-    b = BudgetAssignment(
-        month_ord=month_ord,
-        amount=Decimal(100),
-        category_id=categories["emergency fund"],
-    )
-    session.add(b)
-    b = BudgetAssignment(
-        month_ord=utils.date_add_months(month, 1).toordinal(),
-        amount=Decimal(2000),
-        category_id=categories["rent"],
-    )
-    session.add(b)
-    session.commit()
-    return list(session.query(BudgetAssignment).all())
 
 
 def test_init_properties(
@@ -123,38 +94,38 @@ def test_get_monthly_available(
         month,
     )
     availables.pop(categories["other income"])
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(50),
         Decimal(-20),
         Decimal(30),
-        Decimal(0),
+        Decimal(),
     )
     assert availables.pop(categories["groceries"]) == target
-    target = BudgetAvailable(
-        Decimal(0),
+    target = BudgetAvailableCategory(
+        Decimal(),
         Decimal(-50),
         Decimal(-50),
-        Decimal(0),
+        Decimal(),
     )
     assert availables.pop(categories["rent"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(100),
-        Decimal(0),
+        Decimal(),
         Decimal(100),
-        Decimal(0),
+        Decimal(),
     )
     assert availables.pop(categories["emergency fund"]) == target
-    target = BudgetAvailable(
-        Decimal(0),
+    target = BudgetAvailableCategory(
+        Decimal(),
         Decimal(-50),
         Decimal(-50),
-        Decimal(0),
+        Decimal(),
     )
     assert availables.pop(categories["securities traded"]) == target
     # Remaining all zero
     non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
     assert non_zero == {}
-    assert assignable == Decimal(0)
+    assert assignable == Decimal()
     assert future_assigned == Decimal(1170)  # Not 2000 since overassigned
 
 
@@ -172,23 +143,23 @@ def test_get_monthly_available_next_month(
         utils.date_add_months(month, 1),
     )
     availables.pop(categories["other income"])
-    target = BudgetAvailable(
-        Decimal(0),
-        Decimal(0),
+    target = BudgetAvailableCategory(
+        Decimal(),
+        Decimal(),
         Decimal(30),
         Decimal(30),
     )
     assert availables.pop(categories["groceries"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(2000),
-        Decimal(0),
+        Decimal(),
         Decimal(2000),
-        Decimal(0),
+        Decimal(),
     )
     assert availables.pop(categories["rent"]) == target
-    target = BudgetAvailable(
-        Decimal(0),
-        Decimal(0),
+    target = BudgetAvailableCategory(
+        Decimal(),
+        Decimal(),
         Decimal(100),
         Decimal(100),
     )
@@ -216,9 +187,9 @@ def test_get_emergency_fund_empty(
         n_lower,
         n_upper,
     )
-    assert result.spending_lower == [Decimal(0)] * 7
-    assert result.spending_upper == [Decimal(0)] * 7
-    assert result.balances == [Decimal(0)] * 7
+    assert result.spending_lower == [Decimal()] * 7
+    assert result.spending_upper == [Decimal()] * 7
+    assert result.balances == [Decimal()] * 7
     assert result.categories == {}
     assert result.categories_total == {}
 
@@ -269,9 +240,9 @@ def test_get_emergency_fund(
 
     n_target = 7 + n_lower + n_smoothing + 1
     target = [
-        *([Decimal(0)] * 9),
+        *([Decimal()] * 9),
         *([Decimal(50)] * n_lower),
-        *([Decimal(0)] * (n_target - n_lower - 4 - 9)),
+        *([Decimal()] * (n_target - n_lower - 4 - 9)),
         *([Decimal(20)] * 4),
     ]
     assert len(target) == n_target
@@ -318,7 +289,7 @@ def test_get_emergency_fund_balance(
         n_upper,
     )
     target = [
-        *([Decimal(0)] * 3),
+        *([Decimal()] * 3),
         *([Decimal(100)] * 4),
     ]
     assert result.balances == target

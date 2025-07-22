@@ -70,7 +70,7 @@ def test_init_properties(
 
 def test_zero_amount(session: orm.Session, transactions: list[Transaction]) -> None:
     t_split = transactions[1].splits[0]
-    t_split.amount = Decimal(0)
+    t_split.amount = Decimal()
     with pytest.raises(exc.IntegrityError):
         session.commit()
 
@@ -89,7 +89,7 @@ def test_parent_attributes_direct(transactions: list[Transaction]) -> None:
 def test_asset_quantity_direct(transactions: list[Transaction]) -> None:
     t_split = transactions[1].splits[0]
     with pytest.raises(exc.ComputedColumnError):
-        t_split.asset_quantity = Decimal(0)
+        t_split.asset_quantity = Decimal()
 
 
 def test_text_fields_direct(transactions: list[Transaction]) -> None:
