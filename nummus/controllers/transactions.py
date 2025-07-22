@@ -845,7 +845,6 @@ def ctx_txn(
             for acct_id, (name, closed) in accounts.items()
         ],
         "cleared": txn.cleared,
-        # TODO (WattsUp): replace fromordinal references
         "date": date or txn.date,
         "date_max": today + datetime.timedelta(days=utils.DAYS_IN_WEEK),
         "amount": txn.amount if amount is None else amount,

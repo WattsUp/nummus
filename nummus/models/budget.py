@@ -562,3 +562,10 @@ class Target(Base):
             field
         """
         return self.clean_decimals(key, field)
+
+    @property
+    def due_date(self) -> datetime.date | None:
+        """Date on which target is due."""
+        if self.due_date_ord is None:
+            return None
+        return datetime.date.fromordinal(self.due_date_ord)

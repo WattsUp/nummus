@@ -9,12 +9,14 @@ from nummus.models import Target, TargetPeriod, TargetType
 from tests import conftest
 
 if TYPE_CHECKING:
+    import datetime
     from decimal import Decimal
 
     from sqlalchemy import orm
 
 
 def test_init_properties(
+    today: datetime.date,
     today_ord: int,
     session: orm.Session,
     rand_real: Decimal,
@@ -38,6 +40,7 @@ def test_init_properties(
     assert t.type_ == d["type_"]
     assert t.period == d["period"]
     assert t.due_date_ord == d["due_date_ord"]
+    assert t.due_date == today
     assert t.repeat_every == d["repeat_every"]
 
 

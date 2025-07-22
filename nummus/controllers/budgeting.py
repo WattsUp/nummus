@@ -628,11 +628,7 @@ def target(uri: str) -> str | flask.Response:
             return base.error(e)
 
         # Create context
-        due_date = (
-            None
-            if tar.due_date_ord is None
-            else datetime.date.fromordinal(tar.due_date_ord)
-        )
+        due_date = tar.due_date
         ctx = {
             "uri": uri,
             "new": new_target,
@@ -909,7 +905,8 @@ def ctx_target(
     Returns:
         TargetContext
     """
-    if tar.due_date_ord is None:
+    due_date = tar.due_date
+    if due_date is None:
         # No due date, easy to figure out progress
         # This is a BALANCE target
         target_assigned = tar.amount - leftover
@@ -928,7 +925,6 @@ def ctx_target(
             "type": tar.type_,
         }
 
-    due_date = datetime.date.fromordinal(tar.due_date_ord)
     if tar.period == TargetPeriod.WEEK:
         # Need the number of weekdays that fall in this month
         weekday = due_date.weekday()
