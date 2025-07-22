@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+import functools
 import random
 import shutil
 import string
@@ -9,9 +10,11 @@ from decimal import Decimal
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+import flask
 import pytest
 import yfinance
 from sqlalchemy import orm, pool
+from typing_extensions import override
 
 from nummus import global_config, sql, utils, web
 from nummus.models import (
@@ -37,7 +40,6 @@ from nummus.portfolio import Portfolio
 from tests.mock_yfinance import MockTicker
 
 if TYPE_CHECKING:
-    import flask
     import time_machine
 
 
@@ -649,9 +651,68 @@ def utc_frozen(
     return utc
 
 
+class FlaskAppGenerator:
+
+    def __init__(
+        self,
+        generator: EmptyPortfolioGenerator,
+    ) -> None:
+        class MockExtension(web.FlaskExtension):
+            @override
+            @classmethod
+            def _open_portfolio(cls, config: flask.Config) -> Portfolio:
+                _ = config
+                return generator()[0]
+
+        self._ext = MockExtension()
+
+        path_root = Path(web.__file__).parent.resolve()
+        self._flask_app = flask.Flask(__name__, root_path=str(path_root))
+        self._flask_app.debug = True
+        self._ext.init_app(self._flask_app)
+
+        # Needed by test_change_redirect
+        self._flask_app.add_url_rule(
+            "/redirect",
+            "redirect",
+            functools.partial(flask.redirect, "/"),
+        )
+
+    def __call__(self, p: Portfolio) -> flask.Flask:
+        # Just swap out portfolio reference, quicker than making a new app
+        # Since all use the same empty_portfolio_generator,
+        # the SECRET_KEY will be identical
+        web.ext._portfolio = p  # noqa: SLF001
+        return self._flask_app
+
+
+@pytest.fixture(scope="session")
+def flask_app_generator(
+    empty_portfolio_generator: EmptyPortfolioGenerator,
+) -> FlaskAppGenerator:
+    """Returns an flask app generator.
+
+    Returns:
+        FlaskAppGenerator
+    """
+    return FlaskAppGenerator(empty_portfolio_generator)
+
+
+@pytest.fixture(scope="session")
+def flask_app_encrypted_generator(
+    empty_portfolio_encrypted_generator: EmptyPortfolioGenerator,
+) -> FlaskAppGenerator:
+    """Returns an flask app generator.
+
+    Returns:
+        FlaskAppGenerator
+    """
+    return FlaskAppGenerator(empty_portfolio_encrypted_generator)
+
+
 @pytest.fixture
 def flask_app(
-    monkeypatch: pytest.MonkeyPatch,
+    flask_app_generator: FlaskAppGenerator,
     empty_portfolio: Portfolio,
 ) -> flask.Flask:
     """Create flask app for EmptyPortfolio.
@@ -659,14 +720,12 @@ def flask_app(
     Returns:
         Flask
     """
-    monkeypatch.setenv("NUMMUS_PORTFOLIO", str(empty_portfolio.path))
-    monkeypatch.setenv("FLASK_DEBUG", "1")
-    return web.create_app()
+    return flask_app_generator(empty_portfolio)
 
 
 @pytest.fixture
 def flask_app_encrypted(
-    monkeypatch: pytest.MonkeyPatch,
+    flask_app_encrypted_generator: FlaskAppGenerator,
     empty_portfolio_encrypted: tuple[Portfolio, str],
 ) -> flask.Flask:
     """Create flask app for EmptyPortfolio.
@@ -674,11 +733,7 @@ def flask_app_encrypted(
     Returns:
         Flask
     """
-    p, key = empty_portfolio_encrypted
-    monkeypatch.setenv("NUMMUS_PORTFOLIO", str(p.path))
-    monkeypatch.setenv("NUMMUS_KEY", key)
-    monkeypatch.setenv("FLASK_DEBUG", "1")
-    return web.create_app()
+    return flask_app_encrypted_generator(empty_portfolio_encrypted[0])
 
 
 @pytest.fixture

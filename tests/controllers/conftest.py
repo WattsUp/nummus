@@ -9,7 +9,6 @@ import flask.sessions
 import pytest
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
-from nummus.models import Config, ConfigKey
 
 if TYPE_CHECKING:
     import contextlib
@@ -297,16 +296,10 @@ class WebClientEncrypted(WebClient):
         self,
         app: flask.Flask,
         valid_html: HTMLValidator,
-        portfolio: Portfolio,
+        web_key: str,
     ) -> None:
         super().__init__(app, valid_html)
-
-        with portfolio.begin_session() as s:
-            key_encoded = (
-                s.query(Config.value).where(Config.key == ConfigKey.WEB_KEY).one()[0]
-            )
-
-        self._web_key = portfolio.decrypt(key_encoded)
+        self._web_key = web_key
 
     def login(self) -> None:
         """Login user."""
@@ -324,5 +317,6 @@ def web_client_encrypted(
     Returns:
         WebClient
     """
-    p, _ = empty_portfolio_encrypted
-    return WebClientEncrypted(flask_app_encrypted, valid_html, p)
+    _, key = empty_portfolio_encrypted
+    # web key and portfolio key are the same
+    return WebClientEncrypted(flask_app_encrypted, valid_html, key)

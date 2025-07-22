@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import datetime
-import functools
 import re
 from decimal import Decimal
 from typing import TYPE_CHECKING
@@ -457,23 +456,11 @@ def test_change_redirect_no_changes() -> None:
     assert "HX-Redirect" not in result.headers
 
 
-def test_change_redirect(flask_app: flask.Flask, web_client: WebClient) -> None:
-    url = web_client.url_for("common.page_dashboard")
-    flask_app.add_url_rule(
-        "/redirect",
-        "redirect",
-        functools.partial(flask.redirect, url),
-    )
+def test_change_redirect(web_client: WebClient) -> None:
     _, headers = web_client.GET("redirect")
-    assert headers["HX-Redirect"] == url
+    assert headers["HX-Redirect"] == "/"
 
 
-def test_change_redirect_no_htmx(flask_app: flask.Flask, web_client: WebClient) -> None:
-    url = web_client.url_for("common.page_dashboard")
-    flask_app.add_url_rule(
-        "/redirect",
-        "redirect",
-        functools.partial(flask.redirect, url),
-    )
+def test_change_redirect_no_htmx(web_client: WebClient) -> None:
     _, headers = web_client.GET("redirect", headers={}, rc=base.HTTP_CODE_REDIRECT)
     assert "HX-Redirect" not in headers
