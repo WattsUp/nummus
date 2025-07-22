@@ -540,18 +540,19 @@ def test_validation(
 
 
 @pytest.mark.parametrize(
-    ("amount", "split_amount", "split", "target"),
+    ("split_amount", "split", "target"),
     [
-        ("10", ["10"], False, ""),
-        ("10", ["11"], False, "Remove $1.00 from splits"),
-        ("10", ["9"], False, "Assign $1.00 to splits"),
-        ("10", ["9"], True, "Assign $1.00 to splits"),
+        # Just amount with a single split is okay
+        ([], False, ""),
+        (["10"], False, ""),
+        (["11"], False, "Remove $1.00 from splits"),
+        (["9"], False, "Assign $1.00 to splits"),
+        (["9"], True, "Assign $1.00 to splits"),
     ],
 )
 def test_validation_amounts(
     flask_app: flask.Flask,
     web_client: WebClient,
-    amount: str,
     split_amount: list[str],
     split: bool,
     target: str,
@@ -559,7 +560,7 @@ def test_validation_amounts(
     result, _ = web_client.GET(
         (
             "transactions.validation",
-            {"amount": amount, "split-amount": split_amount, "split": split},
+            {"amount": "10", "split-amount": split_amount, "split": split},
         ),
     )
 

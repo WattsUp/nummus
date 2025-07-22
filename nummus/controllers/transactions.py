@@ -657,19 +657,22 @@ def validation() -> str:
         split_amounts = [
             utils.evaluate_real_statement(x) for x in args.getlist("split-amount")
         ]
+        if len(split_amounts) == 0:
+            # No splits is okay for single split
+            msg = ""
+        else:
+            split_sum = sum(filter(None, split_amounts)) or Decimal()
 
-        split_sum = sum(filter(None, split_amounts)) or Decimal()
-
-        remaining = parent_amount - split_sum
-        msg = (
-            (
-                f"Assign {utils.format_financial(remaining)} to splits"
-                if remaining > 0
-                else f"Remove {utils.format_financial(-remaining)} from splits"
+            remaining = parent_amount - split_sum
+            msg = (
+                (
+                    f"Assign {utils.format_financial(remaining)} to splits"
+                    if remaining > 0
+                    else f"Remove {utils.format_financial(-remaining)} from splits"
+                )
+                if remaining != 0
+                else ""
             )
-            if remaining != 0
-            else ""
-        )
 
         # Render sum of splits to headline since its a global error
         return flask.render_template(
