@@ -152,10 +152,10 @@ def test_get_value(
         Decimal(100),
         Decimal(90),
         Decimal(90),
-        Decimal(190),
-        Decimal(190),
-        Decimal(190),
-        Decimal(190),
+        Decimal(110),
+        Decimal(150),
+        Decimal(150),
+        Decimal(150),
     ]
     assert values == target
     target = [
@@ -163,10 +163,10 @@ def test_get_value(
         Decimal(),
         Decimal(-10),
         Decimal(-10),
-        Decimal(90),
-        Decimal(90),
-        Decimal(90),
-        Decimal(90),
+        Decimal(10),
+        Decimal(50),
+        Decimal(50),
+        Decimal(50),
     ]
     assert profits == target
     target = {
@@ -175,10 +175,10 @@ def test_get_value(
             Decimal(),
             Decimal(),
             Decimal(),
-            Decimal(100),
-            Decimal(50),
-            Decimal(50),
-            Decimal(50),
+            Decimal(20),
+            Decimal(10),
+            Decimal(10),
+            Decimal(10),
         ],
     }
     assert assets == target
@@ -194,9 +194,9 @@ def test_get_value_today(
     _ = transactions
     _ = asset_valuation
     values, profits, assets = account.get_value(today_ord, today_ord)
-    assert values == [Decimal(190)]
+    assert values == [Decimal(110)]
     assert profits == [Decimal()]
-    assert assets == {asset.id_: [Decimal(100)]}
+    assert assets == {asset.id_: [Decimal(20)]}
 
 
 def test_get_value_buy_day(
@@ -311,7 +311,7 @@ def test_get_profit_by_asset(
     end_ord = today_ord + 3
     result = account.get_profit_by_asset(start_ord, end_ord)
     target = {
-        asset.id_: Decimal(90),
+        asset.id_: Decimal(50),
     }
     assert result == target
 

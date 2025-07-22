@@ -675,12 +675,14 @@ def test_twrr(
             [Decimal(-10000), Decimal(-50000), Decimal(5000), Decimal(10000)],
             id="profit and loss",
         ),
+        # 5x in one day!! is too high
+        ([Decimal(1), Decimal(5)], [Decimal(0), Decimal(5)], None),
     ],
 )
 def test_mwrr(
     values: list[Decimal],
     profit: list[Decimal],
-    target: Decimal | list[Decimal],
+    target: Decimal | list[Decimal] | None,
 ) -> None:
     if isinstance(target, list):
         # target is cash_flows

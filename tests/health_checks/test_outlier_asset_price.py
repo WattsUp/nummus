@@ -33,6 +33,9 @@ def test_zero_quantity(
     t_split = transactions[1].splits[0]
     t_split.asset_quantity_unadjusted = Decimal()
     asset_valuation.date_ord = t_split.date_ord
+    asset_valuation.value = Decimal(10)
+    session.commit()
+
     c = OutlierAssetPrice()
     c.test(session)
     assert query_count(session.query(HealthCheckIssue)) == 0
@@ -56,9 +59,13 @@ def test_check(
 ) -> None:
     t_split = transactions[1].splits[0]
     asset_valuation.date_ord = t_split.date_ord
+    asset_valuation.value = Decimal(10)
     t_split.amount = amount
+    session.commit()
+
     c = OutlierAssetPrice()
     c.test(session)
+
     if target_word is None:
         assert query_count(session.query(HealthCheckIssue)) == 0
         return

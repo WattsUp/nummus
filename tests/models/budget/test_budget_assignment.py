@@ -11,7 +11,7 @@ from nummus import utils
 from nummus.models import (
     Account,
     BudgetAssignment,
-    BudgetAvailable,
+    BudgetAvailableCategory,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -94,28 +94,28 @@ def test_get_monthly_available(
         month,
     )
     availables.pop(categories["other income"])
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(50),
         Decimal(-20),
         Decimal(30),
         Decimal(),
     )
     assert availables.pop(categories["groceries"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(),
         Decimal(-50),
         Decimal(-50),
         Decimal(),
     )
     assert availables.pop(categories["rent"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(100),
         Decimal(),
         Decimal(100),
         Decimal(),
     )
     assert availables.pop(categories["emergency fund"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(),
         Decimal(-50),
         Decimal(-50),
@@ -143,21 +143,21 @@ def test_get_monthly_available_next_month(
         utils.date_add_months(month, 1),
     )
     availables.pop(categories["other income"])
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(),
         Decimal(),
         Decimal(30),
         Decimal(30),
     )
     assert availables.pop(categories["groceries"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(2000),
         Decimal(),
         Decimal(2000),
         Decimal(),
     )
     assert availables.pop(categories["rent"]) == target
-    target = BudgetAvailable(
+    target = BudgetAvailableCategory(
         Decimal(),
         Decimal(),
         Decimal(100),
