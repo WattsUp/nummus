@@ -22,7 +22,6 @@ from nummus.models.transaction_category import TransactionCategoryGroup
 if TYPE_CHECKING:
     import datetime
 
-    import flask
     from sqlalchemy import orm
 
 
@@ -355,17 +354,16 @@ def test_ctx_target_monthly_accumulate(
 def test_ctx_budget_empty(
     month: datetime.date,
     session: orm.Session,
-    flask_app: flask.Flask,
 ) -> None:
     data = BudgetAssignment.get_monthly_available(session, month)
-    with flask_app.test_request_context():
-        ctx, title = budgeting.ctx_budget(
-            session,
-            month,
-            data.categories,
-            data.assignable,
-            data.future_assigned,
-        )
+    ctx, title = budgeting.ctx_budget(
+        session,
+        month,
+        data.categories,
+        data.assignable,
+        data.future_assigned,
+        [],
+    )
 
     month_str = month.isoformat()[:7]
     assert title == f"Budgeting {month_str}"
@@ -394,7 +392,6 @@ def test_ctx_budget_empty(
 def test_ctx_budget(
     month: datetime.date,
     session: orm.Session,
-    flask_app: flask.Flask,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
     budget_group: BudgetGroup,
@@ -414,14 +411,14 @@ def test_ctx_budget(
     _ = budget_assignments
     data = BudgetAssignment.get_monthly_available(session, month)
 
-    with flask_app.test_request_context():
-        ctx, title = budgeting.ctx_budget(
-            session,
-            month,
-            data.categories,
-            data.assignable,
-            data.future_assigned,
-        )
+    ctx, title = budgeting.ctx_budget(
+        session,
+        month,
+        data.categories,
+        data.assignable,
+        data.future_assigned,
+        [],
+    )
 
     month_str = month.isoformat()[:7]
     assert title == f"Budgeting {month_str}"

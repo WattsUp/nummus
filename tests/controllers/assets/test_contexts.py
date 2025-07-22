@@ -11,22 +11,18 @@ from nummus.controllers import assets, base
 if TYPE_CHECKING:
     import datetime
 
-    import flask
     from sqlalchemy import orm
 
     from nummus.models import Asset, AssetCategory, AssetValuation, Transaction
 
 
-# TODO (WattsUp): Remove flask references from ctx functions
 def test_ctx_performance_empty(
     today: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
 ) -> None:
     start = utils.date_add_months(today, -12)
-    with flask_app.app_context():
-        ctx = assets.ctx_performance(session, asset, "1yr")
+    ctx = assets.ctx_performance(session, asset, "1yr")
     labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
     target: assets.PerformanceContext = {
         "date_mode": date_mode,
@@ -40,13 +36,11 @@ def test_ctx_performance_empty(
 
 def test_ctx_performance(
     today: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_performance(session, asset, "max")
+    ctx = assets.ctx_performance(session, asset, "max")
     labels, date_mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
     target: assets.PerformanceContext = {
         "date_mode": date_mode,
@@ -60,12 +54,10 @@ def test_ctx_performance(
 
 def test_ctx_table_empty(
     month: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_table(session, asset, None, None, None, None)
+    ctx = assets.ctx_table(session, asset, None, None, None, None)
 
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
@@ -104,7 +96,6 @@ def test_ctx_table_empty(
     ],
 )
 def test_ctx_table(
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
@@ -115,8 +106,7 @@ def test_ctx_table(
     any_filters: bool,
     has_valuation: bool,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_table(session, asset, period, start, end, page)
+    ctx = assets.ctx_table(session, asset, period, start, end, page)
 
     if page is None:
         assert ctx["first_page"]
@@ -145,12 +135,10 @@ def test_ctx_table(
 
 
 def test_ctx_asset_empty(
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -160,13 +148,11 @@ def test_ctx_asset_empty(
 
 
 def test_ctx_asset(
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -175,19 +161,16 @@ def test_ctx_asset(
     assert ctx["value_date"] == asset_valuation.date
 
 
-def test_ctx_rows_empty(flask_app: flask.Flask, session: orm.Session) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_rows(session, include_unheld=True)
+def test_ctx_rows_empty(session: orm.Session) -> None:
+    ctx = assets.ctx_rows(session, include_unheld=True)
     assert ctx == {}
 
 
 def test_ctx_rows_unheld(
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    with flask_app.app_context():
-        ctx = assets.ctx_rows(session, include_unheld=True)
+    ctx = assets.ctx_rows(session, include_unheld=True)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {
@@ -204,15 +187,13 @@ def test_ctx_rows_unheld(
 
 
 def test_ctx_rows(
-    flask_app: flask.Flask,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    with flask_app.app_context():
-        ctx = assets.ctx_rows(session, include_unheld=False)
+    ctx = assets.ctx_rows(session, include_unheld=False)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {

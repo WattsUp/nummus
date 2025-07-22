@@ -21,6 +21,7 @@ from nummus.models import (
 
 if TYPE_CHECKING:
     import flask
+    from sqlalchemy import orm
 
 
 class ChartAssetContext(TypedDict):
@@ -69,83 +70,84 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return base.page(
-        "allocation/page.jinja",
-        title="Asset Allocation",
-        allocation=ctx_allocation(),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return base.page(
+            "allocation/page.jinja",
+            title="Asset Allocation",
+            allocation=ctx_allocation(s),
+        )
 
 
-def ctx_allocation() -> AllocationContext:
+def ctx_allocation(s: orm.Session) -> AllocationContext:
     """Get the context to build the allocation chart.
+
+    Args:
+        s: SQL session to use
 
     Returns:
         Dictionary HTML context
     """
-    p = web.portfolio
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
-    with p.begin_session() as s:
-        asset_qtys: dict[int, Decimal] = defaultdict(Decimal)
-        acct_qtys = Account.get_asset_qty_all(s, today_ord, today_ord)
-        for acct_qty in acct_qtys.values():
-            for a_id, values in acct_qty.items():
-                asset_qtys[a_id] += values[0]
-        asset_qtys = {a_id: v for a_id, v in asset_qtys.items() if v}
+    asset_qtys: dict[int, Decimal] = defaultdict(Decimal)
+    acct_qtys = Account.get_asset_qty_all(s, today_ord, today_ord)
+    for acct_qty in acct_qtys.values():
+        for a_id, values in acct_qty.items():
+            asset_qtys[a_id] += values[0]
+    asset_qtys = {a_id: v for a_id, v in asset_qtys.items() if v}
 
-        asset_prices = {
-            a_id: values[0]
-            for a_id, values in Asset.get_value_all(
-                s,
-                today_ord,
-                today_ord,
-                ids=set(asset_qtys),
-            ).items()
+    asset_prices = {
+        a_id: values[0]
+        for a_id, values in Asset.get_value_all(
+            s,
+            today_ord,
+            today_ord,
+            ids=set(asset_qtys),
+        ).items()
+    }
+
+    asset_values = {a_id: qty * asset_prices[a_id] for a_id, qty in asset_qtys.items()}
+
+    asset_sectors: dict[int, dict[USSector, Decimal]] = defaultdict(dict)
+    for a_sector in s.query(AssetSector).yield_per(YIELD_PER):
+        asset_sectors[a_sector.asset_id][a_sector.sector] = a_sector.weight
+
+    assets_by_category: dict[AssetCategory, list[AssetContext]] = defaultdict(list)
+    assets_by_sector: dict[USSector, list[AssetContext]] = defaultdict(list)
+    query = (
+        s.query(Asset)
+        .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
+        .where(Asset.id_.in_(asset_qtys))
+        .order_by(Asset.name)
+    )
+    for a_id, name, category, ticker in query.yield_per(YIELD_PER):
+        a_id: int
+        name: str
+        category: AssetCategory
+        ticker: str | None
+        qty = asset_qtys[a_id]
+        value = asset_values[a_id]
+        a_uri = Asset.id_to_uri(a_id)
+
+        asset_ctx: AssetContext = {
+            "uri": a_uri,
+            "name": name,
+            "ticker": ticker,
+            "qty": qty,
+            "price": asset_prices[a_id],
+            "value": value,
+            "weight": Decimal(1),
         }
+        assets_by_category[category].append(asset_ctx)
 
-        asset_values = {
-            a_id: qty * asset_prices[a_id] for a_id, qty in asset_qtys.items()
-        }
-
-        asset_sectors: dict[int, dict[USSector, Decimal]] = defaultdict(dict)
-        for a_sector in s.query(AssetSector).yield_per(YIELD_PER):
-            asset_sectors[a_sector.asset_id][a_sector.sector] = a_sector.weight
-
-        assets_by_category: dict[AssetCategory, list[AssetContext]] = defaultdict(list)
-        assets_by_sector: dict[USSector, list[AssetContext]] = defaultdict(list)
-        query = (
-            s.query(Asset)
-            .with_entities(Asset.id_, Asset.name, Asset.category, Asset.ticker)
-            .where(Asset.id_.in_(asset_qtys))
-            .order_by(Asset.name)
-        )
-        for a_id, name, category, ticker in query.yield_per(YIELD_PER):
-            a_id: int
-            name: str
-            category: AssetCategory
-            ticker: str | None
-            qty = asset_qtys[a_id]
-            value = asset_values[a_id]
-            a_uri = Asset.id_to_uri(a_id)
-
-            asset_ctx: AssetContext = {
-                "uri": a_uri,
-                "name": name,
-                "ticker": ticker,
-                "qty": qty,
-                "price": asset_prices[a_id],
-                "value": value,
-                "weight": Decimal(1),
-            }
-            assets_by_category[category].append(asset_ctx)
-
-            for sector, weight in asset_sectors[a_id].items():
-                asset_sector_ctx = asset_ctx.copy()
-                asset_sector_ctx["weight"] = weight
-                asset_sector_ctx["qty"] = qty * weight
-                asset_sector_ctx["value"] = value * weight
-                assets_by_sector[sector].append(asset_sector_ctx)
+        for sector, weight in asset_sectors[a_id].items():
+            asset_sector_ctx = asset_ctx.copy()
+            asset_sector_ctx["weight"] = weight
+            asset_sector_ctx["qty"] = qty * weight
+            asset_sector_ctx["value"] = value * weight
+            assets_by_sector[sector].append(asset_sector_ctx)
 
     categories: list[GroupContext] = [
         {

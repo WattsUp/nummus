@@ -7,13 +7,11 @@ from nummus.controllers import health
 from nummus.models import query_count, TransactionCategory
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
 
-def test_ctx_empty(flask_app: flask.Flask) -> None:
-    with flask_app.app_context():
-        ctx = health.ctx_checks(run=False)
+def test_ctx_empty() -> None:
+    ctx = health.ctx_checks(run=False)
 
     assert ctx["last_update_ago"] is None
     checks = ctx["checks"]
@@ -22,9 +20,8 @@ def test_ctx_empty(flask_app: flask.Flask) -> None:
     assert not has_issues
 
 
-def test_ctx_empty_run(flask_app: flask.Flask, session: orm.Session) -> None:
-    with flask_app.app_context():
-        ctx = health.ctx_checks(run=True)
+def test_ctx_empty_run(session: orm.Session) -> None:
+    ctx = health.ctx_checks(run=True)
 
     assert ctx["last_update_ago"] == 0
     checks = ctx["checks"]

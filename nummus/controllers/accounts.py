@@ -128,6 +128,7 @@ def page(uri: str) -> flask.Response:
         acct = base.find(s, Account, uri)
         args = flask.request.args
         txn_table, title = transactions.ctx_table(
+            s,
             args.get("search"),
             args.get("account"),
             args.get("category"),
@@ -678,19 +679,20 @@ def txns(uri: str) -> str | flask.Response:
     args = flask.request.args
     first_page = "page" not in args
 
-    txn_table, title = transactions.ctx_table(
-        args.get("search"),
-        args.get("account"),
-        args.get("category"),
-        args.get("period"),
-        args.get("start"),
-        args.get("end"),
-        args.get("page"),
-        uncleared="uncleared" in args,
-        acct_uri=uri,
-    )
-    title = title.removeprefix("Transactions").strip()
     with p.begin_session() as s:
+        txn_table, title = transactions.ctx_table(
+            s,
+            args.get("search"),
+            args.get("account"),
+            args.get("category"),
+            args.get("period"),
+            args.get("start"),
+            args.get("end"),
+            args.get("page"),
+            uncleared="uncleared" in args,
+            acct_uri=uri,
+        )
+        title = title.removeprefix("Transactions").strip()
         acct = base.find(s, Account, uri)
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
     html_title = f"<title>{title} - nummus</title>\n"

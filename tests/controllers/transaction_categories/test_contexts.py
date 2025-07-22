@@ -6,16 +6,11 @@ from nummus.controllers import transaction_categories
 from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
 
-def test_ctx(
-    flask_app: flask.Flask,
-    session: orm.Session,
-) -> None:
-    with flask_app.app_context():
-        groups = transaction_categories.ctx_categories()
+def test_ctx(session: orm.Session) -> None:
+    groups = transaction_categories.ctx_categories()
 
     exclude = {"securities traded"}
 

@@ -233,9 +233,8 @@ def test_validate_int_not_positive(s: str) -> None:
     assert base.validate_int(s, is_positive=True) == "Must be positive"
 
 
-def test_ctx_base(flask_app: flask.Flask) -> None:
-    with flask_app.app_context():
-        ctx = base.ctx_base()
+def test_ctx_base() -> None:
+    ctx = base.ctx_base(is_encrypted=False, debug=True)
 
     assert isinstance(ctx["nav_items"], list)
     for group in ctx["nav_items"]:

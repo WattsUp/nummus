@@ -14,6 +14,8 @@ from nummus.models.budget import BudgetAssignment
 if TYPE_CHECKING:
     from decimal import Decimal
 
+    from sqlalchemy import orm
+
 
 class ChartContext(TypedDict):
     """Emergency fund chart context."""
@@ -52,11 +54,13 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return base.page(
-        "emergency-fund/page.jinja",
-        "Emergency Fund",
-        ctx=ctx_page(),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return base.page(
+            "emergency-fund/page.jinja",
+            "Emergency Fund",
+            ctx=ctx_page(s),
+        )
 
 
 def dashboard() -> str:
@@ -65,36 +69,38 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "emergency-fund/dashboard.jinja",
-        ctx=ctx_page(),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return flask.render_template(
+            "emergency-fund/dashboard.jinja",
+            ctx=ctx_page(s),
+        )
 
 
-def ctx_page() -> EFundContext:
+def ctx_page(s: orm.Session) -> EFundContext:
     """Get the context to build the emergency fund page.
+
+    Args:
+        s: SQL session to use
 
     Returns:
         EFundContext
     """
-    p = web.portfolio
-
     today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()
     n = today_ord - start_ord + 1
 
-    with p.begin_session() as s:
-        t_lowers, t_uppers, balances, categories, categories_total = (
-            BudgetAssignment.get_emergency_fund(
-                s,
-                start_ord,
-                today_ord,
-                utils.DAYS_IN_QUARTER,
-                utils.DAYS_IN_QUARTER * 2,
-            )
+    t_lowers, t_uppers, balances, categories, categories_total = (
+        BudgetAssignment.get_emergency_fund(
+            s,
+            start_ord,
+            today_ord,
+            utils.DAYS_IN_QUARTER,
+            utils.DAYS_IN_QUARTER * 2,
         )
+    )
     dates = utils.range_date(start_ord, today_ord)
 
     current = balances[-1]

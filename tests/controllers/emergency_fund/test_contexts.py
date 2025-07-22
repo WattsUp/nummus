@@ -17,17 +17,15 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
 
-def test_empty(today: datetime.date, flask_app: flask.Flask) -> None:
+def test_empty(today: datetime.date, session: orm.Session) -> None:
     start = utils.date_add_months(today, -6)
     dates = utils.range_date(start.toordinal(), today.toordinal())
     n = len(dates)
 
-    with flask_app.app_context():
-        ctx = emergency_fund.ctx_page()
+    ctx = emergency_fund.ctx_page(session)
 
     target: emergency_fund.EFundContext = {
         "chart": {
@@ -50,7 +48,6 @@ def test_empty(today: datetime.date, flask_app: flask.Flask) -> None:
 
 def test_ctx_underfunded(
     today: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     account: Account,
     categories: dict[str, int],
@@ -77,8 +74,7 @@ def test_ctx_underfunded(
     session.add_all((txn, t_split))
     session.commit()
 
-    with flask_app.app_context():
-        ctx = emergency_fund.ctx_page()
+    ctx = emergency_fund.ctx_page(session)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(34), abs=Decimal(1))
@@ -94,7 +90,6 @@ def test_ctx_underfunded(
 
 def test_ctx_overfunded(
     today: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     account: Account,
     categories: dict[str, int],
@@ -121,8 +116,7 @@ def test_ctx_overfunded(
     session.add_all((txn, t_split))
     session.commit()
 
-    with flask_app.app_context():
-        ctx = emergency_fund.ctx_page()
+    ctx = emergency_fund.ctx_page(session)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(347), abs=Decimal(1))
@@ -138,7 +132,6 @@ def test_ctx_overfunded(
 
 def test_ctx(
     today: datetime.date,
-    flask_app: flask.Flask,
     session: orm.Session,
     account: Account,
     categories: dict[str, int],
@@ -165,8 +158,7 @@ def test_ctx(
     session.add_all((txn, t_split))
     session.commit()
 
-    with flask_app.app_context():
-        ctx = emergency_fund.ctx_page()
+    ctx = emergency_fund.ctx_page(session)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(119), abs=Decimal(1))

@@ -6,14 +6,13 @@ from typing import TYPE_CHECKING
 from nummus.controllers import allocation
 
 if TYPE_CHECKING:
-    import flask
+    from sqlalchemy import orm
 
     from nummus.models import Asset, AssetSector, AssetValuation, Transaction
 
 
-def test_ctx_empty(flask_app: flask.Flask) -> None:
-    with flask_app.app_context():
-        ctx = allocation.ctx_allocation()
+def test_ctx_empty(session: orm.Session) -> None:
+    ctx = allocation.ctx_allocation(session)
 
     target: allocation.AllocationContext = {
         "chart": {"categories": {}, "sectors": {}},
@@ -24,7 +23,7 @@ def test_ctx_empty(flask_app: flask.Flask) -> None:
 
 
 def test_ctx(
-    flask_app: flask.Flask,
+    session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
@@ -34,8 +33,7 @@ def test_ctx(
     _ = asset_valuation
     _ = asset_sectors
 
-    with flask_app.app_context():
-        ctx = allocation.ctx_allocation()
+    ctx = allocation.ctx_allocation(session)
 
     target: allocation.AllocationContext = {
         "chart": {

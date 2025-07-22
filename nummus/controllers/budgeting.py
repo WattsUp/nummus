@@ -150,6 +150,7 @@ def page() -> flask.Response:
             data.categories,
             data.assignable,
             data.future_assigned,
+            flask.session.get("groups_open", []),
         )
         sidebar = ctx_sidebar(
             s,
@@ -265,6 +266,7 @@ def assign(uri: str) -> str:
             data.categories,
             data.assignable,
             data.future_assigned,
+            flask.session.get("groups_open", []),
         )
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(
@@ -1033,6 +1035,7 @@ def ctx_budget(
     categories: dict[int, BudgetAvailableCategory],
     assignable: Decimal,
     future_assigned: Decimal,
+    groups_open: list[str],
 ) -> tuple[BudgetContext, str]:
     """Get the context to build the budgeting table.
 
@@ -1042,17 +1045,16 @@ def ctx_budget(
         categories: Dict of categories from Budget.get_monthly_available
         assignable: Assignable amount from Budget.get_monthly_available
         future_assigned: Assigned amount in the future from Budget.get_monthly_available
+        groups_open: List of groups that are open, from session
 
     Returns:
-        Dictionary HTML context
+        tuple(BudgetContext, title)
     """
     n_overspent = 0
 
     targets: dict[int, Target] = {
         t.category_id: t for t in s.query(Target).yield_per(YIELD_PER)
     }
-
-    groups_open: list[str] = flask.session.get("groups_open", [])
 
     groups: dict[int | None, GroupContext] = {}
     query = s.query(BudgetGroup)
@@ -1146,15 +1148,18 @@ def ctx_budget(
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
     )
-    return {
-        "month": month_str,
-        "month_next": month_next,
-        "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
-        "assignable": assignable,
-        "future_assigned": future_assigned,
-        "groups": groups_list,
-        "n_overspent": n_overspent,
-    }, title
+    return (
+        {
+            "month": month_str,
+            "month_next": month_next,
+            "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
+            "assignable": assignable,
+            "future_assigned": future_assigned,
+            "groups": groups_list,
+            "n_overspent": n_overspent,
+        },
+        title,
+    )
 
 
 def ctx_progress_bars(

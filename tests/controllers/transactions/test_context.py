@@ -19,7 +19,6 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
-    import flask
     from sqlalchemy import orm
 
 
@@ -333,18 +332,18 @@ def test_table_results(
     assert result == target
 
 
-def test_ctx_table_empty(flask_app: flask.Flask) -> None:
-    with flask_app.app_context():
-        ctx, title = txn_controller.ctx_table(
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            uncleared=False,
-        )
+def test_ctx_table_empty(session: orm.Session) -> None:
+    ctx, title = txn_controller.ctx_table(
+        session,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        uncleared=False,
+    )
 
     assert title == "Transactions"
     assert ctx["uri"] is None
@@ -362,21 +361,18 @@ def test_ctx_table_empty(flask_app: flask.Flask) -> None:
     assert ctx["end"] is None
 
 
-def test_ctx_table(
-    flask_app: flask.Flask,
-    transactions: list[Transaction],
-) -> None:
-    with flask_app.app_context():
-        ctx, title = txn_controller.ctx_table(
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            uncleared=False,
-        )
+def test_ctx_table(session: orm.Session, transactions: list[Transaction]) -> None:
+    ctx, title = txn_controller.ctx_table(
+        session,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        uncleared=False,
+    )
 
     assert title == "Transactions"
     assert ctx["uri"] is None
@@ -396,63 +392,63 @@ def test_ctx_table(
 
 def test_ctx_table_paging(
     monkeypatch: pytest.MonkeyPatch,
-    flask_app: flask.Flask,
+    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     monkeypatch.setattr(txn_controller, "PAGE_LEN", 2)
-    with flask_app.app_context():
-        ctx, _ = txn_controller.ctx_table(
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            transactions[2].date.isoformat(),
-            uncleared=False,
-        )
+    ctx, _ = txn_controller.ctx_table(
+        session,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        transactions[2].date.isoformat(),
+        uncleared=False,
+    )
 
     assert len(ctx["transactions"]) == 2
     assert ctx["next_page"] == transactions[0].date.isoformat()
 
 
 def test_ctx_table_search(
-    flask_app: flask.Flask,
+    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    with flask_app.app_context():
-        ctx, _ = txn_controller.ctx_table(
-            "rent",
-            None,
-            None,
-            None,
-            None,
-            None,
-            None,
-            uncleared=False,
-        )
+    ctx, _ = txn_controller.ctx_table(
+        session,
+        "rent",
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        uncleared=False,
+    )
 
     assert len(ctx["transactions"]) == 2
     assert ctx["search"] == "rent"
 
 
 def test_ctx_table_search_paging(
-    flask_app: flask.Flask,
+    session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    with flask_app.app_context():
-        ctx, _ = txn_controller.ctx_table(
-            "rent",
-            None,
-            None,
-            None,
-            None,
-            None,
-            "1",
-            uncleared=False,
-        )
+    ctx, _ = txn_controller.ctx_table(
+        session,
+        "rent",
+        None,
+        None,
+        None,
+        None,
+        None,
+        "1",
+        uncleared=False,
+    )
 
     assert len(ctx["transactions"]) == 1
     assert ctx["search"] == "rent"

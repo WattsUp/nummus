@@ -116,16 +116,20 @@ def page_all() -> flask.Response:
         string HTML response
     """
     args = flask.request.args
-    txn_table, title = ctx_table(
-        args.get("search"),
-        args.get("account"),
-        args.get("category"),
-        args.get("period"),
-        args.get("start"),
-        args.get("end"),
-        args.get("page"),
-        uncleared="uncleared" in args,
-    )
+
+    p = web.portfolio
+    with p.begin_session() as s:
+        txn_table, title = ctx_table(
+            s,
+            args.get("search"),
+            args.get("account"),
+            args.get("category"),
+            args.get("period"),
+            args.get("start"),
+            args.get("end"),
+            args.get("page"),
+            uncleared="uncleared" in args,
+        )
     return base.page(
         "transactions/page-all.jinja",
         title=title,
@@ -142,16 +146,19 @@ def table() -> str | flask.Response:
     """
     args = flask.request.args
     first_page = "page" not in args
-    txn_table, title = ctx_table(
-        args.get("search"),
-        args.get("account"),
-        args.get("category"),
-        args.get("period"),
-        args.get("start"),
-        args.get("end"),
-        args.get("page"),
-        uncleared="uncleared" in args,
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        txn_table, title = ctx_table(
+            s,
+            args.get("search"),
+            args.get("account"),
+            args.get("category"),
+            args.get("period"),
+            args.get("start"),
+            args.get("end"),
+            args.get("page"),
+            uncleared="uncleared" in args,
+        )
     html_title = f"<title>{title} - nummus</title>\n"
     html = html_title + flask.render_template(
         "transactions/table-rows.jinja",
@@ -991,6 +998,7 @@ def ctx_options(
 
 
 def ctx_table(
+    s: orm.Session,
     search_str: str | None,
     selected_account: str | None,
     selected_category: str | None,
@@ -1005,6 +1013,7 @@ def ctx_table(
     """Get the context to build the transaction table.
 
     Args:
+        s: SQL session to use
         search_str: String to search for
         selected_account: Selected account for filtering
         selected_category: Selected category for filtering
@@ -1018,128 +1027,126 @@ def ctx_table(
     Returns:
         tuple(TableContext, title)
     """
-    p = web.portfolio
-    with p.begin_session() as s:
-        accounts = Account.map_name(s)
-        categories_emoji = TransactionCategory.map_name_emoji(s)
-        categories = {
-            cat_id: TransactionCategory.clean_emoji_name(name)
-            for cat_id, name in categories_emoji.items()
-        }
-        query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
-        assets: dict[int, tuple[str, str | None]] = {
-            r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
-        }
+    accounts = Account.map_name(s)
+    categories_emoji = TransactionCategory.map_name_emoji(s)
+    categories = {
+        cat_id: TransactionCategory.clean_emoji_name(name)
+        for cat_id, name in categories_emoji.items()
+    }
+    query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
+    assets: dict[int, tuple[str, str | None]] = {
+        r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
+    }
 
-        if page_start is None:
-            page_start_int = None
-        else:
-            try:
-                page_start_int = int(page_start)
-            except ValueError:
-                page_start_int = datetime.date.fromisoformat(page_start).toordinal()
-
-        query, any_filters = table_query(
-            s,
-            acct_uri,
-            selected_account,
-            selected_period,
-            selected_start,
-            selected_end,
-            selected_category,
-            uncleared=uncleared,
-        )
-        options = ctx_options(
-            query,
-            accounts,
-            categories_emoji,
-            selected_account,
-            selected_category,
-        )
-
-        # Do search
+    if page_start is None:
+        page_start_int = None
+    else:
         try:
-            matches = TransactionSplit.search(query, search_str or "", categories)
-        except exc.EmptySearchError:
-            matches = None
+            page_start_int = int(page_start)
+        except ValueError:
+            page_start_int = datetime.date.fromisoformat(page_start).toordinal()
 
-        if matches is not None:
-            any_filters = True
-            query = query.where(TransactionSplit.id_.in_(matches))
-            t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
-        else:
-            t_split_order = {}
+    query, any_filters = table_query(
+        s,
+        acct_uri,
+        selected_account,
+        selected_period,
+        selected_start,
+        selected_end,
+        selected_category,
+        uncleared=uncleared,
+    )
+    options = ctx_options(
+        query,
+        accounts,
+        categories_emoji,
+        selected_account,
+        selected_category,
+    )
 
-        query_total = query.with_entities(func.sum(TransactionSplit.amount))
+    # Do search
+    try:
+        matches = TransactionSplit.search(query, search_str or "", categories)
+    except exc.EmptySearchError:
+        matches = None
 
-        if matches is not None:
-            i_start = page_start_int or 0
-            page = matches[i_start : i_start + PAGE_LEN]
-            query = query.where(TransactionSplit.id_.in_(page))
-            next_page = i_start + PAGE_LEN
-        else:
-            # Find the fewest dates to include that will make page at least
-            # PAGE_LEN long
-            included_date_ords: set[int] = set()
-            query_page_count = query.with_entities(
-                TransactionSplit.date_ord,
-                func.count(),
-            ).group_by(TransactionSplit.date_ord)
-            if page_start_int:
-                query_page_count = query_page_count.where(
-                    TransactionSplit.date_ord <= page_start_int,
-                )
-            page_count = 0
-            # Limit to PAGE_LEN since at most there is one txn per day
-            for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(
-                YIELD_PER,
-            ):
-                included_date_ords.add(date_ord)
-                page_count += count
-                if page_count >= PAGE_LEN:
-                    break
+    if matches is not None:
+        any_filters = True
+        query = query.where(TransactionSplit.id_.in_(matches))
+        t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
+    else:
+        t_split_order = {}
 
-            query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+    query_total = query.with_entities(func.sum(TransactionSplit.amount))
 
-            next_page = (
-                None
-                if len(included_date_ords) == 0
-                else datetime.date.fromordinal(min(included_date_ords) - 1)
+    if matches is not None:
+        i_start = page_start_int or 0
+        page = matches[i_start : i_start + PAGE_LEN]
+        query = query.where(TransactionSplit.id_.in_(page))
+        next_page = i_start + PAGE_LEN
+    else:
+        # Find the fewest dates to include that will make page at least
+        # PAGE_LEN long
+        included_date_ords: set[int] = set()
+        query_page_count = query.with_entities(
+            TransactionSplit.date_ord,
+            func.count(),
+        ).group_by(TransactionSplit.date_ord)
+        if page_start_int:
+            query_page_count = query_page_count.where(
+                TransactionSplit.date_ord <= page_start_int,
             )
+        page_count = 0
+        # Limit to PAGE_LEN since at most there is one txn per day
+        for date_ord, count in query_page_count.limit(PAGE_LEN).yield_per(
+            YIELD_PER,
+        ):
+            included_date_ords.add(date_ord)
+            page_count += count
+            if page_count >= PAGE_LEN:
+                break
 
-        n_matches = query_count(query)
-        groups = _table_results(
-            query,
-            assets,
-            accounts,
-            categories_emoji,
-            t_split_order,
+        query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+
+        next_page = (
+            None
+            if len(included_date_ords) == 0
+            else datetime.date.fromordinal(min(included_date_ords) - 1)
         )
-        title = _table_title(
-            selected_account and accounts[Account.uri_to_id(selected_account)],
-            selected_period,
-            selected_start,
-            selected_end,
-            selected_category
-            and categories_emoji[TransactionCategory.uri_to_id(selected_category)],
-            uncleared=uncleared,
-        )
-        return {
-            "uri": acct_uri,
-            "transactions": groups,
-            "query_total": query_total.scalar() or Decimal(),
-            "no_matches": n_matches == 0 and page_start_int is None,
-            "next_page": None if n_matches < PAGE_LEN else str(next_page),
-            "any_filters": any_filters,
-            "search": search_str,
-            **options,
-            "selected_period": selected_period,
-            "selected_account": selected_account,
-            "selected_category": selected_category,
-            "uncleared": uncleared,
-            "start": selected_start,
-            "end": selected_end,
-        }, title
+
+    n_matches = query_count(query)
+    groups = _table_results(
+        query,
+        assets,
+        accounts,
+        categories_emoji,
+        t_split_order,
+    )
+    title = _table_title(
+        selected_account and accounts[Account.uri_to_id(selected_account)],
+        selected_period,
+        selected_start,
+        selected_end,
+        selected_category
+        and categories_emoji[TransactionCategory.uri_to_id(selected_category)],
+        uncleared=uncleared,
+    )
+    return {
+        "uri": acct_uri,
+        "transactions": groups,
+        "query_total": query_total.scalar() or Decimal(),
+        "no_matches": n_matches == 0 and page_start_int is None,
+        "next_page": None if n_matches < PAGE_LEN else str(next_page),
+        "any_filters": any_filters,
+        "search": search_str,
+        **options,
+        "selected_period": selected_period,
+        "selected_account": selected_account,
+        "selected_category": selected_category,
+        "uncleared": uncleared,
+        "start": selected_start,
+        "end": selected_end,
+    }, title
 
 
 def _table_results(

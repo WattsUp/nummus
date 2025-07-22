@@ -60,14 +60,16 @@ class DateLabels(NamedTuple):
     mode: str
 
 
-def ctx_base() -> BaseContext:
+def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
     """Get the context to build the base page.
+
+    Args:
+        is_encrypted: Portfolio encrypted status
+        debug: Flask app debug status
 
     Returns:
         BaseContext
     """
-    p = web.portfolio
-
     # list[(group label, subpages {label: (icon name, endpoint, link type)})]
     nav_items: list[PageGroup] = [
         PageGroup(
@@ -115,7 +117,7 @@ def ctx_base() -> BaseContext:
             {
                 "Logout": (
                     Page("logout", "auth.logout", LinkType.HX_POST)
-                    if p.is_encrypted
+                    if is_encrypted
                     else None
                 ),
                 "Categories": Page(
@@ -132,7 +134,7 @@ def ctx_base() -> BaseContext:
                 "Health checks": Page("health_metrics", "health.page", LinkType.PAGE),
                 "Style test": (
                     Page("style", "common.page_style_test", LinkType.PAGE)
-                    if flask.current_app.debug
+                    if debug
                     else None
                 ),
             },
@@ -239,6 +241,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
         content = flask.render_template(content_template, **context)
         html = html_title + nav_trigger + content
     else:
+        p = web.portfolio
         html = flask.render_template_string(
             textwrap.dedent(
                 f"""\
@@ -249,7 +252,10 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
                 """,
             ),
             title=f"{title} - nummus",
-            **ctx_base(),
+            **ctx_base(
+                is_encrypted=p.is_encrypted,
+                debug=flask.current_app.debug,
+            ),
             **context,
         )
 
