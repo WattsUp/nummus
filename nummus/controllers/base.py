@@ -73,6 +73,7 @@ class CategoryContext(NamedTuple):
     uri: str
     name: str
     emoji_name: str
+    group: TransactionCategoryGroup
     asset_linked: bool
 
 
@@ -668,6 +669,7 @@ def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
                 TransactionCategory.id_to_uri(t_cat_id),
                 name,
                 emoji_name,
+                group,
                 asset_linked,
             ),
         )

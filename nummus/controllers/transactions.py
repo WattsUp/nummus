@@ -86,7 +86,7 @@ class OptionsContext(TypedDict):
 
     options_period: list[tuple[str, str]]
     options_account: list[tuple[str, str]]
-    options_category: list[tuple[str, str]]
+    options_category: base.CategoryGroups
 
 
 class TableContext(OptionsContext):
@@ -188,7 +188,6 @@ def table_options() -> str:
     p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
-        categories_emoji = TransactionCategory.map_name_emoji(s)
 
         args = flask.request.args
         uncleared = "uncleared" in args
@@ -211,7 +210,7 @@ def table_options() -> str:
         options = ctx_options(
             query,
             accounts,
-            categories_emoji,
+            base.tranaction_category_groups(s),
             selected_account,
             selected_category,
         )
@@ -896,7 +895,7 @@ def ctx_row(
 def ctx_options(
     query: orm.Query[TransactionSplit],
     accounts: dict[int, str],
-    categories: dict[int, str],
+    categories: base.CategoryGroups,
     selected_account: str | None = None,
     selected_category: str | None = None,
 ) -> OptionsContext:
@@ -938,24 +937,20 @@ def ctx_options(
         options_account = [(accounts[acct_id], selected_account)]
 
     query_options = query.with_entities(TransactionSplit.category_id).distinct()
-    options_category = sorted(
-        [
-            (
-                categories[cat_id],
-                TransactionCategory.id_to_uri(cat_id),
-                utils.strip_emojis(categories[cat_id]),
-            )
-            for cat_id, in query_options.yield_per(YIELD_PER)
-        ],
-        key=operator.itemgetter(2),
-    )
-    # Remove clean_emoji_name
-    options_category = [cat[:2] for cat in options_category]
-    if len(options_category) == 0 and selected_category:
-        cat_id = TransactionCategory.uri_to_id(selected_category)
-        options_category = [
-            (categories[cat_id], selected_category),
-        ]
+    options_uris = {
+        TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
+    }
+    if selected_category:
+        options_uris.add(selected_category)
+    options_category = {
+        group: [cat for cat in items if cat.uri in options_uris]
+        for group, items in categories.items()
+    }
+    options_category = {
+        group: sorted(items, key=operator.attrgetter("name"))
+        for group, items in options_category.items()
+        if items
+    }
 
     return {
         "options_period": options_period,
@@ -1026,7 +1021,7 @@ def ctx_table(
     options = ctx_options(
         query,
         accounts,
-        categories_emoji,
+        base.tranaction_category_groups(s),
         selected_account,
         selected_category,
     )

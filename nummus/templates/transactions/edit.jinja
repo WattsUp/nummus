@@ -181,9 +181,16 @@
       <label
         class="input-outlined input-bg-surface-container-high {{ split_class }}"
       >
-        {% with category_groups=txn.category_groups, selected_uri=split.category_uri %}
-          {% include "shared/category-select.jinja" %}
-        {% endwith %}
+        <select
+          name="category"
+          required
+          autocomplete="off"
+          onkeyup="onSelectKey(event)"
+        >
+          {% with category_groups=txn.category_groups, selected_uri=split.category_uri, hide_asset_linked=True %}
+            {% include "shared/category-options.jinja" %}
+          {% endwith %}
+        </select>
         {% if not is_split %}<icon>category</icon>{% endif %}
         <div>
           <div>Category</div>
