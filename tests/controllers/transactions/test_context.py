@@ -53,7 +53,7 @@ def test_table_query(
     target: tuple[int, bool],
 ) -> None:
     _ = transactions
-    query, any_filters = txn_controller.table_query(
+    tbl_query = txn_controller.table_query(
         session,
         None,
         account.uri if include_account else None,
@@ -63,8 +63,8 @@ def test_table_query(
         TransactionCategory.id_to_uri(categories[category]) if category else None,
         uncleared=uncleared,
     )
-    assert any_filters == target[1]
-    assert query_count(query) == target[0]
+    assert tbl_query.any_filters == target[1]
+    assert query_count(tbl_query.final_query) == target[0]
 
 
 def test_ctx_txn(
@@ -186,10 +186,14 @@ def test_ctx_options(
     categories: dict[str, int],
 ) -> None:
     _ = transactions
-    query = session.query(TransactionSplit)
+    tbl_query = txn_controller.TableQuery(
+        session.query(TransactionSplit),
+        {},
+        any_filters=False,
+    )
 
     ctx = txn_controller.ctx_options(
-        query,
+        tbl_query,
         Account.map_name(session),
         base.tranaction_category_groups(session),
         None,
@@ -225,10 +229,14 @@ def test_ctx_options_selected(
     account: Account,
     categories: dict[str, int],
 ) -> None:
-    query = session.query(TransactionSplit)
+    tbl_query = txn_controller.TableQuery(
+        session.query(TransactionSplit),
+        {},
+        any_filters=False,
+    )
 
     ctx = txn_controller.ctx_options(
-        query,
+        tbl_query,
         Account.map_name(session),
         base.tranaction_category_groups(session),
         account.uri,

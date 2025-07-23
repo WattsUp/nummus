@@ -741,7 +741,7 @@ def txns_options(uri: str) -> str:
         selected_start = args.get("start")
         selected_end = args.get("end")
 
-        query, _ = transactions.table_query(
+        tbl_query = transactions.table_query(
             s,
             None,
             selected_account,
@@ -752,7 +752,7 @@ def txns_options(uri: str) -> str:
             uncleared=uncleared,
         )
         options = transactions.ctx_options(
-            query,
+            tbl_query,
             accounts,
             base.tranaction_category_groups(s),
             selected_account,

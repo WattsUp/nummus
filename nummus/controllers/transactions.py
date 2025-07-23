@@ -5,9 +5,10 @@ from __future__ import annotations
 import datetime
 import operator
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
+import sqlalchemy
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
@@ -107,6 +108,32 @@ class TableContext(OptionsContext):
     end: str | None
 
 
+class TableQuery(NamedTuple):
+    """Type definition for result of table_query()."""
+
+    query: orm.Query[TransactionSplit]
+    clauses: dict[str, sqlalchemy.ColumnElement]
+    any_filters: bool
+
+    @property
+    def final_query(self) -> orm.Query[TransactionSplit]:
+        """Build the final query with clauses."""
+        return self.query.where(*self.clauses.values())
+
+    def where(self, **clauses: sqlalchemy.ColumnElement) -> TableQuery:
+        """Add clauses to query.
+
+        Args:
+            clauses: New clauses to add
+
+        Returns:
+            New TableQuery
+        """
+        new_clauses = self.clauses.copy()
+        new_clauses.update(clauses)
+        return TableQuery(self.query, new_clauses, any_filters=True)
+
+
 def page_all() -> flask.Response:
     """GET /transactions.
 
@@ -197,7 +224,7 @@ def table_options() -> str:
         selected_start = args.get("start")
         selected_end = args.get("end")
 
-        query, _ = table_query(
+        tbl_query = table_query(
             s,
             None,
             selected_account,
@@ -208,7 +235,7 @@ def table_options() -> str:
             uncleared=uncleared,
         )
         options = ctx_options(
-            query,
+            tbl_query,
             accounts,
             base.tranaction_category_groups(s),
             selected_account,
@@ -674,7 +701,7 @@ def table_query(
     selected_category: str | None = None,
     *,
     uncleared: bool | None = False,
-) -> tuple[orm.Query[TransactionSplit], bool]:
+) -> TableQuery:
     """Create transactions table query.
 
     Args:
@@ -688,7 +715,7 @@ def table_query(
         uncleared: True will only query uncleared transactions
 
     Returns:
-        (SQL query, any_filters)
+        TableQuery
     """
     selected_account = acct_uri or selected_account
     query = s.query(TransactionSplit).order_by(
@@ -699,6 +726,7 @@ def table_query(
         TransactionSplit.tag,
         TransactionSplit.memo,
     )
+    clauses: dict[str, sqlalchemy.ColumnElement] = {}
 
     any_filters = False
 
@@ -718,30 +746,26 @@ def table_query(
             end = datetime.date(year, 12, 31)
 
         if start:
-            query = query.where(
-                TransactionSplit.date_ord >= start.toordinal(),
-            )
+            clauses["start"] = TransactionSplit.date_ord >= start.toordinal()
         if end:
-            query = query.where(
-                TransactionSplit.date_ord <= end.toordinal(),
-            )
+            clauses["end"] = TransactionSplit.date_ord <= end.toordinal()
 
     if selected_account:
         any_filters |= acct_uri is None
-        query = query.where(
-            TransactionSplit.account_id == Account.uri_to_id(selected_account),
+        clauses["account"] = TransactionSplit.account_id == Account.uri_to_id(
+            selected_account,
         )
 
     if selected_category:
         any_filters = True
         cat_id = TransactionCategory.uri_to_id(selected_category)
-        query = query.where(TransactionSplit.category_id == cat_id)
+        clauses["category"] = TransactionSplit.category_id == cat_id
 
     if uncleared:
         any_filters = True
-        query = query.where(TransactionSplit.cleared.is_(False))
+        clauses["cleared"] = TransactionSplit.cleared.is_(False)
 
-    return query, any_filters
+    return TableQuery(query, clauses, any_filters)
 
 
 def ctx_txn(
@@ -893,7 +917,7 @@ def ctx_row(
 
 
 def ctx_options(
-    query: orm.Query[TransactionSplit],
+    tbl_query: TableQuery,
     accounts: dict[int, str],
     categories: base.CategoryGroups,
     selected_account: str | None = None,
@@ -902,7 +926,7 @@ def ctx_options(
     """Get the context to build the options for table.
 
     Args:
-        query: Query to use to get distinct values
+        tbl_query: Query to use to get distinct values
         accounts: Account name mapping
         categories: Account name mapping
         selected_account: URI of account from args
@@ -911,7 +935,7 @@ def ctx_options(
     Returns:
         OptionsContext
     """
-    query = query.order_by(None)
+    query = tbl_query.query.order_by(None)
 
     today = datetime.datetime.now().astimezone().date()
     month = utils.start_of_month(today)
@@ -924,7 +948,13 @@ def ctx_options(
         ("Custom date range", "custom"),
     ]
 
-    query_options = query.with_entities(TransactionSplit.account_id).distinct()
+    clauses = tbl_query.clauses.copy()
+    clauses.pop("account", None)
+    query_options = (
+        query.with_entities(TransactionSplit.account_id)
+        .where(*clauses.values())
+        .distinct()
+    )
     options_account = sorted(
         [
             (accounts[acct_id], Account.id_to_uri(acct_id))
@@ -936,7 +966,13 @@ def ctx_options(
         acct_id = Account.uri_to_id(selected_account)
         options_account = [(accounts[acct_id], selected_account)]
 
-    query_options = query.with_entities(TransactionSplit.category_id).distinct()
+    clauses = tbl_query.clauses.copy()
+    clauses.pop("category", None)
+    query_options = (
+        query.with_entities(TransactionSplit.category_id)
+        .where(*clauses.values())
+        .distinct()
+    )
     options_uris = {
         TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
     }
@@ -1008,7 +1044,7 @@ def ctx_table(
         except ValueError:
             page_start_int = datetime.date.fromisoformat(page_start).toordinal()
 
-    query, any_filters = table_query(
+    tbl_query = table_query(
         s,
         acct_uri,
         selected_account,
@@ -1019,7 +1055,7 @@ def ctx_table(
         uncleared=uncleared,
     )
     options = ctx_options(
-        query,
+        tbl_query,
         accounts,
         base.tranaction_category_groups(s),
         selected_account,
@@ -1028,29 +1064,33 @@ def ctx_table(
 
     # Do search
     try:
-        matches = TransactionSplit.search(query, search_str or "", categories)
+        matches = TransactionSplit.search(
+            tbl_query.final_query,
+            search_str or "",
+            categories,
+        )
     except exc.EmptySearchError:
         matches = None
 
     if matches is not None:
-        any_filters = True
-        query = query.where(TransactionSplit.id_.in_(matches))
+        tbl_query = tbl_query.where(search=TransactionSplit.id_.in_(matches))
         t_split_order = {t_split_id: i for i, t_split_id in enumerate(matches)}
     else:
         t_split_order = {}
 
-    query_total = query.with_entities(func.sum(TransactionSplit.amount))
+    final_query = tbl_query.final_query
+    query_total = final_query.with_entities(func.sum(TransactionSplit.amount))
 
     if matches is not None:
         i_start = page_start_int or 0
         page = matches[i_start : i_start + PAGE_LEN]
-        query = query.where(TransactionSplit.id_.in_(page))
+        final_query = final_query.where(TransactionSplit.id_.in_(page))
         next_page = i_start + PAGE_LEN
     else:
         # Find the fewest dates to include that will make page at least
         # PAGE_LEN long
         included_date_ords: set[int] = set()
-        query_page_count = query.with_entities(
+        query_page_count = final_query.with_entities(
             TransactionSplit.date_ord,
             func.count(),
         ).group_by(TransactionSplit.date_ord)
@@ -1068,7 +1108,9 @@ def ctx_table(
             if page_count >= PAGE_LEN:
                 break
 
-        query = query.where(TransactionSplit.date_ord.in_(included_date_ords))
+        final_query = final_query.where(
+            TransactionSplit.date_ord.in_(included_date_ords),
+        )
 
         next_page = (
             None
@@ -1076,9 +1118,9 @@ def ctx_table(
             else datetime.date.fromordinal(min(included_date_ords) - 1)
         )
 
-    n_matches = query_count(query)
+    n_matches = query_count(final_query)
     groups = _table_results(
-        query,
+        final_query,
         assets,
         accounts,
         categories_emoji,
@@ -1099,7 +1141,7 @@ def ctx_table(
         "query_total": query_total.scalar() or Decimal(),
         "no_matches": n_matches == 0 and page_start_int is None,
         "next_page": None if n_matches < PAGE_LEN else str(next_page),
-        "any_filters": any_filters,
+        "any_filters": tbl_query.any_filters,
         "search": search_str,
         **options,
         "selected_period": selected_period,
