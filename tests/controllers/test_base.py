@@ -12,7 +12,7 @@ from nummus import controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
-from nummus.models import Account, Asset, AssetValuation
+from nummus.models import Account, Asset, AssetValuation, TransactionCategoryGroup
 from tests import conftest
 
 if TYPE_CHECKING:
@@ -464,3 +464,12 @@ def test_change_redirect(web_client: WebClient) -> None:
 def test_change_redirect_no_htmx(web_client: WebClient) -> None:
     _, headers = web_client.GET("redirect", headers={}, rc=base.HTTP_CODE_REDIRECT)
     assert "HX-Redirect" not in headers
+
+
+def test_tranaction_category_groups(
+    session: orm.Session,
+    categories: dict[str, int],
+) -> None:
+    groups = base.tranaction_category_groups(session)
+    assert len(groups) == len(TransactionCategoryGroup)
+    assert sum(len(group) for group in groups.values()) == len(categories)
