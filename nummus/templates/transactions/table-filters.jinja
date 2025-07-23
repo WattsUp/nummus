@@ -101,6 +101,7 @@
           hx-target="#txn-filters"
           hx-indicator="unset"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          onkeyup="onSelectKey(event)"
         >
           <option value=""></option>
           {% for label, value in ctx.options_category %}

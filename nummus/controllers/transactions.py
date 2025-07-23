@@ -20,7 +20,6 @@ from nummus.models import (
     query_count,
     Transaction,
     TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
     update_rows_list,
     YIELD_PER,
@@ -48,8 +47,7 @@ class TxnContext(TypedDict):
     statement: str
     payee: str | None
     splits: list[SplitContext]
-    # list[(category uri, name, option disabled, group)]
-    categories: list[tuple[str, str, bool, TransactionCategoryGroup]]
+    category_groups: base.CategoryGroups
     payees: list[str]
     tags: list[str]
     similar_uri: str | None
@@ -252,20 +250,6 @@ def new() -> str | flask.Response:
         )
         accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-                TransactionCategory.asset_linked,
-                TransactionCategory.group,
-            )
-            .order_by(TransactionCategory.group, TransactionCategory.name)
-        )
-        categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
-            r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
-        }
-
         uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         query = s.query(Transaction.payee)
@@ -302,10 +286,7 @@ def new() -> str | flask.Response:
             "statement": "Manually created",
             "payee": None,
             "splits": [empty_split],
-            "categories": [
-                (TransactionCategory.id_to_uri(cat_id), *row)
-                for cat_id, row in categories.items()
-            ],
+            "category_groups": base.tranaction_category_groups(s),
             "payees": payees,
             "tags": tags,
             "similar_uri": None,
@@ -798,19 +779,6 @@ def ctx_txn(
     accounts: dict[int, tuple[str, bool]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
-    query = (
-        s.query(TransactionCategory)
-        .with_entities(
-            TransactionCategory.id_,
-            TransactionCategory.emoji_name,
-            TransactionCategory.asset_linked,
-            TransactionCategory.group,
-        )
-        .order_by(TransactionCategory.group, TransactionCategory.name)
-    )
-    categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
-        r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
-    }
     query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
@@ -854,10 +822,7 @@ def ctx_txn(
         "statement": txn.statement,
         "payee": txn.payee if payee is None else payee,
         "splits": ctx_splits,
-        "categories": [
-            (TransactionCategory.id_to_uri(cat_id), *row)
-            for cat_id, row in categories.items()
-        ],
+        "category_groups": base.tranaction_category_groups(s),
         "payees": payees,
         "tags": tags,
         "similar_uri": similar_uri,

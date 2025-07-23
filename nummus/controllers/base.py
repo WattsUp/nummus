@@ -14,8 +14,15 @@ import flask
 from typing_extensions import NamedTuple, TypedDict, TypeVar
 
 from nummus import exceptions as exc
-from nummus import models, utils, web
-from nummus.models import Base, query_count
+from nummus import utils, web
+from nummus.models import (
+    Base,
+    BaseEnum,
+    query_count,
+    TransactionCategory,
+    TransactionCategoryGroup,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
     import sqlalchemy
@@ -24,7 +31,7 @@ if TYPE_CHECKING:
 Routes = dict[str, tuple[Callable, list[str]]]
 
 
-class LinkType(models.BaseEnum):
+class LinkType(BaseEnum):
     """Header link type."""
 
     PAGE = 1
@@ -58,6 +65,18 @@ class DateLabels(NamedTuple):
 
     labels: list[str]
     mode: str
+
+
+class CategoryContext(NamedTuple):
+    """Context for a category option."""
+
+    uri: str
+    name: str
+    emoji_name: str
+    asset_linked: bool
+
+
+CategoryGroups = dict[TransactionCategoryGroup, list[CategoryContext]]
 
 
 def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
@@ -615,3 +634,41 @@ def parse_date(
             raise ValueError(msg)
 
     return date
+
+
+def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
+    """Get TransactionCategory by groups.
+
+    Args:
+        s: SQL session to use
+
+    Returns:
+        dict{group: list[CategoryContext]}
+    """
+    query = (
+        s.query(TransactionCategory)
+        .with_entities(
+            TransactionCategory.id_,
+            TransactionCategory.name,
+            TransactionCategory.emoji_name,
+            TransactionCategory.asset_linked,
+            TransactionCategory.group,
+        )
+        .order_by(TransactionCategory.name)
+    )
+    category_groups: CategoryGroups = {
+        TransactionCategoryGroup.INCOME: [],
+        TransactionCategoryGroup.EXPENSE: [],
+        TransactionCategoryGroup.TRANSFER: [],
+        TransactionCategoryGroup.OTHER: [],
+    }
+    for t_cat_id, name, emoji_name, asset_linked, group in query.yield_per(YIELD_PER):
+        category_groups[group].append(
+            CategoryContext(
+                TransactionCategory.id_to_uri(t_cat_id),
+                name,
+                emoji_name,
+                asset_linked,
+            ),
+        )
+    return category_groups
