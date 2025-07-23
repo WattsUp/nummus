@@ -20,7 +20,6 @@ from nummus.models import (
     query_count,
     Transaction,
     TransactionCategory,
-    TransactionCategoryGroup,
     TransactionSplit,
     update_rows_list,
     YIELD_PER,
@@ -48,8 +47,7 @@ class TxnContext(TypedDict):
     statement: str
     payee: str | None
     splits: list[SplitContext]
-    # list[(category uri, name, option disabled, group)]
-    categories: list[tuple[str, str, bool, TransactionCategoryGroup]]
+    category_groups: base.CategoryGroups
     payees: list[str]
     tags: list[str]
     similar_uri: str | None
@@ -88,7 +86,7 @@ class OptionsContext(TypedDict):
 
     options_period: list[tuple[str, str]]
     options_account: list[tuple[str, str]]
-    options_category: list[tuple[str, str]]
+    options_category: base.CategoryGroups
 
 
 class TableContext(OptionsContext):
@@ -190,7 +188,6 @@ def table_options() -> str:
     p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
-        categories_emoji = TransactionCategory.map_name_emoji(s)
 
         args = flask.request.args
         uncleared = "uncleared" in args
@@ -213,7 +210,7 @@ def table_options() -> str:
         options = ctx_options(
             query,
             accounts,
-            categories_emoji,
+            base.tranaction_category_groups(s),
             selected_account,
             selected_category,
         )
@@ -252,20 +249,6 @@ def new() -> str | flask.Response:
         )
         accounts: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
 
-        query = (
-            s.query(TransactionCategory)
-            .with_entities(
-                TransactionCategory.id_,
-                TransactionCategory.emoji_name,
-                TransactionCategory.asset_linked,
-                TransactionCategory.group,
-            )
-            .order_by(TransactionCategory.group, TransactionCategory.name)
-        )
-        categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
-            r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
-        }
-
         uncategorized_id, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         query = s.query(Transaction.payee)
@@ -302,10 +285,7 @@ def new() -> str | flask.Response:
             "statement": "Manually created",
             "payee": None,
             "splits": [empty_split],
-            "categories": [
-                (TransactionCategory.id_to_uri(cat_id), *row)
-                for cat_id, row in categories.items()
-            ],
+            "category_groups": base.tranaction_category_groups(s),
             "payees": payees,
             "tags": tags,
             "similar_uri": None,
@@ -798,19 +778,6 @@ def ctx_txn(
     accounts: dict[int, tuple[str, bool]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
-    query = (
-        s.query(TransactionCategory)
-        .with_entities(
-            TransactionCategory.id_,
-            TransactionCategory.emoji_name,
-            TransactionCategory.asset_linked,
-            TransactionCategory.group,
-        )
-        .order_by(TransactionCategory.group, TransactionCategory.name)
-    )
-    categories: dict[int, tuple[str, bool, TransactionCategoryGroup]] = {
-        r[0]: (r[1], r[2], r[3]) for r in query.yield_per(YIELD_PER)
-    }
     query = s.query(Asset).with_entities(Asset.id_, Asset.name, Asset.ticker)
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
@@ -854,10 +821,7 @@ def ctx_txn(
         "statement": txn.statement,
         "payee": txn.payee if payee is None else payee,
         "splits": ctx_splits,
-        "categories": [
-            (TransactionCategory.id_to_uri(cat_id), *row)
-            for cat_id, row in categories.items()
-        ],
+        "category_groups": base.tranaction_category_groups(s),
         "payees": payees,
         "tags": tags,
         "similar_uri": similar_uri,
@@ -931,7 +895,7 @@ def ctx_row(
 def ctx_options(
     query: orm.Query[TransactionSplit],
     accounts: dict[int, str],
-    categories: dict[int, str],
+    categories: base.CategoryGroups,
     selected_account: str | None = None,
     selected_category: str | None = None,
 ) -> OptionsContext:
@@ -973,24 +937,20 @@ def ctx_options(
         options_account = [(accounts[acct_id], selected_account)]
 
     query_options = query.with_entities(TransactionSplit.category_id).distinct()
-    options_category = sorted(
-        [
-            (
-                categories[cat_id],
-                TransactionCategory.id_to_uri(cat_id),
-                utils.strip_emojis(categories[cat_id]),
-            )
-            for cat_id, in query_options.yield_per(YIELD_PER)
-        ],
-        key=operator.itemgetter(2),
-    )
-    # Remove clean_emoji_name
-    options_category = [cat[:2] for cat in options_category]
-    if len(options_category) == 0 and selected_category:
-        cat_id = TransactionCategory.uri_to_id(selected_category)
-        options_category = [
-            (categories[cat_id], selected_category),
-        ]
+    options_uris = {
+        TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
+    }
+    if selected_category:
+        options_uris.add(selected_category)
+    options_category = {
+        group: [cat for cat in items if cat.uri in options_uris]
+        for group, items in categories.items()
+    }
+    options_category = {
+        group: sorted(items, key=operator.attrgetter("name"))
+        for group, items in options_category.items()
+        if items
+    }
 
     return {
         "options_period": options_period,
@@ -1061,7 +1021,7 @@ def ctx_table(
     options = ctx_options(
         query,
         accounts,
-        categories_emoji,
+        base.tranaction_category_groups(s),
         selected_account,
         selected_category,
     )

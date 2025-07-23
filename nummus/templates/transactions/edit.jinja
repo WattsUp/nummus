@@ -181,19 +181,15 @@
       <label
         class="input-outlined input-bg-surface-container-high {{ split_class }}"
       >
-        <select name="category" required autocomplete="off">
-          {% for value, label, disabled, group in txn.categories %}
-            {% if not loop.previtem or loop.previtem[3] != group %}
-              <option disabled>{{ group.pretty }}</option>
-            {% endif %}
-            <option
-              value="{{ value }}"
-              {% if disabled %}disabled hidden{% endif %}
-              {% if value == split.category_uri %}selected{% endif %}
-            >
-              {{ label }}
-            </option>
-          {% endfor %}
+        <select
+          name="category"
+          required
+          autocomplete="off"
+          onkeyup="onSelectKey(event)"
+        >
+          {% with category_groups=txn.category_groups, selected_uri=split.category_uri, hide_asset_linked=True %}
+            {% include "shared/category-options.jinja" %}
+          {% endwith %}
         </select>
         {% if not is_split %}<icon>category</icon>{% endif %}
         <div>

@@ -732,7 +732,6 @@ def txns_options(uri: str) -> str:
     p = web.portfolio
     with p.begin_session() as s:
         accounts = Account.map_name(s)
-        categories_emoji = TransactionCategory.map_name_emoji(s)
 
         args = flask.request.args
         uncleared = "uncleared" in args
@@ -755,7 +754,7 @@ def txns_options(uri: str) -> str:
         options = transactions.ctx_options(
             query,
             accounts,
-            categories_emoji,
+            base.tranaction_category_groups(s),
             selected_account,
             selected_category,
         )

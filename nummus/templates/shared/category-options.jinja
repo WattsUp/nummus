@@ -1,0 +1,14 @@
+{% for group, categories in category_groups.items() %}
+  <optgroup label="{{ group.pretty }}">
+    {% for category in categories %}
+      <option
+        value="{{ category.uri }}"
+        {% if category.asset_linked and hide_asset_linked %}disabled hidden{% endif %}
+        {% if category.uri == selected_uri %}selected{% endif %}
+        label="{{ category.emoji_name }}"
+      >
+        {{ category.name }}
+      </option>
+    {% endfor %}
+  </optgroup>
+{% endfor %}

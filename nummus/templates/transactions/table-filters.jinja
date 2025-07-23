@@ -101,16 +101,12 @@
           hx-target="#txn-filters"
           hx-indicator="unset"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          onkeyup="onSelectKey(event)"
         >
           <option value=""></option>
-          {% for label, value in ctx.options_category %}
-            <option
-              value="{{ value }}"
-              {% if value == ctx.selected_category %}selected{% endif %}
-            >
-              {{ label }}
-            </option>
-          {% endfor %}
+          {% with category_groups=ctx.options_category, selected_uri=ctx.selected_category %}
+            {% include "shared/category-options.jinja" %}
+          {% endwith %}
         </select>
         <div>
           <div>Category</div>

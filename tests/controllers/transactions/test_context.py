@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import pytest
 
 from nummus import utils
+from nummus.controllers import base
 from nummus.controllers import transactions as txn_controller
 from nummus.models import (
     Account,
@@ -14,6 +15,7 @@ from nummus.models import (
     query_count,
     Transaction,
     TransactionCategory,
+    TransactionCategoryGroup,
     TransactionSplit,
     YIELD_PER,
 )
@@ -189,19 +191,32 @@ def test_ctx_options(
     ctx = txn_controller.ctx_options(
         query,
         Account.map_name(session),
-        TransactionCategory.map_name_emoji(session),
+        base.tranaction_category_groups(session),
         None,
         None,
     )
 
     assert ctx["options_account"] == [(account.name, account.uri)]
-    target = [
-        ("Other Income", TransactionCategory.id_to_uri(categories["other income"])),
-        (
-            "Securities Traded",
-            TransactionCategory.id_to_uri(categories["securities traded"]),
-        ),
-    ]
+    target = {
+        TransactionCategoryGroup.INCOME: [
+            base.CategoryContext(
+                TransactionCategory.id_to_uri(categories["other income"]),
+                "other income",
+                "Other Income",
+                TransactionCategoryGroup.INCOME,
+                asset_linked=False,
+            ),
+        ],
+        TransactionCategoryGroup.OTHER: [
+            base.CategoryContext(
+                TransactionCategory.id_to_uri(categories["securities traded"]),
+                "securities traded",
+                "Securities Traded",
+                TransactionCategoryGroup.OTHER,
+                asset_linked=True,
+            ),
+        ],
+    }
     assert ctx["options_category"] == target
 
 
@@ -215,15 +230,23 @@ def test_ctx_options_selected(
     ctx = txn_controller.ctx_options(
         query,
         Account.map_name(session),
-        TransactionCategory.map_name_emoji(session),
+        base.tranaction_category_groups(session),
         account.uri,
         TransactionCategory.id_to_uri(categories["other income"]),
     )
 
     assert ctx["options_account"] == [(account.name, account.uri)]
-    target = [
-        ("Other Income", TransactionCategory.id_to_uri(categories["other income"])),
-    ]
+    target = {
+        TransactionCategoryGroup.INCOME: [
+            base.CategoryContext(
+                TransactionCategory.id_to_uri(categories["other income"]),
+                "other income",
+                "Other Income",
+                TransactionCategoryGroup.INCOME,
+                asset_linked=False,
+            ),
+        ],
+    }
     assert ctx["options_category"] == target
 
 

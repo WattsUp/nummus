@@ -364,6 +364,26 @@ function nummusClearHistory() {
   localStorage.removeItem("htmx-history-cache");
 }
 
+/**
+ * On key press of a select tag, go to the matching element, ignoring emojis
+ *
+ * @param {Event} evt - Triggering event
+ */
+function onSelectKey(evt) {
+  const k = evt.key.toLowerCase();
+  if (k.length != 1 || !k.match(/[a-z]/)) return;
+  const e = evt.target;
+
+  const values = [];
+  for (const option of e.options) {
+    if (option.disabled) continue;
+    const cat = option.innerText.toLowerCase().trim();
+    if (cat[0] == k) values[values.length] = option.value;
+  }
+  const i = values.indexOf(e.value) + 1;
+  e.value = values[i % values.length];
+}
+
 /*
  * DELETE is supposed to use request parameters but form is way better
  * htmx 2.x followed the spec properly, revert
