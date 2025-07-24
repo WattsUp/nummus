@@ -211,7 +211,7 @@
     {% include "budgeting/target-desc.jinja" %}
   </div>
 </form>
-<div class="flex flex-wrap justify-around">
+<div class="flex flex-wrap justify-around" hx-target="#dialog-error">
   {% if not target.new %}
     <button
       class="btn-text-error"

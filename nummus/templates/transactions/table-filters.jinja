@@ -130,8 +130,9 @@
         <button
           class="btn-text"
           type="button"
-          hx-include="unset"
           hx-get="{{ url_for(endpoint,  **url_args) }}"
+          hx-include="unset"
+          hx-target="#txn-table"
         >
           Clear all filters
         </button>

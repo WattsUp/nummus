@@ -65,11 +65,7 @@
     </p>
   </div>
 </details>
-<div
-  class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
-  hx-push-url="true"
-  hx-swap="innerHTML show:window:top"
->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4">
   {% for category, (total, accounts) in ctx.categories.items() %}
     <div class="mb-4">
       <div class="w-full">
@@ -92,8 +88,10 @@
     type="checkbox"
     autocomplete="off"
     {% if ctx.include_closed %}checked{% endif %}
-    hx-push-url="true"
     hx-get="{{ url_for('accounts.page_all', include_closed=not ctx.include_closed) }}"
+    hx-target="#main"
+    hx-push-url="true"
+    hx-swap="innerHTML show:window:top"
   />
   <div>
     {% if ctx.include_closed %}

@@ -91,8 +91,9 @@
   <button
     class="btn-text-error mx-auto"
     onclick="txnCat.confirmDelete(event)"
-    hx-trigger="delete"
     hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}"
+    hx-target="#dialog-error"
+    hx-trigger="delete"
   >
     Delete
   </button>

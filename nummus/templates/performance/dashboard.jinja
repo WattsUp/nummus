@@ -11,14 +11,14 @@
     href="{{ url_for('performance.page') }}"
     hx-get="{{ url_for('performance.page') }}"
     hx-target="#main"
-    hx-swap="innerHTML"
+    hx-swap="innerHTML show:window:top"
     hx-push-url="true"
     hx-indicator="next .spinner"
   >
     <h1
       class="align-left grow font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
     >
-      90-Day Performance
+      90-day performance
     </h1>
     <h1 class="text-lg">{{ data["profit"] | money }}</h1>
   </a>
@@ -38,8 +38,8 @@
         href="{{ url_for('performance.page', index=index) }}"
         hx-get="{{ url_for('performance.page', index=index) }}"
         hx-target="#main"
-        hx-swap="innerHTML"
         hx-push-url="true"
+        hx-swap="innerHTML show:window:top"
       >
         <div class="grow truncate">{{ index }}</div>
         <div class="text-{{ twrr | pnl_color }} min-w-[4rem] text-right">

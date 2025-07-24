@@ -6,6 +6,9 @@
       class="btn-text btn-sq"
       hx-disabled-elt="this"
       hx-get="{{ url_for('assets.valuation', uri=valuation.uri) }}"
+      hx-target="#dialog"
+      hx-push-url="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
     >
       <icon>edit</icon>
     </button>

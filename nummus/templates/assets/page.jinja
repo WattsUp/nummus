@@ -54,13 +54,7 @@
   {% endif %}
   {% include "assets/table-filters.jinja" %}
   {# Display query total if filtered #}
-  <div
-    id="valuation-table"
-    class="mx-auto max-w-sm"
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-  >
+  <div id="valuation-table" class="mx-auto max-w-sm">
     {% include "assets/table-rows.jinja" %}
   </div>
   <div id="valuation-indicator">{% include "shared/spinner.jinja" %}</div>

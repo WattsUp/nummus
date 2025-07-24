@@ -97,16 +97,14 @@
 {% endif %}
 {% if acct.assets %}
   <div class="flex items-end justify-between">
-    <h1 class="text-primary font-serif text-2xl">
-      {% if acct.performance %}
-        Investments
-      {% else %}
-        Assets
-      {% endif %}
-    </h1>
+    {% if acct.performance %}
+      <h1 class="text-primary font-serif text-2xl">Investments</h1>
+    {% else %}
+      <h1 class="text-primary font-serif text-2xl">Assets</h1>
+    {% endif %}
     <h2 class="text-on-surface-variant pr-6">Total return</h2>
   </div>
-  <div hx-push-url="true" hx-swap="innerHTML show:window:top">
+  <div>
     {% for asset in acct.assets[:3] %}
       {% include "accounts/asset-row.jinja" %}
       {% if not loop.last %}<hr class="mx-4 my-1" />{% endif %}

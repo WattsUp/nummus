@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import flask
 import flask.sessions
 import pytest
+from typing_extensions import NamedTuple
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
@@ -18,9 +19,34 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
+class TreeNode(NamedTuple):
+    tag: str
+    attributes: str
+    i_start: int
+    i_end: int
+
+    parent: TreeNode | None
+    children: list[TreeNode]
+
+    def set_parent(self, parent: TreeNode) -> TreeNode:
+        return TreeNode(
+            self.tag,
+            self.attributes,
+            self.i_start,
+            self.i_end,
+            parent,
+            self.children,
+        )
+
+    def has_hx_target(self) -> bool:
+        if "hx-target" in self.attributes:
+            return True
+        if self.parent is None:
+            return False
+        return self.parent.has_hx_target()
+
+
 ResultType = dict[str, object] | str | bytes
-Tree = dict[str, "TreeNode"]
-TreeNode = Tree | tuple[str, Tree, int] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 
@@ -28,25 +54,22 @@ class HTMLValidator:
 
     @classmethod
     def __call__(cls, s: str) -> bool:
-        tags: list[tuple[str, int, int]] = [
-            (m.group(1), m.start(0), m.end(0))
-            for m in re.finditer(r"<(/?\w+)(?:[^<>]+)?>", s)
+        nodes: list[TreeNode] = [
+            TreeNode(m.group(1), m.group(2), m.start(0), m.end(0), None, [])
+            for m in re.finditer(r"<(/?\w+)([^<>]*)>", s)
         ]
 
-        tree: Tree = {"__parent__": (None, None, None)}
+        tree = TreeNode("__root__", "", 0, len(s), None, [])
         current_node = tree
-        for tag, i_start, i_end in tags:
-            assert isinstance(current_node, dict)
-            if tag[0] == "/":
-                # Close tag
-                item = current_node.pop("__parent__")
-                assert isinstance(item, tuple)
-                current_tag, parent, open_i_end = item
-                current_node = parent
-                assert current_tag == tag[1:]
+        for tmp in nodes:
+            if tmp.tag[0] == "/":
+                close_node = tmp
+                open_node = current_node
+                assert open_node is not None
+                assert open_node.tag == close_node.tag[1:]
 
-                inner_html = s[open_i_end:i_start]
-                if current_tag in {"h1", "h2", "h3", "h4"} and inner_html not in {
+                inner_html = s[open_node.i_end : close_node.i_start]
+                if open_node.tag in {"h1", "h2", "h3", "h4"} and inner_html not in {
                     "nummus",
                     "Bad Request",
                 }:
@@ -63,22 +86,38 @@ class HTMLValidator:
                         for i, w in enumerate(words)
                     )
                     assert inner_html == target
-            elif tag in {"link", "meta", "path", "input", "hr", "rect"}:
-                # Tags without close tags
-                current_node[tag] = {}
-            else:
-                current_node[tag] = {"__parent__": (tag, current_node, i_end)}
-                current_node = current_node[tag]
 
-        # Got back up to the root element
-        assert isinstance(current_node, dict)
-        item = current_node.pop("__parent__")
-        assert isinstance(item, tuple)
-        tag, parent, _ = item
-        assert tag in {None, "html"}  # <html> might not be closed
-        if parent is not None:
-            parent: dict[str, object]
-            assert parent.keys() == {"__parent__", "html"}
+                current_node = current_node.parent
+                assert current_node is not None
+                continue
+
+            node = tmp.set_parent(current_node)
+            current_node.children.append(node)
+
+            if 'hx-target="#dialog"' in node.attributes:
+                assert 'hx-push-url="#dialog"' in node.attributes
+                top = 'hx-swap="innerHTML show:#dialog:top"'
+                btm = 'hx-swap="innerHTML show:#dialog:bottom"'
+                assert top in node.attributes or btm in node.attributes
+            elif 'hx-target="#main"' in node.attributes:
+                if "hx-trigger" in node.attributes:
+                    # triggered updates don't move the page or push history
+                    assert "hx-push-url" not in node.attributes
+                    assert "hx-swap" not in node.attributes
+                else:
+                    assert 'hx-push-url="true"' in node.attributes
+                    assert 'hx-swap="innerHTML show:window:top"' in node.attributes
+
+            if re.search(r"hx-(get|put|post|delete)", node.attributes):
+                # There's an action, check there is a target in parent
+                assert node.has_hx_target()
+
+            if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
+                # Tags without close tags
+                current_node = node
+
+        # Got back up to the root element, hopefully
+        assert current_node.tag in {"__root__", "html"}  # <html> might not be closed
 
         # Find all DOM ids and validate no duplicates
         ids: list[str] = re.findall(r'id="([^"]+)"', s)
@@ -88,26 +127,14 @@ class HTMLValidator:
         duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
         assert not duplicates
 
-        # Find all targeting #dialog and validate proper hx-push-url and hx-swap
-        hx_configs: list[str] = re.findall(r'hx-target="#dialog"([^>]*)>', s)
-        for hx_config in hx_configs:
-            assert 'hx-push-url="#dialog"' in hx_config
-            top = 'hx-swap="innerHTML show:#dialog:top"'
-            btm = 'hx-swap="innerHTML show:#dialog:bottom"'
-            assert top in hx_config or btm in hx_config
-
-        # Find all targeting #main and validate proper hx-push-url and hx-swap
-        hx_configs: list[str] = re.findall(r'hx-target="#main"([^>]*)>', s)
-        for hx_config in hx_configs:
-            if "hx-trigger" in hx_config:
-                # triggered updates don't move the page or push history
-                assert "hx-push-url" not in hx_config
-                assert "hx-swap" not in hx_config
-            else:
-                assert 'hx-push-url="true"' in hx_config
-                assert 'hx-swap="innerHTML show:window:top"' in hx_config
-
         return True
+
+    @classmethod
+    def clean(cls, html: str) -> str:
+        html = "".join(html.split("\n"))
+        html = re.sub(r" +", " ", html)
+        html = re.sub(r" ?> ?", ">", html)
+        return re.sub(r" ?< ?", "<", html)
 
 
 @pytest.fixture(scope="session")
@@ -194,12 +221,7 @@ class WebClient:
             assert response.content_type == content_type
 
             if content_type == "text/html; charset=utf-8":
-                html = response.text
-                # Remove whitespace
-                html = "".join(html.split("\n"))
-                html = re.sub(r" +", " ", html)
-                html = re.sub(r" ?> ?", ">", html)
-                html = re.sub(r" ?< ?", "<", html)
+                html = self.valid_html.clean(response.text)
                 if response.status_code != HTTP_CODE_REDIRECT:
                     # werkzeug redirect doesn't have close tags
                     assert self.valid_html(html)

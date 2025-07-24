@@ -2,6 +2,9 @@
   class="btn-text text-on-surface relative block px-6"
   href="{{ url_for('accounts.page', uri=acct.uri) }}"
   hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
+  hx-target="#main"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
   hx-disabled-elt="this"
 >
   <div class="flex justify-between">

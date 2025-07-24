@@ -11,14 +11,14 @@
     href="{{ url_for('net_worth.page') }}"
     hx-get="{{ url_for('net_worth.page') }}"
     hx-target="#main"
-    hx-swap="innerHTML"
     hx-push-url="true"
+    hx-swap="innerHTML show:window:top"
     hx-indicator="next .spinner"
   >
     <h1
       class="align-left w-full font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
     >
-      Net Worth
+      Net worth
     </h1>
     <h1 class="text-lg">{{ chart["current"] | money }}</h1>
   </a>

@@ -10,7 +10,7 @@
 <div class="relative mb-2 h-60 w-full md:h-96">
   <canvas id="category-chart-canvas" hx-preserve></canvas>
 </div>
-<div hx-push-url="true" hx-swap="innerHTML show:window:top">
+<div>
   {% for category in allocation.categories %}
     <details class="bg-surface-container-high mb-2 rounded-md" name="category">
       <summary

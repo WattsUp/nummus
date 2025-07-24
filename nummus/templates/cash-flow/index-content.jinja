@@ -4,10 +4,9 @@
   hx-include="#txn-config,#txn-header"
   hx-trigger="update-account from:body"
   hx-target="#main"
-  hx-swap="innerHTML"
 >
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Cash Flow
+    Cash flow
   </h1>
   <div class="relative h-60 w-full md:h-96">
     <canvas id="cash-flow-chart-canvas" hx-preserve></canvas>
@@ -28,7 +27,7 @@
     {% include "shared/spinner.jinja" %}
   </div>
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Income by Tag
+    Income by tag
   </h1>
   <div
     class="relative flex w-full flex-wrap items-stretch justify-center gap-1"
@@ -56,7 +55,7 @@
     {% include "shared/spinner.jinja" %}
   </div>
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Expense by Tag
+    Expense by tag
   </h1>
   <div
     class="relative flex w-full flex-wrap items-stretch justify-center gap-1"

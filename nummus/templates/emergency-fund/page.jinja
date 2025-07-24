@@ -73,6 +73,7 @@
     <a
       href="{{ url_for('budgeting.page') }}"
       hx-get="{{ url_for('budgeting.page') }}"
+      hx-target="#main"
       hx-push-url="true"
       hx-swap="innerHTML show:window:top"
       >budgeting page</a
@@ -86,6 +87,7 @@
   <a
     href="{{ url_for('transaction_categories.page') }}"
     hx-get="{{ url_for('transaction_categories.page') }}"
+    hx-target="#main"
     hx-push-url="true"
     hx-swap="innerHTML show:window:top"
     >here</a
@@ -94,6 +96,7 @@
   <a
     href="{{ url_for('accounts.page_all') }}"
     hx-get="{{ url_for('accounts.page_all') }}"
+    hx-target="#main"
     hx-push-url="true"
     hx-swap="innerHTML show:window:top"
     >edit account</a

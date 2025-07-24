@@ -46,9 +46,7 @@ if TYPE_CHECKING:
 def id_func(val: object) -> str | None:
     if isinstance(val, datetime.date):
         return val.isoformat()
-    if isinstance(val, Iterable):
-        return str(val)
-    if isinstance(val, Decimal):
+    if isinstance(val, Iterable | Decimal | Path):
         return str(val)
     if callable(val):
         return val.__name__

@@ -36,12 +36,7 @@
     </p>
   </div>
 </details>
-<div
-  class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2"
-  hx-target="#dialog"
-  hx-push-url="#dialog"
-  hx-swap="innerHTML show:#dialog:top"
->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2">
   {% for group, items in groups.items() %}
     {# Set row span such that on md screen the third category will fit in dense #}
     <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">

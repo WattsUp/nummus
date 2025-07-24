@@ -2,8 +2,9 @@
   <a
     href="{{ url_for("emergency_fund.page") }}"
     hx-get="{{ url_for("emergency_fund.page") }}"
-    hx-swap="innerHTML show:window:top"
+    hx-target="#main"
     hx-push-url="true"
+    hx-swap="innerHTML show:window:top"
   >
     <h1>Emergency fund</h1>
     <h2>{{ ctx.current | money0 }}</h2>

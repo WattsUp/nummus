@@ -274,7 +274,7 @@
     Simply leave a split amount empty when saving to remove
   </div>
 {% endif %}
-<div class="flex flex-wrap justify-around">
+<div class="flex flex-wrap justify-around" hx-target="#dialog-error">
   {% if not txn.any_asset_splits %}
     {% if txn.uri %}
       <button

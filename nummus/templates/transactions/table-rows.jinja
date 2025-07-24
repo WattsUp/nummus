@@ -6,11 +6,7 @@
   {% endwith %}
 {% endif %}
 {% for date, transactions in ctx.transactions %}
-  <div
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-  >
+  <div>
     <div class="txn-header">
       <div>{{ date }}</div>
     </div>
