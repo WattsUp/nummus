@@ -21,6 +21,7 @@
           class="btn-outlined"
           hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}"
           hx-target="#dialog"
+          hx-push-url="#dialog"
           hx-swap="innerHTML show:#dialog:top"
           onclick="dialog.changes()"
         >

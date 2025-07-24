@@ -9,6 +9,7 @@
   <button
     class="btn-tonal"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-disabled-elt="this"
     hx-get="{{ url_for('accounts.account', uri=acct.uri) }}"
@@ -136,6 +137,7 @@
   <button
     class="btn-tonal"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-disabled-elt="this"
     hx-get="{{ url_for('transactions.new', account=acct.uri) }}"

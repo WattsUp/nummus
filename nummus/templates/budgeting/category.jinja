@@ -31,7 +31,11 @@
     >
       {{ category.activity | money }}
     </div>
-    <div hx-target="#dialog" hx-swap="innerHTML show:#dialog:top">
+    <div
+      hx-target="#dialog"
+      hx-push-url="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
+    >
       {% if category.available < 0 %}
         <button
           class="btn-tonal-error ml-auto px-2"
@@ -94,6 +98,7 @@
     class="hx-assign hidden"
     hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-trigger="button"
   ></div>
@@ -101,6 +106,7 @@
     class="hx-target hidden"
     hx-get="{{ url_for("budgeting.target", uri=category.uri) }}"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-trigger="button"
   ></div>

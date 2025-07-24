@@ -13,8 +13,8 @@
       <button
         hx-get="{{ url_for(endpoint) }}"
         hx-target="#dialog"
+        hx-push-url="#dialog"
         hx-swap="innerHTML show:#dialog:top"
-        hx-push-url="false"
         hx-disabled-elt="this"
       >
         <icon>{{ icon }}</icon>
@@ -37,8 +37,8 @@
     hx-get="{{ url_for('transactions.new') }}"
     hx-include="previous .current-account"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-push-url="false"
     hx-disabled-elt="this"
   >
     <icon>note_stack_add</icon>

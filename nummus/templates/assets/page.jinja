@@ -8,6 +8,7 @@
   <button
     class="btn-tonal"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-disabled-elt="this"
     hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
@@ -57,6 +58,7 @@
     id="valuation-table"
     class="mx-auto max-w-sm"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
   >
     {% include "assets/table-rows.jinja" %}

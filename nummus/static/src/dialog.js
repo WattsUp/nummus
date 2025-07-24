@@ -6,35 +6,35 @@ const dialog = {
    *
    * @param {boolean} force true will ignore pending changes
    */
-  close: function (force) {
-    if (!force && dialog.pending) {
-      dialog.confirm("Discard draft?", "Discard", () => {
-        dialog.pending = false;
+  close(force) {
+    if (!force && this.pending) {
+      this.confirm("Discard draft?", "Discard", () => {
+        this.pending = false;
         htmx.find("#dialog").innerHTML = "";
       });
       return;
     }
-    dialog.pending = false;
+    this.pending = false;
     htmx.find("#dialog").innerHTML = "";
   },
   /**
    * On dialog changes, set pending flag
    */
-  changes: function () {
-    dialog.pending = true;
+  changes() {
+    this.pending = true;
   },
   /**
    * On dialog reset, reset pending flag
    */
-  reset: function () {
-    dialog.pending = false;
+  reset() {
+    this.pending = false;
   },
   /**
    * Check if all required element are populated
    *
    * @return boolean true if all required elements are filled
    */
-  checkRequired: function () {
+  checkRequired() {
     let allFilled = true;
     htmx.findAll("#dialog [required]").forEach((e) => {
       if (!allFilled) return;
@@ -48,20 +48,20 @@ const dialog = {
   /**
    * Update dialog save button
    */
-  updateSave: function () {
+  updateSave() {
     const saveBtn = htmx.find("#dialog-save");
     if (!saveBtn) return;
-    const allFilled = dialog.checkRequired();
+    const allFilled = this.checkRequired();
     const anyInvalid = htmx.find("#dialog error:not(:empty)") != null;
     saveBtn.disabled = !allFilled || anyInvalid;
   },
   /**
    * Add event listeners to the dialog
    */
-  addListeners: function () {
+  addListeners() {
     const d = htmx.find("#dialog");
     htmx.findAll(d, "[required]").forEach((e) => {
-      htmx.on(e, "input", dialog.updateSave);
+      htmx.on(e, "input", this.updateSave.bind(this));
     });
     const focusNext = function (start) {
       const results = htmx.findAll(
@@ -81,7 +81,7 @@ const dialog = {
       }
     };
     htmx.findAll(d, "input, textarea, select").forEach((e) => {
-      htmx.on(e, "input", dialog.changes);
+      htmx.on(e, "input", this.changes.bind(this));
       htmx.on(e, "keypress", (evt) => {
         if (evt.key == "Enter") {
           evt.preventDefault();
@@ -98,8 +98,8 @@ const dialog = {
   /**
    * On load of a dialog, addListeners and autofocus
    */
-  onLoad: function () {
-    dialog.addListeners();
+  onLoad() {
+    this.addListeners();
     // Only autofocus for not mobile
     if (window.screen.width >= 768) {
       const d = htmx.find("#dialog");
@@ -119,7 +119,7 @@ const dialog = {
    * @param {Function} action Event handler for the action button
    * @param {String} details Explanation text
    */
-  confirm: function (headline, actionLabel, action, details) {
+  confirm(headline, actionLabel, action, details) {
     const e = htmx.find("#confirm-dialog");
     e.innerHTML = `
             <div><h1>${headline}</h1></div>
@@ -136,7 +136,24 @@ const dialog = {
   /**
    * Close confirm dialog
    */
-  closeConfirm: function () {
+  closeConfirm() {
     htmx.find("#confirm-dialog").innerHTML = "";
   },
+  /**
+   * @param {Event} event - Triggering event
+   */
+  onHashChange(event) {
+    if (location.hash) return;
+    if (!this.pending) {
+      this.close();
+      return;
+    }
+    window.location.hash = "dialog";
+    this.confirm("Discard draft?", "Discard", () => {
+      this.close(true);
+      history.back();
+    });
+  },
 };
+
+htmx.on(window, "hashchange", dialog.onHashChange.bind(dialog));

@@ -280,6 +280,7 @@
       <button
         class="btn-text"
         hx-target="#dialog"
+        hx-push-url="#dialog"
         hx-include="#dialog form"
         hx-swap="innerHTML show:#dialog:bottom"
         hx-put="{{ url_for('transactions.split', uri=txn.uri) }}"
@@ -290,6 +291,7 @@
       <button
         class="btn-text"
         hx-target="#dialog"
+        hx-push-url="#dialog"
         hx-include="#dialog form"
         hx-swap="innerHTML show:#dialog:bottom"
         hx-put="{{ url_for('transactions.new', uri=txn.uri, split=True) }}"

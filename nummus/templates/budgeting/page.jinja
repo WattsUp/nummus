@@ -104,8 +104,8 @@
     hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
     hx-include="#budget-button-bar"
     hx-target="#dialog"
+    hx-push-url="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-push-url="false"
     hx-disabled-elt="this"
   >
     <icon>payments</icon>

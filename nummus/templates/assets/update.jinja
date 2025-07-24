@@ -25,6 +25,8 @@
       class="btn-text btn-size-lg mx-auto"
       hx-post="{{ url_for('assets.update') }}"
       hx-target="#dialog"
+      hx-push-url="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
       hx-disabled-elt="this"
       hx-indicator="next .spinner"
     >

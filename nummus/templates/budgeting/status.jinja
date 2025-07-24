@@ -13,6 +13,7 @@
         class="{{ "btn-filled-error" if ctx.n_overspent > 0 else "btn-filled" }}"
         hx-get="{{ url_for("budgeting.move", uri="income", month=ctx.month) }}"
         hx-target="#dialog"
+        hx-push-url="#dialog"
         hx-swap="innerHTML show:#dialog:top"
         hx-disabled-elt="this"
       >
@@ -23,6 +24,7 @@
         class="btn-filled-error"
         hx-get="{{ url_for("budgeting.move", uri="income", month=ctx.month) }}"
         hx-target="#dialog"
+        hx-push-url="#dialog"
         hx-swap="innerHTML show:#dialog:top"
         hx-disabled-elt="this"
       >

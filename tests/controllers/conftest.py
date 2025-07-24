@@ -87,6 +87,15 @@ class HTMLValidator:
             id_counts[e_id] += 1
         duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
         assert not duplicates
+
+        # Find all targeting #dialog and validate proper hx-push-url and hx-swap
+        hx_configs: list[str] = re.findall(r'hx-target="#dialog"([^>]*)>', s)
+        for hx_config in hx_configs:
+            assert 'hx-push-url="#dialog"' in hx_config
+            top = 'hx-swap="innerHTML show:#dialog:top"'
+            btm = 'hx-swap="innerHTML show:#dialog:bottom"'
+            assert top in hx_config or btm in hx_config
+
         return True
 
 

@@ -15,6 +15,7 @@
     <button
       class="btn-tonal"
       hx-target="#dialog"
+      hx-push-url="#dialog"
       hx-swap="innerHTML show:#dialog:top"
       hx-disabled-elt="this"
       hx-get="{{ url_for('assets.new_valuation', uri=ctx.uri) }}"
