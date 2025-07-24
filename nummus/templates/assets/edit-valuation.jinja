@@ -17,10 +17,10 @@
       placeholder=""
       value="{{ valuation.date or "" }}"
       max="{{ valuation.date_max }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
       hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri, v=valuation.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
       autocomplete="off"
     />
     <icon>event</icon>
@@ -39,10 +39,10 @@
       enterkeyhint="next"
       placeholder=""
       inputmode="tel"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
       hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
       autocomplete="off"
     />
     <div>
@@ -58,8 +58,8 @@
     <button
       class="btn-text-error"
       onclick="assets.confirmDelete(event)"
-      hx-trigger="delete"
       hx-delete="{{ url_for('assets.valuation', uri=valuation.uri) }}"
+      hx-trigger="delete"
     >
       Delete
     </button>

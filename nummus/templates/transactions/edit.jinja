@@ -74,10 +74,10 @@
         enterkeyhint="next"
         placeholder=""
         inputmode="tel"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
         hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
         autocomplete="off"
       />
       <icon>attach_money</icon>
@@ -100,10 +100,10 @@
       required
       enterkeyhint="next"
       placeholder=""
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
       hx-get="{{ url_for('transactions.validation') }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
       list="payees"
       autocomplete="off"
     />
@@ -127,10 +127,10 @@
       enterkeyhint="next"
       placeholder=""
       max="{{ txn.date_max }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
       hx-get="{{ url_for('transactions.validation') }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
       autocomplete="off"
     />
     <icon>event</icon>
@@ -205,10 +205,10 @@
         value="{{ split.memo or "" }}"
         enterkeyhint="next"
         placeholder=""
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
         hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
         autocomplete="off"
       />
       {% if not is_split %}<icon>notes</icon>{% endif %}
@@ -228,10 +228,10 @@
         enterkeyhint="next"
         placeholder=""
         list="tags"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
         hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
         autocomplete="off"
       />
       {% if not is_split %}<icon>label</icon>{% endif %}
@@ -252,10 +252,10 @@
           enterkeyhint="next"
           placeholder=""
           inputmode="tel"
-          hx-target="next error"
-          hx-trigger="input delay:200ms"
-          hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
           hx-get="{{ url_for('transactions.validation',  split=True) }}"
+          hx-trigger="input delay:200ms"
+          hx-target="next error"
+          hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
           autocomplete="off"
         />
         <icon>attach_money</icon>
@@ -279,22 +279,22 @@
     {% if txn.uri %}
       <button
         class="btn-text"
+        hx-put="{{ url_for('transactions.split', uri=txn.uri) }}"
         hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:bottom"
         hx-push-url="#dialog"
         hx-include="#dialog form"
-        hx-swap="innerHTML show:#dialog:bottom"
-        hx-put="{{ url_for('transactions.split', uri=txn.uri) }}"
       >
         Add Splits
       </button>
     {% else %}
       <button
         class="btn-text"
+        hx-put="{{ url_for('transactions.new', uri=txn.uri, split=True) }}"
         hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:bottom"
         hx-push-url="#dialog"
         hx-include="#dialog form"
-        hx-swap="innerHTML show:#dialog:bottom"
-        hx-put="{{ url_for('transactions.new', uri=txn.uri, split=True) }}"
       >
         Add Splits
       </button>
@@ -314,8 +314,8 @@
     <button
       class="btn-text-error"
       onclick="txn.confirmDelete(event)"
-      hx-trigger="delete"
       hx-delete="{{ url_for('transactions.transaction', uri=txn.uri) }}"
+      hx-trigger="delete"
     >
       Delete
     </button>

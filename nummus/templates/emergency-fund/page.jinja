@@ -74,8 +74,8 @@
       href="{{ url_for('budgeting.page') }}"
       hx-get="{{ url_for('budgeting.page') }}"
       hx-target="#main"
-      hx-push-url="true"
       hx-swap="innerHTML show:window:top"
+      hx-push-url="true"
       >budgeting page</a
     >.
   </p>
@@ -88,8 +88,8 @@
     href="{{ url_for('transaction_categories.page') }}"
     hx-get="{{ url_for('transaction_categories.page') }}"
     hx-target="#main"
-    hx-push-url="true"
     hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
     >here</a
   >. Only transactions from budgeted accounts are included. To change which
   accounts are included in budgeting,
@@ -97,8 +97,8 @@
     href="{{ url_for('accounts.page_all') }}"
     hx-get="{{ url_for('accounts.page_all') }}"
     hx-target="#main"
-    hx-push-url="true"
     hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
     >edit account</a
   >.
 </div>

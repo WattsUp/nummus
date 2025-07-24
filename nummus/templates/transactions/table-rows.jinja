@@ -18,12 +18,12 @@
   {% if loop.last %}
     {% if ctx.next_page %}
       <div
+        hx-get="{{ url_for(endpoint, page=ctx.next_page, **url_args) }}"
+        hx-trigger="revealed"
+        hx-indicator="#txn-indicator"
         hx-target="#txn-table"
         hx-swap="beforeend show:none"
-        hx-trigger="revealed"
         hx-include="#txn-filters,#txn-search"
-        hx-get="{{ url_for(endpoint, page=ctx.next_page, **url_args) }}"
-        hx-indicator="#txn-indicator"
         hx-on::after-request="this.remove()"
       ></div>
     {% else %}

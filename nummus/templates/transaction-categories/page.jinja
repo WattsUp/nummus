@@ -1,17 +1,17 @@
 <div
   class="mb-2 flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="category from:body"
   hx-get="{{ url_for('transaction_categories.page') }}"
+  hx-trigger="category from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">Transaction categories</h1>
   <button
     class="btn-tonal"
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
     hx-get="{{ url_for('transaction_categories.new') }}"
+    hx-disabled-elt="this"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="#dialog"
   >
     <icon>add</icon>New
   </button>

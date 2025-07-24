@@ -45,6 +45,96 @@ class TreeNode(NamedTuple):
             return False
         return self.parent.has_hx_target()
 
+    def has_valid_inner_html(self, inner_html: str) -> bool:
+        if self.tag not in {"h1", "h2", "h3", "h4"}:
+            return True
+        if inner_html in {"nummus", "Bad Request"}:
+            return True
+
+        # Headers should use capital case
+        # strip any inner element
+        inner_html = inner_html.replace(".", "")
+        words = inner_html.split(" ")
+        target = " ".join(
+            (w if w.upper() == w else (w.capitalize() if i == 0 else w.lower()))
+            for i, w in enumerate(words)
+        )
+        assert inner_html == target
+        return True
+
+    def has_valid_hx_attributes(self) -> bool:
+        if 'hx-target="#dialog"' in self.attributes:
+            assert 'hx-push-url="#dialog"' in self.attributes
+            top = 'hx-swap="innerHTML show:#dialog:top"'
+            btm = 'hx-swap="innerHTML show:#dialog:bottom"'
+            assert top in self.attributes or btm in self.attributes
+        elif 'hx-target="#main"' in self.attributes:
+            if "hx-trigger" in self.attributes:
+                # triggered updates don't move the page or push history
+                assert "hx-push-url" not in self.attributes
+                assert "hx-swap" not in self.attributes
+            else:
+                assert 'hx-push-url="true"' in self.attributes
+                assert 'hx-swap="innerHTML show:window:top"' in self.attributes
+        if re.search(r"hx-(get|put|post|delete)", self.attributes):
+            # There's an action, check there is a target in parent
+            assert self.has_hx_target()
+
+        return True
+
+    def has_valid_hx_order(self) -> bool:
+        attributes = re.findall(r" hx-([\w\-:]+)=?", self.attributes)
+
+        # TODO (WattsUp): Expand to all attributes??
+        preferred_order = [
+            # Methods
+            "get",
+            "post",
+            "put",
+            "patch",
+            "delete",
+            # Actions
+            "trigger",
+            "disabled-elt",
+            "indicator",
+            # Destinations
+            "target",
+            "swap",
+            "sync",
+            "swap-oob",
+            "push-url",
+            # Data
+            "include",
+            "encoding",
+            "validate",
+            "preserve",
+            "history-elt",
+            # Events
+            "on::validation:failed",
+            "on::history-cache-miss",
+            "on::history-cache-miss-load",
+            "on::history-cache-miss-load-error",
+            "on::before-request",
+            "on::before-send",
+            "on::send-error",
+            "on::xhr:loadstart",
+            "on::xhr:progress",
+            "on::xhr:loadend",
+            "on::response-error",
+            "on::before-swap",
+            "on::after-swap",
+            "on::oob-before-swap",
+            "on::oob-after-swap",
+            "on::after-request",
+            "on::after-settle",
+            # "confirm", # No confirm, use dialog confirm instead
+        ]
+        preferred_order = [s for s in preferred_order if s in attributes]
+
+        assert attributes == preferred_order
+
+        return True
+
 
 ResultType = dict[str, object] | str | bytes
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
@@ -69,23 +159,7 @@ class HTMLValidator:
                 assert open_node.tag == close_node.tag[1:]
 
                 inner_html = s[open_node.i_end : close_node.i_start]
-                if open_node.tag in {"h1", "h2", "h3", "h4"} and inner_html not in {
-                    "nummus",
-                    "Bad Request",
-                }:
-                    # Headers should use capital case
-                    # strip any inner element
-                    inner_html = inner_html.replace(".", "")
-                    words = inner_html.split(" ")
-                    target = " ".join(
-                        (
-                            w
-                            if w.upper() == w
-                            else (w.capitalize() if i == 0 else w.lower())
-                        )
-                        for i, w in enumerate(words)
-                    )
-                    assert inner_html == target
+                assert open_node.has_valid_inner_html(inner_html)
 
                 current_node = current_node.parent
                 assert current_node is not None
@@ -94,23 +168,8 @@ class HTMLValidator:
             node = tmp.set_parent(current_node)
             current_node.children.append(node)
 
-            if 'hx-target="#dialog"' in node.attributes:
-                assert 'hx-push-url="#dialog"' in node.attributes
-                top = 'hx-swap="innerHTML show:#dialog:top"'
-                btm = 'hx-swap="innerHTML show:#dialog:bottom"'
-                assert top in node.attributes or btm in node.attributes
-            elif 'hx-target="#main"' in node.attributes:
-                if "hx-trigger" in node.attributes:
-                    # triggered updates don't move the page or push history
-                    assert "hx-push-url" not in node.attributes
-                    assert "hx-swap" not in node.attributes
-                else:
-                    assert 'hx-push-url="true"' in node.attributes
-                    assert 'hx-swap="innerHTML show:window:top"' in node.attributes
-
-            if re.search(r"hx-(get|put|post|delete)", node.attributes):
-                # There's an action, check there is a target in parent
-                assert node.has_hx_target()
+            assert node.has_valid_hx_attributes()
+            assert node.has_valid_hx_order()
 
             if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags

@@ -11,8 +11,8 @@
   </script>
   <div
     class="flex justify-around gap-2"
-    hx-target="#asset-performance"
     hx-indicator="#asset-indicator"
+    hx-target="#asset-performance"
   >
     {% for value, label in perf.period_options.items() %}
       {% set btn_class = "btn-tonal" if value == perf.period else "btn-text" %}

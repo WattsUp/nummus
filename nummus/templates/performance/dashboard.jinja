@@ -3,17 +3,17 @@
   class="relative flex h-[16rem] min-h-[16rem] flex-col bg-white p-2 md:h-[20rem] md:min-h-[20rem]"
   hx-get="{{ url_for('performance.dashboard') }}"
   hx-trigger="update-asset from:body"
-  hx-target="#dashboard-performance"
   hx-indicator="find .spinner"
+  hx-target="#dashboard-performance"
 >
   <a
     class="space-between group flex w-full cursor-pointer"
     href="{{ url_for('performance.page') }}"
     hx-get="{{ url_for('performance.page') }}"
+    hx-indicator="next .spinner"
     hx-target="#main"
     hx-swap="innerHTML show:window:top"
     hx-push-url="true"
-    hx-indicator="next .spinner"
   >
     <h1
       class="align-left grow font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
@@ -38,8 +38,8 @@
         href="{{ url_for('performance.page', index=index) }}"
         hx-get="{{ url_for('performance.page', index=index) }}"
         hx-target="#main"
-        hx-push-url="true"
         hx-swap="innerHTML show:window:top"
+        hx-push-url="true"
       >
         <div class="grow truncate">{{ index }}</div>
         <div class="text-{{ twrr | pnl_color }} min-w-[4rem] text-right">

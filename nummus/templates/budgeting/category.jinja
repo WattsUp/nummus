@@ -3,10 +3,10 @@
   id="category-{{ category.uri }}"
   class="budget-category {{ "not-edit:hidden" if category.hidden }}"
   onclick="budgeting.onClickCategory(this, event)"
-  hx-include="#budget-sidebar-uri"
-  hx-target="#budget-sidebar"
-  hx-trigger="sidebar"
   hx-get="{{ url_for("budgeting.sidebar", uri=category.uri) }}"
+  hx-trigger="sidebar"
+  hx-target="#budget-sidebar"
+  hx-include="#budget-sidebar-uri"
 >
   <input name="category-uri" value="{{ category.uri }}" type="hidden" />
   <icon class="budget-drag">drag_indicator</icon>
@@ -20,8 +20,8 @@
         value="{{ category.assigned | input_value }}"
         placeholder="0.00"
         inputmode="tel"
-        hx-target="#group-{{ group.uri or "ungrouped" }}"
         hx-put="{{ url_for("budgeting.assign", uri=category.uri, month=ctx.month) }}"
+        hx-target="#group-{{ group.uri or "ungrouped" }}"
         autocomplete="off"
       />
       <span>{{ category.assigned | money }}</span>
@@ -33,8 +33,8 @@
     </div>
     <div
       hx-target="#dialog"
-      hx-push-url="#dialog"
       hx-swap="innerHTML show:#dialog:top"
+      hx-push-url="#dialog"
     >
       {% if category.available < 0 %}
         <button
@@ -97,17 +97,17 @@
   <div
     class="hx-assign hidden"
     hx-get="{{ url_for("budgeting.move", uri=category.uri, month=ctx.month) }}"
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
     hx-trigger="button"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="#dialog"
   ></div>
   <div
     class="hx-target hidden"
     hx-get="{{ url_for("budgeting.target", uri=category.uri) }}"
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
     hx-trigger="button"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="#dialog"
   ></div>
 </div>

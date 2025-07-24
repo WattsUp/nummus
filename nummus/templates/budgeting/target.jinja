@@ -21,8 +21,8 @@
           class="btn-outlined"
           hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}"
           hx-target="#dialog"
-          hx-push-url="#dialog"
           hx-swap="innerHTML show:#dialog:top"
+          hx-push-url="#dialog"
           onclick="dialog.changes()"
         >
           {{ period_str }}
@@ -38,10 +38,10 @@
       enterkeyhint="next"
       placeholder=""
       inputmode="tel"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
       hx-get="{{ url_for("budgeting.validation") }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
       autocomplete="off"
     />
     <icon>attach_money</icon>
@@ -58,8 +58,8 @@
         name="due"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-        hx-include="#dialog form"
         hx-target="#target-desc"
+        hx-include="#dialog form"
       >
         {% for weekday in target.weekdays %}
           <option
@@ -128,10 +128,10 @@
         enterkeyhint="next"
         placeholder=""
         value="{{ target.due_date or "" }}"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
         hx-get="{{ url_for("budgeting.validation") }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
         autocomplete="off"
       />
       <icon>event</icon>
@@ -151,8 +151,8 @@
         name="type"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-        hx-include="#dialog form"
         hx-target="#target-desc"
+        hx-include="#dialog form"
       >
         <option
           value="accumulate"
@@ -185,10 +185,10 @@
         placeholder=""
         value="{{ target.repeat_every | input_value }}"
         min="1"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
         hx-get="{{ url_for("budgeting.validation") }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
         autocomplete="off"
       />
       <icon>event_repeat</icon>
@@ -204,9 +204,9 @@
     id="target-desc"
     class="col-span-full"
     hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-    hx-include="#dialog form"
-    hx-target="this"
     hx-trigger="target-desc from:body"
+    hx-target="this"
+    hx-include="#dialog form"
   >
     {% include "budgeting/target-desc.jinja" %}
   </div>
@@ -216,8 +216,8 @@
     <button
       class="btn-text-error"
       onclick="budgeting.confirmDelete(event)"
-      hx-trigger="delete"
       hx-delete="{{ url_for('budgeting.target', uri=target.uri) }}"
+      hx-trigger="delete"
     >
       Delete
     </button>

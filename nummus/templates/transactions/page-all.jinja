@@ -1,9 +1,9 @@
 <div
   class="flex items-center justify-between"
+  hx-get="{{ url_for('transactions.page_all') }}"
+  hx-trigger="transaction from:body, account from:body"
   hx-target="#main"
   hx-include="#txn-filters,#txn-search"
-  hx-trigger="transaction from:body, account from:body"
-  hx-get="{{ url_for('transactions.page_all') }}"
 >
   {# TODO (WattsUp): Can updating be optimized to just affected rows?
         Return oob for the two date sections affected.
@@ -13,12 +13,12 @@
   <h1 class="text-primary font-serif text-3xl">Transactions</h1>
   <button
     class="btn-tonal"
+    hx-get="{{ url_for('transactions.new') }}"
+    hx-disabled-elt="this"
     hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
     hx-push-url="#dialog"
     hx-include="unset"
-    hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
-    hx-get="{{ url_for('transactions.new') }}"
   >
     <icon>note_stack_add</icon>New
   </button>

@@ -4,14 +4,14 @@
 <form
   class="w-88 min-h-32"
   onsubmit="return false"
-  hx-encoding="multipart/form-data"
   hx-post="{{ url_for('import_file.import_file') }}"
+  hx-disabled-elt="find button"
   hx-target="#dialog-error"
+  hx-encoding="multipart/form-data"
   hx-on::before-send="importFile.beforeSend()"
   hx-on::xhr:loadstart="importFile.xhrLoadStart(event)"
   hx-on::xhr:progress="importFile.xhrProgress(event)"
   hx-on::xhr:loadend="importFile.xhrLoadEnd()"
-  hx-disabled-elt="find button"
 >
   <p>Import financial statement into portfolio.</p>
   <label class="input-outlined input-bg-surface-container-high">

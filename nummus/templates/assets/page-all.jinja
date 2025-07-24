@@ -1,17 +1,17 @@
 <div
   class="mb-2 flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="asset from:body, valuation from:body, account from:body"
   hx-get="{{ url_for('assets.page_all') }}"
+  hx-trigger="asset from:body, valuation from:body, account from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">Assets</h1>
   <button
     class="btn-tonal"
-    hx-target="#dialog"
-    hx-push-url="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
     hx-get="{{ url_for('assets.new') }}"
+    hx-disabled-elt="this"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="#dialog"
     disabled
   >
     <icon>add</icon>New
@@ -60,8 +60,8 @@
     {% if ctx.include_unheld %}checked{% endif %}
     hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}"
     hx-target="#main"
-    hx-push-url="true"
     hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   />
   <div>
     {% if ctx.include_unheld %}

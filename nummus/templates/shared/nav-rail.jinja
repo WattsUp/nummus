@@ -1,8 +1,8 @@
 <nav
   id="nav-rail"
   hx-target="#main"
-  hx-push-url="true"
   hx-swap="innerHTML show:window:top"
+  hx-push-url="true"
 >
   <a
     href="{{ url_for('common.page_dashboard') }}"
@@ -18,11 +18,11 @@
       class="fab"
       title="Add Transaction"
       hx-get="{{ url_for('transactions.new') }}"
-      hx-include="next .current-account"
-      hx-target="#dialog"
-      hx-push-url="#dialog"
-      hx-swap="innerHTML show:#dialog:top"
       hx-disabled-elt="this"
+      hx-target="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
+      hx-push-url="#dialog"
+      hx-include="next .current-account"
     >
       <icon>note_stack_add</icon>
     </button>
@@ -41,10 +41,10 @@
       {% elif link == "DIALOG" %}
         <button
           hx-get="{{ url_for(endpoint) }}"
-          hx-target="#dialog"
-          hx-push-url="#dialog"
-          hx-swap="innerHTML show:#dialog:top"
           hx-disabled-elt="this"
+          hx-target="#dialog"
+          hx-swap="innerHTML show:#dialog:top"
+          hx-push-url="#dialog"
         >
           <icon>{{ icon }}</icon>
           <div>{{ label }}</div>
@@ -52,8 +52,8 @@
       {% elif link == "HX_POST" %}
         <button
           hx-post="{{ url_for(endpoint) }}"
-          hx-push-url="false"
           hx-disabled-elt="this"
+          hx-push-url="false"
         >
           <icon>{{ icon }}</icon>
           <div>{{ label }}</div>

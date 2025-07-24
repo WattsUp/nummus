@@ -18,9 +18,9 @@
           id="form-login"
           class="bg-surface mx-2 my-8 flex max-h-96 w-full max-w-96 grow flex-col items-center rounded-2xl p-2"
           hx-post="{{ url_for('auth.login') }}"
+          hx-disabled-elt="button"
           hx-target="#login-error"
           hx-include="this"
-          hx-disable-etl="button"
         >
           <h1 class="font-title text-7xl">nummus</h1>
           <p class="grow text-center">

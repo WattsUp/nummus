@@ -1,11 +1,11 @@
 <div
   id="net-worth-config"
   class="flex w-full items-center justify-center gap-1 font-serif"
-  hx-swap-oob="{{ oob }}"
-  hx-include="#net-worth-config"
+  hx-indicator=".spinner"
   hx-target="#net-worth-chart-data"
   hx-swap="outerHTML"
-  hx-indicator=".spinner"
+  hx-swap-oob="{{ oob }}"
+  hx-include="#net-worth-config"
 >
   <div class="max-md:hidden">
     Accounts:

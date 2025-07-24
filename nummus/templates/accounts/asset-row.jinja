@@ -5,10 +5,10 @@
     class="btn-text {{ class }} block"
     href="{{ url_for('assets.page', uri=asset.uri) }}"
     hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
-    hx-target="#main"
-    hx-push-url="true"
-    hx-swap="innerHTML show:window:top"
     hx-disabled-elt="this"
+    hx-target="#main"
+    hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   >
     {% block row %}
       <div class="flex justify-between gap-2">
