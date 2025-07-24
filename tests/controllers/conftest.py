@@ -96,6 +96,17 @@ class HTMLValidator:
             btm = 'hx-swap="innerHTML show:#dialog:bottom"'
             assert top in hx_config or btm in hx_config
 
+        # Find all targeting #main and validate proper hx-push-url and hx-swap
+        hx_configs: list[str] = re.findall(r'hx-target="#main"([^>]*)>', s)
+        for hx_config in hx_configs:
+            if "hx-trigger" in hx_config:
+                # triggered updates don't move the page or push history
+                assert "hx-push-url" not in hx_config
+                assert "hx-swap" not in hx_config
+            else:
+                assert 'hx-push-url="true"' in hx_config
+                assert 'hx-swap="innerHTML show:window:top"' in hx_config
+
         return True
 
 

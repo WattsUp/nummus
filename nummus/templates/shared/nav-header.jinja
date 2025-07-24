@@ -1,4 +1,9 @@
-<header id="nav-header" hx-push-url="true" hx-swap="innerHTML show:window:top">
+<header
+  id="nav-header"
+  hx-target="#main"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
+>
   <icon class="nav-opener" onclick="nav.openDrawer()">menu</icon>
   <a
     href="{{ url_for('common.page_dashboard') }}"

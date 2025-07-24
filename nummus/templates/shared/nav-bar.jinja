@@ -1,4 +1,9 @@
-<nav id="nav-bar" hx-push-url="true" hx-swap="innerHTML show:window:top">
+<nav
+  id="nav-bar"
+  hx-target="#main"
+  hx-push-url="true"
+  hx-swap="innerHTML show:window:top"
+>
   {% for label, (icon, endpoint, link) in nav_items[0][1].items() %}
     {% if link == "PAGE" %}
       <a
