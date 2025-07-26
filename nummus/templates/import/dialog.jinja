@@ -3,7 +3,6 @@
 {% endwith %}
 <form
   class="w-88 min-h-32"
-  onsubmit="return false"
   hx-post="{{ url_for('import_file.import_file') }}"
   hx-disabled-elt="find button"
   hx-target="#dialog-error"
@@ -12,15 +11,16 @@
   hx-on::xhr:loadstart="importFile.xhrLoadStart(event)"
   hx-on::xhr:progress="importFile.xhrProgress(event)"
   hx-on::xhr:loadend="importFile.xhrLoadEnd()"
+  onsubmit="return false"
 >
   <p>Import financial statement into portfolio.</p>
   <label class="input-outlined input-bg-surface-container-high">
     <input
       name="file"
-      type="file"
       required
-      enterkeyhint="next"
+      type="file"
       autocomplete="off"
+      enterkeyhint="next"
     />
     <div>
       <div>File</div>
@@ -29,7 +29,7 @@
   {% include "import/button.jinja" %}
   <div id="import-upload-progress" class="flex hidden items-center gap-1">
     <div>Uploading</div>
-    <progress value="0" max="100" class="grow"></progress>
+    <progress class="grow" value="0" max="100"></progress>
   </div>
 </form>
 {% if success %}

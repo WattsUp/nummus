@@ -7,12 +7,12 @@
   <h1 class="text-primary font-serif text-3xl">Assets</h1>
   <button
     class="btn-tonal"
+    disabled
     hx-get="{{ url_for('assets.new') }}"
     hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
     hx-push-url="#dialog"
-    disabled
   >
     <icon>add</icon>New
   </button>
@@ -56,8 +56,8 @@
 <label class="toggle max-w-60">
   <input
     type="checkbox"
-    autocomplete="off"
     {% if ctx.include_unheld %}checked{% endif %}
+    autocomplete="off"
     hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}"
     hx-target="#main"
     hx-swap="innerHTML show:window:top"

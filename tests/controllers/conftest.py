@@ -82,52 +82,100 @@ class TreeNode(NamedTuple):
 
         return True
 
-    def has_valid_hx_order(self) -> bool:
-        attributes = re.findall(r" hx-([\w\-:]+)=?", self.attributes)
+    def has_preferred_attribute_order(self) -> bool:
+        s = re.sub(r'="[^"]*"|=[^ ]*', "", self.attributes).strip(" /")
+        if not s:
+            return True
+        attributes = s.split(" ")
 
-        # TODO (WattsUp): Expand to all attributes??
         preferred_order = [
-            # Methods
-            "get",
-            "post",
-            "put",
-            "patch",
-            "delete",
-            # Actions
-            "trigger",
-            "disabled-elt",
-            "indicator",
-            # Destinations
-            "target",
-            "swap",
-            "sync",
-            "swap-oob",
-            "push-url",
+            "id",
+            "class",
+            "style",
+            "rel",
+            "title",
+            "label",
+            "href",
+            "charset",
+            "lang",
+            # Inputs
+            "name",
+            "required",
+            "type",
+            "value",
+            "checked",
+            "selected",
+            "list",
+            "min",
+            "max",
+            "placeholder",
+            "autocomplete",
+            "spellcheck",
+            "enterkeyhint",
+            "inputmode",
+            "autofocus",
+            # States
+            "disabled",
+            "hidden",
+            # SVG, img, & canvas
+            "viewbox",
+            "width",
+            "height",
+            "x",
+            "y",
+            "rx",
+            "ry",
             # Data
-            "include",
-            "encoding",
-            "validate",
-            "preserve",
-            "history-elt",
-            # Events
-            "on::validation:failed",
-            "on::history-cache-miss",
-            "on::history-cache-miss-load",
-            "on::history-cache-miss-load-error",
-            "on::before-request",
-            "on::before-send",
-            "on::send-error",
-            "on::xhr:loadstart",
-            "on::xhr:progress",
-            "on::xhr:loadend",
-            "on::response-error",
-            "on::before-swap",
-            "on::after-swap",
-            "on::oob-before-swap",
-            "on::oob-after-swap",
-            "on::after-request",
-            "on::after-settle",
+            "content",
+            "src",
+            # HTMX Methods
+            "hx-get",
+            "hx-post",
+            "hx-put",
+            "hx-patch",
+            "hx-delete",
+            # HTMX Actions
+            "hx-trigger",
+            "hx-disabled-elt",
+            "hx-indicator",
+            # HTMX Destinations
+            "hx-target",
+            "hx-swap",
+            "hx-sync",
+            "hx-swap-oob",
+            "hx-push-url",
+            # HTMX Data
+            "hx-include",
+            "hx-encoding",
+            "hx-validate",
+            "hx-preserve",
+            "hx-history-elt",
+            # HTMX Events
+            "hx-on::validation:failed",
+            "hx-on::history-cache-miss",
+            "hx-on::history-cache-miss-load",
+            "hx-on::history-cache-miss-load-error",
+            "hx-on::before-request",
+            "hx-on::before-send",
+            "hx-on::send-error",
+            "hx-on::xhr:loadstart",
+            "hx-on::xhr:progress",
+            "hx-on::xhr:loadend",
+            "hx-on::response-error",
+            "hx-on::before-swap",
+            "hx-on::after-swap",
+            "hx-on::oob-before-swap",
+            "hx-on::oob-after-swap",
+            "hx-on::after-request",
+            "hx-on::after-settle",
             # "confirm", # No confirm, use dialog confirm instead
+            # JS event
+            "onchange",
+            "onclick",
+            "oninput",
+            "onkeydown",
+            "onkeyup",
+            "onsubmit",
         ]
         preferred_order = [s for s in preferred_order if s in attributes]
 
@@ -169,7 +217,7 @@ class HTMLValidator:
             current_node.children.append(node)
 
             assert node.has_valid_hx_attributes()
-            assert node.has_valid_hx_order()
+            assert node.has_preferred_attribute_order()
 
             if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags

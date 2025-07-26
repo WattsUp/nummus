@@ -14,10 +14,10 @@
         <select
           name="period"
           autocomplete="off"
-          onchange="txn.changePeriod()"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
           hx-indicator="unset"
           hx-target="#txn-filters"
+          onchange="txn.changePeriod()"
         >
           {% for label, value in ctx.options_period %}
             <option
@@ -37,8 +37,8 @@
           id="txn-filter-start"
           name="start"
           type="date"
-          autocomplete="off"
           value="{{ ctx.start or '' }}"
+          autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
           hx-indicator="unset"
@@ -53,8 +53,8 @@
           id="txn-filter-end"
           name="end"
           type="date"
-          autocomplete="off"
           value="{{ ctx.end or '' }}"
+          autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
           hx-indicator="unset"
@@ -116,8 +116,8 @@
         <input
           name="uncleared"
           type="checkbox"
-          autocomplete="off"
           {% if ctx.uncleared %}checked{% endif %}
+          autocomplete="off"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
           hx-indicator="unset"
           hx-target="#txn-filters"

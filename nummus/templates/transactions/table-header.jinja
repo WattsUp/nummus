@@ -1,22 +1,22 @@
 <div
   id="txn-header"
-  hx-swap-oob="{{ oob }}"
   class="mx-auto mb-2 flex max-w-2xl items-start gap-2"
+  hx-swap-oob="{{ oob }}"
 >
   <label class="input-outlined grow">
     <input
       id="txn-search"
       name="search"
-      enterkeyhint="search"
-      placeholder=""
       value="{{ (ctx.search or "") | e }}"
+      placeholder=""
+      autocomplete="off"
+      spellcheck="true"
+      enterkeyhint="search"
       hx-get="{{ url_for(endpoint,  **url_args) }}"
       hx-trigger="keyup[keyCode==13],search"
       hx-indicator="#txn-table,#txn-indicator"
       hx-target="#txn-table"
       hx-include="#txn-filters"
-      autocomplete="off"
-      spellcheck="true"
     />
     <div>
       <div>Search</div>

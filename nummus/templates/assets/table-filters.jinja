@@ -34,8 +34,8 @@
           id="valuation-filter-start"
           name="start"
           type="date"
-          autocomplete="off"
           value="{{ ctx.start or '' }}"
+          autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
         />
         <div>
@@ -47,8 +47,8 @@
           id="valuation-filter-end"
           name="end"
           type="date"
-          autocomplete="off"
           value="{{ ctx.end or '' }}"
+          autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
         />
         <div>

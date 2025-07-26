@@ -37,8 +37,8 @@
     {% endif %}
   {% endfor %}
   <button
-    title="Add Transaction"
     id="nav-fab"
+    title="Add Transaction"
     hx-get="{{ url_for('transactions.new') }}"
     hx-disabled-elt="this"
     hx-target="#dialog"

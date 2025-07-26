@@ -21,10 +21,10 @@
     <h1 class="text-primary font-serif text-3xl">{{ ctx.month }}</h1>
     <button
       class="btn-text btn-sq"
+      {% if not ctx.month_next %}disabled{% endif %}
       hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
       hx-swap="innerHTML show:window:top"
       hx-push-url="true"
-      {% if not ctx.month_next %}disabled{% endif %}
     >
       <icon>chevron_right</icon>
     </button>
@@ -99,7 +99,7 @@
   </div>
 </div>
 <div id="budget-button-bar">
-  <input type="hidden" name="destination" />
+  <input name="destination" type="hidden" />
   <button
     hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
     hx-disabled-elt="this"

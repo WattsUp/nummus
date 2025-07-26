@@ -255,7 +255,7 @@ def test_dialog_swap_empty(
         response = base.dialog_swap()
 
     data: bytes = response.data
-    html = data.decode()
+    html = valid_html.clean(data.decode())
     assert valid_html(html)
     assert "snackbar" not in html
     assert "HX-Trigger" not in response.headers
@@ -274,7 +274,7 @@ def test_dialog_swap(
         response = base.dialog_swap(content, event, snackbar)
 
     data: bytes = response.data
-    html = data.decode()
+    html = valid_html.clean(data.decode())
     assert valid_html(html)
     assert content in html
     assert "snackbar" in html

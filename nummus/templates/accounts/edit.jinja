@@ -12,15 +12,15 @@
     <input
       name="name"
       required
-      enterkeyhint="next"
-      placeholder=""
       value="{{ acct.name or "" }}"
+      placeholder=""
+      autocomplete="off"
+      spellcheck="true"
+      enterkeyhint="next"
       hx-get="{{ url_for('accounts.validation', uri=acct.uri) }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
-      spellcheck="true"
     />
     <div>
       <div>Name</div>
@@ -33,15 +33,15 @@
     <input
       name="institution"
       required
-      enterkeyhint="next"
-      placeholder=""
       value="{{ acct.institution or "" }}"
+      placeholder=""
+      autocomplete="off"
+      spellcheck="true"
+      enterkeyhint="next"
       hx-get="{{ url_for('accounts.validation', uri=acct.uri) }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
-      spellcheck="true"
     />
     <div>
       <div>Institution</div>
@@ -54,9 +54,9 @@
     <select name="category" required autocomplete="off">
       <option
         value=""
+        {% if not acct.group %}selected{% endif %}
         disabled
         hidden
-        {% if not acct.group %}selected{% endif %}
       ></option>
       {% for cat in acct.category_type %}
         <option
@@ -75,14 +75,14 @@
   <label class="input-outlined input-bg-surface-container-high col-span-2">
     <input
       name="number"
-      enterkeyhint="next"
-      placeholder=""
       value="{{ acct.number or "" }}"
+      placeholder=""
+      autocomplete="off"
+      enterkeyhint="next"
       hx-get="{{ url_for('accounts.validation', uri=acct.uri) }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
     />
     <div>
       <div>Number (Optional)</div>
@@ -94,10 +94,10 @@
   </label>
   <label class="toggle col-span-2">
     <input
-      type="checkbox"
       name="budgeted"
-      autocomplete="off"
+      type="checkbox"
       {% if acct.budgeted %}checked{% endif %}
+      autocomplete="off"
     />
     <div>
       <span>Budgeted</span>
@@ -107,10 +107,10 @@
   </label>
   <label class="toggle col-span-2">
     <input
-      type="checkbox"
       name="closed"
-      autocomplete="off"
+      type="checkbox"
       {% if acct.closed %}checked{% endif %}
+      autocomplete="off"
       {% if acct.value != 0 %}disabled{% endif %}
     />
     <div>

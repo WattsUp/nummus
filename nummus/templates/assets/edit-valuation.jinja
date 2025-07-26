@@ -11,17 +11,17 @@
   <label class="input-outlined input-bg-surface-container-high">
     <input
       name="date"
-      type="date"
       required
-      enterkeyhint="next"
-      placeholder=""
+      type="date"
       value="{{ valuation.date or "" }}"
       max="{{ valuation.date_max }}"
+      placeholder=""
+      autocomplete="off"
+      enterkeyhint="next"
       hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri, v=valuation.uri) }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
     />
     <icon>event</icon>
     <div>
@@ -34,16 +34,16 @@
   <label class="input-outlined input-bg-surface-container-high">
     <input
       name="value"
-      value="{{ valuation.value | input_value }}"
       required
-      enterkeyhint="next"
+      value="{{ valuation.value | input_value }}"
       placeholder=""
+      autocomplete="off"
+      enterkeyhint="next"
       inputmode="tel"
       hx-get="{{ url_for('assets.validation', uri=valuation.asset_uri) }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
     />
     <div>
       <div>Value</div>
@@ -57,9 +57,9 @@
   {% if valuation.uri %}
     <button
       class="btn-text-error"
-      onclick="assets.confirmDelete(event)"
       hx-delete="{{ url_for('assets.valuation', uri=valuation.uri) }}"
       hx-trigger="delete"
+      onclick="assets.confirmDelete(event)"
     >
       Delete
     </button>

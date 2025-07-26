@@ -222,7 +222,7 @@
   <figure>
     <svg viewbox="0 0 220 100">
       <rect width="100" height="100" />
-      <rect x="120" width="100" height="100" rx="15" />
+      <rect width="100" height="100" x="120" rx="15" />
     </svg>
     <figcaption>Caption for figure</figcaption>
   </figure>
@@ -284,7 +284,7 @@
 <div class="flex flex-wrap gap-2">
   <fieldset class="radioset">
     <label>
-      <input name="radioset" type="radio" autocomplete="off" checked />
+      <input name="radioset" type="radio" checked autocomplete="off" />
       <icon>devices</icon>
     </label>
     <label>
@@ -298,7 +298,7 @@
   </fieldset>
   <fieldset class="radioset" disabled>
     <label>
-      <input name="radioset-2" type="radio" autocomplete="off" checked />
+      <input name="radioset-2" type="radio" checked autocomplete="off" />
       <icon>devices</icon>
     </label>
     <label>
@@ -314,7 +314,7 @@
 <h2 class="text-primary font-serif text-2xl">Inputs</h2>
 <div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
   <label class="input-outlined col-start-1">
-    <input enterkeyhint="next" placeholder="" autocomplete="off" />
+    <input placeholder="" autocomplete="off" enterkeyhint="next" />
     <div>
       <div>Text</div>
     </div>
@@ -327,10 +327,10 @@
   </label>
   <label class="input-outlined">
     <input
-      enterkeyhint="next"
+      value="Banana"
       placeholder=""
       autocomplete="off"
-      value="Banana"
+      enterkeyhint="next"
     />
     <div>
       <div>Text with value</div>
@@ -339,10 +339,10 @@
   </label>
   <label class="input-outlined">
     <input
-      enterkeyhint="next"
+      value="Banana"
       placeholder=""
       autocomplete="off"
-      value="Banana"
+      enterkeyhint="next"
       disabled
     />
     <div>
@@ -355,7 +355,7 @@
     <icon>search</icon>
   </label>
   <label class="input-outlined col-start-1">
-    <input enterkeyhint="next" placeholder="" autocomplete="off" />
+    <input placeholder="" autocomplete="off" enterkeyhint="next" />
     <div>
       <div>Text</div>
     </div>
@@ -367,10 +367,10 @@
   </label>
   <label class="input-outlined">
     <input
-      enterkeyhint="next"
+      value="Banana"
       placeholder=""
       autocomplete="off"
-      value="Banana"
+      enterkeyhint="next"
     />
     <div>
       <div>Text with value</div>
@@ -382,9 +382,9 @@
   </label>
   <label class="input-outlined col-start-1">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     ></textarea>
     <div>
@@ -399,9 +399,9 @@
   </label>
   <label class="input-outlined">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     >
 Banana</textarea
@@ -413,9 +413,9 @@ Banana</textarea
   </label>
   <label class="input-outlined">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     >
 Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. Lemons are fruits. Tomatoes are fruits.</textarea
@@ -431,9 +431,9 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       disabled
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     >
@@ -449,9 +449,9 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined col-start-1">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     ></textarea>
     <div>
@@ -465,9 +465,9 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     >
 Banana</textarea
@@ -482,9 +482,9 @@ Banana</textarea
   </label>
   <label class="input-outlined">
     <textarea
-      enterkeyhint="next"
       placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
       onkeydown="if(event.keyCode == 13)event.preventDefault()"
     >
 Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. Lemons are fruits. Tomatoes are fruits.</textarea
@@ -499,7 +499,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined col-start-1">
     <select autocomplete="off">
-      <option value="" disabled hidden selected></option>
+      <option value="" selected disabled hidden></option>
       <option value="apple">Apple</option>
       <option value="banana">Banana</option>
     </select>
@@ -537,7 +537,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined col-start-1">
     <select autocomplete="off">
-      <option value="" disabled hidden selected></option>
+      <option value="" selected disabled hidden></option>
       <option value="apple">Apple</option>
       <option value="banana">Banana</option>
     </select>
@@ -569,7 +569,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <switch></switch>
   </label>
   <label class="toggle">
-    <input type="checkbox" autocomplete="off" checked />
+    <input type="checkbox" checked autocomplete="off" />
     <div>
       <span>Toggle switch on</span>
       <span>Supporting text</span>
@@ -585,7 +585,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <switch></switch>
   </label>
   <label class="toggle">
-    <input type="checkbox" autocomplete="off" checked disabled />
+    <input type="checkbox" checked autocomplete="off" disabled />
     <div>
       <span>Toggle switch on</span>
       <span>Disabled</span>
@@ -602,7 +602,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <icon>visibility_off</icon>
   </label>
   <label class="checkbox">
-    <input type="checkbox" autocomplete="off" checked />
+    <input type="checkbox" checked autocomplete="off" />
     <div>
       <span>xxxxx hidden</span>
       <span>12347 not hidden</span>
@@ -620,7 +620,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <icon>visibility_off</icon>
   </label>
   <label class="checkbox">
-    <input type="checkbox" autocomplete="off" checked disabled />
+    <input type="checkbox" checked autocomplete="off" disabled />
     <div>
       <span>xxxxx hidden</span>
       <span>12347 not hidden</span>
@@ -635,7 +635,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <icon>check_box</icon>
   </label>
   <label class="checkbox">
-    <input type="checkbox" autocomplete="off" checked />
+    <input type="checkbox" checked autocomplete="off" />
     <div>Plain checkbox</div>
     <icon>check_box_outline_blank</icon>
     <icon>check_box</icon>
@@ -647,7 +647,7 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
     <icon>check_box</icon>
   </label>
   <label class="checkbox">
-    <input type="checkbox" autocomplete="off" checked disabled />
+    <input type="checkbox" checked autocomplete="off" disabled />
     <div>Plain checkbox</div>
     <icon>check_box_outline_blank</icon>
     <icon>check_box</icon>

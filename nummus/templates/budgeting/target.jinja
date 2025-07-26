@@ -15,7 +15,7 @@
     {% for period, period_str in target["period_options"].items() %}
       {% if period == target["period"] %}
         <div class="btn-tonal">{{ period_str }}</div>
-        <input value="{{ period_str }}" name="period" type="hidden" />
+        <input name="period" type="hidden" value="{{ period_str }}" />
       {% else %}
         <div
           class="btn-outlined"
@@ -33,16 +33,16 @@
   <label class="input-outlined input-bg-surface-container-high col-span-full">
     <input
       name="amount"
-      value="{{ target.amount | input_value }}"
       required
-      enterkeyhint="next"
+      value="{{ target.amount | input_value }}"
       placeholder=""
+      autocomplete="off"
+      enterkeyhint="next"
       inputmode="tel"
       hx-get="{{ url_for("budgeting.validation") }}"
       hx-trigger="input delay:200ms"
       hx-target="next error"
       hx-include="this"
-      autocomplete="off"
     />
     <icon>attach_money</icon>
     <div>
@@ -81,8 +81,8 @@
   {% elif target.period == "ONCE" %}
     <label class="toggle col-span-full">
       <input
-        type="checkbox"
         name="has-due"
+        type="checkbox"
         {% if target["due_date"] %}checked{% endif %}
         autocomplete="off"
       />
@@ -123,16 +123,16 @@
     <label class="input-outlined input-bg-surface-container-high col-span-full">
       <input
         name="date"
-        type="date"
         required
-        enterkeyhint="next"
-        placeholder=""
+        type="date"
         value="{{ target.due_date or "" }}"
+        placeholder=""
+        autocomplete="off"
+        enterkeyhint="next"
         hx-get="{{ url_for("budgeting.validation") }}"
         hx-trigger="input delay:200ms"
         hx-target="next error"
         hx-include="this"
-        autocomplete="off"
       />
       <icon>event</icon>
       <div>
@@ -181,15 +181,15 @@
       <input
         name="repeat"
         required
-        enterkeyhint="next"
-        placeholder=""
         value="{{ target.repeat_every | input_value }}"
         min="1"
+        placeholder=""
+        autocomplete="off"
+        enterkeyhint="next"
         hx-get="{{ url_for("budgeting.validation") }}"
         hx-trigger="input delay:200ms"
         hx-target="next error"
         hx-include="this"
-        autocomplete="off"
       />
       <icon>event_repeat</icon>
       <div>
@@ -215,9 +215,9 @@
   {% if not target.new %}
     <button
       class="btn-text-error"
-      onclick="budgeting.confirmDelete(event)"
       hx-delete="{{ url_for('budgeting.target', uri=target.uri) }}"
       hx-trigger="delete"
+      onclick="budgeting.confirmDelete(event)"
     >
       Delete
     </button>

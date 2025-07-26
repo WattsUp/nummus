@@ -1,7 +1,7 @@
 <div id="import-button" class="my-1" hx-swap-oob="{{ oob }}">
   {% if force %}
     <p>Force importing may result in duplicate transactions.</p>
-    <input type="hidden" name="force" value="true" />
+    <input name="force" type="hidden" value="true" />
     <button class="btn-text-error btn-size-lg mx-auto">Force Import</button>
   {% else %}
     <button class="btn-text btn-size-lg mx-auto">Upload</button>

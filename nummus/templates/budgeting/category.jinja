@@ -2,13 +2,13 @@
 <div
   id="category-{{ category.uri }}"
   class="budget-category {{ "not-edit:hidden" if category.hidden }}"
-  onclick="budgeting.onClickCategory(this, event)"
   hx-get="{{ url_for("budgeting.sidebar", uri=category.uri) }}"
   hx-trigger="sidebar"
   hx-target="#budget-sidebar"
   hx-include="#budget-sidebar-uri"
+  onclick="budgeting.onClickCategory(this, event)"
 >
-  <input name="category-uri" value="{{ category.uri }}" type="hidden" />
+  <input name="category-uri" type="hidden" value="{{ category.uri }}" />
   <icon class="budget-drag">drag_indicator</icon>
   <div class="mb-1 flex items-center">
     <div class="grow">{{ category.emoji_name }}</div>
@@ -19,10 +19,10 @@
         name="amount"
         value="{{ category.assigned | input_value }}"
         placeholder="0.00"
+        autocomplete="off"
         inputmode="tel"
         hx-put="{{ url_for("budgeting.assign", uri=category.uri, month=ctx.month) }}"
         hx-target="#group-{{ group.uri or "ungrouped" }}"
-        autocomplete="off"
       />
       <span>{{ category.assigned | money }}</span>
     </div>
