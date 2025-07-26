@@ -85,7 +85,7 @@ class RandomRealGenerator:
     @classmethod
     def __call__(
         cls,
-        low: str | float | Decimal = 0,
+        low: str | float | Decimal = 0.1,
         high: str | float | Decimal = 1,
         precision: int = 6,
     ) -> Decimal:
