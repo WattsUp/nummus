@@ -1,4 +1,4 @@
-# nummus
+# nummus-financial
 
 [![Unit Test][unittest-image]][unittest-url] [![Static Analysis][static-analysis-image]][static-analysis-url] [![Coverage][coverage-image]][coverage-url]
 
@@ -118,8 +118,8 @@ Formatters
 - `formatters.sh` will run every formatter
 - `linters.sh` will run every linter
 - `make_test_portfolio.py` will create a portfolio with pseudorandom data
-- `profile_web_call.py` will send a request to an endpoint with vizviewer
-- `run_tailwindcss.py` will run tailwindcss with proper arguments, add `-w` to watch and rerun on save
+- `run_tailwindcss.sh` will run tailwindcss with proper arguments
+- `gunicorn_conf.py` is an example configuration for gunicorn running nummus
 
 ---
 
