@@ -482,6 +482,7 @@ def update() -> str | flask.Response:
         "assets/update.jinja",
         failed_tickers=failed_tickers,
         successful_tickers=sorted(successful_tickers),
+        clear_history=True,
     )
     response = flask.make_response(html)
     response.headers["HX-Trigger"] = "valuation"
