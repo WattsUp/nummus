@@ -71,7 +71,7 @@ test = [
   "jsmin",
 ]
 dev = [
-  "nummus[test]",     # Development needs tests too
+  "nummus-financial[test]", # Development needs tests too
   "ruff>=0.12.0",
   "codespell>=2.4.1",
   "black>=25",
