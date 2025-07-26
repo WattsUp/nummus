@@ -161,14 +161,16 @@ def test_move_overspending(
     web_client: WebClient,
     transactions_spending: list[Transaction],
     budget_assignments: list[BudgetAssignment],
+    categories: dict[str, int],
 ) -> None:
     _ = transactions_spending
     a = budget_assignments[0]
-    t_cat_uri = TransactionCategory.id_to_uri(a.category_id)
+    uri = TransactionCategory.id_to_uri(categories["securities traded"])
+    dest_uri = TransactionCategory.id_to_uri(a.category_id)
 
     result, headers = web_client.PUT(
-        ("budgeting.move", {"uri": "income", "month": month.isoformat()[:7]}),
-        data={"destination": t_cat_uri},
+        ("budgeting.move", {"uri": uri, "month": month.isoformat()[:7]}),
+        data={"destination": dest_uri},
     )
     assert "snackbar.show" in result
     assert "$30.00 reallocated" in result
