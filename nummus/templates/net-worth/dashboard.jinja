@@ -27,7 +27,9 @@
   </div>
   <div id="net-worth-chart-data">
     <script>
-      netWorth.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'));
+      onLoad(() => {
+        netWorth.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'));
+      });
     </script>
   </div>
   <div>{% include "shared/spinner.jinja" %}</div>

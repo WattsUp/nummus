@@ -257,7 +257,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
         html_title = f"<title>{title} - nummus</title>\n"
-        nav_trigger = "<script>nav.update()</script>\n"
+        nav_trigger = "<script>onLoad(nav.update)</script>\n"
         content = flask.render_template(content_template, **context)
         html = html_title + nav_trigger + content
     else:
