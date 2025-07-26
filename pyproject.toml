@@ -243,19 +243,21 @@ runtime-evaluated-base-classes = [
 required-imports = ["from __future__ import annotations"]
 
 [tool.setuptools]
-packages = ["nummus"]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+include = ["nummus*"]
+namespaces = false
 
 [tool.setuptools.cmdclass]
 build_py = "nummus.web_assets.BuildAssets"
 
 [tool.setuptools.package-data]
-nummus_financial = ["static/dist/*", "templates/*"]
-
-[tool.setuptools.exclude-package-data]
-nummus_financial = [
-  "static/src/*",
-  "static/plugins/*",
-  "static/tailwind.config.js",
+nummus = [
+  "static/dist/**/*",
+  "static/fonts/**/*",
+  "static/img/**/*",
+  "templates/**/*",
 ]
 
 [tool.setuptools_scm]
