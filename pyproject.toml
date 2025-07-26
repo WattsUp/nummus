@@ -11,7 +11,7 @@ requires = [
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "nummus"
+name = "nummus-financial"
 dynamic = ["version"]
 dependencies = [
   "sqlalchemy>=2",
@@ -33,14 +33,13 @@ dependencies = [
   "packaging",
 ]
 description = "A personal financial information aggregator and planning tool"
-license = { file = "LICENSE" }
+license = "MIT"
 readme = "README.md"
 authors = [{ name = "Bradley Davis", email = "me@bradleydavis.tech" }]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Operating System :: OS Independent",
-  "Development Status :: 2 - Pre-Alpha",
-  "License :: OSI Approved :: MIT License",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Financial and Insurance Industry",
   "Intended Audience :: End Users/Desktop",
   "Topic :: Office/Business :: Financial",
@@ -72,7 +71,7 @@ test = [
   "jsmin",
 ]
 dev = [
-  "nummus[test]",     # Development needs tests too
+  "nummus-financial[test]", # Development needs tests too
   "ruff>=0.12.0",
   "codespell>=2.4.1",
   "black>=25",
@@ -250,10 +249,14 @@ packages = ["nummus"]
 build_py = "nummus.web_assets.BuildAssets"
 
 [tool.setuptools.package-data]
-nummus = ["static/dist/*", "templates/*"]
+nummus_financial = ["static/dist/*", "templates/*"]
 
 [tool.setuptools.exclude-package-data]
-nummus = ["static/src/*", "static/plugins/*", "static/tailwind.config.js"]
+nummus_financial = [
+  "static/src/*",
+  "static/plugins/*",
+  "static/tailwind.config.js",
+]
 
 [tool.setuptools_scm]
 version_file = "nummus/version.py"

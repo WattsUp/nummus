@@ -1,6 +1,6 @@
-# nummus
+# nummus-financial
 
-[![Unit Test][unittest-image]][unittest-url] [![Static Analysis][static-analysis-image]][static-analysis-url] [![Coverage][coverage-image]][coverage-url]
+[![Unit Test][unittest-image]][unittest-url] [![Static Analysis][static-analysis-image]][static-analysis-url] [![Coverage][coverage-image]][coverage-url][![Latest Version][pypi-image]][pypi-url]
 
 A personal financial information aggregator and planning tool. Collects and categorizes transactions, manages budgets, tracks investments, calculates net worth, and predicts future performance.
 
@@ -118,8 +118,8 @@ Formatters
 - `formatters.sh` will run every formatter
 - `linters.sh` will run every linter
 - `make_test_portfolio.py` will create a portfolio with pseudorandom data
-- `profile_web_call.py` will send a request to an endpoint with vizviewer
-- `run_tailwindcss.py` will run tailwindcss with proper arguments, add `-w` to watch and rerun on save
+- `run_tailwindcss.sh` will run tailwindcss with proper arguments
+- `gunicorn_conf.py` is an example configuration for gunicorn running nummus
 
 ---
 
@@ -140,6 +140,8 @@ secure-icon = ⚿ # Icon to print on secure CLI prompts such as unlocking passwo
 
 Versioning of this projects adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html) and is implemented using git tags.
 
+[pypi-image]: https://img.shields.io/pypi/v/nummus-financial.svg
+[pypi-url]: https://pypi.org/project/nummus-financial/
 [unittest-image]: https://github.com/WattsUp/nummus/actions/workflows/test.yml/badge.svg
 [unittest-url]: https://github.com/WattsUp/nummus/actions/workflows/test.yml
 [static-analysis-image]: https://github.com/WattsUp/nummus/actions/workflows/static-analysis.yml/badge.svg
