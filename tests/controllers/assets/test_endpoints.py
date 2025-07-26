@@ -375,6 +375,7 @@ def test_update(
 
     result, headers = web_client.POST("assets.update")
     assert "The assets with the following tickers were updated" in result
+    assert "nummusClearHistory" in result
     assert asset.ticker is not None
     assert asset.ticker in result
     assert headers["HX-Trigger"] == "valuation"

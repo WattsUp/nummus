@@ -64,7 +64,9 @@ class TreeNode(NamedTuple):
 
     def has_valid_hx_attributes(self) -> bool:
         if 'hx-target="#dialog"' in self.attributes:
-            assert 'hx-push-url="#dialog"' in self.attributes
+            dialog = 'hx-push-url="#dialog"'
+            explicit_false = 'hx-push-url="false"'
+            assert dialog in self.attributes or explicit_false in self.attributes
             top = 'hx-swap="innerHTML show:#dialog:top"'
             btm = 'hx-swap="innerHTML show:#dialog:bottom"'
             assert top in self.attributes or btm in self.attributes

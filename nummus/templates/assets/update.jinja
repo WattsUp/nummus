@@ -28,10 +28,16 @@
       hx-indicator="next .spinner"
       hx-target="#dialog"
       hx-swap="innerHTML show:#dialog:top"
-      hx-push-url="#dialog"
+      {# already pushed in, don't do it again #}
+      hx-push-url="false"
     >
       Update
     </button>
     {% include "shared/spinner.jinja" %}
   {% endif %}
 </div>
+{% if clear_history %}
+  <script id="history-script" hx-swap-oob="true">
+    nummusClearHistory();
+  </script>
+{% endif %}
