@@ -75,5 +75,7 @@
 </div>
 <script>
   // prettier-ignore
-  allocation.update(JSON.parse('{{ allocation.chart | tojson }}'));
+  onLoad(() => {
+    allocation.update(JSON.parse('{{ allocation.chart | tojson }}'));
+  });
 </script>

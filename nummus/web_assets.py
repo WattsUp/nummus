@@ -112,12 +112,6 @@ def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
     bundle_js = flask_assets.Bundle(
         # top first
         "src/top.js",
-        # hammer.js needs to be before chart.js
-        "src/3rd-party/hammer.js",
-        # chart.js needs to be before plugins
-        "src/3rd-party/chart.min.js",
-        # 3rd-party needs to be before 1st-party
-        "src/3rd-party/*.js",
         "src/*.js",
         "src/**/*.js",
         output=stub_dist_js,
