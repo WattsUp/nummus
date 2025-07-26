@@ -326,8 +326,9 @@ def move(uri: str) -> str | flask.Response:
                 if to_move is None:
                     return base.error("Amount to move must not be blank")
             else:
-                # Min of the positive number is max of negative
-                to_move = min(src_available, -dest_available)
+                # Find the smaller of the two
+                # Max of the negative number is min of the positive/abs
+                to_move = max(src_available, -dest_available)
 
             BudgetAssignment.move(s, month_ord, src_cat_id, dest_cat_id, to_move)
 
