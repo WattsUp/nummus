@@ -3,9 +3,12 @@
   <a
     id="asset-{{ asset.uri }}"
     class="btn-text {{ class }} block"
-    hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
     href="{{ url_for('assets.page', uri=asset.uri) }}"
+    hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
     hx-disabled-elt="this"
+    hx-target="#main"
+    hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   >
     {% block row %}
       <div class="flex justify-between gap-2">

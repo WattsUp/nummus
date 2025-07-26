@@ -12,15 +12,15 @@
     <input
       name="name"
       required
-      enterkeyhint="next"
-      placeholder=""
       value="{{ asset.name or "" }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      placeholder=""
       autocomplete="off"
       spellcheck="true"
+      enterkeyhint="next"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <div>
       <div>Name</div>
@@ -32,15 +32,15 @@
   <label class="input-outlined input-bg-surface-container-high">
     <input
       name="ticker"
-      enterkeyhint="next"
-      placeholder=""
       value="{{ asset.ticker or "" }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      placeholder=""
       autocomplete="off"
       spellcheck="true"
+      enterkeyhint="next"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <div>
       <div>Ticker</div>
@@ -53,9 +53,9 @@
     <select name="category" required autocomplete="off">
       <option
         value=""
+        {% if not asset.group %}selected{% endif %}
         disabled
         hidden
-        {% if not asset.group %}selected{% endif %}
       ></option>
       {% for cat in asset.category_type %}
         <option
@@ -74,14 +74,14 @@
   <label class="input-outlined input-bg-surface-container-high col-span-full">
     <textarea
       name="description"
-      enterkeyhint="next"
       placeholder=""
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
       autocomplete="off"
       spellcheck="true"
+      enterkeyhint="next"
+      hx-get="{{ url_for('assets.validation', uri=asset.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     >
 {{ asset.description or "" }}</textarea
     >

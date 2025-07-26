@@ -5,15 +5,15 @@
     class="space-between group flex w-full cursor-pointer"
     href="{{ url_for('cash_flow.page') }}"
     hx-get="{{ url_for('cash_flow.page') }}"
-    hx-target="#main"
-    hx-swap="innerHTML"
-    hx-push-url="true"
     hx-indicator="next .spinner"
+    hx-target="#main"
+    hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   >
     <h1
       class="align-left w-full font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
     >
-      Cash Flow
+      Cash flow
     </h1>
   </a>
   <div class="relative w-full grow">

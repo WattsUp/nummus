@@ -1,16 +1,17 @@
 <div
   class="mb-2 flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="category from:body"
   hx-get="{{ url_for('transaction_categories.page') }}"
+  hx-trigger="category from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">Transaction categories</h1>
   <button
     class="btn-tonal"
+    hx-get="{{ url_for('transaction_categories.new') }}"
+    hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
-    hx-get="{{ url_for('transaction_categories.new') }}"
+    hx-push-url="#dialog"
   >
     <icon>add</icon>New
   </button>
@@ -35,11 +36,7 @@
     </p>
   </div>
 </details>
-<div
-  class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2"
-  hx-target="#dialog"
-  hx-swap="innerHTML show:#dialog:top"
->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-x-2">
   {% for group, items in groups.items() %}
     {# Set row span such that on md screen the third category will fit in dense #}
     <div class="mb-4" style="grid-row: span {{ items | count + 1 }}">

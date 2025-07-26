@@ -1,18 +1,18 @@
 <div
   id="net-worth-config"
   class="flex w-full items-center justify-center gap-1 font-serif"
-  hx-swap-oob="{{ oob }}"
-  hx-include="#net-worth-config"
+  hx-indicator=".spinner"
   hx-target="#net-worth-chart-data"
   hx-swap="outerHTML"
-  hx-indicator=".spinner"
+  hx-swap-oob="{{ oob }}"
+  hx-include="#net-worth-config"
 >
   <div class="max-md:hidden">
     Accounts:
     <select
       name="category"
-      hx-get="{{ url_for('net_worth.chart') }}"
       autocomplete="off"
+      hx-get="{{ url_for('net_worth.chart') }}"
     >
       <option value="" {% if not chart["category"] %}selected{% endif %}>
         All
@@ -31,8 +31,8 @@
   <div class="md:hidden">Period</div>
   <select
     name="period"
-    hx-get="{{ url_for('net_worth.chart') }}"
     autocomplete="off"
+    hx-get="{{ url_for('net_worth.chart') }}"
   >
     {% with period = chart["period"] %}
       {% include "shared/period-options.jinja" %}
@@ -40,25 +40,25 @@
   </select>
   <div class="max-md:hidden">
     <input
-      type="date"
       name="start"
+      type="date"
       value="{{ chart["start"] }}"
+      autocomplete="off"
       hx-get="{{ url_for('net_worth.chart', period='custom') }}"
       hx-trigger="blur changed,keyup[keyCode==13] changed"
       hx-validate="true"
       hx-on::validation:failed="event.target.classList.add('border-red')"
-      autocomplete="off"
     />
     to
     <input
-      type="date"
       name="end"
+      type="date"
       value="{{ chart["end"] }}"
+      autocomplete="off"
       hx-get="{{ url_for('net_worth.chart', period='custom') }}"
       hx-trigger="blur changed,keyup[keyCode==13] changed"
       hx-validate="true"
       hx-on::validation:failed="event.target.classList.add('border-red')"
-      autocomplete="off"
     />
   </div>
 </div>

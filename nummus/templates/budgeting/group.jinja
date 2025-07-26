@@ -11,15 +11,15 @@
     name="open"
     type="checkbox"
     {% if group.is_open %}checked{% endif %}
+    autocomplete="off"
+    hx-put="{{ url_for("budgeting.group", uri=group.uri or "ungrouped") }}"
+    hx-trigger="send-state"
     hx-target="#no-target"
     hx-include="this"
-    hx-trigger="send-state"
-    hx-put="{{ url_for("budgeting.group", uri=group.uri or "ungrouped") }}"
     onclick="budgeting.openGroup(this, '{{ group.uri or "ungrouped" }}')"
-    autocomplete="off"
   />
   {% if group.name %}
-    <input name="group-uri" value="{{ group.uri or "" }}" type="hidden" />
+    <input name="group-uri" type="hidden" value="{{ group.uri or "" }}" />
     <icon class="budget-drag">drag_indicator</icon>
   {% endif %}
   <icon class="not-open:hidden edit:hidden">keyboard_arrow_up</icon>
@@ -27,14 +27,14 @@
   <div>
     {% if group.name %}
       <input
+        class="not-edit:hidden"
         name="name"
         value="{{ group.name }}"
-        class="not-edit:hidden"
-        hx-target="#budget-error"
-        hx-include="this"
-        hx-put="{{ url_for("budgeting.group", uri=group.uri) }}"
         autocomplete="off"
         spellcheck="true"
+        hx-put="{{ url_for("budgeting.group", uri=group.uri) }}"
+        hx-target="#budget-error"
+        hx-include="this"
       />
       <h1 class="edit:hidden">{{ group.name }}</h1>
     {% else %}

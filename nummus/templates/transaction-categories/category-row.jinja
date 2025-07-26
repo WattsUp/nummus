@@ -2,8 +2,11 @@
   <div>{{ cat.name }}</div>
   <button
     class="btn-text btn-sq"
-    hx-disabled-elt="this"
     hx-get="{{ url_for('transaction_categories.category', uri=cat.uri) }}"
+    hx-disabled-elt="this"
+    hx-target="#dialog"
+    hx-swap="innerHTML show:#dialog:top"
+    hx-push-url="#dialog"
   >
     <icon>edit</icon>
   </button>

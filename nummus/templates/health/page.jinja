@@ -2,10 +2,10 @@
   <h1 class="text-primary font-serif text-3xl">Health checks</h1>
   <button
     class="btn-tonal"
-    hx-target="#health-checks"
-    hx-disabled-elt="this"
     hx-post="{{ url_for('health.refresh') }}"
+    hx-disabled-elt="this"
     hx-indicator="#health-indicator"
+    hx-target="#health-checks"
   >
     <icon>refresh</icon>Refresh
   </button>

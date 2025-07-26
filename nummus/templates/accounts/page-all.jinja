@@ -1,17 +1,18 @@
 <div
   class="flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="account from:body, valuation from:body"
   hx-get="{{ url_for('accounts.page_all') }}"
+  hx-trigger="account from:body, valuation from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">Accounts</h1>
   <button
     class="btn-tonal"
+    disabled
+    hx-get="{{ url_for('accounts.new') }}"
+    hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
-    hx-get="{{ url_for('accounts.new') }}"
-    disabled
+    hx-push-url="#dialog"
   >
     <icon>add</icon>New
   </button>
@@ -64,11 +65,7 @@
     </p>
   </div>
 </details>
-<div
-  class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
-  hx-push-url="true"
-  hx-swap="innerHTML show:window:top"
->
+<div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4">
   {% for category, (total, accounts) in ctx.categories.items() %}
     <div class="mb-4">
       <div class="w-full">
@@ -89,10 +86,12 @@
 <label class="toggle max-w-60">
   <input
     type="checkbox"
-    autocomplete="off"
     {% if ctx.include_closed %}checked{% endif %}
-    hx-push-url="true"
+    autocomplete="off"
     hx-get="{{ url_for('accounts.page_all', include_closed=not ctx.include_closed) }}"
+    hx-target="#main"
+    hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   />
   <div>
     {% if ctx.include_closed %}

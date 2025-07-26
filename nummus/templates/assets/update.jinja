@@ -24,9 +24,11 @@
     <button
       class="btn-text btn-size-lg mx-auto"
       hx-post="{{ url_for('assets.update') }}"
-      hx-target="#dialog"
       hx-disabled-elt="this"
       hx-indicator="next .spinner"
+      hx-target="#dialog"
+      hx-swap="innerHTML show:#dialog:top"
+      hx-push-url="#dialog"
     >
       Update
     </button>

@@ -32,6 +32,7 @@
   class="budget-sidebar-target"
   hx-target="#dialog"
   hx-swap="innerHTML show:#dialog:top"
+  hx-push-url="#dialog"
 >
   {% if budget_sidebar.uri is none %}
     <h1 class="font-bold">Targets</h1>
@@ -41,7 +42,7 @@
     </div>
     <label class="input-outlined">
       <select class="w-full" autocomplete="off">
-        <option value="" disabled hidden selected></option>
+        <option value="" selected disabled hidden></option>
         {% for uri, name in budget_sidebar.no_target.items() %}
           <option
             value="{{ uri }}"

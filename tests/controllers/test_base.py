@@ -3,11 +3,13 @@ from __future__ import annotations
 import datetime
 import re
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
 import pytest
 
+import nummus
 from nummus import controllers
 from nummus import exceptions as exc
 from nummus import utils
@@ -253,7 +255,7 @@ def test_dialog_swap_empty(
         response = base.dialog_swap()
 
     data: bytes = response.data
-    html = data.decode()
+    html = valid_html.clean(data.decode())
     assert valid_html(html)
     assert "snackbar" not in html
     assert "HX-Trigger" not in response.headers
@@ -272,7 +274,7 @@ def test_dialog_swap(
         response = base.dialog_swap(content, event, snackbar)
 
     data: bytes = response.data
-    html = data.decode()
+    html = valid_html.clean(data.decode())
     assert valid_html(html)
     assert content in html
     assert "snackbar" in html
@@ -473,3 +475,18 @@ def test_tranaction_category_groups(
     groups = base.tranaction_category_groups(session)
     assert len(groups) == len(TransactionCategoryGroup)
     assert sum(len(group) for group in groups.values()) == len(categories)
+
+
+@pytest.mark.parametrize(
+    "path",
+    sorted(Path(nummus.__file__).with_name("templates").glob("**/*.jinja")),
+    ids=conftest.id_func,
+)
+def test_template(valid_html: HTMLValidator, path: Path) -> None:
+    with path.open("r", encoding="utf-8") as file:
+        buf = file.read()
+
+    re_jinja = re.compile(r"(\{[{%#]).+?([#%}]\})")
+    buf = valid_html.clean(re_jinja.sub("", buf))
+    # Since each template is tested, it ensures any HX actions require local targets
+    assert valid_html(buf)

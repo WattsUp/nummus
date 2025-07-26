@@ -1,6 +1,9 @@
 <div
   class="txn"
   hx-get="{{ url_for('transactions.transaction', uri=txn.parent_uri) }}"
+  hx-target="#dialog"
+  hx-swap="innerHTML show:#dialog:top"
+  hx-push-url="#dialog"
 >
   <label class="checkbox">
     {# TODO (WattsUp): Add bulk editor #}

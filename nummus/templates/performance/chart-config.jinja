@@ -1,18 +1,18 @@
 <div
   id="performance-config"
   class="my-1 flex w-full justify-between gap-1 font-serif max-lg:flex-col"
-  hx-swap-oob="{{ oob }}"
-  hx-include="#performance-config"
+  hx-indicator=".spinner"
   hx-target="#performance-chart-data"
   hx-swap="outerHTML"
-  hx-indicator=".spinner"
+  hx-swap-oob="{{ oob }}"
+  hx-include="#performance-config"
 >
   <div class="flex items-center justify-center gap-1">
     Selected index
     <select
       name="index"
-      hx-get="{{ url_for('performance.chart') }}"
       autocomplete="off"
+      hx-get="{{ url_for('performance.chart') }}"
     >
       {% for index, selected in chart["indices"].items() %}
         <option value="{{ index }}" {% if selected %}selected{% endif %}>
@@ -35,33 +35,33 @@
   <div class="flex items-center justify-center gap-1">
     <select
       name="period"
-      hx-get="{{ url_for('performance.chart') }}"
       autocomplete="off"
+      hx-get="{{ url_for('performance.chart') }}"
     >
       {% with period = chart["period"] %}
         {% include "shared/period-options.jinja" %}
       {% endwith %}
     </select>
     <input
-      type="date"
       name="start"
+      type="date"
       value="{{ chart["start"] }}"
+      autocomplete="off"
       hx-get="{{ url_for('performance.chart', period='custom') }}"
       hx-trigger="blur changed,keyup[keyCode==13] changed"
       hx-validate="true"
       hx-on::validation:failed="event.target.classList.add('border-red')"
-      autocomplete="off"
     />
     to
     <input
-      type="date"
       name="end"
+      type="date"
       value="{{ chart["end"] }}"
+      autocomplete="off"
       hx-get="{{ url_for('performance.chart', period='custom') }}"
       hx-trigger="blur changed,keyup[keyCode==13] changed"
       hx-validate="true"
       hx-on::validation:failed="event.target.classList.add('border-red')"
-      autocomplete="off"
     />
   </div>
 </div>

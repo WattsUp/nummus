@@ -15,13 +15,14 @@
     {% for period, period_str in target["period_options"].items() %}
       {% if period == target["period"] %}
         <div class="btn-tonal">{{ period_str }}</div>
-        <input value="{{ period_str }}" name="period" type="hidden" />
+        <input name="period" type="hidden" value="{{ period_str }}" />
       {% else %}
         <div
           class="btn-outlined"
           hx-get="{{ url_for('budgeting.target', uri=target['uri'], period=period_str, change=True) }}"
           hx-target="#dialog"
           hx-swap="innerHTML show:#dialog:top"
+          hx-push-url="#dialog"
           onclick="dialog.changes()"
         >
           {{ period_str }}
@@ -32,16 +33,16 @@
   <label class="input-outlined input-bg-surface-container-high col-span-full">
     <input
       name="amount"
-      value="{{ target.amount | input_value }}"
       required
-      enterkeyhint="next"
+      value="{{ target.amount | input_value }}"
       placeholder=""
-      inputmode="tel"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for("budgeting.validation") }}"
       autocomplete="off"
+      enterkeyhint="next"
+      inputmode="tel"
+      hx-get="{{ url_for("budgeting.validation") }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <icon>attach_money</icon>
     <div>
@@ -57,8 +58,8 @@
         name="due"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-        hx-include="#dialog form"
         hx-target="#target-desc"
+        hx-include="#dialog form"
       >
         {% for weekday in target.weekdays %}
           <option
@@ -80,8 +81,8 @@
   {% elif target.period == "ONCE" %}
     <label class="toggle col-span-full">
       <input
-        type="checkbox"
         name="has-due"
+        type="checkbox"
         {% if target["due_date"] %}checked{% endif %}
         autocomplete="off"
       />
@@ -122,16 +123,16 @@
     <label class="input-outlined input-bg-surface-container-high col-span-full">
       <input
         name="date"
-        type="date"
         required
-        enterkeyhint="next"
-        placeholder=""
+        type="date"
         value="{{ target.due_date or "" }}"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
-        hx-get="{{ url_for("budgeting.validation") }}"
+        placeholder=""
         autocomplete="off"
+        enterkeyhint="next"
+        hx-get="{{ url_for("budgeting.validation") }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
       />
       <icon>event</icon>
       <div>
@@ -150,8 +151,8 @@
         name="type"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-        hx-include="#dialog form"
         hx-target="#target-desc"
+        hx-include="#dialog form"
       >
         <option
           value="accumulate"
@@ -180,15 +181,15 @@
       <input
         name="repeat"
         required
-        enterkeyhint="next"
-        placeholder=""
         value="{{ target.repeat_every | input_value }}"
         min="1"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
-        hx-get="{{ url_for("budgeting.validation") }}"
+        placeholder=""
         autocomplete="off"
+        enterkeyhint="next"
+        hx-get="{{ url_for("budgeting.validation") }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
       />
       <icon>event_repeat</icon>
       <div>
@@ -203,20 +204,20 @@
     id="target-desc"
     class="col-span-full"
     hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
-    hx-include="#dialog form"
-    hx-target="this"
     hx-trigger="target-desc from:body"
+    hx-target="this"
+    hx-include="#dialog form"
   >
     {% include "budgeting/target-desc.jinja" %}
   </div>
 </form>
-<div class="flex flex-wrap justify-around">
+<div class="flex flex-wrap justify-around" hx-target="#dialog-error">
   {% if not target.new %}
     <button
       class="btn-text-error"
-      onclick="budgeting.confirmDelete(event)"
-      hx-trigger="delete"
       hx-delete="{{ url_for('budgeting.target', uri=target.uri) }}"
+      hx-trigger="delete"
+      onclick="budgeting.confirmDelete(event)"
     >
       Delete
     </button>

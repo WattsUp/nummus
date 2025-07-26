@@ -3,6 +3,9 @@
   href="{{ url_for('assets.page', uri=asset.uri) }}"
   hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
   hx-disabled-elt="this"
+  hx-target="#main"
+  hx-swap="innerHTML show:window:top"
+  hx-push-url="true"
 >
   <div class="flex justify-between gap-2">
     <b class="truncate">{{ asset.name }}</b>

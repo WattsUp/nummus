@@ -13,12 +13,12 @@
   <div class="text-center italic">no valuations match query</div>
 {% elif ctx.next_page %}
   <div
+    hx-get="{{ url_for('assets.table', uri=ctx.uri, page=ctx.next_page) }}"
+    hx-trigger="revealed"
+    hx-indicator="#valuation-indicator"
     hx-target="#valuation-table"
     hx-swap="beforeend show:none"
-    hx-trigger="revealed"
     hx-include="#valuation-filters"
-    hx-get="{{ url_for('assets.table', uri=ctx.uri, page=ctx.next_page) }}"
-    hx-indicator="#valuation-indicator"
     hx-on::after-request="this.remove()"
   ></div>
 {% else %}

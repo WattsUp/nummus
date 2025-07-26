@@ -12,15 +12,15 @@
     <input
       name="name"
       required
-      enterkeyhint="next"
-      placeholder=""
       value="{{ category.name or "" }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('transaction_categories.validation', uri=category.uri) }}"
+      placeholder=""
       autocomplete="off"
       spellcheck="true"
+      enterkeyhint="next"
+      hx-get="{{ url_for('transaction_categories.validation', uri=category.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <div>
       <div>Name</div>
@@ -40,9 +40,9 @@
     >
       <option
         value=""
+        {% if not category.group %}selected{% endif %}
         disabled
         hidden
-        {% if not category.group %}selected{% endif %}
       ></option>
       {% for group in category.group_type %}
         <option
@@ -60,11 +60,11 @@
   </label>
   <label class="toggle col-span-2">
     <input
-      type="checkbox"
       name="is-pnl"
+      type="checkbox"
+      {% if category.is_profit_loss %}checked{% endif %}
       autocomplete="off"
       {% if category.locked %}disabled{% endif %}
-      {% if category.is_profit_loss %}checked{% endif %}
     />
     <div>
       <span>Include in profit &amp; loss</span>
@@ -74,10 +74,10 @@
   </label>
   <label class="toggle col-span-2">
     <input
-      type="checkbox"
       name="essential"
-      autocomplete="off"
+      type="checkbox"
       {% if category.essential %}checked{% endif %}
+      autocomplete="off"
       {% if category.group == "INCOME" or category.locked %}disabled{% endif %}
     />
     <div>
@@ -90,9 +90,10 @@
 {% if category.uri and not category.locked %}
   <button
     class="btn-text-error mx-auto"
-    onclick="txnCat.confirmDelete(event)"
-    hx-trigger="delete"
     hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}"
+    hx-trigger="delete"
+    hx-target="#dialog-error"
+    onclick="txnCat.confirmDelete(event)"
   >
     Delete
   </button>

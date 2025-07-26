@@ -1,16 +1,17 @@
 <div
   class="flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="asset from:body, valuation from:body"
   hx-get="{{ url_for('assets.page', uri=asset.uri) }}"
+  hx-trigger="asset from:body, valuation from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">{{ asset.name }}</h1>
   <button
     class="btn-tonal"
+    hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
+    hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
-    hx-get="{{ url_for('assets.asset', uri=asset.uri) }}"
+    hx-push-url="#dialog"
   >
     <icon>edit</icon>Edit
   </button>
@@ -53,12 +54,7 @@
   {% endif %}
   {% include "assets/table-filters.jinja" %}
   {# Display query total if filtered #}
-  <div
-    id="valuation-table"
-    class="mx-auto max-w-sm"
-    hx-target="#dialog"
-    hx-swap="innerHTML show:#dialog:top"
-  >
+  <div id="valuation-table" class="mx-auto max-w-sm">
     {% include "assets/table-rows.jinja" %}
   </div>
   <div id="valuation-indicator">{% include "shared/spinner.jinja" %}</div>

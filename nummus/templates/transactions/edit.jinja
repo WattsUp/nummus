@@ -45,15 +45,15 @@
       <select name="account" required autocomplete="off">
         <option
           value=""
+          {% if not txn.account_uri %}selected{% endif %}
           disabled
           hidden
-          {% if not txn.account_uri %}selected{% endif %}
         ></option>
         {% for value, label, disabled in txn.accounts %}
           <option
             value="{{ value }}"
-            {% if disabled %}disabled hidden{% endif %}
             {% if value == txn.account_uri %}selected{% endif %}
+            {% if disabled %}disabled hidden{% endif %}
           >
             {{ label }}
           </option>
@@ -69,16 +69,16 @@
     >
       <input
         name="amount"
-        value="{{ txn.amount | input_value }}"
         required
-        enterkeyhint="next"
+        value="{{ txn.amount | input_value }}"
         placeholder=""
-        inputmode="tel"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
-        hx-get="{{ url_for('transactions.validation') }}"
         autocomplete="off"
+        enterkeyhint="next"
+        inputmode="tel"
+        hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this{{ ', #dialog [name=split-amount]' if is_split }}"
       />
       <icon>attach_money</icon>
       <div>
@@ -96,16 +96,16 @@
   >
     <input
       name="payee"
-      value="{{ txn.payee or "" }}"
       required
-      enterkeyhint="next"
-      placeholder=""
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('transactions.validation') }}"
+      value="{{ txn.payee or "" }}"
       list="payees"
+      placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
+      hx-get="{{ url_for('transactions.validation') }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <icon>store</icon>
     <div>
@@ -121,17 +121,17 @@
   >
     <input
       name="date"
-      value="{{ txn.date or "" }}"
-      type="date"
       required
-      enterkeyhint="next"
-      placeholder=""
+      type="date"
+      value="{{ txn.date or "" }}"
       max="{{ txn.date_max }}"
-      hx-target="next error"
-      hx-trigger="input delay:200ms"
-      hx-include="this"
-      hx-get="{{ url_for('transactions.validation') }}"
+      placeholder=""
       autocomplete="off"
+      enterkeyhint="next"
+      hx-get="{{ url_for('transactions.validation') }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
     />
     <icon>event</icon>
     <div>
@@ -203,13 +203,13 @@
       <input
         name="memo"
         value="{{ split.memo or "" }}"
-        enterkeyhint="next"
         placeholder=""
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
-        hx-get="{{ url_for('transactions.validation') }}"
         autocomplete="off"
+        enterkeyhint="next"
+        hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
       />
       {% if not is_split %}<icon>notes</icon>{% endif %}
       <div>
@@ -225,14 +225,14 @@
       <input
         name="tag"
         value="{{ split.tag or "" }}"
-        enterkeyhint="next"
-        placeholder=""
         list="tags"
-        hx-target="next error"
-        hx-trigger="input delay:200ms"
-        hx-include="this"
-        hx-get="{{ url_for('transactions.validation') }}"
+        placeholder=""
         autocomplete="off"
+        enterkeyhint="next"
+        hx-get="{{ url_for('transactions.validation') }}"
+        hx-trigger="input delay:200ms"
+        hx-target="next error"
+        hx-include="this"
       />
       {% if not is_split %}<icon>label</icon>{% endif %}
       <div>
@@ -249,14 +249,14 @@
         <input
           name="split-amount"
           value="{{ split.amount | input_value }}"
-          enterkeyhint="next"
           placeholder=""
-          inputmode="tel"
-          hx-target="next error"
-          hx-trigger="input delay:200ms"
-          hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
-          hx-get="{{ url_for('transactions.validation',  split=True) }}"
           autocomplete="off"
+          enterkeyhint="next"
+          inputmode="tel"
+          hx-get="{{ url_for('transactions.validation',  split=True) }}"
+          hx-trigger="input delay:200ms"
+          hx-target="next error"
+          hx-include="this, #dialog [name=split-amount], #dialog [name=amount]"
         />
         <icon>attach_money</icon>
         <div>
@@ -274,25 +274,27 @@
     Simply leave a split amount empty when saving to remove
   </div>
 {% endif %}
-<div class="flex flex-wrap justify-around">
+<div class="flex flex-wrap justify-around" hx-target="#dialog-error">
   {% if not txn.any_asset_splits %}
     {% if txn.uri %}
       <button
         class="btn-text"
-        hx-target="#dialog"
-        hx-include="#dialog form"
-        hx-swap="innerHTML show:#dialog:bottom"
         hx-put="{{ url_for('transactions.split', uri=txn.uri) }}"
+        hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:bottom"
+        hx-push-url="#dialog"
+        hx-include="#dialog form"
       >
         Add Splits
       </button>
     {% else %}
       <button
         class="btn-text"
-        hx-target="#dialog"
-        hx-include="#dialog form"
-        hx-swap="innerHTML show:#dialog:bottom"
         hx-put="{{ url_for('transactions.new', uri=txn.uri, split=True) }}"
+        hx-target="#dialog"
+        hx-swap="innerHTML show:#dialog:bottom"
+        hx-push-url="#dialog"
+        hx-include="#dialog form"
       >
         Add Splits
       </button>
@@ -301,8 +303,8 @@
       {# TODO (WattsUp): enable button #}
       <button
         class="btn-text"
-        hx-delete="{{ url_for('transactions.split', uri="arst") }}"
         disabled
+        hx-delete="{{ url_for('transactions.split', uri="arst") }}"
       >
         Copy Similar
       </button>
@@ -311,9 +313,9 @@
   {% if txn.uri and not txn.cleared %}
     <button
       class="btn-text-error"
-      onclick="txn.confirmDelete(event)"
-      hx-trigger="delete"
       hx-delete="{{ url_for('transactions.transaction', uri=txn.uri) }}"
+      hx-trigger="delete"
+      onclick="txn.confirmDelete(event)"
     >
       Delete
     </button>

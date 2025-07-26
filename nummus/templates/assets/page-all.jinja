@@ -1,17 +1,18 @@
 <div
   class="mb-2 flex items-center justify-between"
-  hx-target="#main"
-  hx-trigger="asset from:body, valuation from:body, account from:body"
   hx-get="{{ url_for('assets.page_all') }}"
+  hx-trigger="asset from:body, valuation from:body, account from:body"
+  hx-target="#main"
 >
   <h1 class="text-primary font-serif text-3xl">Assets</h1>
   <button
     class="btn-tonal"
+    disabled
+    hx-get="{{ url_for('assets.new') }}"
+    hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-disabled-elt="this"
-    hx-get="{{ url_for('assets.new') }}"
-    disabled
+    hx-push-url="#dialog"
   >
     <icon>add</icon>New
   </button>
@@ -35,8 +36,6 @@
 </details>
 <div
   class="grid grid-flow-row-dense grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-x-4"
-  hx-push-url="true"
-  hx-swap="innerHTML show:window:top"
 >
   {% for category, assets in ctx.categories.items() %}
     <div class="mb-4" style="grid-row: span {{ assets | length }}">
@@ -57,10 +56,12 @@
 <label class="toggle max-w-60">
   <input
     type="checkbox"
-    autocomplete="off"
     {% if ctx.include_unheld %}checked{% endif %}
-    hx-push-url="true"
+    autocomplete="off"
     hx-get="{{ url_for('assets.page_all', include_unheld=not ctx.include_unheld) }}"
+    hx-target="#main"
+    hx-swap="innerHTML show:window:top"
+    hx-push-url="true"
   />
   <div>
     {% if ctx.include_unheld %}

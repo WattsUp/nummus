@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 import flask
 import flask.sessions
 import pytest
+from typing_extensions import NamedTuple
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
@@ -18,9 +19,172 @@ if TYPE_CHECKING:
     from nummus.portfolio import Portfolio
 
 
+class TreeNode(NamedTuple):
+    tag: str
+    attributes: str
+    i_start: int
+    i_end: int
+
+    parent: TreeNode | None
+    children: list[TreeNode]
+
+    def set_parent(self, parent: TreeNode) -> TreeNode:
+        return TreeNode(
+            self.tag,
+            self.attributes,
+            self.i_start,
+            self.i_end,
+            parent,
+            self.children,
+        )
+
+    def has_hx_target(self) -> bool:
+        if "hx-target" in self.attributes:
+            return True
+        if self.parent is None:
+            return False
+        return self.parent.has_hx_target()
+
+    def has_valid_inner_html(self, inner_html: str) -> bool:
+        if self.tag not in {"h1", "h2", "h3", "h4"}:
+            return True
+        if inner_html in {"nummus", "Bad Request"}:
+            return True
+
+        # Headers should use capital case
+        # strip any inner element
+        inner_html = inner_html.replace(".", "")
+        words = inner_html.split(" ")
+        target = " ".join(
+            (w if w.upper() == w else (w.capitalize() if i == 0 else w.lower()))
+            for i, w in enumerate(words)
+        )
+        assert inner_html == target
+        return True
+
+    def has_valid_hx_attributes(self) -> bool:
+        if 'hx-target="#dialog"' in self.attributes:
+            assert 'hx-push-url="#dialog"' in self.attributes
+            top = 'hx-swap="innerHTML show:#dialog:top"'
+            btm = 'hx-swap="innerHTML show:#dialog:bottom"'
+            assert top in self.attributes or btm in self.attributes
+        elif 'hx-target="#main"' in self.attributes:
+            if "hx-trigger" in self.attributes:
+                # triggered updates don't move the page or push history
+                assert "hx-push-url" not in self.attributes
+                assert "hx-swap" not in self.attributes
+            else:
+                assert 'hx-push-url="true"' in self.attributes
+                assert 'hx-swap="innerHTML show:window:top"' in self.attributes
+        if re.search(r"hx-(get|put|post|delete)", self.attributes):
+            # There's an action, check there is a target in parent
+            assert self.has_hx_target()
+
+        return True
+
+    def has_preferred_attribute_order(self) -> bool:
+        s = re.sub(r'="[^"]*"|=[^ ]*', "", self.attributes).strip(" /")
+        if not s:
+            return True
+        attributes = s.split(" ")
+
+        preferred_order = [
+            "id",
+            "class",
+            "style",
+            "rel",
+            "title",
+            "label",
+            "href",
+            "charset",
+            "lang",
+            # Inputs
+            "name",
+            "required",
+            "type",
+            "value",
+            "checked",
+            "selected",
+            "list",
+            "min",
+            "max",
+            "placeholder",
+            "autocomplete",
+            "spellcheck",
+            "enterkeyhint",
+            "inputmode",
+            "autofocus",
+            # States
+            "disabled",
+            "hidden",
+            # SVG, img, & canvas
+            "viewbox",
+            "width",
+            "height",
+            "x",
+            "y",
+            "rx",
+            "ry",
+            # Data
+            "content",
+            "src",
+            # HTMX Methods
+            "hx-get",
+            "hx-post",
+            "hx-put",
+            "hx-patch",
+            "hx-delete",
+            # HTMX Actions
+            "hx-trigger",
+            "hx-disabled-elt",
+            "hx-indicator",
+            # HTMX Destinations
+            "hx-target",
+            "hx-swap",
+            "hx-sync",
+            "hx-swap-oob",
+            "hx-push-url",
+            # HTMX Data
+            "hx-include",
+            "hx-encoding",
+            "hx-validate",
+            "hx-preserve",
+            "hx-history-elt",
+            # HTMX Events
+            "hx-on::validation:failed",
+            "hx-on::history-cache-miss",
+            "hx-on::history-cache-miss-load",
+            "hx-on::history-cache-miss-load-error",
+            "hx-on::before-request",
+            "hx-on::before-send",
+            "hx-on::send-error",
+            "hx-on::xhr:loadstart",
+            "hx-on::xhr:progress",
+            "hx-on::xhr:loadend",
+            "hx-on::response-error",
+            "hx-on::before-swap",
+            "hx-on::after-swap",
+            "hx-on::oob-before-swap",
+            "hx-on::oob-after-swap",
+            "hx-on::after-request",
+            "hx-on::after-settle",
+            # "confirm", # No confirm, use dialog confirm instead
+            # JS event
+            "onchange",
+            "onclick",
+            "oninput",
+            "onkeydown",
+            "onkeyup",
+            "onsubmit",
+        ]
+        preferred_order = [s for s in preferred_order if s in attributes]
+
+        assert attributes == preferred_order
+
+        return True
+
+
 ResultType = dict[str, object] | str | bytes
-Tree = dict[str, "TreeNode"]
-TreeNode = Tree | tuple[str, Tree, int] | object
 Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 
@@ -28,57 +192,39 @@ class HTMLValidator:
 
     @classmethod
     def __call__(cls, s: str) -> bool:
-        tags: list[tuple[str, int, int]] = [
-            (m.group(1), m.start(0), m.end(0))
-            for m in re.finditer(r"<(/?\w+)(?:[^<>]+)?>", s)
+        nodes: list[TreeNode] = [
+            TreeNode(m.group(1), m.group(2), m.start(0), m.end(0), None, [])
+            for m in re.finditer(r"<(/?\w+)([^<>]*)>", s)
         ]
 
-        tree: Tree = {"__parent__": (None, None, None)}
+        tree = TreeNode("__root__", "", 0, len(s), None, [])
         current_node = tree
-        for tag, i_start, i_end in tags:
-            assert isinstance(current_node, dict)
-            if tag[0] == "/":
-                # Close tag
-                item = current_node.pop("__parent__")
-                assert isinstance(item, tuple)
-                current_tag, parent, open_i_end = item
-                current_node = parent
-                assert current_tag == tag[1:]
+        for tmp in nodes:
+            if tmp.tag[0] == "/":
+                close_node = tmp
+                open_node = current_node
+                assert open_node is not None
+                assert open_node.tag == close_node.tag[1:]
 
-                inner_html = s[open_i_end:i_start]
-                if current_tag in {"h1", "h2", "h3", "h4"} and inner_html not in {
-                    "nummus",
-                    "Bad Request",
-                }:
-                    # Headers should use capital case
-                    # strip any inner element
-                    inner_html = inner_html.replace(".", "")
-                    words = inner_html.split(" ")
-                    target = " ".join(
-                        (
-                            w
-                            if w.upper() == w
-                            else (w.capitalize() if i == 0 else w.lower())
-                        )
-                        for i, w in enumerate(words)
-                    )
-                    assert inner_html == target
-            elif tag in {"link", "meta", "path", "input", "hr", "rect"}:
+                inner_html = s[open_node.i_end : close_node.i_start]
+                assert open_node.has_valid_inner_html(inner_html)
+
+                current_node = current_node.parent
+                assert current_node is not None
+                continue
+
+            node = tmp.set_parent(current_node)
+            current_node.children.append(node)
+
+            assert node.has_valid_hx_attributes()
+            assert node.has_preferred_attribute_order()
+
+            if node.tag not in {"link", "meta", "path", "input", "hr", "rect"}:
                 # Tags without close tags
-                current_node[tag] = {}
-            else:
-                current_node[tag] = {"__parent__": (tag, current_node, i_end)}
-                current_node = current_node[tag]
+                current_node = node
 
-        # Got back up to the root element
-        assert isinstance(current_node, dict)
-        item = current_node.pop("__parent__")
-        assert isinstance(item, tuple)
-        tag, parent, _ = item
-        assert tag in {None, "html"}  # <html> might not be closed
-        if parent is not None:
-            parent: dict[str, object]
-            assert parent.keys() == {"__parent__", "html"}
+        # Got back up to the root element, hopefully
+        assert current_node.tag in {"__root__", "html"}  # <html> might not be closed
 
         # Find all DOM ids and validate no duplicates
         ids: list[str] = re.findall(r'id="([^"]+)"', s)
@@ -87,7 +233,15 @@ class HTMLValidator:
             id_counts[e_id] += 1
         duplicates = {e_id for e_id, count in id_counts.items() if count != 1}
         assert not duplicates
+
         return True
+
+    @classmethod
+    def clean(cls, html: str) -> str:
+        html = "".join(html.split("\n"))
+        html = re.sub(r" +", " ", html)
+        html = re.sub(r" ?> ?", ">", html)
+        return re.sub(r" ?< ?", "<", html)
 
 
 @pytest.fixture(scope="session")
@@ -174,12 +328,7 @@ class WebClient:
             assert response.content_type == content_type
 
             if content_type == "text/html; charset=utf-8":
-                html = response.text
-                # Remove whitespace
-                html = "".join(html.split("\n"))
-                html = re.sub(r" +", " ", html)
-                html = re.sub(r" ?> ?", ">", html)
-                html = re.sub(r" ?< ?", "<", html)
+                html = self.valid_html.clean(response.text)
                 if response.status_code != HTTP_CODE_REDIRECT:
                     # werkzeug redirect doesn't have close tags
                     assert self.valid_html(html)

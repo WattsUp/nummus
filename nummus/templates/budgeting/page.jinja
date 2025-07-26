@@ -1,8 +1,8 @@
 <div
   class="grid grid-flow-row-dense grid-cols-2 gap-2 pb-2 md:grid-cols-4"
-  hx-target="#main"
-  hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
   hx-get="{{ url_for("budgeting.page", month=ctx.month) }}"
+  hx-trigger="account from:body, asset from:body, valuation from:body, budget from:body"
+  hx-target="#main"
   hx-include="#budget-sidebar-uri"
 >
   <h1 class="text-primary mr-auto font-serif text-3xl">Budgeting</h1>
@@ -13,18 +13,18 @@
     <button
       class="btn-text btn-sq"
       hx-get="{{ url_for("budgeting.page", month=ctx.month_prev) }}"
-      hx-push-url="true"
       hx-swap="innerHTML show:window:top"
+      hx-push-url="true"
     >
       <icon>chevron_left</icon>
     </button>
     <h1 class="text-primary font-serif text-3xl">{{ ctx.month }}</h1>
     <button
       class="btn-text btn-sq"
-      hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
-      hx-push-url="true"
-      hx-swap="innerHTML show:window:top"
       {% if not ctx.month_next %}disabled{% endif %}
+      hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
+      hx-swap="innerHTML show:window:top"
+      hx-push-url="true"
     >
       <icon>chevron_right</icon>
     </button>
@@ -63,9 +63,9 @@
     id="budget-table"
     class="relative pb-8"
     hx-put="{{ url_for("budgeting.reorder") }}"
-    hx-include="this"
-    hx-target="#no-target"
     hx-trigger="reorder"
+    hx-target="#no-target"
+    hx-include="this"
   >
     <error id="budget-error" class="status-error"></error>
     <label class="toggle not-edit:absolute bottom-0 w-full">
@@ -99,14 +99,14 @@
   </div>
 </div>
 <div id="budget-button-bar">
-  <input type="hidden" name="destination" />
+  <input name="destination" type="hidden" />
   <button
     hx-get="{{ url_for("budgeting.move", uri="income",month=ctx.month) }}"
-    hx-include="#budget-button-bar"
+    hx-disabled-elt="this"
     hx-target="#dialog"
     hx-swap="innerHTML show:#dialog:top"
-    hx-push-url="false"
-    hx-disabled-elt="this"
+    hx-push-url="#dialog"
+    hx-include="#budget-button-bar"
   >
     <icon>payments</icon>
     <div>Assign</div>

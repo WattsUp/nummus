@@ -1,13 +1,12 @@
 <section
   class="m-auto min-h-full max-w-screen-lg bg-white p-2"
   hx-get="{{ url_for('cash_flow.page') }}"
-  hx-include="#txn-config,#txn-header"
   hx-trigger="update-account from:body"
   hx-target="#main"
-  hx-swap="innerHTML"
+  hx-include="#txn-config,#txn-header"
 >
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Cash Flow
+    Cash flow
   </h1>
   <div class="relative h-60 w-full md:h-96">
     <canvas id="cash-flow-chart-canvas" hx-preserve></canvas>
@@ -23,12 +22,12 @@
       <canvas id="income-pie-chart-canvas" hx-preserve></canvas>
     </div>
     <div class="max-h-64 max-w-[32rem] grow overflow-y-auto">
-      <div class="flex flex-col" id="income-breakdown"></div>
+      <div id="income-breakdown" class="flex flex-col"></div>
     </div>
     {% include "shared/spinner.jinja" %}
   </div>
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Income by Tag
+    Income by tag
   </h1>
   <div
     class="relative flex w-full flex-wrap items-stretch justify-center gap-1"
@@ -37,7 +36,7 @@
       <canvas id="income-tag-pie-chart-canvas" hx-preserve></canvas>
     </div>
     <div class="max-h-64 max-w-[32rem] grow overflow-y-auto">
-      <div class="flex flex-col" id="income-tag-breakdown"></div>
+      <div id="income-tag-breakdown" class="flex flex-col"></div>
     </div>
     {% include "shared/spinner.jinja" %}
   </div>
@@ -51,12 +50,12 @@
       <canvas id="expense-pie-chart-canvas" hx-preserve></canvas>
     </div>
     <div class="max-h-64 max-w-[32rem] grow overflow-y-auto">
-      <div class="flex flex-col" id="expense-breakdown"></div>
+      <div id="expense-breakdown" class="flex flex-col"></div>
     </div>
     {% include "shared/spinner.jinja" %}
   </div>
   <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Expense by Tag
+    Expense by tag
   </h1>
   <div
     class="relative flex w-full flex-wrap items-stretch justify-center gap-1"
@@ -65,16 +64,16 @@
       <canvas id="expense-tag-pie-chart-canvas" hx-preserve></canvas>
     </div>
     <div class="max-h-64 max-w-[32rem] grow overflow-y-auto">
-      <div class="flex flex-col" id="expense-tag-breakdown"></div>
+      <div id="expense-tag-breakdown" class="flex flex-col"></div>
     </div>
     {% include "shared/spinner.jinja" %}
   </div>
   {% include "cash-flow/chart-data.jinja" %}
   <div
     class="w-full"
+    hx-indicator=".spinner"
     hx-target="#txn-table"
     hx-swap="outerHTML"
-    hx-indicator=".spinner"
   >
     <h1
       class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl"

@@ -37,8 +37,8 @@
         <button
           class="btn-text btn-sq"
           hx-put="{{ url_for('health.ignore', uri=uri) }}"
-          hx-target="#check-{{ check.uri }}"
           hx-disabled-elt="this"
+          hx-target="#check-{{ check.uri }}"
         >
           <icon>visibility_off</icon>
         </button>
