@@ -8,6 +8,7 @@ import re
 import textwrap
 from collections.abc import Callable
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
@@ -58,6 +59,7 @@ class BaseContext(TypedDict):
     """Base context type."""
 
     nav_items: list[PageGroup]
+    icons: str
 
 
 class DateLabels(NamedTuple):
@@ -78,6 +80,34 @@ class CategoryContext(NamedTuple):
 
 
 CategoryGroups = dict[TransactionCategoryGroup, list[CategoryContext]]
+
+LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
+# else plot normally by days
+
+LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
+LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
+# else plot normally by days
+
+LIMIT_TICKS_YEARS = 400  # if n_days > LIMIT_TICKS_YEARS then have ticks on the new year
+LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
+LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
+# else tick each day
+
+HTTP_CODE_OK = 200
+HTTP_CODE_REDIRECT = 302
+HTTP_CODE_BAD_REQUEST = 400
+HTTP_CODE_FORBIDDEN = 403
+
+PERIOD_OPTIONS = {
+    "1m": "1M",
+    "6m": "6M",
+    "ytd": "YTD",
+    "1yr": "1Y",
+    "max": "MAX",
+}
+
+RE_ICONS = re.compile(r"<icon[^>]*>([\w\-]+)</icon>")
+TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
 
 
 def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
@@ -172,8 +202,32 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
     # Filter out empty groups
     nav_items = [group for group in nav_items if group.pages]
 
+    icons: set[str] = set()
+
+    for group in nav_items:
+        for page in group.pages.values():
+            if page and page.icon:
+                icons.add(page.icon)
+
+    if not TEMPLATES:
+        templates = Path(flask.current_app.root_path) / (
+            flask.current_app.template_folder or "templates"
+        )
+        TEMPLATES.update(dict.fromkeys(templates.glob("**/*.jinja"), (0, set())))
+    for path, (last_modified_ns, path_icons) in TEMPLATES.items():
+        mtime_ns = path.stat().st_mtime_ns
+        if mtime_ns == last_modified_ns:
+            icons.update(path_icons)
+            continue
+        with path.open("r", encoding="utf-8") as file:
+            buf = file.read()
+        path_icons_new = set(RE_ICONS.findall(buf))
+        icons.update(path_icons_new)
+        TEMPLATES[path] = (mtime_ns, path_icons_new)
+
     return {
         "nav_items": nav_items,
+        "icons": ",".join(sorted(icons)),
     }
 
 
@@ -307,32 +361,6 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
         response.data = ""
 
     return response
-
-
-LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
-# else plot normally by days
-
-LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
-LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
-# else plot normally by days
-
-LIMIT_TICKS_YEARS = 400  # if n_days > LIMIT_TICKS_YEARS then have ticks on the new year
-LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
-LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
-# else tick each day
-
-HTTP_CODE_OK = 200
-HTTP_CODE_REDIRECT = 302
-HTTP_CODE_BAD_REQUEST = 400
-HTTP_CODE_FORBIDDEN = 403
-
-PERIOD_OPTIONS = {
-    "1m": "1M",
-    "6m": "6M",
-    "ytd": "YTD",
-    "1yr": "1Y",
-    "max": "MAX",
-}
 
 
 T = TypeVar("T", bound=Base)

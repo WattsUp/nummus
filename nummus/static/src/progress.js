@@ -9,6 +9,7 @@ const progress = {
    */
   update: function (evt, v) {
     // Only do progress bar for whole page
+    // BUG (WattsUp): htmx 2.0.6 update
     if (evt && evt.detail.target.id != "main") return;
     if (this.bar == null) this.bar = htmx.find("#page-progress");
 

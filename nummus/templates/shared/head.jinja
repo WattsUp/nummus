@@ -45,6 +45,10 @@
   {% assets "js" %}
     <script defer type="text/javascript" src="{{ ASSET_URL }}"></script>
   {% endassets %}
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&icon_names={{ icons }}"
+    rel="stylesheet"
+  />
   {# Embed directly to avoid FOUC #}
   <script>
     function updateTheme(selection) {
