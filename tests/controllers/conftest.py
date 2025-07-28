@@ -102,6 +102,7 @@ class TreeNode(NamedTuple):
             "title",
             "label",
             "href",
+            "crossorigin",
             "charset",
             "lang",
             "defer",

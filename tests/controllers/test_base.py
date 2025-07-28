@@ -235,7 +235,11 @@ def test_validate_int_not_positive(s: str) -> None:
 
 
 def test_ctx_base() -> None:
-    ctx = base.ctx_base(is_encrypted=False, debug=True)
+    base.PAGES.clear()
+    base.TEMPLATES.clear()
+    templates = Path(nummus.__file__).with_name("templates")
+
+    ctx = base.ctx_base(templates, is_encrypted=False, debug=True)
 
     assert isinstance(ctx["nav_items"], list)
     for group in ctx["nav_items"]:
@@ -245,6 +249,12 @@ def test_ctx_base() -> None:
             assert isinstance(p, base.Page)
             assert p
             assert name == name.capitalize()
+
+    assert isinstance(ctx["icons"], str)
+    assert ctx["icons"].count(",") > 50
+
+    assert base.PAGES
+    assert base.TEMPLATES
 
 
 def test_dialog_swap_empty(

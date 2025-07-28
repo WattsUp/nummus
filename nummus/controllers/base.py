@@ -43,7 +43,7 @@ class LinkType(BaseEnum):
 class Page(NamedTuple):
     """Page specification."""
 
-    icon: str | None
+    icon: str
     endpoint: str
     type_: LinkType
 
@@ -52,7 +52,7 @@ class PageGroup(NamedTuple):
     """Group of pages specification."""
 
     name: str
-    pages: dict[str, Page | None]
+    pages: dict[str, Page]
 
 
 class BaseContext(TypedDict):
@@ -111,10 +111,11 @@ TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
 PAGES: list[PageGroup] = []
 
 
-def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
+def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext:
     """Get the context to build the base page.
 
     Args:
+        templates: Path to templates
         is_encrypted: Portfolio encrypted status
         debug: Flask app debug status
 
@@ -122,8 +123,8 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
         BaseContext
     """
     if not PAGES:
-        nav_items: list[PageGroup] = [
-            PageGroup(
+        nav_items: list[tuple[str, dict[str, Page | None]]] = [
+            (
                 "",
                 {
                     "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
@@ -144,7 +145,7 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
                 },
             ),
             # TODO (WattsUp): Banking section? Where to put spending by tag info?
-            PageGroup(
+            (
                 "Investing",
                 {
                     "Assets": Page("box", "assets.page_all", LinkType.PAGE),
@@ -156,7 +157,7 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
                     ),
                 },
             ),
-            PageGroup(
+            (
                 "Planning",
                 {
                     "Retirement": None,  # person_play
@@ -167,7 +168,7 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
                     ),
                 },
             ),
-            PageGroup(
+            (
                 "Utilities",
                 {
                     "Logout": (
@@ -201,28 +202,23 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
         ]
 
         # Filter out empty subpages
-        nav_items = [
+        no_blanks = [
             PageGroup(
-                group.name,
-                {page_name: page for page_name, page in group.pages.items() if page},
+                name,
+                {page_name: page for page_name, page in pages.items() if page},
             )
-            for group in nav_items
+            for name, pages in nav_items
         ]
         # Filter out empty groups
-        nav_items = [group for group in nav_items if group.pages]
-        PAGES.extend(nav_items)
+        no_blanks = [group for group in no_blanks if group.pages]
+        PAGES.extend(no_blanks)
 
     icons: set[str] = set()
 
     for group in PAGES:
-        for page in group.pages.values():
-            if page and page.icon:
-                icons.add(page.icon)
+        icons.update(page.icon for page in group.pages.values())
 
     if not TEMPLATES:
-        templates = Path(flask.current_app.root_path) / (
-            flask.current_app.template_folder or "templates"
-        )
         TEMPLATES.update(dict.fromkeys(templates.glob("**/*.jinja"), (0, set())))
     for path, (last_modified_ns, path_icons) in TEMPLATES.items():
         mtime_ns = path.stat().st_mtime_ns
@@ -326,6 +322,9 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
         html = html_title + nav_trigger + content
     else:
         p = web.portfolio
+        templates = Path(flask.current_app.root_path) / (
+            flask.current_app.template_folder or "templates"
+        )
         html = flask.render_template_string(
             textwrap.dedent(
                 f"""\
@@ -337,6 +336,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
             ),
             title=f"{title} - nummus",
             **ctx_base(
+                templates,
                 is_encrypted=p.is_encrypted,
                 debug=flask.current_app.debug,
             ),
