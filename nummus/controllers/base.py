@@ -259,6 +259,8 @@ def dialog_swap(
         snackbar=snackbar,
         # Triggering events should clear history
         clear_history=event is not None,
+        # Triggering events should reset dialog
+        reset_dialog=event is not None,
     )
     response = flask.make_response(html)
     if event:
