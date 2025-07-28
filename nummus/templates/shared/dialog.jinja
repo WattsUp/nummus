@@ -2,7 +2,6 @@
   id="dialog"
   class="dialog"
   hx-swap-oob="{{ oob }}"
-  hx-on::oob-before-swap="dialog.reset()"
   hx-on::after-settle="dialog.updateSave()"
 >
   {{- content | safe -}}
@@ -18,6 +17,13 @@
   <script id="history-script" hx-swap-oob="true">
     onLoad(() => {
       nummusClearHistory();
+    });
+  </script>
+{% endif %}
+{% if reset_dialog %}
+  <script id="dialog-script" hx-swap-oob="true">
+    onLoad(() => {
+      dialog.reset();
     });
   </script>
 {% endif %}
