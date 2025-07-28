@@ -108,6 +108,7 @@ PERIOD_OPTIONS = {
 
 RE_ICONS = re.compile(r"<icon[^>]*>([\w\-]+)</icon>")
 TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
+PAGES: list[PageGroup] = []
 
 
 def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
@@ -120,91 +121,100 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
     Returns:
         BaseContext
     """
-    # list[(group label, subpages {label: (icon name, endpoint, link type)})]
-    nav_items: list[PageGroup] = [
-        PageGroup(
-            "",
-            {
-                "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
-                "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
-                # TODO (WattsUp): Change to receipt_long and add_receipt_long if
-                # request gets fulfilled
-                "Transactions": Page(
-                    "note_stack",
-                    "transactions.page_all",
-                    LinkType.PAGE,
-                ),
-                "Accounts": Page("account_balance", "accounts.page_all", LinkType.PAGE),
-                "Insights": None,  # search_insights
-            },
-        ),
-        # TODO (WattsUp): Banking section? Where to put spending by tag info?
-        PageGroup(
-            "Investing",
-            {
-                "Assets": Page("box", "assets.page_all", LinkType.PAGE),
-                "Performance": None,  # ssid_chart
-                "Allocation": Page(
-                    "full_stacked_bar_chart",
-                    "allocation.page",
-                    LinkType.PAGE,
-                ),
-            },
-        ),
-        PageGroup(
-            "Planning",
-            {
-                "Retirement": None,  # person_play
-                "Emergency fund": Page(
-                    "emergency",
-                    "emergency_fund.page",
-                    LinkType.PAGE,
-                ),
-            },
-        ),
-        PageGroup(
-            "Utilities",
-            {
-                "Logout": (
-                    Page("logout", "auth.logout", LinkType.HX_POST)
-                    if is_encrypted
-                    else None
-                ),
-                "Categories": Page(
-                    "category",
-                    "transaction_categories.page",
-                    LinkType.PAGE,
-                ),
-                "Import file": Page(
-                    "upload",
-                    "import_file.import_file",
-                    LinkType.DIALOG,
-                ),
-                "Update assets": Page("update", "assets.update", LinkType.DIALOG),
-                "Health checks": Page("health_metrics", "health.page", LinkType.PAGE),
-                "Style test": (
-                    Page("style", "common.page_style_test", LinkType.PAGE)
-                    if debug
-                    else None
-                ),
-            },
-        ),
-    ]
+    if not PAGES:
+        nav_items: list[PageGroup] = [
+            PageGroup(
+                "",
+                {
+                    "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
+                    "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
+                    # TODO (WattsUp): Change to receipt_long and add_receipt_long if
+                    # request gets fulfilled
+                    "Transactions": Page(
+                        "note_stack",
+                        "transactions.page_all",
+                        LinkType.PAGE,
+                    ),
+                    "Accounts": Page(
+                        "account_balance",
+                        "accounts.page_all",
+                        LinkType.PAGE,
+                    ),
+                    "Insights": None,  # search_insights
+                },
+            ),
+            # TODO (WattsUp): Banking section? Where to put spending by tag info?
+            PageGroup(
+                "Investing",
+                {
+                    "Assets": Page("box", "assets.page_all", LinkType.PAGE),
+                    "Performance": None,  # ssid_chart
+                    "Allocation": Page(
+                        "full_stacked_bar_chart",
+                        "allocation.page",
+                        LinkType.PAGE,
+                    ),
+                },
+            ),
+            PageGroup(
+                "Planning",
+                {
+                    "Retirement": None,  # person_play
+                    "Emergency fund": Page(
+                        "emergency",
+                        "emergency_fund.page",
+                        LinkType.PAGE,
+                    ),
+                },
+            ),
+            PageGroup(
+                "Utilities",
+                {
+                    "Logout": (
+                        Page("logout", "auth.logout", LinkType.HX_POST)
+                        if is_encrypted
+                        else None
+                    ),
+                    "Categories": Page(
+                        "category",
+                        "transaction_categories.page",
+                        LinkType.PAGE,
+                    ),
+                    "Import file": Page(
+                        "upload",
+                        "import_file.import_file",
+                        LinkType.DIALOG,
+                    ),
+                    "Update assets": Page("update", "assets.update", LinkType.DIALOG),
+                    "Health checks": Page(
+                        "health_metrics",
+                        "health.page",
+                        LinkType.PAGE,
+                    ),
+                    "Style test": (
+                        Page("style", "common.page_style_test", LinkType.PAGE)
+                        if debug
+                        else None
+                    ),
+                },
+            ),
+        ]
 
-    # Filter out empty subpages
-    nav_items = [
-        PageGroup(
-            group.name,
-            {page_name: page for page_name, page in group.pages.items() if page},
-        )
-        for group in nav_items
-    ]
-    # Filter out empty groups
-    nav_items = [group for group in nav_items if group.pages]
+        # Filter out empty subpages
+        nav_items = [
+            PageGroup(
+                group.name,
+                {page_name: page for page_name, page in group.pages.items() if page},
+            )
+            for group in nav_items
+        ]
+        # Filter out empty groups
+        nav_items = [group for group in nav_items if group.pages]
+        PAGES.extend(nav_items)
 
     icons: set[str] = set()
 
-    for group in nav_items:
+    for group in PAGES:
         for page in group.pages.values():
             if page and page.icon:
                 icons.add(page.icon)
@@ -226,7 +236,7 @@ def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
         TEMPLATES[path] = (mtime_ns, path_icons_new)
 
     return {
-        "nav_items": nav_items,
+        "nav_items": PAGES,
         "icons": ",".join(sorted(icons)),
     }
 
