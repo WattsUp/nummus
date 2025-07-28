@@ -17,10 +17,10 @@ const progress = {
       this.bar.innerHTML = "<div style='width:0'></div>";
     } else if (v == 1) {
       htmx.removeClass(this.bar, "open");
-      this.bar.firstChild.style.width = "100%";
+      this.bar.firstElementChild.style.width = "100%";
     } else {
       htmx.addClass(this.bar, "open");
-      this.bar.firstChild.style.width = `${v * 100}%`;
+      this.bar.firstElementChild.style.width = `${v * 100}%`;
     }
   },
 };
