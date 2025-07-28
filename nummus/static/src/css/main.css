@@ -87,16 +87,16 @@
   --color-white: #fff;
   --color-black: #000;
 
-  --font-serif: "linux-libertine", "serif", "noto-color-emoji";
-  --font-sans: "liberation-sans", "sans-serif", "noto-color-emoji";
-  --font-title: "fogtwo-no5", "serif", "noto-color-emoji";
-  --font-mono: "code-new-roman", "monospace", "noto-color-emoji";
+  --font-serif: "linux-libertine", "serif", "Noto Color Emoji";
+  --font-sans: "liberation-sans", "sans-serif", "Noto Color Emoji";
+  --font-title: "fogtwo-no5", "serif", "Noto Color Emoji";
+  --font-mono: "code-new-roman", "monospace", "Noto Color Emoji";
 }
 
 @layer base {
   icon {
     user-select: none;
-    font-family: "material-icons-outlined";
+    font-family: "Material Symbols Outlined";
     font-weight: normal;
     font-style: normal;
     font-size: 24px;
@@ -126,6 +126,8 @@
 
   html {
     @apply overscroll-y-contain scroll-smooth;
+
+    font-variant-emoji: unicode;
 
     @variant dark {
       --color-primary: #a4d396;

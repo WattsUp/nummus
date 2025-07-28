@@ -18,9 +18,43 @@
   {% assets "css" %}
     <link rel="stylesheet" href="{{ ASSET_URL }}" />
   {% endassets %}
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js"
+  ></script>
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/tinycolor2@1.6.0/cjs/tinycolor.min.js"
+  ></script>
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"
+  ></script>
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"
+  ></script>
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/chartjs-chart-treemap@3.1.0/dist/chartjs-chart-treemap.min.js"
+  ></script>
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.2.0/dist/chartjs-plugin-zoom.min.js"
+  ></script>
   {% assets "js" %}
-    <script type="text/javascript" src="{{ ASSET_URL }}"></script>
+    <script defer type="text/javascript" src="{{ ASSET_URL }}"></script>
   {% endassets %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap"
+  />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1&icon_names={{ icons }}"
+  />
   {# Embed directly to avoid FOUC #}
   <script>
     function updateTheme(selection) {
@@ -51,10 +85,20 @@
             window.matchMedia("(prefers-color-scheme: dark)").matches),
       );
 
-      if (pluginColor) pluginColor.update();
-      if (pluginTreeColor) pluginTreeColor.update();
+      if (typeof pluginColor !== "undefined") pluginColor.update();
+      if (typeof pluginTreeColor !== "undefined") pluginTreeColor.update();
     }
 
     updateTheme();
+    domLoaded = false;
+    document.addEventListener("DOMContentLoaded", () => {
+      domLoaded = true;
+    });
+
+    function onLoad(func) {
+      if (domLoaded) func();
+      else document.addEventListener("DOMContentLoaded", func);
+    }
+    onLoad(updateTheme);
   </script>
 </head>

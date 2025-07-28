@@ -69,6 +69,8 @@
   {% include "shared/theme-selector.jinja" %}
   {# Set radio buttons once buttons load #}
   <script>
-    updateTheme();
+    onLoad(() => {
+      updateTheme();
+    });
   </script>
 </nav>

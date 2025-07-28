@@ -8,6 +8,7 @@ import re
 import textwrap
 from collections.abc import Callable
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
@@ -42,7 +43,7 @@ class LinkType(BaseEnum):
 class Page(NamedTuple):
     """Page specification."""
 
-    icon: str | None
+    icon: str
     endpoint: str
     type_: LinkType
 
@@ -51,13 +52,14 @@ class PageGroup(NamedTuple):
     """Group of pages specification."""
 
     name: str
-    pages: dict[str, Page | None]
+    pages: dict[str, Page]
 
 
 class BaseContext(TypedDict):
     """Base context type."""
 
     nav_items: list[PageGroup]
+    icons: str
 
 
 class DateLabels(NamedTuple):
@@ -79,101 +81,159 @@ class CategoryContext(NamedTuple):
 
 CategoryGroups = dict[TransactionCategoryGroup, list[CategoryContext]]
 
+LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
+# else plot normally by days
 
-def ctx_base(*, is_encrypted: bool, debug: bool) -> BaseContext:
+LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
+LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
+# else plot normally by days
+
+LIMIT_TICKS_YEARS = 400  # if n_days > LIMIT_TICKS_YEARS then have ticks on the new year
+LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
+LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
+# else tick each day
+
+HTTP_CODE_OK = 200
+HTTP_CODE_REDIRECT = 302
+HTTP_CODE_BAD_REQUEST = 400
+HTTP_CODE_FORBIDDEN = 403
+
+PERIOD_OPTIONS = {
+    "1m": "1M",
+    "6m": "6M",
+    "ytd": "YTD",
+    "1yr": "1Y",
+    "max": "MAX",
+}
+
+RE_ICONS = re.compile(r"<icon[^>]*>([\w\-]+)</icon>")
+TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
+PAGES: list[PageGroup] = []
+
+
+def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext:
     """Get the context to build the base page.
 
     Args:
+        templates: Path to templates
         is_encrypted: Portfolio encrypted status
         debug: Flask app debug status
 
     Returns:
         BaseContext
     """
-    # list[(group label, subpages {label: (icon name, endpoint, link type)})]
-    nav_items: list[PageGroup] = [
-        PageGroup(
-            "",
-            {
-                "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
-                "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
-                # TODO (WattsUp): Change to receipt_long and add_receipt_long if
-                # request gets fulfilled
-                "Transactions": Page(
-                    "note_stack",
-                    "transactions.page_all",
-                    LinkType.PAGE,
-                ),
-                "Accounts": Page("account_balance", "accounts.page_all", LinkType.PAGE),
-                "Insights": None,  # search_insights
-            },
-        ),
-        # TODO (WattsUp): Banking section? Where to put spending by tag info?
-        PageGroup(
-            "Investing",
-            {
-                "Assets": Page("box", "assets.page_all", LinkType.PAGE),
-                "Performance": None,  # ssid_chart
-                "Allocation": Page(
-                    "full_stacked_bar_chart",
-                    "allocation.page",
-                    LinkType.PAGE,
-                ),
-            },
-        ),
-        PageGroup(
-            "Planning",
-            {
-                "Retirement": None,  # person_play
-                "Emergency fund": Page(
-                    "emergency",
-                    "emergency_fund.page",
-                    LinkType.PAGE,
-                ),
-            },
-        ),
-        PageGroup(
-            "Utilities",
-            {
-                "Logout": (
-                    Page("logout", "auth.logout", LinkType.HX_POST)
-                    if is_encrypted
-                    else None
-                ),
-                "Categories": Page(
-                    "category",
-                    "transaction_categories.page",
-                    LinkType.PAGE,
-                ),
-                "Import file": Page(
-                    "upload",
-                    "import_file.import_file",
-                    LinkType.DIALOG,
-                ),
-                "Update assets": Page("update", "assets.update", LinkType.DIALOG),
-                "Health checks": Page("health_metrics", "health.page", LinkType.PAGE),
-                "Style test": (
-                    Page("style", "common.page_style_test", LinkType.PAGE)
-                    if debug
-                    else None
-                ),
-            },
-        ),
-    ]
+    if not PAGES:
+        nav_items: list[tuple[str, dict[str, Page | None]]] = [
+            (
+                "",
+                {
+                    "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
+                    "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
+                    # TODO (WattsUp): Change to receipt_long and add_receipt_long if
+                    # request gets fulfilled
+                    "Transactions": Page(
+                        "note_stack",
+                        "transactions.page_all",
+                        LinkType.PAGE,
+                    ),
+                    "Accounts": Page(
+                        "account_balance",
+                        "accounts.page_all",
+                        LinkType.PAGE,
+                    ),
+                    "Insights": None,  # search_insights
+                },
+            ),
+            # TODO (WattsUp): Banking section? Where to put spending by tag info?
+            (
+                "Investing",
+                {
+                    "Assets": Page("box", "assets.page_all", LinkType.PAGE),
+                    "Performance": None,  # ssid_chart
+                    "Allocation": Page(
+                        "full_stacked_bar_chart",
+                        "allocation.page",
+                        LinkType.PAGE,
+                    ),
+                },
+            ),
+            (
+                "Planning",
+                {
+                    "Retirement": None,  # person_play
+                    "Emergency fund": Page(
+                        "emergency",
+                        "emergency_fund.page",
+                        LinkType.PAGE,
+                    ),
+                },
+            ),
+            (
+                "Utilities",
+                {
+                    "Logout": (
+                        Page("logout", "auth.logout", LinkType.HX_POST)
+                        if is_encrypted
+                        else None
+                    ),
+                    "Categories": Page(
+                        "category",
+                        "transaction_categories.page",
+                        LinkType.PAGE,
+                    ),
+                    "Import file": Page(
+                        "upload",
+                        "import_file.import_file",
+                        LinkType.DIALOG,
+                    ),
+                    "Update assets": Page("update", "assets.update", LinkType.DIALOG),
+                    "Health checks": Page(
+                        "health_metrics",
+                        "health.page",
+                        LinkType.PAGE,
+                    ),
+                    "Style test": (
+                        Page("style", "common.page_style_test", LinkType.PAGE)
+                        if debug
+                        else None
+                    ),
+                },
+            ),
+        ]
 
-    # Filter out empty subpages
-    nav_items = [
-        PageGroup(
-            group.name,
-            {page_name: page for page_name, page in group.pages.items() if page},
-        )
-        for group in nav_items
-    ]
-    # Filter out empty groups
-    nav_items = [group for group in nav_items if group.pages]
+        # Filter out empty subpages
+        no_blanks = [
+            PageGroup(
+                name,
+                {page_name: page for page_name, page in pages.items() if page},
+            )
+            for name, pages in nav_items
+        ]
+        # Filter out empty groups
+        no_blanks = [group for group in no_blanks if group.pages]
+        PAGES.extend(no_blanks)
+
+    icons: set[str] = set()
+
+    for group in PAGES:
+        icons.update(page.icon for page in group.pages.values())
+
+    if not TEMPLATES:
+        TEMPLATES.update(dict.fromkeys(templates.glob("**/*.jinja"), (0, set())))
+    for path, (last_modified_ns, path_icons) in TEMPLATES.items():
+        mtime_ns = path.stat().st_mtime_ns
+        if mtime_ns == last_modified_ns:
+            icons.update(path_icons)
+            continue
+        with path.open("r", encoding="utf-8") as file:
+            buf = file.read()
+        path_icons_new = set(RE_ICONS.findall(buf))
+        icons.update(path_icons_new)
+        TEMPLATES[path] = (mtime_ns, path_icons_new)
 
     return {
-        "nav_items": nav_items,
+        "nav_items": PAGES,
+        "icons": ",".join(sorted(icons)),
     }
 
 
@@ -257,11 +317,14 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     if flask.request.headers.get("HX-Request", "false") == "true":
         # Send just the content
         html_title = f"<title>{title} - nummus</title>\n"
-        nav_trigger = "<script>nav.update()</script>\n"
+        nav_trigger = "<script>onLoad(nav.update)</script>\n"
         content = flask.render_template(content_template, **context)
         html = html_title + nav_trigger + content
     else:
         p = web.portfolio
+        templates = Path(flask.current_app.root_path) / (
+            flask.current_app.template_folder or "templates"
+        )
         html = flask.render_template_string(
             textwrap.dedent(
                 f"""\
@@ -273,6 +336,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
             ),
             title=f"{title} - nummus",
             **ctx_base(
+                templates,
                 is_encrypted=p.is_encrypted,
                 debug=flask.current_app.debug,
             ),
@@ -307,32 +371,6 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
         response.data = ""
 
     return response
-
-
-LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
-# else plot normally by days
-
-LIMIT_PLOT_YEARS = 400  # if n_days > LIMIT_PLOT_YEARS then plot by years
-LIMIT_PLOT_MONTHS = 100  # if n_days > LIMIT_PLOT_MONTHS then plot by months
-# else plot normally by days
-
-LIMIT_TICKS_YEARS = 400  # if n_days > LIMIT_TICKS_YEARS then have ticks on the new year
-LIMIT_TICKS_MONTHS = 50  # if n_days > LIMIT_TICKS_MONTHS then have ticks on the 1st
-LIMIT_TICKS_WEEKS = 20  # if n_days > LIMIT_TICKS_WEEKS then have ticks on Sunday
-# else tick each day
-
-HTTP_CODE_OK = 200
-HTTP_CODE_REDIRECT = 302
-HTTP_CODE_BAD_REQUEST = 400
-HTTP_CODE_FORBIDDEN = 403
-
-PERIOD_OPTIONS = {
-    "1m": "1M",
-    "6m": "6M",
-    "ytd": "YTD",
-    "1yr": "1Y",
-    "max": "MAX",
-}
 
 
 T = TypeVar("T", bound=Base)

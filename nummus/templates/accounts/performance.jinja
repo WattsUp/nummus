@@ -7,7 +7,9 @@
 {% with perf = acct.performance %}
   <script>
     // prettier-ignore
-    accounts.update(JSON.parse('{{ perf | tojson }}'));
+    onLoad(() => {
+      accounts.update(JSON.parse('{{ perf | tojson }}'));
+    });
   </script>
   <div
     class="flex justify-around gap-2"

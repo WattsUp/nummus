@@ -8,6 +8,8 @@
 {% endif %}
 <div id="net-worth-chart-data">
   <script>
-    netWorth.update(JSON.parse('{{ chart["data"] | tojson }}'));
+    onLoad(() => {
+      netWorth.update(JSON.parse('{{ chart["data"] | tojson }}'));
+    });
   </script>
 </div>

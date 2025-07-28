@@ -21,7 +21,9 @@
   </div>
   <div id="cash-flow-chart-data">
     <script>
-      cashFlow.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'));
+      onLoad(() => {
+        cashFlow.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'));
+      });
     </script>
   </div>
   <div>{% include "shared/spinner.jinja" %}</div>

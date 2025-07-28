@@ -20,7 +20,11 @@
     {# Default current-account is blank #}
     <input class="current-account" name="account" type="hidden" />
     <script id="history-script"></script>
-    <div id="page-progress"></div>
+    <div id="page-progress">
+      {# djlint: off H020b #}
+      <div></div>
+      {# djlint: on #}
+    </div>
     {% include "shared/hx-error.jinja" %}
     {% include "shared/nav-header.jinja" %}
     {% include "shared/nav-rail.jinja" %}

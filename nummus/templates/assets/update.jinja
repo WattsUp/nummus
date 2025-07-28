@@ -38,6 +38,8 @@
 </div>
 {% if clear_history %}
   <script id="history-script" hx-swap-oob="true">
-    nummusClearHistory();
+    onLoad(() => {
+      nummusClearHistory();
+    });
   </script>
 {% endif %}

@@ -16,7 +16,9 @@
   <div>
     <script>
       // prettier-ignore
-      emergencyFund.updateDashboard(JSON.parse('{{ ctx.chart | tojson }}'));
+      onLoad(() => {
+        emergencyFund.updateDashboard(JSON.parse('{{ ctx.chart | tojson }}'));
+      });
     </script>
   </div>
   <div class="text-center text-sm">

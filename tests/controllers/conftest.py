@@ -46,6 +46,10 @@ class TreeNode(NamedTuple):
         return self.parent.has_hx_target()
 
     def has_valid_inner_html(self, inner_html: str) -> bool:
+        if self.tag == "script":
+            attributes = self.attributes
+            assert not inner_html or "onLoad" in inner_html or "src" in attributes
+            return True
         if self.tag not in {"h1", "h2", "h3", "h4"}:
             return True
         if inner_html in {"nummus", "Bad Request"}:
@@ -98,8 +102,10 @@ class TreeNode(NamedTuple):
             "title",
             "label",
             "href",
+            "crossorigin",
             "charset",
             "lang",
+            "defer",
             # Inputs
             "name",
             "required",
