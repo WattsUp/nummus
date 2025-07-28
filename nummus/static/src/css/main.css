@@ -87,10 +87,10 @@
   --color-white: #fff;
   --color-black: #000;
 
-  --font-serif: "Noto Color Emoji", "linux-libertine", "serif";
-  --font-sans: "Noto Color Emoji", "liberation-sans", "sans-serif";
-  --font-title: "Noto Color Emoji", "fogtwo-no5", "serif";
-  --font-mono: "Noto Color Emoji", "code-new-roman", "monospace";
+  --font-serif: "linux-libertine", "serif", "Noto Color Emoji";
+  --font-sans: "liberation-sans", "sans-serif", "Noto Color Emoji";
+  --font-title: "fogtwo-no5", "serif", "Noto Color Emoji";
+  --font-mono: "code-new-roman", "monospace", "Noto Color Emoji";
 }
 
 @layer base {
@@ -126,6 +126,8 @@
 
   html {
     @apply overscroll-y-contain scroll-smooth;
+
+    font-variant-emoji: unicode;
 
     @variant dark {
       --color-primary: #a4d396;
