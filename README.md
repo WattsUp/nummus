@@ -119,7 +119,6 @@ Formatters
 - `linters.sh` will run every linter
 - `make_test_portfolio.py` will create a portfolio with pseudorandom data
 - `run_tailwindcss.sh` will run tailwindcss with proper arguments
-- `gunicorn_conf.py` is an example configuration for gunicorn running nummus
 
 ---
 

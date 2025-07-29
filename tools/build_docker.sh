@@ -1,0 +1,12 @@
+#!/bin/sh
+
+PY_VERSION=$(python -m setuptools_scm)
+
+WHL=dist/nummus_financial-$PY_VERSION-py3-none-any.whl
+if [ ! -f $WHL ]; then
+  echo "Building python wheel"
+  python -m build -w
+fi
+
+# Build docker image
+docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHL=$WHL .
