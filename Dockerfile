@@ -27,7 +27,6 @@ ENV PYTHONUNBUFFERED="true" \
 
 RUN pip3 install --no-cache-dir "build>=1.2.2" "setuptools-scm>=8" \
   && rm -rf dist \
-  && git describe \
   && python -m build -w
 
 CMD [ "bash" ]
@@ -57,8 +56,7 @@ COPY --chown=python:python docker/* .
 RUN chmod +x ./*.sh
 
 COPY --chown=python:python --from=app-build /app/dist/* .
-RUN whl=$(echo nummus_financial*.whl([1])) \
-  && echo $whl \
+RUN whl=$(echo nummus_financial*.whl) \
   && pip3 install --no-cache-dir "$whl[deploy,encrypt]"
 
 ENV PYTHONUNBUFFERED="true" \
