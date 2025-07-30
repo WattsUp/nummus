@@ -631,7 +631,7 @@ def utc() -> datetime.datetime:
     Returns:
         datetime
     """
-    return datetime.datetime.now(datetime.timezone.utc)
+    return datetime.datetime.now(datetime.UTC)
 
 
 @pytest.fixture

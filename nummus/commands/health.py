@@ -138,7 +138,7 @@ class Health(BaseCommand):
             )
 
         # Update LAST_HEALTH_CHECK_TS
-        utc_now = datetime.datetime.now(datetime.timezone.utc)
+        utc_now = datetime.datetime.now(datetime.UTC)
         with p.begin_session() as s:
             c = (
                 s.query(Config)

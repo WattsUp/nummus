@@ -9,7 +9,7 @@ import textwrap
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
-from typing import NamedTuple, TYPE_CHECKING, TypedDict, TypeVar
+from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
 
@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     import sqlalchemy
     from sqlalchemy import orm
 
-Routes = dict[str, tuple[Callable, list[str]]]
+type Routes = dict[str, tuple[Callable, list[str]]]
 
 
 class LinkType(BaseEnum):
@@ -374,10 +374,7 @@ def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     return response
 
 
-T = TypeVar("T", bound=Base)
-
-
-def find(s: orm.Session, cls: type[T], uri: str) -> T:
+def find[T: Base](s: orm.Session, cls: type[T], uri: str) -> T:
     """Find the matching object by URI.
 
     Args:

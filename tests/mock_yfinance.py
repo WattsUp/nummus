@@ -63,7 +63,7 @@ class MockTicker:
 
         dt = datetime.datetime.combine(
             start,
-            datetime.time(tzinfo=datetime.timezone.utc),
+            datetime.time(tzinfo=datetime.UTC),
         )
         while dt.date() <= end:
             weekday = dt.weekday()
