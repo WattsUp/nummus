@@ -58,7 +58,7 @@ jobs:
           echo "PY_VERSION=$(python -m setuptools_scm)" >> $GITHUB_ENV
           python -m build -w
       - name: Build and push
-        uses: docker/buld-push-action@v6
+        uses: docker/build-push-action@v6
         with:
           push: true
           tags: wattsup/nummus-financial:latest
