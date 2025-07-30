@@ -27,6 +27,7 @@ ENV PYTHONUNBUFFERED="true" \
 
 RUN pip3 install --no-cache-dir "build>=1.2.2" "setuptools-scm>=8" \
   && rm -rf dist \
+  && git describe \
   && python -m build -w
 
 CMD [ "bash" ]
