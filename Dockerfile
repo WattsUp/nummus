@@ -1,7 +1,38 @@
 # syntax=docker/dockerfile:1
 
-# TODO (WattsUp): workflow action to build this
-FROM python:3.12-slim-bullseye
+################################################################################
+FROM python:3.12-slim-bullseye AS app-build
+LABEL maintainer="Bradley Davis <me@bradleydavis.tech>"
+
+WORKDIR /app
+ARG UID=1000
+ARG GID=1000
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends git \
+  && rm -rf /var/lib/apt/lists/* /usr/share/doc /usr/share/man \
+  && apt-get clean \
+  && groupadd -g "${GID}" python \
+  && useradd --create-home --no-log-init -u "${UID}" -g "${GID}" python \
+  && chown python:python -R /app
+
+USER python
+
+COPY --chown=python:python . .
+
+ENV PYTHONUNBUFFERED="true" \
+  PYTHONPATH="." \
+  PATH="${PATH}:/home/python/.local/bin" \
+  USER="python"
+
+RUN pip3 install --no-cache-dir "build>=1.2.2" "setuptools-scm>=8" \
+  && rm -rf dist \
+  && python -m build -w
+
+CMD [ "bash" ]
+
+################################################################################
+FROM python:3.12-slim-bullseye AS app
 LABEL maintainer="Bradley Davis <me@bradleydavis.tech>"
 
 WORKDIR /app
@@ -20,12 +51,14 @@ VOLUME /data
 
 USER python
 
-ARG WHL=
 
 COPY --chown=python:python docker/* .
 RUN chmod +x ./*.sh
 
-RUN --mount=type=bind,target=. pip3 install --no-cache-dir "${WHL}[deploy,encrypt]"
+COPY --chown=python:python --from=app-build /app/dist/* .
+RUN whl=$(echo nummus_financial*.whl([1])) \
+  && echo $whl \
+  && pip3 install --no-cache-dir "$whl[deploy,encrypt]"
 
 ENV PYTHONUNBUFFERED="true" \
   PYTHONPATH="." \
