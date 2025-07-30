@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 import flask
 import flask.sessions
 import pytest
-from typing_extensions import NamedTuple
 
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 

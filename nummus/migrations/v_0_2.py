@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func
-from typing_extensions import override
 
 from nummus.migrations.base import Migrator
 from nummus.models import (

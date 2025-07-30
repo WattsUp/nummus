@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import flask
 import flask_assets
 import webassets.filter
 from setuptools.command import build_py
-from typing_extensions import override
 
 try:
     import jsmin

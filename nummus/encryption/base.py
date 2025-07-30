@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import hashlib
 from abc import ABC, abstractmethod
-
-from typing_extensions import override
+from typing import override
 
 
 class EncryptionInterface(ABC):

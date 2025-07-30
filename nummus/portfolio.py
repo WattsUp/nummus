@@ -13,13 +13,12 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 import sqlalchemy
 import tqdm
 from packaging.version import Version
 from sqlalchemy import func, orm
-from typing_extensions import NamedTuple
 
 from nummus import __version__, encryption
 from nummus import exceptions as exc

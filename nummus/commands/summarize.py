@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
-
-from typing_extensions import override
+from typing import override, TYPE_CHECKING, TypedDict
 
 from nummus.commands.base import BaseCommand
 

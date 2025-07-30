@@ -20,7 +20,6 @@ dependencies = [
   "flask>=3",
   "flask-assets",
   "flask-login",
-  "typing-extensions",
   "pdfplumber",
   "yfinance>=0.2.54",
   "pyspellchecker>=0.8.3",
@@ -43,11 +42,10 @@ classifiers = [
   "Intended Audience :: End Users/Desktop",
   "Topic :: Office/Business :: Financial",
   "Topic :: Office/Business :: Financial :: Accounting",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 
 [project.scripts]
 nummus = "nummus.main:main"
@@ -85,7 +83,7 @@ build = ["build"]
 build-docker = ["nummus-financial[build,encrypt]", "setuptools-scm>=8"]
 
 [tool.black]
-target-version = ["py310", "py311", "py312", "py313"]
+target-version = ["py312", "py313"]
 preview = true
 
 [tool.codespell]

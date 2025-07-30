@@ -5,8 +5,7 @@ from __future__ import annotations
 import csv
 import datetime
 import io
-
-from typing_extensions import override
+from typing import override
 
 from nummus import exceptions as exc
 from nummus import utils

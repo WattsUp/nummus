@@ -9,10 +9,9 @@ import textwrap
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING, TypedDict, TypeVar
 
 import flask
-from typing_extensions import NamedTuple, TypedDict, TypeVar
 
 from nummus import exceptions as exc
 from nummus import utils, web

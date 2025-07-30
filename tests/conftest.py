@@ -8,13 +8,12 @@ import string
 from collections.abc import Iterable
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import flask
 import pytest
 import yfinance
 from sqlalchemy import orm, pool
-from typing_extensions import override
 
 from nummus import global_config, sql, utils, web
 from nummus.models import (

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import sqlalchemy
-from typing_extensions import override
 
 from nummus.health_checks.base import Base
 

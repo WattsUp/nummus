@@ -5,13 +5,12 @@ from __future__ import annotations
 import base64
 import hashlib
 import secrets
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import Crypto
 import Crypto.Random
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA256
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus.encryption import base

@@ -4,9 +4,7 @@ from __future__ import annotations
 
 import datetime
 import textwrap
-from typing import TYPE_CHECKING
-
-from typing_extensions import override
+from typing import override, TYPE_CHECKING
 
 from nummus import utils
 from nummus.health_checks.base import Base
