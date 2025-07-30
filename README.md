@@ -69,11 +69,43 @@ For development, install as a link to repository such that code changes are used
 
 ## Usage
 
-Run `web` command to launch a website to interact with the module.
+Run `create` command to make a new portfolio. Then start a web server using flask.
 
 ```bash
-> nummus web
+> nummus create
+> flask --app nummus.web run
 ```
+
+---
+
+## Docker
+
+A better way to use nummus is hosting the web server on in a docker instance.
+
+```bash
+> docker run \
+  --name nummus \
+  --detach \
+  --publish 8000:8000 \
+  --publish 8001:8001 \
+  --volume nummus-data:/data \
+  nummus-financial
+```
+
+### Configuration
+
+The following environment variables are used to configure the instance.
+
+|Env|Default|Description|
+|-|-|-|
+|`NUMMUS_PORTFOLIO`|`/data/portfolio.db`|Path to portfolio inside `data` volume.|
+|`NUMMUS_KEY_PATH`|`/data/.key.secret`|File containing portfolio key for encryption|
+|`NUMMUS_WEB_KEY`|`nummus-admin`|Web key used when creating a new portfolio|
+|`WEB_PORT`|`8000`|Port to bind server to|
+|`WEB_PORT_METRICS`|`8001`|Port to bind metrics server to|
+|`WEB_CONCURRENCY`|n(CPU) * 2 + 1|Number of gunicorn workers to spawn|
+|`WEB_N_THREADS`|`1`|Number of gunicorn workers threads to spawn|
+|`WEB_TIMEOUT`|`30`|Gunicorn workers silent for more than this many seconds are killed and restarted|
 
 ---
 

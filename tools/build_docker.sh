@@ -9,4 +9,4 @@ if [ ! -f $WHL ]; then
 fi
 
 # Build docker image
-docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHL=$WHL .
+docker build --build-arg WHL=$WHL --tag nummus-financial .
