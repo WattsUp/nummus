@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import pytest
 from colorama import Fore
-from typing_extensions import override
 
 from nummus import encryption
 from nummus.commands.change_password import ChangePassword

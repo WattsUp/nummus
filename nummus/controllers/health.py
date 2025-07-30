@@ -91,7 +91,7 @@ def ctx_checks(*, run: bool) -> HealthContext:
         Dictionary HTML context
     """
     p = web.portfolio
-    utc_now = datetime.datetime.now(datetime.timezone.utc)
+    utc_now = datetime.datetime.now(datetime.UTC)
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
     with p.begin_session() as s:

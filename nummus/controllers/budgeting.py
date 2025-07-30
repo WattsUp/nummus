@@ -6,7 +6,7 @@ import datetime
 import math
 import operator
 from decimal import Decimal
-from typing import NamedTuple, TYPE_CHECKING, TypedDict
+from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import sql
@@ -30,7 +30,6 @@ from nummus.models import (
 if TYPE_CHECKING:
     import werkzeug.datastructures
     from sqlalchemy import orm
-    from typing_extensions import NotRequired
 
 
 PERIOD_OPTIONS = {

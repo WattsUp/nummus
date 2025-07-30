@@ -7,12 +7,11 @@ import operator
 import re
 import string
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
 from sqlalchemy import CheckConstraint, event, ForeignKey, orm, Row
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils

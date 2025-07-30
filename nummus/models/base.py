@@ -4,11 +4,10 @@ from __future__ import annotations
 
 import enum
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import CheckConstraint, orm, sql, types
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils

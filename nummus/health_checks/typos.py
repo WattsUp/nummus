@@ -6,11 +6,10 @@ import datetime
 import re
 import string
 from collections import defaultdict
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import spellchecker
 from sqlalchemy import func, orm
-from typing_extensions import override
 
 from nummus import utils
 from nummus.health_checks.base import Base

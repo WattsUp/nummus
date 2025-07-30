@@ -6,12 +6,11 @@ import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import yfinance
 import yfinance.exceptions
 from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus import utils

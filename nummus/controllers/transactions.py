@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 import operator
 from decimal import Decimal
-from typing import NamedTuple, TYPE_CHECKING, TypedDict
+from typing import NamedTuple, NotRequired, TypedDict
 
 import flask
 import sqlalchemy
@@ -25,10 +25,6 @@ from nummus.models import (
     update_rows_list,
     YIELD_PER,
 )
-
-if TYPE_CHECKING:
-    from typing_extensions import NotRequired
-
 
 PAGE_LEN = 25
 

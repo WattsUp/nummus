@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from typing import override
+
 from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
-from typing_extensions import override
 
 from nummus import exceptions as exc
 from nummus.models.base import (

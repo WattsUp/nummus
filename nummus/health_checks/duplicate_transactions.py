@@ -3,10 +3,9 @@
 from __future__ import annotations
 
 import datetime
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 from sqlalchemy import func, orm
-from typing_extensions import override
 
 from nummus import utils
 from nummus.health_checks.base import Base

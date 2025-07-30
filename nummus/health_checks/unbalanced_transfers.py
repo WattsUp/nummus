@@ -7,9 +7,7 @@ import operator
 import textwrap
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING
-
-from typing_extensions import override
+from typing import override, TYPE_CHECKING
 
 from nummus import utils
 from nummus.health_checks.base import Base

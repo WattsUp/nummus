@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 from colorama import Fore
-from typing_extensions import override
 
 from nummus.commands.base import BaseCommand
 

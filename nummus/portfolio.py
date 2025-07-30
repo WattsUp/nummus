@@ -13,13 +13,12 @@ import shutil
 import sys
 import tarfile
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 import sqlalchemy
 import tqdm
 from packaging.version import Version
 from sqlalchemy import func, orm
-from typing_extensions import NamedTuple
 
 from nummus import __version__, encryption
 from nummus import exceptions as exc
@@ -704,7 +703,7 @@ class Portfolio:
                 tar.add(file, arcname=file.relative_to(parent))
             # Add a timestamp of when it was created
             info = tarfile.TarInfo("_timestamp")
-            buf = datetime.datetime.now(datetime.timezone.utc).isoformat().encode()
+            buf = datetime.datetime.now(datetime.UTC).isoformat().encode()
             info.size = len(buf)
             tar.addfile(info, io.BytesIO(buf))
 
@@ -751,7 +750,7 @@ class Portfolio:
                     raise exc.InvalidBackupTarError(msg)
                 tar_ver = int(m[1])
                 ts = datetime.datetime.fromisoformat(file_ts.read().decode())
-                ts = ts.replace(tzinfo=datetime.timezone.utc)
+                ts = ts.replace(tzinfo=datetime.UTC)
                 backups.append((tar_ver, ts))
         return sorted(backups, key=operator.itemgetter(0))
 

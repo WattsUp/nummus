@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import datetime
 import sys
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 from colorama import Fore
-from typing_extensions import override
 
 from nummus.commands.base import BaseCommand
 
@@ -109,7 +108,7 @@ class Restore(BaseCommand):
                         file=sys.stderr,
                     )
                     return 0
-                now = datetime.datetime.now(datetime.timezone.utc)
+                now = datetime.datetime.now(datetime.UTC)
                 for ver, ts in backups:
                     ago_s = (now - ts).total_seconds()
                     ago = utils.format_seconds(ago_s)

@@ -13,7 +13,7 @@ import shutil
 import string
 import sys
 from decimal import Decimal
-from typing import Generic, TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import emoji as emoji_mod
 from colorama import Fore
@@ -948,10 +948,7 @@ def strip_emojis(text: str) -> str:
     return "".join(t.value for t in tokens if isinstance(t.value, str)).strip()
 
 
-T = TypeVar("T")
-
-
-class classproperty(Generic[T]):  # noqa: N801
+class classproperty[T]:  # noqa: N801
     """Decorator for @property but on classes not instances."""
 
     def __init__(self, fget: Callable) -> None:

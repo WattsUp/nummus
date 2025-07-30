@@ -5,13 +5,12 @@ from __future__ import annotations
 import re
 import textwrap
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from packaging.version import Version
 from sqlalchemy import orm
 from sqlalchemy.schema import CreateTable
-from typing_extensions import override
 
 from nummus import sql
 from nummus.models import Base, dump_table_configs, get_constraints

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 import sqlalchemy
 from sqlalchemy import (
@@ -234,10 +234,7 @@ def update_rows_list(
         s.delete(m)
 
 
-T = TypeVar("T")
-
-
-def one_or_none(query: orm.Query[T]) -> T | None:
+def one_or_none[T](query: orm.Query[T]) -> T | None:
     """Return one result. If no results or multiple, return None."""
     try:
         return query.one_or_none()
