@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import flask
@@ -87,8 +88,18 @@ def page_login() -> str | werkzeug.Response:
     if flask_login.current_user.is_authenticated:
         # If already authenticated, skip login page
         return flask.redirect(next_url or flask.url_for("common.page_dashboard"))
+    p = web.portfolio
+    templates = Path(flask.current_app.root_path) / (
+        flask.current_app.template_folder or "templates"
+    )
     return flask.render_template(
         "auth/login.jinja",
+        title="Login - nummus",
+        **base.ctx_base(
+            templates,
+            is_encrypted=p.is_encrypted,
+            debug=flask.current_app.debug,
+        ),
         next_url=next_url,
     )
 

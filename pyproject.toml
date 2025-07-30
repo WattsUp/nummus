@@ -1,8 +1,7 @@
 [build-system]
 requires = [
-  "setuptools>=64",
+  "setuptools>=77",
   "setuptools-scm>=8",
-  "wheel",
   "flask",
   "flask-assets",
   "pytailwindcss",
@@ -60,6 +59,7 @@ Issues = "https://github.com/WattsUp/nummus/issues"
 
 [project.optional-dependencies]
 encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodome"]
+deploy = ["gunicorn"]
 test = [
   "pytest",
   "coverage",
@@ -71,7 +71,7 @@ test = [
   "jsmin",
 ]
 dev = [
-  "nummus-financial[test]", # Development needs tests too
+  "nummus-financial[deploy,test]",
   "ruff>=0.12.0",
   "codespell>=2.4.1",
   "black>=25",
@@ -80,8 +80,9 @@ dev = [
   "djlint>=1.36.4",
   "pyright>=1.1.402",
   "taplo",
-  "gunicorn",
 ]
+build = ["build"]
+build-docker = ["nummus-financial[build,encrypt]", "setuptools-scm>=8"]
 
 [tool.black]
 target-version = ["py310", "py311", "py312", "py313"]
