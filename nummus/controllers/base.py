@@ -105,6 +105,8 @@ PERIOD_OPTIONS = {
     "max": "MAX",
 }
 
+RE_JINJA = re.compile(r"(\{[{%#]).+?([#%}]\})")
+RE_ICON_VAR = re.compile(r'set icon = "([\w\-]+)"')
 RE_ICONS = re.compile(r"<icon[^>]*>([\w\-]+)</icon>")
 TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
 PAGES: list[PageGroup] = []
@@ -212,7 +214,8 @@ def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext
         no_blanks = [group for group in no_blanks if group.pages]
         PAGES.extend(no_blanks)
 
-    icons: set[str] = set()
+    # From jinja filters
+    icons: set[str] = {"arrow_downward", "arrow_upward"}
 
     for group in PAGES:
         icons.update(page.icon for page in group.pages.values())
@@ -226,7 +229,12 @@ def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext
             continue
         with path.open("r", encoding="utf-8") as file:
             buf = file.read()
-        path_icons_new = set(RE_ICONS.findall(buf))
+        # Look for icon = "" in jinja
+        path_icons_new = set(RE_ICON_VAR.findall(buf))
+
+        # Clean out jinja and look for <icon>
+        buf = RE_JINJA.sub("", buf)
+        path_icons_new.update(RE_ICONS.findall(buf))
         icons.update(path_icons_new)
         TEMPLATES[path] = (mtime_ns, path_icons_new)
 
