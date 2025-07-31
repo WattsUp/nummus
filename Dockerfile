@@ -49,20 +49,21 @@ RUN apt-get update \
   && chown python:python -R /data
 VOLUME /data
 
-USER python
-
 
 COPY --chown=python:python docker/* .
-RUN chmod +x ./*.sh
+RUN chmod +x ./*.sh \
+  && ln -s /app/nummus-alias.sh /usr/bin/nummus
+
+USER python
 
 COPY --chown=python:python --from=app-build /app/dist/* .
 RUN whl=$(echo nummus_financial*.whl) \
-  && pip3 install --no-cache-dir "$whl[deploy,encrypt]"
+  && pip3 install --no-warn-script-location --no-cache-dir "$whl[deploy,encrypt]"
 
 ENV PYTHONUNBUFFERED="true" \
   PYTHONPATH="." \
-  PATH="${PATH}:/home/python/.local/bin" \
   USER="python"
+
 
 EXPOSE 8000
 EXPOSE 8001
