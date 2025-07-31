@@ -27,4 +27,4 @@ fi
 export PROMETHEUS_MULTIPROC_DIR=$prom_dir
 export NUMMUS_PORTFOLIO=$portfolio
 export NUMMUS_KEY_PATH=$key_file
-gunicorn -c gunicorn.conf.py "nummus.web:create_app()"
+/home/python/.local/bin/gunicorn -c gunicorn.conf.py "nummus.web:create_app()"
