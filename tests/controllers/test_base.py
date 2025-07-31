@@ -252,6 +252,8 @@ def test_ctx_base() -> None:
 
     assert isinstance(ctx["icons"], str)
     assert ctx["icons"].count(",") > 50
+    assert "arrow_split" in ctx["icons"]
+    assert "warning" in ctx["icons"]
 
     assert base.PAGES
     assert base.TEMPLATES
