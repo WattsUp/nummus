@@ -2,16 +2,20 @@ from __future__ import annotations
 
 import re
 from collections import defaultdict
+from pathlib import Path
 from typing import NamedTuple, TYPE_CHECKING
 
 import flask
 import flask.sessions
 import pytest
 
+import nummus
+from nummus.controllers import base
 from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
     import contextlib
+    from collections.abc import Generator
 
     import werkzeug.datastructures
 
@@ -197,8 +201,10 @@ Queries = dict[str, str] | dict[str, str | bool | list[str | bool]]
 
 class HTMLValidator:
 
-    @classmethod
-    def __call__(cls, s: str) -> bool:
+    def __init__(self) -> None:
+        self._icons: set[str] = set()
+
+    def __call__(self, s: str) -> bool:
         nodes: list[TreeNode] = [
             TreeNode(m.group(1), m.group(2), m.start(0), m.end(0), None, [])
             for m in re.finditer(r"<(/?\w+)([^<>]*)>", s)
@@ -215,6 +221,9 @@ class HTMLValidator:
 
                 inner_html = s[open_node.i_end : close_node.i_start]
                 assert open_node.has_valid_inner_html(inner_html)
+
+                if open_node.tag == "icon" and inner_html:
+                    self._icons.add(inner_html)
 
                 current_node = current_node.parent
                 assert current_node is not None
@@ -250,15 +259,28 @@ class HTMLValidator:
         html = re.sub(r" ?> ?", ">", html)
         return re.sub(r" ?< ?", "<", html)
 
+    def check_icons(self) -> None:
+        """Check all icons seen are in ctx_base."""
+        templates = Path(nummus.__file__).with_name("templates")
+
+        ctx = base.ctx_base(templates, is_encrypted=False, debug=True)
+        icons = set(ctx["icons"].split(","))
+        # All icons seen should be in ctx_base
+        # Might not have seen all so extra is okay
+        assert self._icons <= icons
+
 
 @pytest.fixture(scope="session")
-def valid_html() -> HTMLValidator:
+def valid_html() -> Generator[HTMLValidator]:
     """Returns a HTMLValidator.
 
-    Returns:
+    Yields:
         HTMLValidator
     """
-    return HTMLValidator()
+    html_validator = HTMLValidator()
+    yield html_validator
+
+    html_validator.check_icons()
 
 
 class WebClient:
