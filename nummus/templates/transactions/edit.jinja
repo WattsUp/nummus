@@ -28,7 +28,7 @@
       <option value="{{ item | e }}">{{ item }}</option>
     {% endfor %}
   </datalist>
-  {# TODO (WattsUp): Add a manual clear button with confirmation #}
+  {# TODO (WattsUp): #363 Add a manual clear button with confirmation #}
   {% if txn.cleared %}
     <div class="{{ parent_class }} flex items-center gap-1">
       <icon>account_balance</icon>Account: {{ txn.account }}
@@ -300,7 +300,7 @@
       </button>
     {% endif %}
     {% if txn.similar_uri %}
-      {# TODO (WattsUp): enable button #}
+      {# TODO (WattsUp): #364 enable button #}
       <button
         class="btn-text"
         disabled

@@ -39,7 +39,7 @@
     {{ asset.description }}
   </div>
 {% endif %}
-{# TODO (WattsUp): Add holdings info #}
+{# TODO (WattsUp): #362 Add holdings info #}
 {% with ctx = asset.table %}
   {% include "assets/table-header.jinja" %}
   {% if asset.ticker %}

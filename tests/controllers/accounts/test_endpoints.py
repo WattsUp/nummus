@@ -106,6 +106,7 @@ def test_page_performance(
 
 @pytest.mark.xfail
 def test_new(web_client: WebClient) -> None:
+    # TODO (WattsUp): #222
     web_client.GET("accounts.new")
 
 

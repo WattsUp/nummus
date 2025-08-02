@@ -19,7 +19,7 @@ if [ ! -f $portfolio ]; then
 
   nummus --portfolio $portfolio --pass-file $key_file create
 
-  # TODO (WattsUp): Add args to change-password
+  # TODO (WattsUp): #360 Add args to change-password
   # nummus --portfolio $portfolio --pass-file $key_file change-password
 fi
 

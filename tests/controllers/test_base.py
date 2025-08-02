@@ -403,6 +403,7 @@ def test_metrics(web_client: WebClient, asset: Asset) -> None:
     assert 'endpoint="assets.page_all"' in result
 
 
+# TODO (WattsUp): #369
 @pytest.mark.xfail
 def test_follow_links(web_client: WebClient) -> None:
     # Recursively click on every link checking that it is a valid link and valid

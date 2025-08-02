@@ -39,7 +39,7 @@ class Base(ABC):
     @classproperty
     def name(cls) -> str:  # noqa: N805,
         """Health check name."""  # noqa: DOC201
-        # TODO (WattsUp): Change to .capitalize()
+        # TODO (WattsUp): #357 Change to .capitalize()
         return utils.camel_to_snake(cls.__name__).replace("_", " ").title()
 
     @classproperty
@@ -105,7 +105,6 @@ class Base(ABC):
             value: {"check": self.name, "ignore": value in ignored, "msg": msg}
             for value, msg in issues.items()
         }
-        # TODO (WattsUp): add test
         query = s.query(HealthCheckIssue).where(
             HealthCheckIssue.check == self.name,
         )

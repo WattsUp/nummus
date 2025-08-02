@@ -160,7 +160,7 @@ def test_data_dir_no_account(
 ) -> None:
     path_debug = empty_portfolio.path.with_suffix(".importer_debug")
 
-    # BUG (WattsUp): Currently it raises NoResultFound due to missing Account
+    # BUG (WattsUp): #367 Currently it raises NoResultFound due to missing Account
     # It should prompt to create the account instead
     # Same for Asset, probably
     c = Import(empty_portfolio.path, None, [data_path], force=False)

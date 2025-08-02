@@ -3,7 +3,7 @@
   hx-get="{{ url_for('accounts.page', uri=acct.uri) }}"
   hx-trigger="account from:body, valuation from:body, transaction from:body"
   hx-target="#main"
-  {# TODO (WattsUp): Just update transaction table on transaction event #}
+  {# TODO (WattsUp): #361 Just update transaction table on transaction event #}
 >
   <h1 class="text-primary font-serif text-3xl">{{ acct.name }}</h1>
   <button

@@ -160,7 +160,7 @@ markers = ["encryption: tests that require encryption"]
 addopts = [
   "--durations=10",
   "--import-mode=importlib",
-  # TODO (WattsUp): Migrate tests
+  # TODO (WattsUp): #369 Migrate tests
   "--ignore=tests/controllers/test_cash_flow.py",
   "--ignore=tests/controllers/test_net_worth.py",
   "--ignore=tests/controllers/test_performance.py",
@@ -175,7 +175,6 @@ preview = true
 
 ignore = [
   "FIX002",  # Permit TODOs
-  "TD003",   # issue links not required for TODOs
   "I001",    # mismatch between ruff and isort
   "PLR0904", # Too many public methods
   "PLR0911", # Too many return statements
@@ -185,7 +184,7 @@ ignore = [
   "PLR0915", # Too many statements
   "PLR0917", # Too many positional arguments
   "CPY001",  # No copyright
-  "S413",    # TODO (WattsUp): Remove
+  "S413",    # TODO (WattsUp): #368 Remove
 ]
 
 exclude = [

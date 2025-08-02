@@ -42,6 +42,7 @@ def test_page(
 
 @pytest.mark.xfail
 def test_new(web_client: WebClient) -> None:
+    # TODO (WattsUp): #223
     web_client.GET("assets.new")
 
 

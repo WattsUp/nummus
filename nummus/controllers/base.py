@@ -130,8 +130,8 @@ def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext
                 {
                     "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
                     "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
-                    # TODO (WattsUp): Change to receipt_long and add_receipt_long if
-                    # request gets fulfilled
+                    # TODO (WattsUp): #358 Change to receipt_long and add_receipt_long
+                    # if request gets fulfilled
                     "Transactions": Page(
                         "note_stack",
                         "transactions.page_all",
@@ -145,7 +145,7 @@ def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext
                     "Insights": None,  # search_insights
                 },
             ),
-            # TODO (WattsUp): Banking section? Where to put spending by tag info?
+            # TODO (WattsUp): #359 Banking section? Where to put spending by tag info?
             (
                 "Investing",
                 {
