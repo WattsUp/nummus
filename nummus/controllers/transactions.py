@@ -324,7 +324,7 @@ def new() -> str | flask.Response:
         if flask.request.method == "PUT":
             form = flask.request.form
             amount = utils.evaluate_real_statement(form["amount"]) or Decimal()
-            ctx["account_uri"] = form["amount"]
+            ctx["account_uri"] = form.get("account") or ""
             ctx["amount"] = amount
             ctx["payee"] = form["payee"]
             try:

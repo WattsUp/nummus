@@ -72,22 +72,29 @@ def test_new_get(
 def test_new_put(
     today: datetime.date,
     web_client: WebClient,
+    account: Account,
     categories: dict[str, int],
 ) -> None:
     result, _ = web_client.PUT(
         "transactions.new",
         data={
-            "date": "",
-            "account": "",
-            "amount": "",
-            "payee": "",
+            "date": "2000-01-01",
+            "account": account.uri,
+            "amount": "1234",
+            "payee": "Banana Farm",
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
-            "memo": [""],
-            "tag": [""],
+            "memo": ["Apples"],
+            "tag": ["Fruit"],
         },
     )
     assert "New transaction" in result
-    assert today.isoformat() in result
+    assert today.isoformat() not in result
+    assert "2000-01-01" in result
+    assert f'value="{account.uri}" selected' in result
+    assert "1234" in result
+    assert "Banana Farm" in result
+    assert "Apples" in result
+    assert "Fruit" in result
     assert result.count('name="memo"') == 4
 
 
