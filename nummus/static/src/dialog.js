@@ -7,7 +7,6 @@ const dialog = {
    * @param {boolean} force true will ignore pending changes
    */
   close(force) {
-    console.log("close", force, this);
     if (!force && this.pending) {
       this.confirm("Discard draft?", "Discard", () => {
         this.pending = false;
