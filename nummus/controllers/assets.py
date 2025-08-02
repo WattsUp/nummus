@@ -464,11 +464,7 @@ def update() -> str | flask.Response:
     updated = p.update_assets(no_bars=True)
 
     if len(updated) == 0:
-        return flask.render_template(
-            "assets/update.jinja",
-            n_to_update=n,
-            error=base.error("No assets were updated"),
-        )
+        return "No assets were updated"
 
     updated = sorted(updated, key=lambda item: item[0].lower())  # sort by name
     failed_tickers: dict[str, str] = {}
@@ -478,11 +474,14 @@ def update() -> str | flask.Response:
             failed_tickers[ticker] = error
         else:
             successful_tickers.append(ticker)
-    html = flask.render_template(
-        "assets/update.jinja",
-        failed_tickers=failed_tickers,
-        successful_tickers=sorted(successful_tickers),
-        clear_history=True,
+    if not failed_tickers:
+        n = len(successful_tickers)
+        return base.dialog_swap(
+            event="valuation",
+            snackbar=f"{n} asset{'' if n == 1 else 's'} updated",
+        )
+    html = "Failed to update: " + ", ".join(
+        f"{ticker}: {e}" for ticker, e in sorted(failed_tickers.items())
     )
     response = flask.make_response(html)
     response.headers["HX-Trigger"] = "valuation"

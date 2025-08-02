@@ -369,15 +369,14 @@ def test_update(
     asset: Asset,
     transactions: list[Transaction],
 ) -> None:
+    _ = asset
     _ = transactions
     session.query(Asset).where(Asset.category == AssetCategory.INDEX).delete()
     session.commit()
 
     result, headers = web_client.POST("assets.update")
-    assert "The assets with the following tickers were updated" in result
-    assert "nummusClearHistory" in result
-    assert asset.ticker is not None
-    assert asset.ticker in result
+    assert "snackbar.show" in result
+    assert "1 asset updated" in result
     assert headers["HX-Trigger"] == "valuation"
 
 

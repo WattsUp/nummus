@@ -2,18 +2,7 @@
   {% include "shared/dialog-headline.jinja" %}
 {% endwith %}
 <div class="w-88 min-h-60 overflow-y-hidden">
-  {% if error %}
-    <error class="status-error"> {{ error }} </error>
-  {% elif failed_tickers %}
-    {% for ticker, e in failed_tickers.items() %}
-      <p>{{ ticker }} failed: {{ e }}</p>
-    {% endfor %}
-  {% elif successful_tickers %}
-    <p class="text-center">
-      The assets with the following tickers were updated
-    </p>
-    <p class="text-center">{{ successful_tickers | join(", ") }}</p>
-  {% elif n_to_update == 0 %}
+  {% if n_to_update == 0 %}
     <p>There are no assets to update, set ticker on edit asset page.</p>
   {% else %}
     {% if n_to_update == 1 %}
@@ -26,20 +15,11 @@
       hx-post="{{ url_for('assets.update') }}"
       hx-disabled-elt="this"
       hx-indicator="next .spinner"
-      hx-target="#dialog"
-      hx-swap="innerHTML show:#dialog:top"
-      {# already pushed in, don't do it again #}
-      hx-push-url="false"
+      hx-target="#dialog-error"
     >
       Update
     </button>
     {% include "shared/spinner.jinja" %}
   {% endif %}
 </div>
-{% if clear_history %}
-  <script id="history-script" hx-swap-oob="true">
-    onLoad(() => {
-      nummusClearHistory();
-    });
-  </script>
-{% endif %}
+<div id="dialog-error" class="status-error"></div>
