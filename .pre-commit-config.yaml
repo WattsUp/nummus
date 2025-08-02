@@ -74,3 +74,8 @@ repos:
         entry: prettier --write
         language: node
         files: \.(jinja|css|js)$
+      - id: grep-console
+        name: grep-console
+        entry: console.log
+        language: pygrep
+        files: \.(jinja|css|js)$
