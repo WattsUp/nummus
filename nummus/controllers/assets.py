@@ -8,6 +8,7 @@ from decimal import Decimal
 from typing import TypedDict
 
 import flask
+import sqlalchemy
 from sqlalchemy import func, orm
 
 from nummus import exceptions as exc
@@ -306,15 +307,20 @@ def validation(uri: str) -> str:
             )
 
         if "date" in args:
+            wheres: list[sqlalchemy.ColumnExpressionArgument] = [
+                AssetValuation.id_ == Asset.uri_to_id(uri),
+            ]
+            if "v" in args:
+                wheres.append(
+                    AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
+                )
+
             return base.validate_date(
                 args["date"],
                 is_required=True,
                 session=s,
                 no_duplicates=AssetValuation.date_ord,
-                no_duplicate_wheres=[
-                    AssetValuation.id_ == Asset.uri_to_id(uri),
-                    AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
-                ],
+                no_duplicate_wheres=wheres,
             )
 
         if "value" in args:

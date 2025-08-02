@@ -112,21 +112,23 @@ def test_table_second_page(web_client: WebClient, asset: Asset) -> None:
 
 
 @pytest.mark.parametrize(
-    ("prop", "value", "target"),
+    ("include_valuation", "prop", "value", "target"),
     [
-        ("name", "New Name", ""),
-        ("name", " ", "Required"),
-        ("name", "a", "2 characters required"),
-        ("name", "Banana ETF", "Must be unique"),
-        ("description", "BANANA ETF", ""),
-        ("ticker", "TICKER", ""),
-        ("ticker", " ", ""),
-        ("ticker", "A", ""),
-        ("ticker", "BANANA_ETF", "Must be unique"),
-        ("date", "2000-01-01", ""),
-        ("date", " ", "Required"),
-        ("value", "0", ""),
-        ("value", " ", "Required"),
+        (False, "name", "New Name", ""),
+        (False, "name", " ", "Required"),
+        (False, "name", "a", "2 characters required"),
+        (False, "name", "Banana ETF", "Must be unique"),
+        (False, "description", "BANANA ETF", ""),
+        (False, "ticker", "TICKER", ""),
+        (False, "ticker", " ", ""),
+        (False, "ticker", "A", ""),
+        (False, "ticker", "BANANA_ETF", "Must be unique"),
+        (False, "date", "2000-01-01", ""),
+        (False, "date", " ", "Required"),
+        (True, "date", "2000-01-01", ""),
+        (True, "date", " ", "Required"),
+        (False, "value", "0", ""),
+        (False, "value", " ", "Required"),
     ],
 )
 def test_validation(
@@ -134,17 +136,16 @@ def test_validation(
     asset: Asset,
     asset_etf: Asset,
     asset_valuation: AssetValuation,
+    include_valuation: bool,
     prop: str,
     value: str,
     target: str,
 ) -> None:
     _ = asset_etf
-    result, _ = web_client.GET(
-        (
-            "assets.validation",
-            {"uri": asset.uri, prop: value, "v": asset_valuation.uri},
-        ),
-    )
+    args = {"uri": asset.uri, prop: value}
+    if include_valuation:
+        args["v"] = asset_valuation.uri
+    result, _ = web_client.GET(("assets.validation", args))
     assert result == target
 
 
