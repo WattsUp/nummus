@@ -790,10 +790,14 @@ def ctx_txn(
 
     account_id = txn.account_id if account_id is None else account_id
 
-    query = s.query(Account).with_entities(
-        Account.id_,
-        Account.name,
-        Account.closed,
+    query = (
+        s.query(Account)
+        .with_entities(
+            Account.id_,
+            Account.name,
+            Account.closed,
+        )
+        .order_by(Account.name)
     )
     accounts: dict[int, tuple[str, bool]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
