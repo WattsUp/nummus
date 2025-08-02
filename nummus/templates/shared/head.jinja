@@ -63,6 +63,7 @@
       } else if (selection != null) {
         localStorage.currentTheme = selection;
       }
+      console.log(localStorage.currentTheme);
 
       let radioBtns = null;
       if (localStorage.currentTheme === "dark") {
@@ -99,6 +100,8 @@
       if (domLoaded) func();
       else document.addEventListener("DOMContentLoaded", func);
     }
-    onLoad(updateTheme);
+    onLoad(() => {
+      updateTheme();
+    });
   </script>
 </head>
