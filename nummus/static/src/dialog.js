@@ -14,8 +14,8 @@ const dialog = {
       });
       return;
     }
-    this.pending = false;
     htmx.find("#dialog").innerHTML = "";
+    this.reset();
   },
   /**
    * On dialog changes, set pending flag
@@ -28,6 +28,7 @@ const dialog = {
    */
   reset() {
     this.pending = false;
+    if (location.hash == "#dialog") history.back();
   },
   /**
    * Check if all required element are populated
