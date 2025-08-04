@@ -20,6 +20,7 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    import flask
     from sqlalchemy import orm
 
     from tests.controllers.conftest import WebClient
@@ -428,6 +429,7 @@ def test_new_group_second(web_client: WebClient) -> None:
 def test_parse_form(
     today: datetime.date,
     today_ord: int,
+    flask_app: flask.Flask,
     kwargs: dict[str, str | list[str]],
     period: TargetPeriod,
     type_: TargetType,
@@ -443,7 +445,8 @@ def test_parse_form(
     )
     args = werkzeug.datastructures.MultiDict(kwargs)
 
-    budgeting.parse_target_form(target, args)
+    with flask_app.test_request_context():
+        budgeting.parse_target_form(target, args)
 
     assert target.period == period
     assert target.type_ == type_

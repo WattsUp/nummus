@@ -19,6 +19,8 @@ from nummus.models import (
 )
 
 if TYPE_CHECKING:
+    import datetime
+
     import flask
     from sqlalchemy import orm
 
@@ -74,20 +76,20 @@ def page() -> flask.Response:
         return base.page(
             "allocation/page.jinja",
             title="Asset Allocation",
-            allocation=ctx_allocation(s),
+            allocation=ctx_allocation(s, base.today_client()),
         )
 
 
-def ctx_allocation(s: orm.Session) -> AllocationContext:
+def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
     """Get the context to build the allocation chart.
 
     Args:
         s: SQL session to use
+        today: Today's date
 
     Returns:
         Dictionary HTML context
     """
-    today = base.today()
     today_ord = today.toordinal()
 
     asset_qtys: dict[int, Decimal] = defaultdict(Decimal)

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import flask
 import pytest
 
-from nummus import __version__, encryption
+from nummus import encryption
 from nummus import exceptions as exc
 from nummus import web
 from nummus.models import Config, ConfigKey
@@ -97,7 +97,7 @@ def test_url_for(
     kwargs: dict[str, object],
     target: str,
 ) -> None:
-    with flask_app.app_context(), flask_app.test_request_context():
+    with flask_app.test_request_context():
         result = flask_app.url_for(
             "static",
             filename="main.css",
@@ -112,7 +112,7 @@ def test_url_for(
 
 def test_flask_context(flask_app: flask.Flask) -> None:
     with flask_app.app_context():
-        assert flask.render_template_string("{{ version }}") == __version__
+        assert flask.render_template_string("{{ url_args }}") == "{}"
 
 
 @pytest.mark.parametrize(
@@ -145,7 +145,7 @@ def test_jinja_filters(
     filt: str,
     target: str,
 ) -> None:
-    with flask_app.app_context(), flask_app.test_request_context():
+    with flask_app.test_request_context():
         result = flask.render_template_string(
             f"{{{{ value | {filt} }}}}",
             value=value,

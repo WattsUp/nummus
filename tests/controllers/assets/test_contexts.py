@@ -22,7 +22,7 @@ def test_ctx_performance_empty(
     asset: Asset,
 ) -> None:
     start = utils.date_add_months(today, -12)
-    ctx = assets.ctx_performance(session, asset, "1yr")
+    ctx = assets.ctx_performance(session, asset, today, "1yr")
     labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
     target: assets.PerformanceContext = {
         "date_mode": date_mode,
@@ -40,7 +40,7 @@ def test_ctx_performance(
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    ctx = assets.ctx_performance(session, asset, "max")
+    ctx = assets.ctx_performance(session, asset, today, "max")
     labels, date_mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
     target: assets.PerformanceContext = {
         "date_mode": date_mode,
@@ -53,11 +53,12 @@ def test_ctx_performance(
 
 
 def test_ctx_table_empty(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_table(session, asset, None, None, None, None)
+    ctx = assets.ctx_table(session, asset, today, None, None, None, None)
 
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
@@ -96,6 +97,7 @@ def test_ctx_table_empty(
     ],
 )
 def test_ctx_table(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
@@ -106,7 +108,7 @@ def test_ctx_table(
     any_filters: bool,
     has_valuation: bool,
 ) -> None:
-    ctx = assets.ctx_table(session, asset, period, start, end, page)
+    ctx = assets.ctx_table(session, asset, today, period, start, end, page)
 
     if page is None:
         assert ctx["first_page"]
@@ -135,10 +137,11 @@ def test_ctx_table(
 
 
 def test_ctx_asset_empty(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    ctx = assets.ctx_asset(session, asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -148,11 +151,12 @@ def test_ctx_asset_empty(
 
 
 def test_ctx_asset(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
 ) -> None:
-    ctx = assets.ctx_asset(session, asset, None, None, None, None, None)
+    ctx = assets.ctx_asset(session, asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
     assert ctx["category"] == asset.category
@@ -161,16 +165,17 @@ def test_ctx_asset(
     assert ctx["value_date"] == asset_valuation.date
 
 
-def test_ctx_rows_empty(session: orm.Session) -> None:
-    ctx = assets.ctx_rows(session, include_unheld=True)
+def test_ctx_rows_empty(today: datetime.date, session: orm.Session) -> None:
+    ctx = assets.ctx_rows(session, today, include_unheld=True)
     assert ctx == {}
 
 
 def test_ctx_rows_unheld(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
 ) -> None:
-    ctx = assets.ctx_rows(session, include_unheld=True)
+    ctx = assets.ctx_rows(session, today, include_unheld=True)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {
@@ -187,13 +192,14 @@ def test_ctx_rows_unheld(
 
 
 def test_ctx_rows(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
     asset_valuation: AssetValuation,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
-    ctx = assets.ctx_rows(session, include_unheld=False)
+    ctx = assets.ctx_rows(session, today, include_unheld=False)
     target: dict[AssetCategory, list[assets.RowContext]] = {
         asset.category: [
             {

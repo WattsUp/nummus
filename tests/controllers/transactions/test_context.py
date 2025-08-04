@@ -73,7 +73,7 @@ def test_ctx_txn(
     transactions: list[Transaction],
 ) -> None:
     txn = transactions[0]
-    ctx = txn_controller.ctx_txn(txn)
+    ctx = txn_controller.ctx_txn(txn, today)
 
     assert ctx["uri"] == txn.uri
     assert ctx["account"] == account.name
@@ -180,6 +180,7 @@ def test_ctx_row(
 
 
 def test_ctx_options(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     transactions: list[Transaction],
@@ -194,6 +195,7 @@ def test_ctx_options(
 
     ctx = txn_controller.ctx_options(
         tbl_query,
+        today,
         Account.map_name(session),
         base.tranaction_category_groups(session),
         None,
@@ -225,6 +227,7 @@ def test_ctx_options(
 
 
 def test_ctx_options_selected(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     categories: dict[str, int],
@@ -237,6 +240,7 @@ def test_ctx_options_selected(
 
     ctx = txn_controller.ctx_options(
         tbl_query,
+        today,
         Account.map_name(session),
         base.tranaction_category_groups(session),
         account.uri,
@@ -363,9 +367,10 @@ def test_table_results(
     assert result == target
 
 
-def test_ctx_table_empty(session: orm.Session) -> None:
+def test_ctx_table_empty(today: datetime.date, session: orm.Session) -> None:
     ctx, title = txn_controller.ctx_table(
         session,
+        today,
         None,
         None,
         None,
@@ -392,9 +397,14 @@ def test_ctx_table_empty(session: orm.Session) -> None:
     assert ctx["end"] is None
 
 
-def test_ctx_table(session: orm.Session, transactions: list[Transaction]) -> None:
+def test_ctx_table(
+    today: datetime.date,
+    session: orm.Session,
+    transactions: list[Transaction],
+) -> None:
     ctx, title = txn_controller.ctx_table(
         session,
+        today,
         None,
         None,
         None,
@@ -422,6 +432,7 @@ def test_ctx_table(session: orm.Session, transactions: list[Transaction]) -> Non
 
 
 def test_ctx_table_paging(
+    today: datetime.date,
     monkeypatch: pytest.MonkeyPatch,
     session: orm.Session,
     transactions: list[Transaction],
@@ -429,6 +440,7 @@ def test_ctx_table_paging(
     monkeypatch.setattr(txn_controller, "PAGE_LEN", 2)
     ctx, _ = txn_controller.ctx_table(
         session,
+        today,
         None,
         None,
         None,
@@ -444,12 +456,14 @@ def test_ctx_table_paging(
 
 
 def test_ctx_table_search(
+    today: datetime.date,
     session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
     ctx, _ = txn_controller.ctx_table(
         session,
+        today,
         "rent",
         None,
         None,
@@ -465,12 +479,14 @@ def test_ctx_table_search(
 
 
 def test_ctx_table_search_paging(
+    today: datetime.date,
     session: orm.Session,
     transactions: list[Transaction],
 ) -> None:
     _ = transactions
     ctx, _ = txn_controller.ctx_table(
         session,
+        today,
         "rent",
         None,
         None,

@@ -6,13 +6,15 @@ from typing import TYPE_CHECKING
 from nummus.controllers import allocation
 
 if TYPE_CHECKING:
+    import datetime
+
     from sqlalchemy import orm
 
     from nummus.models import Asset, AssetSector, AssetValuation, Transaction
 
 
-def test_ctx_empty(session: orm.Session) -> None:
-    ctx = allocation.ctx_allocation(session)
+def test_ctx_empty(today: datetime.date, session: orm.Session) -> None:
+    ctx = allocation.ctx_allocation(session, today)
 
     target: allocation.AllocationContext = {
         "chart": {"categories": {}, "sectors": {}},
@@ -23,6 +25,7 @@ def test_ctx_empty(session: orm.Session) -> None:
 
 
 def test_ctx(
+    today: datetime.date,
     session: orm.Session,
     asset: Asset,
     transactions: list[Transaction],
@@ -33,7 +36,7 @@ def test_ctx(
     _ = asset_valuation
     _ = asset_sectors
 
-    ctx = allocation.ctx_allocation(session)
+    ctx = allocation.ctx_allocation(session, today)
 
     target: allocation.AllocationContext = {
         "chart": {

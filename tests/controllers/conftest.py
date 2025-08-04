@@ -301,7 +301,7 @@ class WebClient:
         Returns:
             URL
         """
-        with self._flask_app.app_context(), self._flask_app.test_request_context():
+        with self._flask_app.test_request_context():
             return flask.url_for(
                 endpoint,
                 _anchor=None,

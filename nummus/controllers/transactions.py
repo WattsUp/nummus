@@ -142,6 +142,7 @@ def page_all() -> flask.Response:
     with p.begin_session() as s:
         txn_table, title = ctx_table(
             s,
+            base.today_client(),
             args.get("search"),
             args.get("account"),
             args.get("category"),
@@ -171,6 +172,7 @@ def table() -> str | flask.Response:
     with p.begin_session() as s:
         txn_table, title = ctx_table(
             s,
+            base.today_client(),
             args.get("search"),
             args.get("account"),
             args.get("category"),
@@ -232,6 +234,7 @@ def table_options() -> str:
         )
         options = ctx_options(
             tbl_query,
+            base.today_client(),
             accounts,
             base.tranaction_category_groups(s),
             selected_account,
@@ -261,7 +264,7 @@ def new() -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = base.today()
+    today = base.today_client()
 
     with p.begin_session() as s:
         query = (
@@ -386,7 +389,7 @@ def new() -> str | flask.Response:
                 txn = Transaction(
                     statement="Manually added",
                 )
-                if err := _transaction_edit(s, txn):
+                if err := _transaction_edit(s, txn, today):
                     return base.error(err)
                 s.add(txn)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -409,13 +412,14 @@ def transaction(uri: str) -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
+    today = base.today_client()
     with p.begin_session() as s:
         txn = base.find(s, Transaction, uri)
 
         if flask.request.method == "GET":
             return flask.render_template(
                 "transactions/edit.jinja",
-                txn=ctx_txn(txn),
+                txn=ctx_txn(txn, today),
             )
         if flask.request.method == "DELETE":
             if txn.cleared:
@@ -434,7 +438,7 @@ def transaction(uri: str) -> str | flask.Response:
         try:
             amount_before = txn.amount
             with s.begin_nested():
-                if err := _transaction_edit(s, txn):
+                if err := _transaction_edit(s, txn, today):
                     return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -445,12 +449,13 @@ def transaction(uri: str) -> str | flask.Response:
         )
 
 
-def _transaction_edit(s: orm.Session, txn: Transaction) -> str:
+def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) -> str:
     """Edit transaction from form.
 
     Args:
         s: SQL session to use
         txn: Transaction to edit
+        today: Today's date
 
     Returns:
         Error string or ""
@@ -458,7 +463,7 @@ def _transaction_edit(s: orm.Session, txn: Transaction) -> str:
     form = flask.request.form
 
     try:
-        txn.date = base.parse_date(form["date"])
+        txn.date = base.parse_date(form["date"], today)
     except ValueError as e:
         return str(e)
     txn.payee = form["payee"]
@@ -596,6 +601,7 @@ def split(uri: str) -> str:
 
         ctx = ctx_txn(
             txn,
+            base.today_client(),
             amount=parent_amount,
             account_id=account_id,
             payee=payee,
@@ -635,6 +641,7 @@ def validation() -> str:
     if "date" in args:
         return base.validate_date(
             args["date"],
+            base.today_client(),
             is_required=True,
         )
 
@@ -766,6 +773,7 @@ def table_query(
 
 def ctx_txn(
     txn: Transaction,
+    today: datetime.date,
     *,
     amount: Decimal | None = None,
     account_id: int | None = None,
@@ -777,6 +785,7 @@ def ctx_txn(
 
     Args:
         txn: Transaction to build context for
+        today: Today's date
         amount: Override context amount
         account_id: Override context account
         payee: Override context payee
@@ -829,7 +838,6 @@ def ctx_txn(
     # Run similar transaction
     similar_id = txn.find_similar(set_property=False)
     similar_uri = None if similar_id is None else Transaction.id_to_uri(similar_id)
-    today = base.today()
     return {
         "uri": txn.uri,
         "account": accounts[account_id][0],
@@ -918,6 +926,7 @@ def ctx_row(
 
 def ctx_options(
     tbl_query: TableQuery,
+    today: datetime.date,
     accounts: dict[int, str],
     categories: base.CategoryGroups,
     selected_account: str | None = None,
@@ -927,6 +936,7 @@ def ctx_options(
 
     Args:
         tbl_query: Query to use to get distinct values
+        today: Today's date
         accounts: Account name mapping
         categories: Account name mapping
         selected_account: URI of account from args
@@ -937,7 +947,6 @@ def ctx_options(
     """
     query = tbl_query.query.order_by(None)
 
-    today = base.today()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
@@ -997,6 +1006,7 @@ def ctx_options(
 
 def ctx_table(
     s: orm.Session,
+    today: datetime.date,
     search_str: str | None,
     selected_account: str | None,
     selected_category: str | None,
@@ -1012,6 +1022,7 @@ def ctx_table(
 
     Args:
         s: SQL session to use
+        today: Today's date
         search_str: String to search for
         selected_account: Selected account for filtering
         selected_category: Selected category for filtering
@@ -1056,6 +1067,7 @@ def ctx_table(
     )
     options = ctx_options(
         tbl_query,
+        today,
         accounts,
         base.tranaction_category_groups(s),
         selected_account,

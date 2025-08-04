@@ -5,7 +5,7 @@ from __future__ import annotations
 import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func, orm
@@ -23,6 +23,9 @@ from nummus.models import (
     TransactionSplit,
     YIELD_PER,
 )
+
+if TYPE_CHECKING:
+    import datetime
 
 
 class AccountContext(TypedDict):
@@ -109,7 +112,7 @@ def page_all() -> flask.Response:
         return base.page(
             "accounts/page-all.jinja",
             "Accounts",
-            ctx=ctx_accounts(s, include_closed=include_closed),
+            ctx=ctx_accounts(s, base.today_client(), include_closed=include_closed),
         )
 
 
@@ -123,11 +126,13 @@ def page(uri: str) -> flask.Response:
         string HTML response
     """
     p = web.portfolio
+    today = base.today_client()
     with p.begin_session() as s:
         acct = base.find(s, Account, uri)
         args = flask.request.args
         txn_table, title = transactions.ctx_table(
             s,
+            today,
             args.get("search"),
             args.get("account"),
             args.get("category"),
@@ -141,10 +146,15 @@ def page(uri: str) -> flask.Response:
         title = title.removeprefix("Transactions").strip()
         title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
 
-        ctx = ctx_account(s, acct)
+        ctx = ctx_account(s, acct, today)
         if acct.category == AccountCategory.INVESTMENT:
-            ctx["performance"] = ctx_performance(s, acct, args.get("chart-period"))
-        ctx["assets"] = ctx_assets(s, acct)
+            ctx["performance"] = ctx_performance(
+                s,
+                acct,
+                today,
+                args.get("chart-period"),
+            )
+        ctx["assets"] = ctx_assets(s, acct, today)
         return base.page(
             "accounts/page.jinja",
             title=title,
@@ -174,7 +184,7 @@ def account(uri: str) -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = base.today()
+    today = base.today_client()
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
@@ -183,7 +193,7 @@ def account(uri: str) -> str | flask.Response:
         if flask.request.method == "GET":
             return flask.render_template(
                 "accounts/edit.jinja",
-                acct=ctx_account(s, acct),
+                acct=ctx_account(s, acct, today),
             )
 
         values, _, _ = acct.get_value(today_ord, today_ord)
@@ -229,7 +239,12 @@ def performance(uri: str) -> flask.Response:
             "accounts/performance.jinja",
             acct={
                 "uri": uri,
-                "performance": ctx_performance(s, acct, args.get("chart-period")),
+                "performance": ctx_performance(
+                    s,
+                    acct,
+                    base.today_client(),
+                    args.get("chart-period"),
+                ),
             },
         )
     response = flask.make_response(html)
@@ -281,6 +296,7 @@ def validation(uri: str) -> str:
 def ctx_account(
     s: orm.Session,
     acct: Account,
+    today: datetime.date,
     *,
     skip_today: bool = False,
 ) -> AccountContext:
@@ -289,12 +305,12 @@ def ctx_account(
     Args:
         s: SQL session to use
         acct: Account to generate context for
+        today: Today's date
         skip_today: True will skip fetching today's value
 
     Returns:
         Dictionary HTML context
     """
-    today = base.today()
     today_ord = today.toordinal()
     if skip_today:
         current_value = Decimal()
@@ -359,6 +375,7 @@ def ctx_account(
 def ctx_performance(
     s: orm.Session,
     acct: Account,
+    today: datetime.date,
     period: str | None,
 ) -> PerformanceContext:
     """Get the context to build the account performance details.
@@ -366,13 +383,14 @@ def ctx_performance(
     Args:
         s: SQL session to use
         acct: Account to generate context for
+        today: Today's date
         period: Period string to get data for
 
     Returns:
         Dictionary HTML context
     """
     period = period or "1yr"
-    start, end = base.parse_period(period)
+    start, end = base.parse_period(period, today)
     end_ord = end.toordinal()
     start_ord = acct.opened_on_ord or end_ord if start is None else start.toordinal()
     labels, date_mode = base.date_labels(start_ord, end_ord)
@@ -432,17 +450,21 @@ def ctx_performance(
     }
 
 
-def ctx_assets(s: orm.Session, acct: Account) -> list[AssetContext] | None:
+def ctx_assets(
+    s: orm.Session,
+    acct: Account,
+    today: datetime.date,
+) -> list[AssetContext] | None:
     """Get the context to build the account assets.
 
     Args:
         s: SQL session to use
         acct: Account to generate context for
+        today: Today's date
 
     Returns:
         Dictionary HTML context
     """
-    today = base.today()
     today_ord = today.toordinal()
     start_ord = acct.opened_on_ord or today_ord
 
@@ -537,18 +559,23 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[AssetContext] | None:
     )
 
 
-def ctx_accounts(s: orm.Session, *, include_closed: bool = False) -> AllAccountsContext:
+def ctx_accounts(
+    s: orm.Session,
+    today: datetime.date,
+    *,
+    include_closed: bool = False,
+) -> AllAccountsContext:
     """Get the context to build the accounts table.
 
     Args:
         s: SQL session to use
+        today: Today's date
         include_closed: True will include Accounts marked closed, False will exclude
 
     Returns:
         AllAccountsContext
     """
     # Create sidebar context
-    today = base.today()
     today_ord = today.toordinal()
 
     assets = Decimal()
@@ -564,7 +591,7 @@ def ctx_accounts(s: orm.Session, *, include_closed: bool = False) -> AllAccounts
     if not include_closed:
         query = query.where(Account.closed.is_(False))
     for acct in query.all():
-        accounts[acct.id_] = ctx_account(s, acct, skip_today=True)
+        accounts[acct.id_] = ctx_account(s, acct, today, skip_today=True)
         if acct.closed:
             n_closed += 1
 
@@ -681,6 +708,7 @@ def txns(uri: str) -> str | flask.Response:
     with p.begin_session() as s:
         txn_table, title = transactions.ctx_table(
             s,
+            base.today_client(),
             args.get("search"),
             args.get("account"),
             args.get("category"),
@@ -752,6 +780,7 @@ def txns_options(uri: str) -> str:
         )
         options = transactions.ctx_options(
             tbl_query,
+            base.today_client(),
             accounts,
             base.tranaction_category_groups(s),
             selected_account,
