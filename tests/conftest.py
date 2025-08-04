@@ -230,7 +230,7 @@ def today() -> datetime.date:
     Returns:
         today datetime.date
     """
-    return datetime.datetime.now().astimezone().date()
+    return datetime.datetime.now(datetime.UTC).date()
 
 
 @pytest.fixture(scope="session")

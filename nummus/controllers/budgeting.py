@@ -135,7 +135,7 @@ def page() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.datetime.now().astimezone().date())
+        utils.start_of_month(base.today())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -572,7 +572,7 @@ def target(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
 
     with p.begin_session() as s:
         try:
@@ -672,7 +672,7 @@ def parse_target_form(
         target: Target to modify
         args: Arguments to use, from args or form
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
 
     period = args.get("period")
     if period is not None:
@@ -733,7 +733,7 @@ def sidebar() -> flask.Response:
     args = flask.request.args
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.datetime.now().astimezone().date())
+        utils.start_of_month(base.today())
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -942,7 +942,7 @@ def ctx_target(
         total_to_go = total_target - total_assigned
 
         on_track = assigned >= target_assigned
-        today = datetime.datetime.now().astimezone().date()
+        today = base.today()
         if month.year == today.year and month.month == today.month:
             # Move next_due_date to next weekday
             n_days = weekday - today.weekday()
@@ -1141,7 +1141,7 @@ def ctx_budget(
 
     month_str = month.isoformat()[:7]
     title = f"Budgeting {month_str}"
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
     )

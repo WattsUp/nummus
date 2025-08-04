@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
@@ -175,7 +174,7 @@ def account(uri: str) -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
 
     with p.begin_session() as s:
@@ -295,7 +294,7 @@ def ctx_account(
     Returns:
         Dictionary HTML context
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
     if skip_today:
         current_value = Decimal()
@@ -443,7 +442,7 @@ def ctx_assets(s: orm.Session, acct: Account) -> list[AssetContext] | None:
     Returns:
         Dictionary HTML context
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
     start_ord = acct.opened_on_ord or today_ord
 
@@ -549,7 +548,7 @@ def ctx_accounts(s: orm.Session, *, include_closed: bool = False) -> AllAccounts
         AllAccountsContext
     """
     # Create sidebar context
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
 
     assets = Decimal()

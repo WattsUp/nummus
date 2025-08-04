@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
@@ -86,7 +85,7 @@ def ctx_page(s: orm.Session) -> EFundContext:
     Returns:
         EFundContext
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()

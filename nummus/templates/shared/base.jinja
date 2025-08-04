@@ -8,6 +8,7 @@
     hx-on::history-cache-miss="progress.update(null, 0);progress.update(null, 0.3)"
     hx-on::history-cache-miss-load="progress.update(null, 1)"
     hx-on::history-cache-miss-load-error="nummusResponseError(event)"
+    hx-on::config-request="addTimezone(event)"
     hx-on::before-request="progress.update(event, 0)"
     hx-on::before-send="progress.update(event, 0.3)"
     hx-on::send-error="nummusSendError(event)"

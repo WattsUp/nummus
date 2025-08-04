@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 import operator
 from collections import defaultdict
 from decimal import Decimal
@@ -88,7 +87,7 @@ def ctx_allocation(s: orm.Session) -> AllocationContext:
     Returns:
         Dictionary HTML context
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
 
     asset_qtys: dict[int, Decimal] = defaultdict(Decimal)

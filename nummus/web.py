@@ -50,7 +50,7 @@ class FlaskExtension:
         app.context_processor(
             lambda: {
                 "version": __version__,
-                "current_year": datetime.datetime.now().astimezone().year,
+                "current_year": base.today().year,
                 "url_args": {},
             },
         )
@@ -95,6 +95,7 @@ class FlaskExtension:
             REMEMBER_COOKIE_SAMESITE="Lax",
             REMEMBER_COOKIE_DURATION=datetime.timedelta(days=28),
         )
+        app.after_request(base.update_client_timezone)
         app.after_request(base.change_redirect_to_htmx)
 
         login_manager = flask_login.LoginManager()

@@ -338,7 +338,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
     if flask.request.method == "GET":
         ctx: ValuationContext = {
@@ -398,7 +398,7 @@ def valuation(uri: str) -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
 
     with p.begin_session() as s:
         v = base.find(s, AssetValuation, uri)
@@ -510,7 +510,7 @@ def ctx_rows(
     """
     categories: dict[AssetCategory, list[RowContext]] = defaultdict(list)
 
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     today_ord = today.toordinal()
 
     accounts = Account.get_asset_qty_all(s, today_ord, today_ord)
@@ -710,7 +710,7 @@ def ctx_table(
     # There are no more if there wasn't enough for a full page
     no_more = len(valuations) < PAGE_LEN
 
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [

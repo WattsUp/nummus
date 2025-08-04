@@ -384,6 +384,16 @@ function onSelectKey(evt) {
   e.value = values[i % values.length];
 }
 
+/**
+ * Add current timezone to HTMX requests
+ *
+ * @param {Event} evt - Triggering event
+ */
+function addTimezone(evt) {
+  const d = new Date();
+  evt.detail.headers["Timezone-Offset"] = d.getTimezoneOffset();
+}
+
 /*
  * DELETE is supposed to use request parameters but form is way better
  * htmx 2.x followed the spec properly, revert

@@ -359,6 +359,38 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     return response
 
 
+def update_client_timezone(response: flask.Response) -> flask.Response:
+    """Update the client's timezone.
+
+    Args:
+        response: HTTP response
+
+    Returns:
+        Modified HTTP response if refresh is required
+    """
+    current_tz_minutes = int(flask.session.get("tz_minutes", 0))
+    tz_minutes = flask.request.headers.get(
+        "Timezone-Offset",
+        current_tz_minutes,
+        type=int,
+    )
+    if tz_minutes != current_tz_minutes:
+        response.headers["HX-Refresh"] = "true"
+    flask.session["tz_minutes"] = tz_minutes
+    return response
+
+
+def today() -> datetime.date:
+    """Get today's date in the client's timezone.
+
+    Returns:
+        Today in the client's timezone
+    """
+    tz_minutes = int(flask.session.get("tz_minutes", 0))
+    tz = datetime.timezone(datetime.timedelta(minutes=-tz_minutes))
+    return datetime.datetime.now(tz).date()
+
+
 def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
     """Change redirect responses to HX-Redirect.
 
@@ -422,21 +454,21 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     Raises:
         BadRequest: If period is unknown
     """
-    today = datetime.datetime.now().astimezone().date()
+    t = today()
     if period == "1yr":
-        start = datetime.date(today.year - 1, today.month, today.day)
+        start = datetime.date(t.year - 1, t.month, t.day)
     elif period == "ytd":
-        start = datetime.date(today.year, 1, 1)
+        start = datetime.date(t.year, 1, 1)
     elif period == "max":
         start = None
     elif m := re.match(r"(\d)m", period):
         n = min(0, -int(m.group(1)))
-        start = utils.date_add_months(today, n)
+        start = utils.date_add_months(t, n)
     else:
         msg = f"Unknown period '{period}'"
         raise exc.http.BadRequest(msg)
 
-    return start, today
+    return start, t
 
 
 def date_labels(start_ord: int, end_ord: int) -> DateLabels:
@@ -569,13 +601,12 @@ def validate_date(
         return "Required" if is_required else ""
 
     if max_future == 0:
-        today = datetime.datetime.now().astimezone().date()
-        if date > today:
+        if date > today():
             return "Cannot be in advance"
-    elif max_future is not None:
-        today = datetime.datetime.now().astimezone().date()
-        if date > (today + datetime.timedelta(days=max_future)):
-            return f"Only up to {utils.format_days(max_future)} in advance"
+    elif max_future is not None and date > (
+        today() + datetime.timedelta(days=max_future)
+    ):
+        return f"Only up to {utils.format_days(max_future)} in advance"
 
     if no_duplicates is None:
         return ""
@@ -668,15 +699,14 @@ def parse_date(
         msg = "Date must not be empty"
         raise ValueError(msg)
     if max_future == 0:
-        today = datetime.datetime.now().astimezone().date()
-        if date > today:
+        if date > today():
             msg = "Cannot be in advance"
             raise ValueError(msg)
-    elif max_future is not None:
-        today = datetime.datetime.now().astimezone().date()
-        if date > (today + datetime.timedelta(days=max_future)):
-            msg = f"Only up to {utils.format_days(max_future)} in advance"
-            raise ValueError(msg)
+    elif max_future is not None and date > (
+        today() + datetime.timedelta(days=max_future)
+    ):
+        msg = f"Only up to {utils.format_days(max_future)} in advance"
+        raise ValueError(msg)
 
     return date
 

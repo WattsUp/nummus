@@ -393,7 +393,7 @@ class Portfolio:
                 raise exc.FileAlreadyImportedError(date, path)
 
             i = importers.get_importer(path, path_debug, self._importers)
-            today = datetime.datetime.now().astimezone().date()
+            today = datetime.datetime.now(datetime.UTC).date()
 
             categories = TransactionCategory.map_name(s)
             # Reverse categories for LUT
@@ -921,7 +921,7 @@ class Portfolio:
             Assets that were updated
             [AssetUpdate for each]
         """
-        today = datetime.datetime.now().astimezone().date()
+        today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
         updated: list[AssetUpdate] = []
 

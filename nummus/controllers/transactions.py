@@ -261,7 +261,7 @@ def new() -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
 
     with p.begin_session() as s:
         query = (
@@ -829,7 +829,7 @@ def ctx_txn(
     # Run similar transaction
     similar_id = txn.find_similar(set_property=False)
     similar_uri = None if similar_id is None else Transaction.id_to_uri(similar_id)
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     return {
         "uri": txn.uri,
         "account": accounts[account_id][0],
@@ -937,7 +937,7 @@ def ctx_options(
     """
     query = tbl_query.query.order_by(None)
 
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [

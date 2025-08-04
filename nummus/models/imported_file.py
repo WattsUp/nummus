@@ -21,7 +21,7 @@ class ImportedFile(Base):
 
     hash_: ORMStr = orm.MappedColumn(unique=True)
     date_ord: ORMInt = orm.MappedColumn(
-        default=lambda: datetime.datetime.now().astimezone().date().toordinal(),
+        default=lambda: datetime.datetime.now(datetime.UTC).date().toordinal(),
     )
 
     __table_args__ = (*string_column_args("hash_"),)

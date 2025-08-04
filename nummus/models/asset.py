@@ -534,7 +534,7 @@ class Asset(Base):
 
         s = obj_session(self)
 
-        today = datetime.datetime.now().astimezone().date()
+        today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
 
         query = s.query(TransactionSplit).with_entities(
