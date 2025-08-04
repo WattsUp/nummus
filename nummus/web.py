@@ -49,8 +49,6 @@ class FlaskExtension:
         # Inject common variables into templates
         app.context_processor(
             lambda: {
-                "version": __version__,
-                "current_year": base.today().year,
                 "url_args": {},
             },
         )

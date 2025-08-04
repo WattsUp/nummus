@@ -10,7 +10,7 @@ import flask
 import pytest
 
 import nummus
-from nummus import controllers
+from nummus import __version__, controllers
 from nummus import exceptions as exc
 from nummus import utils
 from nummus.controllers import base
@@ -52,17 +52,17 @@ def test_find_400(session: orm.Session) -> None:
 )
 def test_parse_period(today: datetime.date, period: str, months: int | None) -> None:
     start = None if months is None else utils.date_add_months(today, months)
-    assert base.parse_period(period) == (start, today)
+    assert base.parse_period(period, today) == (start, today)
 
 
 def test_parse_period_ytd(today: datetime.date) -> None:
     start = datetime.date(today.year, 1, 1)
-    assert base.parse_period("ytd") == (start, today)
+    assert base.parse_period("ytd", today) == (start, today)
 
 
-def test_parse_period_400() -> None:
+def test_parse_period_400(today: datetime.date) -> None:
     with pytest.raises(exc.http.BadRequest):
-        base.parse_period("")
+        base.parse_period("", today)
 
 
 def test_date_labels_days(today: datetime.date) -> None:
@@ -108,12 +108,15 @@ def test_ctx_to_json_unknown_type() -> None:
         base.validate_string,
         base.validate_real,
         base.validate_int,
-        base.validate_date,
     ],
     ids=conftest.id_func,
 )
 def test_validate_required(func: Callable) -> None:
     assert func("", is_required=True) == "Required"
+
+
+def test_validate_required_date(today: datetime.date) -> None:
+    assert base.validate_date("", today, is_required=True) == "Required"
 
 
 @pytest.mark.parametrize("s", ["", "abc"])
@@ -151,8 +154,8 @@ def test_validate_string_duplicate_self(session: orm.Session, account: Account) 
 
 @pytest.mark.parametrize("s", ["", "2025-01-01"])
 @pytest.mark.parametrize("max_future", [7, 0, None])
-def test_validate_date(s: str, max_future: int | None) -> None:
-    assert not base.validate_date(s, max_future=max_future)
+def test_validate_date(today: datetime.date, s: str, max_future: int | None) -> None:
+    assert not base.validate_date(s, today, max_future=max_future)
 
 
 @pytest.mark.parametrize(
@@ -160,12 +163,15 @@ def test_validate_date(s: str, max_future: int | None) -> None:
     [
         base.validate_real,
         base.validate_int,
-        base.validate_date,
     ],
     ids=conftest.id_func,
 )
 def test_validate_unable_to_parse(func: Callable) -> None:
     assert func("a") == "Unable to parse"
+
+
+def test_validate_unable_to_parse_date(today: datetime.date) -> None:
+    assert base.validate_date("a", today) == "Unable to parse"
 
 
 @pytest.mark.parametrize(
@@ -176,8 +182,12 @@ def test_validate_unable_to_parse(func: Callable) -> None:
         (None, ""),
     ],
 )
-def test_validate_date_future(max_future: int | None, target: str) -> None:
-    assert base.validate_date("2190-01-01", max_future=max_future) == target
+def test_validate_date_future(
+    today: datetime.date,
+    max_future: int | None,
+    target: str,
+) -> None:
+    assert base.validate_date("2190-01-01", today, max_future=max_future) == target
 
 
 @pytest.mark.parametrize(
@@ -192,21 +202,28 @@ def test_validate_date_future(max_future: int | None, target: str) -> None:
         ("2000-01-01", 0, None),
     ],
 )
-def test_parse_date(s: str, max_future: int | None, target: str | None) -> None:
+def test_parse_date(
+    today: datetime.date,
+    s: str,
+    max_future: int | None,
+    target: str | None,
+) -> None:
     if target:
         with pytest.raises(ValueError, match=target):
-            base.parse_date(s, max_future=max_future)
+            base.parse_date(s, today, max_future=max_future)
     else:
-        date = base.parse_date(s, max_future=max_future)
+        date = base.parse_date(s, today, max_future=max_future)
         assert isinstance(date, datetime.date)
 
 
 def test_validate_date_duplicate(
+    today: datetime.date,
     session: orm.Session,
     asset_valuation: AssetValuation,
 ) -> None:
     err = base.validate_date(
         asset_valuation.date.isoformat(),
+        today,
         session=session,
         no_duplicates=AssetValuation.date_ord,
     )
@@ -234,12 +251,12 @@ def test_validate_int_not_positive(s: str) -> None:
     assert base.validate_int(s, is_positive=True) == "Must be positive"
 
 
-def test_ctx_base() -> None:
+def test_ctx_base(today: datetime.date) -> None:
     base.PAGES.clear()
     base.TEMPLATES.clear()
     templates = Path(nummus.__file__).with_name("templates")
 
-    ctx = base.ctx_base(templates, is_encrypted=False, debug=True)
+    ctx = base.ctx_base(templates, today, is_encrypted=False, debug=True)
 
     assert isinstance(ctx["nav_items"], list)
     for group in ctx["nav_items"]:
@@ -254,6 +271,8 @@ def test_ctx_base() -> None:
     assert ctx["icons"].count(",") > 50
     assert "arrow_split" in ctx["icons"]
     assert "warning" in ctx["icons"]
+    assert ctx["version"] == __version__
+    assert ctx["current_year"] == today.year
 
     assert base.PAGES
     assert base.TEMPLATES
@@ -463,6 +482,24 @@ def test_follow_links(web_client: WebClient) -> None:
     visit_all_links("/", "GET")
     for link in deletes:
         visit_all_links(link, "DELETE", hx=True)
+
+
+def test_update_client_timezone_refresh(web_client: WebClient) -> None:
+    _, headers = web_client.GET(
+        "common.page_dashboard",
+        headers={"Timezone-Offset": 8 * 60},
+    )
+    assert "HX-Refresh" in headers
+
+
+def test_update_client_timezone(web_client: WebClient) -> None:
+    with web_client.session() as session:
+        session["tz_minutes"] = 8 * 60
+        _, headers = web_client.GET(
+            "common.page_dashboard",
+            headers={"Timezone-Offset": 8 * 60},
+        )
+    assert "HX-Refresh" in headers
 
 
 def test_change_redirect_no_changes() -> None:
