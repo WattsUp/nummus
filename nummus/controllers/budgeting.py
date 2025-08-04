@@ -379,6 +379,7 @@ def move(uri: str) -> str | flask.Response:
             "available": src_available,
             "month": month_str,
             "options": options,
+            "destination": args.get("destination"),
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",

@@ -46,7 +46,12 @@
         {% if not loop.previtem or loop.previtem[3] != group %}
           <option disabled>{{ group.pretty }}</option>
         {% endif %}
-        <option value="{{ uri }}">{{ name }} {{ available | money }}</option>
+        <option
+          value="{{ uri }}"
+          {% if uri == category.destination %}selected{% endif %}
+        >
+          {{ name }} {{ available | money }}
+        </option>
       {% endfor %}
     </select>
     <div>
