@@ -134,8 +134,9 @@ def page() -> flask.Response:
     p = web.portfolio
     args = flask.request.args
     month_str = args.get("month")
+    today = base.today_client()
     month = (
-        utils.start_of_month(datetime.datetime.now().astimezone().date())
+        utils.start_of_month(today)
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -145,6 +146,7 @@ def page() -> flask.Response:
         data = BudgetAssignment.get_monthly_available(s, month)
         budget, title = ctx_budget(
             s,
+            today,
             month,
             data.categories,
             data.assignable,
@@ -153,6 +155,7 @@ def page() -> flask.Response:
         )
         sidebar = ctx_sidebar(
             s,
+            today,
             month,
             data.categories,
             data.future_assigned,
@@ -181,7 +184,12 @@ def validation() -> flask.Response | str:
 
     if "date" in args:
         return (
-            base.validate_date(args["date"], is_required=True, max_future=None)
+            base.validate_date(
+                args["date"],
+                base.today_client(),
+                is_required=True,
+                max_future=None,
+            )
             or update_target_desc()
         )
 
@@ -221,6 +229,7 @@ def assign(uri: str) -> str:
     args = flask.request.args
 
     month_str = args["month"]
+    today = base.today_client()
     month = datetime.date.fromisoformat(month_str + "-01")
     month_ord = month.toordinal()
 
@@ -261,6 +270,7 @@ def assign(uri: str) -> str:
         data = BudgetAssignment.get_monthly_available(s, month)
         budget, _ = ctx_budget(
             s,
+            today,
             month,
             data.categories,
             data.assignable,
@@ -270,6 +280,7 @@ def assign(uri: str) -> str:
         sidebar_uri = form.get("sidebar") or None
         sidebar = ctx_sidebar(
             s,
+            today,
             month,
             data.categories,
             data.future_assigned,
@@ -572,7 +583,7 @@ def target(uri: str) -> str | flask.Response:
     """
     p = web.portfolio
     args = flask.request.args if flask.request.method == "GET" else flask.request.form
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today_client()
 
     with p.begin_session() as s:
         try:
@@ -672,7 +683,7 @@ def parse_target_form(
         target: Target to modify
         args: Arguments to use, from args or form
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today_client()
 
     period = args.get("period")
     if period is not None:
@@ -731,9 +742,10 @@ def sidebar() -> flask.Response:
     """
     p = web.portfolio
     args = flask.request.args
+    today = base.today_client()
     month_str = args.get("month")
     month = (
-        utils.start_of_month(datetime.datetime.now().astimezone().date())
+        utils.start_of_month(today)
         if month_str is None
         else datetime.date.fromisoformat(month_str + "-01")
     )
@@ -744,7 +756,14 @@ def sidebar() -> flask.Response:
             s,
             month,
         )
-        sidebar = ctx_sidebar(s, month, data.categories, data.future_assigned, uri)
+        sidebar = ctx_sidebar(
+            s,
+            today,
+            month,
+            data.categories,
+            data.future_assigned,
+            uri,
+        )
         html = flask.render_template(
             "budgeting/sidebar.jinja",
             ctx={"month": month_str},
@@ -765,6 +784,7 @@ def sidebar() -> flask.Response:
 
 def ctx_sidebar(
     s: orm.Session,
+    today: datetime.date,
     month: datetime.date,
     categories: dict[int, BudgetAvailableCategory],
     future_assigned: Decimal,
@@ -774,6 +794,7 @@ def ctx_sidebar(
 
     Args:
         s: SQL session to use
+        today: Today's date
         month: Month of table
         categories: Dict of categories from Budget.get_monthly_available
         future_assigned: Assigned amount in the future from Budget.get_monthly_available
@@ -815,6 +836,7 @@ def ctx_sidebar(
             else:
                 target_ctx = ctx_target(
                     tar,
+                    today,
                     month,
                     assigned,
                     available,
@@ -868,6 +890,7 @@ def ctx_sidebar(
         }
     target_ctx = ctx_target(
         tar,
+        today,
         month,
         assigned,
         available,
@@ -889,6 +912,7 @@ def ctx_sidebar(
 
 def ctx_target(
     tar: Target,
+    today: datetime.date,
     month: datetime.date,
     assigned: Decimal,
     available: Decimal,
@@ -898,6 +922,7 @@ def ctx_target(
 
     Args:
         tar: Target to get context for
+        today: Today's date
         month: Month to check progress during
         assigned: Amount assigned this month
         available: Available balance this month
@@ -942,7 +967,6 @@ def ctx_target(
         total_to_go = total_target - total_assigned
 
         on_track = assigned >= target_assigned
-        today = datetime.datetime.now().astimezone().date()
         if month.year == today.year and month.month == today.month:
             # Move next_due_date to next weekday
             n_days = weekday - today.weekday()
@@ -1028,6 +1052,7 @@ def ctx_target(
 
 def ctx_budget(
     s: orm.Session,
+    today: datetime.date,
     month: datetime.date,
     categories: dict[int, BudgetAvailableCategory],
     assignable: Decimal,
@@ -1038,6 +1063,7 @@ def ctx_budget(
 
     Args:
         s: SQL session to use
+        today: Today's date
         month: Month of table
         categories: Dict of categories from Budget.get_monthly_available
         assignable: Assignable amount from Budget.get_monthly_available
@@ -1103,6 +1129,7 @@ def ctx_budget(
         else:
             target_ctx = ctx_target(
                 tar,
+                today,
                 month,
                 assigned,
                 available,
@@ -1141,7 +1168,6 @@ def ctx_budget(
 
     month_str = month.isoformat()[:7]
     title = f"Budgeting {month_str}"
-    today = datetime.datetime.now().astimezone().date()
     month_next = (
         None if month > today else utils.date_add_months(month, 1).isoformat()[:7]
     )

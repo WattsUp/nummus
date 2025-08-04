@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import datetime
 from typing import TYPE_CHECKING, TypedDict
 
 import flask
@@ -12,6 +11,7 @@ from nummus.controllers import base
 from nummus.models.budget import BudgetAssignment
 
 if TYPE_CHECKING:
+    import datetime
     from decimal import Decimal
 
     from sqlalchemy import orm
@@ -59,7 +59,7 @@ def page() -> flask.Response:
         return base.page(
             "emergency-fund/page.jinja",
             "Emergency Fund",
-            ctx=ctx_page(s),
+            ctx=ctx_page(s, base.today_client()),
         )
 
 
@@ -73,20 +73,20 @@ def dashboard() -> str:
     with p.begin_session() as s:
         return flask.render_template(
             "emergency-fund/dashboard.jinja",
-            ctx=ctx_page(s),
+            ctx=ctx_page(s, base.today_client()),
         )
 
 
-def ctx_page(s: orm.Session) -> EFundContext:
+def ctx_page(s: orm.Session, today: datetime.date) -> EFundContext:
     """Get the context to build the emergency fund page.
 
     Args:
         s: SQL session to use
+        today: Today's date
 
     Returns:
         EFundContext
     """
-    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
     start = utils.date_add_months(today, -6)
     start_ord = start.toordinal()

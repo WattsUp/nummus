@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import zoneinfo
 from decimal import Decimal
 from typing import TYPE_CHECKING
+
+import time_machine
 
 from nummus.commands.summarize import _Summary, Summarize
 
 if TYPE_CHECKING:
+    import datetime
+
     import pytest
     from sqlalchemy import orm
 
@@ -34,14 +39,19 @@ def test_empty_summary(
 
 
 def test_non_empty_summary(
+    utc: datetime.datetime,
     empty_portfolio: Portfolio,
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
 ) -> None:
     _ = transactions
     _ = asset_valuation
+
     c = Summarize(empty_portfolio.path, None, include_all=False)
-    result = c._get_summary()  # noqa: SLF001
+
+    utc = utc.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
+    with time_machine.travel(utc):
+        result = c._get_summary()  # noqa: SLF001
 
     target: _Summary = {
         "n_accounts": 1,
@@ -121,6 +131,7 @@ def test_empty_print(
 
 def test_non_empty_print(
     capsys: pytest.CaptureFixture,
+    utc: datetime.datetime,
     empty_portfolio: Portfolio,
     transactions: list[Transaction],
     asset_valuation: AssetValuation,
@@ -129,7 +140,10 @@ def test_non_empty_print(
     _ = asset_valuation
 
     c = Summarize(empty_portfolio.path, None, include_all=False)
-    assert c.run() == 0
+
+    utc = utc.replace(tzinfo=zoneinfo.ZoneInfo("UTC"))
+    with time_machine.travel(utc):
+        assert c.run() == 0
 
     captured = capsys.readouterr()
     # big output use "" in asserts

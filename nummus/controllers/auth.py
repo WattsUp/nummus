@@ -97,6 +97,7 @@ def page_login() -> str | werkzeug.Response:
         title="Login - nummus",
         **base.ctx_base(
             templates,
+            base.today_client(),
             is_encrypted=p.is_encrypted,
             debug=flask.current_app.debug,
         ),

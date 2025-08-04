@@ -24,11 +24,12 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize("skip_today", [False, True])
 def test_ctx_account_empty(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     skip_today: bool,
 ) -> None:
-    ctx = accounts.ctx_account(session, account, skip_today=skip_today)
+    ctx = accounts.ctx_account(session, account, today, skip_today=skip_today)
 
     target: accounts.AccountContext = {
         "uri": account.uri,
@@ -52,11 +53,12 @@ def test_ctx_account_empty(
 
 
 def test_ctx_account(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     transactions: list[Transaction],
 ) -> None:
-    ctx = accounts.ctx_account(session, account)
+    ctx = accounts.ctx_account(session, account, today)
 
     target: accounts.AccountContext = {
         "uri": account.uri,
@@ -87,7 +89,7 @@ def test_ctx_performance_empty(
     start = utils.date_add_months(today, -12)
     labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, "1yr")
+    ctx = accounts.ctx_performance(session, account, today, "1yr")
 
     target: accounts.PerformanceContext = {
         "pnl_past_year": Decimal(),
@@ -119,7 +121,7 @@ def test_ctx_performance(
     session.commit()
     labels, date_mode = base.date_labels(transactions[0].date_ord, today.toordinal())
 
-    ctx = accounts.ctx_performance(session, account, "max")
+    ctx = accounts.ctx_performance(session, account, today, "max")
 
     twrr = Decimal(8) / Decimal(100)
     twrr_per_annum = (1 + twrr) ** (utils.DAYS_IN_YEAR / len(labels)) - 1
@@ -145,13 +147,15 @@ def test_ctx_performance(
 
 
 def test_ctx_assets_empty(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
 ) -> None:
-    assert accounts.ctx_assets(session, account) is None
+    assert accounts.ctx_assets(session, account, today) is None
 
 
 def test_ctx_assets(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     asset: Asset,
@@ -162,7 +166,7 @@ def test_ctx_assets(
     asset_valuation.date_ord -= 7
     session.commit()
 
-    ctx = accounts.ctx_assets(session, account)
+    ctx = accounts.ctx_assets(session, account, today)
 
     target: list[accounts.AssetContext] = [
         {
@@ -191,8 +195,8 @@ def test_ctx_assets(
     assert ctx == target
 
 
-def test_ctx_accounts_empty(session: orm.Session) -> None:
-    ctx = accounts.ctx_accounts(session)
+def test_ctx_accounts_empty(today: datetime.date, session: orm.Session) -> None:
+    ctx = accounts.ctx_accounts(session, today)
 
     target: accounts.AllAccountsContext = {
         "net_worth": Decimal(),
@@ -208,6 +212,7 @@ def test_ctx_accounts_empty(session: orm.Session) -> None:
 
 
 def test_ctx_accounts(
+    today: datetime.date,
     session: orm.Session,
     account: Account,
     account_investments: Account,
@@ -219,7 +224,7 @@ def test_ctx_accounts(
     account_investments.closed = True
     session.commit()
 
-    ctx = accounts.ctx_accounts(session, include_closed=True)
+    ctx = accounts.ctx_accounts(session, today, include_closed=True)
 
     target: accounts.AllAccountsContext = {
         "net_worth": Decimal(108),
@@ -230,11 +235,11 @@ def test_ctx_accounts(
         "categories": {
             account.category: (
                 Decimal(108),
-                [accounts.ctx_account(session, account)],
+                [accounts.ctx_account(session, account, today)],
             ),
             account_investments.category: (
                 Decimal(),
-                [accounts.ctx_account(session, account_investments)],
+                [accounts.ctx_account(session, account_investments, today)],
             ),
         },
         "include_closed": True,

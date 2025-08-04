@@ -32,7 +32,7 @@ class OutlierAssetPrice(Base):
 
     @override
     def test(self, s: orm.Session) -> None:
-        today = datetime.datetime.now().astimezone().date()
+        today = datetime.datetime.now(datetime.UTC).date()
         today_ord = today.toordinal()
         start_ord = (
             s.query(func.min(TransactionSplit.date_ord))

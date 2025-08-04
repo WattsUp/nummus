@@ -25,7 +25,7 @@ def test_empty(today: datetime.date, session: orm.Session) -> None:
     dates = utils.range_date(start.toordinal(), today.toordinal())
     n = len(dates)
 
-    ctx = emergency_fund.ctx_page(session)
+    ctx = emergency_fund.ctx_page(session, today)
 
     target: emergency_fund.EFundContext = {
         "chart": {
@@ -74,7 +74,7 @@ def test_ctx_underfunded(
     session.add_all((txn, t_split))
     session.commit()
 
-    ctx = emergency_fund.ctx_page(session)
+    ctx = emergency_fund.ctx_page(session, today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(34), abs=Decimal(1))
@@ -116,7 +116,7 @@ def test_ctx_overfunded(
     session.add_all((txn, t_split))
     session.commit()
 
-    ctx = emergency_fund.ctx_page(session)
+    ctx = emergency_fund.ctx_page(session, today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(347), abs=Decimal(1))
@@ -158,7 +158,7 @@ def test_ctx(
     session.add_all((txn, t_split))
     session.commit()
 
-    ctx = emergency_fund.ctx_page(session)
+    ctx = emergency_fund.ctx_page(session, today)
 
     assert ctx["current"] == Decimal(100)
     assert ctx["days"] == pytest.approx(Decimal(119), abs=Decimal(1))

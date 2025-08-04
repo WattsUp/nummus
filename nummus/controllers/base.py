@@ -13,6 +13,7 @@ from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
 
+from nummus import __version__
 from nummus import exceptions as exc
 from nummus import utils, web
 from nummus.models import (
@@ -59,6 +60,8 @@ class BaseContext(TypedDict):
 
     nav_items: list[PageGroup]
     icons: str
+    version: str
+    current_year: int
 
 
 class DateLabels(NamedTuple):
@@ -112,11 +115,18 @@ TEMPLATES: dict[Path, tuple[int, set[str]]] = {}
 PAGES: list[PageGroup] = []
 
 
-def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext:
+def ctx_base(
+    templates: Path,
+    today: datetime.date,
+    *,
+    is_encrypted: bool,
+    debug: bool,
+) -> BaseContext:
     """Get the context to build the base page.
 
     Args:
         templates: Path to templates
+        today: Today's date
         is_encrypted: Portfolio encrypted status
         debug: Flask app debug status
 
@@ -241,6 +251,8 @@ def ctx_base(templates: Path, *, is_encrypted: bool, debug: bool) -> BaseContext
     return {
         "nav_items": PAGES,
         "icons": ",".join(sorted(icons)),
+        "version": __version__,
+        "current_year": today.year,
     }
 
 
@@ -346,6 +358,7 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
             title=f"{title} - nummus",
             **ctx_base(
                 templates,
+                today_client(),
                 is_encrypted=p.is_encrypted,
                 debug=flask.current_app.debug,
             ),
@@ -357,6 +370,38 @@ def page(content_template: str, title: str, **context: object) -> flask.Response
     response = flask.make_response(html)
     response.headers["Vary"] = "HX-Request"
     return response
+
+
+def update_client_timezone(response: flask.Response) -> flask.Response:
+    """Update the client's timezone.
+
+    Args:
+        response: HTTP response
+
+    Returns:
+        Modified HTTP response if refresh is required
+    """
+    current_tz_minutes = int(flask.session.get("tz_minutes", 0))
+    tz_minutes = flask.request.headers.get(
+        "Timezone-Offset",
+        current_tz_minutes,
+        type=int,
+    )
+    if tz_minutes != current_tz_minutes:
+        response.headers["HX-Refresh"] = "true"
+    flask.session["tz_minutes"] = tz_minutes
+    return response
+
+
+def today_client() -> datetime.date:
+    """Get today's date in the client's timezone.
+
+    Returns:
+        Today in the client's timezone
+    """
+    tz_minutes = int(flask.session.get("tz_minutes", 0))
+    tz = datetime.timezone(datetime.timedelta(minutes=-tz_minutes))
+    return datetime.datetime.now(tz).date()
 
 
 def change_redirect_to_htmx(response: flask.Response) -> flask.Response:
@@ -409,11 +454,15 @@ def find[T: Base](s: orm.Session, cls: type[T], uri: str) -> T:
     return obj
 
 
-def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
+def parse_period(
+    period: str,
+    today: datetime.date,
+) -> tuple[datetime.date | None, datetime.date]:
     """Parse time period from arguments.
 
     Args:
         period: Name of period
+        today: Today's date
 
     Returns:
         start, end dates
@@ -422,7 +471,6 @@ def parse_period(period: str) -> tuple[datetime.date | None, datetime.date]:
     Raises:
         BadRequest: If period is unknown
     """
-    today = datetime.datetime.now().astimezone().date()
     if period == "1yr":
         start = datetime.date(today.year - 1, today.month, today.day)
     elif period == "ytd":
@@ -540,6 +588,7 @@ def _test_duplicates(
 
 def validate_date(
     value: str,
+    today: datetime.date,
     *,
     is_required: bool = False,
     max_future: int | None = utils.DAYS_IN_WEEK,
@@ -551,6 +600,7 @@ def validate_date(
 
     Args:
         value: Date string to test
+        today: Today's date
         is_required: True will require the value be non-empty
         max_future: Maximum number of days date is allowed in the future
         session: SQL session to use for no_duplicates
@@ -569,13 +619,12 @@ def validate_date(
         return "Required" if is_required else ""
 
     if max_future == 0:
-        today = datetime.datetime.now().astimezone().date()
         if date > today:
             return "Cannot be in advance"
-    elif max_future is not None:
-        today = datetime.datetime.now().astimezone().date()
-        if date > (today + datetime.timedelta(days=max_future)):
-            return f"Only up to {utils.format_days(max_future)} in advance"
+    elif max_future is not None and date > (
+        today + datetime.timedelta(days=max_future)
+    ):
+        return f"Only up to {utils.format_days(max_future)} in advance"
 
     if no_duplicates is None:
         return ""
@@ -644,6 +693,7 @@ def validate_int(
 
 def parse_date(
     value: str,
+    today: datetime.date,
     *,
     max_future: int | None = utils.DAYS_IN_WEEK,
 ) -> datetime.date:
@@ -651,6 +701,7 @@ def parse_date(
 
     Args:
         value: Raw string to parse
+        today: Today's date
         max_future: Maximum number of days date is allowed in the future
 
     Returns:
@@ -668,15 +719,14 @@ def parse_date(
         msg = "Date must not be empty"
         raise ValueError(msg)
     if max_future == 0:
-        today = datetime.datetime.now().astimezone().date()
         if date > today:
             msg = "Cannot be in advance"
             raise ValueError(msg)
-    elif max_future is not None:
-        today = datetime.datetime.now().astimezone().date()
-        if date > (today + datetime.timedelta(days=max_future)):
-            msg = f"Only up to {utils.format_days(max_future)} in advance"
-            raise ValueError(msg)
+    elif max_future is not None and date > (
+        today + datetime.timedelta(days=max_future)
+    ):
+        msg = f"Only up to {utils.format_days(max_future)} in advance"
+        raise ValueError(msg)
 
     return date
 

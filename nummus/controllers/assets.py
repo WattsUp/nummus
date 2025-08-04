@@ -101,7 +101,7 @@ def page_all() -> flask.Response:
     include_unheld = "include-unheld" in flask.request.args
 
     with p.begin_session() as s:
-        categories = ctx_rows(s, include_unheld=include_unheld)
+        categories = ctx_rows(s, base.today_client(), include_unheld=include_unheld)
 
     return base.page(
         "assets/page-all.jinja",
@@ -133,6 +133,7 @@ def page(uri: str) -> flask.Response:
         ctx = ctx_asset(
             s,
             a,
+            base.today_client(),
             args.get("period"),
             args.get("start"),
             args.get("end"),
@@ -175,6 +176,7 @@ def asset(uri: str) -> str | flask.Response:
                 asset=ctx_asset(
                     s,
                     a,
+                    base.today_client(),
                     args.get("period"),
                     args.get("start"),
                     args.get("end"),
@@ -216,7 +218,7 @@ def performance(uri: str) -> flask.Response:
             "assets/performance.jinja",
             asset={
                 "uri": uri,
-                "performance": ctx_performance(s, a, period),
+                "performance": ctx_performance(s, a, base.today_client(), period),
             },
         )
     response = flask.make_response(html)
@@ -248,6 +250,7 @@ def table(uri: str) -> str | flask.Response:
         val_table = ctx_table(
             s,
             a,
+            base.today_client(),
             args.get("period"),
             args.get("start"),
             args.get("end"),
@@ -317,6 +320,7 @@ def validation(uri: str) -> str:
 
             return base.validate_date(
                 args["date"],
+                base.today_client(),
                 is_required=True,
                 session=s,
                 no_duplicates=AssetValuation.date_ord,
@@ -338,7 +342,7 @@ def new_valuation(uri: str) -> str | flask.Response:
     Returns:
         string HTML response
     """
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today_client()
     date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
     if flask.request.method == "GET":
         ctx: ValuationContext = {
@@ -356,7 +360,7 @@ def new_valuation(uri: str) -> str | flask.Response:
 
     form = flask.request.form
     try:
-        date = base.parse_date(form["date"])
+        date = base.parse_date(form["date"], today)
     except ValueError as e:
         return base.error(str(e))
     value = utils.evaluate_real_statement(form["value"], precision=6)
@@ -398,7 +402,7 @@ def valuation(uri: str) -> str | flask.Response:
         string HTML response
     """
     p = web.portfolio
-    today = datetime.datetime.now().astimezone().date()
+    today = base.today_client()
 
     with p.begin_session() as s:
         v = base.find(s, AssetValuation, uri)
@@ -425,7 +429,7 @@ def valuation(uri: str) -> str | flask.Response:
 
         form = flask.request.form
         try:
-            date = base.parse_date(form["date"])
+            date = base.parse_date(form["date"], today)
         except ValueError as e:
             return base.error(str(e))
         value = utils.evaluate_real_statement(form["value"], precision=6)
@@ -496,6 +500,7 @@ def update() -> str | flask.Response:
 
 def ctx_rows(
     s: orm.Session,
+    today: datetime.date,
     *,
     include_unheld: bool,
 ) -> dict[AssetCategory, list[RowContext]]:
@@ -503,6 +508,7 @@ def ctx_rows(
 
     Args:
         s: SQL session to use
+        today: Today's date
         include_unheld: True will include assets with zero current quantity
 
     Returns:
@@ -510,7 +516,6 @@ def ctx_rows(
     """
     categories: dict[AssetCategory, list[RowContext]] = defaultdict(list)
 
-    today = datetime.datetime.now().astimezone().date()
     today_ord = today.toordinal()
 
     accounts = Account.get_asset_qty_all(s, today_ord, today_ord)
@@ -550,6 +555,7 @@ def ctx_rows(
 def ctx_asset(
     s: orm.Session,
     a: Asset,
+    today: datetime.date,
     period: str | None,
     start: str | None,
     end: str | None,
@@ -561,6 +567,7 @@ def ctx_asset(
     Args:
         s: SQL session to use
         a: Asset to generate context for
+        today: Today's date
         period: Period to get table for
         start: Start of custom period
         end: End of custom period
@@ -592,24 +599,30 @@ def ctx_asset(
         "category_type": AssetCategory,
         "value": current_value,
         "value_date": current_date,
-        "performance": ctx_performance(s, a, period_chart),
-        "table": ctx_table(s, a, period, start, end, page),
+        "performance": ctx_performance(s, a, today, period_chart),
+        "table": ctx_table(s, a, today, period, start, end, page),
     }
 
 
-def ctx_performance(s: orm.Session, a: Asset, period: str | None) -> PerformanceContext:
+def ctx_performance(
+    s: orm.Session,
+    a: Asset,
+    today: datetime.date,
+    period: str | None,
+) -> PerformanceContext:
     """Get the context to build the asset performance details.
 
     Args:
         s: SQL session to use
         a: Asset to generate context for
+        today: Today's date
         period: Chart-period to fetch performance for
 
     Returns:
         Dictionary HTML context
     """
     period = period or "1yr"
-    start, end = base.parse_period(period)
+    start, end = base.parse_period(period, today)
     end_ord = end.toordinal()
     if start is None:
         start_ord = (
@@ -636,6 +649,7 @@ def ctx_performance(s: orm.Session, a: Asset, period: str | None) -> Performance
 def ctx_table(
     s: orm.Session,
     a: Asset,
+    today: datetime.date,
     period: str | None,
     start: str | None,
     end: str | None,
@@ -646,6 +660,7 @@ def ctx_table(
     Args:
         s: SQL session to use
         a: Asset to get valuations for
+        today: Today's date
         period: Period to get table for
         start: Start of custom period
         end: End of custom period
@@ -710,7 +725,6 @@ def ctx_table(
     # There are no more if there wasn't enough for a full page
     no_more = len(valuations) < PAGE_LEN
 
-    today = datetime.datetime.now().astimezone().date()
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [

@@ -15,6 +15,7 @@ from nummus.controllers.base import HTTP_CODE_OK, HTTP_CODE_REDIRECT
 
 if TYPE_CHECKING:
     import contextlib
+    import datetime
     from collections.abc import Generator
 
     import werkzeug.datastructures
@@ -166,6 +167,8 @@ class TreeNode(NamedTuple):
             "hx-on::history-cache-miss",
             "hx-on::history-cache-miss-load",
             "hx-on::history-cache-miss-load-error",
+            # In the order the events fire
+            "hx-on::config-request",
             "hx-on::before-request",
             "hx-on::before-send",
             "hx-on::send-error",
@@ -259,11 +262,11 @@ class HTMLValidator:
         html = re.sub(r" ?> ?", ">", html)
         return re.sub(r" ?< ?", "<", html)
 
-    def check_icons(self) -> None:
+    def check_icons(self, today: datetime.date) -> None:
         """Check all icons seen are in ctx_base."""
         templates = Path(nummus.__file__).with_name("templates")
 
-        ctx = base.ctx_base(templates, is_encrypted=False, debug=True)
+        ctx = base.ctx_base(templates, today, is_encrypted=False, debug=True)
         icons = set(ctx["icons"].split(","))
         # All icons seen should be in ctx_base
         # Might not have seen all so extra is okay
@@ -271,7 +274,7 @@ class HTMLValidator:
 
 
 @pytest.fixture(scope="session")
-def valid_html() -> Generator[HTMLValidator]:
+def valid_html(today: datetime.date) -> Generator[HTMLValidator]:
     """Returns a HTMLValidator.
 
     Yields:
@@ -280,7 +283,7 @@ def valid_html() -> Generator[HTMLValidator]:
     html_validator = HTMLValidator()
     yield html_validator
 
-    html_validator.check_icons()
+    html_validator.check_icons(today)
 
 
 class WebClient:
@@ -298,7 +301,7 @@ class WebClient:
         Returns:
             URL
         """
-        with self._flask_app.app_context(), self._flask_app.test_request_context():
+        with self._flask_app.test_request_context():
             return flask.url_for(
                 endpoint,
                 _anchor=None,

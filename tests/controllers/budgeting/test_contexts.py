@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 def test_ctx_sidebar_global(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     transactions_spending: list[Transaction],
@@ -39,6 +40,7 @@ def test_ctx_sidebar_global(
 
     ctx = budgeting.ctx_sidebar(
         session,
+        today,
         month,
         data.categories,
         data.future_assigned,
@@ -68,6 +70,7 @@ def test_ctx_sidebar_global(
 
 
 def test_ctx_sidebar_no_target(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     transactions_spending: list[Transaction],
@@ -81,6 +84,7 @@ def test_ctx_sidebar_no_target(
 
     ctx = budgeting.ctx_sidebar(
         session,
+        today,
         month,
         data.categories,
         data.future_assigned,
@@ -102,6 +106,7 @@ def test_ctx_sidebar_no_target(
 
 
 def test_ctx_sidebar(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     transactions_spending: list[Transaction],
@@ -116,6 +121,7 @@ def test_ctx_sidebar(
 
     ctx = budgeting.ctx_sidebar(
         session,
+        today,
         month,
         data.categories,
         data.future_assigned,
@@ -133,6 +139,7 @@ def test_ctx_sidebar(
         "activity": Decimal(),
         "target": budgeting.ctx_target(
             budget_target,
+            today,
             month,
             data_cat.assigned,
             data_cat.available,
@@ -143,11 +150,13 @@ def test_ctx_sidebar(
 
 
 def test_ctx_target_no_due_date(
+    today: datetime.date,
     month: datetime.date,
     budget_target: Target,
 ) -> None:
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -171,6 +180,7 @@ def test_ctx_target_no_due_date(
 
 
 def test_ctx_target_once(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     budget_target: Target,
@@ -181,6 +191,7 @@ def test_ctx_target_once(
 
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -219,6 +230,7 @@ def test_ctx_target_weekly_refil(
 
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -256,6 +268,7 @@ def test_ctx_target_weekly_accumulate(
 
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -293,6 +306,7 @@ def test_ctx_target_monthly_refil(
 
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -329,6 +343,7 @@ def test_ctx_target_monthly_accumulate(
 
     ctx = budgeting.ctx_target(
         budget_target,
+        today,
         month,
         Decimal(100),
         Decimal(200),
@@ -352,12 +367,14 @@ def test_ctx_target_monthly_accumulate(
 
 
 def test_ctx_budget_empty(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
 ) -> None:
     data = BudgetAssignment.get_monthly_available(session, month)
     ctx, title = budgeting.ctx_budget(
         session,
+        today,
         month,
         data.categories,
         data.assignable,
@@ -390,6 +407,7 @@ def test_ctx_budget_empty(
 
 
 def test_ctx_budget(
+    today: datetime.date,
     month: datetime.date,
     session: orm.Session,
     transactions_spending: list[Transaction],
@@ -413,6 +431,7 @@ def test_ctx_budget(
 
     ctx, title = budgeting.ctx_budget(
         session,
+        today,
         month,
         data.categories,
         data.assignable,
@@ -474,6 +493,7 @@ def test_ctx_budget(
             "position": None,
             "target": budgeting.ctx_target(
                 budget_target,
+                today,
                 month,
                 Decimal(100),
                 Decimal(100),

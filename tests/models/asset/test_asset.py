@@ -101,7 +101,7 @@ def test_get_value_empty(
     start_ord = today_ord - 3
     end_ord = today_ord + 3
     result = asset.get_value(start_ord, end_ord)
-    assert result == [Decimal()] * 7
+    assert result == [Decimal(0)] * 7
 
     result = Asset.get_value_all(session, start_ord, end_ord)
     assert result == {}
@@ -196,7 +196,7 @@ def test_update_splits(
     assets = account.get_asset_qty(today_ord, today_ord)
     assert assets == {asset.id_: [Decimal(100)]}
     assets = account.get_asset_qty(today_ord + 7, today_ord + 7)
-    assert assets == {asset.id_: [Decimal()]}
+    assert assets == {asset.id_: [Decimal(0)]}
 
 
 def test_prune_valuations_all(asset: Asset, valuations: list[AssetValuation]) -> None:
@@ -367,13 +367,13 @@ def test_index_twrr(today_ord: int, session: orm.Session, asset: Asset) -> None:
     asset.category = AssetCategory.INDEX
     result = Asset.index_twrr(session, asset.name, today_ord - 3, today_ord + 3)
     # utils.twrr and Asset.get_value already tested, just check they connect well
-    assert result == [Decimal()] * 7
+    assert result == [Decimal(0)] * 7
 
 
 def test_index_twrr_today(today_ord: int, session: orm.Session, asset: Asset) -> None:
     asset.category = AssetCategory.INDEX
     result = Asset.index_twrr(session, asset.name, today_ord, today_ord)
-    assert result == [Decimal()]
+    assert result == [Decimal(0)]
 
 
 def test_add_indices(session: orm.Session) -> None:
