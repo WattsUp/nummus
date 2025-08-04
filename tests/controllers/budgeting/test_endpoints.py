@@ -155,6 +155,29 @@ def test_move_get(
     assert "Assignable income $0.00" in result
 
 
+def test_move_get_destination(
+    month: datetime.date,
+    web_client: WebClient,
+    transactions_spending: list[Transaction],
+    categories: dict[str, int],
+    budget_assignments: list[BudgetAssignment],
+) -> None:
+    _ = transactions_spending
+    _ = budget_assignments
+    t_cat_uri = TransactionCategory.id_to_uri(categories["groceries"])
+
+    result, _ = web_client.GET(
+        (
+            "budgeting.move",
+            {"uri": "income", "month": month.isoformat()[:7], "destination": t_cat_uri},
+        ),
+    )
+
+    assert "Move available funds" in result
+    assert "Assignable income has $0.00 available" in result
+    assert f'value="{t_cat_uri}" selected' in result
+
+
 def test_move_overspending(
     month: datetime.date,
     session: orm.Session,
