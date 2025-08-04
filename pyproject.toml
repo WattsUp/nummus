@@ -56,7 +56,7 @@ Repository = "https://github.com/WattsUp/nummus.git"
 Issues = "https://github.com/WattsUp/nummus/issues"
 
 [project.optional-dependencies]
-encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodome"]
+encrypt = ["sqlcipher3-binary", "Cipher", "pycryptodomex"]
 deploy = ["gunicorn"]
 test = [
   "pytest",
@@ -184,7 +184,6 @@ ignore = [
   "PLR0915", # Too many statements
   "PLR0917", # Too many positional arguments
   "CPY001",  # No copyright
-  "S413",    # TODO (WattsUp): #368 Remove
 ]
 
 exclude = [
