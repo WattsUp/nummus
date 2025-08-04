@@ -7,16 +7,15 @@ import hashlib
 import secrets
 from typing import override, TYPE_CHECKING
 
-import Crypto
-import Crypto.Random
-from Crypto.Cipher import AES
-from Crypto.Hash import SHA256
+import Cryptodome.Random
+from Cryptodome.Cipher import AES
+from Cryptodome.Hash import SHA256
 
 from nummus import exceptions as exc
 from nummus.encryption import base
 
 if TYPE_CHECKING:
-    from Crypto.Cipher._mode_cbc import CbcMode
+    from Cryptodome.Cipher._mode_cbc import CbcMode
 
 
 class EncryptionAES(base.EncryptionInterface):
@@ -85,7 +84,7 @@ class EncryptionAES(base.EncryptionInterface):
         secret_b = secret.encode() if isinstance(secret, str) else bytes(secret)
 
         # Generate a random initialization vector
-        iv = Crypto.Random.new().read(AES.block_size)
+        iv = Cryptodome.Random.new().read(AES.block_size)
         aes = self._get_aes(iv)
 
         # Add padding the secret to fit in whole blocks
