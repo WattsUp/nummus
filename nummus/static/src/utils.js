@@ -361,7 +361,7 @@ function nummusResponseError(evt) {
  * On changes, clear all page history and force a cache miss
  */
 function nummusClearHistory() {
-  localStorage.removeItem("htmx-history-cache");
+  sessionStorage.removeItem("htmx-history-cache");
 }
 
 /**
