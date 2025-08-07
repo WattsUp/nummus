@@ -10,8 +10,8 @@ if TYPE_CHECKING:
     from sqlalchemy import orm
 
 
-def test_ctx_empty() -> None:
-    ctx = health.ctx_checks(run=False)
+def test_ctx_empty(session: orm.Session) -> None:
+    ctx = health.ctx_checks(session, run=False)
 
     assert ctx["last_update_ago"] is None
     checks = ctx["checks"]
@@ -21,7 +21,7 @@ def test_ctx_empty() -> None:
 
 
 def test_ctx_empty_run(session: orm.Session) -> None:
-    ctx = health.ctx_checks(run=True)
+    ctx = health.ctx_checks(session, run=True)
 
     assert ctx["last_update_ago"] == 0
     checks = ctx["checks"]
@@ -29,7 +29,7 @@ def test_ctx_empty_run(session: orm.Session) -> None:
     has_issues = [c for c in checks if c["issues"]]
     assert len(has_issues) == 1
     c = has_issues[0]
-    assert c["name"] == "Unused Categories"
+    assert c["name"] == "Unused categories"
 
     # All unused
     query = session.query(TransactionCategory).where(

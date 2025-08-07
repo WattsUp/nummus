@@ -39,8 +39,7 @@ class Base(ABC):
     @classproperty
     def name(cls) -> str:  # noqa: N805,
         """Health check name."""  # noqa: DOC201
-        # TODO (WattsUp): #357 Change to .capitalize()
-        return utils.camel_to_snake(cls.__name__).replace("_", " ").title()
+        return utils.camel_to_snake(cls.__name__).replace("_", " ").capitalize()
 
     @classproperty
     def description(cls) -> str:  # noqa: N805

@@ -5,9 +5,7 @@ from __future__ import annotations
 from typing import override, TYPE_CHECKING
 
 from nummus.migrations.base import Migrator
-from nummus.models import (
-    TransactionCategory,
-)
+from nummus.models import HealthCheckIssue, TransactionCategory, YIELD_PER
 
 if TYPE_CHECKING:
     from nummus import portfolio
@@ -30,5 +28,9 @@ class MigratorV0_10(Migrator):  # noqa: N801
                 "essential",
                 "essential_spending",
             )
+
+            query = s.query(HealthCheckIssue)
+            for issue in query.yield_per(YIELD_PER):
+                issue.check = issue.check.capitalize()
 
         return comments

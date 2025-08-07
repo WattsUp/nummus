@@ -5,13 +5,16 @@ from __future__ import annotations
 import datetime
 import operator
 from collections import defaultdict
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 
 from nummus import health_checks, web
 from nummus.controllers import base
 from nummus.models import Config, ConfigKey, HealthCheckIssue, YIELD_PER
+
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
 class HealthContext(TypedDict):
@@ -37,11 +40,13 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return base.page(
-        "health/page.jinja",
-        title="Health",
-        ctx=ctx_checks(run=False),
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return base.page(
+            "health/page.jinja",
+            title="Health",
+            ctx=ctx_checks(s, run=False),
+        )
 
 
 def refresh() -> str:
@@ -50,11 +55,13 @@ def refresh() -> str:
     Returns:
         string HTML response
     """
-    return flask.render_template(
-        "health/checks.jinja",
-        ctx=ctx_checks(run=True),
-        include_oob=True,
-    )
+    p = web.portfolio
+    with p.begin_session() as s:
+        return flask.render_template(
+            "health/checks.jinja",
+            ctx=ctx_checks(s, run=True),
+            include_oob=True,
+        )
 
 
 def ignore(uri: str) -> str:
@@ -72,7 +79,7 @@ def ignore(uri: str) -> str:
         c.ignore = True
         name = c.check
 
-    checks = ctx_checks(run=False)["checks"]
+        checks = ctx_checks(s, run=False)["checks"]
 
     return flask.render_template(
         "health/check-row.jinja",
@@ -81,49 +88,48 @@ def ignore(uri: str) -> str:
     )
 
 
-def ctx_checks(*, run: bool) -> HealthContext:
+def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
     """Get the context to build the health checks.
 
     Args:
+        s: SQL session to use
         run: True will rerun health checks
 
     Returns:
         Dictionary HTML context
     """
-    p = web.portfolio
     utc_now = datetime.datetime.now(datetime.UTC)
 
     issues: dict[str, dict[str, str]] = defaultdict(dict)
-    with p.begin_session() as s:
-        if run:
-            c = (
-                s.query(Config)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .one_or_none()
+    if run:
+        c = (
+            s.query(Config)
+            .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
+            .one_or_none()
+        )
+        if c is None:
+            c = Config(
+                key=ConfigKey.LAST_HEALTH_CHECK_TS,
+                value=utc_now.isoformat(),
             )
-            if c is None:
-                c = Config(
-                    key=ConfigKey.LAST_HEALTH_CHECK_TS,
-                    value=utc_now.isoformat(),
-                )
-                s.add(c)
-            else:
-                c.value = utc_now.isoformat()
-            last_update = utc_now
+            s.add(c)
         else:
-            last_update_str = (
-                s.query(Config.value)
-                .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
-                .scalar()
-            )
-            last_update = (
-                None
-                if last_update_str is None
-                else datetime.datetime.fromisoformat(last_update_str)
-            )
-            query = s.query(HealthCheckIssue).where(HealthCheckIssue.ignore.is_(False))
-            for i in query.yield_per(YIELD_PER):
-                issues[i.check][i.uri] = i.msg
+            c.value = utc_now.isoformat()
+        last_update = utc_now
+    else:
+        last_update_str = (
+            s.query(Config.value)
+            .where(Config.key == ConfigKey.LAST_HEALTH_CHECK_TS)
+            .scalar()
+        )
+        last_update = (
+            None
+            if last_update_str is None
+            else datetime.datetime.fromisoformat(last_update_str)
+        )
+        query = s.query(HealthCheckIssue).where(HealthCheckIssue.ignore.is_(False))
+        for i in query.yield_per(YIELD_PER):
+            issues[i.check][i.uri] = i.msg
 
     checks: list[HealthCheckContext] = []
     for check_type in health_checks.CHECKS:
@@ -131,8 +137,7 @@ def ctx_checks(*, run: bool) -> HealthContext:
 
         if run:
             c = check_type()
-            with p.begin_session() as s:
-                c.test(s)
+            c.test(s)
             c_issues = c.issues
         else:
             c_issues = issues[name]

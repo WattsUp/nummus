@@ -16,7 +16,7 @@ def test_page(web_client: WebClient) -> None:
     result, _ = web_client.GET("health.page")
     assert "Health checks" in result
     assert "Refresh" in result
-    assert "Database Integrity" in result
+    assert "Database integrity" in result
     assert "warnings" not in result
     assert "Health checks never ran" in result
 
@@ -29,7 +29,7 @@ def test_refresh(web_client: WebClient, n_runs: int) -> None:
     result, _ = web_client.POST("health.refresh")
     assert "Health checks" not in result
     assert "Refresh" not in result
-    assert "Database Integrity" in result
+    assert "Database integrity" in result
     assert "warnings" in result
     assert "Last checks ran 0.0 seconds ago" in result
 
