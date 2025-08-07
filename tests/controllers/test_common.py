@@ -11,6 +11,19 @@ def test_page_dashboard(web_client: WebClient) -> None:
     assert "Dashboard" in result
 
 
+def test_page_status(web_client: WebClient) -> None:
+    result, _ = web_client.GET("common.page_status")
+    assert result == "ok"
+
+    result, _ = web_client.GET(
+        "prometheus_metrics",
+        content_type="text/plain; version=0.0.4; charset=utf-8",
+    )
+    if isinstance(result, bytes):
+        result = result.decode()
+    assert 'endpoint="common.page_status"' not in result
+
+
 def test_page_style_test(web_client: WebClient) -> None:
     result, _ = web_client.GET("common.page_style_test")
     assert "Style Test" in result
