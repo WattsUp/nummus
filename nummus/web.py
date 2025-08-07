@@ -142,7 +142,7 @@ class FlaskExtension:
         metrics = metrics_class(
             app,
             path="/metrics",
-            excluded_paths=["/static", "/metrics"],
+            excluded_paths=["/static", "/metrics", "/status"],
             group_by="endpoint",
             registry=(
                 None
