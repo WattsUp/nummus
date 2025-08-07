@@ -35,9 +35,9 @@ def test_issues(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database Integrity'" in captured.out
+    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
     assert f"{Fore.CYAN}    Checks for issues in the underlying" in captured.out
-    assert f"{Fore.YELLOW}Check 'Unused Categories'" in captured.out
+    assert f"{Fore.YELLOW}Check 'Unused categories'" in captured.out
     assert f"{Fore.YELLOW}  Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert "more issues, use --limit flag to see more" in captured.out
@@ -73,9 +73,9 @@ def test_no_limit_severe(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database Integrity'" in captured.out
+    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
     assert f"{Fore.CYAN}    Checks for issues in the underlying" in captured.out
-    assert f"{Fore.RED}Check 'Unused Categories'" in captured.out
+    assert f"{Fore.RED}Check 'Unused categories'" in captured.out
     assert f"{Fore.RED}  Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert "more issues, use --limit flag to see more" not in captured.out
@@ -119,9 +119,9 @@ def test_ignore_all(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.GREEN}Check 'Database Integrity'" in captured.out
+    assert f"{Fore.GREEN}Check 'Database integrity'" in captured.out
     assert f"{Fore.CYAN}    Checks for issues in the underlying" not in captured.out
-    assert f"{Fore.YELLOW}Check 'Unused Categories'" not in captured.out
+    assert f"{Fore.YELLOW}Check 'Unused categories'" not in captured.out
     assert f"{Fore.YELLOW}  Has the following issues:" not in captured.out
     assert "has no transactions nor budget assignments" not in captured.out
     assert "more issues, use --limit flag to see more" not in captured.out
@@ -160,7 +160,7 @@ def test_clear_ignores(
 
     captured = capsys.readouterr()
     # big output, use "" in checks
-    assert f"{Fore.YELLOW}Check 'Unused Categories'" in captured.out
+    assert f"{Fore.YELLOW}Check 'Unused categories'" in captured.out
     assert f"{Fore.YELLOW}  Has the following issues:" in captured.out
     assert "has no transactions nor budget assignments" in captured.out
     assert not captured.err
