@@ -39,7 +39,7 @@ def issues(
 
 def test_init_properties() -> None:
     c = MockCheck()
-    assert c.name == "Mock Check"
+    assert c.name == "Mock check"
     assert c.description == MockCheck._DESC  # noqa: SLF001
     assert not c.any_issues
     assert c.is_severe
