@@ -3,7 +3,7 @@ from __future__ import annotations
 import shutil
 from typing import TYPE_CHECKING
 
-from nummus.migrations.v_0_2 import MigratorV0_2
+from nummus.migrations.v0_2 import MigratorV0_2
 from nummus.models import dump_table_configs, Transaction, TransactionSplit
 from nummus.portfolio import Portfolio
 

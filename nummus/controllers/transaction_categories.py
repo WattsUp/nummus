@@ -60,7 +60,7 @@ def new() -> str | flask.Response:
     name = form["name"].strip()
     group = form.get("group", type=TransactionCategoryGroup)
     is_profit_loss = "is-pnl" in form
-    essential = "essential" in form
+    essential_spending = "essential-spending" in form
 
     try:
         p = web.portfolio
@@ -71,7 +71,7 @@ def new() -> str | flask.Response:
                 locked=False,
                 is_profit_loss=is_profit_loss,
                 asset_linked=False,
-                essential=essential,
+                essential_spending=essential_spending,
             )
             s.add(cat)
     except (exc.IntegrityError, exc.InvalidORMValueError) as e:
@@ -107,7 +107,7 @@ def category(uri: str) -> str | flask.Response:
                 "group_type": TransactionCategoryGroup,
                 "locked": cat.locked,
                 "is_profit_loss": cat.is_profit_loss,
-                "essential": cat.essential,
+                "essential_spending": cat.essential_spending,
             }
 
             return flask.render_template(
@@ -136,7 +136,7 @@ def category(uri: str) -> str | flask.Response:
         name = form["name"]
         group = TransactionCategoryGroup(form["group"])
         is_profit_loss = "is-pnl" in form
-        essential = "essential" in form
+        essential_spending = "essential-spending" in form
 
         name_clean = TransactionCategory.clean_emoji_name(name)
         if cat.locked and name_clean != cat.name:
@@ -148,7 +148,7 @@ def category(uri: str) -> str | flask.Response:
                 if not cat.locked:
                     cat.group = group
                     cat.is_profit_loss = is_profit_loss
-                    cat.essential = essential
+                    cat.essential_spending = essential_spending
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 

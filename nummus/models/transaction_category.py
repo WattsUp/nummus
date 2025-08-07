@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import override
+from typing import NamedTuple, override
 
 from sqlalchemy import CheckConstraint, ForeignKey, orm, UniqueConstraint
 
@@ -38,7 +38,7 @@ class TransactionCategory(Base):
         group: Type of category
         locked: True will prevent any changes being made, okay to change emoji
         is_profit_loss: True will include category in profit loss calculations
-        essential: True indicates category is included in an emergency budget
+        essential_spending: True indicates category is included in an emergency budget
         asset_linked: True expects transactions to be linked to an Asset
         budget_group: Name of group in budget category is a part of
         budget_position: Position on budget page where category is located
@@ -54,8 +54,7 @@ class TransactionCategory(Base):
     locked: ORMBool
     is_profit_loss: ORMBool
     asset_linked: ORMBool
-    # TODO (WattsUp): #356 Rename to essential_spending
-    essential: ORMBool
+    essential_spending: ORMBool
 
     budget_group_id: ORMIntOpt = orm.mapped_column(ForeignKey("budget_group.id_"))
     budget_position: ORMIntOpt
@@ -64,8 +63,9 @@ class TransactionCategory(Base):
         *string_column_args("name", lower_check=True),
         *string_column_args("emoji_name"),
         CheckConstraint(
-            f"not essential OR `group` != {TransactionCategoryGroup.INCOME.value}",
-            name="INCOME cannot be essential",
+            "not essential_spending OR `group` != "
+            f"{TransactionCategoryGroup.INCOME.value}",
+            name="INCOME cannot be essential spending",
         ),
         CheckConstraint(
             "(budget_group_id IS NOT NULL) == (budget_position IS NOT NULL)",
@@ -96,9 +96,9 @@ class TransactionCategory(Base):
         """
         return self.clean_strings(key, field)
 
-    @orm.validates("essential")
-    def validate_essential(self, _: str, field: object) -> bool:
-        """Validates income groups are not marked essential.
+    @orm.validates("essential_spending")
+    def validate_essential_spending(self, _: str, field: object) -> bool:
+        """Validates income groups are not marked essential_spending.
 
         Args:
             field: Updated value
@@ -107,7 +107,7 @@ class TransactionCategory(Base):
             field
 
         Raises:
-            InvalidORMValueError: If field is essential
+            InvalidORMValueError: If field is essential_spending
             TypeError: If field is not bool
         """
         if not isinstance(field, bool):
@@ -117,7 +117,7 @@ class TransactionCategory(Base):
             TransactionCategoryGroup.INCOME,
             TransactionCategoryGroup.OTHER,
         }:
-            msg = f"{self.group.name.capitalize()} cannot be essential"
+            msg = f"{self.group.name.capitalize()} cannot be essential spending"
             raise exc.InvalidORMValueError(msg)
         return field
 
@@ -132,94 +132,107 @@ class TransactionCategory(Base):
             Dictionary {name: category}
         """
         d: dict[str, TransactionCategory] = {}
-        # Dictionary {group: {name: (locked, is_profit_loss, asset_linked, essential)}}
-        groups = {
+
+        class Spec(NamedTuple):
+            locked: bool = False
+            is_profit_loss: bool = False
+            asset_linked: bool = False
+            essential_spending: bool = False
+
+        groups: dict[TransactionCategoryGroup, dict[str, Spec]] = {
             TransactionCategoryGroup.INCOME: {
-                "Consulting": (False, False, False, False),
-                "Deposits": (False, False, False, False),
-                "Dividends Received": (True, True, True, False),
-                "Interest": (True, True, False, False),
-                "Investment Income": (False, False, False, False),
-                "Other Income": (False, False, False, False),
-                "Paychecks/Salary": (False, False, False, False),
-                "Refunds & Reimbursements": (False, False, False, False),
-                "Retirement Contributions": (True, False, False, False),
-                "Retirement Income": (False, False, False, False),
-                "Rewards Redemption": (False, True, False, False),
-                "Sales": (False, False, False, False),
-                "Services": (False, False, False, False),
+                "Consulting": Spec(),
+                "Deposits": Spec(),
+                "Dividends Received": Spec(
+                    locked=True,
+                    is_profit_loss=True,
+                    asset_linked=True,
+                ),
+                "Interest": Spec(locked=True, is_profit_loss=True),
+                "Investment Income": Spec(),
+                "Other Income": Spec(),
+                "Paychecks/Salary": Spec(),
+                "Refunds & Reimbursements": Spec(),
+                "Retirement Contributions": Spec(locked=True),
+                "Retirement Income": Spec(),
+                "Rewards Redemption": Spec(is_profit_loss=True),
+                "Sales": Spec(),
+                "Services": Spec(),
             },
             TransactionCategoryGroup.EXPENSE: {
-                "Advertising": (False, False, False, False),
-                "Advisory Fee": (False, False, False, False),
-                "ATM/Cash": (False, False, False, False),
-                "Automotive": (False, False, False, False),
-                "Business Miscellaneous": (False, False, False, False),
-                "Charitable Giving": (False, False, False, False),
-                "Child/Dependent": (False, False, False, False),
-                "Clothing/Shoes": (False, False, False, False),
-                "Dues & Subscriptions": (False, False, False, False),
-                "Education": (False, False, False, False),
-                "Electronics": (False, False, False, False),
-                "Entertainment": (False, False, False, False),
-                "Gasoline/Fuel": (False, False, False, False),
-                "General Merchandise": (False, False, False, False),
-                "Gifts": (False, False, False, False),
-                "Groceries": (False, False, False, False),
-                "Healthcare/Medical": (False, False, False, False),
-                "Hobbies": (False, False, False, False),
-                "Home Improvement": (False, False, False, False),
-                "Home Maintenance": (False, False, False, False),
-                "Insurance": (False, False, False, False),
-                "Investment Fees": (True, True, True, False),
-                "Mortgages": (False, False, False, False),
-                "Office Maintenance": (False, False, False, False),
-                "Office Supplies": (False, False, False, False),
-                "Other Bills": (False, False, False, False),
-                "Other Expenses": (False, False, False, False),
-                "Personal Care": (False, False, False, False),
-                "Pets/Pet Care": (False, False, False, False),
-                "Postage & Shipping": (False, False, False, False),
-                "Printing": (False, False, False, False),
-                "Rent": (False, False, False, False),
-                "Restaurants": (False, False, False, False),
-                "Service Charge/Fees": (False, False, False, False),
-                "Taxes": (False, False, False, False),
-                "Telephone": (False, False, False, False),
-                "Travel": (False, False, False, False),
-                "Utilities": (False, False, False, False),
-                "Wages Paid": (False, False, False, False),
+                "Advertising": Spec(),
+                "Advisory Fee": Spec(),
+                "ATM/Cash": Spec(),
+                "Automotive": Spec(),
+                "Business Miscellaneous": Spec(),
+                "Charitable Giving": Spec(),
+                "Child/Dependent": Spec(),
+                "Clothing/Shoes": Spec(),
+                "Dues & Subscriptions": Spec(),
+                "Education": Spec(),
+                "Electronics": Spec(),
+                "Entertainment": Spec(),
+                "Gasoline/Fuel": Spec(),
+                "General Merchandise": Spec(),
+                "Gifts": Spec(),
+                "Groceries": Spec(),
+                "Healthcare/Medical": Spec(),
+                "Hobbies": Spec(),
+                "Home Improvement": Spec(),
+                "Home Maintenance": Spec(),
+                "Insurance": Spec(),
+                "Investment Fees": Spec(
+                    locked=True,
+                    is_profit_loss=True,
+                    asset_linked=True,
+                ),
+                "Mortgages": Spec(),
+                "Office Maintenance": Spec(),
+                "Office Supplies": Spec(),
+                "Other Bills": Spec(),
+                "Other Expenses": Spec(),
+                "Personal Care": Spec(),
+                "Pets/Pet Care": Spec(),
+                "Postage & Shipping": Spec(),
+                "Printing": Spec(),
+                "Rent": Spec(),
+                "Restaurants": Spec(),
+                "Service Charge/Fees": Spec(),
+                "Taxes": Spec(),
+                "Telephone": Spec(),
+                "Travel": Spec(),
+                "Utilities": Spec(),
+                "Wages Paid": Spec(),
             },
             TransactionCategoryGroup.TRANSFER: {
-                "Credit Card Payments": (True, False, False, False),
-                "Expense Reimbursement": (False, False, False, False),
-                "Emergency Fund": (True, False, False, False),
-                "General Rebalance": (False, False, False, False),
-                "Portfolio Management": (False, False, False, False),
-                "Savings": (True, False, False, False),
-                "Transfers": (True, False, False, False),
-                "Fraud": (False, False, False, False),
+                "Credit Card Payments": Spec(locked=True),
+                "Expense Reimbursement": Spec(),
+                "Emergency Fund": Spec(locked=True),
+                "General Rebalance": Spec(),
+                "Portfolio Management": Spec(),
+                "Savings": Spec(locked=True),
+                "Transfers": Spec(locked=True),
+                "Fraud": Spec(),
             },
             TransactionCategoryGroup.OTHER: {
-                "Securities Traded": (True, True, True, False),
-                "Uncategorized": (True, False, False, False),
+                "Securities Traded": Spec(
+                    locked=True,
+                    is_profit_loss=True,
+                    asset_linked=True,
+                ),
+                "Uncategorized": Spec(locked=True),
             },
         }
 
         for group, categories in groups.items():
-            for name, (
-                locked,
-                is_profit_loss,
-                asset_linked,
-                essential,
-            ) in categories.items():
+            for name, spec in categories.items():
                 cat = TransactionCategory(
                     emoji_name=name,
                     group=group,
-                    locked=locked,
-                    is_profit_loss=is_profit_loss,
-                    asset_linked=asset_linked,
-                    essential=essential,
+                    locked=spec.locked,
+                    is_profit_loss=spec.is_profit_loss,
+                    asset_linked=spec.asset_linked,
+                    essential_spending=spec.essential_spending,
                 )
                 s.add(cat)
                 d[cat.name] = cat

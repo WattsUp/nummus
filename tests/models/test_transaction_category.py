@@ -22,7 +22,7 @@ def test_init_properties(
         "locked": False,
         "is_profit_loss": False,
         "asset_linked": False,
-        "essential": False,
+        "essential_spending": False,
         "budget_group_id": budget_group.id_,
         "budget_position": 0,
     }
@@ -37,7 +37,7 @@ def test_init_properties(
     assert t_cat.locked == d["locked"]
     assert t_cat.is_profit_loss == d["is_profit_loss"]
     assert t_cat.asset_linked == d["asset_linked"]
-    assert t_cat.essential == d["essential"]
+    assert t_cat.essential_spending == d["essential_spending"]
     assert t_cat.budget_group_id == d["budget_group_id"]
     assert t_cat.budget_group_id == d["budget_group_id"]
 
@@ -73,26 +73,29 @@ def test_name_no_group(session: orm.Session) -> None:
 
 def test_essential_income() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        TransactionCategory(group=TransactionCategoryGroup.INCOME, essential=True)
+        TransactionCategory(
+            group=TransactionCategoryGroup.INCOME,
+            essential_spending=True,
+        )
 
 
 def test_essential_income_update(session: orm.Session) -> None:
     with pytest.raises(exc.IntegrityError):
         session.query(TransactionCategory).where(
             TransactionCategory.name == "other income",
-        ).update({TransactionCategory.essential: True})
+        ).update({TransactionCategory.essential_spending: True})
 
 
 def test_essential_expense(session: orm.Session) -> None:
     session.query(TransactionCategory).where(
         TransactionCategory.name == "groceries",
-    ).update({TransactionCategory.essential: True})
+    ).update({TransactionCategory.essential_spending: True})
     session.commit()
 
 
 def test_essential_none() -> None:
     with pytest.raises(TypeError):
-        TransactionCategory(essential=None)
+        TransactionCategory(essential_spending=None)
 
 
 def test_emergency_fund_missing(session: orm.Session) -> None:

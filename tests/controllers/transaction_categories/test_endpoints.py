@@ -68,7 +68,7 @@ def test_new(
         "name": rand_str,
         "group": "expense",
         "is-pnl": "on",
-        "essential": "on",
+        "essential-spending": "on",
     }
     result, headers = web_client.POST("transaction_categories.new", data=form)
     assert "snackbar.show" in result
@@ -82,7 +82,7 @@ def test_new(
     )
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert t_cat.is_profit_loss
-    assert t_cat.essential
+    assert t_cat.essential_spending
 
 
 def test_new_error(web_client: WebClient, rand_str: str) -> None:
@@ -90,10 +90,10 @@ def test_new_error(web_client: WebClient, rand_str: str) -> None:
         "name": rand_str,
         "group": "income",
         "is-pnl": "on",
-        "essential": "on",
+        "essential-spending": "on",
     }
     result, _ = web_client.POST("transaction_categories.new", data=form)
-    assert result == base.error("Income cannot be essential")
+    assert result == base.error("Income cannot be essential spending")
 
 
 def test_category_get_locked(web_client: WebClient, categories: dict[str, int]) -> None:
@@ -172,7 +172,7 @@ def test_category_edit_unlocked(
 
     result, headers = web_client.PUT(
         ("transaction_categories.category", {"uri": uri}),
-        data={"name": "Food", "group": "expense", "essential": "on"},
+        data={"name": "Food", "group": "expense", "essential-spending": "on"},
     )
     assert "snackbar.show" in result
     assert "All changes saved" in result
@@ -186,7 +186,7 @@ def test_category_edit_unlocked(
     assert t_cat.emoji_name == "Food"
     assert t_cat.group == TransactionCategoryGroup.EXPENSE
     assert not t_cat.is_profit_loss
-    assert t_cat.essential
+    assert t_cat.essential_spending
 
 
 def test_category_edit_locked(
@@ -212,7 +212,7 @@ def test_category_edit_locked(
     assert t_cat.emoji_name == "Uncategorized 🤷"
     assert t_cat.group == TransactionCategoryGroup.OTHER
     assert not t_cat.is_profit_loss
-    assert not t_cat.essential
+    assert not t_cat.essential_spending
 
 
 def test_category_edit_locked_error(
@@ -223,7 +223,7 @@ def test_category_edit_locked_error(
 
     result, _ = web_client.PUT(
         ("transaction_categories.category", {"uri": uri}),
-        data={"name": "Food", "group": "expense", "essential": "on"},
+        data={"name": "Food", "group": "expense", "essential-spending": "on"},
     )
     assert result == base.error("May only add/remove emojis on locked category")
 
@@ -236,6 +236,6 @@ def test_category_edit_error(
 
     result, _ = web_client.PUT(
         ("transaction_categories.category", {"uri": uri}),
-        data={"name": "Food", "group": "income", "essential": "on"},
+        data={"name": "Food", "group": "income", "essential-spending": "on"},
     )
-    assert result == base.error("Income cannot be essential")
+    assert result == base.error("Income cannot be essential spending")

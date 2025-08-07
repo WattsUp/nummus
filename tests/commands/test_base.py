@@ -7,7 +7,7 @@ from typing import override, TYPE_CHECKING
 import pytest
 from colorama import Fore
 
-from nummus import encryption
+from nummus import encryption, migrations
 from nummus.commands.backup import Backup, Restore
 from nummus.commands.base import BaseCommand
 from nummus.commands.change_password import ChangePassword
@@ -68,8 +68,9 @@ def test_migration_required(capsys: pytest.CaptureFixture, data_path: Path) -> N
 
     captured = capsys.readouterr()
     assert not captured.out
+    v = migrations.MIGRATORS[-1].min_version
     target = (
-        f"{Fore.RED}Portfolio requires migration to v0.2.0\n"
+        f"{Fore.RED}Portfolio requires migration to v{v}\n"
         f"{Fore.YELLOW}Run 'nummus migrate' to resolve\n"
     )
     assert captured.err == target
