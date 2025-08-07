@@ -59,7 +59,7 @@ def test_ctx_underfunded(
     _ = budget_assignments
     session.query(TransactionCategory).where(
         TransactionCategory.name == "groceries",
-    ).update({"essential": True})
+    ).update({"essential_spending": True})
     txn = Transaction(
         account_id=account.id_,
         date=today - datetime.timedelta(days=100),
@@ -101,7 +101,7 @@ def test_ctx_overfunded(
     _ = budget_assignments
     session.query(TransactionCategory).where(
         TransactionCategory.name == "groceries",
-    ).update({"essential": True})
+    ).update({"essential_spending": True})
     txn = Transaction(
         account_id=account.id_,
         date=today - datetime.timedelta(days=100),
@@ -143,7 +143,7 @@ def test_ctx(
     _ = budget_assignments
     session.query(TransactionCategory).where(
         TransactionCategory.name == "groceries",
-    ).update({"essential": True})
+    ).update({"essential_spending": True})
     txn = Transaction(
         account_id=account.id_,
         date=today - datetime.timedelta(days=100),

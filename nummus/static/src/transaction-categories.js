@@ -1,13 +1,13 @@
 "use strict";
 const txnCat = {
   /**
-   * Update is essential toggle when group changes
+   * Update is essential spending toggle when group changes
    *
    * INCOME cannot be essential spending
    */
   updateEssential: function () {
     const isIncome = htmx.find("#dialog [name='group']").value == "INCOME";
-    const essential = htmx.find("#dialog [name='essential']");
+    const essential = htmx.find("#dialog [name='essential-spending']");
     essential.disabled = isIncome;
     essential.checked = !isIncome && essential.checked;
   },

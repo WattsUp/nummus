@@ -74,9 +74,9 @@
   </label>
   <label class="toggle col-span-2">
     <input
-      name="essential"
+      name="essential-spending"
       type="checkbox"
-      {% if category.essential %}checked{% endif %}
+      {% if category.essential_spending %}checked{% endif %}
       autocomplete="off"
       {% if category.group == "INCOME" or category.locked %}disabled{% endif %}
     />

@@ -366,7 +366,7 @@ class BudgetAssignment(Base):
                 TransactionCategory.name,
                 TransactionCategory.emoji_name,
             )
-            .where(TransactionCategory.essential)
+            .where(TransactionCategory.essential_spending)
         )
         for t_cat_id, name, emoji_name in query.all():
             categories[t_cat_id] = name, emoji_name

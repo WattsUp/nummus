@@ -206,7 +206,7 @@ def test_get_emergency_fund(
 ) -> None:
     session.query(TransactionCategory).where(
         TransactionCategory.name == "groceries",
-    ).update({"essential": True})
+    ).update({"essential_spending": True})
     # Add a transaction 30 days ago
     txn = Transaction(
         account_id=account.id_,
