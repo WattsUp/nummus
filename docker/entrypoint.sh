@@ -23,6 +23,8 @@ if [ ! -f $portfolio ]; then
   # nummus --portfolio $portfolio --pass-file $key_file change-password
 fi
 
+/home/python/.local/bin/nummus --portfolio $portfolio --pass-file $key_file migrate
+
 # Start server
 export PROMETHEUS_MULTIPROC_DIR=$prom_dir
 export NUMMUS_PORTFOLIO=$portfolio
