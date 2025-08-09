@@ -105,26 +105,28 @@
     </div>
     <switch></switch>
   </label>
-  <label class="toggle col-span-2">
-    <input
-      name="closed"
-      type="checkbox"
-      {% if acct.closed %}checked{% endif %}
-      autocomplete="off"
-      {% if acct.value != 0 %}disabled{% endif %}
-    />
-    <div>
-      <span>Closed</span>
-      <span>
-        {% if acct.value != 0 %}
-          Cannot close account with non-zero value
-        {% else %}
-          Account will be hidden
-        {% endif %}
-      </span>
-    </div>
-    <switch></switch>
-  </label>
+  {% if acct.uri %}
+    <label class="toggle col-span-2">
+      <input
+        name="closed"
+        type="checkbox"
+        {% if acct.closed %}checked{% endif %}
+        autocomplete="off"
+        {% if acct.value != 0 %}disabled{% endif %}
+      />
+      <div>
+        <span>Closed</span>
+        <span>
+          {% if acct.value != 0 %}
+            Cannot close account with non-zero value
+          {% else %}
+            Account will be hidden
+          {% endif %}
+        </span>
+      </div>
+      <switch></switch>
+    </label>
+  {% endif %}
 </form>
 <div id="dialog-error" class="status-error"></div>
 <script>

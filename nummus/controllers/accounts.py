@@ -165,13 +165,61 @@ def page(uri: str) -> flask.Response:
         )
 
 
-def new() -> str:
+def new() -> str | flask.Response:
     """GET & POST /h/accounts/new.
 
     Returns:
         HTML response
     """
-    raise NotImplementedError
+    if flask.request.method == "GET":
+        ctx: AccountContext = {
+            "uri": None,
+            "name": "",
+            "number": None,
+            "institution": "",
+            "category": AccountCategory.CASH,
+            "category_type": AccountCategory,
+            "closed": False,
+            "budgeted": False,
+            "updated_days_ago": 0,
+            "n_today": 0,
+            "n_future": 0,
+            "change_today": Decimal(),
+            "change_future": Decimal(),
+            "value": Decimal(),
+            "performance": None,
+            "assets": None,
+        }
+        return flask.render_template(
+            "accounts/edit.jinja",
+            acct=ctx,
+        )
+
+    p = web.portfolio
+
+    with p.begin_session() as s:
+        form = flask.request.form
+        institution = form["institution"].strip()
+        name = form["name"].strip()
+        number = form["number"].strip()
+        category = AccountCategory(form["category"])
+        budgeted = "budgeted" in form
+
+        try:
+            with s.begin_nested():
+                acct = Account(
+                    institution=institution,
+                    name=name,
+                    number=number,
+                    category=category,
+                    closed=False,
+                    budgeted=budgeted,
+                )
+                s.add(acct)
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return base.error(e)
+
+        return base.dialog_swap(event="account", snackbar="All changes saved")
 
 
 def account(uri: str) -> str | flask.Response:
@@ -260,8 +308,8 @@ def performance(uri: str) -> flask.Response:
     return response
 
 
-def validation(uri: str) -> str:
-    """GET /h/accounts/a/<uri>/validation.
+def validation() -> str:
+    """GET /h/accounts/validation.
 
     Returns:
         string HTML response
@@ -277,6 +325,7 @@ def validation(uri: str) -> str:
 
     with p.begin_session() as s:
         args = flask.request.args
+        uri = args.get("uri")
         for key, (required, prop) in properties.items():
             if key not in args:
                 continue
@@ -285,9 +334,9 @@ def validation(uri: str) -> str:
                 is_required=required,
                 session=s,
                 no_duplicates=prop,
-                no_duplicate_wheres=[
-                    Account.id_ != Account.uri_to_id(uri),
-                ],
+                no_duplicate_wheres=(
+                    None if uri is None else [Account.id_ != Account.uri_to_id(uri)]
+                ),
             )
 
     raise NotImplementedError
@@ -811,7 +860,7 @@ ROUTES: base.Routes = {
     "/h/accounts/new": (new, ["GET", "POST"]),
     "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
     "/h/accounts/a/<path:uri>/performance": (performance, ["GET"]),
-    "/h/accounts/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options": (txns_options, ["GET"]),
+    "/h/accounts/validation": (validation, ["GET"]),
 }
