@@ -40,6 +40,11 @@ def test_no_file(web_client: WebClient) -> None:
             "CSVTransactionImporter did not import any transactions for file",
             True,
         ),
+        (
+            "transactions_bad_account.csv",
+            "Account matching 'Unknown' could not be found, please create first",
+            False,
+        ),
     ],
 )
 def test_error(

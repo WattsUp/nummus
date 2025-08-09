@@ -57,6 +57,8 @@ def import_file() -> str | flask.Response:
         return base.error(f"{e.importer} did not import any transactions for file")
     except exc.FutureTransactionError:
         return base.error("Cannot create transaction in the future")
+    except exc.NoResultFound as e:
+        return base.error(f"{e}, please create first")
     finally:
         path_file_local.unlink()
 
