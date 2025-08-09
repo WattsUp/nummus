@@ -33,6 +33,7 @@ def issues(
     c = MockCheck()
     d = {value_0: "msg 0", value_1: "msg 1"}
     c._commit_issues(session, d)  # noqa: SLF001
+    c.ignore(session, [value_0])
 
     return [(i.value, i.id_) for i in session.query(HealthCheckIssue).all()]
 
@@ -53,26 +54,37 @@ def test_any_issues(rand_str: str) -> None:
     assert c.issues == d
 
 
-def test_commit_issues(session: orm.Session, issues: list[tuple[str, int]]) -> None:
-    i = (
-        session.query(HealthCheckIssue)
-        .where(HealthCheckIssue.id_ == issues[0][1])
-        .one()
-    )
-    assert i.check == MockCheck.name
-    assert i.value is not None
-    assert i.msg == "msg 0"
-    assert not i.ignore
+@pytest.mark.parametrize("no_ignores", [False, True])
+def test_commit_issues(
+    session: orm.Session,
+    rand_str_generator: RandomStringGenerator,
+    no_ignores: bool,
+) -> None:
+    value_0 = rand_str_generator()
+    value_1 = rand_str_generator()
+    c = MockCheck(no_ignores=no_ignores)
+    d = {value_0: "msg 0", value_1: "msg 1"}
+    c._commit_issues(session, d)  # noqa: SLF001
+    c.ignore(session, [value_0])
+    # Refresh c.issues
+    c._commit_issues(session, d)  # noqa: SLF001
 
-    i = (
-        session.query(HealthCheckIssue)
-        .where(HealthCheckIssue.id_ == issues[1][1])
-        .one()
-    )
-    assert i.check == MockCheck.name
-    assert i.value is not None
-    assert i.msg == "msg 1"
-    assert not i.ignore
+    i_0 = session.query(HealthCheckIssue).where(HealthCheckIssue.value == value_0).one()
+    assert i_0.check == MockCheck.name
+    assert i_0.msg == "msg 0"
+    assert i_0.ignore
+
+    i_1 = session.query(HealthCheckIssue).where(HealthCheckIssue.value == value_1).one()
+    assert i_1.check == MockCheck.name
+    assert i_1.msg == "msg 1"
+    assert not i_1.ignore
+
+    target = {
+        i_1.uri: i_1.msg,
+    }
+    if no_ignores:
+        target[i_0.uri] = i_0.msg
+    assert c.issues == target
 
 
 def test_ignore_empty(session: orm.Session, rand_str: str) -> None:
@@ -91,7 +103,7 @@ def test_ignore(
         .one()
     )
     assert i.check == MockCheck.name
-    assert i.value is not None
+    assert i.value == issues[0][0]
     assert i.msg == "msg 0"
     assert i.ignore
 
@@ -101,7 +113,7 @@ def test_ignore(
         .one()
     )
     assert i.check == MockCheck.name
-    assert i.value is not None
+    assert i.value == issues[1][0]
     assert i.msg == "msg 1"
     assert not i.ignore
 
