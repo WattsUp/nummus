@@ -105,27 +105,41 @@
     </div>
     <switch></switch>
   </label>
-  <label class="toggle col-span-2">
-    <input
-      name="closed"
-      type="checkbox"
-      {% if acct.closed %}checked{% endif %}
-      autocomplete="off"
-      {% if acct.value != 0 %}disabled{% endif %}
-    />
-    <div>
-      <span>Closed</span>
-      <span>
-        {% if acct.value != 0 %}
-          Cannot close account with non-zero value
-        {% else %}
-          Account will be hidden
-        {% endif %}
-      </span>
-    </div>
-    <switch></switch>
-  </label>
+  {% if acct.uri and acct.updated_days_ago is not none %}
+    <label class="toggle col-span-2">
+      <input
+        name="closed"
+        type="checkbox"
+        {% if acct.closed %}checked{% endif %}
+        autocomplete="off"
+        {% if acct.value != 0 %}disabled{% endif %}
+      />
+      <div>
+        <span>Closed</span>
+        <span>
+          {% if acct.value != 0 %}
+            Cannot close account with non-zero value
+          {% else %}
+            Account will be hidden
+          {% endif %}
+        </span>
+      </div>
+      <switch></switch>
+    </label>
+  {% endif %}
 </form>
+{% if acct.uri and acct.updated_days_ago is none %}
+  <div class="flex flex-wrap justify-around" hx-target="#dialog-error">
+    <button
+      class="btn-text-error"
+      hx-delete="{{ url_for('accounts.account', uri=acct.uri) }}"
+      hx-trigger="delete"
+      onclick="accounts.confirmDelete(event)"
+    >
+      Delete
+    </button>
+  </div>
+{% endif %}
 <div id="dialog-error" class="status-error"></div>
 <script>
   dialog.onLoad();

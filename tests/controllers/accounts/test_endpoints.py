@@ -104,13 +104,70 @@ def test_page_performance(
     assert account.name in result
 
 
-@pytest.mark.xfail
-def test_new(web_client: WebClient) -> None:
-    # TODO (WattsUp): #222
-    web_client.GET("accounts.new")
+def test_new_get(web_client: WebClient) -> None:
+    result, _ = web_client.GET("accounts.new")
+    assert "New account" in result
+    assert "Save" in result
+    assert "Delete" not in result
 
 
-def test_account_get(web_client: WebClient, account: Account) -> None:
+def test_new(
+    web_client: WebClient,
+    session: orm.Session,
+) -> None:
+    result, headers = web_client.POST(
+        "accounts.new",
+        data={
+            "name": "New name",
+            "category": "INVESTMENT",
+            "institution": "Nothing to see",
+            "number": "1234",
+            "closed": "on",
+        },
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "account"
+
+    account = session.query(Account).one()
+    assert account.name == "New name"
+    assert account.category == AccountCategory.INVESTMENT
+    assert account.institution == "Nothing to see"
+    assert account.number == "1234"
+    assert not account.closed
+
+
+def test_new_error(web_client: WebClient) -> None:
+    result, _ = web_client.POST(
+        "accounts.new",
+        data={
+            "name": "a",
+            "category": "INVESTMENT",
+            "institution": "Nothing to see",
+            "number": "1234",
+            "closed": "on",
+        },
+    )
+    assert result == base.error("Account name must be at least 2 characters long")
+
+
+def test_account_get_empty(web_client: WebClient, account: Account) -> None:
+    result, _ = web_client.GET(("accounts.account", {"uri": account.uri}))
+    assert account.name in result
+    assert account.institution in result
+    assert account.number is not None
+    assert account.number in result
+    assert "Edit account" in result
+    assert "Save" in result
+    assert "Delete" in result
+
+
+def test_account_get(
+    web_client: WebClient,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
     result, _ = web_client.GET(("accounts.account", {"uri": account.uri}))
     assert account.name in result
     assert account.institution in result
@@ -173,6 +230,12 @@ def test_account_edit_error(
         form["closed"] = "on"
     result, _ = web_client.PUT(("accounts.account", {"uri": account.uri}), data=form)
     assert result == base.error(target)
+
+
+def test_account_delete(web_client: WebClient, account: Account) -> None:
+    result, headers = web_client.DELETE(("accounts.account", {"uri": account.uri}))
+    assert not result
+    assert headers["HX-Redirect"] == web_client.url_for("accounts.page_all")
 
 
 def test_performance(

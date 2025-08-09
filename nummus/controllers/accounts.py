@@ -27,6 +27,8 @@ from nummus.models import (
 if TYPE_CHECKING:
     import datetime
 
+    import werkzeug
+
 
 class AccountContext(TypedDict):
     """Type definition for Account context."""
@@ -39,7 +41,7 @@ class AccountContext(TypedDict):
     category_type: type[AccountCategory]
     closed: bool
     budgeted: bool
-    updated_days_ago: int
+    updated_days_ago: int | None
     n_today: int
     n_future: int
     change_today: Decimal
@@ -165,16 +167,64 @@ def page(uri: str) -> flask.Response:
         )
 
 
-def new() -> str:
+def new() -> str | flask.Response:
     """GET & POST /h/accounts/new.
 
     Returns:
         HTML response
     """
-    raise NotImplementedError
+    if flask.request.method == "GET":
+        ctx: AccountContext = {
+            "uri": None,
+            "name": "",
+            "number": None,
+            "institution": "",
+            "category": AccountCategory.CASH,
+            "category_type": AccountCategory,
+            "closed": False,
+            "budgeted": False,
+            "updated_days_ago": None,
+            "n_today": 0,
+            "n_future": 0,
+            "change_today": Decimal(),
+            "change_future": Decimal(),
+            "value": Decimal(),
+            "performance": None,
+            "assets": None,
+        }
+        return flask.render_template(
+            "accounts/edit.jinja",
+            acct=ctx,
+        )
+
+    p = web.portfolio
+
+    with p.begin_session() as s:
+        form = flask.request.form
+        institution = form["institution"].strip()
+        name = form["name"].strip()
+        number = form["number"].strip()
+        category = AccountCategory(form["category"])
+        budgeted = "budgeted" in form
+
+        try:
+            with s.begin_nested():
+                acct = Account(
+                    institution=institution,
+                    name=name,
+                    number=number,
+                    category=category,
+                    closed=False,
+                    budgeted=budgeted,
+                )
+                s.add(acct)
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return base.error(e)
+
+        return base.dialog_swap(event="account", snackbar="All changes saved")
 
 
-def account(uri: str) -> str | flask.Response:
+def account(uri: str) -> str | werkzeug.Response:
     """GET & POST /h/accounts/a/<uri>.
 
     Args:
@@ -195,6 +245,10 @@ def account(uri: str) -> str | flask.Response:
                 "accounts/edit.jinja",
                 acct=ctx_account(s, acct, today),
             )
+        if flask.request.method == "DELETE":
+            with s.begin_nested():
+                s.delete(acct)
+            return flask.redirect(flask.url_for("accounts.page_all"))
 
         values, _, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
@@ -260,8 +314,8 @@ def performance(uri: str) -> flask.Response:
     return response
 
 
-def validation(uri: str) -> str:
-    """GET /h/accounts/a/<uri>/validation.
+def validation() -> str:
+    """GET /h/accounts/validation.
 
     Returns:
         string HTML response
@@ -277,6 +331,7 @@ def validation(uri: str) -> str:
 
     with p.begin_session() as s:
         args = flask.request.args
+        uri = args.get("uri")
         for key, (required, prop) in properties.items():
             if key not in args:
                 continue
@@ -285,9 +340,9 @@ def validation(uri: str) -> str:
                 is_required=required,
                 session=s,
                 no_duplicates=prop,
-                no_duplicate_wheres=[
-                    Account.id_ != Account.uri_to_id(uri),
-                ],
+                no_duplicate_wheres=(
+                    None if uri is None else [Account.id_ != Account.uri_to_id(uri)]
+                ),
             )
 
     raise NotImplementedError
@@ -318,9 +373,12 @@ def ctx_account(
         change_future = Decimal()
         n_today = 0
         n_future = 0
-        updated_on_ord = today_ord
+        updated_days_ago = None
     else:
-        updated_on_ord = acct.updated_on_ord or today_ord
+        updated_on_ord = acct.updated_on_ord
+        updated_days_ago = (
+            None if updated_on_ord is None else today_ord - updated_on_ord
+        )
 
         query = (
             s.query(Transaction)
@@ -362,7 +420,7 @@ def ctx_account(
         "value": current_value,
         "closed": acct.closed,
         "budgeted": acct.budgeted,
-        "updated_days_ago": today_ord - updated_on_ord,
+        "updated_days_ago": updated_days_ago,
         "change_today": change_today,
         "change_future": change_future or Decimal(),
         "n_today": n_today,
@@ -809,9 +867,9 @@ ROUTES: base.Routes = {
     "/accounts": (page_all, ["GET"]),
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/new": (new, ["GET", "POST"]),
-    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
+    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT", "DELETE"]),
     "/h/accounts/a/<path:uri>/performance": (performance, ["GET"]),
-    "/h/accounts/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options": (txns_options, ["GET"]),
+    "/h/accounts/validation": (validation, ["GET"]),
 }

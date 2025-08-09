@@ -27,3 +27,10 @@ def test_page_status(web_client: WebClient) -> None:
 def test_page_style_test(web_client: WebClient) -> None:
     result, _ = web_client.GET("common.page_style_test")
     assert "Style Test" in result
+
+
+def test_favicon(web_client: WebClient) -> None:
+    web_client.GET(
+        "common.favicon",
+        content_type="image/vnd.microsoft.icon",
+    )
