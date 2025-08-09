@@ -45,11 +45,26 @@ const assets = {
     });
   },
   /**
-   * On click of delete valuation, confirm action
+   * On click of delete asset, confirm action
    *
    * @param {Event} evt Triggering event
    */
   confirmDelete: function (evt) {
+    dialog.confirm(
+      "Delete Asset",
+      "Delete",
+      () => {
+        htmx.trigger(evt.target, "delete");
+      },
+      "Empty asset will be deleted.",
+    );
+  },
+  /**
+   * On click of delete valuation, confirm action
+   *
+   * @param {Event} evt Triggering event
+   */
+  confirmDeleteValuation: function (evt) {
     dialog.confirm(
       "Delete Valuation",
       "Delete",

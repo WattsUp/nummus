@@ -5,7 +5,7 @@ from __future__ import annotations
 import datetime
 from collections import defaultdict
 from decimal import Decimal
-from typing import TypedDict
+from typing import TYPE_CHECKING, TypedDict
 
 import flask
 import sqlalchemy
@@ -18,10 +18,17 @@ from nummus.models import (
     Account,
     Asset,
     AssetCategory,
+    AssetSector,
     AssetValuation,
     query_count,
     YIELD_PER,
 )
+from nummus.models.asset import AssetSplit
+from nummus.models.transaction import TransactionSplit
+
+if TYPE_CHECKING:
+    import werkzeug
+
 
 PAGE_LEN = 50
 
@@ -29,7 +36,7 @@ PAGE_LEN = 50
 class AssetContext(TypedDict):
     """Context for asset page."""
 
-    uri: str
+    uri: str | None
     name: str
     description: str | None
     ticker: str | None
@@ -37,10 +44,11 @@ class AssetContext(TypedDict):
     category_type: type[AssetCategory]
     value: Decimal
     value_date: datetime.date | None
+    deletable: bool
 
-    table: TableContext
+    table: TableContext | None
 
-    performance: PerformanceContext
+    performance: PerformanceContext | None
 
 
 class TableContext(TypedDict):
@@ -147,16 +155,56 @@ def page(uri: str) -> flask.Response:
         )
 
 
-def new() -> str:
-    """GET & POST /h/accounts/new.
+def new() -> str | flask.Response:
+    """GET & POST /h/assets/new.
 
     Returns:
         HTML response
     """
-    raise NotImplementedError
+    if flask.request.method == "GET":
+        ctx: AssetContext = {
+            "uri": None,
+            "name": "",
+            "description": None,
+            "ticker": "",
+            "category": AssetCategory.STOCKS,
+            "category_type": AssetCategory,
+            "value": Decimal(),
+            "value_date": None,
+            "table": None,
+            "performance": None,
+            "deletable": False,
+        }
+        return flask.render_template(
+            "assets/edit.jinja",
+            asset=ctx,
+        )
+
+    p = web.portfolio
+
+    with p.begin_session() as s:
+        form = flask.request.form
+        name = form["name"].strip()
+        description = form["description"].strip()
+        ticker = form["ticker"].strip()
+        category = AssetCategory(form["category"])
+
+        try:
+            with s.begin_nested():
+                a = Asset(
+                    name=name,
+                    description=description,
+                    category=category,
+                    ticker=ticker,
+                )
+                s.add(a)
+        except (exc.IntegrityError, exc.InvalidORMValueError) as e:
+            return base.error(e)
+
+        return base.dialog_swap(event="asset", snackbar="All changes saved")
 
 
-def asset(uri: str) -> str | flask.Response:
+def asset(uri: str) -> str | werkzeug.Response:
     """GET & POST /h/assets/a/<uri>.
 
     Args:
@@ -184,6 +232,13 @@ def asset(uri: str) -> str | flask.Response:
                     args.get("chart-period"),
                 ),
             )
+        if flask.request.method == "DELETE":
+            with s.begin_nested():
+                s.query(AssetSector).where(AssetSector.asset_id == a.id_).delete()
+                s.query(AssetSplit).where(AssetSplit.asset_id == a.id_).delete()
+                s.query(AssetValuation).where(AssetValuation.asset_id == a.id_).delete()
+                s.delete(a)
+            return flask.redirect(flask.url_for("assets.page_all"))
 
         form = flask.request.form
         name = form["name"].strip()
@@ -279,8 +334,8 @@ def table(uri: str) -> str | flask.Response:
     return response
 
 
-def validation(uri: str) -> str:
-    """GET /h/assets/a/<uri>/validation.
+def validation() -> str:
+    """GET /h/assets/validation.
 
     Returns:
         string HTML response
@@ -295,6 +350,7 @@ def validation(uri: str) -> str:
 
     with p.begin_session() as s:
         args = flask.request.args
+        uri = args.get("uri")
         for key, (required, prop) in properties.items():
             if key not in args:
                 continue
@@ -304,15 +360,17 @@ def validation(uri: str) -> str:
                 check_length=key != "ticker",
                 session=s,
                 no_duplicates=prop,
-                no_duplicate_wheres=[
-                    Asset.id_ != Asset.uri_to_id(uri),
-                ],
+                no_duplicate_wheres=(
+                    None if uri is None else [Asset.id_ != Asset.uri_to_id(uri)]
+                ),
             )
 
         if "date" in args:
-            wheres: list[sqlalchemy.ColumnExpressionArgument] = [
-                AssetValuation.id_ == Asset.uri_to_id(uri),
-            ]
+            wheres: list[sqlalchemy.ColumnExpressionArgument] = []
+            if uri:
+                wheres.append(
+                    AssetValuation.asset_id == Asset.uri_to_id(uri),
+                )
             if "v" in args:
                 wheres.append(
                     AssetValuation.id_ != AssetValuation.uri_to_id(args["v"]),
@@ -589,6 +647,13 @@ def ctx_asset(
     else:
         current_value = valuation.value
         current_date = valuation.date
+    deletable = (
+        s.query(TransactionSplit.id_)
+        .where(TransactionSplit.asset_id == a.id_)
+        .limit(1)
+        .scalar()
+        is None
+    )
 
     return {
         "uri": a.uri,
@@ -601,6 +666,7 @@ def ctx_asset(
         "value_date": current_date,
         "performance": ctx_performance(s, a, today, period_chart),
         "table": ctx_table(s, a, today, period, start, end, page),
+        "deletable": deletable,
     }
 
 
@@ -754,11 +820,11 @@ ROUTES: base.Routes = {
     "/assets": (page_all, ["GET"]),
     "/assets/<path:uri>": (page, ["GET"]),
     "/h/assets/new": (new, ["GET", "POST"]),
-    "/h/assets/a/<path:uri>": (asset, ["GET", "PUT"]),
+    "/h/assets/a/<path:uri>": (asset, ["GET", "PUT", "DELETE"]),
     "/h/assets/a/<path:uri>/performance": (performance, ["GET"]),
     "/h/assets/a/<path:uri>/table": (table, ["GET"]),
-    "/h/assets/a/<path:uri>/validation": (validation, ["GET"]),
     "/h/assets/a/<path:uri>/new-valuation": (new_valuation, ["GET", "POST"]),
     "/h/assets/v/<path:uri>": (valuation, ["GET", "PUT", "DELETE"]),
     "/h/assets/update": (update, ["GET", "POST"]),
+    "/h/assets/validation": (validation, ["GET"]),
 }
