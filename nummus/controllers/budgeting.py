@@ -347,6 +347,7 @@ def move(uri: str) -> str | flask.Response:
                 snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
 
+        destination = args.get("destination")
         query = (
             s.query(TransactionCategory)
             .with_entities(
@@ -369,7 +370,7 @@ def move(uri: str) -> str | flask.Response:
 
             t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
             available = data.categories[t_cat_id].available
-            if src_available > 0 or available > 0:
+            if destination or src_available > 0 or available > 0:
                 options.append((t_cat_uri, name, available, group))
 
         if src_cat_id is not None and (src_available > 0 or data.assignable > 0):
@@ -390,7 +391,7 @@ def move(uri: str) -> str | flask.Response:
             "available": src_available,
             "month": month_str,
             "options": options,
-            "destination": args.get("destination"),
+            "destination": destination,
         }
     return flask.render_template(
         "budgeting/edit-move.jinja",
