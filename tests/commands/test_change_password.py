@@ -6,7 +6,6 @@ from typing import override, TYPE_CHECKING
 import pytest
 from colorama import Fore
 
-from nummus import encryption
 from nummus.commands.change_password import ChangePassword
 from nummus.portfolio import Portfolio
 
@@ -28,18 +27,15 @@ class MockPortfolio(Portfolio):
 
 def test_no_change_unencrypted(
     capsys: pytest.CaptureFixture,
-    monkeypatch: pytest.MonkeyPatch,
     empty_portfolio: Portfolio,
+    tmp_path: Path,
 ) -> None:
-    queue = [None]
+    path_password_new = tmp_path / "password.secret"
+    with path_password_new.open("w", encoding="utf-8") as file:
+        file.write("db:\n")
+        file.write("web:\n")
 
-    def mock_get_pass(_: str) -> str | None:
-        return queue.pop(0)
-
-    monkeypatch.setattr("builtins.input", mock_get_pass)
-    monkeypatch.setattr("getpass.getpass", mock_get_pass)
-
-    c = ChangePassword(empty_portfolio.path, None)
+    c = ChangePassword(empty_portfolio.path, None, path_password_new)
     assert c.run() != 0
 
     captured = capsys.readouterr()
@@ -48,82 +44,85 @@ def test_no_change_unencrypted(
 
 
 @pytest.mark.parametrize(
-    ("queue", "target"),
+    ("new_db_key", "new_web_key", "target"),
     [
-        ([None, None], f"{Fore.YELLOW}Neither password changing\n"),
-        (["Y", None], ""),
-        ([None, "Y", None], ""),
+        ("12345678", "", "Changing key to 12345678\n"),
+        ("", "01010101", "Changing web key to 01010101\n"),
     ],
 )
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
-@pytest.mark.encryption
-def test_no_change(
+def test_change(
     capsys: pytest.CaptureFixture,
     monkeypatch: pytest.MonkeyPatch,
-    empty_portfolio_encrypted: tuple[Portfolio, str],
+    empty_portfolio: Portfolio,
     tmp_path: Path,
-    queue: list[str],
+    new_db_key: str,
+    new_web_key: str,
     target: str,
 ) -> None:
-    p, key = empty_portfolio_encrypted
-    path_password = tmp_path / "password.secret"
-    with path_password.open("w", encoding="utf-8") as file:
-        file.write(key)
+    path_password_new = tmp_path / "password.secret"
+    with path_password_new.open("w", encoding="utf-8") as file:
+        file.write(f"db:{new_db_key}\n")
+        file.write(f"web:{new_web_key}\n")
+    monkeypatch.setattr("nummus.portfolio.Portfolio", MockPortfolio)
 
-    def mock_get_pass(_: str) -> str | None:
-        return queue.pop(0)
-
-    monkeypatch.setattr("builtins.input", mock_get_pass)
-    monkeypatch.setattr("getpass.getpass", mock_get_pass)
-
-    c = ChangePassword(p.path, path_password)
-    assert c.run() != 0
+    c = ChangePassword(empty_portfolio.path, None, path_password_new)
+    assert c.run() == 0
 
     captured = capsys.readouterr()
-    assert captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
+    target_out = (
+        f"{Fore.GREEN}Portfolio is unlocked\n"
+        f"{Fore.GREEN}Changed password(s)\n"
+        f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
+    )
+    assert captured.out == target_out
     assert captured.err == target
 
 
 @pytest.mark.parametrize(
-    ("queue", "target"),
+    ("queue", "target_db", "target_web"),
     [
-        (["Y", "12345678", "12345678", "N"], "Changing key to 12345678\n"),
-        (["N", "Y", "01010101", "01010101"], "Changing web key to 01010101\n"),
+        (["N"], None, None),
+        (["Y", None], None, None),
+        (["Y", "12345678", "12345678", "N"], "12345678", None),
+        (["Y", "12345678", "12345678", "Y", None], None, None),
         (
             ["Y", "12345678", "12345678", "Y", "01010101", "01010101"],
-            "Changing key to 12345678\nChanging web key to 01010101\n",
+            "12345678",
+            "01010101",
         ),
     ],
 )
-@pytest.mark.skipif(not encryption.AVAILABLE, reason="Encryption is not installed")
-@pytest.mark.encryption
-def test_change(
-    capsys: pytest.CaptureFixture,
+def test_get_keys_input(
     monkeypatch: pytest.MonkeyPatch,
-    empty_portfolio_encrypted: tuple[Portfolio, str],
-    tmp_path: Path,
+    empty_portfolio: Portfolio,
     queue: list[str],
-    target: str,
+    target_db: str | None,
+    target_web: str | None,
 ) -> None:
-    p, key = empty_portfolio_encrypted
-    path_password = tmp_path / "password.secret"
-    with path_password.open("w", encoding="utf-8") as file:
-        file.write(key)
-
     def mock_get_pass(_: str) -> str | None:
         return queue.pop(0)
 
     monkeypatch.setattr("builtins.input", mock_get_pass)
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
-    monkeypatch.setattr("nummus.portfolio.Portfolio", MockPortfolio)
 
-    c = ChangePassword(p.path, path_password)
-    assert c.run() == 0
+    c = ChangePassword(empty_portfolio.path, None, None)
+    new_db_key, new_web_key = c._get_keys()  # noqa: SLF001
 
-    captured = capsys.readouterr()
-    assert (
-        captured.out == f"{Fore.GREEN}Portfolio is unlocked\n"
-        f"{Fore.GREEN}Changed password(s)\n"
-        f"{Fore.CYAN}Run 'nummus clean' to remove backups with old password\n"
-    )
-    assert captured.err == target
+    assert new_db_key == target_db
+    assert new_web_key == target_web
+
+
+def test_get_keys_file(
+    empty_portfolio: Portfolio,
+    tmp_path: Path,
+) -> None:
+    path_password_new = tmp_path / "password.secret"
+    with path_password_new.open("w", encoding="utf-8") as file:
+        file.write("db:12345678\n")
+        file.write("web:01010101\n")
+
+    c = ChangePassword(empty_portfolio.path, None, path_password_new)
+    new_db_key, new_web_key = c._get_keys()  # noqa: SLF001
+
+    assert new_db_key == "12345678"
+    assert new_web_key == "01010101"

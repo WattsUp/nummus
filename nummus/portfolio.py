@@ -22,7 +22,7 @@ from sqlalchemy import func, orm
 
 from nummus import __version__, encryption
 from nummus import exceptions as exc
-from nummus import importers, migrations, models, sql
+from nummus import importers, migrations, models, sql, utils
 from nummus.models import (
     Account,
     Asset,
@@ -966,7 +966,14 @@ class Portfolio:
 
         Args:
             key: New portfolio key
+
+        Raises:
+            InvalidKeyError: If key does not match minimum requirements
         """
+        if len(key) < utils.MIN_PASS_LEN:
+            msg = f"Password must be at least {utils.MIN_PASS_LEN} characters"
+            raise exc.InvalidKeyError(msg)
+
         # Changing portfolio password requires recreating it
         path_new = self._path_db.with_suffix(".new.db")
         dst = Portfolio.create(path_new, key)
@@ -974,7 +981,10 @@ class Portfolio:
         engine_src = sql.get_engine(self._path_db, self._enc)
         engine_dst = sql.get_engine(dst._path_db, dst._enc)  # noqa: SLF001
 
-        exclude_tables = ("config",)
+        exclude_tables = {"config"}
+
+        def filter_(tables: list[sqlalchemy.Table]) -> list[sqlalchemy.Table]:
+            return [table for table in tables if table.name not in exclude_tables]
 
         with engine_src.connect() as conn_src, engine_dst.connect() as conn_dst:
             metadata_src = sqlalchemy.MetaData()
@@ -983,33 +993,28 @@ class Portfolio:
             metadata_dst.reflect(bind=engine_dst)
 
             # Drop destination tables in order of foreign keys
-            for table in reversed(metadata_dst.sorted_tables):
-                if table.name not in exclude_tables:
-                    table.drop(bind=engine_dst)
+            for table in reversed(filter_(metadata_dst.sorted_tables)):
+                table.drop(bind=engine_dst)
             metadata_dst.clear()
             metadata_dst.reflect(bind=engine_dst)
 
             # Create destination tables in order of foreign keys
-            for table in metadata_src.sorted_tables:
-                if table.name not in exclude_tables:
-                    table.create(bind=engine_dst)
+            for table in filter_(metadata_src.sorted_tables):
+                table.create(bind=engine_dst)
             metadata_dst.clear()
             metadata_dst.reflect(bind=engine_dst)
 
             # Count total number of rows for progress bar
             col = func.count(sqlalchemy.literal_column("*"))
             n = 0
-            for table in metadata_src.sorted_tables:
-                if table.name not in exclude_tables:
-                    query = sqlalchemy.select(col).select_from(table)
-                    result = conn_src.execute(query).scalar_one()
-                    n += result
+            for table in filter_(metadata_src.sorted_tables):
+                query = sqlalchemy.select(col).select_from(table)
+                result = conn_src.execute(query).scalar_one()
+                n += result
 
             # Copy each row, metadata is the same so order of columns is the same
             with tqdm.tqdm(desc="Copying rows", total=n) as bar:
-                for table in metadata_dst.sorted_tables:
-                    if table.name in exclude_tables:
-                        continue
+                for table in filter_(metadata_dst.sorted_tables):
                     table_src = metadata_src.tables[table.name]
                     statement = table.insert()
                     select = conn_src.execute(table_src.select())
@@ -1044,7 +1049,14 @@ class Portfolio:
 
         Args:
             key: New web key
+
+        Raises:
+            InvalidKeyError: If key does not match minimum requirements
         """
+        if len(key) < utils.MIN_PASS_LEN:
+            msg = f"Password must be at least {utils.MIN_PASS_LEN} characters"
+            raise exc.InvalidKeyError(msg)
+
         key_encrypted = self.encrypt(key)
         with self.begin_session() as s:
             s.query(Config).where(Config.key == ConfigKey.WEB_KEY).update(

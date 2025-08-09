@@ -32,6 +32,7 @@ __all__ = [
     "IntegrityError",
     "InvalidAssetTransactionCategoryError",
     "InvalidBackupTarError",
+    "InvalidKeyError",
     "InvalidORMValueError",
     "InvalidURIError",
     "MigrationRequiredError",
@@ -250,3 +251,7 @@ class EmptySearchError(Exception):
 
 class InvalidAssetTransactionCategoryError(Exception):
     """Error when a category for an asset transaction is invalid."""
+
+
+class InvalidKeyError(Exception):
+    """Error when a key does not meet minimum requirements."""

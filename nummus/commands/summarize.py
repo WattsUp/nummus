@@ -112,8 +112,6 @@ class Summarize(BaseCommand):
         )
 
         today = datetime.datetime.now().astimezone().date()
-        print(today)
-        print(datetime.datetime.now().astimezone().tzinfo)
         today_ord = today.toordinal()
 
         with self._p.begin_session() as s:
