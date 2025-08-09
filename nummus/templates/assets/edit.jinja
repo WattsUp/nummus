@@ -93,6 +93,18 @@
     </div>
   </label>
 </form>
+{% if asset.deletable %}
+  <div class="flex flex-wrap justify-around" hx-target="#dialog-error">
+    <button
+      class="btn-text-error"
+      hx-delete="{{ url_for('assets.asset', uri=asset.uri) }}"
+      hx-trigger="delete"
+      onclick="assets.confirmDelete(event)"
+    >
+      Delete
+    </button>
+  </div>
+{% endif %}
 <div id="dialog-error" class="status-error"></div>
 <script>
   dialog.onLoad();

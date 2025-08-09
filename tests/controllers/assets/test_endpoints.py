@@ -40,13 +40,71 @@ def test_page(
     assert "new" not in result
 
 
-@pytest.mark.xfail
-def test_new(web_client: WebClient) -> None:
-    # TODO (WattsUp): #223
-    web_client.GET("assets.new")
+def test_new_get(web_client: WebClient) -> None:
+    result, _ = web_client.GET("assets.new")
+    assert "New asset" in result
+    assert "Save" in result
+    assert "Delete" not in result
 
 
-def test_asset_get(web_client: WebClient, asset: Asset) -> None:
+def test_new(
+    web_client: WebClient,
+    session: orm.Session,
+) -> None:
+    session.query(Asset).delete()
+    session.commit()
+
+    result, headers = web_client.POST(
+        "assets.new",
+        data={
+            "name": "New name",
+            "category": "STOCKS",
+            "description": "Nothing to see",
+            "ticker": "1234",
+        },
+    )
+    assert "snackbar.show" in result
+    assert "All changes saved" in result
+    assert headers["HX-Trigger"] == "asset"
+
+    a = session.query(Asset).one()
+    assert a.name == "New name"
+    assert a.category == AssetCategory.STOCKS
+    assert a.description == "Nothing to see"
+    assert a.ticker == "1234"
+
+
+def test_new_error(web_client: WebClient) -> None:
+    result, _ = web_client.POST(
+        "assets.new",
+        data={
+            "name": "a",
+            "category": "STOCKS",
+            "description": "Nothing to see",
+            "ticker": "1234",
+        },
+    )
+    assert result == base.error("Asset name must be at least 2 characters long")
+
+
+def test_asset_get_empty(web_client: WebClient, asset: Asset) -> None:
+    result, _ = web_client.GET(("assets.asset", {"uri": asset.uri}))
+    assert asset.name in result
+    assert asset.ticker is not None
+    assert asset.ticker in result
+    assert asset.description is not None
+    assert asset.description in result
+    assert "Edit asset" in result
+    assert "Save" in result
+    assert "Delete" in result
+
+
+def test_asset_get(
+    web_client: WebClient,
+    asset: Asset,
+    transactions: list[Transaction],
+) -> None:
+    _ = transactions
     result, _ = web_client.GET(("assets.asset", {"uri": asset.uri}))
     assert asset.name in result
     assert asset.ticker is not None
@@ -92,6 +150,17 @@ def test_asset_edit_error(web_client: WebClient, asset: Asset) -> None:
     assert result == base.error("Asset name must be at least 2 characters long")
 
 
+def test_account_delete(
+    web_client: WebClient,
+    asset: Asset,
+    asset_valuation: AssetValuation,
+) -> None:
+    _ = asset_valuation
+    result, headers = web_client.DELETE(("assets.asset", {"uri": asset.uri}))
+    assert not result
+    assert headers["HX-Redirect"] == web_client.url_for("assets.page_all")
+
+
 def test_performance(web_client: WebClient, asset: Asset) -> None:
     result, headers = web_client.GET(("assets.performance", {"uri": asset.uri}))
     assert "<script>" in result
@@ -113,23 +182,25 @@ def test_table_second_page(web_client: WebClient, asset: Asset) -> None:
 
 
 @pytest.mark.parametrize(
-    ("include_valuation", "prop", "value", "target"),
+    ("include_asset", "include_valuation", "prop", "value", "target"),
     [
-        (False, "name", "New Name", ""),
-        (False, "name", " ", "Required"),
-        (False, "name", "a", "2 characters required"),
-        (False, "name", "Banana ETF", "Must be unique"),
-        (False, "description", "BANANA ETF", ""),
-        (False, "ticker", "TICKER", ""),
-        (False, "ticker", " ", ""),
-        (False, "ticker", "A", ""),
-        (False, "ticker", "BANANA_ETF", "Must be unique"),
-        (False, "date", "2000-01-01", ""),
-        (False, "date", " ", "Required"),
-        (True, "date", "2000-01-01", ""),
-        (True, "date", " ", "Required"),
-        (False, "value", "0", ""),
-        (False, "value", " ", "Required"),
+        (True, False, "name", "New Name", ""),
+        (True, False, "name", " ", "Required"),
+        (True, False, "name", "a", "2 characters required"),
+        (True, False, "name", "Banana ETF", "Must be unique"),
+        (False, False, "name", "Banana incorporated", "Must be unique"),
+        (True, False, "description", "BANANA ETF", ""),
+        (True, False, "ticker", "TICKER", ""),
+        (True, False, "ticker", " ", ""),
+        (True, False, "ticker", "A", ""),
+        (True, False, "ticker", "BANANA_ETF", "Must be unique"),
+        (True, False, "date", "2000-01-01", ""),
+        (True, False, "date", " ", "Required"),
+        (True, True, "date", "2000-01-01", ""),
+        (True, True, "date", " ", "Required"),
+        (False, True, "date", "2000-01-01", ""),
+        (True, False, "value", "0", ""),
+        (True, False, "value", " ", "Required"),
     ],
 )
 def test_validation(
@@ -137,13 +208,16 @@ def test_validation(
     asset: Asset,
     asset_etf: Asset,
     asset_valuation: AssetValuation,
+    include_asset: bool,
     include_valuation: bool,
     prop: str,
     value: str,
     target: str,
 ) -> None:
     _ = asset_etf
-    args = {"uri": asset.uri, prop: value}
+    args = {prop: value}
+    if include_asset:
+        args["uri"] = asset.uri
     if include_valuation:
         args["v"] = asset_valuation.uri
     result, _ = web_client.GET(("assets.validation", args))
