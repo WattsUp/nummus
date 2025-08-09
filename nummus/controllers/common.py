@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from pathlib import Path
+
+import flask
 
 from nummus.controllers import auth, base
-
-if TYPE_CHECKING:
-    import flask
 
 
 def page_dashboard() -> flask.Response:
@@ -41,9 +40,20 @@ def page_style_test() -> flask.Response:
     )
 
 
+def favicon() -> flask.Response:
+    """GET /favicon.ico.
+
+    Returns:
+        string HTML response
+    """
+    path = Path(flask.current_app.static_folder or "static") / "img" / "favicon.ico"
+    return flask.send_file(path)
+
+
 ROUTES: base.Routes = {
     "/": (page_dashboard, ["GET"]),
     "/index": (page_dashboard, ["GET"]),
+    "/favicon.ico": (favicon, ["GET"]),
     "/status": (page_status, ["GET"]),
     "/d/style-test": (page_style_test, ["GET"]),
 }
