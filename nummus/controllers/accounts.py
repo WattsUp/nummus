@@ -27,6 +27,8 @@ from nummus.models import (
 if TYPE_CHECKING:
     import datetime
 
+    import werkzeug
+
 
 class AccountContext(TypedDict):
     """Type definition for Account context."""
@@ -39,7 +41,7 @@ class AccountContext(TypedDict):
     category_type: type[AccountCategory]
     closed: bool
     budgeted: bool
-    updated_days_ago: int
+    updated_days_ago: int | None
     n_today: int
     n_future: int
     change_today: Decimal
@@ -181,7 +183,7 @@ def new() -> str | flask.Response:
             "category_type": AccountCategory,
             "closed": False,
             "budgeted": False,
-            "updated_days_ago": 0,
+            "updated_days_ago": None,
             "n_today": 0,
             "n_future": 0,
             "change_today": Decimal(),
@@ -222,7 +224,7 @@ def new() -> str | flask.Response:
         return base.dialog_swap(event="account", snackbar="All changes saved")
 
 
-def account(uri: str) -> str | flask.Response:
+def account(uri: str) -> str | werkzeug.Response:
     """GET & POST /h/accounts/a/<uri>.
 
     Args:
@@ -243,6 +245,10 @@ def account(uri: str) -> str | flask.Response:
                 "accounts/edit.jinja",
                 acct=ctx_account(s, acct, today),
             )
+        if flask.request.method == "DELETE":
+            with s.begin_nested():
+                s.delete(acct)
+            return flask.redirect(flask.url_for("accounts.page_all"))
 
         values, _, _ = acct.get_value(today_ord, today_ord)
         v = values[0]
@@ -367,9 +373,12 @@ def ctx_account(
         change_future = Decimal()
         n_today = 0
         n_future = 0
-        updated_on_ord = today_ord
+        updated_days_ago = None
     else:
-        updated_on_ord = acct.updated_on_ord or today_ord
+        updated_on_ord = acct.updated_on_ord
+        updated_days_ago = (
+            None if updated_on_ord is None else today_ord - updated_on_ord
+        )
 
         query = (
             s.query(Transaction)
@@ -411,7 +420,7 @@ def ctx_account(
         "value": current_value,
         "closed": acct.closed,
         "budgeted": acct.budgeted,
-        "updated_days_ago": today_ord - updated_on_ord,
+        "updated_days_ago": updated_days_ago,
         "change_today": change_today,
         "change_future": change_future or Decimal(),
         "n_today": n_today,
@@ -858,7 +867,7 @@ ROUTES: base.Routes = {
     "/accounts": (page_all, ["GET"]),
     "/accounts/<path:uri>": (page, ["GET"]),
     "/h/accounts/new": (new, ["GET", "POST"]),
-    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT"]),
+    "/h/accounts/a/<path:uri>": (account, ["GET", "PUT", "DELETE"]),
     "/h/accounts/a/<path:uri>/performance": (performance, ["GET"]),
     "/h/accounts/a/<path:uri>/txns": (txns, ["GET"]),
     "/h/accounts/a/<path:uri>/txns-options": (txns_options, ["GET"]),

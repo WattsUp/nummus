@@ -78,4 +78,19 @@ const accounts = {
     htmx.addClass(btn, "hidden");
     htmx.removeClass(htmx.find("#account-assets-all"), "hidden");
   },
+  /**
+   * On click of delete account, confirm action
+   *
+   * @param {Event} evt Triggering event
+   */
+  confirmDelete: function (evt) {
+    dialog.confirm(
+      "Delete Account",
+      "Delete",
+      () => {
+        htmx.trigger(evt.target, "delete");
+      },
+      "Empty account will be deleted.",
+    );
+  },
 };

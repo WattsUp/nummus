@@ -41,6 +41,8 @@
       <span class="text-error">
         Account was closed {{ acct.updated_days_ago | days }} ago
       </span>
+    {% elif acct.updated_days_ago is none %}
+      <span>Account has no transactions</span>
     {% elif acct.updated_days_ago < 0 %}
       <span>
         {{ acct.n_future }} future transaction{{ 's' if acct.n_future != 1 }}
