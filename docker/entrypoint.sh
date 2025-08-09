@@ -19,8 +19,10 @@ if [ ! -f $portfolio ]; then
 
   nummus --portfolio $portfolio --pass-file $key_file create
 
-  # TODO (WattsUp): #360 Add args to change-password
-  # nummus --portfolio $portfolio --pass-file $key_file change-password
+  echo -e "db:\nweb:$web_key" >new.key
+  nummus --portfolio $portfolio --pass-file $key_file change-password --new-pass-file new.key
+  rm new.key
+  nummus --portfolio $portfolio --pass-file $key_file clean
 fi
 
 /home/python/.local/bin/nummus --portfolio $portfolio --pass-file $key_file migrate
