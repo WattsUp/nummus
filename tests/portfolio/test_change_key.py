@@ -46,6 +46,11 @@ def test_change_db_key(
         Portfolio(p.path, old_key)
 
 
+def test_change_db_key_short(empty_portfolio: Portfolio) -> None:
+    with pytest.raises(exc.InvalidKeyError):
+        empty_portfolio.change_key("a")
+
+
 @pytest.mark.skipif(not encryption.AVAILABLE, reason="No encryption available")
 @pytest.mark.encryption
 def test_change_web_key(
@@ -63,3 +68,8 @@ def test_change_web_key(
     web_key = p.decrypt_s(web_key_enc)
     assert web_key == new_key
     assert web_key != db_key
+
+
+def test_change_web_key_short(empty_portfolio: Portfolio) -> None:
+    with pytest.raises(exc.InvalidKeyError):
+        empty_portfolio.change_web_key("a")
