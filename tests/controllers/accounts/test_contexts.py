@@ -41,7 +41,7 @@ def test_ctx_account_empty(
         "value": Decimal(),
         "closed": account.closed,
         "budgeted": account.budgeted,
-        "updated_days_ago": 0,
+        "updated_days_ago": None,
         "change_today": Decimal(),
         "change_future": Decimal(),
         "n_today": 0,
