@@ -115,9 +115,10 @@ class Base(ABC):
             .with_entities(HealthCheckIssue.id_, HealthCheckIssue.msg)
             .where(
                 HealthCheckIssue.check == self.name,
-                HealthCheckIssue.ignore.is_(False),
             )
         )
+        if not self._no_ignores:
+            query = query.where(HealthCheckIssue.ignore.is_(False))
         self._issues = {
             HealthCheckIssue.id_to_uri(id_): msg
             for id_, msg in query.yield_per(YIELD_PER)

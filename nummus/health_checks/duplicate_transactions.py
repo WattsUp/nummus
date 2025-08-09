@@ -34,6 +34,8 @@ class DuplicateTransactions(Base):
                 Transaction.account_id,
                 Transaction.amount,
             )
+            # Dividends often occur on the same day with a zero Transaction.amount
+            .where(Transaction.amount != 0)
             .group_by(
                 Transaction.date_ord,
                 Transaction.account_id,
