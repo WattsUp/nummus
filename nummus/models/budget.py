@@ -7,7 +7,7 @@ from collections import defaultdict
 from decimal import Decimal
 from typing import NamedTuple
 
-from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, func, Index, orm, UniqueConstraint
 
 from nummus import utils
 from nummus.models.account import Account
@@ -101,7 +101,10 @@ class BudgetAssignment(Base):
     amount: ORMReal = orm.mapped_column(Decimal6)
     category_id: ORMInt = orm.mapped_column(ForeignKey("transaction_category.id_"))
 
-    __table_args__ = (UniqueConstraint("month_ord", "category_id"),)
+    __table_args__ = (
+        UniqueConstraint("month_ord", "category_id"),
+        Index("budget_assignment_category_id", "category_id"),
+    )
 
     @orm.validates("amount")
     def validate_decimals(self, key: str, field: Decimal | None) -> Decimal | None:
@@ -548,6 +551,7 @@ class Target(Base):
             f"period != {TargetPeriod.WEEK.value} or repeat_every == 1",
             "WEEK targets must repeat every week",
         ),
+        Index("target_category_id", "category_id"),
     )
 
     @orm.validates("amount")

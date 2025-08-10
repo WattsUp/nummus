@@ -10,7 +10,7 @@ from typing import override, TYPE_CHECKING
 
 import yfinance
 import yfinance.exceptions
-from sqlalchemy import CheckConstraint, ForeignKey, func, orm, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, func, Index, orm, UniqueConstraint
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -78,6 +78,7 @@ class AssetSector(Base):
             "weight > 0",
             "asset_sector.weight must be positive",
         ),
+        Index("asset_sector_asset_id", "asset_id"),
     )
 
 
@@ -102,6 +103,7 @@ class AssetSplit(Base):
             "multiplier > 0",
             "asset_split.multiplier must be positive",
         ),
+        Index("asset_split_asset_id", "asset_id"),
     )
 
     @orm.validates("multiplier")
@@ -144,6 +146,8 @@ class AssetValuation(Base):
             "value >= 0",
             "asset_valuation.value must be zero or positive",
         ),
+        Index("asset_valuation_asset_id", "asset_id"),
+        Index("asset_valuation_date_ord", "date_ord"),
     )
 
     @orm.validates("value")
