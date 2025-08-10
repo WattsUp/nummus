@@ -11,7 +11,7 @@ from typing import override, TYPE_CHECKING
 
 import sqlalchemy
 from rapidfuzz import process
-from sqlalchemy import CheckConstraint, event, ForeignKey, orm, Row
+from sqlalchemy import CheckConstraint, event, ForeignKey, Index, orm, Row
 
 from nummus import exceptions as exc
 from nummus import utils
@@ -94,6 +94,11 @@ class TransactionSplit(Base):
             "amount != 0",
             "transaction_split.amount must be non-zero",
         ),
+        Index("transaction_split_category_id", "category_id"),
+        Index("transaction_split_parent_id", "parent_id"),
+        Index("transaction_split_account_id", "account_id"),
+        Index("transaction_split_asset_id", "asset_id"),
+        Index("transaction_split_date_ord", "date_ord"),
     )
 
     @orm.validates("payee", "memo", "tag", "text_fields")
@@ -378,6 +383,8 @@ class Transaction(Base):
     __table_args__ = (
         *string_column_args("statement"),
         *string_column_args("payee"),
+        Index("transaction_account_id", "account_id"),
+        Index("transaction_date_ord", "date_ord"),
     )
 
     @orm.validates("statement", "payee")

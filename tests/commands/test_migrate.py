@@ -50,6 +50,7 @@ def test_v0_1_migration(
         "1948-03-15 Savings, please validate\n"
         f"{Fore.GREEN}Portfolio migrated to v0.2.0\n"
         f"{Fore.GREEN}Portfolio migrated to v0.10.0\n"
+        f"{Fore.GREEN}Portfolio migrated to v0.11.0\n"
         f"{Fore.GREEN}Portfolio model schemas updated\n"
     )
     assert captured.out == target
