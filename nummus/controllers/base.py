@@ -45,7 +45,7 @@ class Page(NamedTuple):
 
     icon: str
     endpoint: str
-    type_: LinkType
+    type_: LinkType = LinkType.PAGE
 
 
 class PageGroup(NamedTuple):
@@ -138,20 +138,12 @@ def ctx_base(
             (
                 "",
                 {
-                    "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
-                    "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
+                    "Home": Page("home", "common.page_dashboard"),
+                    "Budget": Page("wallet", "budgeting.page"),
                     # TODO (WattsUp): #358 Change to receipt_long and add_receipt_long
                     # if request gets fulfilled
-                    "Transactions": Page(
-                        "note_stack",
-                        "transactions.page_all",
-                        LinkType.PAGE,
-                    ),
-                    "Accounts": Page(
-                        "account_balance",
-                        "accounts.page_all",
-                        LinkType.PAGE,
-                    ),
+                    "Transactions": Page("note_stack", "transactions.page_all"),
+                    "Accounts": Page("account_balance", "accounts.page_all"),
                     "Insights": None,  # search_insights
                 },
             ),
@@ -159,24 +151,16 @@ def ctx_base(
             (
                 "Investing",
                 {
-                    "Assets": Page("box", "assets.page_all", LinkType.PAGE),
-                    "Performance": None,  # ssid_chart
-                    "Allocation": Page(
-                        "full_stacked_bar_chart",
-                        "allocation.page",
-                        LinkType.PAGE,
-                    ),
+                    "Assets": Page("box", "assets.page_all"),
+                    "Performance": Page("ssid_chart", "performance.page"),  # ssid_chart
+                    "Allocation": Page("full_stacked_bar_chart", "allocation.page"),
                 },
             ),
             (
                 "Planning",
                 {
                     "Retirement": None,  # person_play
-                    "Emergency fund": Page(
-                        "emergency",
-                        "emergency_fund.page",
-                        LinkType.PAGE,
-                    ),
+                    "Emergency fund": Page("emergency", "emergency_fund.page"),
                 },
             ),
             (
@@ -187,26 +171,16 @@ def ctx_base(
                         if is_encrypted
                         else None
                     ),
-                    "Categories": Page(
-                        "category",
-                        "transaction_categories.page",
-                        LinkType.PAGE,
-                    ),
+                    "Categories": Page("category", "transaction_categories.page"),
                     "Import file": Page(
                         "upload",
                         "import_file.import_file",
                         LinkType.DIALOG,
                     ),
                     "Update assets": Page("update", "assets.update", LinkType.DIALOG),
-                    "Health checks": Page(
-                        "health_metrics",
-                        "health.page",
-                        LinkType.PAGE,
-                    ),
+                    "Health checks": Page("health_metrics", "health.page"),
                     "Style test": (
-                        Page("style", "common.page_style_test", LinkType.PAGE)
-                        if debug
-                        else None
+                        Page("style", "common.page_style_test") if debug else None
                     ),
                 },
             ),
@@ -510,11 +484,12 @@ def date_labels(start_ord: int, end_ord: int) -> DateLabels:
     return DateLabels([d.isoformat() for d in dates], date_mode)
 
 
-def ctx_to_json(d: dict[str, object]) -> str:
+def ctx_to_json(d: dict[str, object], precision: int = 2) -> str:
     """Convert web context to JSON.
 
     Args:
         d: Object to serialize
+        precision: Precision to round real numbers to
 
     Returns:
         JSON object
@@ -522,7 +497,7 @@ def ctx_to_json(d: dict[str, object]) -> str:
 
     def default(obj: object) -> str | float:
         if isinstance(obj, Decimal):
-            return float(round(obj, 2))
+            return float(round(obj, precision))
         msg = f"Unknown type {type(obj)}"
         raise TypeError(msg)
 

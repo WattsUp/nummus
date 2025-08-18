@@ -124,6 +124,7 @@ const nummusChart = {
       chart.data.datasets = datasets;
     }
     chart.config.options.scales.x.ticks.dateMode = dateMode;
+    pluginColor.updateChartColor(chart);
     chart.update();
   },
   /**

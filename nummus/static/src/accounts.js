@@ -54,20 +54,24 @@ const accounts = {
         },
       },
     ];
-    if (this.chart) this.chart.destroy();
-    this.ctx = ctx;
-    this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
-      plugins: {
-        tooltip: {
-          callbacks: {
-            footer: function (context) {
-              let profit = context[0].raw - context[1].raw;
-              return "Return: " + formatterF2.format(profit);
+    // TODO (WattsUp): date years not working
+    if (this.chart && ctx == this.chart.ctx) {
+      nummusChart.update(this.chart, labels, dateMode, datasets);
+    } else {
+      this.ctx = ctx;
+      this.chart = nummusChart.create(ctx, labels, dateMode, datasets, null, {
+        plugins: {
+          tooltip: {
+            callbacks: {
+              footer: function (context) {
+                let profit = context[0].raw - context[1].raw;
+                return "Return: " + formatterF2.format(profit);
+              },
             },
           },
         },
-      },
-    });
+      });
+    }
   },
   /**
    * Show remaining assets

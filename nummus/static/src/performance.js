@@ -13,23 +13,9 @@ const performance = {
     const min = raw.min && raw.min.map((v) => Number(v) * 100);
     const max = raw.max && raw.max.map((v) => Number(v) * 100);
     const index = raw.index.map((v) => Number(v) * 100);
+    const indexName = raw.index_name;
     const indexMin = raw.index_min && raw.index_min.map((v) => Number(v) * 100);
     const indexMax = raw.index_max && raw.index_max.map((v) => Number(v) * 100);
-
-    // If only single day data, duplicate for prettier charts
-    if (labels.length == 1) {
-      labels.push(labels[0]);
-      values.push(values[0]);
-      if (min) min.push(min[0]);
-      if (max) max.push(max[0]);
-      index.push(index[0]);
-      if (indexMin) min.push(indexMin[0]);
-      if (indexMax) max.push(indexMax[0]);
-    }
-
-    const blue = getThemeColor("blue");
-    const yellow = getThemeColor("yellow");
-    const ticksEnabled = window.screen.width >= 768;
 
     {
       const canvas = document.getElementById("performance-chart-canvas");
@@ -40,19 +26,20 @@ const performance = {
           label: "Portfolio",
           type: "line",
           data: values,
-          borderColor: blue,
+          borderColorRaw: "primary",
+          backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 2,
-          backgroundColor: blue + "80",
           pointRadius: 0,
           hoverRadius: 0,
+          fill: true,
         });
         datasets.push({
-          label: "S&P 500",
+          label: indexName,
           type: "line",
           data: index,
-          borderColor: yellow,
+          borderColorRaw: "tertiary",
+          backgroundColorRaw: ["tertiary-container", "80"],
           borderWidth: 2,
-          backgroundColor: yellow + "80",
           pointRadius: 0,
           hoverRadius: 0,
         });
@@ -62,83 +49,70 @@ const performance = {
           label: "Max",
           type: "line",
           data: max,
+          borderColorRaw: "primary",
+          backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 0,
           pointRadius: 0,
           hoverRadius: 0,
           fill: 2,
-          borderColor: blue,
-          backgroundColor: blue + "40",
         });
         datasets.push({
           label: "Average",
           type: "line",
           data: values,
+          borderColorRaw: "primary",
+          backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
-          borderColor: blue,
-          backgroundColor: blue + "40",
         });
         datasets.push({
           label: "Min",
           type: "line",
           data: min,
+          borderColorRaw: "primary",
+          backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 0,
           pointRadius: 0,
           hoverRadius: 0,
-          borderColor: blue,
-          backgroundColor: blue + "40",
         });
         // Plot average as a line and fill between min/max
         datasets.push({
-          label: "S&P 500 Max",
+          label: `${indexName} Max`,
           type: "line",
           data: indexMax,
+          borderColorRaw: "tertiary",
+          backgroundColorRaw: ["tertiary-container", "80"],
           borderWidth: 0,
           pointRadius: 0,
           hoverRadius: 0,
           fill: 5,
-          borderColor: yellow,
-          backgroundColor: yellow + "40",
         });
         datasets.push({
-          label: "S&P 500 Average",
+          label: `${indexName} Average`,
           type: "line",
           data: index,
+          borderColorRaw: "tertiary",
+          backgroundColorRaw: ["tertiary-container", "80"],
           borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
-          borderColor: yellow,
-          backgroundColor: yellow + "40",
         });
         datasets.push({
-          label: "S&P 500 Min",
+          label: `${indexName} Min`,
           type: "line",
           data: indexMin,
+          borderColorRaw: "tertiary",
+          backgroundColorRaw: ["tertiary-container", "80"],
           borderWidth: 0,
           pointRadius: 0,
           hoverRadius: 0,
-          borderColor: yellow,
-          backgroundColor: yellow + "40",
         });
       }
 
       const options = {
         scales: {
-          x: {
-            ticks: { display: ticksEnabled },
-            grid: { drawTicks: ticksEnabled },
-          },
-          y: {
-            ticks: {
-              callback: formatPercentTicks,
-              precision: 0,
-            },
-            grid: {
-              color: (ctx) =>
-                ctx.tick.value == 0 ? "black" : "rgba(0,0,0,0.1)",
-            },
-          },
+          y: { ticks: { callback: formatPercentTicks } },
         },
         plugins: {
           tooltip: {

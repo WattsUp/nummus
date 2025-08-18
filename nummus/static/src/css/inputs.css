@@ -184,7 +184,7 @@
 }
 
 @utility input-bg-* {
-  --input-bg-color: --value(--color- *);
+  --input-bg-color: --value(--color-*);
 }
 
 @utility toggle {

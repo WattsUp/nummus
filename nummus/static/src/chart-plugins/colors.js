@@ -56,7 +56,8 @@ const pluginColor = {
 
     if (options.scales.y) {
       options.scales.y.ticks.color = text;
-      options.scales.y.grid.color = outline;
+      options.scales.y.grid.color = (ctx) =>
+        ctx.tick.value == 0 ? text : outline;
       options.scales.y.border.color = outline;
     }
 
