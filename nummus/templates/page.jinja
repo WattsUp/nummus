@@ -11,4 +11,13 @@
   >
     {% include "shared/spinner.jinja" %}
   </div>
+  <div
+    hx-get="{{ url_for('performance.dashboard') }}"
+    hx-trigger="load"
+    hx-indicator="find .spinner"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% include "shared/spinner.jinja" %}
+  </div>
 </div>

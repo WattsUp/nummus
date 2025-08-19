@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
 from sqlalchemy import func, orm
 
-from nummus import portfolio, utils, web
-from nummus.controllers import base, common
+from nummus import utils, web
+from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
 
@@ -55,14 +55,14 @@ class ChartData(TypedDict):
     index_max: list[Decimal] | None
 
 
-class ChartContext(TypedDict):
+class Context(TypedDict):
     """Type definition for chart context."""
 
     start: datetime.date
     end: datetime.date
     period: str
     period_options: dict[str, str]
-    data: ChartData
+    chart: ChartData
     accounts: AccountsContext
     index: str
     indices: list[str]
@@ -87,7 +87,7 @@ def page() -> flask.Response:
     return base.page(
         "performance/page.jinja",
         title="Performance",
-        chart=ctx,
+        ctx=ctx,
     )
 
 
@@ -127,12 +127,10 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
-        end = datetime.date.today()
+        end = base.today_client()
         start = end - datetime.timedelta(days=90)
         start_ord = start.toordinal()
         end_ord = end.toordinal()
@@ -160,13 +158,13 @@ def dashboard() -> str:
         twrr = utils.twrr(total, total_profit)
 
         ctx = {
-            "profit": total_profit[-1],
+            "pnl": total_profit[-1],
             "twrr": twrr[-1],
             "indices": indices,
         }
     return flask.render_template(
         "performance/dashboard.jinja",
-        data=ctx,
+        ctx=ctx,
     )
 
 
@@ -175,7 +173,7 @@ def ctx_chart(
     today: datetime.date,
     period: str,
     index: str,
-) -> ChartContext:
+) -> Context:
     """Get the context to build the performance chart.
 
     Args:
@@ -275,7 +273,8 @@ def ctx_chart(
     index_twrr_max: list[Decimal] | None = None
     date_mode: str | None = None
 
-    # TODO (WattsUp): #392 Move to base.chart_data(start_ord, end_ord, [twrr, index_twrr])
+    # TODO (WattsUp): #392 Move to base
+    # maybe chart_data(start_ord, end_ord, [twrr, index_twrr])
     # Copy to accounts.performance
     if n > base.LIMIT_DOWNSAMPLE:
         # Downsample to min/avg/max by month
@@ -299,7 +298,7 @@ def ctx_chart(
         else:
             date_mode = "days"
 
-    data: ChartData = {
+    chart: ChartData = {
         "labels": labels,
         "date_mode": date_mode,
         "values": twrr,
@@ -325,7 +324,7 @@ def ctx_chart(
         "end": end,
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
-        "data": data,
+        "chart": chart,
         "accounts": accounts,
         "index": index,
         "indices": indices,

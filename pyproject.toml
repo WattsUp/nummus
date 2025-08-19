@@ -192,7 +192,6 @@ exclude = [
   # Not updated yet
   "nummus/controllers/cash_flow.py",
   "nummus/controllers/net_worth.py",
-  "nummus/controllers/performance.py",
   "tests/controllers/test_cash_flow.py",
   "tests/controllers/test_net_worth.py",
   "tests/controllers/test_performance.py",

@@ -5,8 +5,8 @@
   hx-target="#performance-chart-data"
 >
   <div class="flex justify-around gap-2">
-    {% for value, label in chart.period_options.items() %}
-      {% set btn_class = "btn-tonal" if value == chart.period else "btn-text" %}
+    {% for value, label in ctx.period_options.items() %}
+      {% set btn_class = "btn-tonal" if value == ctx.period else "btn-text" %}
       <button
         class="{{ btn_class }}"
         hx-get="{{ url_for('performance.chart', period=value) }}"
@@ -25,10 +25,10 @@
         autocomplete="off"
         hx-get="{{ url_for("performance.chart") }}"
       >
-        {% for index in chart.indices %}
+        {% for index in ctx.indices %}
           <option
             value="{{ index }}"
-            {% if index == chart.index %}selected{% endif %}
+            {% if index == ctx.index %}selected{% endif %}
           >
             {{ index }}
           </option>
@@ -45,12 +45,12 @@
       class="bg-tertiary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>help</icon>
-      <span class="mr-auto">About {{ chart.index }}</span>
+      <span class="mr-auto">About {{ ctx.index }}</span>
       <icon class="details-icon-open">keyboard_arrow_up</icon>
       <icon class="details-icon-closed">keyboard_arrow_down</icon>
     </summary>
     <div class="prose mx-auto px-2">
-      <p>{{ chart.index_description }}</p>
+      <p>{{ ctx.index_description }}</p>
     </div>
   </details>
 </div>

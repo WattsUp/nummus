@@ -30,8 +30,8 @@
       </div>
       <div class="text-right max-md:hidden">{{ account.end | money }}</div>
       <div class="{{ account.pnl | pnl_color }} flex items-center justify-end">
-        <icon class="sm">{{ account.pnl | pnl_arrow }}</icon>
         {{ account.pnl | abs | money }}
+        <icon class="sm">{{ account.pnl | pnl_arrow }}</icon>
       </div>
       <div class="text-right">{{ account.mwrr | percent }}</div>
       <icon>chevron_right</icon>
@@ -45,8 +45,8 @@
     <div class="text-right max-md:hidden">{{ accounts.cash_flow | money }}</div>
     <div class="text-right max-md:hidden">{{ accounts.end | money }}</div>
     <div class="{{ accounts.pnl | pnl_color }} flex items-center justify-end">
-      <icon class="sm">{{ accounts.pnl | pnl_arrow }}</icon>
       {{ accounts.pnl | money }}
+      <icon class="sm">{{ accounts.pnl | pnl_arrow }}</icon>
     </div>
     <div class="text-right">{{ accounts.mwrr | percent }}</div>
   </div>
