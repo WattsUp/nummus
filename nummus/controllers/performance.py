@@ -64,7 +64,8 @@ class ChartContext(TypedDict):
     period_options: dict[str, str]
     data: ChartData
     accounts: AccountsContext
-    indices: dict[str, bool]
+    index: str
+    indices: list[str]
     index_description: str | None
 
 
@@ -90,26 +91,34 @@ def page() -> flask.Response:
     )
 
 
-def chart() -> str:
+def chart() -> flask.Response:
     """GET /h/performance/chart.
 
     Returns:
         string HTML response
     """
     args = flask.request.args
+    period = args.get("period", _DEFAULT_PERIOD)
+    index = args.get("index", _DEFAULT_INDEX)
     p = web.portfolio
     with p.begin_session() as s:
-        ctx = ctx_chart(
-            s,
-            base.today_client(),
-            args.get("period", _DEFAULT_PERIOD),
-            args.get("index", _DEFAULT_INDEX),
-        )
-    return flask.render_template(
+        ctx = ctx_chart(s, base.today_client(), period, index)
+    html = flask.render_template(
         "performance/chart-data.jinja",
         chart=ctx,
         include_oob=True,
     )
+    response = flask.make_response(html)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "performance.page",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        period=period,
+        index=index,
+    )
+    return response
 
 
 def dashboard() -> str:
@@ -199,8 +208,7 @@ def ctx_chart(
     n = end_ord - start_ord + 1
 
     query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
-    indices: dict[str, bool] = {name: False for (name,) in query.all()}
-    indices[index] = True
+    indices: list[str] = [name for (name,) in query.all()]
     index_description: str | None = (
         s.query(Asset.description).where(Asset.name == index).scalar()
     )
@@ -317,6 +325,7 @@ def ctx_chart(
         "period_options": base.PERIOD_OPTIONS,
         "data": data,
         "accounts": accounts,
+        "index": index,
         "indices": indices,
         "index_description": index_description,
     }
