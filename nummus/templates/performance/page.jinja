@@ -41,14 +41,10 @@
   </div>
 </div>
 {% include "performance/chart-config.jinja" %}
-{# TODO (WattsUp): Add accounts table
-  <h1 class="align-left w-full font-serif text-2xl text-green-600 md:text-3xl">
-    Accounts
-  </h1>
-  {% with accounts = chart["accounts"] %}
-    {% include "performance/accounts.jinja" %}
-  {% endwith %}
-#}
+<h2 class="text-primary font-serif text-2xl">Accounts</h2>
+{% with accounts = chart.accounts %}
+  {% include "performance/accounts.jinja" %}
+{% endwith %}
 <div id="performance-chart-data">
   {% include "performance/chart-data.jinja" %}
 </div>

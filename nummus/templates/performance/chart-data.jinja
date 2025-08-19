@@ -1,11 +1,9 @@
 {% if include_oob %}
   {% with oob = True %}
     {% include "performance/chart-config.jinja" %}
-    {#
-    {% with accounts = chart["accounts"] %}
+    {% with accounts = chart.accounts %}
       {% include "performance/accounts.jinja" %}
     {% endwith %}
-#}
   {% endwith %}
 {% endif %}
 <script>

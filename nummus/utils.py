@@ -770,7 +770,8 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal | None:
         # Don't need to test type protection
         msg = f"Optimize result was {type(result)} not float"
         raise TypeError(msg)
-    return round(Decimal(result - 1), 6)
+    # -0 is ugly, turn into 0
+    return round(Decimal(result - 1), 6) or Decimal()
 
 
 def pretty_table(table: list[list[str] | None]) -> list[str]:
