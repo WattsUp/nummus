@@ -13,7 +13,7 @@
     <div class="max-md:hidden">Initial</div>
     <div class="max-md:hidden">Cash Flow</div>
     <div class="max-md:hidden">End Balance</div>
-    <div>P&amp;L</div>
+    <div>Return</div>
     <div>MWRR p.a.</div>
   </div>
   {% for account in accounts.accounts %}
@@ -29,12 +29,11 @@
         {{ account.cash_flow | money }}
       </div>
       <div class="text-right max-md:hidden">{{ account.end | money }}</div>
-      <div class="{{ account.profit | pnl_color }} text-right">
-        {{ account.profit | money }}
+      <div class="{{ account.pnl | pnl_color }} flex items-center justify-end">
+        <icon class="sm">{{ account.pnl | pnl_arrow }}</icon>
+        {{ account.pnl | abs | money }}
       </div>
-      <div class="{{ account.mwrr | pnl_color }} text-right">
-        {{ account.mwrr | percent }}
-      </div>
+      <div class="text-right">{{ account.mwrr | percent }}</div>
       <icon>chevron_right</icon>
     </a>
   {% endfor %}
@@ -45,11 +44,10 @@
     <div class="text-right max-md:hidden">{{ accounts.initial | money }}</div>
     <div class="text-right max-md:hidden">{{ accounts.cash_flow | money }}</div>
     <div class="text-right max-md:hidden">{{ accounts.end | money }}</div>
-    <div class="{{ accounts.profit | pnl_color }} text-right">
-      {{ accounts.profit | money }}
+    <div class="{{ accounts.pnl | pnl_color }} flex items-center justify-end">
+      <icon class="sm">{{ accounts.pnl | pnl_arrow }}</icon>
+      {{ accounts.pnl | money }}
     </div>
-    <div class="{{ accounts.mwrr | pnl_color }} text-right">
-      {{ accounts.mwrr | percent }}
-    </div>
+    <div class="text-right">{{ accounts.mwrr | percent }}</div>
   </div>
 </div>

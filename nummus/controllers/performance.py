@@ -25,7 +25,7 @@ class AccountContext(TypedDict):
     uri: str
     initial: Decimal
     end: Decimal
-    profit: Decimal
+    pnl: Decimal
     cash_flow: Decimal
     mwrr: Decimal | None
 
@@ -36,7 +36,7 @@ class AccountsContext(TypedDict):
     initial: Decimal
     end: Decimal
     cash_flow: Decimal
-    profit: Decimal
+    pnl: Decimal
     mwrr: Decimal | None
     accounts: list[AccountContext]
 
@@ -260,7 +260,7 @@ def ctx_chart(
                 "uri": Account.id_to_uri(acct_id),
                 "initial": v_initial,
                 "end": v_end,
-                "profit": profit,
+                "pnl": profit,
                 "cash_flow": cash_flow,
                 "mwrr": utils.mwrr(values, profits),
             },
@@ -313,7 +313,7 @@ def ctx_chart(
         "initial": total[0],
         "end": total[-1],
         "cash_flow": sum_cash_flow,
-        "profit": total_profit[-1],
+        "pnl": total_profit[-1],
         "mwrr": mwrr,
         "accounts": ctx_accounts,
     }
