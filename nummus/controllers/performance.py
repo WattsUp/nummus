@@ -275,6 +275,8 @@ def ctx_chart(
     index_twrr_max: list[Decimal] | None = None
     date_mode: str | None = None
 
+    # TODO (WattsUp): #392 Move to base.chart_data(start_ord, end_ord, [twrr, index_twrr])
+    # Copy to accounts.performance
     if n > base.LIMIT_DOWNSAMPLE:
         # Downsample to min/avg/max by month
         labels, twrr_min, twrr, twrr_max = utils.downsample(

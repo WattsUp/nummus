@@ -54,7 +54,6 @@ const accounts = {
         },
       },
     ];
-    // TODO (WattsUp): date years not working
     if (this.chart && ctx == this.chart.ctx) {
       nummusChart.update(this.chart, labels, dateMode, datasets);
     } else {

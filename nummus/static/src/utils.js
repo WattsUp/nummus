@@ -158,7 +158,7 @@ function formatDateTicks(value, index, ticks) {
       case "years":
         ticks.forEach((t, i) => {
           let l = labels[i];
-          if (l.slice(-5) == "01-01") t.label = l.slice(0, 4);
+          if (l.slice(-2) == "01") t.label = l.slice(0, 4);
         });
         break;
       case "months":
