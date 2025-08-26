@@ -671,6 +671,7 @@ def target(uri: str) -> str | flask.Response:
                 else "budgeting/target.jinja"
             ),
             target=ctx,
+            current_year=base.today_client().year,
         )
 
 
