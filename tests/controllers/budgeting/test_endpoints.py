@@ -476,6 +476,21 @@ def test_target_get(web_client: WebClient, budget_target: Target) -> None:
     assert "Edit target" in result
 
 
+def test_target_get_once(
+    today_ord: int,
+    session: orm.Session,
+    web_client: WebClient,
+    budget_target: Target,
+) -> None:
+    budget_target.type_ = TargetType.BALANCE
+    budget_target.period = TargetPeriod.ONCE
+    budget_target.due_date_ord = today_ord
+    session.commit()
+
+    result, _ = web_client.GET(("budgeting.target", {"uri": budget_target.uri}))
+    assert "Edit target" in result
+
+
 def test_target_new(
     today_ord: int,
     session: orm.Session,
