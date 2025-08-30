@@ -540,3 +540,79 @@ def test_template(valid_html: HTMLValidator, path: Path) -> None:
     buf = valid_html.clean(re_jinja.sub("", buf))
     # Since each template is tested, it ensures any HX actions require local targets
     assert valid_html(buf)
+
+
+def test_chart_data() -> None:
+    start = datetime.date(2023, 1, 10)
+    start_ord = start.toordinal()
+    end = datetime.date(2023, 1, 28)
+    end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
+
+    values = [Decimal(i) for i in range(n)]
+
+    result = base.chart_data(start_ord, end_ord, values)
+    assert result.labels == base.date_labels(start_ord, end_ord)[0]
+    assert result.mode == "days"
+    assert result.min is None
+    assert result.avg == values
+    assert result.max is None
+
+
+def test_chart_data_tuple() -> None:
+    start = datetime.date(2023, 1, 10)
+    start_ord = start.toordinal()
+    end = datetime.date(2023, 1, 28)
+    end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
+
+    values = [Decimal(i) for i in range(n)]
+
+    results = base.chart_data(start_ord, end_ord, (values, values))
+    for result in results:
+        assert result.labels == base.date_labels(start_ord, end_ord)[0]
+        assert result.mode == "days"
+        assert result.min is None
+        assert result.avg == values
+        assert result.max is None
+
+
+def test_chart_data_downsampled() -> None:
+    start = datetime.date(2023, 1, 1)
+    start_ord = start.toordinal()
+    end = datetime.date(2024, 12, 31)
+    end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
+
+    values = [Decimal(i) for i in range(n)]
+
+    result = base.chart_data(start_ord, end_ord, values)
+    assert len(result.labels) == 24
+    assert result.labels[0] == "2023-01"
+    assert result.labels[-1] == "2024-12"
+    assert result.mode == "years"
+    assert result.min is not None
+    assert result.max is not None
+    for r_min, r_avg, r_max in zip(result.min, result.avg, result.max, strict=True):
+        assert r_min <= r_avg <= r_max
+
+
+def test_chart_data_downsampled_tuple() -> None:
+    start = datetime.date(2023, 1, 1)
+    start_ord = start.toordinal()
+    end = datetime.date(2024, 12, 31)
+    end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
+
+    values = [Decimal(i) for i in range(n)]
+
+    results = base.chart_data(start_ord, end_ord, (values, values))
+    for result in results:
+        assert len(result.labels) == 24
+        assert result.labels[0] == "2023-01"
+        assert result.labels[-1] == "2024-12"
+        assert result.mode == "years"
+        assert result.min is not None
+        assert result.max is not None
+        for r_min, r_avg, r_max in zip(result.min, result.avg, result.max, strict=True):
+            assert r_min <= r_avg <= r_max

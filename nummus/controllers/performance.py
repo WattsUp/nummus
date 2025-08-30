@@ -105,7 +105,7 @@ def chart() -> flask.Response:
         ctx = ctx_chart(s, base.today_client(), period, index)
     html = flask.render_template(
         "performance/chart-data.jinja",
-        chart=ctx,
+        ctx=ctx,
         include_oob=True,
     )
     response = flask.make_response(html)
@@ -137,7 +137,11 @@ def dashboard() -> str:
         n = end_ord - start_ord + 1
 
         indices: dict[str, Decimal] = {}
-        query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
+        query = (
+            s.query(Asset.name)
+            .where(Asset.category == AssetCategory.INDEX)
+            .order_by(Asset.name)
+        )
         for (name,) in query.all():
             twrr = Asset.index_twrr(s, name, start_ord, end_ord)
             indices[name] = twrr[-1]
@@ -196,16 +200,16 @@ def ctx_chart(
             TransactionSplit.account_id.in_(acct_ids),
         )
         start_ord = query.scalar()
-        start = (
-            datetime.date.fromordinal(start_ord)
-            if start_ord
-            else datetime.date(1970, 1, 1)
-        )
+        start = datetime.date.fromordinal(start_ord) if start_ord else end
     start_ord = start.toordinal()
     end_ord = end.toordinal()
     n = end_ord - start_ord + 1
 
-    query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
+    query = (
+        s.query(Asset.name)
+        .where(Asset.category == AssetCategory.INDEX)
+        .order_by(Asset.name)
+    )
     indices: list[str] = [name for (name,) in query.all()]
     index_description: str | None = (
         s.query(Asset.description).where(Asset.name == index).scalar()
@@ -213,15 +217,7 @@ def ctx_chart(
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
 
-    # Include account if not closed
-    # Include account if most recent transaction is in period
-    def include_account(acct: Account) -> bool:
-        if not acct.closed:
-            return True
-        updated_on_ord = acct.updated_on_ord
-        return updated_on_ord is not None and updated_on_ord > start_ord
-
-    acct_ids = [acct.id_ for acct in query.all() if include_account(acct)]
+    acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
 
     acct_values, acct_profits, _ = Account.get_value_all(
         s,
@@ -266,48 +262,18 @@ def ctx_chart(
         sum_cash_flow += cash_flow
     ctx_accounts = sorted(ctx_accounts, key=lambda item: -item["end"])
 
-    labels: list[str] = []
-    twrr_min: list[Decimal] | None = None
-    twrr_max: list[Decimal] | None = None
-    index_twrr_min: list[Decimal] | None = None
-    index_twrr_max: list[Decimal] | None = None
-    date_mode: str | None = None
-
-    # TODO (WattsUp): #392 Move to base
-    # maybe chart_data(start_ord, end_ord, [twrr, index_twrr])
-    # Copy to accounts.performance
-    if n > base.LIMIT_DOWNSAMPLE:
-        # Downsample to min/avg/max by month
-        labels, twrr_min, twrr, twrr_max = utils.downsample(
-            start_ord,
-            end_ord,
-            twrr,
-        )
-        _, index_twrr_min, index_twrr, index_twrr_max = utils.downsample(
-            start_ord,
-            end_ord,
-            index_twrr,
-        )
-        date_mode = "years"
-    else:
-        labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
-        if n > base.LIMIT_TICKS_MONTHS:
-            date_mode = "months"
-        elif n > base.LIMIT_TICKS_WEEKS:
-            date_mode = "weeks"
-        else:
-            date_mode = "days"
+    data_twrr, data_index = base.chart_data(start_ord, end_ord, (twrr, index_twrr))
 
     chart: ChartData = {
-        "labels": labels,
-        "date_mode": date_mode,
-        "values": twrr,
-        "min": twrr_min,
-        "max": twrr_max,
-        "index": index_twrr,
+        "labels": data_twrr.labels,
+        "date_mode": data_twrr.mode,
+        "values": data_twrr.avg,
+        "min": data_twrr.min,
+        "max": data_twrr.max,
+        "index": data_index.avg,
         "index_name": index,
-        "index_min": index_twrr_min,
-        "index_max": index_twrr_max,
+        "index_min": data_index.min,
+        "index_max": data_index.max,
     }
 
     accounts: AccountsContext = {

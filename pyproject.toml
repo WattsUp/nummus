@@ -127,6 +127,9 @@ exclude_lines = [
 
   # Don't need to test guard code
   "raise exc.UnboundExecutionError",
+
+  # Overloads have branch issues
+  "@overload",
 ]
 
 [tool.djlint]
@@ -163,7 +166,6 @@ addopts = [
   # TODO (WattsUp): #369 Migrate tests
   "--ignore=tests/controllers/test_cash_flow.py",
   "--ignore=tests/controllers/test_net_worth.py",
-  "--ignore=tests/controllers/test_performance.py",
 ]
 
 [tool.ruff]

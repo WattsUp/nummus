@@ -9,7 +9,7 @@ import textwrap
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
-from typing import NamedTuple, TYPE_CHECKING, TypedDict
+from typing import NamedTuple, overload, TYPE_CHECKING, TypedDict
 
 import flask
 
@@ -82,6 +82,18 @@ class CategoryContext(NamedTuple):
 
 
 CategoryGroups = dict[TransactionCategoryGroup, list[CategoryContext]]
+
+
+class ChartData(NamedTuple):
+    """Chart data."""
+
+    labels: list[str]
+    mode: str
+
+    min: list[Decimal] | None
+    avg: list[Decimal]
+    max: list[Decimal] | None
+
 
 LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
 # else plot normally by days
@@ -743,3 +755,91 @@ def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
             ),
         )
     return category_groups
+
+
+# TODO (WattsUp): #392 Use for all charts
+@overload
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: list[Decimal],
+) -> ChartData: ...
+
+
+@overload
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: tuple[list[Decimal], ...],
+) -> tuple[ChartData, ...]: ...
+
+
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: list[Decimal] | tuple[list[Decimal], ...],
+) -> ChartData | tuple[ChartData, ...]:
+    """Prepare chart data by downsampling if necessary.
+
+    Args:
+        start_ord: Start date ordinal
+        end_ord: End date ordinal
+        values: One or more daily values to prepare
+
+    Returns:
+        ChartData for each values
+
+    """
+    n = end_ord - start_ord + 1
+    if n > LIMIT_DOWNSAMPLE:
+        periods = utils.period_months(start_ord, end_ord)
+        labels: list[str] = list(periods.keys())
+        if isinstance(values, tuple):
+            values_min: list[list[Decimal]] = []
+            values_avg: list[list[Decimal]] = []
+            values_max: list[list[Decimal]] = []
+
+            for _ in range(len(values)):
+                values_min.append([])
+                values_avg.append([])
+                values_max.append([])
+
+            for period_ord, period_end_ord in periods.values():
+                i_start = period_ord - start_ord
+                i_end = period_end_ord - start_ord
+
+                for i, v in enumerate(values):
+                    values_sliced = v[i_start : i_end + 1]
+                    values_min[i].append(min(values_sliced))
+                    values_max[i].append(max(values_sliced))
+                    values_avg[i].append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+            return tuple(
+                ChartData(labels, "years", v_min, v_avg, v_max)
+                for v_min, v_avg, v_max in zip(
+                    values_min,
+                    values_avg,
+                    values_max,
+                    strict=True,
+                )
+            )
+
+        v_min: list[Decimal] = []
+        v_avg: list[Decimal] = []
+        v_max: list[Decimal] = []
+
+        for period_ord, period_end_ord in periods.values():
+            i_start = period_ord - start_ord
+            i_end = period_end_ord - start_ord
+            values_sliced = values[i_start : i_end + 1]
+
+            v_min.append(min(values_sliced))
+            v_max.append(max(values_sliced))
+            v_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+        return ChartData(labels, "years", v_min, v_avg, v_max)
+
+    dates = date_labels(start_ord, end_ord)
+    if isinstance(values, tuple):
+        return tuple(ChartData(*dates, None, v, None) for v in values)
+    return ChartData(*dates, None, values, None)

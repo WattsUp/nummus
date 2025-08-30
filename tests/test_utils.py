@@ -426,42 +426,6 @@ def test_period_years_two_years() -> None:
     assert utils.period_years(start_ord, end_ord) == target
 
 
-def test_downsample_range() -> None:
-    start = datetime.date(2023, 1, 10)
-    start_ord = start.toordinal()
-    end = datetime.date(2023, 1, 28)
-    end_ord = end.toordinal()
-    n = end_ord - start_ord + 1
-
-    values = [Decimal(i) for i in range(n)]
-
-    labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
-    assert labels == ["2023-01"]
-    assert r_min == [Decimal()]
-    assert r_avg == [Decimal(n - 1) / 2]
-    assert r_max == [Decimal(n - 1)]
-
-
-def test_downsample_range_doubled() -> None:
-    start = datetime.date(2023, 1, 30)
-    start_ord = start.toordinal()
-    end = datetime.date(2023, 2, 2)
-    end_ord = end.toordinal()
-
-    values = [
-        Decimal(1),
-        Decimal(3),
-        Decimal(5),
-        Decimal(7),
-    ]
-
-    labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
-    assert labels == ["2023-01", "2023-02"]
-    assert r_min == [Decimal(1), Decimal(5)]
-    assert r_avg == [Decimal(2), Decimal(6)]
-    assert r_max == [Decimal(3), Decimal(7)]
-
-
 def test_round_list() -> None:
     n = 9
     list_ = [1 / Decimal(n) for _ in range(n)]

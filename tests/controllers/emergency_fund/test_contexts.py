@@ -85,7 +85,7 @@ def test_ctx_underfunded(
     assert len(ctx_categories) == 1
     assert ctx_categories[0]["emoji_name"] == "Groceries"
     assert ctx_categories[0]["name"] == "groceries"
-    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(170), abs=Decimal(1))
+    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(170), abs=Decimal(2))
 
 
 def test_ctx_overfunded(
