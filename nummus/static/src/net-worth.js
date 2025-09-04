@@ -165,7 +165,7 @@ const netWorth = {
   updateDashboard: function (raw) {
     const labels = raw.labels;
     const dateMode = raw.mode;
-    const total = raw.total.map((v) => Number(v));
+    const total = raw.avg.map((v) => Number(v));
 
     const canvas = document.getElementById("net-worth-chart-canvas-dashboard");
     const ctx = canvas.getContext("2d");

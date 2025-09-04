@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func, orm
 
-from nummus import utils, web
+from nummus import web
 from nummus.controllers import base
 from nummus.models import (
     Account,
@@ -103,22 +103,11 @@ def dashboard() -> str:
     """
     p = web.portfolio
     with p.begin_session() as s:
-        start, end = base.parse_period(base.DEFAULT_PERIOD, base.today_client())
-        start = start or end
-        start_ord = start.toordinal()
-        end_ord = end.toordinal()
-        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
-
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
-
-    ctx = {
-        "chart": {
-            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "mode": "months",
-            "total": total,
-        },
-        "current": total[-1],
-    }
+        ctx = ctx_chart(
+            s,
+            base.today_client(),
+            base.DEFAULT_PERIOD,
+        )
     return flask.render_template(
         "net-worth/dashboard.jinja",
         ctx=ctx,
