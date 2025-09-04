@@ -56,7 +56,12 @@ class TreeNode(NamedTuple):
             return True
         if self.tag not in {"h1", "h2", "h3", "h4", "title"}:
             return True
-        if inner_html in {"nummus", "Bad Request"}:
+        if inner_html in {
+            "nummus",
+            "Bad Request",
+            "400 Bad Request",
+            "403 Forbidden",
+        }:
             return True
 
         # Headers should use capital case

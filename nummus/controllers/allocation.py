@@ -75,7 +75,7 @@ def page() -> flask.Response:
     with p.begin_session() as s:
         return base.page(
             "allocation/page.jinja",
-            title="Asset Allocation",
+            title="Asset allocation",
             allocation=ctx_allocation(s, base.today_client()),
         )
 

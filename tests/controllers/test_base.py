@@ -552,11 +552,11 @@ def test_chart_data() -> None:
     values = [Decimal(i) for i in range(n)]
 
     result = base.chart_data(start_ord, end_ord, values)
-    assert result.labels == base.date_labels(start_ord, end_ord)[0]
-    assert result.mode == "days"
-    assert result.min is None
-    assert result.avg == values
-    assert result.max is None
+    assert result["labels"] == base.date_labels(start_ord, end_ord)[0]
+    assert result["mode"] == "days"
+    assert result["min"] is None
+    assert result["avg"] == values
+    assert result["max"] is None
 
 
 def test_chart_data_tuple() -> None:
@@ -570,11 +570,11 @@ def test_chart_data_tuple() -> None:
 
     results = base.chart_data(start_ord, end_ord, (values, values))
     for result in results:
-        assert result.labels == base.date_labels(start_ord, end_ord)[0]
-        assert result.mode == "days"
-        assert result.min is None
-        assert result.avg == values
-        assert result.max is None
+        assert result["labels"] == base.date_labels(start_ord, end_ord)[0]
+        assert result["mode"] == "days"
+        assert result["min"] is None
+        assert result["avg"] == values
+        assert result["max"] is None
 
 
 def test_chart_data_downsampled() -> None:
@@ -587,13 +587,18 @@ def test_chart_data_downsampled() -> None:
     values = [Decimal(i) for i in range(n)]
 
     result = base.chart_data(start_ord, end_ord, values)
-    assert len(result.labels) == 24
-    assert result.labels[0] == "2023-01"
-    assert result.labels[-1] == "2024-12"
-    assert result.mode == "years"
-    assert result.min is not None
-    assert result.max is not None
-    for r_min, r_avg, r_max in zip(result.min, result.avg, result.max, strict=True):
+    assert len(result["labels"]) == 24
+    assert result["labels"][0] == "2023-01"
+    assert result["labels"][-1] == "2024-12"
+    assert result["mode"] == "years"
+    assert result["min"] is not None
+    assert result["max"] is not None
+    for r_min, r_avg, r_max in zip(
+        result["min"],
+        result["avg"],
+        result["max"],
+        strict=True,
+    ):
         assert r_min <= r_avg <= r_max
 
 
@@ -608,11 +613,16 @@ def test_chart_data_downsampled_tuple() -> None:
 
     results = base.chart_data(start_ord, end_ord, (values, values))
     for result in results:
-        assert len(result.labels) == 24
-        assert result.labels[0] == "2023-01"
-        assert result.labels[-1] == "2024-12"
-        assert result.mode == "years"
-        assert result.min is not None
-        assert result.max is not None
-        for r_min, r_avg, r_max in zip(result.min, result.avg, result.max, strict=True):
+        assert len(result["labels"]) == 24
+        assert result["labels"][0] == "2023-01"
+        assert result["labels"][-1] == "2024-12"
+        assert result["mode"] == "years"
+        assert result["min"] is not None
+        assert result["max"] is not None
+        for r_min, r_avg, r_max in zip(
+            result["min"],
+            result["avg"],
+            result["max"],
+            strict=True,
+        ):
             assert r_min <= r_avg <= r_max

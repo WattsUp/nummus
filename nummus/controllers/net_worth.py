@@ -13,10 +13,7 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
-    Asset,
-    AssetCategory,
     TransactionSplit,
-    YIELD_PER,
 )
 
 if TYPE_CHECKING:
@@ -65,7 +62,7 @@ def page() -> flask.Response:
         )
     return base.page(
         "net-worth/page.jinja",
-        title="Net Worth",
+        title="Net worth",
         ctx=ctx,
     )
 
@@ -166,7 +163,7 @@ def ctx_chart(
 
     total: list[Decimal] = [
         Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
-    ]
+    ] or [Decimal()] * (end_ord - start_ord + 1)
     data_tuple = base.chart_data(start_ord, end_ord, (total, *acct_values.values()))
 
     mapping = Account.map_name(s)
@@ -212,151 +209,6 @@ def ctx_chart(
         "liabilities": liabilities,
         "assets_w": asset_width,
         "liabilities_w": liabilities_width,
-    }
-
-
-def ctx_assets(
-    s: orm.Session,
-    start_ord: int,
-    end_ord: int,
-    total_value: Decimal,
-    account_ids: list[int],
-) -> dict[str, object]:
-    """Get the context to build the assets list.
-
-    Args:
-        s: SQL session to use
-        start_ord: First date ordinal to evaluate
-        end_ord: Last date ordinal to evaluate (inclusive)
-        total_value: Sum of all assets to compute value in cash
-        account_ids: Limit results to specific Accounts by ID
-
-    Returns:
-        Dictionary HTML context
-    """
-    account_asset_qtys = Account.get_asset_qty_all(
-        s,
-        end_ord,
-        end_ord,
-        ids=account_ids,
-    )
-    asset_qtys: dict[int, Decimal] = {}
-    for acct_assets in account_asset_qtys.values():
-        for a_id, qtys in acct_assets.items():
-            v = asset_qtys.get(a_id, Decimal(0))
-            asset_qtys[a_id] = v + qtys[0]
-
-    # Include assets that are currently held or had a change in qty
-    query = s.query(TransactionSplit.asset_id).where(
-        TransactionSplit.date_ord <= end_ord,
-        TransactionSplit.date_ord >= start_ord,
-        TransactionSplit.asset_id.is_not(None),
-        TransactionSplit.account_id.in_(account_ids),
-    )
-    a_ids = {a_id for a_id, in query.distinct()}
-
-    asset_qtys = {
-        a_id: qty for a_id, qty in asset_qtys.items() if a_id in a_ids or qty != 0
-    }
-    a_ids = set(asset_qtys.keys())
-
-    if len(a_ids) == 0:
-        return {
-            "assets": [
-                {
-                    "uri": None,
-                    "category": AssetCategory.CASH,
-                    "name": "Cash",
-                    "end_qty": None,
-                    "end_value": total_value,
-                    "end_value_ratio": 1,
-                    "profit": 0,
-                },
-            ],
-            "end_value": total_value,
-            "profit": 0,
-        }
-
-    end_prices = Asset.get_value_all(s, end_ord, end_ord, ids=a_ids)
-
-    asset_profits = Account.get_profit_by_asset_all(
-        s,
-        start_ord,
-        end_ord,
-        ids=account_ids,
-    )
-
-    query = (
-        s.query(Asset)
-        .with_entities(
-            Asset.id_,
-            Asset.name,
-            Asset.category,
-        )
-        .where(Asset.id_.in_(a_ids))
-    )
-
-    class AssetContext(TypedDict):
-        """Type definition for Asset context."""
-
-        uri: str | None
-        category: AssetCategory
-        name: str
-        end_qty: Decimal | None
-        end_value: Decimal
-        end_value_ratio: Decimal
-        profit: Decimal
-
-    assets: list[AssetContext] = []
-    cash = total_value
-    total_profit = Decimal(0)
-    for a_id, name, category in query.yield_per(YIELD_PER):
-        end_qty = asset_qtys[a_id]
-        end_value = end_qty * end_prices[a_id][0]
-        profit = asset_profits[a_id]
-
-        cash -= end_value
-        total_profit += profit
-
-        ctx_asset: AssetContext = {
-            "uri": Asset.id_to_uri(a_id),
-            "category": category,
-            "name": name,
-            "end_qty": end_qty,
-            "end_value": end_value,
-            "end_value_ratio": Decimal(0),
-            "profit": profit,
-        }
-        assets.append(ctx_asset)
-
-    # Add in cash too
-    ctx_asset = {
-        "uri": None,
-        "category": AssetCategory.CASH,
-        "name": "Cash",
-        "end_qty": None,
-        "end_value": cash,
-        "end_value_ratio": Decimal(0),
-        "profit": Decimal(0),
-    }
-    assets.append(ctx_asset)
-
-    for item in assets:
-        item["end_value_ratio"] = item["end_value"] / total_value
-
-    assets = sorted(
-        assets,
-        key=lambda item: (
-            -item["end_value"],
-            -item["profit"],
-            item["name"].lower(),
-        ),
-    )
-
-    return {
-        "assets": assets,
-        "end_value": total_value,
-        "profit": total_profit,
     }
 
 

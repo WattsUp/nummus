@@ -26,7 +26,7 @@
     </div>
   </div>
   <div>
-    <h2 class="text-xl">Liabilites</h2>
+    <h2 class="text-xl">Liabilities</h2>
     <h1 class="text-tertiary font-serif text-4xl">
       {{ ctx.liabilities | money0 }}
     </h1>
@@ -56,7 +56,7 @@
 </details>
 <div class="relative h-60 w-full md:h-96">
   <canvas id="net-worth-chart-canvas" hx-preserve></canvas>
-  <div id="net-worth-indicator" class="spinner-overlay">
+  <div class="spinner-overlay net-worth-indicator">
     {% include "shared/spinner.jinja" %}
   </div>
 </div>
@@ -64,14 +64,14 @@
 <h2 class="text-primary font-serif text-2xl">Assets</h2>
 <div class="relative h-60 w-full md:h-96">
   <canvas id="assets-chart-canvas" hx-preserve></canvas>
-  <div id="net-worth-indicator" class="spinner-overlay">
+  <div class="spinner-overlay net-worth-indicator">
     {% include "shared/spinner.jinja" %}
   </div>
 </div>
 <h2 class="text-primary font-serif text-2xl">Liabilites</h2>
 <div class="relative h-60 w-full md:h-96">
   <canvas id="liabilities-chart-canvas" hx-preserve></canvas>
-  <div id="net-worth-indicator" class="spinner-overlay">
+  <div class="spinner-overlay net-worth-indicator">
     {% include "shared/spinner.jinja" %}
   </div>
 </div>

@@ -152,7 +152,7 @@ def ctx_base(
             (
                 "",
                 {
-                    "Home": Page("home", "common.page_dashboard"),
+                    "Dashboard": Page("dashboard", "common.page_dashboard"),
                     "Budget": Page("wallet", "budgeting.page"),
                     # TODO (WattsUp): #358 Change to receipt_long and add_receipt_long
                     # if request gets fulfilled

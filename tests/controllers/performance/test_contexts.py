@@ -30,8 +30,8 @@ def test_ctx_chart_empty(
 
     chart: performance.ChartData = {
         "labels": [today.isoformat()],
-        "date_mode": "days",
-        "values": [Decimal()],
+        "mode": "days",
+        "avg": [Decimal()],
         "min": None,
         "max": None,
         "index": [Decimal()],
@@ -96,8 +96,8 @@ def test_ctx_chart(
 
     chart: performance.ChartData = {
         "labels": base.date_labels(start.toordinal(), end.toordinal())[0],
-        "date_mode": "days",
-        "values": [
+        "mode": "days",
+        "avg": [
             Decimal(),
             Decimal("-0.1"),
             Decimal("-0.1"),
