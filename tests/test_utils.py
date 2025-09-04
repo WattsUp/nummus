@@ -40,7 +40,7 @@ def test_get_input_insecure(
     prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print + prompt_input)  # noqa: T201
+        print(to_print + prompt_input)
         return prompt_input
 
     monkeypatch.setattr("builtins.input", mock_input)
@@ -57,7 +57,7 @@ def test_get_input_insecure_abort(
     prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print + prompt_input)  # noqa: T201
+        print(to_print + prompt_input)
         raise KeyboardInterrupt
 
     monkeypatch.setattr("builtins.input", mock_input)
@@ -74,7 +74,7 @@ def test_get_input_secure(
     prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         return prompt_input
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -88,7 +88,7 @@ def test_get_input_secure_abort(
     rand_str: str,
 ) -> None:
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         raise EOFError
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -105,7 +105,7 @@ def test_get_input_secure_with_icon(
     prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         return prompt_input
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -130,7 +130,7 @@ def test_get_password(
 
     def mock_input(to_print: str, *, secure: bool) -> str | None:
         assert secure
-        print(to_print)  # noqa: T201
+        print(to_print)
         return queue.pop(0)
 
     monkeypatch.setattr(utils, "get_input", mock_input)
@@ -159,7 +159,7 @@ def test_confirm(
     retries = len(queue) > 1
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         if len(queue) == 1:
             return queue[0]
         return queue.pop(0)

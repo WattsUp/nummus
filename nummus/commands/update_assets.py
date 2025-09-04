@@ -51,7 +51,7 @@ class UpdateAssets(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio  # noqa: PLC0415
+        from nummus import portfolio
 
         p = self._p
         # Back up Portfolio

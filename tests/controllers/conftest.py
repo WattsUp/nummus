@@ -375,7 +375,7 @@ class WebClient:
             if response is not None:
                 response.close()
 
-    def GET(  # noqa: N802
+    def GET(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -396,7 +396,7 @@ class WebClient:
         """
         return self.open_("GET", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def PUT(  # noqa: N802
+    def PUT(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -417,7 +417,7 @@ class WebClient:
         """
         return self.open_("PUT", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def POST(  # noqa: N802
+    def POST(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -438,7 +438,7 @@ class WebClient:
         """
         return self.open_("POST", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def DELETE(  # noqa: N802
+    def DELETE(
         self,
         endpoint: str | tuple[str, Queries],
         *,

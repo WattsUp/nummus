@@ -329,8 +329,8 @@ class TransactionSplit(Base):
 
 @event.listens_for(TransactionSplit, "before_insert")
 def before_insert_transaction_split(
-    mapper: orm.Mapper,  # noqa: ARG001
-    connection: sqlalchemy.Connection,  # noqa: ARG001
+    _: orm.Mapper,
+    __: sqlalchemy.Connection,
     target: TransactionSplit,
 ) -> None:
     """Handle event before insert of TransactionSplit.

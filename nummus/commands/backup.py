@@ -97,7 +97,7 @@ class Restore(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio, utils  # noqa: PLC0415
+        from nummus import portfolio, utils
 
         try:
             if self._list_ver:
