@@ -146,7 +146,7 @@ def page(uri: str) -> flask.Response:
             acct_uri=acct.uri,
         )
         title = title.removeprefix("Transactions").strip()
-        title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
+        title = f"{acct.name}, {title}" if title else f"{acct.name}"
 
         ctx = ctx_account(s, acct, today)
         if acct.category == AccountCategory.INVESTMENT:
@@ -779,7 +779,7 @@ def txns(uri: str) -> str | flask.Response:
         )
         title = title.removeprefix("Transactions").strip()
         acct = base.find(s, Account, uri)
-        title = f"Account {acct.name}, {title}" if title else f"Account {acct.name}"
+        title = f"{acct.name}, {title}" if title else f"{acct.name}"
     html_title = f"<title>{title} - nummus</title>\n"
     html = html_title + flask.render_template(
         "transactions/table-rows.jinja",

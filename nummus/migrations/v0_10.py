@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from nummus import portfolio
 
 
-class MigratorV0_10(Migrator):  # noqa: N801
+class MigratorV0_10(Migrator):
     """Migrator to v0.10.0."""
 
     _VERSION = "0.10.0"

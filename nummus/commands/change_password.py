@@ -50,7 +50,7 @@ class ChangePassword(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import portfolio  # noqa: PLC0415
+        from nummus import portfolio
 
         p = self._p
 
@@ -83,7 +83,7 @@ class ChangePassword(BaseCommand):
                 new_web_key = file.readline().split(":", 1)[-1].strip() or None
             return new_db_key, new_web_key
 
-        from nummus import utils  # noqa: PLC0415
+        from nummus import utils
 
         new_db_key: str | None = None
         new_web_key: str | None = None

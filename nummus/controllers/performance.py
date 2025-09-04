@@ -1,186 +1,66 @@
-"""Net worth controllers."""
+"""Performance controllers."""
 
 from __future__ import annotations
 
 import datetime
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import TypedDict
 
 import flask
-from sqlalchemy import func
+from sqlalchemy import func, orm
 
-from nummus import portfolio, utils, web_utils
-from nummus.controllers import common
+from nummus import utils, web
+from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
 
-if TYPE_CHECKING:
-    from nummus.controllers.base import Routes
-
-DEFAULT_PERIOD = "90-days"
+_DEFAULT_INDEX = "S&P 500"
 
 
-def ctx_chart() -> dict[str, object]:
-    """Get the context to build the performance chart.
+class AccountContext(TypedDict):
+    """Type definition for Account context."""
 
-    Returns:
-        Dictionary HTML context
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    name: str
+    uri: str
+    initial: Decimal
+    end: Decimal
+    pnl: Decimal
+    cash_flow: Decimal
+    mwrr: Decimal | None
 
-    args = flask.request.args
 
-    period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-    index = args.get("index", "S&P 500")
+class AccountsContext(TypedDict):
+    """Type definition for Accounts context."""
 
-    class AccountContext(TypedDict):
-        """Type definition for Account context."""
+    initial: Decimal
+    end: Decimal
+    cash_flow: Decimal
+    pnl: Decimal
+    mwrr: Decimal | None
+    accounts: list[AccountContext]
 
-        name: str
-        uri: str
-        initial: Decimal
-        end: Decimal
-        profit: Decimal
-        cash_flow: Decimal
-        mwrr: Decimal
 
-    accounts: list[AccountContext] = []
+class ChartData(base.ChartData):
+    """Type definition for chart data context."""
 
-    with p.begin_session() as s:
-        acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
-        if start is None:
-            query = s.query(func.min(TransactionSplit.date_ord)).where(
-                TransactionSplit.asset_id.is_(None),
-                TransactionSplit.account_id.in_(acct_ids),
-            )
-            start_ord = query.scalar()
-            start = (
-                datetime.date.fromordinal(start_ord)
-                if start_ord
-                else datetime.date(1970, 1, 1)
-            )
-        start_ord = start.toordinal()
-        end_ord = end.toordinal()
-        n = end_ord - start_ord + 1
+    index: list[Decimal]
+    index_name: str
+    index_min: list[Decimal] | None
+    index_max: list[Decimal] | None
 
-        query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
-        indices = {name: False for name, in query.all()}
-        indices[index] = True
-        index_description = (
-            s.query(Asset.description).where(Asset.name == index).scalar()
-        )
 
-        query = s.query(Account).where(Account.id_.in_(acct_ids))
+class Context(TypedDict):
+    """Type definition for chart context."""
 
-        # Include account if not closed
-        # Include account if most recent transaction is in period
-        def include_account(acct: Account) -> bool:
-            if not acct.closed:
-                return True
-            updated_on_ord = acct.updated_on_ord
-            return updated_on_ord is not None and updated_on_ord > start_ord
-
-        acct_ids = [acct.id_ for acct in query.all() if include_account(acct)]
-
-        acct_values, acct_profits, _ = Account.get_value_all(
-            s,
-            start_ord,
-            end_ord,
-            ids=acct_ids,
-        )
-
-        total: list[Decimal] = [
-            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
-        ] or [Decimal(0)] * n
-        total_profit: list[Decimal] = [
-            Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
-        ] or [Decimal(0)] * n
-        twrr = utils.twrr(total, total_profit)
-        mwrr = utils.mwrr(total, total_profit)
-
-        index_twrr = Asset.index_twrr(s, index, start_ord, end_ord)
-
-        mapping = Account.map_name(s)
-
-        sum_cash_flow = Decimal(0)
-
-        for acct_id, values in acct_values.items():
-            profits = acct_profits[acct_id]
-
-            v_initial = values[0] - profits[0]
-            v_end = values[-1]
-            profit = profits[-1]
-            cash_flow = (v_end - v_initial) - profit
-            accounts.append(
-                {
-                    "name": mapping[acct_id],
-                    "uri": Account.id_to_uri(acct_id),
-                    "initial": v_initial,
-                    "end": v_end,
-                    "profit": profit,
-                    "cash_flow": cash_flow,
-                    "mwrr": utils.mwrr(values, profits),
-                },
-            )
-            sum_cash_flow += cash_flow
-        accounts = sorted(accounts, key=lambda item: -item["end"])
-
-        labels: list[str] = []
-        twrr_min: list[Decimal] | None = None
-        twrr_max: list[Decimal] | None = None
-        index_twrr_min: list[Decimal] | None = None
-        index_twrr_max: list[Decimal] | None = None
-        date_mode: str | None = None
-
-        if n > web_utils.LIMIT_DOWNSAMPLE:
-            # Downsample to min/avg/max by month
-            labels, twrr_min, twrr, twrr_max = utils.downsample(
-                start_ord,
-                end_ord,
-                twrr,
-            )
-            _, index_twrr_min, index_twrr, index_twrr_max = utils.downsample(
-                start_ord,
-                end_ord,
-                index_twrr,
-            )
-            date_mode = "years"
-        else:
-            labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
-            if n > web_utils.LIMIT_TICKS_MONTHS:
-                date_mode = "months"
-            elif n > web_utils.LIMIT_TICKS_WEEKS:
-                date_mode = "weeks"
-            else:
-                date_mode = "days"
-
-    return {
-        "start": start,
-        "end": end,
-        "period": period,
-        "data": {
-            "labels": labels,
-            "date_mode": date_mode,
-            "values": twrr,
-            "min": twrr_min,
-            "max": twrr_max,
-            "index": index_twrr,
-            "index_min": index_twrr_min,
-            "index_max": index_twrr_max,
-        },
-        "accounts": {
-            "initial": total[0],
-            "end": total[-1],
-            "cash_flow": sum_cash_flow,
-            "profit": total_profit[-1],
-            "mwrr": mwrr,
-            "accounts": accounts,
-        },
-        "indices": indices,
-        "index_description": index_description,
-    }
+    start: datetime.date
+    end: datetime.date
+    period: str
+    period_options: dict[str, str]
+    chart: ChartData
+    accounts: AccountsContext
+    index: str
+    indices: list[str]
+    index_description: str | None
 
 
 def page() -> flask.Response:
@@ -189,24 +69,50 @@ def page() -> flask.Response:
     Returns:
         string HTML response
     """
-    return common.page(
-        "performance/index-content.jinja",
-        title="Performance | nummus",
-        chart=ctx_chart(),
+    args = flask.request.args
+    p = web.portfolio
+    with p.begin_session() as s:
+        ctx = ctx_chart(
+            s,
+            base.today_client(),
+            args.get("period", base.DEFAULT_PERIOD),
+            args.get("index", _DEFAULT_INDEX),
+        )
+    return base.page(
+        "performance/page.jinja",
+        title="Performance",
+        ctx=ctx,
     )
 
 
-def chart() -> str:
+def chart() -> flask.Response:
     """GET /h/performance/chart.
 
     Returns:
         string HTML response
     """
-    return flask.render_template(
+    args = flask.request.args
+    period = args.get("period", base.DEFAULT_PERIOD)
+    index = args.get("index", _DEFAULT_INDEX)
+    p = web.portfolio
+    with p.begin_session() as s:
+        ctx = ctx_chart(s, base.today_client(), period, index)
+    html = flask.render_template(
         "performance/chart-data.jinja",
-        chart=ctx_chart(),
+        ctx=ctx,
         include_oob=True,
     )
+    response = flask.make_response(html)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "performance.page",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        period=period,
+        index=index,
+    )
+    return response
 
 
 def dashboard() -> str:
@@ -215,19 +121,21 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-
+    p = web.portfolio
     with p.begin_session() as s:
         acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
-        end = datetime.date.today()
+        end = base.today_client()
         start = end - datetime.timedelta(days=90)
         start_ord = start.toordinal()
         end_ord = end.toordinal()
         n = end_ord - start_ord + 1
 
         indices: dict[str, Decimal] = {}
-        query = s.query(Asset.name).where(Asset.category == AssetCategory.INDEX)
+        query = (
+            s.query(Asset.name)
+            .where(Asset.category == AssetCategory.INDEX)
+            .order_by(Asset.name)
+        )
         for (name,) in query.all():
             twrr = Asset.index_twrr(s, name, start_ord, end_ord)
             indices[name] = twrr[-1]
@@ -248,17 +156,138 @@ def dashboard() -> str:
         twrr = utils.twrr(total, total_profit)
 
         ctx = {
-            "profit": total_profit[-1],
+            "pnl": total_profit[-1],
             "twrr": twrr[-1],
             "indices": indices,
         }
     return flask.render_template(
         "performance/dashboard.jinja",
-        data=ctx,
+        ctx=ctx,
     )
 
 
-ROUTES: Routes = {
+def ctx_chart(
+    s: orm.Session,
+    today: datetime.date,
+    period: str,
+    index: str,
+) -> Context:
+    """Get the context to build the performance chart.
+
+    Args:
+        s: SQL session to use
+        today: Today's date
+        period: Selected chart period
+        index: Selected index to compare against
+
+    Returns:
+        Dictionary HTML context
+    """
+    start, end = base.parse_period(period, today)
+
+    ctx_accounts: list[AccountContext] = []
+
+    acct_ids = Account.ids(s, AccountCategory.INVESTMENT)
+    if start is None:
+        query = s.query(func.min(TransactionSplit.date_ord)).where(
+            TransactionSplit.asset_id.is_(None),
+            TransactionSplit.account_id.in_(acct_ids),
+        )
+        start_ord = query.scalar()
+        start = datetime.date.fromordinal(start_ord) if start_ord else end
+    start_ord = start.toordinal()
+    end_ord = end.toordinal()
+    n = end_ord - start_ord + 1
+
+    query = (
+        s.query(Asset.name)
+        .where(Asset.category == AssetCategory.INDEX)
+        .order_by(Asset.name)
+    )
+    indices: list[str] = [name for (name,) in query.all()]
+    index_description: str | None = (
+        s.query(Asset.description).where(Asset.name == index).scalar()
+    )
+
+    query = s.query(Account).where(Account.id_.in_(acct_ids))
+    acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
+
+    acct_values, acct_profits, _ = Account.get_value_all(
+        s,
+        start_ord,
+        end_ord,
+        ids=acct_ids,
+    )
+
+    total: list[Decimal] = [
+        Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
+    ] or [Decimal(0)] * n
+    total_profit: list[Decimal] = [
+        Decimal(sum(item)) for item in zip(*acct_profits.values(), strict=True)
+    ] or [Decimal(0)] * n
+    twrr = utils.twrr(total, total_profit)
+    mwrr = utils.mwrr(total, total_profit)
+
+    index_twrr = Asset.index_twrr(s, index, start_ord, end_ord)
+
+    mapping = Account.map_name(s)
+
+    sum_cash_flow = Decimal(0)
+
+    for acct_id, values in acct_values.items():
+        profits = acct_profits[acct_id]
+
+        v_initial = values[0] - profits[0]
+        v_end = values[-1]
+        profit = profits[-1]
+        cash_flow = (v_end - v_initial) - profit
+        ctx_accounts.append(
+            {
+                "name": mapping[acct_id],
+                "uri": Account.id_to_uri(acct_id),
+                "initial": v_initial,
+                "end": v_end,
+                "pnl": profit,
+                "cash_flow": cash_flow,
+                "mwrr": utils.mwrr(values, profits),
+            },
+        )
+        sum_cash_flow += cash_flow
+    ctx_accounts = sorted(ctx_accounts, key=lambda item: -item["end"])
+
+    data_twrr, data_index = base.chart_data(start_ord, end_ord, (twrr, index_twrr))
+
+    chart: ChartData = {
+        **data_twrr,
+        "index": data_index["avg"],
+        "index_name": index,
+        "index_min": data_index["min"],
+        "index_max": data_index["max"],
+    }
+
+    accounts: AccountsContext = {
+        "initial": total[0],
+        "end": total[-1],
+        "cash_flow": sum_cash_flow,
+        "pnl": total_profit[-1],
+        "mwrr": mwrr,
+        "accounts": ctx_accounts,
+    }
+
+    return {
+        "start": start,
+        "end": end,
+        "period": period,
+        "period_options": base.PERIOD_OPTIONS,
+        "chart": chart,
+        "accounts": accounts,
+        "index": index,
+        "indices": indices,
+        "index_description": index_description,
+    }
+
+
+ROUTES: base.Routes = {
     "/performance": (page, ["GET"]),
     "/h/performance/chart": (chart, ["GET"]),
     "/h/dashboard/performance": (dashboard, ["GET"]),

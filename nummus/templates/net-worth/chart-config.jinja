@@ -1,64 +1,18 @@
 <div
   id="net-worth-config"
-  class="flex w-full items-center justify-center gap-1 font-serif"
-  hx-indicator=".spinner"
+  hx-indicator=".net-worth-indicator"
   hx-target="#net-worth-chart-data"
-  hx-swap="outerHTML"
   hx-swap-oob="{{ oob }}"
-  hx-include="#net-worth-config"
 >
-  <div class="max-md:hidden">
-    Accounts:
-    <select
-      name="category"
-      autocomplete="off"
-      hx-get="{{ url_for('net_worth.chart') }}"
-    >
-      <option value="" {% if not chart["category"] %}selected{% endif %}>
-        All
-      </option>
-      {% for cat in chart["category_type"] %}
-        <option
-          value="{{ cat.name }}"
-          {% if chart["category"] == cat %}selected{% endif %}
-        >
-          {{ cat.pretty }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="grow max-md:hidden"></div>
-  <div class="md:hidden">Period</div>
-  <select
-    name="period"
-    autocomplete="off"
-    hx-get="{{ url_for('net_worth.chart') }}"
-  >
-    {% with period = chart["period"] %}
-      {% include "shared/period-options.jinja" %}
-    {% endwith %}
-  </select>
-  <div class="max-md:hidden">
-    <input
-      name="start"
-      type="date"
-      value="{{ chart["start"] }}"
-      autocomplete="off"
-      hx-get="{{ url_for('net_worth.chart', period='custom') }}"
-      hx-trigger="blur changed,keyup[keyCode==13] changed"
-      hx-validate="true"
-      hx-on::validation:failed="event.target.classList.add('border-red')"
-    />
-    to
-    <input
-      name="end"
-      type="date"
-      value="{{ chart["end"] }}"
-      autocomplete="off"
-      hx-get="{{ url_for('net_worth.chart', period='custom') }}"
-      hx-trigger="blur changed,keyup[keyCode==13] changed"
-      hx-validate="true"
-      hx-on::validation:failed="event.target.classList.add('border-red')"
-    />
+  <div class="flex justify-around gap-2">
+    {% for value, label in ctx.period_options.items() %}
+      {% set btn_class = "btn-tonal" if value == ctx.period else "btn-text" %}
+      <button
+        class="{{ btn_class }}"
+        hx-get="{{ url_for('net_worth.chart', period=value) }}"
+      >
+        {{ label }}
+      </button>
+    {% endfor %}
   </div>
 </div>

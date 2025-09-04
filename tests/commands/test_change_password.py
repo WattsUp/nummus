@@ -18,11 +18,11 @@ class MockPortfolio(Portfolio):
     # Changing password takes a while so mock the actual function
     @override
     def change_key(self, key: str) -> None:
-        print(f"Changing key to {key}", file=sys.stderr)  # noqa: T201
+        print(f"Changing key to {key}", file=sys.stderr)
 
     @override
     def change_web_key(self, key: str) -> None:
-        print(f"Changing web key to {key}", file=sys.stderr)  # noqa: T201
+        print(f"Changing web key to {key}", file=sys.stderr)
 
 
 def test_no_change_unencrypted(

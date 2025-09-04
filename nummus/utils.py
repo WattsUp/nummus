@@ -13,7 +13,7 @@ import shutil
 import string
 import sys
 from decimal import Decimal
-from typing import TYPE_CHECKING
+from typing import NamedTuple, TYPE_CHECKING
 
 import emoji as emoji_mod
 from colorama import Fore
@@ -94,6 +94,23 @@ MONTHS = [
     "November",
     "December",
 ]
+
+
+class Downsampled(NamedTuple):
+    """downsample results."""
+
+    labels: list[str]
+    min: list[Decimal]
+    avg: list[Decimal]
+    max: list[Decimal]
+
+
+class Tokens(NamedTuple):
+    """tokenize_search_str results."""
+
+    must: set[str]
+    can: set[str]
+    not_: set[str]
 
 
 def camel_to_snake(s: str) -> str:
@@ -518,37 +535,6 @@ def period_years(start_ord: int, end_ord: int) -> dict[str, tuple[int, int]]:
     return years
 
 
-def downsample(
-    start_ord: int,
-    end_ord: int,
-    values: list[Decimal],
-) -> tuple[list[str], list[Decimal], list[Decimal], list[Decimal]]:
-    """Downsample a list of values to min/avg/max by month.
-
-    Args:
-        start_ord: First date ordinal of period
-        end_ord: Last date ordinal of period
-        values: Daily values
-
-    Returns:
-        (labels, min, avg, max)
-    """
-    periods = period_months(start_ord, end_ord)
-    labels: list[str] = []
-    values_min: list[Decimal] = []
-    values_avg: list[Decimal] = []
-    values_max: list[Decimal] = []
-
-    for period, limits in periods.items():
-        values_sliced = values[limits[0] - start_ord : limits[1] - start_ord + 1]
-        labels.append(period)
-        values_min.append(min(values_sliced))
-        values_max.append(max(values_sliced))
-        values_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
-
-    return labels, values_min, values_avg, values_max
-
-
 def round_list(list_: list[Decimal], precision: int = 6) -> list[Decimal]:
     """Round a list, carrying over error such that sum(list) == sum(round_list).
 
@@ -770,7 +756,8 @@ def mwrr(values: list[Decimal], profit: list[Decimal]) -> Decimal | None:
         # Don't need to test type protection
         msg = f"Optimize result was {type(result)} not float"
         raise TypeError(msg)
-    return round(Decimal(result - 1), 6)
+    # -0 is ugly, turn into 0
+    return round(Decimal(result - 1), 6) or Decimal()
 
 
 def pretty_table(table: list[list[str] | None]) -> list[str]:
@@ -980,7 +967,7 @@ class classproperty[T]:  # noqa: N801
         return self.fget(cls)
 
 
-def tokenize_search_str(search_str: str) -> tuple[set[str], set[str], set[str]]:
+def tokenize_search_str(search_str: str) -> Tokens:
     """Parse a search string into tokens.
 
     Args:
@@ -1032,7 +1019,7 @@ def tokenize_search_str(search_str: str) -> tuple[set[str], set[str], set[str]]:
         if token:
             dest.add(token)
 
-    return tokens_must, tokens_can, tokens_not
+    return Tokens(tokens_must, tokens_can, tokens_not)
 
 
 def low_pass(data: list[Decimal], rc: int) -> list[Decimal]:

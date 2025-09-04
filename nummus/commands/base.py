@@ -48,7 +48,7 @@ class BaseCommand(ABC):
         self._path_password = path_password
 
         # Defer for faster time to main
-        from nummus import exceptions as exc  # noqa: PLC0415
+        from nummus import exceptions as exc
 
         if not do_unlock:
             return
@@ -117,8 +117,8 @@ class BaseCommand(ABC):
             Unlocked Portfolio
         """
         # defer for faster time to main
-        from nummus import exceptions as exc  # noqa: PLC0415
-        from nummus import portfolio, utils  # noqa: PLC0415
+        from nummus import exceptions as exc
+        from nummus import portfolio, utils
 
         if not portfolio.Portfolio.is_encrypted_path(path_db):
             return portfolio.Portfolio(path_db, None, check_migration=check_migration)

@@ -26,7 +26,7 @@ def test_page_status(web_client: WebClient) -> None:
 
 def test_page_style_test(web_client: WebClient) -> None:
     result, _ = web_client.GET("common.page_style_test")
-    assert "Style Test" in result
+    assert "Style test" in result
 
 
 def test_favicon(web_client: WebClient) -> None:

@@ -37,13 +37,21 @@ class Base(ABC):
         self._no_ignores = no_ignores
 
     @classproperty
-    def name(cls) -> str:  # noqa: N805,
-        """Health check name."""  # noqa: DOC201
+    def name(cls) -> str:  # noqa: N805
+        """Health check name.
+
+        Returns:
+            str
+        """
         return utils.camel_to_snake(cls.__name__).replace("_", " ").capitalize()
 
     @classproperty
     def description(cls) -> str:  # noqa: N805
-        """Health check description."""  # noqa: DOC201
+        """Health check description.
+
+        Returns:
+            str
+        """
         return cls._DESC
 
     @property
@@ -58,7 +66,11 @@ class Base(ABC):
 
     @classproperty
     def is_severe(cls) -> bool:  # noqa: N805
-        """True if issues are severe."""  # noqa: DOC201
+        """True if issues are severe.
+
+        Returns:
+            True if issues are severe
+        """
         return cls._SEVERE
 
     @abstractmethod

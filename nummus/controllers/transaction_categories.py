@@ -33,7 +33,7 @@ def page() -> flask.Response:
     """
     return base.page(
         "transaction-categories/page.jinja",
-        "Transaction Categories",
+        "Transaction categories",
         groups=ctx_categories(),
     )
 

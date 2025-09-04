@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 
 def test_empty(today: datetime.date, session: orm.Session) -> None:
-    start = utils.date_add_months(today, -6)
+    start = today - datetime.timedelta(days=utils.DAYS_IN_QUARTER * 2)
     dates = utils.range_date(start.toordinal(), today.toordinal())
     n = len(dates)
 
@@ -85,7 +85,7 @@ def test_ctx_underfunded(
     assert len(ctx_categories) == 1
     assert ctx_categories[0]["emoji_name"] == "Groceries"
     assert ctx_categories[0]["name"] == "groceries"
-    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(170), abs=Decimal(1))
+    assert ctx_categories[0]["monthly"] == pytest.approx(Decimal(170), abs=Decimal(2))
 
 
 def test_ctx_overfunded(

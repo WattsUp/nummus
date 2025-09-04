@@ -37,9 +37,9 @@
 }
 
 @utility pattern-* {
-  --pattern-color: --value(--color- *);
+  --pattern-color: --value(--color-*);
 }
 
 @utility pattern-bg-* {
-  --pattern-bg-color: --value(--color- *);
+  --pattern-bg-color: --value(--color-*);
 }

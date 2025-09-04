@@ -1,67 +1,56 @@
 <div
   id="performance-config"
-  class="my-1 flex w-full justify-between gap-1 font-serif max-lg:flex-col"
-  hx-indicator=".spinner"
+  hx-indicator="#performance-indicator"
   hx-target="#performance-chart-data"
-  hx-swap="outerHTML"
   hx-swap-oob="{{ oob }}"
-  hx-include="#performance-config"
 >
-  <div class="flex items-center justify-center gap-1">
-    Selected index
-    <select
-      name="index"
-      autocomplete="off"
-      hx-get="{{ url_for('performance.chart') }}"
-    >
-      {% for index, selected in chart["indices"].items() %}
-        <option value="{{ index }}" {% if selected %}selected{% endif %}>
-          {{ index }}
-        </option>
-      {% endfor %}
-    </select>
-    <div class="tooltip max-md:hidden">
-      {% with class = "w-6 h-6 inline-block align-bottom" %}
-        {% include "svg/help.svg" %}
-      {% endwith %}
-      <div
-        class="tooltip-text after:border-b-grey-800 left-1/2 mt-1 -translate-x-1/2 font-sans after:bottom-full after:left-1/2 after:top-[unset] after:-ml-[4px]"
+  <div class="flex justify-around gap-2">
+    {% for value, label in ctx.period_options.items() %}
+      {% set btn_class = "btn-tonal" if value == ctx.period else "btn-text" %}
+      <button
+        class="{{ btn_class }}"
+        hx-get="{{ url_for('performance.chart', period=value) }}"
       >
-        {{ chart["index_description"] }}
+        {{ label }}
+      </button>
+    {% endfor %}
+  </div>
+  <div class="my-1 flex items-center gap-2">
+    <div class="bg-primary h-6 w-6 rounded"></div>
+    Portfolio TWRR vs
+    <div class="bg-tertiary h-6 w-6 rounded"></div>
+    <label class="input-outlined">
+      <select
+        name="index"
+        autocomplete="off"
+        hx-get="{{ url_for("performance.chart") }}"
+      >
+        {% for index in ctx.indices %}
+          <option
+            value="{{ index }}"
+            {% if index == ctx.index %}selected{% endif %}
+          >
+            {{ index }}
+          </option>
+        {% endfor %}
+      </select>
+      <icon>balance</icon>
+      <div>
+        <div>Index</div>
       </div>
-    </div>
+    </label>
   </div>
-  <div class="italic md:hidden">{{ chart["index_description"] }}</div>
-  <div class="flex items-center justify-center gap-1">
-    <select
-      name="period"
-      autocomplete="off"
-      hx-get="{{ url_for('performance.chart') }}"
+  <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+    <summary
+      class="bg-tertiary-container flex items-center gap-2 rounded-md p-2"
     >
-      {% with period = chart["period"] %}
-        {% include "shared/period-options.jinja" %}
-      {% endwith %}
-    </select>
-    <input
-      name="start"
-      type="date"
-      value="{{ chart["start"] }}"
-      autocomplete="off"
-      hx-get="{{ url_for('performance.chart', period='custom') }}"
-      hx-trigger="blur changed,keyup[keyCode==13] changed"
-      hx-validate="true"
-      hx-on::validation:failed="event.target.classList.add('border-red')"
-    />
-    to
-    <input
-      name="end"
-      type="date"
-      value="{{ chart["end"] }}"
-      autocomplete="off"
-      hx-get="{{ url_for('performance.chart', period='custom') }}"
-      hx-trigger="blur changed,keyup[keyCode==13] changed"
-      hx-validate="true"
-      hx-on::validation:failed="event.target.classList.add('border-red')"
-    />
-  </div>
+      <icon>help</icon>
+      <span class="mr-auto">About {{ ctx.index }}</span>
+      <icon class="details-icon-open">keyboard_arrow_up</icon>
+      <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    <div class="prose mx-auto px-2">
+      <p>{{ ctx.index_description }}</p>
+    </div>
+  </details>
 </div>

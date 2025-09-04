@@ -54,9 +54,14 @@ class TreeNode(NamedTuple):
             attributes = self.attributes
             assert not inner_html or "onLoad" in inner_html or "src" in attributes
             return True
-        if self.tag not in {"h1", "h2", "h3", "h4"}:
+        if self.tag not in {"h1", "h2", "h3", "h4", "title"}:
             return True
-        if inner_html in {"nummus", "Bad Request"}:
+        if inner_html in {
+            "nummus",
+            "Bad Request",
+            "400 Bad Request",
+            "403 Forbidden",
+        }:
             return True
 
         # Headers should use capital case
@@ -370,7 +375,7 @@ class WebClient:
             if response is not None:
                 response.close()
 
-    def GET(  # noqa: N802
+    def GET(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -391,7 +396,7 @@ class WebClient:
         """
         return self.open_("GET", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def PUT(  # noqa: N802
+    def PUT(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -412,7 +417,7 @@ class WebClient:
         """
         return self.open_("PUT", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def POST(  # noqa: N802
+    def POST(
         self,
         endpoint: str | tuple[str, Queries],
         *,
@@ -433,7 +438,7 @@ class WebClient:
         """
         return self.open_("POST", endpoint, rc=rc, content_type=content_type, **kwargs)
 
-    def DELETE(  # noqa: N802
+    def DELETE(
         self,
         endpoint: str | tuple[str, Queries],
         *,

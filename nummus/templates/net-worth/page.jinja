@@ -1,0 +1,78 @@
+<div
+  class="flex items-center justify-between"
+  hx-get="{{ url_for('net_worth.page') }}"
+  hx-trigger="account from:body, asset from:body"
+  hx-target="#main"
+>
+  <h1 class="text-primary font-serif text-3xl">Net worth</h1>
+</div>
+<div
+  class="mb-2 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-x-2 text-center font-bold"
+>
+  <div class="col-span-2">
+    <h2 class="text-xl">Net worth</h2>
+    <h1 class="text-tertiary font-serif text-6xl">
+      {{ ctx.net_worth | money0 }}
+    </h1>
+  </div>
+  <div class="max-lg:col-start-1">
+    <h2 class="text-xl">Assets</h2>
+    <h1 class="text-tertiary font-serif text-4xl">{{ ctx.assets | money0 }}</h1>
+    <div class="border-primary h-2 w-full rounded-xl border">
+      <div
+        class="bg-primary h-full rounded-xl"
+        style="width: {{ ctx.assets_w }}%"
+      ></div>
+    </div>
+  </div>
+  <div>
+    <h2 class="text-xl">Liabilities</h2>
+    <h1 class="text-tertiary font-serif text-4xl">
+      {{ ctx.liabilities | money0 }}
+    </h1>
+    <div class="border-primary h-2 w-full rounded-xl border">
+      <div
+        class="bg-primary h-full rounded-xl"
+        style="width: {{ ctx.liabilities_w }}%"
+      ></div>
+    </div>
+  </div>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About account classification</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Assets are accounts with a positive valuation. This is commonly cash,
+      stocks, and other investments. Liabilites are accounts with a negative
+      valuation. This is commonly lines of credit, mortgages, and other loans.
+      Net worth is the sum of all account valuations.
+    </p>
+  </div>
+</details>
+<div class="relative h-60 w-full md:h-96">
+  <canvas id="net-worth-chart-canvas" hx-preserve></canvas>
+  <div class="spinner-overlay net-worth-indicator">
+    {% include "shared/spinner.jinja" %}
+  </div>
+</div>
+{% include "net-worth/chart-config.jinja" %}
+<h2 class="text-primary font-serif text-2xl">Assets</h2>
+<div class="relative h-60 w-full md:h-96">
+  <canvas id="assets-chart-canvas" hx-preserve></canvas>
+  <div class="spinner-overlay net-worth-indicator">
+    {% include "shared/spinner.jinja" %}
+  </div>
+</div>
+<h2 class="text-primary font-serif text-2xl">Liabilites</h2>
+<div class="relative h-60 w-full md:h-96">
+  <canvas id="liabilities-chart-canvas" hx-preserve></canvas>
+  <div class="spinner-overlay net-worth-indicator">
+    {% include "shared/spinner.jinja" %}
+  </div>
+</div>
+<div id="net-worth-chart-data">{% include "net-worth/chart-data.jinja" %}</div>

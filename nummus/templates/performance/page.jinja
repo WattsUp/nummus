@@ -1,0 +1,50 @@
+<div
+  class="flex items-center justify-between"
+  hx-get="{{ url_for('performance.page') }}"
+  hx-trigger="account from:body, asset from:body"
+  hx-target="#main"
+>
+  <h1 class="text-primary font-serif text-3xl">Investing performance</h1>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary class="bg-tertiary-container flex items-center gap-2 rounded-md p-2">
+    <icon>help</icon>
+    <span class="mr-auto">About investing performance</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Time-Weighted Rate of Return or TWRR is a performance metric that ignores
+      cash flow. Cash flow include deposits into or withdrawals out of an
+      account. If funds are added just before a rise, this has no effect on
+      TWRR. Per annum (p.a.) means the rate is normalized to an annual rate
+      regardless of period duration.
+    </p>
+    <p>
+      Money-Weighted Rate of Return or MWRR is a performance metric that
+      includes cash flow. Also known as Internal Rate of Return or IRR. If funds
+      are added just before a rise, this positively affects MWRR.
+    </p>
+    <p>
+      MWRR allows you to see how your cash flow actions affect your investment.
+      TWRR allows you to see how your asset allocation is performing compared to
+      other investments.
+    </p>
+    <p>Various market indices ar available to compare against.</p>
+  </div>
+</details>
+<div class="relative h-60 w-full md:h-96">
+  <canvas id="performance-chart-canvas" hx-preserve></canvas>
+  <div id="performance-indicator" class="spinner-overlay">
+    {% include "shared/spinner.jinja" %}
+  </div>
+</div>
+{% include "performance/chart-config.jinja" %}
+<h2 class="text-primary font-serif text-2xl">Accounts</h2>
+{% with accounts = ctx.accounts %}
+  {% include "performance/accounts.jinja" %}
+{% endwith %}
+<div id="performance-chart-data">
+  {% include "performance/chart-data.jinja" %}
+</div>

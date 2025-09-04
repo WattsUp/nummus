@@ -40,7 +40,7 @@ def test_get_input_insecure(
     prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print + prompt_input)  # noqa: T201
+        print(to_print + prompt_input)
         return prompt_input
 
     monkeypatch.setattr("builtins.input", mock_input)
@@ -57,7 +57,7 @@ def test_get_input_insecure_abort(
     prompt_input = rand_str_generator()
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print + prompt_input)  # noqa: T201
+        print(to_print + prompt_input)
         raise KeyboardInterrupt
 
     monkeypatch.setattr("builtins.input", mock_input)
@@ -74,7 +74,7 @@ def test_get_input_secure(
     prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         return prompt_input
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -88,7 +88,7 @@ def test_get_input_secure_abort(
     rand_str: str,
 ) -> None:
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         raise EOFError
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -105,7 +105,7 @@ def test_get_input_secure_with_icon(
     prompt_input = rand_str_generator()
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         return prompt_input
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -130,7 +130,7 @@ def test_get_password(
 
     def mock_input(to_print: str, *, secure: bool) -> str | None:
         assert secure
-        print(to_print)  # noqa: T201
+        print(to_print)
         return queue.pop(0)
 
     monkeypatch.setattr(utils, "get_input", mock_input)
@@ -159,7 +159,7 @@ def test_confirm(
     retries = len(queue) > 1
 
     def mock_input(to_print: str) -> str | None:
-        print(to_print)  # noqa: T201
+        print(to_print)
         if len(queue) == 1:
             return queue[0]
         return queue.pop(0)
@@ -424,42 +424,6 @@ def test_period_years_two_years() -> None:
         "2025": (datetime.date(2025, 1, 1).toordinal(), end_ord),
     }
     assert utils.period_years(start_ord, end_ord) == target
-
-
-def test_downsample_range() -> None:
-    start = datetime.date(2023, 1, 10)
-    start_ord = start.toordinal()
-    end = datetime.date(2023, 1, 28)
-    end_ord = end.toordinal()
-    n = end_ord - start_ord + 1
-
-    values = [Decimal(i) for i in range(n)]
-
-    labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
-    assert labels == ["2023-01"]
-    assert r_min == [Decimal()]
-    assert r_avg == [Decimal(n - 1) / 2]
-    assert r_max == [Decimal(n - 1)]
-
-
-def test_downsample_range_doubled() -> None:
-    start = datetime.date(2023, 1, 30)
-    start_ord = start.toordinal()
-    end = datetime.date(2023, 2, 2)
-    end_ord = end.toordinal()
-
-    values = [
-        Decimal(1),
-        Decimal(3),
-        Decimal(5),
-        Decimal(7),
-    ]
-
-    labels, r_min, r_avg, r_max = utils.downsample(start_ord, end_ord, values)
-    assert labels == ["2023-01", "2023-02"]
-    assert r_min == [Decimal(1), Decimal(5)]
-    assert r_avg == [Decimal(2), Decimal(6)]
-    assert r_max == [Decimal(3), Decimal(7)]
 
 
 def test_round_list() -> None:

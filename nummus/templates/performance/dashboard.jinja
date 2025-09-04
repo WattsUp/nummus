@@ -1,55 +1,43 @@
-<div
-  id="dashboard-performance"
-  class="relative flex h-[16rem] min-h-[16rem] flex-col bg-white p-2 md:h-[20rem] md:min-h-[20rem]"
-  hx-get="{{ url_for('performance.dashboard') }}"
-  hx-trigger="update-asset from:body"
-  hx-indicator="find .spinner"
-  hx-target="#dashboard-performance"
->
+<div hx-target="#main" hx-swap="innerHTML show:window:top" hx-push-url="true">
   <a
-    class="space-between group flex w-full cursor-pointer"
-    href="{{ url_for('performance.page') }}"
-    hx-get="{{ url_for('performance.page') }}"
-    hx-indicator="next .spinner"
-    hx-target="#main"
-    hx-swap="innerHTML show:window:top"
-    hx-push-url="true"
+    href="{{ url_for("performance.page") }}"
+    hx-get="{{ url_for("performance.page") }}"
+    hx-disabled-elt="this"
   >
-    <h1
-      class="align-left grow font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
-    >
-      90-day performance
-    </h1>
-    <h1 class="text-lg">{{ data["profit"] | money }}</h1>
+    <h1>Investing performance</h1>
+    <h2 class="{{ ctx.pnl | pnl_color }} flex items-center justify-end">
+      {{ ctx.pnl | money0 }}
+      <icon class="sm">{{ ctx.pnl | pnl_arrow }}</icon>
+    </h2>
+    <icon>chevron_forward</icon>
   </a>
-  <div class="border-blue group relative flex border-l-4 pl-1">
+  <a class="border-primary group relative flex border-l-4 pl-1">
     <div class="grow truncate">Portfolio</div>
-    <div class="text-{{ data["twrr"] | pnl_color }} min-w-[4rem] text-right">
-      {{ data["twrr"] | percent }}
+    <div class="{{ ctx.twrr | pnl_color }} flex items-center justify-end">
+      {{ ctx.twrr | percent }}
+      <icon class="sm">{{ ctx.twrr | pnl_arrow }}</icon>
     </div>
     <div
-      class="bg-blue absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
+      class="bg-primary absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
     ></div>
-  </div>
-  <div class="w-full grow overflow-y-auto">
-    {% for index, twrr in data["indices"].items() %}
-      <a
-        class="border-yellow group relative flex cursor-pointer border-l-4 pl-1"
-        href="{{ url_for('performance.page', index=index) }}"
-        hx-get="{{ url_for('performance.page', index=index) }}"
-        hx-target="#main"
-        hx-swap="innerHTML show:window:top"
-        hx-push-url="true"
-      >
-        <div class="grow truncate">{{ index }}</div>
-        <div class="text-{{ twrr | pnl_color }} min-w-[4rem] text-right">
-          {{ twrr | percent }}
-        </div>
-        <div
-          class="bg-yellow absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
-        ></div>
-      </a>
-    {% endfor %}
-  </div>
-  <div>{% include "shared/spinner.jinja" %}</div>
+  </a>
+  {% for index, twrr in ctx.indices.items() %}
+    <a
+      class="border-tertiary group relative flex border-l-4 pl-1"
+      href="{{ url_for("performance.page", index=index) }}"
+      hx-get="{{ url_for("performance.page", index=index) }}"
+      hx-disabled-elt="this"
+    >
+      <div class="grow truncate">{{ index }}</div>
+      <div class="{{ twrr | pnl_color }} flex items-center justify-end">
+        {{ twrr | percent }}
+        <icon class="sm">{{ twrr | pnl_arrow }}</icon>
+      </div>
+      <icon>chevron_forward</icon>
+      <div
+        class="bg-tertiary absolute bottom-0 left-0 h-0.5 w-0 transition-[width] duration-500 md:group-hover:w-full"
+      ></div>
+    </a>
+  {% endfor %}
+  <i class="text-center text-sm">over the past 6 months</i>
 </div>

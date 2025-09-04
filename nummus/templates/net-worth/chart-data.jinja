@@ -1,15 +1,14 @@
 {% if include_oob %}
   {% with oob = True %}
     {% include "net-worth/chart-config.jinja" %}
-    {% with assets = chart["assets"] %}
-      {% include "accounts/assets.jinja" %}
-    {% endwith %}
   {% endwith %}
 {% endif %}
-<div id="net-worth-chart-data">
-  <script>
-    onLoad(() => {
-      netWorth.update(JSON.parse('{{ chart["data"] | tojson }}'));
-    });
-  </script>
-</div>
+<script>
+  // prettier-ignore
+  onLoad(() => {
+    netWorth.update(
+      JSON.parse('{{ ctx.chart | tojson }}'),
+      JSON.parse('{{ ctx.accounts | tojson }}'),
+    );
+  });
+</script>

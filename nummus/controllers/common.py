@@ -15,7 +15,7 @@ def page_dashboard() -> flask.Response:
     Returns:
         string HTML response
     """
-    return base.page("page.jinja", title="Dashboard | nummus")
+    return base.page("page.jinja", "Dashboard")
 
 
 @auth.login_exempt
@@ -36,7 +36,7 @@ def page_style_test() -> flask.Response:
     """
     return base.page(
         "shared/style-test.jinja",
-        "Style Test",
+        "Style test",
     )
 
 

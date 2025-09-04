@@ -9,7 +9,7 @@ import textwrap
 from collections.abc import Callable
 from decimal import Decimal
 from pathlib import Path
-from typing import NamedTuple, TYPE_CHECKING, TypedDict
+from typing import NamedTuple, overload, TYPE_CHECKING, TypedDict
 
 import flask
 
@@ -45,7 +45,7 @@ class Page(NamedTuple):
 
     icon: str
     endpoint: str
-    type_: LinkType
+    type_: LinkType = LinkType.PAGE
 
 
 class PageGroup(NamedTuple):
@@ -83,6 +83,18 @@ class CategoryContext(NamedTuple):
 
 CategoryGroups = dict[TransactionCategoryGroup, list[CategoryContext]]
 
+
+class ChartData(TypedDict):
+    """Chart data."""
+
+    labels: list[str]
+    mode: str
+
+    min: list[Decimal] | None
+    avg: list[Decimal]
+    max: list[Decimal] | None
+
+
 LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
 # else plot normally by days
 
@@ -105,8 +117,10 @@ PERIOD_OPTIONS = {
     "6m": "6M",
     "ytd": "YTD",
     "1yr": "1Y",
+    "5yr": "5Y",
     "max": "MAX",
 }
+DEFAULT_PERIOD = "6m"
 
 RE_JINJA = re.compile(r"(\{[{%#]).+?([#%}]\})")
 RE_ICON_VAR = re.compile(r'set icon = "([\w\-]+)"')
@@ -138,45 +152,35 @@ def ctx_base(
             (
                 "",
                 {
-                    "Home": Page("home", "common.page_dashboard", LinkType.PAGE),
-                    "Budget": Page("wallet", "budgeting.page", LinkType.PAGE),
+                    "Dashboard": Page("dashboard", "common.page_dashboard"),
+                    "Budget": Page("wallet", "budgeting.page"),
                     # TODO (WattsUp): #358 Change to receipt_long and add_receipt_long
                     # if request gets fulfilled
-                    "Transactions": Page(
-                        "note_stack",
-                        "transactions.page_all",
-                        LinkType.PAGE,
-                    ),
-                    "Accounts": Page(
-                        "account_balance",
-                        "accounts.page_all",
-                        LinkType.PAGE,
-                    ),
+                    "Transactions": Page("note_stack", "transactions.page_all"),
+                    "Accounts": Page("account_balance", "accounts.page_all"),
                     "Insights": None,  # search_insights
                 },
             ),
-            # TODO (WattsUp): #359 Banking section? Where to put spending by tag info?
+            (
+                "Retrospection",
+                {
+                    "Net worth": Page("balance", "net_worth.page"),
+                    # add "Spending": Page("troubleshoot", "performance.page"),
+                },
+            ),
             (
                 "Investing",
                 {
-                    "Assets": Page("box", "assets.page_all", LinkType.PAGE),
-                    "Performance": None,  # ssid_chart
-                    "Allocation": Page(
-                        "full_stacked_bar_chart",
-                        "allocation.page",
-                        LinkType.PAGE,
-                    ),
+                    "Assets": Page("box", "assets.page_all"),
+                    "Performance": Page("ssid_chart", "performance.page"),
+                    "Allocation": Page("full_stacked_bar_chart", "allocation.page"),
                 },
             ),
             (
                 "Planning",
                 {
                     "Retirement": None,  # person_play
-                    "Emergency fund": Page(
-                        "emergency",
-                        "emergency_fund.page",
-                        LinkType.PAGE,
-                    ),
+                    "Emergency fund": Page("emergency", "emergency_fund.page"),
                 },
             ),
             (
@@ -187,26 +191,16 @@ def ctx_base(
                         if is_encrypted
                         else None
                     ),
-                    "Categories": Page(
-                        "category",
-                        "transaction_categories.page",
-                        LinkType.PAGE,
-                    ),
+                    "Categories": Page("category", "transaction_categories.page"),
                     "Import file": Page(
                         "upload",
                         "import_file.import_file",
                         LinkType.DIALOG,
                     ),
                     "Update assets": Page("update", "assets.update", LinkType.DIALOG),
-                    "Health checks": Page(
-                        "health_metrics",
-                        "health.page",
-                        LinkType.PAGE,
-                    ),
+                    "Health checks": Page("health_metrics", "health.page"),
                     "Style test": (
-                        Page("style", "common.page_style_test", LinkType.PAGE)
-                        if debug
-                        else None
+                        Page("style", "common.page_style_test") if debug else None
                     ),
                 },
             ),
@@ -471,12 +465,13 @@ def parse_period(
     Raises:
         BadRequest: If period is unknown
     """
-    if period == "1yr":
-        start = datetime.date(today.year - 1, today.month, today.day)
-    elif period == "ytd":
+    if period == "ytd":
         start = datetime.date(today.year, 1, 1)
     elif period == "max":
         start = None
+    elif m := re.match(r"(\d)yr", period):
+        n = max(0, int(m.group(1)))
+        start = datetime.date(today.year - n, today.month, today.day)
     elif m := re.match(r"(\d)m", period):
         n = min(0, -int(m.group(1)))
         start = utils.date_add_months(today, n)
@@ -510,11 +505,12 @@ def date_labels(start_ord: int, end_ord: int) -> DateLabels:
     return DateLabels([d.isoformat() for d in dates], date_mode)
 
 
-def ctx_to_json(d: dict[str, object]) -> str:
+def ctx_to_json(d: dict[str, object], precision: int = 2) -> str:
     """Convert web context to JSON.
 
     Args:
         d: Object to serialize
+        precision: Precision to round real numbers to
 
     Returns:
         JSON object
@@ -522,7 +518,7 @@ def ctx_to_json(d: dict[str, object]) -> str:
 
     def default(obj: object) -> str | float:
         if isinstance(obj, Decimal):
-            return float(round(obj, 2))
+            return float(round(obj, precision))
         msg = f"Unknown type {type(obj)}"
         raise TypeError(msg)
 
@@ -768,3 +764,118 @@ def tranaction_category_groups(s: orm.Session) -> CategoryGroups:
             ),
         )
     return category_groups
+
+
+# TODO (WattsUp): #392 Use for all charts
+@overload
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: list[Decimal],
+) -> ChartData: ...
+
+
+@overload
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: tuple[list[Decimal], ...],
+) -> tuple[ChartData, ...]: ...
+
+
+def chart_data(
+    start_ord: int,
+    end_ord: int,
+    values: list[Decimal] | tuple[list[Decimal], ...],
+) -> ChartData | tuple[ChartData, ...]:
+    """Prepare chart data by downsampling if necessary.
+
+    Args:
+        start_ord: Start date ordinal
+        end_ord: End date ordinal
+        values: One or more daily values to prepare
+
+    Returns:
+        ChartData for each values
+
+    """
+    n = end_ord - start_ord + 1
+    if n > LIMIT_DOWNSAMPLE:
+        periods = utils.period_months(start_ord, end_ord)
+        labels: list[str] = list(periods.keys())
+        if isinstance(values, tuple):
+            values_min: list[list[Decimal]] = []
+            values_avg: list[list[Decimal]] = []
+            values_max: list[list[Decimal]] = []
+
+            for _ in range(len(values)):
+                values_min.append([])
+                values_avg.append([])
+                values_max.append([])
+
+            for period_ord, period_end_ord in periods.values():
+                i_start = period_ord - start_ord
+                i_end = period_end_ord - start_ord
+
+                for i, v in enumerate(values):
+                    values_sliced = v[i_start : i_end + 1]
+                    values_min[i].append(min(values_sliced))
+                    values_max[i].append(max(values_sliced))
+                    values_avg[i].append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+            return tuple(
+                ChartData(
+                    labels=labels,
+                    mode="years",
+                    min=v_min,
+                    avg=v_avg,
+                    max=v_max,
+                )
+                for v_min, v_avg, v_max in zip(
+                    values_min,
+                    values_avg,
+                    values_max,
+                    strict=True,
+                )
+            )
+
+        v_min: list[Decimal] = []
+        v_avg: list[Decimal] = []
+        v_max: list[Decimal] = []
+
+        for period_ord, period_end_ord in periods.values():
+            i_start = period_ord - start_ord
+            i_end = period_end_ord - start_ord
+            values_sliced = values[i_start : i_end + 1]
+
+            v_min.append(min(values_sliced))
+            v_max.append(max(values_sliced))
+            v_avg.append(sum(values_sliced) / len(values_sliced))  # type: ignore[attr-defined]
+
+        return ChartData(
+            labels=labels,
+            mode="years",
+            min=v_min,
+            avg=v_avg,
+            max=v_max,
+        )
+
+    dates = date_labels(start_ord, end_ord)
+    if isinstance(values, tuple):
+        return tuple(
+            ChartData(
+                labels=dates[0],
+                mode=dates[1],
+                min=None,
+                avg=v,
+                max=None,
+            )
+            for v in values
+        )
+    return ChartData(
+        labels=dates[0],
+        mode=dates[1],
+        min=None,
+        avg=values,
+        max=None,
+    )

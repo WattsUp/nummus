@@ -61,7 +61,7 @@ class Import(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus import exceptions as exc  # noqa: PLC0415
+        from nummus import exceptions as exc
 
         p = self._p
         # Back up Portfolio
@@ -116,7 +116,7 @@ class Import(BaseCommand):
             tar_ver: Target version to restore
             path_debug: Path to debug file
         """
-        from nummus import portfolio  # noqa: PLC0415
+        from nummus import portfolio
 
         portfolio.Portfolio.restore(self._p, tar_ver=tar_ver)
         print(f"{Fore.RED}Abandoned import, restored from backup", file=sys.stderr)

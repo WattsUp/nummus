@@ -1,15 +1,14 @@
 {% if include_oob %}
   {% with oob = True %}
     {% include "performance/chart-config.jinja" %}
-    {% with accounts = chart["accounts"] %}
+    {% with accounts = ctx.accounts %}
       {% include "performance/accounts.jinja" %}
     {% endwith %}
   {% endwith %}
 {% endif %}
-<div id="performance-chart-data">
-  <script>
-    onLoad(() => {
-      performance.update(JSON.parse('{{ chart["data"] | tojson }}'));
-    });
-  </script>
-</div>
+<script>
+  // prettier-ignore
+  onLoad(() => {
+    performance.update(JSON.parse('{{ ctx.chart | tojson(precision=4) }}'));
+  });
+</script>

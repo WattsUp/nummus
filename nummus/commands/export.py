@@ -84,7 +84,7 @@ class Export(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from nummus.models import TransactionSplit  # noqa: PLC0415
+        from nummus.models import TransactionSplit
 
         with self._p.begin_session() as s:
             query = (
@@ -126,10 +126,10 @@ def write_csv(
         Number of transactions exported
     """
     # Defer for faster time to main
-    import tqdm  # noqa: PLC0415
+    import tqdm
 
-    from nummus import utils  # noqa: PLC0415
-    from nummus.models import (  # noqa: PLC0415
+    from nummus import utils
+    from nummus.models import (
         Account,
         query_count,
         TransactionCategory,

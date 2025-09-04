@@ -41,11 +41,11 @@ class Migrate(BaseCommand):
     @override
     def run(self) -> int:
         # Defer for faster time to main
-        from packaging.version import Version  # noqa: PLC0415
+        from packaging.version import Version
 
-        from nummus import portfolio  # noqa: PLC0415
-        from nummus.migrations import MIGRATORS, SchemaMigrator  # noqa: PLC0415
-        from nummus.models import Config, ConfigKey  # noqa: PLC0415
+        from nummus import portfolio
+        from nummus.migrations import MIGRATORS, SchemaMigrator
+        from nummus.models import Config, ConfigKey
 
         p = self._p
 

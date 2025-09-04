@@ -23,7 +23,7 @@ class MockPortfolio(Portfolio):
     @override
     @classmethod
     def create(cls, path: str | Path, key: str | None = None) -> Portfolio:
-        print(f"Creating {path} with {key}", file=sys.stderr)  # noqa: T201
+        print(f"Creating {path} with {key}", file=sys.stderr)
         return MockPortfolio()
 
 

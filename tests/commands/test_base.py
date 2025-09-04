@@ -128,7 +128,7 @@ def test_unlock_encrypted(
     queue = ["not key", key]
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print, file=sys.stderr)  # noqa: T201
+        print(to_print, file=sys.stderr)
         return queue.pop(0)
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -155,7 +155,7 @@ def test_unlock_encrypted_cancel(
     p, _ = empty_portfolio_encrypted
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print, file=sys.stderr)  # noqa: T201
+        print(to_print, file=sys.stderr)
         return None
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)
@@ -179,7 +179,7 @@ def test_unlock_encrypted_failed(
     p, _ = empty_portfolio_encrypted
 
     def mock_get_pass(to_print: str) -> str | None:
-        print(to_print, file=sys.stderr)  # noqa: T201
+        print(to_print, file=sys.stderr)
         return "not key"
 
     monkeypatch.setattr("getpass.getpass", mock_get_pass)

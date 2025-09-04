@@ -137,7 +137,6 @@ def page(uri: str) -> flask.Response:
     args = flask.request.args
     with p.begin_session() as s:
         a = base.find(s, Asset, uri)
-        title = f"Asset {a.name}"
         ctx = ctx_asset(
             s,
             a,
@@ -150,7 +149,7 @@ def page(uri: str) -> flask.Response:
         )
         return base.page(
             "assets/page.jinja",
-            title=title,
+            title=a.name,
             asset=ctx,
         )
 
