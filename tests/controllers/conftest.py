@@ -54,7 +54,7 @@ class TreeNode(NamedTuple):
             attributes = self.attributes
             assert not inner_html or "onLoad" in inner_html or "src" in attributes
             return True
-        if self.tag not in {"h1", "h2", "h3", "h4"}:
+        if self.tag not in {"h1", "h2", "h3", "h4", "title"}:
             return True
         if inner_html in {"nummus", "Bad Request"}:
             return True

@@ -8,8 +8,8 @@ const performance = {
    */
   update: function (raw) {
     const labels = raw.labels;
-    const dateMode = raw.date_mode;
-    const values = raw.values.map((v) => Number(v) * 100);
+    const dateMode = raw.mode;
+    const avg = raw.avg.map((v) => Number(v) * 100);
     const min = raw.min && raw.min.map((v) => Number(v) * 100);
     const max = raw.max && raw.max.map((v) => Number(v) * 100);
     const index = raw.index.map((v) => Number(v) * 100);
@@ -25,7 +25,7 @@ const performance = {
         datasets.push({
           label: "Portfolio",
           type: "line",
-          data: values,
+          data: avg,
           borderColorRaw: "primary",
           backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 2,
@@ -59,7 +59,7 @@ const performance = {
         datasets.push({
           label: "Average",
           type: "line",
-          data: values,
+          data: avg,
           borderColorRaw: "primary",
           backgroundColorRaw: ["primary-container", "80"],
           borderWidth: 2,

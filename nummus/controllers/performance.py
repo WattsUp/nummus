@@ -14,7 +14,6 @@ from nummus.controllers import base
 from nummus.models import Account, AccountCategory, Asset, TransactionSplit
 from nummus.models.asset import AssetCategory
 
-_DEFAULT_PERIOD = "6m"
 _DEFAULT_INDEX = "S&P 500"
 
 
@@ -41,14 +40,9 @@ class AccountsContext(TypedDict):
     accounts: list[AccountContext]
 
 
-class ChartData(TypedDict):
+class ChartData(base.ChartData):
     """Type definition for chart data context."""
 
-    labels: list[str]
-    date_mode: str
-    values: list[Decimal]
-    min: list[Decimal] | None
-    max: list[Decimal] | None
     index: list[Decimal]
     index_name: str
     index_min: list[Decimal] | None
@@ -81,7 +75,7 @@ def page() -> flask.Response:
         ctx = ctx_chart(
             s,
             base.today_client(),
-            args.get("period", _DEFAULT_PERIOD),
+            args.get("period", base.DEFAULT_PERIOD),
             args.get("index", _DEFAULT_INDEX),
         )
     return base.page(
@@ -98,7 +92,7 @@ def chart() -> flask.Response:
         string HTML response
     """
     args = flask.request.args
-    period = args.get("period", _DEFAULT_PERIOD)
+    period = args.get("period", base.DEFAULT_PERIOD)
     index = args.get("index", _DEFAULT_INDEX)
     p = web.portfolio
     with p.begin_session() as s:
@@ -216,7 +210,6 @@ def ctx_chart(
     )
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
-
     acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
 
     acct_values, acct_profits, _ = Account.get_value_all(
@@ -265,15 +258,11 @@ def ctx_chart(
     data_twrr, data_index = base.chart_data(start_ord, end_ord, (twrr, index_twrr))
 
     chart: ChartData = {
-        "labels": data_twrr.labels,
-        "date_mode": data_twrr.mode,
-        "values": data_twrr.avg,
-        "min": data_twrr.min,
-        "max": data_twrr.max,
-        "index": data_index.avg,
+        **data_twrr,
+        "index": data_index["avg"],
         "index_name": index,
-        "index_min": data_index.min,
-        "index_max": data_index.max,
+        "index_min": data_index["min"],
+        "index_max": data_index["max"],
     }
 
     accounts: AccountsContext = {

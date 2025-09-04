@@ -9,8 +9,8 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func, orm
 
-from nummus import portfolio, utils, web_utils
-from nummus.controllers import common
+from nummus import portfolio, utils, web
+from nummus.controllers import base
 from nummus.models import (
     Account,
     AccountCategory,
@@ -23,129 +23,200 @@ from nummus.models import (
 if TYPE_CHECKING:
     from nummus.controllers.base import Routes
 
-DEFAULT_PERIOD = "90-days"
+
+class AccountContext(TypedDict):
+    """Type definition for Account context."""
+
+    name: str
+    uri: str
+    min: list[Decimal] | None
+    avg: list[Decimal]
+    max: list[Decimal] | None
 
 
-def ctx_chart() -> dict[str, object]:
+class Context(TypedDict):
+    """Type definition for chart context."""
+
+    start: datetime.date
+    end: datetime.date
+    period: str
+    period_options: dict[str, str]
+    chart: base.ChartData
+    accounts: list[AccountContext]
+    net_worth: Decimal
+    assets: Decimal
+    liabilities: Decimal
+    assets_w: Decimal
+    liabilities_w: Decimal
+
+
+def page() -> flask.Response:
+    """GET /net-worth.
+
+    Returns:
+        string HTML response
+    """
+    args = flask.request.args
+    p = web.portfolio
+    with p.begin_session() as s:
+        ctx = ctx_chart(
+            s,
+            base.today_client(),
+            args.get("period", base.DEFAULT_PERIOD),
+        )
+    return base.page(
+        "net-worth/page.jinja",
+        title="Net Worth",
+        ctx=ctx,
+    )
+
+
+def chart() -> flask.Response:
+    """GET /h/net-worth/chart.
+
+    Returns:
+        string HTML response
+    """
+    args = flask.request.args
+    period = args.get("period", base.DEFAULT_PERIOD)
+    p = web.portfolio
+    with p.begin_session() as s:
+        ctx = ctx_chart(s, base.today_client(), period)
+    html = flask.render_template(
+        "net-worth/chart-data.jinja",
+        ctx=ctx,
+        include_oob=True,
+    )
+    response = flask.make_response(html)
+    response.headers["HX-Push-Url"] = flask.url_for(
+        "net_worth.page",
+        _anchor=None,
+        _method=None,
+        _scheme=None,
+        _external=False,
+        period=period,
+    )
+    return response
+
+
+def dashboard() -> str:
+    """GET /h/dashboard/net-worth.
+
+    Returns:
+        string HTML response
+    """
+    with flask.current_app.app_context():
+        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
+    today = datetime.date.today()
+    today_ord = today.toordinal()
+
+    with p.begin_session() as s:
+        end_ord = today_ord
+        start = utils.date_add_months(today, -8)
+        start_ord = start.toordinal()
+        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
+
+        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
+
+    chart = {
+        "data": {
+            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
+            "date_mode": "months",
+            "total": total,
+        },
+        "current": total[-1],
+    }
+    return flask.render_template(
+        "net-worth/dashboard.jinja",
+        chart=chart,
+    )
+
+
+def ctx_chart(
+    s: orm.Session,
+    today: datetime.date,
+    period: str,
+) -> Context:
     """Get the context to build the net worth chart.
+
+    Args:
+        s: SQL session to use
+        today: Today's date
+        period: Selected chart period
 
     Returns:
         Dictionary HTML context
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
 
-    args = flask.request.args
+    start, end = base.parse_period(period, today)
 
-    period = args.get("period", DEFAULT_PERIOD)
-    start, end = web_utils.parse_period(period, args.get("start"), args.get("end"))
-    category = args.get("category", None, type=AccountCategory)
+    if start is None:
+        query = s.query(func.min(TransactionSplit.date_ord)).where(
+            TransactionSplit.asset_id.is_(None),
+        )
+        start_ord = query.scalar()
+        start = datetime.date.fromordinal(start_ord) if start_ord else end
+    start_ord = start.toordinal()
+    end_ord = end.toordinal()
 
-    class AccountContext(TypedDict):
-        """Type definition for Account context."""
+    query = s.query(Account)
+    acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
 
-        name: str
-        values: list[Decimal]
+    acct_values, _, _ = Account.get_value_all(
+        s,
+        start_ord,
+        end_ord,
+        ids=acct_ids,
+    )
 
-    accounts: list[AccountContext] = []
+    total: list[Decimal] = [
+        Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
+    ]
+    data_tuple = base.chart_data(start_ord, end_ord, (total, *acct_values.values()))
 
-    with p.begin_session() as s:
-        if start is None:
-            query = s.query(func.min(TransactionSplit.date_ord)).where(
-                TransactionSplit.asset_id.is_(None),
-            )
-            start_ord = query.scalar()
-            start = (
-                datetime.date.fromordinal(start_ord)
-                if start_ord
-                else datetime.date(1970, 1, 1)
-            )
-        start_ord = start.toordinal()
-        end_ord = end.toordinal()
-        n = end_ord - start_ord + 1
+    mapping = Account.map_name(s)
 
-        query = s.query(Account)
-        if category is not None:
-            query = query.where(Account.category == category)
+    ctx_accounts: list[AccountContext] = [
+        {
+            "name": mapping[acct_id],
+            "uri": Account.id_to_uri(acct_id),
+            "min": data_tuple[i + 1]["min"],
+            "avg": data_tuple[i + 1]["avg"],
+            "max": data_tuple[i + 1]["max"],
+        }
+        for i, acct_id in enumerate(acct_values)
+    ]
+    ctx_accounts = sorted(ctx_accounts, key=lambda item: -item["avg"][-1])
 
-        # Include account if not closed
-        # Include account if most recent transaction is in period
-        def include_account(acct: Account) -> bool:
-            if not acct.closed:
-                return True
-            updated_on_ord = acct.updated_on_ord
-            return updated_on_ord is not None and updated_on_ord > start_ord
-
-        ids = [acct.id_ for acct in query.all() if include_account(acct)]
-
-        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord, ids=ids)
-
-        total: list[Decimal] = [
-            Decimal(sum(item)) for item in zip(*acct_values.values(), strict=True)
-        ]
-
-        mapping = Account.map_name(s)
-
-        sum_assets_end = Decimal(0)
-
-        for acct_id, values in acct_values.items():
-            accounts.append(
-                {
-                    "name": mapping[acct_id],
-                    "values": values,
-                },
-            )
-            sum_assets_end += max(0, values[-1])
-        accounts = sorted(accounts, key=lambda item: -item["values"][-1])
-
-        labels: list[str] = []
-        total_min: list[Decimal] | None = None
-        total_max: list[Decimal] | None = None
-        date_mode: str | None = None
-
-        if n > web_utils.LIMIT_DOWNSAMPLE:
-            # Downsample to min/avg/max by month
-            labels, total_min, total, total_max = utils.downsample(
-                start_ord,
-                end_ord,
-                total,
-            )
-            date_mode = "years"
-
-            for account in accounts:
-                # Don't care about min/max cause stacked chart
-                _, _, acct_values, _ = utils.downsample(
-                    start_ord,
-                    end_ord,
-                    account["values"],
-                )
-                account["values"] = acct_values
+    assets = Decimal()
+    liabilities = Decimal()
+    for values in acct_values.values():
+        v = values[-1]
+        if v > 0:
+            assets += v
         else:
-            labels = [d.isoformat() for d in utils.range_date(start_ord, end_ord)]
-            if n > web_utils.LIMIT_TICKS_MONTHS:
-                date_mode = "months"
-            elif n > web_utils.LIMIT_TICKS_WEEKS:
-                date_mode = "weeks"
-            else:
-                date_mode = "days"
+            liabilities += v
 
-        assets = ctx_assets(s, start_ord, end_ord, sum_assets_end, ids)
+    bar_total = assets - liabilities
+    if bar_total == 0:
+        asset_width = Decimal()
+        liabilities_width = Decimal()
+    else:
+        asset_width = round(assets / (assets - liabilities) * 100, 2)
+        liabilities_width = 100 - asset_width
 
     return {
         "start": start,
         "end": end,
         "period": period,
-        "data": {
-            "labels": labels,
-            "date_mode": date_mode,
-            "values": total,
-            "min": total_min,
-            "max": total_max,
-            "accounts": accounts,
-        },
-        "category": category,
-        "category_type": AccountCategory,
+        "period_options": base.PERIOD_OPTIONS,
+        "chart": data_tuple[0],
+        "accounts": ctx_accounts,
+        "net_worth": assets + liabilities,
         "assets": assets,
+        "liabilities": liabilities,
+        "assets_w": asset_width,
+        "liabilities_w": liabilities_width,
     }
 
 
@@ -292,74 +363,6 @@ def ctx_assets(
         "end_value": total_value,
         "profit": total_profit,
     }
-
-
-def page() -> flask.Response:
-    """GET /net-worth.
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    with p.begin_session() as s:
-        acct_values, _, _ = Account.get_value_all(s, today_ord, today_ord)
-        current = sum(item[0] for item in acct_values.values())
-    return common.page(
-        "net-worth/index-content.jinja",
-        title="Net Worth | nummus",
-        chart=ctx_chart(),
-        current=current,
-    )
-
-
-def chart() -> str:
-    """GET /h/net-worth/chart.
-
-    Returns:
-        string HTML response
-    """
-    return flask.render_template(
-        "net-worth/chart-data.jinja",
-        chart=ctx_chart(),
-        include_oob=True,
-    )
-
-
-def dashboard() -> str:
-    """GET /h/dashboard/net-worth.
-
-    Returns:
-        string HTML response
-    """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
-    with p.begin_session() as s:
-        end_ord = today_ord
-        start = utils.date_add_months(today, -8)
-        start_ord = start.toordinal()
-        acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
-
-        total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
-
-    chart = {
-        "data": {
-            "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "date_mode": "months",
-            "total": total,
-        },
-        "current": total[-1],
-    }
-    return flask.render_template(
-        "net-worth/dashboard.jinja",
-        chart=chart,
-    )
 
 
 ROUTES: Routes = {

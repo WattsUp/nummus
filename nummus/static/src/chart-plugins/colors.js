@@ -11,9 +11,15 @@ const pluginColor = {
     this.updateChartColor(chart);
   },
   updateChartColor: function (chart) {
-    const getColor = function (src) {
-      if (Array.isArray(src)) return getThemeColor(src[0]) + src[1];
-      else return getThemeColor(src);
+    const getColor = function (src, spin) {
+      let opacity = "";
+      if (Array.isArray(src)) {
+        opacity = src[1];
+        src = src[0];
+      }
+      const c = getThemeColor(src);
+      if (spin) return tinycolor(c).spin(spin).toHexString() + opacity;
+      return c + opacity;
     };
 
     const fields = ["borderColor", "backgroundColor"];
@@ -28,6 +34,7 @@ const pluginColor = {
       const {
         borderColorRaw,
         backgroundColorRaw,
+        colorSpin,
         fill: { aboveRaw, belowRaw } = {},
       } = dataset;
       if (type == "doughnut") {
@@ -35,11 +42,12 @@ const pluginColor = {
         if (backgroundColorRaw)
           dataset.backgroundColor = backgroundColorRaw.map(getColor);
       } else {
-        if (borderColorRaw) dataset.borderColor = getColor(borderColorRaw);
+        if (borderColorRaw)
+          dataset.borderColor = getColor(borderColorRaw, colorSpin);
         if (backgroundColorRaw)
-          dataset.backgroundColor = getColor(backgroundColorRaw);
-        if (aboveRaw) dataset.fill.above = getColor(aboveRaw);
-        if (belowRaw) dataset.fill.below = getColor(belowRaw);
+          dataset.backgroundColor = getColor(backgroundColorRaw, colorSpin);
+        if (aboveRaw) dataset.fill.above = getColor(aboveRaw, colorSpin);
+        if (belowRaw) dataset.fill.below = getColor(belowRaw, colorSpin);
       }
     }
 

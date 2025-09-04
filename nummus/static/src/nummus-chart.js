@@ -143,10 +143,13 @@ const nummusChart = {
       if (source.values.every((v) => v == 0)) continue;
       for (let i = 0; i < n; ++i) values[i] += source.values[i];
       datasets.push({
+        label: source.name,
         type: "line",
         data: [...values],
-        borderColor: source.color,
-        backgroundColor: source.color + "80",
+        dataRaw: source.values,
+        borderColorRaw: "primary",
+        backgroundColorRaw: ["primary-container", "80"],
+        colorSpin: source.colorSpin,
         borderWidth: 1,
         pointRadius: 0,
         hoverRadius: 0,
