@@ -9,11 +9,10 @@ from typing import TYPE_CHECKING, TypedDict
 import flask
 from sqlalchemy import func, orm
 
-from nummus import portfolio, utils, web
+from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
-    AccountCategory,
     Asset,
     AssetCategory,
     TransactionSplit,
@@ -105,30 +104,27 @@ def dashboard() -> str:
     Returns:
         string HTML response
     """
-    with flask.current_app.app_context():
-        p: portfolio.Portfolio = flask.current_app.portfolio  # type: ignore[attr-defined]
-    today = datetime.date.today()
-    today_ord = today.toordinal()
-
+    p = web.portfolio
     with p.begin_session() as s:
-        end_ord = today_ord
-        start = utils.date_add_months(today, -8)
+        start, end = base.parse_period(base.DEFAULT_PERIOD, base.today_client())
+        start = start or end
         start_ord = start.toordinal()
+        end_ord = end.toordinal()
         acct_values, _, _ = Account.get_value_all(s, start_ord, end_ord)
 
         total = [sum(item) for item in zip(*acct_values.values(), strict=True)]
 
-    chart = {
-        "data": {
+    ctx = {
+        "chart": {
             "labels": [d.isoformat() for d in utils.range_date(start_ord, end_ord)],
-            "date_mode": "months",
+            "mode": "months",
             "total": total,
         },
         "current": total[-1],
     }
     return flask.render_template(
         "net-worth/dashboard.jinja",
-        chart=chart,
+        ctx=ctx,
     )
 
 
@@ -147,7 +143,6 @@ def ctx_chart(
     Returns:
         Dictionary HTML context
     """
-
     start, end = base.parse_period(period, today)
 
     if start is None:

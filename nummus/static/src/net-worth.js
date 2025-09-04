@@ -158,54 +158,14 @@ const netWorth = {
     }
   },
   /**
-   * Create breakdown table
-   *
-   * @param {DOMElement} parent Parent table element
-   * @param {Array} accounts Array of account objects
-   * @param {Boolean} negative True will skip non-negative, False will skip
-   *     negative accounts
-   */
-  createBreakdown: function (parent, accounts, negative) {
-    parent.innerHTML = "";
-    for (const account of accounts) {
-      const v = account.rawValues[account.rawValues.length - 1];
-      if ((v < 0) ^ negative) continue;
-
-      const row = document.createElement("div");
-      row.classList.add("flex");
-
-      const square = document.createElement("div");
-      square.style.height = "24px";
-      square.style.width = "24px";
-      square.style.background = account.color + "80";
-      square.style.border = `1px solid ${account.color}`;
-      square.style.marginRight = "2px";
-      row.appendChild(square);
-
-      const name = document.createElement("div");
-      name.innerHTML = account.name;
-      name.classList.add("grow");
-      row.appendChild(name);
-
-      const value = document.createElement("div");
-      value.innerHTML = formatterF2.format(v);
-      row.appendChild(value);
-
-      parent.appendChild(row);
-    }
-  },
-  /**
    * Create Net Worth Dashboard Chart
    *
    * @param {Object} raw Raw data from net worth controller
    */
   updateDashboard: function (raw) {
     const labels = raw.labels;
-    const dateMode = raw.date_mode;
+    const dateMode = raw.mode;
     const total = raw.total.map((v) => Number(v));
-
-    const blue = getThemeColor("blue");
-    const yellow = getThemeColor("yellow");
 
     const canvas = document.getElementById("net-worth-chart-canvas-dashboard");
     const ctx = canvas.getContext("2d");
@@ -213,32 +173,21 @@ const netWorth = {
       label: "Total",
       type: "line",
       data: total,
-      borderColor: getThemeColor("grey-500"),
+      borderColorRaw: "primary",
+      backgroundColorRaw: ["primary-container", "80"],
       borderWidth: 2,
       pointRadius: 0,
       hoverRadius: 0,
-      fill: {
-        target: "origin",
-        above: blue + "80",
-        below: yellow + "80",
-      },
+      fill: true,
     };
-    if (this.chartTotal && ctx == this.chartTotal.ctx) {
-      nummusChart.update(this.chartTotal, labels, dateMode, [dataset]);
+    if (this.chart && ctx == this.chart.ctx) {
+      nummusChart.update(this.chart, labels, dateMode, [dataset]);
     } else {
-      this.chartTotal = nummusChart.create(
-        ctx,
-        labels,
-        dateMode,
-        [dataset],
-        null,
-        {
-          scales: {
-            x: { ticks: { callback: formatDateTicksMonths } },
-            y: { ticks: { display: false }, grid: { drawTicks: false } },
-          },
+      this.chart = nummusChart.create(ctx, labels, dateMode, [dataset], null, {
+        scales: {
+          y: { ticks: { display: false }, grid: { drawTicks: false } },
         },
-      );
+      });
     }
   },
 };

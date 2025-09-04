@@ -1,36 +1,24 @@
-<div
-  id="dashboard-net-worth"
-  class="relative flex h-[16rem] min-h-[16rem] flex-col bg-white p-2 md:col-span-2 md:h-[20rem] md:min-h-[20rem]"
-  hx-get="{{ url_for('net_worth.dashboard') }}"
-  hx-trigger="update-asset from:body"
-  hx-indicator="find .spinner"
-  hx-target="#dashboard-net-worth"
->
+<div>
   <a
-    class="space-between group flex w-full cursor-pointer"
-    href="{{ url_for('net_worth.page') }}"
-    hx-get="{{ url_for('net_worth.page') }}"
-    hx-indicator="next .spinner"
+    href="{{ url_for("net_worth.page") }}"
+    hx-get="{{ url_for("net_worth.page") }}"
     hx-target="#main"
     hx-swap="innerHTML show:window:top"
     hx-push-url="true"
   >
-    <h1
-      class="align-left w-full font-serif text-xl text-green-600 md:group-hover:underline md:group-hover:after:content-['»']"
-    >
-      Net worth
-    </h1>
-    <h1 class="text-lg">{{ chart["current"] | money }}</h1>
+    <h1>Net worth</h1>
+    <h2>{{ ctx.current | money0 }}</h2>
+    <icon>chevron_forward</icon>
   </a>
-  <div class="dashboard relative min-h-0 w-full grow">
+  <div class="grow">
     <canvas id="net-worth-chart-canvas-dashboard" hx-preserve></canvas>
   </div>
-  <div id="net-worth-chart-data">
+  <div>
     <script>
+      // prettier-ignore
       onLoad(() => {
-        netWorth.updateDashboard(JSON.parse('{{ chart["data"] | tojson }}'));
+        netWorth.updateDashboard(JSON.parse('{{ ctx.chart | tojson }}'));
       });
     </script>
   </div>
-  <div>{% include "shared/spinner.jinja" %}</div>
 </div>

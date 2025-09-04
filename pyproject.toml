@@ -147,10 +147,6 @@ force_alphabetical_sort_within_sections = true
 include = ["nummus", "tests", "tools"]
 exclude = [
   "**/__pycache__",
-  # Not updated yet
-  "nummus/controllers/cash_flow.py",
-  "nummus/controllers/net_worth.py",
-  "nummus/controllers/performance.py",
   "tests/controllers/test_cash_flow.py",
   "tests/controllers/test_net_worth.py",
   "tests/controllers/test_performance.py",
@@ -191,12 +187,6 @@ ignore = [
 exclude = [
   # Ugly code only for testing
   "tools/make_test_portfolio.py",
-  # Not updated yet
-  "nummus/controllers/cash_flow.py",
-  "nummus/controllers/net_worth.py",
-  "tests/controllers/test_cash_flow.py",
-  "tests/controllers/test_net_worth.py",
-  "tests/controllers/test_performance.py",
 ]
 
 [tool.ruff.lint.pydocstyle]

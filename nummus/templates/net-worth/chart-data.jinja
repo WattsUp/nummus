@@ -7,8 +7,8 @@
   // prettier-ignore
   onLoad(() => {
     netWorth.update(
-      JSON.parse('{{ ctx.chart | tojson(precision=4) }}'),
-      JSON.parse('{{ ctx.accounts | tojson(precision=4) }}'),
+      JSON.parse('{{ ctx.chart | tojson }}'),
+      JSON.parse('{{ ctx.accounts | tojson }}'),
     );
   });
 </script>
