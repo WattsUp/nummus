@@ -134,6 +134,7 @@
       class="btn-text-error"
       hx-delete="{{ url_for('accounts.account', uri=acct.uri) }}"
       hx-trigger="delete"
+      hx-disabled-elt="this"
       onclick="accounts.confirmDelete(event)"
     >
       Delete

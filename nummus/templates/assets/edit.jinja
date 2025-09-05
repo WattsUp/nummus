@@ -99,6 +99,7 @@
       class="btn-text-error"
       hx-delete="{{ url_for('assets.asset', uri=asset.uri) }}"
       hx-trigger="delete"
+      hx-disabled-elt="this"
       onclick="assets.confirmDelete(event)"
     >
       Delete

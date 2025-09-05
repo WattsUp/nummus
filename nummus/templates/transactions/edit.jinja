@@ -280,6 +280,7 @@
       <button
         class="btn-text"
         hx-put="{{ url_for('transactions.split', uri=txn.uri) }}"
+        hx-disabled-elt="this"
         hx-target="#dialog"
         hx-swap="innerHTML show:#dialog:bottom"
         hx-push-url="#dialog"
@@ -291,6 +292,7 @@
       <button
         class="btn-text"
         hx-put="{{ url_for('transactions.new', uri=txn.uri, split=True) }}"
+        hx-disabled-elt="this"
         hx-target="#dialog"
         hx-swap="innerHTML show:#dialog:bottom"
         hx-push-url="#dialog"
@@ -305,6 +307,7 @@
         class="btn-text"
         disabled
         hx-delete="{{ url_for('transactions.split', uri="arst") }}"
+        hx-disabled-elt="this"
       >
         Copy Similar
       </button>
@@ -315,6 +318,7 @@
       class="btn-text-error"
       hx-delete="{{ url_for('transactions.transaction', uri=txn.uri) }}"
       hx-trigger="delete"
+      hx-disabled-elt="this"
       onclick="txn.confirmDelete(event)"
     >
       Delete

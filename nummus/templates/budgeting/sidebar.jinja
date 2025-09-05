@@ -47,6 +47,7 @@
           <option
             value="{{ uri }}"
             hx-get="{{ url_for("budgeting.target", uri=uri) }}"
+            hx-disabled-elt="this"
           >
             {{ name }}
           </option>
@@ -64,6 +65,7 @@
         <button
           class="btn-text btn-sq"
           hx-get="{{ url_for("budgeting.sidebar", month=ctx.month) }}"
+          hx-disabled-elt="this"
           hx-target="#budget-sidebar"
           hx-swap="innerHTML"
         >
@@ -126,6 +128,7 @@
       <button
         class="btn-tonal mx-auto"
         hx-get="{{ url_for("budgeting.target", uri=budget_sidebar.uri) }}"
+        hx-disabled-elt="this"
       >
         <icon>edit</icon>
         Edit Target
@@ -145,6 +148,7 @@
         <button
           class="btn-text btn-sq"
           hx-get="{{ url_for("budgeting.sidebar", month=ctx.month) }}"
+          hx-disabled-elt="this"
           hx-target="#budget-sidebar"
           hx-swap="innerHTML"
         >
@@ -159,6 +163,7 @@
       <button
         class="btn-tonal mx-auto"
         hx-get="{{ url_for("budgeting.target", uri=budget_sidebar["uri"]) }}"
+        hx-disabled-elt="this"
       >
         <icon>add</icon>
         Create Target

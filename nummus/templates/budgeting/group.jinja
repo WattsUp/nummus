@@ -33,6 +33,7 @@
         autocomplete="off"
         spellcheck="true"
         hx-put="{{ url_for("budgeting.group", uri=group.uri) }}"
+        hx-disabled-elt="this"
         hx-target="#budget-error"
         hx-include="this"
       />

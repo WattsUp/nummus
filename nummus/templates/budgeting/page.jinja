@@ -13,6 +13,7 @@
     <button
       class="btn-text btn-sq"
       hx-get="{{ url_for("budgeting.page", month=ctx.month_prev) }}"
+      hx-disabled-elt="this"
       hx-swap="innerHTML show:window:top"
       hx-push-url="true"
     >
@@ -23,6 +24,7 @@
       class="btn-text btn-sq"
       {% if not ctx.month_next %}disabled{% endif %}
       hx-get="{{ url_for("budgeting.page", month=ctx.month_next) }}"
+      hx-disabled-elt="this"
       hx-swap="innerHTML show:window:top"
       hx-push-url="true"
     >
@@ -80,6 +82,7 @@
     <button
       class="btn-filled not-edit:hidden mx-auto mb-2"
       hx-post="{{ url_for("budgeting.new_group") }}"
+      hx-disabled-elt="this"
       hx-target="this"
       hx-swap="afterend"
     >

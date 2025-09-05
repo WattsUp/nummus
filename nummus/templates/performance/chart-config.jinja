@@ -10,6 +10,7 @@
       <button
         class="{{ btn_class }}"
         hx-get="{{ url_for('performance.chart', period=value) }}"
+        hx-disabled-elt="this"
       >
         {{ label }}
       </button>
@@ -24,6 +25,7 @@
         name="index"
         autocomplete="off"
         hx-get="{{ url_for("performance.chart") }}"
+        hx-disabled-elt="this"
       >
         {% for index in ctx.indices %}
           <option

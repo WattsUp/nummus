@@ -92,6 +92,7 @@
     class="btn-text-error mx-auto"
     hx-delete="{{ url_for('transaction_categories.category', uri=category.uri) }}"
     hx-trigger="delete"
+    hx-disabled-elt="this"
     hx-target="#dialog-error"
     onclick="txnCat.confirmDelete(event)"
   >

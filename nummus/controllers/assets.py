@@ -61,7 +61,7 @@ class TableContext(TypedDict):
     no_matches: bool
     next_page: datetime.date | None
     any_filters: bool
-    period: str | None
+    selected_period: str | None
     options_period: list[tuple[str, str]]
     start: str | None
     end: str | None
@@ -808,7 +808,7 @@ def ctx_table(
         "no_matches": len(valuations) == 0 and page_start is None,
         "next_page": None if no_more else next_page,
         "any_filters": any_filters,
-        "period": period,
+        "selected_period": period,
         "options_period": options_period,
         "start": start,
         "end": end,

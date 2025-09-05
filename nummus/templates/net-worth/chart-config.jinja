@@ -10,6 +10,7 @@
       <button
         class="{{ btn_class }}"
         hx-get="{{ url_for('net_worth.chart', period=value) }}"
+        hx-disabled-elt="this"
       >
         {{ label }}
       </button>
