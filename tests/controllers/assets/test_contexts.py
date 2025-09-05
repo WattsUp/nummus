@@ -76,7 +76,7 @@ def test_ctx_table_empty(
         "no_matches": True,
         "next_page": None,
         "any_filters": False,
-        "period": None,
+        "selected_period": None,
         "options_period": options_period,
         "start": None,
         "end": None,

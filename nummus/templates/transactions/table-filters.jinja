@@ -2,9 +2,7 @@
   <form
     id="txn-filters"
     class="not-open:hidden bg-surface-container {{ 'open' if ctx.any_filters }} mx-auto mb-2 grid max-w-2xl grid-cols-2 gap-2 rounded-xl p-2 md:grid-cols-3"
-    hx-get="{{ url_for(endpoint,  **url_args) }}"
     hx-indicator="#txn-table,#txn-indicator"
-    hx-target="#txn-table"
     {# innerHTML to preserve open state #}
     hx-swap-oob="{{ 'innerHTML' if oob }}"
     hx-include="#txn-filters,#txn-search"
@@ -15,6 +13,7 @@
           name="period"
           autocomplete="off"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
           onchange="txn.changePeriod()"
@@ -41,6 +40,7 @@
           autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
         />
@@ -57,6 +57,7 @@
           autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
         />
@@ -75,6 +76,7 @@
             autocomplete="off"
             {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
             hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+            hx-disabled-elt="this"
             hx-indicator="unset"
             hx-target="#txn-filters"
           >
@@ -99,6 +101,7 @@
           autocomplete="off"
           {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
           onkeyup="onSelectKey(event)"
@@ -119,19 +122,26 @@
           {% if ctx.uncleared %}checked{% endif %}
           autocomplete="off"
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
         />
         <div>Only uncleared</div>
         <switch></switch>
       </label>
-      <div class="col-span-full flex justify-around">
-        <button class="btn-filled">Apply filter</button>
+      <div class="col-span-full flex justify-around" hx-target="#txn-table">
+        <button
+          class="btn-filled"
+          hx-get="{{ url_for(endpoint,  **url_args) }}"
+          hx-disabled-elt="this"
+        >
+          Apply filter
+        </button>
         <button
           class="btn-text"
           type="button"
           hx-get="{{ url_for(endpoint,  **url_args) }}"
-          hx-target="#txn-table"
+          hx-disabled-elt="this"
           hx-include="unset"
         >
           Clear all filters

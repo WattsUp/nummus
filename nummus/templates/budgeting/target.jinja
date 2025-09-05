@@ -58,6 +58,7 @@
         name="due"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
+        hx-disabled-elt="this"
         hx-target="#target-desc"
         hx-include="#dialog form"
       >
@@ -151,6 +152,7 @@
         name="type"
         autocomplete="off"
         hx-get="{{ url_for("budgeting.target", uri=target.uri, desc=True) }}"
+        hx-disabled-elt="this"
         hx-target="#target-desc"
         hx-include="#dialog form"
       >
@@ -217,6 +219,7 @@
       class="btn-text-error"
       hx-delete="{{ url_for('budgeting.target', uri=target.uri) }}"
       hx-trigger="delete"
+      hx-disabled-elt="this"
       onclick="budgeting.confirmDelete(event)"
     >
       Delete

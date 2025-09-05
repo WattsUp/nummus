@@ -91,9 +91,20 @@ class TreeNode(NamedTuple):
             else:
                 assert 'hx-push-url="true"' in self.attributes
                 assert 'hx-swap="innerHTML show:window:top"' in self.attributes
-        if re.search(r"hx-(get|put|post|delete)", self.attributes):
+        elif re.search(r"hx-(get|put|post|delete)", self.attributes):
             # There's an action, check there is a target in parent
-            assert self.has_hx_target()
+            if not self.has_hx_target():
+                pytest.fail(f"no hx-target: <{self.tag} {self.attributes}>")
+
+            is_triggered = (
+                "hx-trigger" in self.attributes and "confirm" not in self.attributes
+            )
+            has_disabled_elt = (
+                'hx-disabled-elt="this"' in self.attributes
+                or 'hx-disabled-elt="find' in self.attributes
+            )
+            if is_triggered == has_disabled_elt:
+                pytest.fail(f"bad hx-disabled-elt: <{self.tag} {self.attributes}>")
 
         return True
 

@@ -22,6 +22,7 @@
         autocomplete="off"
         inputmode="tel"
         hx-put="{{ url_for("budgeting.assign", uri=category.uri, month=ctx.month) }}"
+        hx-disabled-elt="this"
         hx-target="#group-{{ group.uri or "ungrouped" }}"
       />
       <span>{{ category.assigned | money }}</span>

@@ -9,6 +9,7 @@
         id="dialog-save"
         disabled
         {{ 'hx-' + (save_method or 'put') + '="' + save_url + '"' }}
+        hx-disabled-elt="this"
         hx-target="#dialog-error"
         hx-include="next form"
       >

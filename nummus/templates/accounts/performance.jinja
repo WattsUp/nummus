@@ -21,6 +21,7 @@
       <button
         class="{{ btn_class }}"
         hx-get="{{ url_for('accounts.performance', uri=acct.uri, chart_period=value) }}"
+        hx-disabled-elt="this"
       >
         {{ label }}
       </button>

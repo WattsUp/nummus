@@ -18,7 +18,7 @@
           id="form-login"
           class="bg-surface mx-2 my-8 flex max-h-96 w-full max-w-96 grow flex-col items-center rounded-2xl p-2"
           hx-post="{{ url_for('auth.login') }}"
-          hx-disabled-elt="button"
+          hx-disabled-elt="find button"
           hx-target="#login-error"
           hx-include="this"
         >
