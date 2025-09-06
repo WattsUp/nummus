@@ -132,7 +132,7 @@ def test_move_get_income(
     )
 
     assert "Move available funds" in result
-    assert "Assignable income has $0.00 available" in result
+    assert "Assignable income has $1,170.00 available" in result
     assert "Groceries $30.00" in result
 
 
@@ -153,7 +153,7 @@ def test_move_get(
 
     assert "Move available funds" in result
     assert "Groceries has $30.00 available" in result
-    assert "Assignable income $0.00" in result
+    assert "Assignable income $1,170.00" in result
 
 
 def test_move_get_destination(
@@ -175,7 +175,7 @@ def test_move_get_destination(
     )
 
     assert "Move available funds" in result
-    assert "Assignable income has $0.00 available" in result
+    assert "Assignable income has $1,170.00 available" in result
     assert f'value="{t_cat_uri}" selected' in result
 
 

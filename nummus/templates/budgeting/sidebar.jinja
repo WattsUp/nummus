@@ -11,7 +11,7 @@
     <div>Assigned this month</div>
     <div>{{ budget_sidebar.assigned | money }}</div>
   </div>
-  {% if budget_sidebar.uri is none %}
+  {% if budget_sidebar.future_assigned is not none %}
     <div>
       <div>Assigned in future</div>
       <div>{{ budget_sidebar.future_assigned | money }}</div>
