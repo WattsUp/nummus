@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import math
 import operator
+from collections import defaultdict
 from decimal import Decimal
 from typing import NamedTuple, NotRequired, TYPE_CHECKING, TypedDict
 
@@ -57,6 +58,14 @@ class TargetContext(TypedDict):
 
     period: TargetPeriod
     type: TargetType
+
+
+class MoveOption(NamedTuple):
+    """Typed definition for an option to move funds."""
+
+    uri: str
+    name: str
+    available: Decimal
 
 
 class CategoryContext(TypedDict):
@@ -344,6 +353,12 @@ def move(uri: str) -> str | flask.Response:
                 snackbar=f"{utils.format_financial(abs(to_move))} reallocated",
             )
 
+        options: dict[TransactionCategoryGroup, list[MoveOption]] = defaultdict(list)
+        if src_cat_id is not None and (src_available > 0 or data.assignable > 0):
+            options[TransactionCategoryGroup.INCOME].append(
+                MoveOption("income", "Assignable income", data.assignable),
+            )
+
         destination = args.get("destination")
         query = (
             s.query(TransactionCategory)
@@ -359,7 +374,6 @@ def move(uri: str) -> str | flask.Response:
             )
             .order_by(TransactionCategory.group, TransactionCategory.name)
         )
-        options: list[tuple[str, str, Decimal, TransactionCategoryGroup]] = []
         for t_cat_id, name, group in query.yield_per(YIELD_PER):
             t_cat_id: int
             name: str
@@ -368,18 +382,7 @@ def move(uri: str) -> str | flask.Response:
             t_cat_uri = TransactionCategory.id_to_uri(t_cat_id)
             available = data.categories[t_cat_id].available
             if destination or src_available > 0 or available > 0:
-                options.append((t_cat_uri, name, available, group))
-
-        if src_cat_id is not None and (src_available > 0 or data.assignable > 0):
-            options.insert(
-                0,
-                (
-                    "income",
-                    "Assignable income",
-                    data.assignable,
-                    TransactionCategoryGroup.INCOME,
-                ),
-            )
+                options[group].append(MoveOption(t_cat_uri, name, available))
 
         month_str = month.isoformat()[:7]
         category = {

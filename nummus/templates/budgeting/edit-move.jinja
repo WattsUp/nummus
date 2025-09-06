@@ -42,16 +42,17 @@
   {% endif %}
   <label class="input-outlined input-bg-surface-container-high">
     <select name="destination" required autocomplete="off">
-      {% for uri, name, available, group in category.options %}
-        {% if not loop.previtem or loop.previtem[3] != group %}
-          <option disabled>{{ group.pretty }}</option>
-        {% endif %}
-        <option
-          value="{{ uri }}"
-          {% if uri == category.destination %}selected{% endif %}
-        >
-          {{ name }} {{ available | money }}
-        </option>
+      {% for group, categories in category.options.items() %}
+        <optgroup label="{{ group.pretty }}">
+          {% for uri, name, available in categories %}
+            <option
+              value="{{ uri }}"
+              {% if uri == category.destination %}selected{% endif %}
+            >
+              {{ name }} {{ available | money }}
+            </option>
+          {% endfor %}
+        </optgroup>
       {% endfor %}
     </select>
     <div>
