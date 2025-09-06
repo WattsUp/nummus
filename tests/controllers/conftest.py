@@ -83,7 +83,9 @@ class TreeNode(NamedTuple):
             top = 'hx-swap="innerHTML show:#dialog:top"'
             btm = 'hx-swap="innerHTML show:#dialog:bottom"'
             assert top in self.attributes or btm in self.attributes
-        elif 'hx-target="#main"' in self.attributes:
+            return True
+
+        if 'hx-target="#main"' in self.attributes:
             if "hx-trigger" in self.attributes:
                 # triggered updates don't move the page or push history
                 assert "hx-push-url" not in self.attributes
@@ -91,20 +93,39 @@ class TreeNode(NamedTuple):
             else:
                 assert 'hx-push-url="true"' in self.attributes
                 assert 'hx-swap="innerHTML show:window:top"' in self.attributes
-        elif re.search(r"hx-(get|put|post|delete)", self.attributes):
-            # There's an action, check there is a target in parent
-            if not self.has_hx_target():
-                pytest.fail(f"no hx-target: <{self.tag} {self.attributes}>")
+            return True
 
-            is_triggered = (
-                "hx-trigger" in self.attributes and "confirm" not in self.attributes
-            )
-            has_disabled_elt = (
-                'hx-disabled-elt="this"' in self.attributes
-                or 'hx-disabled-elt="find' in self.attributes
-            )
-            if is_triggered == has_disabled_elt:
+        if not re.search(r"hx-(get|put|post|delete)", self.attributes):
+            return True
+
+        # There's an action, check there is a target in parent
+        if not self.has_hx_target():
+            pytest.fail(f"no hx-target: <{self.tag} {self.attributes}>")
+
+        has_disabled_elt = (
+            'hx-disabled-elt="this"' in self.attributes
+            or 'hx-disabled-elt="find' in self.attributes
+        )
+
+        if 'type="date"' in self.attributes:
+            if 'hx-target="next error"' in self.attributes:
+                # validation request, no disable needed
+                assert not has_disabled_elt
+                return True
+
+            if not has_disabled_elt:
                 pytest.fail(f"bad hx-disabled-elt: <{self.tag} {self.attributes}>")
+
+            # Better trigger than default
+            assert 'hx-trigger="blur changed"' in self.attributes
+
+            return True
+
+        is_triggered = (
+            "hx-trigger" in self.attributes and "confirm" not in self.attributes
+        )
+        if is_triggered == has_disabled_elt:
+            pytest.fail(f"bad hx-disabled-elt: <{self.tag} {self.attributes}>")
 
         return True
 

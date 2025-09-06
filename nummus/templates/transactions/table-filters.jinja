@@ -40,6 +40,7 @@
           autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-trigger="blur changed"
           hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
@@ -57,6 +58,7 @@
           autocomplete="off"
           {% if ctx.selected_period != "custom" %}disabled{% endif %}
           hx-get="{{ url_for(endpoint + '_options',  **url_args) }}"
+          hx-trigger="blur changed"
           hx-disabled-elt="this"
           hx-indicator="unset"
           hx-target="#txn-filters"
