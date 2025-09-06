@@ -283,11 +283,6 @@ class BudgetAssignment(Base):
             )
 
         assignable = ending_balance - total_available
-        if assignable < 0:
-            future_assigned = Decimal()
-        else:
-            future_assigned = min(future_assigned, assignable)
-            assignable -= future_assigned
 
         return BudgetAvailable(categories, assignable, future_assigned)
 

@@ -125,8 +125,8 @@ def test_get_monthly_available(
     # Remaining all zero
     non_zero = {k: v for k, v in availables.items() if any(vv != 0 for vv in v)}
     assert non_zero == {}
-    assert assignable == Decimal()
-    assert future_assigned == Decimal(1170)  # Not 2000 since overassigned
+    assert assignable == Decimal(1170)
+    assert future_assigned == Decimal(2000)
 
 
 def test_get_monthly_available_next_month(

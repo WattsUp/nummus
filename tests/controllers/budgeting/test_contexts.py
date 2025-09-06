@@ -60,7 +60,7 @@ def test_ctx_sidebar_global(
         "available": Decimal(30),
         "leftover": Decimal(),
         "assigned": Decimal(150),
-        "future_assigned": Decimal(1170),  # Not 2000 since overassigned
+        "future_assigned": Decimal(2000),
         "activity": Decimal(-120),
         "to_go": Decimal(900),
         "no_target": categories,
@@ -98,7 +98,7 @@ def test_ctx_sidebar_no_target(
         "available": Decimal(100),
         "leftover": Decimal(),
         "assigned": Decimal(100),
-        "future_assigned": Decimal(),
+        "future_assigned": None,
         "activity": Decimal(),
         "target": None,
     }
@@ -135,7 +135,7 @@ def test_ctx_sidebar(
         "available": Decimal(100),
         "leftover": Decimal(),
         "assigned": Decimal(100),
-        "future_assigned": Decimal(),
+        "future_assigned": None,
         "activity": Decimal(),
         "target": budgeting.ctx_target(
             budget_target,
@@ -378,7 +378,6 @@ def test_ctx_budget_empty(
         month,
         data.categories,
         data.assignable,
-        data.future_assigned,
         [],
     )
 
@@ -389,7 +388,6 @@ def test_ctx_budget_empty(
     assert ctx["month_next"] == utils.date_add_months(month, 1).isoformat()[:7]
     assert ctx["month_prev"] == utils.date_add_months(month, -1).isoformat()[:7]
     assert ctx["assignable"] == Decimal()
-    assert ctx["future_assigned"] == Decimal()
     assert ctx["n_overspent"] == 0
     assert len(ctx["groups"]) == 1
 
@@ -435,7 +433,6 @@ def test_ctx_budget(
         month,
         data.categories,
         data.assignable,
-        data.future_assigned,
         [],
     )
 
@@ -445,8 +442,7 @@ def test_ctx_budget(
     assert ctx["month"] == month_str
     assert ctx["month_next"] == utils.date_add_months(month, 1).isoformat()[:7]
     assert ctx["month_prev"] == utils.date_add_months(month, -1).isoformat()[:7]
-    assert ctx["assignable"] == Decimal()
-    assert ctx["future_assigned"] == Decimal(1170)
+    assert ctx["assignable"] == Decimal(1170)
     assert ctx["n_overspent"] == 2
     assert len(ctx["groups"]) == 2
 

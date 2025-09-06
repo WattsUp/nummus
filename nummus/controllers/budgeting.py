@@ -96,7 +96,6 @@ class BudgetContext(TypedDict):
     month_next: str | None
     month_prev: str
     assignable: Decimal
-    future_assigned: Decimal
     groups: list[GroupContext]
     n_overspent: int
 
@@ -110,7 +109,7 @@ class SidebarContext(TypedDict):
     available: Decimal
     leftover: Decimal
     assigned: Decimal
-    future_assigned: Decimal
+    future_assigned: Decimal | None
     activity: Decimal
     target: TargetContext | None
     to_go: NotRequired[Decimal]
@@ -150,7 +149,6 @@ def page() -> flask.Response:
             month,
             data.categories,
             data.assignable,
-            data.future_assigned,
             flask.session.get("groups_open", []),
         )
         sidebar = ctx_sidebar(
@@ -274,7 +272,6 @@ def assign(uri: str) -> str:
             month,
             data.categories,
             data.assignable,
-            data.future_assigned,
             flask.session.get("groups_open", []),
         )
         sidebar_uri = form.get("sidebar") or None
@@ -867,7 +864,9 @@ def ctx_sidebar(
             "available": total_available,
             "leftover": total_leftover,
             "assigned": total_assigned,
-            "future_assigned": future_assigned,
+            "future_assigned": (
+                None if month < utils.start_of_month(today) else future_assigned
+            ),
             "activity": total_activity,
             "to_go": total_to_go,
             "no_target": no_target_names,
@@ -886,7 +885,7 @@ def ctx_sidebar(
             "available": available,
             "leftover": leftover,
             "assigned": assigned,
-            "future_assigned": Decimal(),
+            "future_assigned": None,
             "activity": activity,
             "target": None,
         }
@@ -906,7 +905,7 @@ def ctx_sidebar(
         "available": available,
         "leftover": leftover,
         "assigned": assigned,
-        "future_assigned": Decimal(),
+        "future_assigned": None,
         "activity": activity,
         "target": target_ctx,
     }
@@ -1058,7 +1057,6 @@ def ctx_budget(
     month: datetime.date,
     categories: dict[int, BudgetAvailableCategory],
     assignable: Decimal,
-    future_assigned: Decimal,
     groups_open: list[str],
 ) -> tuple[BudgetContext, str]:
     """Get the context to build the budgeting table.
@@ -1069,7 +1067,6 @@ def ctx_budget(
         month: Month of table
         categories: Dict of categories from Budget.get_monthly_available
         assignable: Assignable amount from Budget.get_monthly_available
-        future_assigned: Assigned amount in the future from Budget.get_monthly_available
         groups_open: List of groups that are open, from session
 
     Returns:
@@ -1179,7 +1176,6 @@ def ctx_budget(
             "month_next": month_next,
             "month_prev": utils.date_add_months(month, -1).isoformat()[:7],
             "assignable": assignable,
-            "future_assigned": future_assigned,
             "groups": groups_list,
             "n_overspent": n_overspent,
         },
