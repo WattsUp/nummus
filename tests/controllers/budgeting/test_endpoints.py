@@ -179,6 +179,24 @@ def test_move_get_destination(
     assert f'value="{t_cat_uri}" selected' in result
 
 
+def test_move_get_overspending(
+    month: datetime.date,
+    web_client: WebClient,
+    transactions_spending: list[Transaction],
+    categories: dict[str, int],
+) -> None:
+    _ = transactions_spending
+    t_cat_uri = TransactionCategory.id_to_uri(categories["groceries"])
+
+    result, _ = web_client.GET(
+        ("budgeting.move", {"uri": t_cat_uri, "month": month.isoformat()[:7]}),
+    )
+
+    assert "Cover overspending" in result
+    assert "Groceries is overspent by $20.00" in result
+    assert "Assignable income $1,320.00" in result
+
+
 def test_move_overspending(
     month: datetime.date,
     session: orm.Session,
