@@ -83,7 +83,7 @@ const dialog = {
     };
     htmx.findAll(d, "input, textarea, select").forEach((e) => {
       htmx.on(e, "input", this.changes.bind(this));
-      htmx.on(e, "keypress", (evt) => {
+      htmx.on(e, "keydown", (evt) => {
         if (evt.key == "Enter") {
           evt.preventDefault();
           focusNext(e);

@@ -160,6 +160,12 @@
       @apply input-outlined-translate;
     }
 
+    &:not(:has(div)) {
+      & > input {
+        @apply outline-none;
+      }
+    }
+
     &:has(div) {
       @apply input-outlined-translate pt-2;
 
@@ -213,6 +219,11 @@
           }
         }
       }
+    }
+
+    /* No clicking the label */
+    & ~ div {
+      @apply pointer-events-none;
     }
   }
 
