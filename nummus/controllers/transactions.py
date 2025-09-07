@@ -343,7 +343,9 @@ def new() -> str | flask.Response:
             split_categories = [
                 TransactionCategory.uri_to_id(x) for x in form.getlist("category")
             ]
-            split_tags = form.getlist("tag")
+            split_tags: list[set[str]] = [
+                set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
+            ]
             split_amounts = [
                 utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
             ]
@@ -358,11 +360,10 @@ def new() -> str | flask.Response:
                     "category_id": cat_id,
                     "category_uri": TransactionCategory.id_to_uri(cat_id),
                     "memo": memo,
-                    # TODO (WattsUp): #281 add tag editor
-                    "tags": {tag},
+                    "tags": tags,
                     "amount": amount,
                 }
-                for cat_id, memo, tag, amount in zip(
+                for cat_id, memo, tags, amount in zip(
                     split_categories,
                     split_memos,
                     split_tags,
@@ -488,7 +489,9 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
     split_categories = [
         TransactionCategory.uri_to_id(x) for x in form.getlist("category")
     ]
-    split_tags = form.getlist("tag")
+    split_tags: list[set[str]] = [
+        set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
+    ]
     split_amounts = [
         utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
     ]
@@ -509,25 +512,24 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
             "parent": txn,
             "category_id": cat_id,
             "memo": memo,
-            "tag": tag,
             "amount": amount,
         }
-        for cat_id, memo, tag, amount in zip(
+        for cat_id, memo, amount in zip(
             split_categories,
             split_memos,
-            split_tags,
             split_amounts,
             strict=True,
         )
         if amount
     ]
     query = s.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_)
-    update_rows_list(
+    t_split_ids = update_rows_list(
         s,
         TransactionSplit,
         query,
         splits,
     )
+    TagLink.add_links(s, dict(zip(t_split_ids, split_tags, strict=True)))
 
     return ""
 
@@ -554,9 +556,11 @@ def split(uri: str) -> str:
 
         split_memos: list[str | None] = list(form.getlist("memo"))
         split_categories: list[str | None] = list(form.getlist("category"))
-        split_tags: list[str | None] = list(form.getlist("tag"))
         split_amounts: list[Decimal | None] = [
             utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
+        ]
+        split_tags: list[set[str]] = [
+            set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
         ]
         if len(split_categories) == 1:
             split_amounts = [parent_amount]
@@ -564,13 +568,13 @@ def split(uri: str) -> str:
         for _ in range(3):
             split_memos.append(None)
             split_categories.append(None)
-            split_tags.append(None)
+            split_tags.append(set())
             split_amounts.append(None)
 
         _, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         ctx_splits: list[SplitContext] = []
-        for memo, cat_uri, tag, amount in zip(
+        for memo, cat_uri, tags, amount in zip(
             split_memos,
             split_categories,
             split_tags,
@@ -582,8 +586,7 @@ def split(uri: str) -> str:
                 "category_id": 0,
                 "category_uri": cat_uri or uncategorized_uri,
                 "memo": memo,
-                # TODO (WattsUp): #281 add tag editor
-                "tags": {tag} if tag else set(),
+                "tags": tags,
                 "amount": amount,
                 "asset_name": None,
                 "asset_ticker": None,

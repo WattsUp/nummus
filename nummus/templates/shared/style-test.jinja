@@ -565,12 +565,9 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined col-start-1">
     <chips>
-      <input
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        onkeydown="chips.append(event, 'chip')"
-      />
+      <div>
+        <input placeholder="" autocomplete="off" enterkeyhint="enter" />
+      </div>
     </chips>
     <div>
       <div>Chips</div>
@@ -583,13 +580,14 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined col-span-2">
     <chips>
-      <input
-        value="Banana"
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        onkeydown="chips.append(event, 'chip')"
-      />
+      <div>
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="enter"
+        />
+      </div>
     </chips>
     <div>
       <div>Chips with value</div>
@@ -602,14 +600,15 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   </label>
   <label class="input-outlined">
     <chips>
-      <input
-        value="Banana"
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        disabled
-        onkeydown="chips.append(event, 'chip')"
-      />
+      <div>
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="enter"
+          disabled
+        />
+      </div>
     </chips>
     <div>
       <div>Chips disabled</div>
@@ -623,21 +622,14 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   <label class="input-outlined col-start-1">
     <chips>
       <div>
-        <input type="hidden" value="Enabled" />
-        Enabled
-        <icon onclick="this.parentNode.remove()">clear</icon>
+        {% with value="Enabled" %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        {% with value="Disabled", disabled=True %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        <input placeholder="" autocomplete="off" enterkeyhint="enter" />
       </div>
-      <div disabled>
-        <input type="hidden" value="Disabled" />
-        Disabled
-        <icon onclick="this.parentNode.remove()">clear</icon>
-      </div>
-      <input
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        onkeydown="chips.append(event, 'chip')"
-      />
     </chips>
     <div>
       <div>Chips</div>
@@ -650,22 +642,16 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
   <label class="input-outlined col-span-2">
     <chips>
       <div>
-        <input type="hidden" value="Enabled" />
-        Enabled
-        <icon onclick="this.parentNode.remove()">clear</icon>
+        {% with value="Enabled" %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="next"
+        />
       </div>
-      <div disabled>
-        <input type="hidden" value="Disabled" />
-        Disabled
-        <icon onclick="this.parentNode.remove()">clear</icon>
-      </div>
-      <input
-        value="Banana"
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        onkeydown="chips.append(event, 'chip')"
-      />
     </chips>
     <div>
       <div>Chips with value</div>

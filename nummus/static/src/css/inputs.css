@@ -37,11 +37,11 @@
   --input-pl: calc(var(--spacing) * 2);
   --input-pr: calc(var(--spacing) * 2);
 
-  &:has(icon) {
+  &:has(> icon) {
     --input-pl: calc(var(--spacing) * 8);
   }
 
-  &:has(icon:nth-of-type(2)) {
+  &:has(> icon:nth-of-type(2)) {
     --input-pr: calc(var(--spacing) * 8);
   }
 
@@ -142,18 +142,49 @@
   }
 
   & > chips {
-    @apply flex flex-wrap gap-2;
-
     --input-border-color: var(--color-outline);
-    @apply rounded-md py-1;
-    @apply border;
+    @apply rounded-md pt-1.5;
+    @apply block border;
 
     padding-left: var(--input-pl);
     padding-right: var(--input-pr);
     border-color: var(--input-border-color);
 
-    & > input {
-      @apply border-none px-1 py-1;
+    & > div {
+      @apply flex gap-x-2 overflow-x-auto px-0.5 py-1;
+
+      & > input {
+        @apply w-auto min-w-16 py-0 pl-2 pr-0.5;
+      }
+
+      & > div {
+        @apply flex min-w-16 shrink-0 items-center justify-between gap-1 whitespace-nowrap pl-2 pr-0.5 transition;
+        @apply text-on-surface-variant;
+        @apply border-outline-variant rounded-lg border;
+
+        & > icon {
+          border-radius: 1em;
+          font-size: 20px;
+        }
+
+        @variant disabled {
+          @apply text-on-surface/38;
+        }
+
+        @variant not-disabled {
+          & > icon {
+            @apply text-primary;
+
+            @variant hover {
+              @apply bg-primary/8;
+            }
+
+            @variant [:active, :focus-visible] {
+              @apply bg-primary/10;
+            }
+          }
+        }
+      }
     }
 
     &:has(input:not(:placeholder-shown)) {
@@ -161,17 +192,17 @@
     }
 
     &:not(:has(div)) {
-      & > input {
-        @apply outline-none;
+      & input {
+        --input-border-color: transparent;
       }
     }
 
     &:has(div) {
-      @apply input-outlined-translate pt-2;
+      @apply input-outlined-translate;
 
-      & > input {
-        @variant not-placeholder-shown {
-          @apply outline;
+      & input {
+        @variant placeholder-shown {
+          --input-border-color: transparent;
         }
       }
     }
@@ -187,37 +218,6 @@
 
       & ~ icon {
         color: color-mix(in oklab, var(--color-on-surface) 38%, transparent);
-      }
-    }
-
-    & > div {
-      @apply min-w-22 flex items-center justify-between gap-1 whitespace-nowrap p-0.5 pl-2 transition;
-      @apply text-on-surface-variant;
-      @apply border-outline-variant rounded-lg border;
-
-      & > icon {
-        @apply p-1;
-
-        border-radius: 1em;
-        font-size: 20px;
-      }
-
-      @variant disabled {
-        @apply text-on-surface/38;
-      }
-
-      @variant not-disabled {
-        & > icon {
-          @apply text-primary;
-
-          @variant hover {
-            @apply bg-primary/8;
-          }
-
-          @variant [:active, :focus-visible] {
-            @apply bg-primary/10;
-          }
-        }
       }
     }
 

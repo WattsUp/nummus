@@ -9,7 +9,9 @@ from nummus.models.base import (
     ORMInt,
     ORMStr,
     string_column_args,
+    YIELD_PER,
 )
+from nummus.models.utils import update_rows
 
 
 class TagLink(Base):
@@ -17,7 +19,7 @@ class TagLink(Base):
 
     Attributes:
         tag_id: Tag unique identifier
-        t_split_id: TransactionSlit unique identifier
+        t_split_id: TransactionSplit unique identifier
     """
 
     __table_id__ = None
@@ -30,6 +32,43 @@ class TagLink(Base):
         Index("tag_link_tag_id", "tag_id"),
         Index("tag_link_t_split_id", "t_split_id"),
     )
+
+    @staticmethod
+    def add_links(s: orm.Session, split_tags: dict[int, set[str]]) -> None:
+        """Add links between TransactionSplits and Tags.
+
+        Args:
+            s: SQL session to use
+            split_tags: dict {TransactionSplit: {tag names to link}
+        """
+        tag_names: set[str] = set()
+        for tags in split_tags.values():
+            tag_names.update(tags)
+
+        query = (
+            s.query(Tag).with_entities(Tag.name, Tag.id_).where(Tag.name.in_(tag_names))
+        )
+        mapping: dict[str, int] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+
+        to_add = [Tag(name=name) for name in tag_names if name not in mapping]
+        if to_add:
+            s.add_all(to_add)
+            s.flush()
+            mapping.update({t.name: t.id_ for t in to_add})
+
+        for t_split_id, tags in split_tags.items():
+            query = s.query(TagLink).where(TagLink.t_split_id == t_split_id)
+            update_rows(
+                s,
+                TagLink,
+                query,
+                "tag_id",
+                {mapping[tag]: {"t_split_id": t_split_id} for tag in tags},
+            )
+
+        # Prune danglers
+        sub_query = s.query(TagLink.tag_id).distinct()
+        s.query(Tag).where(Tag.id_.not_in(sub_query)).delete()
 
 
 class Tag(Base):

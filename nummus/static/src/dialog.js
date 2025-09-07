@@ -83,12 +83,14 @@ const dialog = {
     };
     htmx.findAll(d, "input, textarea, select").forEach((e) => {
       htmx.on(e, "input", this.changes.bind(this));
-      htmx.on(e, "keydown", (evt) => {
-        if (evt.key == "Enter") {
-          evt.preventDefault();
-          focusNext(e);
-        }
-      });
+      if (e.attributes["enterkeyhint"] == "next") {
+        htmx.on(e, "keydown", (evt) => {
+          if (evt.key == "Enter") {
+            evt.preventDefault();
+            focusNext(e);
+          }
+        });
+      }
       htmx.on(e, "focus", (evt) => {
         // Smooth scroll nearest
         evt.preventDefault();

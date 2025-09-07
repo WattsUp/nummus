@@ -9,7 +9,11 @@ const chips = {
    * @param {String} name - Name of chip input
    */
   append(evt, name) {
-    if (evt.key != "Enter") return;
+    // If validation response, ignore event
+    if (evt.detail.xhr.response) return;
+    // If not enter key event, ignore event
+    if (evt.detail.requestConfig.triggeringEvent.type !== "keyup") return;
+
     const tgt = evt.target;
     if (!tgt.value) return;
 
@@ -23,5 +27,10 @@ const chips = {
 
     tgt.parentNode.insertBefore(chip, tgt);
     tgt.value = "";
+    tgt.scrollIntoView({
+      block: "nearest",
+      inline: "end",
+      container: "nearest",
+    });
   },
 };
