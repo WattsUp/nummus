@@ -563,6 +563,95 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
       <span>Supporting text</span>
     </div>
   </label>
+  <label class="input-outlined col-start-1">
+    <chips>
+      <input placeholder="" autocomplete="off" enterkeyhint="next" />
+    </chips>
+    <div>
+      <div>Chips</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-span-2">
+    <chips>
+      <input
+        value="Banana"
+        placeholder=""
+        autocomplete="off"
+        enterkeyhint="next"
+      />
+    </chips>
+    <div>
+      <div>Chips with value</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined">
+    <chips>
+      <input
+        value="Banana"
+        placeholder=""
+        autocomplete="off"
+        enterkeyhint="next"
+        disabled
+      />
+    </chips>
+    <div>
+      <div>Chips disabled</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-start-1">
+    <chips>
+      <div>
+        <input type="hidden" value="Enabled" />
+        <span>Enabled</span><icon>clear</icon>
+      </div>
+      <div disabled>
+        <input type="hidden" value="Disabled" />
+        <span>Disabled</span><icon>clear</icon>
+      </div>
+      <input placeholder="" autocomplete="off" enterkeyhint="next" />
+    </chips>
+    <div>
+      <div>Chips</div>
+    </div>
+    <div>
+      <error>Inline validation error</error>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-span-2">
+    <chips>
+      <div><span>Enabled</span><icon>clear</icon></div>
+      <div disabled><span>Disabled</span><icon>clear</icon></div>
+      <input
+        value="Banana"
+        placeholder=""
+        autocomplete="off"
+        enterkeyhint="next"
+      />
+    </chips>
+    <div>
+      <div>Chips with value</div>
+    </div>
+    <div>
+      <error>Inline validation error</error>
+    </div>
+    <icon>label</icon>
+  </label>
   <label class="toggle col-start-1">
     <input type="checkbox" autocomplete="off" />
     <div>Toggle switch off</div>
