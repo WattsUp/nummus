@@ -444,6 +444,29 @@ def test_transaction_edit_error(
     result, _ = web_client.PUT(
         ("transactions.transaction", {"uri": txn.uri}),
         data={
+            "date": "",
+            "account": Account.id_to_uri(txn.account_id),
+            "amount": txn.amount,
+            "payee": txn.payee,
+            "category": [
+                TransactionCategory.id_to_uri(t_split.category_id),
+            ],
+            "memo": "",
+        },
+    )
+    assert result == base.error("Date must not be empty")
+
+
+def test_transaction_edit_payee_error(
+    web_client: WebClient,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+    t_split = txn.splits[0]
+
+    result, _ = web_client.PUT(
+        ("transactions.transaction", {"uri": txn.uri}),
+        data={
             "date": txn.date,
             "account": Account.id_to_uri(txn.account_id),
             "amount": txn.amount,

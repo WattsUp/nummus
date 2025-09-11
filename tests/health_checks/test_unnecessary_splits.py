@@ -42,7 +42,6 @@ def test_check(
         parent=txn,
         amount=t_split.amount,
         category_id=t_split.category_id,
-        tag=t_split.tag,
     )
     session.add(t_split)
     session.commit()
@@ -53,13 +52,8 @@ def test_check(
 
     i = session.query(HealthCheckIssue).one()
     assert i.check == c.name
-    assert i.value == f"{txn.id_}.{t_split.payee}.{t_split.category_id}.{t_split.tag}"
+    assert i.value == f"{txn.id_}.{t_split.payee}.{t_split.category_id}"
     uri = i.uri
 
-    target = (
-        f"{t_split.date} - {account.name}: "
-        f"{t_split.payee or ''} - "
-        f"Other Income - "
-        f"{t_split.tag or ''}"
-    )
+    target = f"{t_split.date} - {account.name}: {t_split.payee or ''} - Other Income"
     assert c.issues == {uri: target}

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import datetime
-from typing import override, TYPE_CHECKING
+from typing import NamedTuple, override, TYPE_CHECKING
 
 from sqlalchemy import func
 
@@ -12,6 +12,15 @@ from nummus.models import Account, TransactionCategory, TransactionSplit, YIELD_
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
+
+
+class RawIssue(NamedTuple):
+    """Type definition for a raw issue."""
+
+    uri: str
+    source: str
+    payee: str
+    category: str
 
 
 class UnnecessarySplits(Base):
@@ -25,7 +34,7 @@ class UnnecessarySplits(Base):
         accounts = Account.map_name(s)
         categories = TransactionCategory.map_name_emoji(s)
 
-        issues: list[tuple[str, str, str, str, str]] = []
+        issues: list[RawIssue] = []
 
         query = (
             s.query(TransactionSplit)
@@ -35,17 +44,15 @@ class UnnecessarySplits(Base):
                 TransactionSplit.parent_id,
                 TransactionSplit.payee,
                 TransactionSplit.category_id,
-                TransactionSplit.tag,
             )
             .group_by(
                 TransactionSplit.parent_id,
                 TransactionSplit.category_id,
-                TransactionSplit.tag,
             )
             .order_by(TransactionSplit.date_ord)
             .having(func.count() > 1)
         )
-        for date_ord, acct_id, t_id, payee, t_cat_id, tag in query.yield_per(
+        for date_ord, acct_id, t_id, payee, t_cat_id in query.yield_per(
             YIELD_PER,
         ):
             date_ord: int
@@ -53,36 +60,32 @@ class UnnecessarySplits(Base):
             t_id: int
             payee: str | None
             t_cat_id: int
-            tag: str | None
             # Create a robust uri for this duplicate
-            uri = f"{t_id}.{payee}.{t_cat_id}.{tag}"
+            uri = f"{t_id}.{payee}.{t_cat_id}"
 
             date = datetime.date.fromordinal(date_ord)
             source = f"{date} - {accounts[acct_id]}"
             issues.append(
-                (uri, source, payee or "", categories[t_cat_id], tag or ""),
+                RawIssue(uri, source, payee or "", categories[t_cat_id]),
             )
 
         if len(issues) != 0:
-            source_len = max(len(item[1]) for item in issues)
-            payee_len = max(len(item[2]) for item in issues)
-            t_cat_len = max(len(item[3]) for item in issues)
-            tag_len = max(len(item[4]) for item in issues)
+            source_len = max(len(item.source) for item in issues)
+            payee_len = max(len(item.payee) for item in issues)
+            t_cat_len = max(len(item.category) for item in issues)
         else:
             source_len = 0
             payee_len = 0
             t_cat_len = 0
-            tag_len = 0
 
         self._commit_issues(
             s,
             {
-                uri: (
-                    f"{source:{source_len}}: "
-                    f"{payee:{payee_len}} - "
-                    f"{t_cat:{t_cat_len}} - "
-                    f"{tag:{tag_len}}"
+                issue.uri: (
+                    f"{issue.source:{source_len}}: "
+                    f"{issue.payee:{payee_len}} - "
+                    f"{issue.category:{t_cat_len}}"
                 )
-                for uri, source, payee, t_cat, tag in issues
+                for issue in issues
             },
         )

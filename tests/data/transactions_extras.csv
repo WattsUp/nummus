@@ -1,7 +1,7 @@
-Account,Date,Amount,Statement,Payee,Memo,Asset,ASSET_QUANTITY,Tag,Category
-Monkey Bank Checking,2023-01-01,"$1,000.00 ",Paycheck,Employer,Paycheck,,,,Paychecks/Salary
-Monkey Bank Checking,2023-01-02,-12.34,Banana,Monkey Store,Banana,,,Fruit,Groceries
-Monkey Bank Checking,2023-01-02,-900,Account Transfer,Monkey Investments,Account Transfer,,,,Transfers
-Monkey Bank Investments,2023-01-02,900,Account Transfer,Monkey Investments,Account Transfer,,,,Transfers
-Monkey Bank Investments,2023-01-03,-900,,Monkey Investments,,BANANA,32.1234,,Securities Traded
-Monkey Bank Investments,2023-02-01,1234.56,Profit Maker,Monkey Investments,Profit Maker,BANANA,-32.1234,,Securities Traded
+Account,Date,Amount,Statement,Payee,Memo,Asset,ASSET_QUANTITY,Category
+Monkey Bank Checking,2023-01-01,"$1,000.00 ",Paycheck,Employer,Paycheck,,,Paychecks/Salary
+Monkey Bank Checking,2023-01-02,-12.34,Banana,Monkey Store,Banana,,,Groceries
+Monkey Bank Checking,2023-01-02,-900,Account Transfer,Monkey Investments,Account Transfer,,,Transfers
+Monkey Bank Investments,2023-01-02,900,Account Transfer,Monkey Investments,Account Transfer,,,Transfers
+Monkey Bank Investments,2023-01-03,-900,,Monkey Investments,,BANANA,32.1234,Securities Traded
+Monkey Bank Investments,2023-02-01,1234.56,Profit Maker,Monkey Investments,Profit Maker,BANANA,-32.1234,Securities Traded

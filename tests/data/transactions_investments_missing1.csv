@@ -1,3 +1,3 @@
-Account,Date,Amount,Statement,Payee,Description,Asset,ASSET_QUANTITY,Tag,Category
-Monkey Bank Investments,2023-01-03,-900,,Monkey Investments,,BANANA,32.1234,,Investment Fees
-Monkey Bank Investments,2023-02-01,1234.56,Profit Maker,Monkey Investments,Profit Maker,BANANA,,,Dividends Received
+Account,Date,Amount,Statement,Payee,Description,Asset,ASSET_QUANTITY,Category
+Monkey Bank Investments,2023-01-03,-900,,Monkey Investments,,BANANA,32.1234,Investment Fees
+Monkey Bank Investments,2023-02-01,1234.56,Profit Maker,Monkey Investments,Profit Maker,BANANA,,Dividends Received
