@@ -197,21 +197,17 @@ def test_update_rows_list_edit(
     new_split_amount = Decimal(20)
     memo_0 = rand_str_generator()
     memo_1 = rand_str_generator()
-    tag_0 = rand_str_generator()
-    tag_1 = rand_str_generator()
     updates: list[dict[str, object]] = [
         {
             "parent": txn,
             "category_id": categories["uncategorized"],
             "memo": memo_0,
-            "tag": tag_0,
             "amount": txn.amount - new_split_amount,
         },
         {
             "parent": txn,
             "category_id": categories["uncategorized"],
             "memo": memo_1,
-            "tag": tag_1,
             "amount": new_split_amount,
         },
     ]
@@ -224,7 +220,6 @@ def test_update_rows_list_edit(
     session.commit()
     assert t_split_0.parent_id == txn.id_
     assert t_split_0.memo == memo_0
-    assert t_split_0.tag == tag_0
     assert t_split_0.amount == txn.amount - new_split_amount
 
     t_split_1 = (
@@ -237,7 +232,6 @@ def test_update_rows_list_edit(
     )
     assert t_split_1.parent_id == txn.id_
     assert t_split_1.memo == memo_1
-    assert t_split_1.tag == tag_1
     assert t_split_1.amount == new_split_amount
 
 

@@ -142,6 +142,7 @@
     </div>
   </label>
   {% for split in txn.splits %}
+    {% set split_i=loop.index0 %}
     <hr />
     {% if split.asset_name %}
       <div
@@ -222,21 +223,30 @@
     <label
       class="input-outlined input-bg-surface-container-high {{ split_class }}"
     >
-      <input
-        name="tag"
-        value="{{ split.tag or "" }}"
-        list="tags"
-        placeholder=""
-        autocomplete="off"
-        enterkeyhint="next"
-        hx-get="{{ url_for('transactions.validation') }}"
-        hx-trigger="input delay:200ms"
-        hx-target="next error"
-        hx-include="this"
-      />
+      <chips>
+        <div>
+          {% for value in split.tags %}
+            {% with name="tag-" + split_i | string %}
+              {% include "shared/chip.jinja" %}
+            {% endwith %}
+          {% endfor %}
+          <input
+            name="tag"
+            list="tags"
+            placeholder=""
+            autocomplete="off"
+            enterkeyhint="next"
+            hx-get="{{ url_for('transactions.validation') }}"
+            hx-trigger="keyup[keyCode==13],input delay:200ms"
+            hx-target="next error"
+            hx-include="this"
+            hx-on::after-request="chips.append(event, 'tag-{{ split_i }}')"
+          />
+        </div>
+      </chips>
       {% if not is_split %}<icon>label</icon>{% endif %}
       <div>
-        <div>Tag (optional)</div>
+        <div>Tags (optional)</div>
       </div>
       <div>
         <error></error>

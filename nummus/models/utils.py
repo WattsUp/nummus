@@ -202,7 +202,7 @@ def update_rows_list(
     cls: type[Base],
     query: orm.Query,
     updates: list[dict[str, object]],
-) -> None:
+) -> list[int]:
     """Update many rows, reusing leftovers when possible.
 
     Args:
@@ -210,7 +210,12 @@ def update_rows_list(
         cls: Type of model to update
         query: Query to fetch all applicable models
         updates: list[{parameter: value}]
+
+    Returns:
+        list[cls.id_ for each updated/created]
     """
+    ids: list[int] = []
+
     updates = updates.copy()
     leftovers: list[Base] = []
 
@@ -222,16 +227,19 @@ def update_rows_list(
             update = updates.pop(0)
             for k, v in update.items():
                 setattr(m, k, v)
+            ids.append(m.id_)
 
-    for update in updates:
-        # Can't have leftovers and more updates
-        # So just add all remaining ones
-        m = cls(**update)
-        s.add(m)
+    to_add = [cls(**update) for update in updates]
+    s.add_all(to_add)
 
     # Delete any leftovers
     for m in leftovers:
         s.delete(m)
+
+    s.flush()
+    ids.extend(m.id_ for m in to_add)
+
+    return ids
 
 
 def one_or_none[T](query: orm.Query[T]) -> T | None:

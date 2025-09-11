@@ -13,7 +13,14 @@ from sqlalchemy import func, orm
 
 from nummus import utils
 from nummus.health_checks.base import Base
-from nummus.models import Account, Asset, AssetCategory, TransactionSplit, YIELD_PER
+from nummus.models import (
+    Account,
+    Asset,
+    AssetCategory,
+    Tag,
+    TransactionSplit,
+    YIELD_PER,
+)
 
 if TYPE_CHECKING:
     from sqlalchemy import orm
@@ -62,6 +69,7 @@ class Typos(Base):
         self._proper_nouns.update(assets.values())
 
         issues.update(self._test_accounts(s, accounts))
+        issues.update(self._test_tags(s))
         issues.update(self._test_transaction_nouns(s, accounts))
 
         # Escape words and sort to replace longest words first
@@ -145,6 +153,18 @@ class Typos(Base):
             self._proper_nouns.add(institution)
         return self._create_issues()
 
+    def _test_tags(
+        self,
+        s: orm.Session,
+    ) -> dict[str, tuple[str, str, str]]:
+        query = s.query(Tag.name)
+        for (name,) in query.yield_per(YIELD_PER):
+            name: str
+            source = f"Tag {name}"
+            self._add(name, source, "name", 1)
+            self._proper_nouns.add(name)
+        return self._create_issues()
+
     def _test_transaction_nouns(
         self,
         s: orm.Session,
@@ -153,7 +173,6 @@ class Typos(Base):
         issues: dict[str, tuple[str, str, str]] = {}
         txn_fields = [
             TransactionSplit.payee,
-            TransactionSplit.tag,
         ]
         for field in txn_fields:
             query = (
@@ -164,14 +183,13 @@ class Typos(Base):
                     field,
                     func.count(),
                 )
+                .where(field.is_not(None))
                 .group_by(field)
             )
             for date_ord, acct_id, value, count in query.yield_per(YIELD_PER):
                 date_ord: int
                 acct_id: int
-                value: str | None
-                if value is None:
-                    continue
+                value: str
                 date = datetime.date.fromordinal(date_ord)
                 source = f"{date} - {accounts[acct_id]}"
                 self._add(value, source, field.key, count)

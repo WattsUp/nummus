@@ -563,6 +563,104 @@ Bananas are fruits. Apples are fruits. Pineapples are fruits. Limes are fruits. 
       <span>Supporting text</span>
     </div>
   </label>
+  <label class="input-outlined col-start-1">
+    <chips>
+      <div>
+        <input placeholder="" autocomplete="off" enterkeyhint="enter" />
+      </div>
+    </chips>
+    <div>
+      <div>Chips</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-span-2">
+    <chips>
+      <div>
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="enter"
+        />
+      </div>
+    </chips>
+    <div>
+      <div>Chips with value</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined">
+    <chips>
+      <div>
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="enter"
+          disabled
+        />
+      </div>
+    </chips>
+    <div>
+      <div>Chips disabled</div>
+    </div>
+    <div>
+      <error></error>
+      <span>Supporting text</span>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-start-1">
+    <chips>
+      <div>
+        {% with value="Enabled" %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        {% with value="Disabled", disabled=True %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        <input placeholder="" autocomplete="off" enterkeyhint="enter" />
+      </div>
+    </chips>
+    <div>
+      <div>Chips</div>
+    </div>
+    <div>
+      <error>Inline validation error</error>
+    </div>
+    <icon>label</icon>
+  </label>
+  <label class="input-outlined col-span-2">
+    <chips>
+      <div>
+        {% with value="Enabled" %}
+          {% include "shared/chip.jinja" %}
+        {% endwith %}
+        <input
+          value="Banana"
+          placeholder=""
+          autocomplete="off"
+          enterkeyhint="next"
+        />
+      </div>
+    </chips>
+    <div>
+      <div>Chips with value</div>
+    </div>
+    <div>
+      <error>Inline validation error</error>
+    </div>
+    <icon>label</icon>
+  </label>
   <label class="toggle col-start-1">
     <input type="checkbox" autocomplete="off" />
     <div>Toggle switch off</div>

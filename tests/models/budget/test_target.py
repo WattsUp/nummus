@@ -116,3 +116,23 @@ def test_duplicates(
     session.add(t)
     with pytest.raises(exc.IntegrityError):
         session.commit()
+
+
+def test_date_none(
+    session: orm.Session,
+    rand_real: Decimal,
+    categories: dict[str, int],
+) -> None:
+    d = {
+        "category_id": categories["uncategorized"],
+        "amount": rand_real,
+        "type_": TargetType.BALANCE,
+        "period": TargetPeriod.ONCE,
+        "due_date_ord": None,
+        "repeat_every": 0,
+    }
+
+    t = Target(**d)
+    session.add(t)
+
+    assert t.due_date is None

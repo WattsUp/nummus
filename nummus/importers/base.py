@@ -25,7 +25,6 @@ class TxnDict(TypedDict):
     payee: str | None
     memo: str | None
     category: str | None
-    tag: str | None
     asset: str | None
     asset_quantity: Decimal | None
 

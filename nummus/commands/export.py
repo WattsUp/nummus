@@ -147,7 +147,6 @@ def write_csv(
         TransactionSplit.payee,
         TransactionSplit.memo,
         TransactionSplit.category_id,
-        TransactionSplit.tag,
         TransactionSplit.amount,
     ).order_by(TransactionSplit.date_ord)
     n = query_count(query)
@@ -158,7 +157,6 @@ def write_csv(
         "Payee",
         "Memo",
         "Category",
-        "Tag",
         "Amount",
     ]
     lines: list[list[str]] = []
@@ -168,7 +166,6 @@ def write_csv(
         payee,
         memo,
         t_cat_id,
-        tag,
         amount,
     ) in tqdm.tqdm(
         query.yield_per(YIELD_PER),
@@ -183,7 +180,6 @@ def write_csv(
                 payee,
                 memo,
                 categories[t_cat_id],
-                tag,
                 utils.format_financial(amount),
             ],
         )

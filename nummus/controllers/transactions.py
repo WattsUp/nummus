@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import operator
+from collections import defaultdict
 from decimal import Decimal
 from typing import NamedTuple, NotRequired, TypedDict
 
@@ -19,6 +20,8 @@ from nummus.models import (
     Asset,
     obj_session,
     query_count,
+    Tag,
+    TagLink,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -58,7 +61,7 @@ class SplitContext(TypedDict):
     category_id: int
     category_uri: str
     memo: str | None
-    tag: str | None
+    tags: set[str]
     amount: Decimal | None
 
     asset_name: NotRequired[str | None]
@@ -283,17 +286,18 @@ def new() -> str | flask.Response:
             key=lambda item: item.lower(),
         )
 
-        query = s.query(TransactionSplit.tag)
+        query = s.query(Tag.name)
         tags = sorted(
-            filter(None, (item for item, in query.distinct())),
+            (item for item, in query.distinct()),
             key=lambda item: item.lower(),
         )
+
         empty_split: SplitContext = {
             "parent_uri": "",
             "category_id": uncategorized_id,
             "category_uri": uncategorized_uri,
             "memo": None,
-            "tag": None,
+            "tags": set(),
             "amount": None,
         }
         ctx: TxnContext = {
@@ -339,7 +343,9 @@ def new() -> str | flask.Response:
             split_categories = [
                 TransactionCategory.uri_to_id(x) for x in form.getlist("category")
             ]
-            split_tags = form.getlist("tag")
+            split_tags: list[set[str]] = [
+                set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
+            ]
             split_amounts = [
                 utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
             ]
@@ -354,10 +360,10 @@ def new() -> str | flask.Response:
                     "category_id": cat_id,
                     "category_uri": TransactionCategory.id_to_uri(cat_id),
                     "memo": memo,
-                    "tag": tag,
+                    "tags": tags,
                     "amount": amount,
                 }
-                for cat_id, memo, tag, amount in zip(
+                for cat_id, memo, tags, amount in zip(
                     split_categories,
                     split_memos,
                     split_tags,
@@ -389,9 +395,12 @@ def new() -> str | flask.Response:
                 txn = Transaction(
                     statement="Manually added",
                 )
-                if err := _transaction_edit(s, txn, today):
+                if err := _transaction_edit(txn, today):
                     return base.error(err)
                 s.add(txn)
+                s.flush()
+                if err := _transaction_split_edit(s, txn):
+                    return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -425,8 +434,13 @@ def transaction(uri: str) -> str | flask.Response:
             if txn.cleared:
                 return base.error("Cannot delete cleared transaction")
             date = txn.date
-            s.query(TransactionSplit).where(
+            query = s.query(TransactionSplit.id_).where(
                 TransactionSplit.parent_id == txn.id_,
+            )
+            t_split_ids = {r[0] for r in query.yield_per(YIELD_PER)}
+            s.query(TagLink).where(TagLink.t_split_id.in_(t_split_ids)).delete()
+            s.query(TransactionSplit).where(
+                TransactionSplit.id_.in_(t_split_ids),
             ).delete()
             s.delete(txn)
             return base.dialog_swap(
@@ -438,7 +452,10 @@ def transaction(uri: str) -> str | flask.Response:
         try:
             amount_before = txn.amount
             with s.begin_nested():
-                if err := _transaction_edit(s, txn, today):
+                if err := _transaction_edit(txn, today):
+                    return base.error(err)
+                s.flush()
+                if err := _transaction_split_edit(s, txn):
                     return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -449,11 +466,10 @@ def transaction(uri: str) -> str | flask.Response:
         )
 
 
-def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) -> str:
+def _transaction_edit(txn: Transaction, today: datetime.date) -> str:
     """Edit transaction from form.
 
     Args:
-        s: SQL session to use
         txn: Transaction to edit
         today: Today's date
 
@@ -478,12 +494,25 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
             return "Account must not be empty"
         acct_id = Account.uri_to_id(account)
         txn.account_id = acct_id
+    return ""
+
+
+def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
+    """Edit transaction from form.
+
+    Args:
+        s: SQL session to use
+        txn: Transaction to edit
+
+    Returns:
+        Error string or ""
+    """
+    form = flask.request.form
 
     split_memos = form.getlist("memo")
     split_categories = [
         TransactionCategory.uri_to_id(x) for x in form.getlist("category")
     ]
-    split_tags = form.getlist("tag")
     split_amounts = [
         utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
     ]
@@ -504,24 +533,34 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
             "parent": txn,
             "category_id": cat_id,
             "memo": memo,
-            "tag": tag,
             "amount": amount,
         }
-        for cat_id, memo, tag, amount in zip(
+        for cat_id, memo, amount in zip(
             split_categories,
             split_memos,
-            split_tags,
             split_amounts,
             strict=True,
         )
         if amount
     ]
-    query = s.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_)
-    update_rows_list(
+    query = (
+        s.query(TransactionSplit)
+        .where(TransactionSplit.parent_id == txn.id_)
+        .order_by(TransactionSplit.id_)
+    )
+    t_split_ids = update_rows_list(
         s,
         TransactionSplit,
         query,
         splits,
+    )
+    s.flush()
+    TagLink.add_links(
+        s,
+        {
+            t_split_id: set(form.getlist(f"tag-{i}"))
+            for i, t_split_id in enumerate(t_split_ids)
+        },
     )
 
     return ""
@@ -549,9 +588,11 @@ def split(uri: str) -> str:
 
         split_memos: list[str | None] = list(form.getlist("memo"))
         split_categories: list[str | None] = list(form.getlist("category"))
-        split_tags: list[str | None] = list(form.getlist("tag"))
         split_amounts: list[Decimal | None] = [
             utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
+        ]
+        split_tags: list[set[str]] = [
+            set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
         ]
         if len(split_categories) == 1:
             split_amounts = [parent_amount]
@@ -559,13 +600,13 @@ def split(uri: str) -> str:
         for _ in range(3):
             split_memos.append(None)
             split_categories.append(None)
-            split_tags.append(None)
+            split_tags.append(set())
             split_amounts.append(None)
 
         _, uncategorized_uri = TransactionCategory.uncategorized(s)
 
         ctx_splits: list[SplitContext] = []
-        for memo, cat_uri, tag, amount in zip(
+        for memo, cat_uri, tags, amount in zip(
             split_memos,
             split_categories,
             split_tags,
@@ -577,7 +618,7 @@ def split(uri: str) -> str:
                 "category_id": 0,
                 "category_uri": cat_uri or uncategorized_uri,
                 "memo": memo,
-                "tag": tag,
+                "tags": tags,
                 "amount": amount,
                 "asset_name": None,
                 "asset_ticker": None,
@@ -726,7 +767,6 @@ def table_query(
         TransactionSplit.account_id,
         TransactionSplit.payee,
         TransactionSplit.category_id,
-        TransactionSplit.tag,
         TransactionSplit.memo,
     )
     clauses: dict[str, sqlalchemy.ColumnElement] = {}
@@ -815,9 +855,27 @@ def ctx_txn(
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
+    query = s.query(Tag.id_, Tag.name)
+    tags: dict[int, str] = dict(query.yield_per(YIELD_PER))  # type: ignore[attr-defined]
+
+    query = (
+        s.query(TagLink)
+        .with_entities(TagLink.t_split_id, TagLink.tag_id)
+        .where(TagLink.t_split_id.in_(t_split.id_ for t_split in txn.splits))
+    )
+    tag_links: dict[int, set[int]] = defaultdict(set)
+    for t_split_id, tag_id in query.yield_per(YIELD_PER):
+        tag_links[t_split_id].add(tag_id)
 
     ctx_splits: list[SplitContext] = (
-        [ctx_split(t_split, assets) for t_split in txn.splits]
+        [
+            ctx_split(
+                t_split,
+                assets,
+                {tags[tag_id] for tag_id in tag_links[t_split.id_]},
+            )
+            for t_split in txn.splits
+        ]
         if splits is None
         else splits
     )
@@ -825,12 +883,6 @@ def ctx_txn(
 
     query = s.query(Transaction.payee)
     payees = sorted(
-        filter(None, (item for item, in query.distinct())),
-        key=lambda item: item.lower(),
-    )
-
-    query = s.query(TransactionSplit.tag)
-    tags = sorted(
         filter(None, (item for item, in query.distinct())),
         key=lambda item: item.lower(),
     )
@@ -855,7 +907,7 @@ def ctx_txn(
         "splits": ctx_splits,
         "category_groups": base.tranaction_category_groups(s),
         "payees": payees,
-        "tags": tags,
+        "tags": list(tags.values()),
         "similar_uri": similar_uri,
         "any_asset_splits": any_asset_splits,
     }
@@ -864,12 +916,14 @@ def ctx_txn(
 def ctx_split(
     t_split: TransactionSplit,
     assets: dict[int, tuple[str, str | None]],
+    tags: set[str],
 ) -> SplitContext:
     """Get the context to build the transaction edit dialog.
 
     Args:
         t_split: TransactionSplit to build context for
         assets: Dict {id: (asset name, ticker)}
+        tags: Tags for TransactionSplit
 
     Returns:
         Dictionary HTML context
@@ -886,7 +940,7 @@ def ctx_split(
         "category_id": t_split.category_id,
         "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "memo": t_split.memo,
-        "tag": t_split.tag,
+        "tags": tags,
         "asset_name": asset_name,
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
@@ -899,6 +953,7 @@ def ctx_row(
     assets: dict[int, tuple[str, str | None]],
     accounts: dict[int, str],
     categories: dict[int, str],
+    tags: set[str],
     split_parents: set[int],
 ) -> RowContext:
     """Get the context to build the transaction edit dialog.
@@ -908,13 +963,14 @@ def ctx_row(
         assets: Dict {id: (asset name, ticker)}
         accounts: Account name mapping
         categories: Category name mapping
+        tags: Tags for TransactionSplit
         split_parents: Set {Transaction.id_ that have more than 1 TransactionSplit}
 
     Returns:
         Dictionary HTML context
     """
     return {
-        **ctx_split(t_split, assets),
+        **ctx_split(t_split, assets, tags),
         "date": t_split.date,
         "account": accounts[t_split.account_id],
         "category": categories[t_split.category_id],
@@ -1046,6 +1102,7 @@ def ctx_table(
     assets: dict[int, tuple[str, str | None]] = {
         r[0]: (r[1], r[2]) for r in query.yield_per(YIELD_PER)
     }
+    tags = Tag.map_name(s)
 
     if page_start is None:
         page_start_int = None
@@ -1136,6 +1193,7 @@ def ctx_table(
         assets,
         accounts,
         categories_emoji,
+        tags,
         t_split_order,
     )
     title = _table_title(
@@ -1170,6 +1228,7 @@ def _table_results(
     assets: dict[int, tuple[str, str | None]],
     accounts: dict[int, str],
     categories: dict[int, str],
+    tags: dict[int, str],
     t_split_order: dict[int, int],
 ) -> list[tuple[datetime.date, list[SplitContext]]]:
     """Get the table results from query.
@@ -1179,6 +1238,7 @@ def _table_results(
         assets: Dict {id: (asset name, ticker)}
         accounts: Account name mapping
         categories: Account name mapping
+        tags: Tag name mapping
         t_split_order: Mapping of id_ to order if it matters
 
     Returns:
@@ -1210,6 +1270,15 @@ def _table_results(
     )
     has_splits = {r[0] for r in query_has_splits.yield_per(YIELD_PER)}
 
+    query_tags = (
+        s.query(TagLink)
+        .with_entities(TagLink.t_split_id, TagLink.tag_id)
+        .where(TagLink.t_split_id.in_(t_split.id_ for t_split in t_splits))
+    )
+    tag_links: dict[int, set[int]] = defaultdict(set)
+    for t_split_id, tag_id in query_tags.yield_per(YIELD_PER):
+        tag_links[t_split_id].add(tag_id)
+
     t_splits_flat: list[tuple[RowContext, int]] = []
     for t_split in t_splits:
         t_split_ctx = ctx_row(
@@ -1217,6 +1286,7 @@ def _table_results(
             assets,
             accounts,
             categories,
+            {tags[tag_id] for tag_id in tag_links[t_split.id_]},
             has_splits,
         )
         t_splits_flat.append(

@@ -34,7 +34,7 @@ class TransactionCategory(Base):
         id: TransactionCategory unique identifier
         uri: TransactionCategory unique identifier
         name: Name of category
-        name_with_emojis: Name with optional emojis
+        emoji_name: Name with optional emojis
         group: Type of category
         locked: True will prevent any changes being made, okay to change emoji
         is_profit_loss: True will include category in profit loss calculations

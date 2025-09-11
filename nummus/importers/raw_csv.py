@@ -68,7 +68,6 @@ class CSVTransactionImporter(TransactionImporter):
                 "payee": row.get("payee") or None,
                 "memo": row.get("memo") or None,
                 "category": row.get("category") or None,
-                "tag": row.get("tag") or None,
                 "asset": row.get("asset") or None,
                 "asset_quantity": utils.parse_real(
                     row.get("asset_quantity"),

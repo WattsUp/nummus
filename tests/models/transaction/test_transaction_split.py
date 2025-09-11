@@ -44,7 +44,6 @@ def test_init_properties(
         "category_id": categories["transfers"],
         "asset_id": asset.id_,
         "asset_quantity_unadjusted": rand_real_generator(),
-        "tag": rand_str_generator(),
         "memo": rand_str_generator(),
     }
 
@@ -64,7 +63,7 @@ def test_init_properties(
     assert t_split_0.payee == txn.payee
     assert t_split_0.cleared == txn.cleared
     assert t_split_0.account_id == account.id_
-    target = f"{txn.payee} {t_split_0.memo} {t_split_0.tag}".lower()
+    target = f"{txn.payee} {t_split_0.memo}".lower()
     assert t_split_0.text_fields == target
 
 
@@ -169,9 +168,9 @@ def test_search_none(session: orm.Session, transactions: list[Transaction]) -> N
     ("search_str", "target"),
     [
         ("other income", [0]),
-        ("engineer", [1, 0]),  # same qty so sort by newest first
         ("engineer other income", [0, 1]),
         ('engineer +"other income"', [0]),
+        ("+engineer", [1, 0]),  # same qty so sort by newest first
         ("-engineer", [3, 2]),  # same qty so sort by newest first
         ("engineer -other", [1]),
         ("rent", [3, 2]),  # same qty so sort by newest first

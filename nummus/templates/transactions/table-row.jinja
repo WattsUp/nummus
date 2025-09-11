@@ -47,7 +47,10 @@
           {{ txn.category }}
         {% endif %}
         <span class="max-md:hidden">
-          {% if txn.tag %}#{{ txn.tag }}{% endif %}
+          {# TODO (WattsUp): Add links to spending by tag #}
+          {% for tag in txn.tags %}
+            #{{ tag }}
+          {% endfor %}
         </span>
       </div>
       <div>{{ txn.account }}</div>

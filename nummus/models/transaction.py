@@ -29,6 +29,7 @@ from nummus.models.base import (
     string_column_args,
     YIELD_PER,
 )
+from nummus.models.tag import Tag, TagLink
 from nummus.models.transaction_category import TransactionCategory
 from nummus.models.utils import obj_session
 
@@ -47,7 +48,6 @@ class TransactionSplit(Base):
         amount: Amount amount of cash exchanged. Positive indicated Account
             increases in value (inflow)
         memo: Memo of exchange
-        tag: Unique tag linked across datasets
         text_fields: Join of all text fields for searching
         category: Type of Transaction
         parent: Parent Transaction
@@ -65,7 +65,6 @@ class TransactionSplit(Base):
     amount: ORMReal = orm.mapped_column(Decimal6)
     payee: ORMStrOpt
     memo: ORMStrOpt
-    tag: ORMStrOpt
 
     text_fields: ORMStrOpt
 
@@ -84,7 +83,6 @@ class TransactionSplit(Base):
     __table_args__ = (
         *string_column_args("payee"),
         *string_column_args("memo"),
-        *string_column_args("tag"),
         *string_column_args("text_fields"),
         CheckConstraint(
             "(asset_quantity IS NOT NULL) == (_asset_qty_unadjusted IS NOT NULL)",
@@ -101,7 +99,7 @@ class TransactionSplit(Base):
         Index("transaction_split_date_ord", "date_ord"),
     )
 
-    @orm.validates("payee", "memo", "tag", "text_fields")
+    @orm.validates("payee", "memo", "text_fields")
     def validate_strings(self, key: str, field: str | None) -> str | None:
         """Validates string fields satisfy constraints.
 
@@ -158,12 +156,12 @@ class TransactionSplit(Base):
         super().__setattr__(name, value)
 
         # update text_fields
-        if name in {"memo", "tag"}:
+        if name == "memo":
             self._update_text_fields()
 
     def _update_text_fields(self) -> None:
         """Update text_fields."""
-        field = [self.payee, self.memo, self.tag]
+        field = [self.payee, self.memo]
         text_fields = " ".join(f for f in field if f).lower()
         super().__setattr__("text_fields", text_fields)
 
@@ -247,6 +245,7 @@ class TransactionSplit(Base):
         query: orm.Query[TransactionSplit],
         search_str: str,
         category_names: dict[int, str] | None = None,
+        tag_names: dict[int, str] | None = None,
     ) -> list[int]:
         """Search TransactionSplit text fields.
 
@@ -254,37 +253,30 @@ class TransactionSplit(Base):
             query: Original query, could be partially filtered
             search_str: String to search
             category_names: Provide category_names to save an extra query
+            tag_names: Provide tag_names to save an extra query
 
         Returns:
             Ordered list of matches, from best to worst
         """
+        query = query.join(TagLink, full=True)
         tokens_must, tokens_can, tokens_not = utils.tokenize_search_str(search_str)
 
         category_names = category_names or TransactionCategory.map_name(query.session)
+        tag_names = tag_names or Tag.map_name(query.session)
+        tag_names = {k: v.lower() for k, v in tag_names.items()}
 
-        # Add tokens_must as an OR for each category and text_fields
-        for token in tokens_must:
-            clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
-            categories = {
-                cat_id
-                for cat_id, cat_name in category_names.items()
-                if token in cat_name
-            }
-            if categories:
-                clauses_or.append(TransactionSplit.category_id.in_(categories))
-            clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
-            query = query.where(sqlalchemy.or_(*clauses_or))
+        query = cls._search_must(query, tokens_must, category_names, tag_names)
+        query = cls._search_not(query, tokens_not, category_names, tag_names)
 
-        # Add tokens_not as an NAND for each category and text_fields
-        for token in tokens_not:
-            categories = {
-                cat_id
-                for cat_id, cat_name in category_names.items()
-                if token in cat_name
-            }
-            if categories:
-                query = query.where(TransactionSplit.category_id.not_in(categories))
-            query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
+        sub_query = query.with_entities(TransactionSplit.id_).scalar_subquery()
+        query_modified = (
+            query.session.query(TagLink)
+            .with_entities(TagLink.t_split_id, TagLink.tag_id)
+            .where(TagLink.t_split_id.in_(sub_query))
+        )
+        split_tags: dict[int, set[int]] = defaultdict(set)
+        for t_split_id, tag_id in query_modified.yield_per(YIELD_PER):
+            split_tags[t_split_id].add(tag_id)
 
         query_modified = query.with_entities(
             TransactionSplit.id_,
@@ -305,7 +297,9 @@ class TransactionSplit(Base):
             cat_id: int
             text_fields: str | None
 
-            full_text = f"{category_names[cat_id]} {text_fields or ''}"
+            full_text = f"{category_names[cat_id]} {text_fields or ''} " + " ".join(
+                tag_names[tag_id] for tag_id in split_tags[t_id]
+            )
 
             # Clean a bit
             for s in string.punctuation:
@@ -325,6 +319,60 @@ class TransactionSplit(Base):
         # Sort by n token matches then date
         matches = sorted(matches, key=operator.itemgetter(1, 2), reverse=True)
         return [item[0] for item in matches]
+
+    @classmethod
+    def _search_must(
+        cls,
+        query: orm.Query[TransactionSplit],
+        tokens_must: set[str],
+        category_names: dict[int, str],
+        tag_names: dict[int, str],
+    ) -> orm.Query[TransactionSplit]:
+        # Add tokens_must as an OR for each category and text_fields
+        for token in tokens_must:
+            clauses_or: list[sqlalchemy.ColumnExpressionArgument] = []
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                clauses_or.append(TransactionSplit.category_id.in_(categories))
+            tags = {
+                tag_id for tag_id, tag_name in tag_names.items() if token in tag_name
+            }
+            if tags:
+                clauses_or.append(TagLink.tag_id.in_(tags))
+            clauses_or.append(TransactionSplit.text_fields.ilike(f"%{token}%"))
+            query = query.where(sqlalchemy.or_(*clauses_or))
+        return query
+
+    @classmethod
+    def _search_not(
+        cls,
+        query: orm.Query[TransactionSplit],
+        tokens_not: set[str],
+        category_names: dict[int, str],
+        tag_names: dict[int, str],
+    ) -> orm.Query[TransactionSplit]:
+        # Add tokens_not as an NAND for each category and text_fields
+        for token in tokens_not:
+            categories = {
+                cat_id
+                for cat_id, cat_name in category_names.items()
+                if token in cat_name
+            }
+            if categories:
+                query = query.where(TransactionSplit.category_id.not_in(categories))
+            tags = {
+                tag_id for tag_id, tag_name in tag_names.items() if token in tag_name
+            }
+            if tags:
+                query = query.where(
+                    TagLink.tag_id.not_in(tags) | TagLink.tag_id.is_(None),
+                )
+            query = query.where(TransactionSplit.text_fields.not_ilike(f"%{token}%"))
+        return query
 
 
 @event.listens_for(TransactionSplit, "before_insert")

@@ -7,7 +7,15 @@ import flask
 import pytest
 
 from nummus.controllers import base
-from nummus.models import Account, Transaction, TransactionCategory, TransactionSplit
+from nummus.models import (
+    Account,
+    Tag,
+    TagLink,
+    Transaction,
+    TransactionCategory,
+    TransactionSplit,
+)
+from nummus.models.base import YIELD_PER
 
 if TYPE_CHECKING:
     import datetime
@@ -84,7 +92,7 @@ def test_new_put(
             "payee": "Banana Farm",
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
             "memo": ["Apples"],
-            "tag": ["Fruit"],
+            "tag-0": ["Fruit"],
         },
     )
     assert "New transaction" in result
@@ -116,7 +124,6 @@ def test_new_put_more(
                 TransactionCategory.id_to_uri(categories["uncategorized"]),
             ],
             "memo": ["", ""],
-            "tag": ["", ""],
         },
     )
     assert "New transaction" in result
@@ -138,7 +145,6 @@ def test_new_put_bad_date(
             "payee": "",
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
             "memo": [""],
-            "tag": [""],
         },
     )
     assert "New transaction" in result
@@ -164,7 +170,6 @@ def test_new(
             "payee": rand_str,
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
             "memo": [""],
-            "tag": [""],
         },
     )
     assert "snackbar.show" in result
@@ -183,7 +188,9 @@ def test_new(
     assert t_split.amount == round(rand_real, 2)
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
-    assert t_split.tag is None
+
+    tags = Tag.map_name(session)
+    assert not tags
 
 
 def test_new_split(
@@ -210,7 +217,7 @@ def test_new_split(
                 TransactionCategory.id_to_uri(categories["uncategorized"]),
             ],
             "memo": ["", "bananas", "", ""],
-            "tag": ["Engineer", "", "", ""],
+            "tag-0": ["Engineer", "Salary", "Engineer", ""],
         },
     )
     assert "snackbar.show" in result
@@ -226,17 +233,24 @@ def test_new_split(
     splits = txn.splits
     assert len(splits) == 2
 
+    tags = Tag.map_name(session)
+    assert len(tags) == 2
+
     t_split = splits[0]
     assert t_split.amount == Decimal(10)
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
-    assert t_split.tag == "Engineer"
+    query = session.query(TagLink.tag_id).where(TagLink.t_split_id == t_split.id_)
+    split_tags = {tags[tag_id] for tag_id, in query.yield_per(YIELD_PER)}
+    assert split_tags == {"Engineer", "Salary"}
 
     t_split = splits[1]
     assert t_split.amount == round(rand_real - 10, 2)
     assert t_split.category_id == categories["groceries"]
     assert t_split.memo == "bananas"
-    assert t_split.tag is None
+    query = session.query(TagLink.tag_id).where(TagLink.t_split_id == t_split.id_)
+    split_tags = {tags[tag_id] for tag_id, in query.yield_per(YIELD_PER)}
+    assert not split_tags
 
 
 @pytest.mark.parametrize(
@@ -255,7 +269,7 @@ def test_new_split(
             "1",
             True,
             "a",
-            "Transaction split tag must be at least 2 characters long",
+            "Tag name must be at least 2 characters long",
         ),
     ],
 )
@@ -285,7 +299,7 @@ def test_new_error(
                 else []
             ),
             "memo": "",
-            "tag": tag,
+            "tag-0": [tag],
         },
     )
     assert result == base.error(target)
@@ -323,7 +337,6 @@ def test_new_unbalanced_split(
                 TransactionCategory.id_to_uri(categories["uncategorized"]),
             ],
             "memo": ["", "bananas", "", ""],
-            "tag": ["Engineer", "", "", ""],
         },
     )
     assert result == base.error(target)
@@ -411,7 +424,6 @@ def test_transaction_edit(
                 TransactionCategory.id_to_uri(t_split.category_id),
             ],
             "memo": "",
-            "tag": t_split.tag,
         },
     )
     assert "snackbar.show" in result
@@ -432,21 +444,20 @@ def test_transaction_edit_error(
     result, _ = web_client.PUT(
         ("transactions.transaction", {"uri": txn.uri}),
         data={
-            "date": txn.date,
+            "date": "",
             "account": Account.id_to_uri(txn.account_id),
             "amount": txn.amount,
-            "payee": "a",
+            "payee": txn.payee,
             "category": [
                 TransactionCategory.id_to_uri(t_split.category_id),
             ],
             "memo": "",
-            "tag": t_split.tag,
         },
     )
-    assert result == base.error("Transaction payee must be at least 2 characters long")
+    assert result == base.error("Date must not be empty")
 
 
-def test_transaction_edit_split_error(
+def test_transaction_edit_payee_error(
     web_client: WebClient,
     transactions: list[Transaction],
 ) -> None:
@@ -459,9 +470,30 @@ def test_transaction_edit_split_error(
             "date": txn.date,
             "account": Account.id_to_uri(txn.account_id),
             "amount": txn.amount,
+            "payee": "a",
+            "category": [
+                TransactionCategory.id_to_uri(t_split.category_id),
+            ],
+            "memo": "",
+        },
+    )
+    assert result == base.error("Transaction payee must be at least 2 characters long")
+
+
+def test_transaction_edit_split_error(
+    web_client: WebClient,
+    transactions: list[Transaction],
+) -> None:
+    txn = transactions[0]
+
+    result, _ = web_client.PUT(
+        ("transactions.transaction", {"uri": txn.uri}),
+        data={
+            "date": txn.date,
+            "account": Account.id_to_uri(txn.account_id),
+            "amount": txn.amount,
             "payee": txn.payee,
             "memo": "",
-            "tag": t_split.tag,
         },
     )
     assert result == base.error("Must have at least one split")
@@ -482,7 +514,6 @@ def test_split(
             "payee": txn.payee,
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
             "memo": [""],
-            "tag": [""],
         },
     )
     assert "Edit transaction" in result
@@ -508,7 +539,6 @@ def test_split_more(
             ],
             "split-amount": ["", ""],
             "memo": ["", ""],
-            "tag": ["", ""],
         },
     )
     assert "Edit transaction" in result

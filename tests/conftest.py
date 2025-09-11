@@ -27,6 +27,8 @@ from nummus.models import (
     base_uri,
     BudgetAssignment,
     BudgetGroup,
+    Tag,
+    TagLink,
     Target,
     TargetPeriod,
     TargetType,
@@ -466,10 +468,21 @@ def budget_group(
 
 
 @pytest.fixture
+def tag(
+    session: orm.Session,
+) -> Tag:
+    tag = Tag(name="engineer")
+    session.add(tag)
+    session.commit()
+    return tag
+
+
+@pytest.fixture
 def transactions(
     today: datetime.date,
     rand_str_generator: RandomStringGenerator,
     session: orm.Session,
+    tag: Tag,
     account: Account,
     asset: Asset,
     categories: dict[str, int],
@@ -483,13 +496,12 @@ def transactions(
         payee="Monkey Bank",
         cleared=True,
     )
-    t_split = TransactionSplit(
+    t_split_0 = TransactionSplit(
         parent=txn,
         amount=txn.amount,
         category_id=categories["other income"],
-        tag="engineer",
     )
-    session.add_all((txn, t_split))
+    session.add_all((txn, t_split_0))
 
     # Buy asset on 2 days before today
     txn = Transaction(
@@ -500,15 +512,14 @@ def transactions(
         payee="Monkey Bank",
         cleared=True,
     )
-    t_split = TransactionSplit(
+    t_split_1 = TransactionSplit(
         parent=txn,
         amount=txn.amount,
         asset_id=asset.id_,
         asset_quantity_unadjusted=10,
         category_id=categories["securities traded"],
-        tag="engineer",
     )
-    session.add_all((txn, t_split))
+    session.add_all((txn, t_split_1))
 
     # Sell asset tomorrow
     txn = Transaction(
@@ -548,6 +559,10 @@ def transactions(
     )
     session.add_all((txn, t_split))
 
+    session.commit()
+
+    session.add(TagLink(tag_id=tag.id_, t_split_id=t_split_0.id_))
+    session.add(TagLink(tag_id=tag.id_, t_split_id=t_split_1.id_))
     session.commit()
     return session.query(Transaction).order_by(Transaction.date_ord).all()
 

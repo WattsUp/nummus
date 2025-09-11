@@ -37,11 +37,11 @@
   --input-pl: calc(var(--spacing) * 2);
   --input-pr: calc(var(--spacing) * 2);
 
-  &:has(icon) {
+  &:has(> icon) {
     --input-pl: calc(var(--spacing) * 8);
   }
 
-  &:has(icon:nth-of-type(2)) {
+  &:has(> icon:nth-of-type(2)) {
     --input-pr: calc(var(--spacing) * 8);
   }
 
@@ -90,9 +90,9 @@
     @apply truncate text-sm;
   }
 
-  & > input,
-  & > textarea,
-  & > select {
+  & input,
+  & textarea,
+  & select {
     @apply w-full resize-none scroll-my-5 py-2;
 
     padding-left: var(--input-pl);
@@ -141,19 +141,105 @@
     }
   }
 
-  & > textarea {
+  & > chips {
+    --input-border-color: var(--color-outline);
+    @apply rounded-md pt-1.5;
+    @apply block border;
+
+    padding-left: var(--input-pl);
+    padding-right: var(--input-pr);
+    border-color: var(--input-border-color);
+
+    & > div {
+      @apply flex gap-x-2 overflow-x-auto px-0.5 py-1;
+
+      & > input {
+        @apply w-auto min-w-16 py-0 pl-2 pr-0.5;
+      }
+
+      & > div {
+        @apply flex min-w-16 shrink-0 items-center justify-between gap-1 whitespace-nowrap pl-2 pr-0.5 transition;
+        @apply text-on-surface-variant;
+        @apply border-outline-variant rounded-lg border;
+
+        & > icon {
+          border-radius: 1em;
+          font-size: 20px;
+        }
+
+        @variant disabled {
+          @apply text-on-surface/38;
+        }
+
+        @variant not-disabled {
+          & > icon {
+            @apply text-primary;
+
+            @variant hover {
+              @apply bg-primary/8;
+            }
+
+            @variant [:active, :focus-visible] {
+              @apply bg-primary/10;
+            }
+          }
+        }
+      }
+    }
+
+    &:has(input:not(:placeholder-shown)) {
+      @apply input-outlined-translate;
+    }
+
+    &:not(:has(div)) {
+      & input {
+        --input-border-color: transparent;
+      }
+    }
+
+    &:has(div) {
+      @apply input-outlined-translate;
+
+      & input {
+        @variant placeholder-shown {
+          --input-border-color: transparent;
+        }
+      }
+    }
+
+    &:has(input:disabled) {
+      & ~ div {
+        --input-label-color: color-mix(
+          in oklab,
+          var(--color-on-surface) 38%,
+          transparent
+        );
+      }
+
+      & ~ icon {
+        color: color-mix(in oklab, var(--color-on-surface) 38%, transparent);
+      }
+    }
+
+    /* No clicking the label */
+    & ~ div {
+      @apply pointer-events-none;
+    }
+  }
+
+  & textarea {
     @apply h-24;
   }
 
-  & > input:not(:placeholder-shown),
-  & > textarea:not(:placeholder-shown),
-  & > select:has(option:checked:not([value])),
-  & > select:has(option:checked:not([value=""])) {
+  & input:not(:placeholder-shown),
+  & textarea:not(:placeholder-shown),
+  & select:has(option:checked:not([value])),
+  & select:has(option:checked:not([value=""])) {
     @apply input-outlined-translate;
   }
 
-  & > input:placeholder-shown ~ icon:nth-of-type(2),
-  & > textarea:placeholder-shown ~ icon:nth-of-type(2) {
+  & input:placeholder-shown ~ icon:nth-of-type(2),
+  & textarea:placeholder-shown ~ icon:nth-of-type(2) {
     @apply hidden;
   }
 
@@ -161,9 +247,9 @@
     --input-label-color: var(--color-error);
     --input-border-color: var(--color-error);
 
-    & > input,
-    & > textarea,
-    & > select {
+    & input,
+    & textarea,
+    & select {
       @variant focus-visible {
         @apply outline-error;
       }

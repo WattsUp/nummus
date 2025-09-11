@@ -496,7 +496,6 @@ class Portfolio:
         t_split = TransactionSplit(
             amount=d["amount"],
             memo=d["memo"],
-            tag=d["tag"],
             category_id=category_id,
         )
         t_split.parent = txn
@@ -597,7 +596,6 @@ class Portfolio:
             t_split = TransactionSplit(
                 amount=d["amount"],
                 memo=d["memo"],
-                tag=d["tag"],
                 category_id=categories[category_name],
                 asset_id=asset_id,
                 asset_quantity_unadjusted=d["asset_quantity"],

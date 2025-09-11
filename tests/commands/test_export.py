@@ -37,7 +37,7 @@ def test_export_empty(
     with path_csv.open("r", encoding="utf-8") as file:
         buf = file.read().splitlines()
     target = [
-        "Date,Account,Payee,Memo,Category,Tag,Amount",
+        "Date,Account,Payee,Memo,Category,Amount",
     ]
     assert buf == target
 
@@ -67,8 +67,8 @@ def test_export(
     with path_csv.open("r", encoding="utf-8") as file:
         buf = file.read().splitlines()
     target = [
-        "Date,Account,Payee,Memo,Category,Tag,Amount",
+        "Date,Account,Payee,Memo,Category,Amount",
         f"{txn.date},{account.name},{txn.payee or ''},{t_split.memo or ''},"
-        f"Other Income,{t_split.tag or ''},{utils.format_financial(txn.amount)}",
+        f"Other Income,{utils.format_financial(txn.amount)}",
     ]
     assert buf == target
