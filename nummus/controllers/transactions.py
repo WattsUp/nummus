@@ -395,9 +395,12 @@ def new() -> str | flask.Response:
                 txn = Transaction(
                     statement="Manually added",
                 )
-                if err := _transaction_edit(s, txn, today):
+                if err := _transaction_edit(txn, today):
                     return base.error(err)
                 s.add(txn)
+                s.flush()
+                if err := _transaction_split_edit(s, txn):
+                    return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
 
@@ -431,8 +434,13 @@ def transaction(uri: str) -> str | flask.Response:
             if txn.cleared:
                 return base.error("Cannot delete cleared transaction")
             date = txn.date
-            s.query(TransactionSplit).where(
+            query = s.query(TransactionSplit.id_).where(
                 TransactionSplit.parent_id == txn.id_,
+            )
+            t_split_ids = {r[0] for r in query.yield_per(YIELD_PER)}
+            s.query(TagLink).where(TagLink.t_split_id.in_(t_split_ids)).delete()
+            s.query(TransactionSplit).where(
+                TransactionSplit.id_.in_(t_split_ids),
             ).delete()
             s.delete(txn)
             return base.dialog_swap(
@@ -444,7 +452,10 @@ def transaction(uri: str) -> str | flask.Response:
         try:
             amount_before = txn.amount
             with s.begin_nested():
-                if err := _transaction_edit(s, txn, today):
+                if err := _transaction_edit(txn, today):
+                    return base.error(err)
+                s.flush()
+                if err := _transaction_split_edit(s, txn):
                     return base.error(err)
         except (exc.IntegrityError, exc.InvalidORMValueError) as e:
             return base.error(e)
@@ -455,11 +466,10 @@ def transaction(uri: str) -> str | flask.Response:
         )
 
 
-def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) -> str:
+def _transaction_edit(txn: Transaction, today: datetime.date) -> str:
     """Edit transaction from form.
 
     Args:
-        s: SQL session to use
         txn: Transaction to edit
         today: Today's date
 
@@ -484,13 +494,24 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
             return "Account must not be empty"
         acct_id = Account.uri_to_id(account)
         txn.account_id = acct_id
+    return ""
+
+
+def _transaction_split_edit(s: orm.Session, txn: Transaction) -> str:
+    """Edit transaction from form.
+
+    Args:
+        s: SQL session to use
+        txn: Transaction to edit
+
+    Returns:
+        Error string or ""
+    """
+    form = flask.request.form
 
     split_memos = form.getlist("memo")
     split_categories = [
         TransactionCategory.uri_to_id(x) for x in form.getlist("category")
-    ]
-    split_tags: list[set[str]] = [
-        set(form.getlist(f"tag-{i}")) for i in range(len(split_categories))
     ]
     split_amounts = [
         utils.evaluate_real_statement(x) for x in form.getlist("split-amount")
@@ -522,14 +543,25 @@ def _transaction_edit(s: orm.Session, txn: Transaction, today: datetime.date) ->
         )
         if amount
     ]
-    query = s.query(TransactionSplit).where(TransactionSplit.parent_id == txn.id_)
+    query = (
+        s.query(TransactionSplit)
+        .where(TransactionSplit.parent_id == txn.id_)
+        .order_by(TransactionSplit.id_)
+    )
     t_split_ids = update_rows_list(
         s,
         TransactionSplit,
         query,
         splits,
     )
-    TagLink.add_links(s, dict(zip(t_split_ids, split_tags, strict=True)))
+    s.flush()
+    TagLink.add_links(
+        s,
+        {
+            t_split_id: set(form.getlist(f"tag-{i}"))
+            for i, t_split_id in enumerate(t_split_ids)
+        },
+    )
 
     return ""
 

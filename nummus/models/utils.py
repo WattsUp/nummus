@@ -231,12 +231,13 @@ def update_rows_list(
 
     to_add = [cls(**update) for update in updates]
     s.add_all(to_add)
-    s.flush()
-    ids.extend(m.id_ for m in to_add)
 
     # Delete any leftovers
     for m in leftovers:
         s.delete(m)
+
+    s.flush()
+    ids.extend(m.id_ for m in to_add)
 
     return ids
 

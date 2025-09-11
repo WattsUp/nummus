@@ -41,6 +41,10 @@ class TagLink(Base):
             s: SQL session to use
             split_tags: dict {TransactionSplit: {tag names to link}
         """
+        split_tags = {
+            t_split_id: {tag for tag in tags if tag.strip()}
+            for t_split_id, tags in split_tags.items()
+        }
         tag_names: set[str] = set()
         for tags in split_tags.values():
             tag_names.update(tags)
