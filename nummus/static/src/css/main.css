@@ -243,6 +243,18 @@
 
   #main {
     @apply min-h-full overflow-hidden px-2 pb-20 pt-2 md:px-4;
+
+    & > div:first-of-type {
+      @apply flex items-center justify-between pb-1;
+
+      & > h1 {
+        @apply text-primary font-serif text-3xl;
+      }
+    }
+
+    & > h2 {
+      @apply text-primary font-serif text-2xl;
+    }
   }
 
   #main-footer {

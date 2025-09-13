@@ -1,0 +1,129 @@
+<form
+  id="spending-filters"
+  class="bg-surface-container mx-auto mb-2 grid max-w-2xl grid-cols-2 gap-2 rounded-xl p-2 md:grid-cols-3"
+  hx-swap-oob="{{ oob }}"
+  hx-include="this"
+>
+  <label class="input-outlined input-bg-surface-container">
+    <select name="period" autocomplete="off" onchange="spending.changePeriod()">
+      {% for label, value in ctx.options_period %}
+        <option
+          value="{{ value }}"
+          {% if value == ctx.selected_period %}selected{% endif %}
+        >
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Date range</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container">
+    <input
+      id="spending-filter-start"
+      name="start"
+      type="date"
+      value="{{ ctx.start or '' }}"
+      autocomplete="off"
+      {% if ctx.selected_period != "custom" %}disabled{% endif %}
+    />
+    <div>
+      <div>Start date</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container">
+    <input
+      id="spending-filter-end"
+      name="end"
+      type="date"
+      value="{{ ctx.end or '' }}"
+      autocomplete="off"
+      {% if ctx.selected_period != "custom" %}disabled{% endif %}
+    />
+    <div>
+      <div>End date</div>
+    </div>
+  </label>
+  <label
+    class="input-outlined input-bg-surface-container col-start-2 max-md:row-start-1 md:col-start-1"
+  >
+    <select
+      name="account"
+      autocomplete="off"
+      {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
+    >
+      <option value=""></option>
+      {% for label, value in ctx.options_account %}
+        <option
+          value="{{ value }}"
+          {% if value == ctx.selected_account %}selected{% endif %}
+        >
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Account</div>
+    </div>
+  </label>
+  <label class="input-outlined input-bg-surface-container col-span-2">
+    <select
+      name="category"
+      autocomplete="off"
+      {% if ctx.no_matches and not ctx.selected_category %}disabled{% endif %}
+      onkeyup="onSelectKey(event)"
+    >
+      <option value=""></option>
+      {% with category_groups=ctx.options_category, selected_uri=ctx.selected_category %}
+        {% include "shared/category-options.jinja" %}
+      {% endwith %}
+    </select>
+    <div>
+      <div>Category</div>
+    </div>
+  </label>
+  <label
+    class="input-outlined input-bg-surface-container col-span-2 col-start-1 md:col-start-2"
+  >
+    <select
+      name="tag"
+      autocomplete="off"
+      {% if ctx.no_matches and not ctx.selected_tag %}disabled{% endif %}
+    >
+      <option value=""></option>
+      {% for label, value in ctx.options_tag %}
+        <option
+          value="{{ value }}"
+          {% if value == ctx.selected_tag %}selected{% endif %}
+        >
+          {{ label }}
+        </option>
+      {% endfor %}
+    </select>
+    <div>
+      <div>Tag</div>
+    </div>
+  </label>
+  <div
+    class="col-span-full flex justify-around"
+    hx-target="#spending-chart-data"
+  >
+    <button
+      class="btn-filled"
+      hx-get="{{ url_for("spending.chart") }}"
+      hx-disabled-elt="this"
+    >
+      Apply filter
+    </button>
+    <button
+      class="btn-text"
+      type="button"
+      hx-get="{{ url_for("spending.chart") }}"
+      hx-disabled-elt="this"
+      hx-include="unset"
+    >
+      Clear all filters
+    </button>
+  </div>
+</form>

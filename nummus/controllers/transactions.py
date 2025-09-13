@@ -61,7 +61,7 @@ class SplitContext(TypedDict):
     category_id: int
     category_uri: str
     memo: str | None
-    tags: set[str]
+    tags: list[str]
     amount: Decimal | None
 
     asset_name: NotRequired[str | None]
@@ -84,8 +84,8 @@ class RowContext(SplitContext):
 class OptionsContext(TypedDict):
     """Type definition for table options context."""
 
-    options_period: list[tuple[str, str]]
-    options_account: list[tuple[str, str]]
+    options_period: list[base.NamePair]
+    options_account: list[base.NamePair]
     options_category: base.CategoryGroups
 
 
@@ -297,7 +297,7 @@ def new() -> str | flask.Response:
             "category_id": uncategorized_id,
             "category_uri": uncategorized_uri,
             "memo": None,
-            "tags": set(),
+            "tags": [],
             "amount": None,
         }
         ctx: TxnContext = {
@@ -360,7 +360,7 @@ def new() -> str | flask.Response:
                     "category_id": cat_id,
                     "category_uri": TransactionCategory.id_to_uri(cat_id),
                     "memo": memo,
-                    "tags": tags,
+                    "tags": sorted(tags),
                     "amount": amount,
                 }
                 for cat_id, memo, tags, amount in zip(
@@ -618,7 +618,7 @@ def split(uri: str) -> str:
                 "category_id": 0,
                 "category_uri": cat_uri or uncategorized_uri,
                 "memo": memo,
-                "tags": tags,
+                "tags": sorted(tags),
                 "amount": amount,
                 "asset_name": None,
                 "asset_ticker": None,
@@ -940,7 +940,7 @@ def ctx_split(
         "category_id": t_split.category_id,
         "category_uri": TransactionCategory.id_to_uri(t_split.category_id),
         "memo": t_split.memo,
-        "tags": tags,
+        "tags": sorted(tags),
         "asset_name": asset_name,
         "asset_ticker": asset_ticker,
         "asset_price": abs(t_split.amount / qty) if qty else None,
@@ -994,7 +994,7 @@ def ctx_options(
         tbl_query: Query to use to get distinct values
         today: Today's date
         accounts: Account name mapping
-        categories: Account name mapping
+        categories: TransactionCategory name mapping
         selected_account: URI of account from args
         selected_category: URI of category from args
 
@@ -1006,11 +1006,11 @@ def ctx_options(
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
-        ("All time", "all"),
-        *((f"{m:%B}", m.isoformat()[:7]) for m in last_months),
-        (str(month.year), str(month.year)),
-        (str(month.year - 1), str(month.year - 1)),
-        ("Custom date range", "custom"),
+        base.NamePair("All time", "all"),
+        *(base.NamePair(f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+        base.NamePair(str(month.year), str(month.year)),
+        base.NamePair(str(month.year - 1), str(month.year - 1)),
+        base.NamePair("Custom date range", "custom"),
     ]
 
     clauses = tbl_query.clauses.copy()
@@ -1022,14 +1022,14 @@ def ctx_options(
     )
     options_account = sorted(
         [
-            (accounts[acct_id], Account.id_to_uri(acct_id))
+            base.NamePair(accounts[acct_id], Account.id_to_uri(acct_id))
             for acct_id, in query_options.yield_per(YIELD_PER)
         ],
         key=operator.itemgetter(0),
     )
     if len(options_account) == 0 and selected_account:
         acct_id = Account.uri_to_id(selected_account)
-        options_account = [(accounts[acct_id], selected_account)]
+        options_account = [base.NamePair(accounts[acct_id], selected_account)]
 
     clauses = tbl_query.clauses.copy()
     clauses.pop("category", None)

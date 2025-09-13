@@ -1,0 +1,38 @@
+<div
+  hx-get="{{ url_for('spending.page') }}"
+  hx-trigger="account from:body, asset from:body"
+  hx-target="#main"
+>
+  <h1>Spending</h1>
+</div>
+{% include "spending/filters.jinja" %}
+{# TODO (WattsUp): #359 plot bys #}
+<h2>By account</h2>
+<div>
+  {% for name, amount in ctx.by_account %}
+    <div>{{ name }} {{ -amount | money }}</div>
+  {% endfor %}
+</div>
+<h2>By payee</h2>
+<div>
+  {% for name, amount in ctx.by_payee %}
+    <div>{{ name }} {{ -amount | money }}</div>
+  {% endfor %}
+</div>
+<h2>By category</h2>
+<div>
+  {% for name, amount in ctx.by_category %}
+    <div>{{ name }} {{ -amount | money }}</div>
+  {% endfor %}
+</div>
+<h2>By tag</h2>
+<div class="prose mx-auto">
+  Since transactions splits may have any number of tags, the percent may be
+  inaccurate.
+</div>
+<div>
+  {% for name, amount in ctx.by_tag %}
+    <div>{{ name }} {{ -amount | money }}</div>
+  {% endfor %}
+</div>
+<div id="spending-chart-data">{% include "spending/chart-data.jinja" %}</div>

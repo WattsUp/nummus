@@ -536,6 +536,9 @@ def test_template(valid_html: HTMLValidator, path: Path) -> None:
     # Since each template is tested, it ensures any HX actions require local targets
     assert valid_html(buf)
 
+    # TODO (WattsUp): #359 Add a check for each page.jinja has the same div/h1 combo
+    # and that direct headers have no class
+
 
 def test_chart_data() -> None:
     start = datetime.date(2023, 1, 10)

@@ -1,0 +1,16 @@
+{% if include_oob %}
+  {% with oob = True %}
+    {% include "spending/filters.jinja" %}
+  {% endwith %}
+{% endif %}
+<script>
+  // prettier-ignore
+  onLoad(() => {
+    spending.update(
+      JSON.parse('{{ ctx.by_account | tojson(precision=4) }}'),
+      JSON.parse('{{ ctx.by_payee | tojson(precision=4) }}'),
+      JSON.parse('{{ ctx.by_category | tojson(precision=4) }}'),
+      JSON.parse('{{ ctx.by_tag | tojson(precision=4) }}'),
+    );
+  });
+</script>
