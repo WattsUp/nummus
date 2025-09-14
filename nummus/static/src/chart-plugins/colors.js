@@ -38,9 +38,14 @@ const pluginColor = {
         fill: { aboveRaw, belowRaw } = {},
       } = dataset;
       if (type == "doughnut") {
-        if (borderColorRaw) dataset.borderColor = borderColorRaw.map(getColor);
+        if (borderColorRaw)
+          dataset.borderColor = borderColorRaw.map((raw, i) =>
+            getColor(raw, colorSpin[i]),
+          );
         if (backgroundColorRaw)
-          dataset.backgroundColor = backgroundColorRaw.map(getColor);
+          dataset.backgroundColor = backgroundColorRaw.map((raw, i) =>
+            getColor(raw, colorSpin[i]),
+          );
       } else {
         if (borderColorRaw)
           dataset.borderColor = getColor(borderColorRaw, colorSpin);

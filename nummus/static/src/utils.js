@@ -394,6 +394,18 @@ function addTimezone(evt) {
   evt.detail.headers["Timezone-Offset"] = d.getTimezoneOffset();
 }
 
+/** Update the colors of color swatches */
+function updateColorSwatches() {
+  const primary = getThemeColor("primary");
+  const primaryContainer = getThemeColor("primary-container");
+  htmx.findAll("div[color-spin]").forEach((e) => {
+    const spin = Number(e.getAttribute("color-spin"));
+    e.style.borderColor = tinycolor(primary).spin(spin).toHexString();
+    e.style.backgroundColor =
+      tinycolor(primaryContainer).spin(spin).toHexString() + "80";
+  });
+}
+
 /*
  * DELETE is supposed to use request parameters but form is way better
  * htmx 2.x followed the spec properly, revert

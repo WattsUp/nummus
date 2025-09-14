@@ -174,6 +174,7 @@ const nummusChart = {
     const data = [];
     const colors = [];
     const backgroundColors = [];
+    const spins = [];
 
     let total = 0;
 
@@ -184,12 +185,14 @@ const nummusChart = {
       labels.push(source.name);
       colors.push(source.borderColorRaw);
       backgroundColors.push(source.backgroundColorRaw);
+      spins.push(source.colorSpin);
     }
     datasets.push({
       data: data,
       borderWidth: 1,
       borderColorRaw: colors,
       backgroundColorRaw: backgroundColors,
+      colorSpin: spins,
     });
     return {
       labels: labels,
@@ -277,6 +280,7 @@ const nummusChart = {
         chart.data.datasets[i].borderColorRaw = datasets[i].borderColorRaw;
         chart.data.datasets[i].backgroundColorRaw =
           datasets[i].backgroundColorRaw;
+        chart.data.datasets[i].colorSpin = datasets[i].colorSpin;
       }
     } else {
       chart.data.datasets = datasets;

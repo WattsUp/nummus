@@ -165,7 +165,9 @@ def data_query(
     Returns:
         DataQuery
     """
-    query = s.query(TransactionSplit)
+    query = s.query(TransactionSplit).where(
+        TransactionSplit.category_id != TransactionCategory.securities_traded(s)[0],
+    )
     clauses: dict[str, sqlalchemy.ColumnElement] = {}
 
     any_filters = False
@@ -275,7 +277,8 @@ def ctx_options(
     query_options = (
         query.with_entities(TransactionSplit.category_id)
         .where(*clauses.values())
-        .distinct()
+        .having(func.sum(TransactionSplit.amount) < 0)
+        .group_by(TransactionSplit.category_id)
     )
     options_uris = {
         TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
