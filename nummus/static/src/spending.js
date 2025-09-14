@@ -45,7 +45,7 @@ const spending = {
     const data = raw.map((item, i) => ({
       name: item[0] ?? "[none]",
       amount: -item[1],
-      colorSpin: i * spin,
+      colorSpin: item[0] ? i * spin : 0,
       borderColorRaw: item[0] ? "primary" : "outline",
       backgroundColorRaw: [
         item[0] ? "primary-container" : "surface-container-low",
@@ -53,12 +53,6 @@ const spending = {
       ],
       collapse: -item[1] < collapseThreshold,
     }));
-
-    if (this.charts[id] && ctx == this.charts[id].ctx) {
-      nummusChart.updatePie(this.charts[id], data);
-    } else {
-      this.charts[id] = nummusChart.createPie(ctx, data);
-    }
 
     breakdown.innerHTML = "";
     let totalOther = 0;
@@ -125,6 +119,17 @@ const spending = {
       row.appendChild(value);
 
       breakdown.appendChild(row);
+    }
+
+    if (this.charts[id] && ctx == this.charts[id].ctx) {
+      nummusChart.updatePie(this.charts[id], data);
+    } else {
+      this.charts[id] = nummusChart.createPie(
+        ctx,
+        data,
+        [pluginHoverHighlight],
+        { plugins: { hoverHighlight: { parent: `${id}>div:last-of-type` } } },
+      );
     }
   },
 };

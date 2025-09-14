@@ -398,6 +398,7 @@ def ctx_chart(
     ).group_by(TransactionSplit.payee)
     by_payee: list[tuple[str, Decimal]] = [
         # TODO (WattsUp): #359 Add income page by payee, tag, category?
+        # TODO (WattsUp): #359 Add dashboard
         (payee, amount)
         for payee, amount in query.yield_per(YIELD_PER)
         if amount

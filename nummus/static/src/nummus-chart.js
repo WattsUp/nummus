@@ -255,10 +255,8 @@ const nummusChart = {
       },
     };
     if (plugins) {
-      for (const item of plugins) {
-        const plugin = item[0];
+      for (const plugin of plugins) {
         pluginObjects.push(plugin);
-        pluginOptions[plugin.id] = item[1];
       }
     }
 
