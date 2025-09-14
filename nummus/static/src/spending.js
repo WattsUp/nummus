@@ -12,7 +12,7 @@ const spending = {
     });
   },
   /**
-   * Create Performance Chart
+   * Create spending Chart
    *
    * @param {Object} byAccount Spending by account from spending controller
    * @param {Object} byPayee Spending by payee from spending controller
@@ -28,6 +28,8 @@ const spending = {
     updateColorSwatches();
   },
   /**
+   * Update one chart
+   *
    * @param {String} id - Top div id
    * @param {Array} raw - Array [[name, value], ...]
    */
@@ -36,13 +38,20 @@ const spending = {
     const breakdown = htmx.find(`#${id}>div:last-of-type`);
     const ctx = canvas.getContext("2d");
 
+    const total = -raw.reduce((cum, item) => cum + item[1], 0);
+    const collapseThreshold = total * 0.005;
+
     const spin = Math.max(20, 300 / raw.length);
     const data = raw.map((item, i) => ({
       name: item[0] ?? "[none]",
       amount: -item[1],
       colorSpin: i * spin,
-      borderColorRaw: "primary",
-      backgroundColorRaw: ["primary-container", "80"],
+      borderColorRaw: item[0] ? "primary" : "outline",
+      backgroundColorRaw: [
+        item[0] ? "primary-container" : "surface-container-low",
+        "80",
+      ],
+      collapse: -item[1] < collapseThreshold,
     }));
 
     if (this.charts[id] && ctx == this.charts[id].ctx) {
@@ -52,8 +61,13 @@ const spending = {
     }
 
     breakdown.innerHTML = "";
-    for (const category of data) {
+    let totalOther = 0;
+    data.forEach((category, i) => {
       const v = category.amount;
+      if (i >= 200) {
+        totalOther += v;
+        return;
+      }
 
       const row = document.createElement("div");
       htmx.addClass(row, "flex");
@@ -62,6 +76,8 @@ const spending = {
 
       const square = document.createElement("div");
       square.setAttribute("color-spin", category.colorSpin);
+      square.setAttribute("border", category.borderColorRaw);
+      square.setAttribute("bg", category.backgroundColorRaw[0]);
       htmx.addClass(square, "w-6");
       htmx.addClass(square, "h-6");
       htmx.addClass(square, "shrink-0");
@@ -77,6 +93,35 @@ const spending = {
 
       const value = document.createElement("div");
       value.innerHTML = formatterF2.format(v);
+      row.appendChild(value);
+
+      breakdown.appendChild(row);
+    });
+
+    if (totalOther) {
+      const row = document.createElement("div");
+      htmx.addClass(row, "flex");
+      htmx.addClass(row, "gap-1");
+      htmx.addClass(row, "not-last:mb-0.5");
+
+      const square = document.createElement("div");
+      htmx.addClass(square, "w-6");
+      htmx.addClass(square, "h-6");
+      htmx.addClass(square, "shrink-0");
+      htmx.addClass(square, "border");
+      htmx.addClass(square, "border-outline");
+      htmx.addClass(square, "bg-surface-container-high");
+      htmx.addClass(square, "rounded");
+      row.appendChild(square);
+
+      const name = document.createElement("div");
+      name.innerHTML = `Other (${data.length - 200} more)`;
+      htmx.addClass(name, "grow");
+      htmx.addClass(name, "truncate");
+      row.appendChild(name);
+
+      const value = document.createElement("div");
+      value.innerHTML = formatterF2.format(totalOther);
       row.appendChild(value);
 
       breakdown.appendChild(row);

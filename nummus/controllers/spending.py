@@ -18,6 +18,7 @@ from nummus.models import (
     Tag,
     TagLink,
     TransactionCategory,
+    TransactionCategoryGroup,
     TransactionSplit,
     YIELD_PER,
 )
@@ -165,8 +166,15 @@ def data_query(
     Returns:
         DataQuery
     """
+    query = s.query(TransactionCategory.id_).where(
+        (TransactionCategory.name == "securities traded")
+        | TransactionCategory.group.in_(
+            {TransactionCategoryGroup.INCOME, TransactionCategoryGroup.TRANSFER},
+        ),
+    )
+    skip_ids = {r[0] for r in query.yield_per(YIELD_PER)}
     query = s.query(TransactionSplit).where(
-        TransactionSplit.category_id != TransactionCategory.securities_traded(s)[0],
+        TransactionSplit.category_id.not_in(skip_ids),
     )
     clauses: dict[str, sqlalchemy.ColumnElement] = {}
 
@@ -277,8 +285,7 @@ def ctx_options(
     query_options = (
         query.with_entities(TransactionSplit.category_id)
         .where(*clauses.values())
-        .having(func.sum(TransactionSplit.amount) < 0)
-        .group_by(TransactionSplit.category_id)
+        .distinct()
     )
     options_uris = {
         TransactionCategory.id_to_uri(r[0]) for r in query_options.yield_per(YIELD_PER)
@@ -381,7 +388,7 @@ def ctx_chart(
     by_account: list[tuple[str, Decimal]] = [
         (accounts[account_id], amount)
         for account_id, amount in query.yield_per(YIELD_PER)
-        if amount < 0
+        if amount
     ]
     by_account = sorted(by_account, key=operator.itemgetter(1))
 
@@ -393,7 +400,7 @@ def ctx_chart(
         # TODO (WattsUp): #359 Add income page by payee, tag, category?
         (payee, amount)
         for payee, amount in query.yield_per(YIELD_PER)
-        if amount < 0
+        if amount
     ]
     by_payee = sorted(by_payee, key=operator.itemgetter(1))
 
@@ -404,7 +411,7 @@ def ctx_chart(
     by_category: list[tuple[str, Decimal]] = [
         (categories_emoji[cat_id], amount)
         for cat_id, amount in query.yield_per(YIELD_PER)
-        if amount < 0
+        if amount
     ]
     by_category = sorted(by_category, key=operator.itemgetter(1))
 
@@ -420,7 +427,7 @@ def ctx_chart(
     by_tag: list[tuple[str | None, Decimal, bool]] = [
         (tag_id and tags[tag_id], amount, tag_id and tag_id == selected_tag_id)
         for tag_id, amount in query.yield_per(YIELD_PER)
-        if amount < 0
+        if amount
     ]
     by_tag = sorted(by_tag, key=operator.itemgetter(1))
 

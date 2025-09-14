@@ -177,15 +177,29 @@ const nummusChart = {
     const spins = [];
 
     let total = 0;
+    let nCollapse = sources.filter((item) => item.collapse).length;
+
+    let totalOther = 0;
 
     for (const source of sources) {
       const value = source.amount ?? source.values[source.values.length - 1];
       total += value;
-      data.push(value);
-      labels.push(source.name);
-      colors.push(source.borderColorRaw);
-      backgroundColors.push(source.backgroundColorRaw);
-      spins.push(source.colorSpin);
+      if (nCollapse > 1 && source.collapse) {
+        totalOther += value;
+      } else {
+        data.push(value);
+        labels.push(source.name);
+        colors.push(source.borderColorRaw);
+        backgroundColors.push(source.backgroundColorRaw);
+        spins.push(source.colorSpin);
+      }
+    }
+    if (totalOther) {
+      data.push(totalOther);
+      labels.push("Other");
+      colors.push("outline");
+      backgroundColors.push("surface-container-high");
+      spins.push(null);
     }
     datasets.push({
       data: data,
@@ -193,6 +207,7 @@ const nummusChart = {
       borderColorRaw: colors,
       backgroundColorRaw: backgroundColors,
       colorSpin: spins,
+      total: total,
     });
     return {
       labels: labels,
@@ -227,7 +242,7 @@ const nummusChart = {
             if (label) label += ": ";
             if (context.parsed != null) {
               label += formatterF2.format(context.parsed);
-              const percent = (context.parsed / total) * 100;
+              const percent = (context.parsed / context.dataset.total) * 100;
               label += ` (${percent.toFixed(1)}%)`;
             }
             return label;
@@ -274,13 +289,13 @@ const nummusChart = {
     const { labels, datasets, total } = this.datasetsPie(sources);
 
     if (chart.data.datasets.length == datasets.length) {
-      // Swapping same type monthly or not
       for (let i = 0; i < datasets.length; ++i) {
         chart.data.datasets[i].data = datasets[i].data;
         chart.data.datasets[i].borderColorRaw = datasets[i].borderColorRaw;
         chart.data.datasets[i].backgroundColorRaw =
           datasets[i].backgroundColorRaw;
         chart.data.datasets[i].colorSpin = datasets[i].colorSpin;
+        chart.data.datasets[i].total = datasets[i].total;
       }
     } else {
       chart.data.datasets = datasets;

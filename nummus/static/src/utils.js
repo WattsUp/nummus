@@ -396,13 +396,15 @@ function addTimezone(evt) {
 
 /** Update the colors of color swatches */
 function updateColorSwatches() {
-  const primary = getThemeColor("primary");
-  const primaryContainer = getThemeColor("primary-container");
   htmx.findAll("div[color-spin]").forEach((e) => {
+    const border = e.getAttribute("border");
+    const bg = e.getAttribute("bg");
     const spin = Number(e.getAttribute("color-spin"));
-    e.style.borderColor = tinycolor(primary).spin(spin).toHexString();
+    e.style.borderColor = tinycolor(getThemeColor(border))
+      .spin(spin)
+      .toHexString();
     e.style.backgroundColor =
-      tinycolor(primaryContainer).spin(spin).toHexString() + "80";
+      tinycolor(getThemeColor(bg)).spin(spin).toHexString() + "80";
   });
 }
 
