@@ -18,12 +18,12 @@
           hx-target="#txn-filters"
           onchange="txn.changePeriod()"
         >
-          {% for label, value in ctx.options_period %}
+          {% for item in ctx.options_period %}
             <option
-              value="{{ value }}"
-              {% if value == ctx.selected_period %}selected{% endif %}
+              value="{{ item.key }}"
+              {% if item.key == ctx.selected_period %}selected{% endif %}
             >
-              {{ label }}
+              {{ item.name }}
             </option>
           {% endfor %}
         </select>
@@ -83,12 +83,12 @@
             hx-target="#txn-filters"
           >
             <option value=""></option>
-            {% for label, value in ctx.options_account %}
+            {% for item in ctx.options_account %}
               <option
-                value="{{ value }}"
-                {% if value == ctx.selected_account %}selected{% endif %}
+                value="{{ item.key }}"
+                {% if item.key == ctx.selected_account %}selected{% endif %}
               >
-                {{ label }}
+                {{ item.name }}
               </option>
             {% endfor %}
           </select>

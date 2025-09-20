@@ -11,11 +11,11 @@ if TYPE_CHECKING:
 
 def test_init_properties(
     session: orm.Session,
-    tag: Tag,
+    tags: dict[str, int],
     transactions: list[Transaction],
 ) -> None:
     d = {
-        "tag_id": tag.id_,
+        "tag_id": tags["engineer"],
         "t_split_id": transactions[-1].splits[0].id_,
     }
 

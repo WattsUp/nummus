@@ -1006,11 +1006,11 @@ def ctx_options(
     month = utils.start_of_month(today)
     last_months = [utils.date_add_months(month, i) for i in range(0, -3, -1)]
     options_period = [
-        base.NamePair("All time", "all"),
-        *(base.NamePair(f"{m:%B}", m.isoformat()[:7]) for m in last_months),
+        base.NamePair("all", "All time"),
+        *(base.NamePair(m.isoformat()[:7], f"{m:%B}") for m in last_months),
         base.NamePair(str(month.year), str(month.year)),
         base.NamePair(str(month.year - 1), str(month.year - 1)),
-        base.NamePair("Custom date range", "custom"),
+        base.NamePair("custom", "Custom date range"),
     ]
 
     clauses = tbl_query.clauses.copy()
@@ -1022,14 +1022,14 @@ def ctx_options(
     )
     options_account = sorted(
         [
-            base.NamePair(accounts[acct_id], Account.id_to_uri(acct_id))
+            base.NamePair(Account.id_to_uri(acct_id), accounts[acct_id])
             for acct_id, in query_options.yield_per(YIELD_PER)
         ],
         key=operator.itemgetter(0),
     )
     if len(options_account) == 0 and selected_account:
         acct_id = Account.uri_to_id(selected_account)
-        options_account = [base.NamePair(accounts[acct_id], selected_account)]
+        options_account = [base.NamePair(selected_account, accounts[acct_id])]
 
     clauses = tbl_query.clauses.copy()
     clauses.pop("category", None)
