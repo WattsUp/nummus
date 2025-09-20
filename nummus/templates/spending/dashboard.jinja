@@ -5,20 +5,20 @@
   class="row-span-2"
 >
   {% set n_display = 8 %}
-  {% set name = "income-by" if ctx.is_income else "spending-by" %}
+  {% set name = "income-by" if is_income else "spending-by" %}
   <a
     href="{{ url_for(controller + '.page') }}"
     hx-get="{{ url_for(controller + '.page') }}"
     hx-disabled-elt="this"
   >
     <h1>
-      {{ "Income" if ctx.is_income else "Spending" }} {{ ctx.selected_period }}
+      {{ "Income" if is_income else "Spending" }} {{ ctx.selected_period }}
     </h1>
     <icon>chevron_forward</icon>
   </a>
   <details class="mb-2 rounded-md" name="{{ name }}">
     <summary
-      class="bg-primary-container flex items-center gap-2 rounded-md p-2"
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>account_balance</icon>
       <span class="mr-auto">By account</span>
@@ -36,7 +36,7 @@
   </details>
   <details class="mb-2 rounded-md" name="{{ name }}">
     <summary
-      class="bg-primary-container flex items-center gap-2 rounded-md p-2"
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>store</icon>
       <span class="mr-auto">By payee</span>
@@ -54,7 +54,7 @@
   </details>
   <details class="mb-2 rounded-md" name="{{ name }}" open>
     <summary
-      class="bg-primary-container flex items-center gap-2 rounded-md p-2"
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>category</icon>
       <span class="mr-auto">By category</span>
@@ -72,7 +72,7 @@
   </details>
   <details class="mb-2 rounded-md" name="{{ name }}">
     <summary
-      class="bg-primary-container flex items-center gap-2 rounded-md p-2"
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>label</icon>
       <span class="mr-auto">By tag</span>

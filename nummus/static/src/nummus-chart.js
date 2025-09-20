@@ -302,6 +302,7 @@ const nummusChart = {
     chart.config.options.plugins.doughnutText.text =
       doughnutText ?? formatterF0.format(total);
     pluginColor.updateChartColor(chart);
+    pluginHoverHighlight.addListeners(chart);
     chart.update();
   },
   /**

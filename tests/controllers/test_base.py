@@ -539,6 +539,7 @@ def test_template(valid_html: HTMLValidator, path: Path) -> None:
     # TODO (WattsUp): #359 Add a check for each page.jinja has the same div/h1 combo
     # and that direct headers have no class
     # TODO (WattsUp): #359 Add a check for each url_for has single quotes only
+    # TODO (WattsUp): #359 Add a check for bg-pri/sec/tert has text-on-pri/sec/tert
 
 
 def test_chart_data() -> None:

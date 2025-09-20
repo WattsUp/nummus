@@ -22,6 +22,7 @@ const pluginHoverHighlight = {
   },
   addListeners(chart) {
     const hoverHighlight = chart.hoverHighlight;
+    if (!hoverHighlight) return;
     this.removeListeners(chart);
     document
       .querySelectorAll(`#${hoverHighlight.parent}>*`)
