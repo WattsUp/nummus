@@ -6,12 +6,12 @@
 >
   <label class="input-outlined input-bg-surface-container">
     <select name="period" autocomplete="off" onchange="spending.changePeriod()">
-      {% for label, value in ctx.options_period %}
+      {% for item in ctx.options_period %}
         <option
-          value="{{ value }}"
-          {% if value == ctx.selected_period %}selected{% endif %}
+          value="{{ item.key }}"
+          {% if item.key == ctx.selected_period %}selected{% endif %}
         >
-          {{ label }}
+          {{ item.name }}
         </option>
       {% endfor %}
     </select>
@@ -54,12 +54,12 @@
       {% if ctx.no_matches and not ctx.selected_account %}disabled{% endif %}
     >
       <option value=""></option>
-      {% for label, value in ctx.options_account %}
+      {% for item in ctx.options_account %}
         <option
-          value="{{ value }}"
-          {% if value == ctx.selected_account %}selected{% endif %}
+          value="{{ item.key }}"
+          {% if item.key == ctx.selected_account %}selected{% endif %}
         >
-          {{ label }}
+          {{ item.name }}
         </option>
       {% endfor %}
     </select>
@@ -92,12 +92,12 @@
       {% if ctx.no_matches and not ctx.selected_tag %}disabled{% endif %}
     >
       <option value=""></option>
-      {% for label, value in ctx.options_tag %}
+      {% for item in ctx.options_tag %}
         <option
-          value="{{ value }}"
-          {% if value == ctx.selected_tag %}selected{% endif %}
+          value="{{ item.key }}"
+          {% if item.key == ctx.selected_tag %}selected{% endif %}
         >
-          {{ label }}
+          {{ item.name }}
         </option>
       {% endfor %}
     </select>
