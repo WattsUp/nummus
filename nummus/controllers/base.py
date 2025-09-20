@@ -95,6 +95,13 @@ class ChartData(TypedDict):
     max: list[Decimal] | None
 
 
+class NamePair(NamedTuple):
+    """Key & name pair."""
+
+    key: str
+    name: str
+
+
 LIMIT_DOWNSAMPLE = 400  # if n_days > LIMIT_DOWNSAMPLE then plot min/avg/max by month
 # else plot normally by days
 
@@ -165,7 +172,8 @@ def ctx_base(
                 "Retrospection",
                 {
                     "Net worth": Page("balance", "net_worth.page"),
-                    # add "Spending": Page("troubleshoot", "performance.page"),
+                    "Income": Page("payments", "income.page"),
+                    "Spending": Page("shopping_basket", "spending.page"),
                 },
             ),
             (
@@ -522,7 +530,7 @@ def ctx_to_json(d: dict[str, object], precision: int = 2) -> str:
         msg = f"Unknown type {type(obj)}"
         raise TypeError(msg)
 
-    return json.dumps(d, default=default, separators=(",", ":"))
+    return json.dumps(d, default=default, separators=(",", ":")).replace("'", "\\'")
 
 
 def validate_string(

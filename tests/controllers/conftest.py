@@ -164,6 +164,7 @@ class TreeNode(NamedTuple):
             "inputmode",
             "autofocus",
             # States
+            "open",
             "disabled",
             "hidden",
             # SVG, img, & canvas

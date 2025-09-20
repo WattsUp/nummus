@@ -118,9 +118,9 @@ class Summarize(BaseCommand):
             accts = {acct.id_: acct for acct in s.query(Account).all()}
             assets = {
                 a.id_: a
-                for a in s.query(Asset)
-                .where(Asset.category != AssetCategory.INDEX)
-                .all()
+                for a in (
+                    s.query(Asset).where(Asset.category != AssetCategory.INDEX).all()
+                )
             }
 
             # Get the inception date

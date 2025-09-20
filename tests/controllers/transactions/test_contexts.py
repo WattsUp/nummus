@@ -111,7 +111,7 @@ def test_ctx_split(
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == {rand_str}
+    assert ctx["tags"] == [rand_str]
     assert ctx.get("asset_name") is None
     assert ctx.get("asset_ticker") is None
     assert ctx.get("asset_price") is None
@@ -141,7 +141,7 @@ def test_ctx_split_asset(
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == {rand_str}
+    assert ctx["tags"] == [rand_str]
     assert ctx.get("asset_name") == asset.name
     assert ctx.get("asset_ticker") == asset.ticker
     assert ctx.get("asset_price") == Decimal(1)
@@ -174,7 +174,7 @@ def test_ctx_row(
     assert ctx["amount"] == t_split.amount
     assert ctx["category_uri"] == TransactionCategory.id_to_uri(t_split.category_id)
     assert ctx["memo"] == t_split.memo
-    assert ctx["tags"] == {rand_str}
+    assert ctx["tags"] == [rand_str]
     assert ctx.get("asset_name") is None
     assert ctx.get("asset_ticker") is None
     assert ctx.get("asset_price") is None
@@ -210,7 +210,7 @@ def test_ctx_options(
         None,
     )
 
-    assert ctx["options_account"] == [(account.name, account.uri)]
+    assert ctx["options_account"] == [base.NamePair(account.uri, account.name)]
     target = {
         TransactionCategoryGroup.INCOME: [
             base.CategoryContext(
@@ -255,7 +255,7 @@ def test_ctx_options_selected(
         TransactionCategory.id_to_uri(categories["other income"]),
     )
 
-    assert ctx["options_account"] == [(account.name, account.uri)]
+    assert ctx["options_account"] == [base.NamePair(account.uri, account.name)]
     target = {
         TransactionCategoryGroup.INCOME: [
             base.CategoryContext(

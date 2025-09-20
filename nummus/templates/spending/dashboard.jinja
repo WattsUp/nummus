@@ -1,0 +1,94 @@
+<div
+  class="row-span-2"
+  hx-target="#main"
+  hx-swap="innerHTML show:window:top"
+  hx-push-url="true"
+>
+  {% set n_display = 8 %}
+  {% set name = "income-by" if is_income else "spending-by" %}
+  <a
+    href="{{ url_for(controller + '.page') }}"
+    hx-get="{{ url_for(controller + '.page') }}"
+    hx-disabled-elt="this"
+  >
+    <h1>
+      {{ "Income" if is_income else "Spending" }} {{ ctx.selected_period }}
+    </h1>
+    <icon>chevron_forward</icon>
+  </a>
+  <details class="mb-2 rounded-md" name="{{ name }}">
+    <summary
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
+    >
+      <icon>account_balance</icon>
+      <span class="mr-auto">By account</span>
+      <icon class="details-icon-open">keyboard_arrow_up</icon>
+      <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    {% for label, amount in ctx.by_account[:n_display] %}
+      <div
+        class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
+      >
+        <div class="truncate">{{ label }}</div>
+        <div class="shrink-0">{{ amount | money }}</div>
+      </div>
+    {% endfor %}
+  </details>
+  <details class="mb-2 rounded-md" name="{{ name }}">
+    <summary
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
+    >
+      <icon>store</icon>
+      <span class="mr-auto">By payee</span>
+      <icon class="details-icon-open">keyboard_arrow_up</icon>
+      <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    {% for label, amount in ctx.by_payee[:n_display] %}
+      <div
+        class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
+      >
+        <div class="truncate">{{ label }}</div>
+        <div class="shrink-0">{{ amount | money }}</div>
+      </div>
+    {% endfor %}
+  </details>
+  <details class="mb-2 rounded-md" name="{{ name }}" open>
+    <summary
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
+    >
+      <icon>category</icon>
+      <span class="mr-auto">By category</span>
+      <icon class="details-icon-open">keyboard_arrow_up</icon>
+      <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    {% for label, amount in ctx.by_category[:n_display] %}
+      <div
+        class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
+      >
+        <div class="truncate">{{ label }}</div>
+        <div class="shrink-0">{{ amount | money }}</div>
+      </div>
+    {% endfor %}
+  </details>
+  <details class="mb-2 rounded-md" name="{{ name }}">
+    <summary
+      class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
+    >
+      <icon>label</icon>
+      <span class="mr-auto">By tag</span>
+      <icon class="details-icon-open">keyboard_arrow_up</icon>
+      <icon class="details-icon-closed">keyboard_arrow_down</icon>
+    </summary>
+    {% for label, amount in ctx.by_tag[:n_display] %}
+      <div
+        class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
+      >
+        <div class="truncate">{{ label or "[none]" }}</div>
+        <div class="shrink-0">{{ amount | money }}</div>
+      </div>
+    {% endfor %}
+  </details>
+  <i class="text-center text-sm">
+    top {{ n_display }} locations year-to-date
+  </i>
+</div>

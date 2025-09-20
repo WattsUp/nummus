@@ -22,6 +22,6 @@ def test_init_properties(session: orm.Session, rand_str: str) -> None:
     assert t.name == d["name"]
 
 
-def test_short(tag: Tag) -> None:
+def test_short() -> None:
     with pytest.raises(exc.InvalidORMValueError):
-        tag.name = "a"
+        Tag(name="a")

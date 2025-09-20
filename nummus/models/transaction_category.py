@@ -355,3 +355,18 @@ class TransactionCategory(Base):
             ProtectedObjectNotFound if not found
         """
         return cls._get_protected_id(s, "emergency fund")
+
+    @classmethod
+    def securities_traded(cls, s: orm.Session) -> tuple[int, str]:
+        """Get the ID and URI of the securities traded category.
+
+        Args:
+            s: SQL session to use
+
+        Returns:
+            tuple(id_, URI)
+
+        Raises:
+            ProtectedObjectNotFound if not found
+        """
+        return cls._get_protected_id(s, "securities traded")

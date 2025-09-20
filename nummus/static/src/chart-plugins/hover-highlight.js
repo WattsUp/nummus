@@ -22,6 +22,7 @@ const pluginHoverHighlight = {
   },
   addListeners(chart) {
     const hoverHighlight = chart.hoverHighlight;
+    if (!hoverHighlight) return;
     this.removeListeners(chart);
     document
       .querySelectorAll(`#${hoverHighlight.parent}>*`)
@@ -63,7 +64,7 @@ const pluginHoverHighlight = {
   setActive(chart, i, active) {
     const hoverHighlight = chart.hoverHighlight;
     const child = this.getChild(chart, i);
-    if (active) {
+    if (active && (chart.data.labels[i] ?? "Other") != "Other") {
       if (hoverHighlight.scroll)
         child.scrollIntoView({ block: "nearest", inline: "nearest" });
       child.style.fontWeight = "bold";
@@ -73,7 +74,7 @@ const pluginHoverHighlight = {
   },
   setHover(chart, i, active) {
     const tooltip = chart.tooltip;
-    if (active) {
+    if (active && (chart.data.labels[i] ?? "Other") != "Other") {
       tooltip.setActiveElements([{ datasetIndex: 0, index: i }]);
     } else {
       tooltip.setActiveElements([]);

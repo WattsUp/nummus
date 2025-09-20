@@ -515,9 +515,11 @@ class Transaction(Base):
 
         cat_asset_linked = {
             t_cat_id
-            for t_cat_id, in s.query(TransactionCategory.id_)
-            .where(TransactionCategory.asset_linked.is_(True))
-            .all()
+            for t_cat_id, in (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.asset_linked.is_(True))
+                .all()
+            )
         }
 
         # Check within Account first, exact matches
@@ -588,12 +590,14 @@ class Transaction(Base):
         # Don't match a Transaction if it has a Securities Traded split
         has_asset_linked = {
             id_
-            for id_, in s.query(TransactionSplit.parent_id)
-            .where(
-                TransactionSplit.parent_id.in_(statements),
-                TransactionSplit.category_id.in_(cat_asset_linked),
+            for id_, in (
+                s.query(TransactionSplit.parent_id)
+                .where(
+                    TransactionSplit.parent_id.in_(statements),
+                    TransactionSplit.category_id.in_(cat_asset_linked),
+                )
+                .distinct()
             )
-            .distinct()
         }
         statements = {
             t_id: statement

@@ -12,6 +12,26 @@
     {% include "shared/spinner.jinja" %}
   </div>
   <div
+    class="row-span-2"
+    hx-get="{{ url_for('income.dashboard') }}"
+    hx-trigger="load"
+    hx-indicator="find .spinner"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% include "shared/spinner.jinja" %}
+  </div>
+  <div
+    class="row-span-2"
+    hx-get="{{ url_for('spending.dashboard') }}"
+    hx-trigger="load"
+    hx-indicator="find .spinner"
+    hx-target="this"
+    hx-swap="outerHTML"
+  >
+    {% include "shared/spinner.jinja" %}
+  </div>
+  <div
     hx-get="{{ url_for('emergency_fund.dashboard') }}"
     hx-trigger="load"
     hx-indicator="find .spinner"

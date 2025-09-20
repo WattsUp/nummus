@@ -1,0 +1,39 @@
+<div
+  hx-get="{{ url_for(controller + '.page') }}"
+  hx-trigger="account from:body, asset from:body"
+  hx-target="#main"
+>
+  <h1>{{ "Income" if is_income else "Spending" }}</h1>
+</div>
+{% include "spending/filters.jinja" %}
+<div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">
+  <div id="spending-by-account">
+    <h2 class="text-primary font-serif text-2xl">By account</h2>
+    <div class="aspect-square">
+      <canvas id="spending-by-account-canvas"></canvas>
+    </div>
+    <div class="max-h-64 overflow-y-auto"></div>
+  </div>
+  <div id="spending-by-payee">
+    <h2 class="text-primary font-serif text-2xl">By payee</h2>
+    <div class="aspect-square">
+      <canvas id="spending-by-payee-canvas"></canvas>
+    </div>
+    <div class="max-h-64 overflow-y-auto"></div>
+  </div>
+  <div id="spending-by-category">
+    <h2 class="text-primary font-serif text-2xl">By category</h2>
+    <div class="aspect-square">
+      <canvas id="spending-by-category-canvas"></canvas>
+    </div>
+    <div class="max-h-64 overflow-y-auto"></div>
+  </div>
+  <div id="spending-by-tag">
+    <h2 class="text-primary font-serif text-2xl">By tag</h2>
+    <div class="aspect-square">
+      <canvas id="spending-by-tag-canvas"></canvas>
+    </div>
+    <div class="max-h-64 overflow-y-auto"></div>
+  </div>
+</div>
+<div id="spending-chart-data">{% include "spending/chart-data.jinja" %}</div>
