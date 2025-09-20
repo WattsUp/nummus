@@ -38,20 +38,20 @@ const spending = {
     const breakdown = htmx.find(`#${id}>div:last-of-type`);
     const ctx = canvas.getContext("2d");
 
-    const total = -raw.reduce((cum, item) => cum + item[1], 0);
+    const total = raw.reduce((cum, item) => cum + item[1], 0);
     const collapseThreshold = total * 0.005;
 
     const spin = Math.max(20, 300 / raw.length);
     const data = raw.map((item, i) => ({
       name: item[0] ?? "[none]",
-      amount: -item[1],
+      amount: item[1],
       colorSpin: item[0] ? i * spin : 0,
       borderColorRaw: item[0] ? "primary" : "outline",
       backgroundColorRaw: [
         item[0] ? "primary-container" : "surface-container-low",
         "80",
       ],
-      collapse: -item[1] < collapseThreshold,
+      collapse: item[1] < collapseThreshold,
     }));
 
     breakdown.innerHTML = "";

@@ -97,11 +97,14 @@ def page() -> flask.Response:
             args.get("period", str(today.year)),
             args.get("start"),
             args.get("end"),
+            is_income=False,
         )
     return base.page(
         "spending/page.jinja",
         title=title,
         ctx=ctx,
+        is_income=False,
+        controller="spending",
     )
 
 
@@ -124,11 +127,14 @@ def chart() -> flask.Response:
             args.get("period", str(today.year)),
             args.get("start"),
             args.get("end"),
+            is_income=False,
         )
     html_title = f"<title>{title} - nummus</title>\n"
     html = html_title + flask.render_template(
         "spending/chart-data.jinja",
         ctx=ctx,
+        is_income=False,
+        controller="spending",
         include_oob=True,
     )
     response = flask.make_response(html)
@@ -161,10 +167,13 @@ def dashboard() -> str:
             str(today.year),
             None,
             None,
+            is_income=False,
         )
     return flask.render_template(
         "spending/dashboard.jinja",
         ctx=ctx,
+        is_income=False,
+        controller="spending",
     )
 
 
@@ -176,6 +185,8 @@ def data_query(
     selected_end: str | None = None,
     selected_category: str | None = None,
     selected_tag: str | None = None,
+    *,
+    is_income: bool,
 ) -> DataQuery:
     """Create transactions data query.
 
@@ -187,15 +198,23 @@ def data_query(
         selected_end: ISO date string of end from args
         selected_category: URI of category from args
         selected_tag: URI of tag from args
+        is_income: True will select income transactions,
+            False will select expense and invert amount signs
 
     Returns:
         DataQuery
     """
+    skip_groups = {
+        (
+            TransactionCategoryGroup.EXPENSE
+            if is_income
+            else TransactionCategoryGroup.INCOME
+        ),
+        TransactionCategoryGroup.TRANSFER,
+    }
     query = s.query(TransactionCategory.id_).where(
         (TransactionCategory.name == "securities traded")
-        | TransactionCategory.group.in_(
-            {TransactionCategoryGroup.INCOME, TransactionCategoryGroup.TRANSFER},
-        ),
+        | TransactionCategory.group.in_(skip_groups),
     )
     skip_ids = {r[0] for r in query.yield_per(YIELD_PER)}
     query = s.query(TransactionSplit).where(
@@ -363,6 +382,8 @@ def ctx_chart(
     selected_period: str | None,
     selected_start: str | None,
     selected_end: str | None,
+    *,
+    is_income: bool,
 ) -> tuple[Context, str]:
     """Get the context to build the chart data.
 
@@ -375,6 +396,8 @@ def ctx_chart(
         selected_tag: Selected tag for filtering
         selected_start: Selected start date for custom period
         selected_end: Selected end date for custom period
+        is_income: True will select income transactions,
+            False will select expense and invert amount signs
 
     Returns:
         tuple(Context, title)
@@ -391,6 +414,7 @@ def ctx_chart(
         selected_end,
         selected_category,
         selected_tag,
+        is_income=is_income,
     )
     options = ctx_options(
         dat_query,
@@ -411,34 +435,33 @@ def ctx_chart(
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.account_id)
     by_account: list[tuple[str, Decimal]] = [
-        (accounts[account_id], amount)
+        (accounts[account_id], amount if is_income else -amount)
         for account_id, amount in query.yield_per(YIELD_PER)
         if amount
     ]
-    by_account = sorted(by_account, key=operator.itemgetter(1))
+    by_account = sorted(by_account, key=operator.itemgetter(1), reverse=True)
 
     query = final_query.with_entities(
         TransactionSplit.payee,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.payee)
     by_payee: list[tuple[str, Decimal]] = [
-        # TODO (WattsUp): #359 Add income page by payee, tag, category?
-        (payee, amount)
+        (payee, amount if is_income else -amount)
         for payee, amount in query.yield_per(YIELD_PER)
         if amount
     ]
-    by_payee = sorted(by_payee, key=operator.itemgetter(1))
+    by_payee = sorted(by_payee, key=operator.itemgetter(1), reverse=True)
 
     query = final_query.with_entities(
         TransactionSplit.category_id,
         func.sum(TransactionSplit.amount),
     ).group_by(TransactionSplit.category_id)
     by_category: list[tuple[str, Decimal]] = [
-        (categories_emoji[cat_id], amount)
+        (categories_emoji[cat_id], amount if is_income else -amount)
         for cat_id, amount in query.yield_per(YIELD_PER)
         if amount
     ]
-    by_category = sorted(by_category, key=operator.itemgetter(1))
+    by_category = sorted(by_category, key=operator.itemgetter(1), reverse=True)
 
     query = (
         final_query.join(TagLink, full=True)
@@ -450,11 +473,15 @@ def ctx_chart(
     )
     selected_tag_id = selected_tag and Tag.uri_to_id(selected_tag)
     by_tag: list[tuple[str | None, Decimal, bool]] = [
-        (tag_id and tags[tag_id], amount, tag_id and tag_id == selected_tag_id)
+        (
+            tag_id and tags[tag_id],
+            amount if is_income else -amount,
+            tag_id and tag_id == selected_tag_id,
+        )
         for tag_id, amount in query.yield_per(YIELD_PER)
         if amount
     ]
-    by_tag = sorted(by_tag, key=operator.itemgetter(1))
+    by_tag = sorted(by_tag, key=operator.itemgetter(1), reverse=True)
 
     return {
         "no_matches": n_matches == 0,
@@ -473,7 +500,7 @@ def ctx_chart(
             for tag, amount, is_selected in by_tag
             if not is_selected or len(by_tag) == 1
         ],
-    }, "Spending"
+    }, ("Income" if is_income else "Spending")
 
 
 ROUTES: base.Routes = {

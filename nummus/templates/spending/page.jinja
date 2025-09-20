@@ -1,9 +1,9 @@
 <div
-  hx-get="{{ url_for('spending.page') }}"
+  hx-get="{{ url_for(controller + '.page') }}"
   hx-trigger="account from:body, asset from:body"
   hx-target="#main"
 >
-  <h1>Spending</h1>
+  <h1>{{ "Income" if is_income else "Spending" }}</h1>
 </div>
 {% include "spending/filters.jinja" %}
 <div class="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-2">

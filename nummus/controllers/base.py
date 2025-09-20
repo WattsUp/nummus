@@ -172,7 +172,8 @@ def ctx_base(
                 "Retrospection",
                 {
                     "Net worth": Page("balance", "net_worth.page"),
-                    "Spending": Page("troubleshoot", "spending.page"),
+                    "Income": Page("payments", "income.page"),
+                    "Spending": Page("shopping_basket", "spending.page"),
                 },
             ),
             (
