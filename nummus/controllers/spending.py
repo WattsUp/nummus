@@ -143,6 +143,31 @@ def chart() -> flask.Response:
     return response
 
 
+def dashboard() -> str:
+    """GET /h/dashboard/spending.
+
+    Returns:
+        string HTML response
+    """
+    p = web.portfolio
+    with p.begin_session() as s:
+        today = base.today_client()
+        ctx, _ = ctx_chart(
+            s,
+            today,
+            None,
+            None,
+            None,
+            str(today.year),
+            None,
+            None,
+        )
+    return flask.render_template(
+        "spending/dashboard.jinja",
+        ctx=ctx,
+    )
+
+
 def data_query(
     s: orm.Session,
     selected_account: str | None = None,
@@ -398,7 +423,6 @@ def ctx_chart(
     ).group_by(TransactionSplit.payee)
     by_payee: list[tuple[str, Decimal]] = [
         # TODO (WattsUp): #359 Add income page by payee, tag, category?
-        # TODO (WattsUp): #359 Add dashboard
         (payee, amount)
         for payee, amount in query.yield_per(YIELD_PER)
         if amount
@@ -455,4 +479,5 @@ def ctx_chart(
 ROUTES: base.Routes = {
     "/spending": (page, ["GET"]),
     "/h/spending/chart": (chart, ["GET"]),
+    "/h/dashboard/spending": (dashboard, ["GET"]),
 }
