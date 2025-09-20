@@ -163,9 +163,11 @@ class BudgetAssignment(Base):
         # Check all categories not INCOME
         budget_categories = {
             t_cat_id
-            for t_cat_id, in s.query(TransactionCategory.id_)
-            .where(TransactionCategory.group != TransactionCategoryGroup.INCOME)
-            .all()
+            for t_cat_id, in (
+                s.query(TransactionCategory.id_)
+                .where(TransactionCategory.group != TransactionCategoryGroup.INCOME)
+                .all()
+            )
         }
 
         # Current month's assignment
