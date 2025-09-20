@@ -117,7 +117,7 @@ def test_uncategorized(session: orm.Session, categories: dict[str, int]) -> None
 
 
 def test_securities_traded(session: orm.Session, categories: dict[str, int]) -> None:
-    result = TransactionCategory.uncategorized(session)
+    result = TransactionCategory.securities_traded(session)
     t_cat_id = categories["securities traded"]
     assert result == (t_cat_id, TransactionCategory.id_to_uri(t_cat_id))
 
