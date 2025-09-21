@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import datetime
+import operator
 from collections import defaultdict
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func
@@ -34,6 +35,15 @@ if TYPE_CHECKING:
 PAGE_LEN = 50
 
 
+class AccountHoldings(NamedTuple):
+    """Context for account holdings."""
+
+    uri: str
+    name: str
+    qty: Decimal
+    value: Decimal
+
+
 class AssetContext(TypedDict):
     """Context for asset page."""
 
@@ -48,6 +58,7 @@ class AssetContext(TypedDict):
     deletable: bool
 
     table: TableContext | None
+    holdings: list[AccountHoldings]
 
     performance: PerformanceContext | None
 
@@ -173,6 +184,7 @@ def new() -> str | flask.Response:
             "value": Decimal(),
             "value_date": None,
             "table": None,
+            "holdings": [],
             "performance": None,
             "deletable": False,
         }
@@ -665,6 +677,32 @@ def ctx_asset(
         is None
     )
 
+    accounts = Account.map_name(s)
+    query = (
+        s.query(TransactionSplit)
+        .with_entities(
+            TransactionSplit.account_id,
+            func.sum(TransactionSplit.asset_quantity),
+        )
+        .where(
+            TransactionSplit.asset_id == a.id_,
+            TransactionSplit.date_ord <= today.toordinal(),
+        )
+        .group_by(
+            TransactionSplit.account_id,
+        )
+    )
+    holdings: list[AccountHoldings] = [
+        AccountHoldings(
+            Account.id_to_uri(acct_id),
+            accounts[acct_id],
+            qty,
+            qty * current_value,
+        )
+        for acct_id, qty in query.yield_per(YIELD_PER)
+        if qty
+    ]
+
     return {
         "uri": a.uri,
         "name": a.name,
@@ -676,6 +714,7 @@ def ctx_asset(
         "value_date": current_date,
         "performance": ctx_performance(s, a, today, period_chart),
         "table": ctx_table(s, a, today, period, start, end, page),
+        "holdings": sorted(holdings, key=operator.itemgetter(2), reverse=True),
         "deletable": deletable,
     }
 

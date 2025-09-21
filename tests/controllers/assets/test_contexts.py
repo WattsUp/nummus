@@ -13,7 +13,7 @@ if TYPE_CHECKING:
 
     from sqlalchemy import orm
 
-    from nummus.models import Asset, AssetCategory, AssetValuation, Transaction
+    from nummus.models import Account, Asset, AssetCategory, AssetValuation, Transaction
 
 
 def test_ctx_performance_empty(
@@ -152,14 +152,18 @@ def test_ctx_asset_empty(
     assert ctx["description"] == asset.description
     assert ctx["value"] == Decimal()
     assert ctx["value_date"] is None
+    assert ctx["holdings"] == []
 
 
 def test_ctx_asset(
     today: datetime.date,
     session: orm.Session,
+    account: Account,
     asset: Asset,
     asset_valuation: AssetValuation,
+    transactions: list[Transaction],
 ) -> None:
+    _ = transactions
     ctx = assets.ctx_asset(session, asset, today, None, None, None, None, None)
     assert ctx["uri"] == asset.uri
     assert ctx["name"] == asset.name
@@ -167,6 +171,9 @@ def test_ctx_asset(
     assert ctx["description"] == asset.description
     assert ctx["value"] == asset_valuation.value
     assert ctx["value_date"] == asset_valuation.date
+    assert ctx["holdings"] == [
+        assets.AccountHoldings(account.uri, account.name, Decimal(10), Decimal(20)),
+    ]
 
 
 def test_ctx_rows_empty(today: datetime.date, session: orm.Session) -> None:
