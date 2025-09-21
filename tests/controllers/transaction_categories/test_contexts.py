@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from nummus.controllers import transaction_categories
+from nummus.controllers import base, transaction_categories
 from nummus.models import TransactionCategory, TransactionCategoryGroup, YIELD_PER
 
 if TYPE_CHECKING:
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 
 def test_ctx(session: orm.Session) -> None:
-    groups = transaction_categories.ctx_categories()
+    groups = transaction_categories.ctx_categories(session)
 
     exclude = {"securities traded"}
 
@@ -23,8 +23,8 @@ def test_ctx(session: orm.Session) -> None:
             )
             .order_by(TransactionCategory.name)
         )
-        target: list[transaction_categories.CategoryContext] = [
-            {"name": t_cat.emoji_name, "uri": t_cat.uri}
+        target: list[base.NamePair] = [
+            base.NamePair(t_cat.uri, t_cat.emoji_name)
             for t_cat in query.yield_per(YIELD_PER)
         ]
         assert groups[g] == target

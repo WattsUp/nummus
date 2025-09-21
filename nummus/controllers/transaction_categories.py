@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import TYPE_CHECKING
 
 import flask
 
@@ -17,12 +17,8 @@ from nummus.models import (
 )
 from nummus.models.base import YIELD_PER
 
-
-class CategoryContext(TypedDict):
-    """Type definition for category context."""
-
-    uri: str | None
-    name: str
+if TYPE_CHECKING:
+    from sqlalchemy import orm
 
 
 def page() -> flask.Response:
@@ -32,11 +28,14 @@ def page() -> flask.Response:
         string HTML response
 
     """
-    return base.page(
-        "transaction-categories/page.jinja",
-        "Transaction categories",
-        groups=ctx_categories(),
-    )
+    p = web.portfolio
+
+    with p.begin_session() as s:
+        return base.page(
+            "transaction-categories/page.jinja",
+            "Transaction categories",
+            groups=ctx_categories(s),
+        )
 
 
 def new() -> str | flask.Response:
@@ -86,7 +85,7 @@ def new() -> str | flask.Response:
 
 
 def category(uri: str) -> str | flask.Response:
-    """GET, PUT, & DELETE /h/txn-categories/<uri>.
+    """GET, PUT, & DELETE /h/txn-categories/c/<uri>.
 
     Args:
         uri: TransactionCategory URI
@@ -203,33 +202,29 @@ def validation() -> str:
     raise NotImplementedError
 
 
-def ctx_categories() -> dict[TransactionCategoryGroup, list[CategoryContext]]:
+def ctx_categories(
+    s: orm.Session,
+) -> dict[TransactionCategoryGroup, list[base.NamePair]]:
     """Get the context required to build the categories table.
+
+    Args:
+        s: SQL session to use
 
     Returns:
         List of HTML context
 
     """
-    p = web.portfolio
-
-    with p.begin_session() as s:
-        groups: dict[TransactionCategoryGroup, list[CategoryContext]] = {
-            TransactionCategoryGroup.INCOME: [],
-            TransactionCategoryGroup.EXPENSE: [],
-            TransactionCategoryGroup.TRANSFER: [],
-            TransactionCategoryGroup.OTHER: [],
-        }
-        query = s.query(TransactionCategory).order_by(TransactionCategory.name)
-        for cat in query.yield_per(YIELD_PER):
-            cat_d: CategoryContext = {
-                "uri": cat.uri,
-                "name": cat.emoji_name,
-            }
-            if (
-                cat.group != TransactionCategoryGroup.OTHER
-                or cat.name == "uncategorized"
-            ):
-                groups[cat.group].append(cat_d)
+    groups: dict[TransactionCategoryGroup, list[base.NamePair]] = {
+        TransactionCategoryGroup.INCOME: [],
+        TransactionCategoryGroup.EXPENSE: [],
+        TransactionCategoryGroup.TRANSFER: [],
+        TransactionCategoryGroup.OTHER: [],
+    }
+    query = s.query(TransactionCategory).order_by(TransactionCategory.name)
+    for cat in query.yield_per(YIELD_PER):
+        cat_d = base.NamePair(cat.uri, cat.emoji_name)
+        if cat.group != TransactionCategoryGroup.OTHER or cat.name == "uncategorized":
+            groups[cat.group].append(cat_d)
 
     return groups
 

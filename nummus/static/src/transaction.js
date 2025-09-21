@@ -17,7 +17,7 @@ const txn = {
    */
   confirmDelete: function (evt) {
     dialog.confirm(
-      "Delete Transaction",
+      "Delete transaction",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");

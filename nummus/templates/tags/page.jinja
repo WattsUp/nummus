@@ -1,0 +1,51 @@
+<div
+  hx-get="{{ url_for('tags.page') }}"
+  hx-trigger="tag from:body"
+  hx-target="#main"
+>
+  <h1>Tags</h1>
+</div>
+<details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
+  <summary
+    class="bg-tertiary-container text-on-tertiary-container flex items-center gap-2 rounded-md p-2"
+  >
+    <icon>help</icon>
+    <span class="mr-auto">About tags</span>
+    <icon class="details-icon-open">keyboard_arrow_up</icon>
+    <icon class="details-icon-closed">keyboard_arrow_down</icon>
+  </summary>
+  <div class="prose mx-auto px-2">
+    <p>
+      Tag transactions to group them together even if they aren't the same
+      category. Then use
+      <a
+        href="{{ url_for('income.page') }}"
+        hx-get="{{ url_for('income.page') }}"
+        hx-disabled-elt="this"
+        hx-target="#main"
+        hx-swap="innerHTML show:window:top"
+        hx-push-url="true"
+      >
+        income
+      </a>
+      and
+      <a
+        href="{{ url_for('spending.page') }}"
+        hx-get="{{ url_for('spending.page') }}"
+        hx-disabled-elt="this"
+        hx-target="#main"
+        hx-swap="innerHTML show:window:top"
+        hx-push-url="true"
+      >
+        spending
+      </a>
+      pages to analyze the group.
+    </p>
+    <p>Common tags include specific vacations, projects, vehicles, etc.</p>
+  </div>
+</details>
+<div class="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-2">
+  {% for tag in tags %}
+    {% include "tags/tag-row.jinja" %}
+  {% endfor %}
+</div>

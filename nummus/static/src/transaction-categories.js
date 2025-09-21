@@ -18,7 +18,7 @@ const txnCat = {
    */
   confirmDelete: function (evt) {
     dialog.confirm(
-      "Delete Category",
+      "Delete category",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");

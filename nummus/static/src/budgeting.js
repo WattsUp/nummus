@@ -305,7 +305,7 @@ const budgeting = {
     } catch (error) {
       // There's a bug with self-ancestor
       // Hard to catch so add context to error next time it shows up
-      console.log(this.dragItem, items, before);
+      console.error(this.dragItem, items, before);
       console.error(error);
     }
 
@@ -506,7 +506,7 @@ const budgeting = {
    */
   confirmDelete(evt) {
     dialog.confirm(
-      "Delete Target",
+      "Delete target",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");

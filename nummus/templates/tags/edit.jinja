@@ -1,0 +1,40 @@
+{% with headline="Edit tag", save_url=url_for("tags.tag", uri=tag.uri) %}
+  {% include "shared/dialog-headline.jinja" %}
+{% endwith %}
+<form class="w-88 grid gap-2" onsubmit="return false">
+  <label class="input-outlined input-bg-surface-container-high">
+    <input
+      name="name"
+      required
+      value="{{ tag.name or '' }}"
+      placeholder=""
+      autocomplete="off"
+      spellcheck="true"
+      enterkeyhint="next"
+      hx-get="{{ url_for('tags.validation', uri=tag.uri) }}"
+      hx-trigger="input delay:200ms"
+      hx-target="next error"
+      hx-include="this"
+    />
+    <div>
+      <div>Name</div>
+    </div>
+    <div>
+      <error></error>
+    </div>
+  </label>
+  <button
+    class="btn-text-error mx-auto"
+    hx-delete="{{ url_for('tags.tag', uri=tag.uri) }}"
+    hx-trigger="delete"
+    hx-disabled-elt="this"
+    hx-target="#dialog-error"
+    onclick="tags.confirmDelete(event)"
+  >
+    Delete
+  </button>
+  <div id="dialog-error" class="status-error"></div>
+  <script>
+    dialog.onLoad();
+  </script>
+</form>
