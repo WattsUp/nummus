@@ -3,6 +3,7 @@
   hx-indicator="#performance-indicator"
   hx-target="#performance-chart-data"
   hx-swap-oob="{{ oob }}"
+  hx-include="this"
 >
   <div class="flex justify-around gap-2">
     {% for value, label in ctx.period_options.items() %}
@@ -16,37 +17,65 @@
       </button>
     {% endfor %}
   </div>
-  <div class="my-1 flex items-center gap-2">
-    <div class="bg-primary h-6 w-6 rounded"></div>
-    Portfolio TWRR
-  </div>
-  <div class="my-1 flex items-center gap-2">
-    <div class="bg-secondary h-6 w-6 rounded"></div>
-    Portfolio MWRR (interpolated)
-  </div>
-  <div class="my-1 flex items-center gap-2">
-    <div class="bg-tertiary h-6 w-6 rounded"></div>
-    <label class="input-outlined">
-      <select
-        name="index"
-        autocomplete="off"
-        hx-get="{{ url_for('performance.chart') }}"
-        hx-disabled-elt="this"
-      >
-        {% for index in ctx.indices %}
-          <option
-            value="{{ index }}"
-            {% if index == ctx.index %}selected{% endif %}
-          >
-            {{ index }}
-          </option>
-        {% endfor %}
-      </select>
-      <icon>balance</icon>
-      <div>
-        <div>Index</div>
+  <input name="period" type="hidden" value="{{ ctx.period }}" />
+  <div class="grid gap-2 md:grid-cols-[auto_1fr]">
+    <div>
+      <div class="my-1 flex items-center gap-2">
+        <div class="bg-primary h-6 w-6 rounded"></div>
+        Portfolio TWRR
       </div>
-    </label>
+      <div class="my-1 flex items-center gap-2">
+        <div class="bg-secondary h-6 w-6 rounded"></div>
+        Portfolio MWRR (interpolated)
+      </div>
+      <div class="my-1 flex items-center gap-2">
+        <div class="bg-tertiary h-6 w-6 rounded"></div>
+        <label class="input-outlined">
+          <select
+            name="index"
+            autocomplete="off"
+            hx-get="{{ url_for('performance.chart') }}"
+            hx-disabled-elt="this"
+          >
+            {% for index in ctx.indices %}
+              <option
+                value="{{ index }}"
+                {% if index == ctx.index %}selected{% endif %}
+              >
+                {{ index }}
+              </option>
+            {% endfor %}
+          </select>
+          <icon>balance</icon>
+          <div>
+            <div>Index</div>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div>
+      <h3 class="text-primary font-serif text-xl">Included accounts</h3>
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-2">
+        {% for account in ctx.accounts.options %}
+          <label class="checkbox inverse">
+            <input
+              name="exclude"
+              type="checkbox"
+              value="{{ account.uri }}"
+              {% if account.excluded %}
+                checked
+              {% endif %}
+              autocomplete="off"
+              hx-get="{{ url_for('performance.chart') }}"
+              hx-disabled-elt="this"
+            />
+            <icon>check_box</icon>
+            <icon>check_box_outline_blank</icon>
+            <div>{{ account.name }}</div>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
   </div>
   <details class="bg-surface-container-high mx-auto mb-2 max-w-2xl rounded-md">
     <summary

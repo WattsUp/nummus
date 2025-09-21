@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import datetime
 import math
+import operator
 from decimal import Decimal
-from typing import TYPE_CHECKING, TypedDict
+from typing import NamedTuple, TYPE_CHECKING, TypedDict
 
 import flask
 from sqlalchemy import func
@@ -33,6 +34,14 @@ class AccountContext(TypedDict):
     mwrr: Decimal | None
 
 
+class AccountOption(NamedTuple):
+    """Type definition for an account option."""
+
+    name: str
+    uri: str
+    excluded: bool
+
+
 class AccountsContext(TypedDict):
     """Type definition for Accounts context."""
 
@@ -42,6 +51,7 @@ class AccountsContext(TypedDict):
     pnl: Decimal
     mwrr: Decimal | None
     accounts: list[AccountContext]
+    options: list[AccountOption]
 
 
 class ChartData(base.ChartData):
@@ -83,6 +93,7 @@ def page() -> flask.Response:
             base.today_client(),
             args.get("period", base.DEFAULT_PERIOD),
             args.get("index", _DEFAULT_INDEX),
+            {Account.uri_to_id(uri) for uri in args.getlist("exclude")},
         )
     return base.page(
         "performance/page.jinja",
@@ -101,9 +112,16 @@ def chart() -> flask.Response:
     args = flask.request.args
     period = args.get("period", base.DEFAULT_PERIOD)
     index = args.get("index", _DEFAULT_INDEX)
+    excluded_accounts = args.getlist("exclude")
     p = web.portfolio
     with p.begin_session() as s:
-        ctx = ctx_chart(s, base.today_client(), period, index)
+        ctx = ctx_chart(
+            s,
+            base.today_client(),
+            period,
+            index,
+            {Account.uri_to_id(uri) for uri in excluded_accounts},
+        )
     html = flask.render_template(
         "performance/chart-data.jinja",
         ctx=ctx,
@@ -118,6 +136,7 @@ def chart() -> flask.Response:
         _external=False,
         period=period,
         index=index,
+        exclude=excluded_accounts,
     )
     return response
 
@@ -179,6 +198,7 @@ def ctx_chart(
     today: datetime.date,
     period: str,
     index: str,
+    excluded_accounts: set[int],
 ) -> Context:
     """Get the context to build the performance chart.
 
@@ -187,6 +207,7 @@ def ctx_chart(
         today: Today's date
         period: Selected chart period
         index: Selected index to compare against
+        excluded_accounts: Selected accounts to excluded
 
     Returns:
         Dictionary HTML context
@@ -219,7 +240,18 @@ def ctx_chart(
     )
 
     query = s.query(Account).where(Account.id_.in_(acct_ids))
-    acct_ids = [acct.id_ for acct in query.all() if acct.do_include(start_ord)]
+    mapping: dict[int, str] = {}
+    acct_ids.clear()
+    account_options: list[AccountOption] = []
+    for acct in query.all():
+        if acct.do_include(start_ord):
+            excluded = acct.id_ in excluded_accounts
+            account_options.append(
+                AccountOption(acct.name, acct.uri, excluded=excluded),
+            )
+            if not excluded:
+                mapping[acct.id_] = acct.name
+                acct_ids.add(acct.id_)
 
     acct_values, acct_profits, _ = Account.get_value_all(
         s,
@@ -238,8 +270,6 @@ def ctx_chart(
     mwrr = utils.mwrr(total, total_profit)
 
     index_twrr = Asset.index_twrr(s, index, start_ord, end_ord)
-
-    mapping = Account.map_name(s)
 
     sum_cash_flow = Decimal(0)
 
@@ -291,6 +321,7 @@ def ctx_chart(
         "pnl": total_profit[-1],
         "mwrr": mwrr,
         "accounts": ctx_accounts,
+        "options": sorted(account_options, key=operator.itemgetter(0)),
     }
 
     return {

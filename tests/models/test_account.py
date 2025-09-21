@@ -81,6 +81,22 @@ def test_get_asset_qty_empty(
     assert result == {}
 
 
+def test_get_asset_qty_none(
+    today_ord: int,
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    _ = account
+    _ = transactions
+    start_ord = today_ord - 3
+    end_ord = today_ord + 3
+
+    result = Account.get_asset_qty_all(session, start_ord, end_ord, set())
+    # defaultdict is correct length
+    assert result[0][0] == [Decimal()] * 7
+
+
 def test_get_asset_qty(
     today_ord: int,
     account: Account,
@@ -134,6 +150,26 @@ def test_get_value_empty(
     assert values == {}
     assert profits == {}
     assert assets == {}
+
+
+def test_get_value_none(
+    today_ord: int,
+    session: orm.Session,
+    account: Account,
+    transactions: list[Transaction],
+) -> None:
+    _ = account
+    _ = transactions
+    start_ord = today_ord - 3
+    end_ord = today_ord + 3
+
+    values, profits, assets = Account.get_value_all(session, start_ord, end_ord, set())
+    assert values == {}
+    assert profits == {}
+    assert assets == {}
+
+    # defaultdict is correct length
+    assert assets[0] == [Decimal()] * 7
 
 
 def test_get_value(

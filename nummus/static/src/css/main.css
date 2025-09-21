@@ -25,6 +25,7 @@
 @custom-variant open (&:where(.open, .open *));
 @custom-variant error (&:where(.error, .error *));
 @custom-variant edit (&:where(.edit, .edit *));
+@custom-variant inverse (&:where(.inverse, .inverse *));
 
 @theme {
   --color-*: initial;

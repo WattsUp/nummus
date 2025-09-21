@@ -144,6 +144,12 @@ class Account(Base):
         """
         n = end_ord - start_ord + 1
 
+        if not ids and ids is not None:
+            acct_values = defaultdict(lambda: [Decimal()] * n)
+            acct_profit = defaultdict(lambda: [Decimal()] * n)
+            asset_values = defaultdict(lambda: [Decimal()] * n)
+            return ValueResultAll(acct_values, acct_profit, asset_values)
+
         cash_flow_accounts: dict[int, list[Decimal | None]] = defaultdict(
             lambda: [None] * n,
         )
@@ -470,6 +476,11 @@ class Account(Base):
 
         """
         n = end_ord - start_ord + 1
+
+        if not ids and ids is not None:
+            return defaultdict(
+                lambda: defaultdict(lambda: [Decimal()] * n),
+            )
 
         iv_accounts: dict[int, dict[int, Decimal]] = defaultdict(dict)
         ids = ids or {r[0] for r in s.query(Account.id_).all()}
