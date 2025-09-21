@@ -29,13 +29,14 @@ class Import(BaseCommand):
         *,
         force: bool,
     ) -> None:
-        """Initize import command.
+        """Initialize import command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             paths: List of files or directories to import
             force: True will not check for already imported files
+
         """
         super().__init__(path_db, path_password)
         self._paths = [path.expanduser() for path in paths]
@@ -115,6 +116,7 @@ class Import(BaseCommand):
         Args:
             tar_ver: Target version to restore
             path_debug: Path to debug file
+
         """
         from nummus import portfolio
 

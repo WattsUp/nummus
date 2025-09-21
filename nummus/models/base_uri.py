@@ -35,6 +35,7 @@ class Cipher:
             keys: List of keys
             sbox: Substitution box
             pbox: Permutation box
+
         """
         self._keys = keys
         self._keys_rev = keys[::-1]
@@ -61,6 +62,7 @@ class Cipher:
 
         Raises:
             ValueError: if box is not properly defined
+
         """
         # Validate box is a box
         n = len(box)
@@ -88,6 +90,7 @@ class Cipher:
 
         Returns:
             i with each byte shuffled
+
         """
         out = 0
         for _ in range(ID_BYTES):
@@ -105,6 +108,7 @@ class Cipher:
 
         Returns:
             i with each bit shuffled
+
         """
         n_bin = format(n, f"0{ID_BITS}b")
 
@@ -120,6 +124,7 @@ class Cipher:
 
         Returns:
             Cipher text number
+
         """
         n = pt
         for i in range(_ROUNDS):
@@ -136,6 +141,7 @@ class Cipher:
 
         Returns:
             Plain text number
+
         """
         n = ct
         n ^= self._keys_rev[0]
@@ -151,6 +157,7 @@ class Cipher:
 
         Returns:
             Generated Cipher
+
         """
         keys = [
             int.from_bytes(secrets.token_bytes(ID_BYTES), _ORDER)
@@ -170,6 +177,7 @@ class Cipher:
 
         Returns:
             String of bytes containing keys and boxes
+
         """
         buf = [k.to_bytes(ID_BYTES, _ORDER) for k in self._keys]
         buf.extend((bytes(self._sbox), bytes(self._pbox)))
@@ -189,6 +197,7 @@ class Cipher:
         Raises:
             TypeError: if buf is not bytes
             ValueError: if Cipher fails to load
+
         """
         if not isinstance(buf, bytes):
             msg = f"Expected bytes, got: {type(buf)}"
@@ -215,6 +224,7 @@ def load_cipher(buf: bytes) -> None:
 
     Args:
         buf: Bytes to load
+
     """
     global _CIPHER  # noqa: PLW0603
     _CIPHER = Cipher.from_bytes(buf)
@@ -228,6 +238,7 @@ def id_to_uri(id_: int) -> str:
 
     Returns:
         URI, hex encoded, 1:1 mapping
+
     """
     return _CIPHER.encode(id_).to_bytes(ID_BYTES, _ORDER).hex()
 
@@ -243,6 +254,7 @@ def uri_to_id(uri: str) -> int:
 
     Raises:
         InvalidURIError: if uri is not the correct length
+
     """
     if len(uri) != URI_BYTES:
         msg = f"URI is not {URI_BYTES} bytes long: {uri}"

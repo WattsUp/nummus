@@ -71,6 +71,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     p = web.portfolio
@@ -93,6 +94,7 @@ def chart() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     args = flask.request.args
     period = args.get("period", base.DEFAULT_PERIOD)
@@ -123,6 +125,7 @@ def dashboard() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -185,6 +188,7 @@ def ctx_chart(
 
     Returns:
         Dictionary HTML context
+
     """
     start, end = base.parse_period(period, today)
 

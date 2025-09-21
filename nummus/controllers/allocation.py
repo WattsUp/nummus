@@ -73,6 +73,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -92,6 +93,7 @@ def ctx_allocation(s: orm.Session, today: datetime.date) -> AllocationContext:
 
     Returns:
         Dictionary HTML context
+
     """
     today_ord = today.toordinal()
 

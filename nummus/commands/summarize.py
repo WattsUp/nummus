@@ -63,12 +63,13 @@ class Summarize(BaseCommand):
         *,
         include_all: bool,
     ) -> None:
-        """Initize summarize command.
+        """Initialize summarize command.
 
         Args:
             path_db: Path to Portfolio DB to create
             path_password: Path to password file, None will prompt when necessary
             include_all: True will include all accounts and assets
+
         """
         super().__init__(path_db, path_password)
         self._include_all = include_all
@@ -97,6 +98,7 @@ class Summarize(BaseCommand):
 
         Returns:
             Dictionary of statistics
+
         """
         # Defer for faster time to main
         from sqlalchemy import func
@@ -224,6 +226,7 @@ class Summarize(BaseCommand):
 
         Args:
             summary: Summary dictionary
+
         """
         # Defer for faster time to main
         from nummus import utils

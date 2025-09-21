@@ -16,6 +16,7 @@ class EncryptionInterface(ABC):
         Args:
             key: encryption key
             config: Encryption config string
+
         """
         key = key.encode() if isinstance(key, str) else bytes(key)
         config = config.encode() if isinstance(config, str) else bytes(config)
@@ -32,6 +33,7 @@ class EncryptionInterface(ABC):
 
         Returns:
             (Encryption object, encryption config string)
+
         """
         raise NotImplementedError
 
@@ -50,6 +52,7 @@ class EncryptionInterface(ABC):
 
         Returns:
             base64 encoded encrypted object
+
         """
         raise NotImplementedError
 
@@ -62,6 +65,7 @@ class EncryptionInterface(ABC):
 
         Returns:
             bytes decoded object
+
         """
         raise NotImplementedError
 
@@ -74,6 +78,7 @@ class EncryptionInterface(ABC):
 
         Returns:
             decoded string
+
         """
         raise NotImplementedError
 

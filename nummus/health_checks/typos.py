@@ -48,6 +48,7 @@ class Typos(Base):
             p: Portfolio to test
             no_ignores: True will print issues that have been ignored
             no_description_typos: True will not check descriptions or memos for typos
+
         """
         super().__init__(no_ignores=no_ignores)
         self._no_description_typos = no_description_typos

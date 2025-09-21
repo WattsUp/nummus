@@ -72,6 +72,7 @@ def build_bundles(app: flask.Flask, *, force: bool = False) -> None:
     Raises:
         FileNotFoundError: If source does not exists and neither does dist
         FileNotFoundError: If source does not exists and debug == True
+
     """
     env_assets = flask_assets.Environment(app)
     stub_dist_css = "dist/main.css"

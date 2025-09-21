@@ -105,6 +105,7 @@ def page_all() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     include_unheld = "include-unheld" in flask.request.args
@@ -133,6 +134,7 @@ def page(uri: str) -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -160,6 +162,7 @@ def new() -> str | flask.Response:
 
     Returns:
         HTML response
+
     """
     if flask.request.method == "GET":
         ctx: AssetContext = {
@@ -212,6 +215,7 @@ def asset(uri: str) -> str | werkzeug.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -264,6 +268,7 @@ def performance(uri: str) -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -297,6 +302,7 @@ def table(uri: str) -> str | flask.Response:
 
     Returns:
         HTML response with url set
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -339,6 +345,7 @@ def validation() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     # dict{key: (required, prop if unique required)}
@@ -399,6 +406,7 @@ def new_valuation(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     today = base.today_client()
     date_max = today + datetime.timedelta(days=utils.DAYS_IN_WEEK)
@@ -458,6 +466,7 @@ def valuation(uri: str) -> str | flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     today = base.today_client()
@@ -519,6 +528,7 @@ def update() -> str | flask.Response:
 
     Returns:
         HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -571,6 +581,7 @@ def ctx_rows(
 
     Returns:
         dict{AssetContext, list[Assets]}
+
     """
     categories: dict[AssetCategory, list[RowContext]] = defaultdict(list)
 
@@ -634,6 +645,7 @@ def ctx_asset(
 
     Returns:
         Dictionary HTML context
+
     """
     valuation = (
         s.query(AssetValuation)
@@ -686,6 +698,7 @@ def ctx_performance(
 
     Returns:
         Dictionary HTML context
+
     """
     period = period or "1yr"
     start, end = base.parse_period(period, today)
@@ -734,6 +747,7 @@ def ctx_table(
 
     Returns:
         Dictionary HTML context, title of page
+
     """
     page_start = None if page is None else datetime.date.fromisoformat(page).toordinal()
 

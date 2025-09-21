@@ -41,6 +41,7 @@ class Migrator(ABC):
 
         Returns:
             List of comments to display to user
+
         """
 
     @classproperty
@@ -49,6 +50,7 @@ class Migrator(ABC):
 
         Returns:
             Version
+
         """
         return Version(self._VERSION)
 
@@ -66,6 +68,7 @@ class Migrator(ABC):
             model: Table to modify
             column: Column to add
             initial_value: Value to set all rows to
+
         """
         engine = s.get_bind().engine
 
@@ -93,6 +96,7 @@ class Migrator(ABC):
             model: Table to modify
             old_name: Current name of column
             new_name: New name of column
+
         """
         old_name = sql.escape(old_name)
         new_name = sql.escape(new_name)
@@ -115,6 +119,7 @@ class Migrator(ABC):
             s: SQL session to use
             model: Table to modify
             col_name: Name of column to drop
+
         """
         constraints = get_constraints(s, model)
         if any(col_name in sql_text for _, sql_text in constraints):
@@ -143,6 +148,7 @@ class Migrator(ABC):
             drop: Set of column names to drop
             create_stmt: Statement to execute to create new table,
                 None will modify existing config
+
         """
         drop = drop or set()
         # In SQLite we can do the hacky way or recreate the table
@@ -208,6 +214,7 @@ class SchemaMigrator(Migrator):
 
         Args:
             pending_schema_updates: Models to update schema for
+
         """
         super().__init__()
         self.pending_schema_updates = pending_schema_updates

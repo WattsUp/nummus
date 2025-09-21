@@ -14,6 +14,7 @@ def page_dashboard() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     return base.page("page.jinja", "Dashboard")
 
@@ -24,6 +25,7 @@ def page_status() -> str:
 
     Returns:
         string HTML response
+
     """
     return "ok"
 
@@ -33,6 +35,7 @@ def page_style_test() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     return base.page(
         "shared/style-test.jinja",
@@ -45,6 +48,7 @@ def favicon() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     path = Path(flask.current_app.static_folder or "static") / "img" / "favicon.ico"
     return flask.send_file(path)

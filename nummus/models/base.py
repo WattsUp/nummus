@@ -37,6 +37,7 @@ class Base(orm.DeclarativeBase):
     Attributes:
         id_: Primary key identifier, unique
         uri: Uniform Resource Identifier, unique
+
     """
 
     @orm.declared_attr  # type: ignore[attr-defined]
@@ -61,6 +62,7 @@ class Base(orm.DeclarativeBase):
 
         Raises:
             NoURIError: If class does not have a table_id
+
         """
         if cls.__table_id__ is None:
             msg = f"{cls.__name__} does not have table_id"
@@ -79,6 +81,7 @@ class Base(orm.DeclarativeBase):
 
         Raises:
             WrongURITypeError: If URI does not belong to class
+
         """
         id_ = base_uri.uri_to_id(uri)
         table_id = id_ & base_uri.MASK_TABLE
@@ -93,6 +96,7 @@ class Base(orm.DeclarativeBase):
 
         Raises:
             NoIDError: If object does not have id_
+
         """
         if self.id_ is None:
             msg = f"{self.__class__.__name__} does not have an id_, maybe flush"
@@ -120,7 +124,7 @@ class Base(orm.DeclarativeBase):
 
     @classmethod
     def map_name(cls, s: orm.Session) -> dict[int, str]:
-        """Mapping between id and names.
+        """Get mapping between id and names.
 
         Args:
             s: SQL session to use
@@ -130,6 +134,7 @@ class Base(orm.DeclarativeBase):
 
         Raises:
             KeyError: if model does not have name property
+
         """
         if not hasattr(cls, "name"):
             msg = f"{cls.__name__} does not have name column"
@@ -146,7 +151,7 @@ class Base(orm.DeclarativeBase):
         *,
         short_check: bool = True,
     ) -> str | None:
-        """Cleans and validates string fields.
+        """Clean and validates string fields.
 
         Args:
             key: Field being updated
@@ -158,6 +163,7 @@ class Base(orm.DeclarativeBase):
 
         Raises:
             InvalidORMValueError: if field is too short
+
         """
         if field is None:
             return None
@@ -173,7 +179,7 @@ class Base(orm.DeclarativeBase):
 
     @classmethod
     def clean_decimals(cls, key: str, field: Decimal | None) -> Decimal | None:
-        """Validates decimals are truncated to their SQL precision.
+        """Validate decimals are truncated to their SQL precision.
 
         Args:
             key: Field being updated
@@ -181,6 +187,7 @@ class Base(orm.DeclarativeBase):
 
         Returns:
             field
+
         """
         # Call truncate using the proper Decimal precision
         return getattr(cls, key).type.truncate(field)
@@ -194,6 +201,7 @@ class Base(orm.DeclarativeBase):
 
         Returns:
             s without emojis and in lowercase
+
         """
         return utils.strip_emojis(s).strip().lower()
 
@@ -216,6 +224,7 @@ class BaseEnum(enum.IntEnum):
 
         Returns:
             Dictionary {alternate names for enums: Enum}
+
         """
         return {}  # pragma: no cover
 
@@ -264,6 +273,7 @@ class SQLEnum(types.TypeDecorator):
             enum_type: BaseEnum this column is
             args: Passed to super
             kwargs: Passed to super
+
         """
         super().__init__(*args, **kwargs)
 
@@ -283,6 +293,7 @@ class SQLEnum(types.TypeDecorator):
 
         Returns:
             SQL side representation of value
+
         """
         if value is None:
             return None
@@ -302,6 +313,7 @@ class SQLEnum(types.TypeDecorator):
 
         Returns:
             Python side representation of value
+
         """
         if value is None:
             return None
@@ -332,6 +344,7 @@ class Decimal6(types.TypeDecorator):
 
         Returns:
             SQL side representation of value
+
         """
         if value is None:
             return None
@@ -351,6 +364,7 @@ class Decimal6(types.TypeDecorator):
 
         Returns:
             Python side representation of value
+
         """
         if value is None:
             return None
@@ -365,6 +379,7 @@ class Decimal6(types.TypeDecorator):
 
         Returns:
             Decimal -> SQL integer -> Decimal
+
         """
         if value is None:
             return None
@@ -395,6 +410,7 @@ def string_column_args(
 
     Returns:
         Tuple of constraints
+
     """
     name_col = f"`{name}`" if name in sql.compiler.RESERVED_WORDS else name
     checks = [

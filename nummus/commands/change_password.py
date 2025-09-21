@@ -25,13 +25,14 @@ class ChangePassword(BaseCommand):
         path_password: Path | None,
         path_password_new: Path | None,
     ) -> None:
-        """Initize create command.
+        """Initialize create command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             path_password_new: Path to new password file,
                 None will prompt when necessary
+
         """
         super().__init__(path_db, path_password)
         self._path_password_new = path_password_new

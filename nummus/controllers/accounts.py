@@ -108,6 +108,7 @@ def page_all() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -127,6 +128,7 @@ def page(uri: str) -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     today = base.today_client()
@@ -173,6 +175,7 @@ def new() -> str | flask.Response:
 
     Returns:
         HTML response
+
     """
     if flask.request.method == "GET":
         ctx: AccountContext = {
@@ -233,6 +236,7 @@ def account(uri: str) -> str | werkzeug.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     today = base.today_client()
@@ -285,6 +289,7 @@ def performance(uri: str) -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -320,6 +325,7 @@ def validation() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
 
@@ -366,6 +372,7 @@ def ctx_account(
 
     Returns:
         Dictionary HTML context
+
     """
     today_ord = today.toordinal()
     if skip_today:
@@ -447,6 +454,7 @@ def ctx_performance(
 
     Returns:
         Dictionary HTML context
+
     """
     period = period or "1yr"
     start, end = base.parse_period(period, today)
@@ -523,6 +531,7 @@ def ctx_assets(
 
     Returns:
         Dictionary HTML context
+
     """
     today_ord = today.toordinal()
     start_ord = acct.opened_on_ord or today_ord
@@ -633,6 +642,7 @@ def ctx_accounts(
 
     Returns:
         AllAccountsContext
+
     """
     # Create sidebar context
     today_ord = today.toordinal()
@@ -759,6 +769,7 @@ def txns(uri: str) -> str | flask.Response:
 
     Returns:
         HTML response
+
     """
     p = web.portfolio
     args = flask.request.args
@@ -814,6 +825,7 @@ def txns_options(uri: str) -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:

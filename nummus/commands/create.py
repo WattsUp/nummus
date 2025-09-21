@@ -29,13 +29,14 @@ class Create(BaseCommand):
         force: bool,
         no_encrypt: bool,
     ) -> None:
-        """Initize create command.
+        """Initialize create command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             force: True will overwrite existing if necessary
             no_encrypt: True will not encrypt the Portfolio
+
         """
         super().__init__(path_db, path_password, do_unlock=False)
         self._force = force

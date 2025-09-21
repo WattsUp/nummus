@@ -26,10 +26,11 @@ _ENGINE_ARGS: dict[str, object] = {}
 
 @sqlalchemy.event.listens_for(sqlalchemy.engine.Engine, "connect")
 def set_sqlite_pragma(db_connection: sqlite3.Connection, *_) -> None:
-    """Hook to set PRAGMA upon opening SQLite connection.
+    """Set PRAGMA upon opening SQLite connection.
 
     Args:
         db_connection: Connection to SQLite DB
+
     """
     cursor = db_connection.cursor()
     cursor.execute("PRAGMA foreign_keys=ON")
@@ -51,6 +52,7 @@ def get_engine(
 
     Returns:
         sqlalchemy.Engine
+
     """
     # Cannot support in-memory DB cause every transaction closes it
     if enc is not None:
@@ -76,5 +78,6 @@ def escape(s: str) -> str:
 
     Returns:
         `s` if escaping is needed else s
+
     """
     return f"`{s}`" if s in sqlalchemy.sql.compiler.RESERVED_WORDS else s

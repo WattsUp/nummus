@@ -66,6 +66,7 @@ class DuplicateURLError(Exception):
         Args:
             url: Duplicate URL
             endpoint: Attempted endpoint
+
         """
         msg = f"Already have a route on {url}, cannot add {endpoint}"
         super().__init__(msg)
@@ -80,6 +81,7 @@ class FileAlreadyImportedError(Exception):
         Args:
             date: Date on which file was already imported
             path: Path to duplicate file
+
         """
         self.date = date
         msg = f"Already imported {path} on {date}"
@@ -94,6 +96,7 @@ class UnknownImporterError(Exception):
 
         Args:
             path: Path to unknown file
+
         """
         msg = f"Unknown importer for {path}"
         super().__init__(msg)
@@ -108,6 +111,7 @@ class EmptyImportError(Exception):
         Args:
             path: Path to empty file
             importer: Importer used on file
+
         """
         self.importer = importer.__class__.__name__
         msg = (
@@ -126,6 +130,7 @@ class FailedImportError(Exception):
         Args:
             path: Path to empty file
             importer: Importer used on file
+
         """
         self.importer = importer.__class__.__name__
         msg = f"{importer.__class__.__name__} failed to import {path}"

@@ -127,6 +127,7 @@ def metadata_create_all(s: orm.Session) -> None:
 
     Args:
         s: Session to create tables for
+
     """
     Base.metadata.create_all(s.get_bind(), [m.__table__ for m in _MODELS])  # type: ignore[attr-defined]
     s.commit()

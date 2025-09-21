@@ -25,11 +25,12 @@ class Clean(BaseCommand):
         path_db: Path,
         path_password: Path | None,
     ) -> None:
-        """Initize clean command.
+        """Initialize clean command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
+
         """
         super().__init__(path_db, path_password)
 

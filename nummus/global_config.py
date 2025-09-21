@@ -31,6 +31,7 @@ def get(key: ConfigKey | str | None = None) -> str | dict[ConfigKey, str]:
     Returns:
         String value of key or all as a dict{key: value} if key not given
         Will return default value if configuration does not exist
+
     """
     if len(_CACHE) == 0:
         config = configparser.ConfigParser()

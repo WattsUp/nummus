@@ -39,6 +39,7 @@ def page() -> flask.Response:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -54,6 +55,7 @@ def refresh() -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -72,6 +74,7 @@ def ignore(uri: str) -> str:
 
     Returns:
         string HTML response
+
     """
     p = web.portfolio
     with p.begin_session() as s:
@@ -97,6 +100,7 @@ def ctx_checks(s: orm.Session, *, run: bool) -> HealthContext:
 
     Returns:
         Dictionary HTML context
+
     """
     utc_now = datetime.datetime.now(datetime.UTC)
 

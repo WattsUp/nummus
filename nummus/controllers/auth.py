@@ -27,6 +27,7 @@ def login_exempt(func: Callable) -> Callable:
 
     Returns:
         Decorated function
+
     """
     func.login_exempt = True  # type: ignore[attr-defined]
     return func
@@ -37,6 +38,7 @@ def default_login_required() -> flask.Response | None:
 
     Returns:
         Response if redirect is required
+
     """
     endpoint = flask.request.endpoint
     if not endpoint or endpoint.rsplit(".", 1)[-1] == "static":
@@ -70,6 +72,7 @@ def get_user(username: str) -> flask_login.UserMixin | flask_login.AnonymousUser
 
     Returns:
         User object or Anonymous
+
     """
     if username != WebUser.ID:  # pragma: no cover
         # Don't need to test anonymous
@@ -83,6 +86,7 @@ def page_login() -> str | werkzeug.Response:
 
     Returns:
         HTML response
+
     """
     next_url = flask.request.args.get("next")
     if flask_login.current_user.is_authenticated:
@@ -114,6 +118,7 @@ def login() -> str | werkzeug.Response:
 
     Raises:
         ProtectedObjectNotFoundError: If WEB_KEY not found
+
     """
     p = web.portfolio
     form = flask.request.form
@@ -147,6 +152,7 @@ def logout() -> str | werkzeug.Response:
 
     Returns:
         HTML response
+
     """
     flask_login.logout_user()
     return flask.redirect(flask.url_for("auth.page_login"))

@@ -49,6 +49,7 @@ class TransactionImporter(ABC):
 
         Raises:
             NoImporterBufferError: If both bufs are None
+
         """
         super().__init__()
 
@@ -75,6 +76,7 @@ class TransactionImporter(ABC):
 
         Returns:
             True if file is importable
+
         """
         raise NotImplementedError
 
@@ -86,5 +88,6 @@ class TransactionImporter(ABC):
             List of transaction as dictionaries, key mapping to Transaction
             properties. Accounts, Assets, and TransactionCategories referred to by
             name since ID is unknown here.
+
         """
         raise NotImplementedError

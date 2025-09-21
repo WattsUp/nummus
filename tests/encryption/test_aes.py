@@ -27,6 +27,7 @@ def key(rand_str_generator: RandomStringGenerator) -> str:
 
     Returns:
         key
+
     """
     return rand_str_generator()
 
@@ -37,6 +38,7 @@ def secret(rand_str_generator: RandomStringGenerator) -> str:
 
     Returns:
         secret
+
     """
     return rand_str_generator()
 
@@ -47,6 +49,7 @@ def encryption(key: str) -> tuple[EncryptionInterface, bytes]:
 
     Returns:
         tuple(Encryption, Encryption config)
+
     """
     return Encryption.create(key)
 
@@ -57,6 +60,7 @@ def secret_encrypted(encryption: tuple[EncryptionInterface, bytes], secret: str)
 
     Returns:
         Encrypted secret
+
     """
     return encryption[0].encrypt(secret)
 

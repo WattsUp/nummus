@@ -15,6 +15,7 @@ class HealthCheckIssue(Base):
         value: Identifier of failure
         msg: User message of failure
         ignore: True will ignore this issue
+
     """
 
     __table_id__ = 0x00000000
@@ -32,7 +33,7 @@ class HealthCheckIssue(Base):
 
     @orm.validates("check", "value")
     def validate_strings(self, key: str, field: str | None) -> str | None:
-        """Validates string fields satisfy constraints.
+        """Validate string fields satisfy constraints.
 
         Args:
             key: Field being updated
@@ -40,5 +41,6 @@ class HealthCheckIssue(Base):
 
         Returns:
             field
+
         """
         return self.clean_strings(key, field, short_check=key != "value")

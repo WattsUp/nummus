@@ -28,12 +28,13 @@ class UpdateAssets(BaseCommand):
         *,
         no_bars: bool,
     ) -> None:
-        """Initize update-assets command.
+        """Initialize update-assets command.
 
         Args:
             path_db: Path to Portfolio DB
             path_password: Path to password file, None will prompt when necessary
             no_bars: True will disable progress bars
+
         """
         super().__init__(path_db, path_password)
         self._no_bars = no_bars

@@ -37,7 +37,7 @@ class Export(BaseCommand):
         *,
         no_bars: bool,
     ) -> None:
-        """Initize export command.
+        """Initialize export command.
 
         Args:
             path_db: Path to Portfolio DB
@@ -46,6 +46,7 @@ class Export(BaseCommand):
             start: Start date to filter transactions
             end: End date to filter transactions
             no_bars: True will disable progress bars
+
         """
         super().__init__(path_db, path_password)
         self._csv_path = csv_path
@@ -124,6 +125,7 @@ def write_csv(
 
     Returns:
         Number of transactions exported
+
     """
     # Defer for faster time to main
     import tqdm
