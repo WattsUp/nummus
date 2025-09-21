@@ -16,6 +16,7 @@ const performance = {
     const indexName = raw.index_name;
     const indexMin = raw.index_min && raw.index_min.map((v) => Number(v) * 100);
     const indexMax = raw.index_max && raw.index_max.map((v) => Number(v) * 100);
+    const mwrr = raw.mwrr && raw.mwrr.map((v) => Number(v) * 100);
 
     {
       const canvas = document.getElementById("performance-chart-canvas");
@@ -39,6 +40,16 @@ const performance = {
           data: index,
           borderColorRaw: "tertiary",
           backgroundColorRaw: ["tertiary-container", "80"],
+          borderWidth: 2,
+          pointRadius: 0,
+          hoverRadius: 0,
+        });
+        datasets.push({
+          label: "MWRR Interpolation",
+          type: "line",
+          data: mwrr,
+          borderColorRaw: "secondary",
+          backgroundColorRaw: ["secondary-container", "80"],
           borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
@@ -105,6 +116,16 @@ const performance = {
           borderColorRaw: "tertiary",
           backgroundColorRaw: ["tertiary-container", "80"],
           borderWidth: 0,
+          pointRadius: 0,
+          hoverRadius: 0,
+        });
+        datasets.push({
+          label: "MWRR Interpolation",
+          type: "line",
+          data: mwrr,
+          borderColorRaw: "secondary",
+          backgroundColorRaw: ["secondary-container", "80"],
+          borderWidth: 2,
           pointRadius: 0,
           hoverRadius: 0,
         });

@@ -41,6 +41,7 @@ def test_ctx_chart_empty(
         "index_name": "S&P 500",
         "index_min": None,
         "index_max": None,
+        "mwrr": [Decimal()],
     }
 
     accounts: performance.AccountsContext = {
@@ -115,6 +116,7 @@ def test_ctx_chart(
         "index_name": "S&P 500",
         "index_min": None,
         "index_max": None,
+        "mwrr": None,
     }
 
     accounts: performance.AccountsContext = {

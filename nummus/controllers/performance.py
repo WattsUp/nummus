@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import math
 from decimal import Decimal
 from typing import TYPE_CHECKING, TypedDict
 
@@ -50,6 +51,7 @@ class ChartData(base.ChartData):
     index_name: str
     index_min: list[Decimal] | None
     index_max: list[Decimal] | None
+    mwrr: list[Decimal] | None
 
 
 class Context(TypedDict):
@@ -262,7 +264,16 @@ def ctx_chart(
         sum_cash_flow += cash_flow
     ctx_accounts = sorted(ctx_accounts, key=lambda item: -item["end"])
 
-    data_twrr, data_index = base.chart_data(start_ord, end_ord, (twrr, index_twrr))
+    if mwrr is None:
+        mwrr_interpolation = [Decimal()] * len(twrr)
+    else:
+        r = Decimal(math.log(mwrr + 1)) / utils.DAYS_IN_YEAR
+        mwrr_interpolation = [Decimal(math.exp(i * r) - 1) for i in range(len(twrr))]
+    data_twrr, data_index, data_mwrr = base.chart_data(
+        start_ord,
+        end_ord,
+        (twrr, index_twrr, mwrr_interpolation),
+    )
 
     chart: ChartData = {
         **data_twrr,
@@ -270,6 +281,7 @@ def ctx_chart(
         "index_name": index,
         "index_min": data_index["min"],
         "index_max": data_index["max"],
+        "mwrr": None if mwrr is None else data_mwrr["avg"],
     }
 
     accounts: AccountsContext = {
