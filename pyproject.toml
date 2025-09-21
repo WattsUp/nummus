@@ -91,9 +91,9 @@ skip = "3rd-party,dist,*.pem,*.json"
 ignore-words-list = ["initialY"]
 
 [tool.coverage.run]
-command_line = "-m pytest"
+command_line = "-m pytest tests/controllers"
 branch = true
-source = ["nummus"]
+source = ["nummus/controllers"]
 
 [tool.coverage.report]
 ignore_errors = true

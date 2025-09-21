@@ -80,7 +80,7 @@ def tag(uri: str) -> str | flask.Response:
             return base.error(e)
 
         return base.dialog_swap(
-            event="category",
+            event="tag",
             snackbar="All changes saved",
         )
 
