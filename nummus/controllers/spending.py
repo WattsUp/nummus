@@ -13,9 +13,9 @@ from nummus import utils, web
 from nummus.controllers import base
 from nummus.models import (
     Account,
+    Label,
+    LabelLink,
     query_count,
-    Tag,
-    TagLink,
     TransactionCategory,
     TransactionCategoryGroup,
     TransactionSplit,
@@ -35,7 +35,7 @@ class OptionsContext(TypedDict):
     options_period: list[base.NamePair]
     options_account: list[base.NamePair]
     options_category: base.CategoryGroups
-    options_tag: list[base.NamePair]
+    options_label: list[base.NamePair]
 
 
 class Context(OptionsContext):
@@ -45,13 +45,13 @@ class Context(OptionsContext):
     selected_period: str | None
     selected_account: str | None
     selected_category: str | None
-    selected_tag: str | None
+    selected_label: str | None
     start: str | None
     end: str | None
     by_account: list[tuple[str, Decimal]]
     by_payee: list[tuple[str, Decimal]]
     by_category: list[tuple[str, Decimal]]
-    by_tag: list[tuple[str | None, Decimal]]
+    by_label: list[tuple[str | None, Decimal]]
 
 
 class DataQuery(NamedTuple):
@@ -83,7 +83,7 @@ def page() -> flask.Response:
             today,
             args.get("account"),
             args.get("category"),
-            args.get("tag"),
+            args.get("label"),
             args.get("period", str(today.year)),
             args.get("start"),
             args.get("end"),
@@ -114,7 +114,7 @@ def chart() -> flask.Response:
             today,
             args.get("account"),
             args.get("category"),
-            args.get("tag"),
+            args.get("label"),
             args.get("period", str(today.year)),
             args.get("start"),
             args.get("end"),
@@ -176,7 +176,7 @@ def data_query(
     selected_start: str | None = None,
     selected_end: str | None = None,
     selected_category: str | None = None,
-    selected_tag: str | None = None,
+    selected_label: str | None = None,
     *,
     is_income: bool,
 ) -> DataQuery:
@@ -189,7 +189,7 @@ def data_query(
         selected_start: ISO date string of start from args
         selected_end: ISO date string of end from args
         selected_category: URI of category from args
-        selected_tag: URI of tag from args
+        selected_label: URI of label from args
         is_income: True will select income transactions,
             False will select expense and invert amount signs
 
@@ -247,17 +247,17 @@ def data_query(
         cat_id = TransactionCategory.uri_to_id(selected_category)
         clauses["category"] = TransactionSplit.category_id == cat_id
 
-    if selected_tag:
+    if selected_label:
         any_filters = True
-        tag_id = Tag.uri_to_id(selected_tag)
-        tag_query = (
-            query.join(TagLink)
+        label_id = Label.uri_to_id(selected_label)
+        label_query = (
+            query.join(LabelLink)
             .with_entities(TransactionSplit.id_)
-            .where(TagLink.tag_id == tag_id)
+            .where(LabelLink.label_id == label_id)
             .distinct()
         )
-        t_split_ids: set[int] = {r[0] for r in tag_query.yield_per(YIELD_PER)}
-        clauses["tag"] = TransactionSplit.id_.in_(t_split_ids)
+        t_split_ids: set[int] = {r[0] for r in label_query.yield_per(YIELD_PER)}
+        clauses["label"] = TransactionSplit.id_.in_(t_split_ids)
 
     return DataQuery(query, clauses, any_filters)
 
@@ -267,10 +267,10 @@ def ctx_options(
     today: datetime.date,
     accounts: dict[int, str],
     categories: base.CategoryGroups,
-    tags: dict[int, str],
+    labels: dict[int, str],
     selected_account: str | None = None,
     selected_category: str | None = None,
-    selected_tag: str | None = None,
+    selected_label: str | None = None,
 ) -> OptionsContext:
     """Get the context to build the options for spending chart.
 
@@ -279,10 +279,10 @@ def ctx_options(
         today: Today's date
         accounts: Account name mapping
         categories: TransactionCategory name mapping
-        tags: Tag name mapping
+        labels: Label name mapping
         selected_account: URI of account from args
         selected_category: URI of category from args
-        selected_tag: URI of tag from args
+        selected_label: URI of label from args
 
     Returns:
         OptionsContext
@@ -341,29 +341,29 @@ def ctx_options(
     }
 
     clauses = dat_query.clauses.copy()
-    clauses.pop("tag", None)
+    clauses.pop("label", None)
     query_options = (
-        query.join(TagLink)
-        .with_entities(TagLink.tag_id)
+        query.join(LabelLink)
+        .with_entities(LabelLink.label_id)
         .where(*clauses.values())
         .distinct()
     )
-    options_tag = sorted(
+    options_label = sorted(
         [
-            base.NamePair(Tag.id_to_uri(tag_id), tags[tag_id])
-            for tag_id, in query_options.yield_per(YIELD_PER)
+            base.NamePair(Label.id_to_uri(label_id), labels[label_id])
+            for label_id, in query_options.yield_per(YIELD_PER)
         ],
         key=operator.itemgetter(0),
     )
-    if len(options_tag) == 0 and selected_tag:
-        tag_id = Tag.uri_to_id(selected_tag)
-        options_tag = [base.NamePair(selected_tag, tags[tag_id])]
+    if len(options_label) == 0 and selected_label:
+        label_id = Label.uri_to_id(selected_label)
+        options_label = [base.NamePair(selected_label, labels[label_id])]
 
     return {
         "options_period": options_period,
         "options_account": options_account,
         "options_category": options_category,
-        "options_tag": options_tag,
+        "options_label": options_label,
     }
 
 
@@ -372,7 +372,7 @@ def ctx_chart(
     today: datetime.date,
     selected_account: str | None,
     selected_category: str | None,
-    selected_tag: str | None,
+    selected_label: str | None,
     selected_period: str | None,
     selected_start: str | None,
     selected_end: str | None,
@@ -387,7 +387,7 @@ def ctx_chart(
         selected_account: Selected account for filtering
         selected_category: Selected category for filtering
         selected_period: Selected period for filtering
-        selected_tag: Selected tag for filtering
+        selected_label: Selected label for filtering
         selected_start: Selected start date for custom period
         selected_end: Selected end date for custom period
         is_income: True will select income transactions,
@@ -399,7 +399,7 @@ def ctx_chart(
     """
     accounts = Account.map_name(s)
     categories_emoji = TransactionCategory.map_name_emoji(s)
-    tags = Tag.map_name(s)
+    labels = Label.map_name(s)
 
     dat_query = data_query(
         s,
@@ -408,7 +408,7 @@ def ctx_chart(
         selected_start,
         selected_end,
         selected_category,
-        selected_tag,
+        selected_label,
         is_income=is_income,
     )
     options = ctx_options(
@@ -416,10 +416,10 @@ def ctx_chart(
         today,
         accounts,
         base.tranaction_category_groups(s),
-        tags,
+        labels,
         selected_account,
         selected_category,
-        selected_tag,
+        selected_label,
     )
 
     final_query = dat_query.final_query
@@ -459,24 +459,24 @@ def ctx_chart(
     by_category = sorted(by_category, key=operator.itemgetter(1), reverse=True)
 
     query = (
-        final_query.join(TagLink, full=True)
+        final_query.join(LabelLink, full=True)
         .with_entities(
-            TagLink.tag_id,
+            LabelLink.label_id,
             func.sum(TransactionSplit.amount),
         )
-        .group_by(TagLink.tag_id)
+        .group_by(LabelLink.label_id)
     )
-    selected_tag_id = selected_tag and Tag.uri_to_id(selected_tag)
-    by_tag: list[tuple[str | None, Decimal, bool]] = [
+    selected_label_id = selected_label and Label.uri_to_id(selected_label)
+    by_label: list[tuple[str | None, Decimal, bool]] = [
         (
-            tag_id and tags[tag_id],
+            label_id and labels[label_id],
             amount if is_income else -amount,
-            tag_id and tag_id == selected_tag_id,
+            label_id and label_id == selected_label_id,
         )
-        for tag_id, amount in query.yield_per(YIELD_PER)
+        for label_id, amount in query.yield_per(YIELD_PER)
         if amount
     ]
-    by_tag = sorted(by_tag, key=operator.itemgetter(1), reverse=True)
+    by_label = sorted(by_label, key=operator.itemgetter(1), reverse=True)
 
     return {
         "no_matches": n_matches == 0,
@@ -484,16 +484,16 @@ def ctx_chart(
         "selected_period": selected_period,
         "selected_account": selected_account,
         "selected_category": selected_category,
-        "selected_tag": selected_tag,
+        "selected_label": selected_label,
         "start": selected_start,
         "end": selected_end,
         "by_account": by_account,
         "by_payee": by_payee,
         "by_category": by_category,
-        "by_tag": [
-            (tag, amount)
-            for tag, amount, is_selected in by_tag
-            if not is_selected or len(by_tag) == 1
+        "by_label": [
+            (label, amount)
+            for label, amount, is_selected in by_label
+            if not is_selected or len(by_label) == 1
         ],
     }, ("Income" if is_income else "Spending")
 

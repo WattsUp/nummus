@@ -15,7 +15,7 @@ from nummus.models.budget import BudgetAssignment, BudgetGroup, Target
 from nummus.models.config import Config
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.imported_file import ImportedFile
-from nummus.models.tag import Tag, TagLink
+from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import TransactionCategory
 
@@ -28,7 +28,7 @@ MODELS_URI = [
     AssetValuation,
     BudgetGroup,
     HealthCheckIssue,
-    Tag,
+    Label,
     Target,
     Transaction,
     TransactionCategory,
@@ -41,7 +41,7 @@ MODELS_NONE = [
     BudgetAssignment,
     Config,
     ImportedFile,
-    TagLink,
+    LabelLink,
 ]
 
 

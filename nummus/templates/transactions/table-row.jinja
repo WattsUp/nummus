@@ -47,18 +47,18 @@
           {{ txn.category }}
         {% endif %}
         <span class="max-md:hidden">
-          {% for tag in txn.tags %}
+          {% for label in txn.labels %}
             <a
               class="underline"
-              href="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', tag=tag.key) }}"
-              hx-get="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', tag=tag.key) }}"
+              href="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', label=label.key) }}"
+              hx-get="{{ url_for('income.page' if txn.amount > 0 else 'spending.page', label=label.key) }}"
               hx-trigger="click consume"
               hx-disabled-elt="this"
               hx-target="#main"
               hx-swap="innerHTML show:window:top"
               hx-push-url="true"
             >
-              #{{ tag.name }}
+              #{{ label.name }}
             </a>
           {% endfor %}
         </span>

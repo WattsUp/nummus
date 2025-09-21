@@ -17,7 +17,7 @@ from nummus.models import (
     Account,
     Asset,
     AssetCategory,
-    Tag,
+    Label,
     TransactionSplit,
     YIELD_PER,
 )
@@ -70,7 +70,7 @@ class Typos(Base):
         self._proper_nouns.update(assets.values())
 
         issues.update(self._test_accounts(s, accounts))
-        issues.update(self._test_tags(s))
+        issues.update(self._test_labels(s))
         issues.update(self._test_transaction_nouns(s, accounts))
 
         # Escape words and sort to replace longest words first
@@ -154,14 +154,14 @@ class Typos(Base):
             self._proper_nouns.add(institution)
         return self._create_issues()
 
-    def _test_tags(
+    def _test_labels(
         self,
         s: orm.Session,
     ) -> dict[str, tuple[str, str, str]]:
-        query = s.query(Tag.name)
+        query = s.query(Label.name)
         for (name,) in query.yield_per(YIELD_PER):
             name: str
-            source = f"Tag {name}"
+            source = f"Label {name}"
             self._add(name, source, "name", 1)
             self._proper_nouns.add(name)
         return self._create_issues()

@@ -28,7 +28,7 @@ from nummus.models.budget import (
 from nummus.models.config import Config, ConfigKey
 from nummus.models.health_checks import HealthCheckIssue
 from nummus.models.imported_file import ImportedFile
-from nummus.models.tag import Tag, TagLink
+from nummus.models.label import Label, LabelLink
 from nummus.models.transaction import Transaction, TransactionSplit
 from nummus.models.transaction_category import (
     TransactionCategory,
@@ -68,8 +68,8 @@ __all__ = [
     "ConfigKey",
     "HealthCheckIssue",
     "ImportedFile",
-    "Tag",
-    "TagLink",
+    "Label",
+    "LabelLink",
     "Target",
     "TargetPeriod",
     "TargetType",
@@ -101,8 +101,8 @@ _MODELS: list[type[Base]] = [
     Config,
     ImportedFile,
     HealthCheckIssue,
-    Tag,
-    TagLink,
+    Label,
+    LabelLink,
     Target,
     Transaction,
     TransactionCategory,

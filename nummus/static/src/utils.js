@@ -365,7 +365,7 @@ function nummusClearHistory() {
 }
 
 /**
- * On key press of a select tag, go to the matching element, ignoring emojis
+ * On key press of a select label, go to the matching element, ignoring emojis
  *
  * @param {Event} evt - Triggering event
  */

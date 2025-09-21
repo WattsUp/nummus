@@ -27,8 +27,8 @@ from nummus.models import (
     base_uri,
     BudgetAssignment,
     BudgetGroup,
-    Tag,
-    TagLink,
+    Label,
+    LabelLink,
     Target,
     TargetPeriod,
     TargetType,
@@ -376,17 +376,17 @@ def categories(session: orm.Session) -> dict[str, int]:
 
 
 @pytest.fixture
-def tags(session: orm.Session) -> dict[str, int]:
-    """Get tags.
+def labels(session: orm.Session) -> dict[str, int]:
+    """Get labels.
 
     Returns:
-        dict{name: tag id}
+        dict{name: label id}
 
     """
-    tags = {"engineer", "fruit", "apartments 4 U"}
-    session.add_all(Tag(name=name) for name in tags)
+    labels = {"engineer", "fruit", "apartments 4 U"}
+    session.add_all(Label(name=name) for name in labels)
     session.commit()
-    return {name: id_ for id_, name in Tag.map_name(session).items()}
+    return {name: id_ for id_, name in Label.map_name(session).items()}
 
 
 @pytest.fixture
@@ -514,7 +514,7 @@ def transactions(
     account: Account,
     asset: Asset,
     categories: dict[str, int],
-    tags: dict[str, int],
+    labels: dict[str, int],
 ) -> list[Transaction]:
     # Fund account on 3 days before today
     txn = Transaction(
@@ -590,8 +590,8 @@ def transactions(
 
     session.commit()
 
-    session.add(TagLink(tag_id=tags["engineer"], t_split_id=t_split_0.id_))
-    session.add(TagLink(tag_id=tags["engineer"], t_split_id=t_split_1.id_))
+    session.add(LabelLink(label_id=labels["engineer"], t_split_id=t_split_0.id_))
+    session.add(LabelLink(label_id=labels["engineer"], t_split_id=t_split_1.id_))
     session.commit()
     return session.query(Transaction).order_by(Transaction.date_ord).all()
 
@@ -605,7 +605,7 @@ def transactions_spending(
     account_savings: Account,
     asset: Asset,
     categories: dict[str, int],
-    tags: dict[str, int],
+    labels: dict[str, int],
 ) -> list[Transaction]:
     statement_income = rand_str_generator()
     statement_groceries = rand_str_generator()
@@ -656,7 +656,7 @@ def transactions_spending(
         .where(TransactionSplit.category_id == categories["rent"])
         .one()[0]
     )
-    session.add(TagLink(tag_id=tags["apartments 4 U"], t_split_id=t_split_id))
+    session.add(LabelLink(label_id=labels["apartments 4 U"], t_split_id=t_split_id))
     session.commit()
 
     return session.query(Transaction).order_by(Transaction.date_ord).all()

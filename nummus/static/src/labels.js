@@ -1,18 +1,18 @@
 "use strict";
-const tags = {
+const labels = {
   /**
-   * On click of delete tag, confirm action
+   * On click of delete label, confirm action
    *
    * @param {Event} evt Triggering event
    */
   confirmDelete: function (evt) {
     dialog.confirm(
-      "Delete tag",
+      "Delete label",
       "Delete",
       () => {
         htmx.trigger(evt.target, "delete");
       },
-      "This tag will be removed from all transactions.",
+      "This label will be removed from all transactions.",
     );
   },
 };

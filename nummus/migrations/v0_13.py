@@ -8,7 +8,7 @@ from typing import override, TYPE_CHECKING
 import sqlalchemy
 
 from nummus.migrations.base import Migrator
-from nummus.models import Base, Tag, TagLink, TransactionSplit
+from nummus.models import Base, Label, LabelLink, TransactionSplit
 
 if TYPE_CHECKING:
     from nummus import portfolio
@@ -26,22 +26,25 @@ class MigratorV0_13(Migrator):
         comments: list[str] = []
 
         with p.begin_session() as s:
-            Base.metadata.create_all(s.get_bind(), [Tag.__table__, TagLink.__table__])  # type: ignore[attr-defined]
+            Base.metadata.create_all(
+                s.get_bind(),
+                [Label.__table__, LabelLink.__table__],  # type: ignore[attr-defined]
+            )
 
-        # Move existing tags to Tag & TagLink
+        # Move existing tags to Label & LabelLink
         with p.begin_session() as s:
             stmt = "SELECT id_, tag FROM transaction_split WHERE tag is not null"
             tag_mapping: dict[str, set[int]] = defaultdict(set)
             for t_split_id, name in s.execute(sqlalchemy.text(stmt)):
                 tag_mapping[name].add(t_split_id)
 
-            tags = [Tag(name=name) for name in tag_mapping]
-            s.add_all(tags)
+            labels = [Label(name=name) for name in tag_mapping]
+            s.add_all(labels)
             s.flush()
 
-            for tag in tags:
-                for t_split_id in tag_mapping[tag.name]:
-                    s.add(TagLink(tag_id=tag.id_, t_split_id=t_split_id))
+            for label in labels:
+                for t_split_id in tag_mapping[label.name]:
+                    s.add(LabelLink(label_id=label.id_, t_split_id=t_split_id))
 
         with p.begin_session() as s:
             self.drop_column(s, TransactionSplit, "tag")

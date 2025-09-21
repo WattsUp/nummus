@@ -75,11 +75,11 @@
       class="bg-secondary-container text-on-secondary-container flex items-center gap-2 rounded-md p-2"
     >
       <icon>label</icon>
-      <span class="mr-auto">By tag</span>
+      <span class="mr-auto">By label</span>
       <icon class="details-icon-open">keyboard_arrow_up</icon>
       <icon class="details-icon-closed">keyboard_arrow_down</icon>
     </summary>
-    {% for label, amount in ctx.by_tag[:n_display] %}
+    {% for label, amount in ctx.by_label[:n_display] %}
       <div
         class="even:bg-surface-container-highest flex justify-between gap-2 rounded-md px-2 py-1"
       >

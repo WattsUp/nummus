@@ -87,22 +87,22 @@
     class="input-outlined input-bg-surface-container col-span-2 col-start-1 md:col-start-2"
   >
     <select
-      name="tag"
+      name="label"
       autocomplete="off"
-      {% if ctx.no_matches and not ctx.selected_tag %}disabled{% endif %}
+      {% if ctx.no_matches and not ctx.selected_label %}disabled{% endif %}
     >
       <option value=""></option>
-      {% for item in ctx.options_tag %}
+      {% for item in ctx.options_label %}
         <option
           value="{{ item.key }}"
-          {% if item.key == ctx.selected_tag %}selected{% endif %}
+          {% if item.key == ctx.selected_label %}selected{% endif %}
         >
           {{ item.name }}
         </option>
       {% endfor %}
     </select>
     <div>
-      <div>Tag</div>
+      <div>label</div>
     </div>
   </label>
   <div

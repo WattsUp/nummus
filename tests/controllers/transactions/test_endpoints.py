@@ -9,8 +9,8 @@ import pytest
 from nummus.controllers import base
 from nummus.models import (
     Account,
-    Tag,
-    TagLink,
+    Label,
+    LabelLink,
     Transaction,
     TransactionCategory,
     TransactionSplit,
@@ -92,7 +92,7 @@ def test_new_put(
             "payee": "Banana Farm",
             "category": [TransactionCategory.id_to_uri(categories["other income"])],
             "memo": ["Apples"],
-            "tag-0": ["Fruit"],
+            "label-0": ["Fruit"],
         },
     )
     assert "New transaction" in result
@@ -189,8 +189,8 @@ def test_new(
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
 
-    tags = Tag.map_name(session)
-    assert not tags
+    labels = Label.map_name(session)
+    assert not labels
 
 
 def test_new_split(
@@ -217,7 +217,7 @@ def test_new_split(
                 TransactionCategory.id_to_uri(categories["uncategorized"]),
             ],
             "memo": ["", "bananas", "", ""],
-            "tag-0": ["Engineer", "Salary", "Engineer", ""],
+            "label-0": ["Engineer", "Salary", "Engineer", ""],
         },
     )
     assert "snackbar.show" in result
@@ -233,28 +233,28 @@ def test_new_split(
     splits = txn.splits
     assert len(splits) == 2
 
-    tags = Tag.map_name(session)
-    assert len(tags) == 2
+    labels = Label.map_name(session)
+    assert len(labels) == 2
 
     t_split = splits[0]
     assert t_split.amount == Decimal(10)
     assert t_split.category_id == categories["other income"]
     assert t_split.memo is None
-    query = session.query(TagLink.tag_id).where(TagLink.t_split_id == t_split.id_)
-    split_tags = {tags[tag_id] for tag_id, in query.yield_per(YIELD_PER)}
-    assert split_tags == {"Engineer", "Salary"}
+    query = session.query(LabelLink.label_id).where(LabelLink.t_split_id == t_split.id_)
+    split_labels = {labels[label_id] for label_id, in query.yield_per(YIELD_PER)}
+    assert split_labels == {"Engineer", "Salary"}
 
     t_split = splits[1]
     assert t_split.amount == round(rand_real - 10, 2)
     assert t_split.category_id == categories["groceries"]
     assert t_split.memo == "bananas"
-    query = session.query(TagLink.tag_id).where(TagLink.t_split_id == t_split.id_)
-    split_tags = {tags[tag_id] for tag_id, in query.yield_per(YIELD_PER)}
-    assert not split_tags
+    query = session.query(LabelLink.label_id).where(LabelLink.t_split_id == t_split.id_)
+    split_labels = {labels[label_id] for label_id, in query.yield_per(YIELD_PER)}
+    assert not split_labels
 
 
 @pytest.mark.parametrize(
-    ("date", "include_account", "amount", "include_split", "tag", "target"),
+    ("date", "include_account", "amount", "include_split", "label", "target"),
     [
         ("", False, "", False, "", "Date must not be empty"),
         ("a", False, "", False, "", "Unable to parse date"),
@@ -269,7 +269,7 @@ def test_new_split(
             "1",
             True,
             "a",
-            "Tag name must be at least 2 characters long",
+            "Label name must be at least 2 characters long",
         ),
     ],
 )
@@ -281,7 +281,7 @@ def test_new_error(
     include_account: bool,
     amount: str,
     include_split: bool,
-    tag: str,
+    label: str,
     target: str,
 ) -> None:
     result, _ = web_client.POST(
@@ -299,7 +299,7 @@ def test_new_error(
                 else []
             ),
             "memo": "",
-            "tag-0": [tag],
+            "label-0": [label],
         },
     )
     assert result == base.error(target)
@@ -553,8 +553,8 @@ def test_split_more(
         ("payee", "a", "2 characters required"),
         ("memo", "Groceries", ""),
         ("memo", " ", ""),
-        ("tag", "Groceries", ""),
-        ("tag", " ", ""),
+        ("label", "Groceries", ""),
+        ("label", " ", ""),
         ("date", "2000-01-01", ""),
         ("date", " ", "Required"),
         ("amount", " ", "Required"),
