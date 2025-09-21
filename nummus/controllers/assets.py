@@ -78,12 +78,10 @@ class ValuationContext(TypedDict):
     value: Decimal | None
 
 
-class PerformanceContext(TypedDict):
+class PerformanceContext(base.ChartData):
     """Context for performance metrics."""
 
     labels: list[str]
-    date_mode: str
-    values: list[Decimal]
 
     period: str
     period_options: dict[str, str]
@@ -712,14 +710,11 @@ def ctx_performance(
         )
     else:
         start_ord = start.toordinal()
-    labels, date_mode = base.date_labels(start_ord, end_ord)
 
     values = a.get_value(start_ord, end_ord)
 
     return {
-        "labels": labels,
-        "date_mode": date_mode,
-        "values": values,
+        **base.chart_data(start_ord, end_ord, values),
         "period": period,
         "period_options": base.PERIOD_OPTIONS,
     }

@@ -23,13 +23,15 @@ def test_ctx_performance_empty(
 ) -> None:
     start = utils.date_add_months(today, -12)
     ctx = assets.ctx_performance(session, asset, today, "1yr")
-    labels, date_mode = base.date_labels(start.toordinal(), today.toordinal())
+    labels, mode = base.date_labels(start.toordinal(), today.toordinal())
     target: assets.PerformanceContext = {
-        "date_mode": date_mode,
+        "mode": mode,
         "labels": labels,
+        "max": None,
+        "avg": [Decimal()] * len(labels),
+        "min": None,
         "period": "1yr",
         "period_options": base.PERIOD_OPTIONS,
-        "values": [Decimal()] * len(labels),
     }
     assert ctx == target
 
@@ -41,13 +43,15 @@ def test_ctx_performance(
     asset_valuation: AssetValuation,
 ) -> None:
     ctx = assets.ctx_performance(session, asset, today, "max")
-    labels, date_mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
+    labels, mode = base.date_labels(asset_valuation.date_ord, today.toordinal())
     target: assets.PerformanceContext = {
-        "date_mode": date_mode,
+        "mode": mode,
         "labels": labels,
+        "max": None,
+        "avg": [Decimal(asset_valuation.value)] * len(labels),
+        "min": None,
         "period": "max",
         "period_options": base.PERIOD_OPTIONS,
-        "values": [Decimal(asset_valuation.value)] * len(labels),
     }
     assert ctx == target
 
